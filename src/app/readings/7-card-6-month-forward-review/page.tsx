@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ReadingPageTemplate, type DivinerLandingCard } from "@/components/marketing/reading-page-template";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { APP_URL } from "@/lib/constants";
+import { getReadingOgImageUrl } from "@/lib/service-images";
 
 export const revalidate = 3600;
 
@@ -134,6 +135,7 @@ export default async function SevenCard6MonthForwardReviewPage() {
     <ReadingPageTemplate
       serviceType="tarot"
       badge="6-Month Forecast Spread"
+      heroImage={getReadingOgImageUrl("7-card-6-month-forward-review")}
       heroTitleBefore="7-Card 6-Month Forecast:"
       heroTitleGradient="Your Roadmap for the Half-Year Ahead"
       heroSubtitle="Six cards for six months, plus one overarching guidance card — this spread gives you the most practical forward-looking tarot tool available, mapping the themes and energy of each coming month before they arrive."

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ReadingPageTemplate, type DivinerLandingCard } from "@/components/marketing/reading-page-template";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { APP_URL } from "@/lib/constants";
+import { getReadingOgImageUrl } from "@/lib/service-images";
 
 export const revalidate = 3600;
 
@@ -134,6 +135,7 @@ export default async function PredictiveEventHoraryPage() {
     <ReadingPageTemplate
       serviceType="astrology"
       badge="Traditional Predictive Astrology"
+      heroImage={getReadingOgImageUrl("predictive-event-horary")}
       heroTitleBefore="Horary Astrology:"
       heroTitleGradient="One Question. One Chart. One Answer."
       heroSubtitle="Horary astrology is the ancient art of answering a specific question by casting a chart for the precise moment the question is asked. The resulting chart — born from the question itself — contains the answer. Remarkably accurate in practiced hands."

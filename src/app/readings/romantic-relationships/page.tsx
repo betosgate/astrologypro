@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ReadingPageTemplate, type DivinerLandingCard } from "@/components/marketing/reading-page-template";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { APP_URL } from "@/lib/constants";
+import { getReadingOgImageUrl } from "@/lib/service-images";
 
 export const revalidate = 3600;
 
@@ -134,6 +135,7 @@ export default async function RomanticRelationshipsPage() {
     <ReadingPageTemplate
       serviceType="astrology"
       badge="Relationship Astrology"
+      heroImage={getReadingOgImageUrl("romantic-relationships")}
       heroTitleBefore="Romantic Relationships: "
       heroTitleGradient="The Astrology of Love & Connection"
       heroSubtitle="Every relationship has its own astrological signature. Synastry reveals how two charts interact — the magnetic pull, the friction points, the growth edges. The composite chart reveals the relationship itself as its own living entity."

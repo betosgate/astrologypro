@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ReadingPageTemplate, type DivinerLandingCard } from "@/components/marketing/reading-page-template";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { APP_URL } from "@/lib/constants";
+import { getReadingOgImageUrl } from "@/lib/service-images";
 
 export const revalidate = 3600;
 
@@ -134,6 +135,7 @@ export default async function MarsReturnPage() {
     <ReadingPageTemplate
       serviceType="astrology"
       badge="Annual Mars Cycle"
+      heroImage={getReadingOgImageUrl("mars-return")}
       heroTitleBefore="Your Mars Return:"
       heroTitleGradient="A New Cycle of Drive & Desire"
       heroSubtitle="Every two years, Mars returns to the exact position it occupied at your birth — resetting your personal engine. A Mars Return reading reveals the themes of drive, ambition, desire, conflict, and action that will define your next chapter."

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ReadingPageTemplate, type DivinerLandingCard } from "@/components/marketing/reading-page-template";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { APP_URL } from "@/lib/constants";
+import { getReadingOgImageUrl } from "@/lib/service-images";
 
 export const revalidate = 3600;
 
@@ -134,6 +135,7 @@ export default async function RelationshipSpreadPage() {
     <ReadingPageTemplate
       serviceType="tarot"
       badge="Deep Relationship Tarot"
+      heroImage={getReadingOgImageUrl("10-card-relationship-spread")}
       heroTitleBefore="10-Card Relationship Spread:"
       heroTitleGradient="The Complete Portrait of a Connection"
       heroSubtitle="Ten positions. Two people. One complete picture. The relationship spread maps both sides of a connection — how each person feels, what draws and divides them, what's hidden, and where the bond is heading."

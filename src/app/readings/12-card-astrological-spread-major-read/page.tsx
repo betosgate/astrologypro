@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ReadingPageTemplate, type DivinerLandingCard } from "@/components/marketing/reading-page-template";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { APP_URL } from "@/lib/constants";
+import { getReadingOgImageUrl } from "@/lib/service-images";
 
 export const revalidate = 3600;
 
@@ -134,6 +135,7 @@ export default async function AstrologicalSpreadPage() {
     <ReadingPageTemplate
       serviceType="tarot"
       badge="Tarot Meets Astrology"
+      heroImage={getReadingOgImageUrl("12-card-astrological-spread-major-read")}
       heroTitleBefore="12-Card Astrological Spread:"
       heroTitleGradient="Your Life's Full Landscape"
       heroSubtitle="One card for each of the twelve astrological houses — this spread merges tarot symbolism with the holistic architecture of astrology to give you a panoramic view of every major dimension of your life in a single reading."

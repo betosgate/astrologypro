@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ReadingPageTemplate, type DivinerLandingCard } from "@/components/marketing/reading-page-template";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { APP_URL } from "@/lib/constants";
+import { getReadingOgImageUrl } from "@/lib/service-images";
 
 export const revalidate = 3600;
 
@@ -134,6 +135,7 @@ export default async function UranusOppositionPage() {
     <ReadingPageTemplate
       serviceType="astrology"
       badge="The Mid-Life Awakening Transit"
+      heroImage={getReadingOgImageUrl("uranus-opposition")}
       heroTitleBefore="Uranus Opposition:"
       heroTitleGradient="The Astrological Mid-Life Turning Point"
       heroSubtitle="Around your early 40s, Uranus reaches the point directly opposite its natal position — and everything that has been repressed, suppressed, or outgrown begins demanding release. This is the astrological engine behind the mid-life awakening."

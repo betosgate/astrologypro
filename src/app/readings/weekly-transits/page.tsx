@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ReadingPageTemplate, type DivinerLandingCard } from "@/components/marketing/reading-page-template";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { APP_URL } from "@/lib/constants";
+import { getReadingOgImageUrl } from "@/lib/service-images";
 
 export const revalidate = 3600;
 
@@ -134,6 +135,7 @@ export default async function WeeklyTransitsPage() {
     <ReadingPageTemplate
       serviceType="astrology"
       badge="Real-Time Planetary Weather"
+      heroImage={getReadingOgImageUrl("weekly-transits")}
       heroTitleBefore="Weekly Transits: "
       heroTitleGradient="Your Personal Planetary Forecast"
       heroSubtitle="The planets never stop moving — and their movement creates a constantly shifting field of energy around your natal chart. A weekly transit reading shows you exactly what's activating right now and how to work with it."

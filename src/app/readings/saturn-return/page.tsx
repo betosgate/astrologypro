@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ReadingPageTemplate, type DivinerLandingCard } from "@/components/marketing/reading-page-template";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { APP_URL } from "@/lib/constants";
+import { getReadingOgImageUrl } from "@/lib/service-images";
 
 export const revalidate = 3600;
 
@@ -151,6 +152,7 @@ export default async function SaturnReturnPage() {
     <ReadingPageTemplate
       serviceType="astrology"
       badge="Astrological Life Events"
+      heroImage={getReadingOgImageUrl("saturn-return")}
       heroTitleBefore="Your Saturn Return"
       heroTitleGradient="Demands Your Attention"
       heroSubtitle="Every ~29.5 years, Saturn returns to its birth position — triggering a deep restructuring of career, relationships, identity, and purpose. A Saturn Return reading gives you a clear map of what is being dismantled, what must be built, and when the pressure peaks."

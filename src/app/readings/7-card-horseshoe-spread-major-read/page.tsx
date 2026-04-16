@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ReadingPageTemplate, type DivinerLandingCard } from "@/components/marketing/reading-page-template";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { APP_URL } from "@/lib/constants";
+import { getReadingOgImageUrl } from "@/lib/service-images";
 
 export const revalidate = 3600;
 
@@ -134,6 +135,7 @@ export default async function SevenCardHorseshoeSpreadMajorReadPage() {
     <ReadingPageTemplate
       serviceType="tarot"
       badge="Classic Major Tarot Spread"
+      heroImage={getReadingOgImageUrl("7-card-horseshoe-spread-major-read")}
       heroTitleBefore="The 7-Card Horseshoe Spread:"
       heroTitleGradient="A Complete View of Any Situation"
       heroSubtitle="The horseshoe spread has been a cornerstone of tarot practice for centuries. Seven positions covering past, present, hidden factors, obstacles, external influences, advice, and outcome — it's the most complete single-question spread in the classical tarot canon."

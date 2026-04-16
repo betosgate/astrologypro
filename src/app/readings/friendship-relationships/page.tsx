@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ReadingPageTemplate, type DivinerLandingCard } from "@/components/marketing/reading-page-template";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { APP_URL } from "@/lib/constants";
+import { getReadingOgImageUrl } from "@/lib/service-images";
 
 export const revalidate = 3600;
 
@@ -134,6 +135,7 @@ export default async function FriendshipRelationshipsPage() {
     <ReadingPageTemplate
       serviceType="astrology"
       badge="Friendship Astrology"
+      heroImage={getReadingOgImageUrl("friendship-relationships")}
       heroTitleBefore="Friendship Compatibility: "
       heroTitleGradient="The Astrology of Your Closest Bonds"
       heroSubtitle="Friendships are not random. The people who become your trusted companions carry specific astrological signatures that resonate with your own chart. Understanding that resonance reveals why certain connections feel effortless — and why others require more conscious navigation."
