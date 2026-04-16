@@ -20,7 +20,6 @@ export function RelationshipSection({ aiMap, areaOfInquiry, tabSlug, checkDacen,
   const { modal, trigger, close } = useShowMore();
   const isBusiness = tabSlug === "business_partner_v2";
   const isFriendship = tabSlug === "friendship_report_tropical_v2";
-  const isRomantic = tabSlug === "romantic_forecast_report_tropical_v2";
 
   function AiBlock({ title, sectionKey, data }: { title: string; sectionKey: string; data: any }) {
     if (!data && data !== "error") return <SectionSkeleton title={title} />;
