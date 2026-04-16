@@ -23,6 +23,9 @@ export async function handler(event) {
     case "NEW_INBOUND_CALL":
       return handleNewInboundCall(event);
 
+    case "CALL_UPDATE_REQUESTED":
+      return handleCallUpdateRequested(event);
+
     case "ACTION_SUCCESSFUL":
       return handleActionSuccessful(event);
 
@@ -83,7 +86,8 @@ async function handleNewInboundCall(event) {
       const errText = await lookupRes.text();
       console.error("Lookup failed! Status:", lookupRes.status, "Body:", errText);
       return hangupWithMessage(
-        "We couldn't find your account. Please book a session online."
+        "We couldn't find your account. Please book a session online.",
+        callId
       );
     }
 
@@ -108,11 +112,12 @@ async function handleNewInboundCall(event) {
       };
     }
 
-    // Standalone call: play hold music and notify diviner
+    // Standalone call: hold caller while notifying diviner
     if (lookup.action === "enqueue") {
       console.log("Action: enqueue, divinerId:", lookup.divinerId, "phoneSessionId:", lookup.phoneSessionId);
 
       // Notify diviner via the Next.js API (fire-and-forget)
+      const transactionId = callDetails?.TransactionId;
       fetch(`${APP_URL}/api/chime/voice/notify`, {
         method: "POST",
         headers: {
@@ -124,24 +129,16 @@ async function handleNewInboundCall(event) {
           phoneSessionId: lookup.phoneSessionId,
           callerPhone,
           callId,
+          transactionId,
         }),
       }).catch((err) => console.error("Notify fire-and-forget failed:", err?.message));
 
-      console.log("Returning PlayAudio + Pause actions");
+      // Keep the caller on hold with silence while diviner accepts
+      // (PlayAudio removed — S3 hold music not yet uploaded)
+      console.log("Returning Pause action (30s hold)");
       return {
         SchemaVersion: "1.0",
         Actions: [
-          {
-            Type: "PlayAudio",
-            Parameters: {
-              CallId: callId,
-              AudioSource: {
-                Type: "S3",
-                BucketName: process.env.HOLD_MUSIC_BUCKET || "astropro-assets",
-                Key: "audio/hold-music.wav",
-              },
-            },
-          },
           {
             Type: "Pause",
             Parameters: {
@@ -156,46 +153,76 @@ async function handleNewInboundCall(event) {
     // No valid action — reject
     console.error("No valid action from lookup. Got:", lookup.action);
     return hangupWithMessage(
-      "We couldn't match your call to a session. Please book online at astrologypro.com."
+      "We couldn't match your call to a session. Please book online at astrologypro.com.",
+      callId
     );
   } catch (err) {
     console.error("SMA lookup error:", err?.message ?? err, err?.stack ?? "");
     return hangupWithMessage(
-      "We're experiencing technical difficulties. Please try again later."
+      "We're experiencing technical difficulties. Please try again later.",
+      callId
     );
   }
+}
+
+/**
+ * CALL_UPDATE_REQUESTED — triggered by UpdateSipMediaApplicationCall from the accept endpoint.
+ * The Arguments contain the Chime meeting info to bridge the caller into.
+ */
+async function handleCallUpdateRequested(event) {
+  const args = event.ActionData?.Parameters?.Arguments ?? {};
+  const callId = event.CallDetails?.Participants?.[0]?.CallId;
+
+  console.log("=== CALL_UPDATE_REQUESTED ===");
+  console.log("Arguments:", JSON.stringify(args));
+  console.log("callId:", callId);
+
+  if (args.action === "join_meeting" && args.meetingId && args.joinToken) {
+    console.log("Bridging caller into meeting:", args.meetingId);
+    return {
+      SchemaVersion: "1.0",
+      Actions: [
+        {
+          Type: "JoinChimeMeeting",
+          Parameters: {
+            JoinToken: args.joinToken,
+            CallId: callId,
+            MeetingId: args.meetingId,
+          },
+        },
+      ],
+    };
+  }
+
+  console.warn("Unknown call update action:", args.action);
+  return { SchemaVersion: "1.0", Actions: [] };
 }
 
 async function handleActionSuccessful(event) {
   const actionData = event.ActionData;
   const actionType = actionData?.Type;
+  const callId = event.CallDetails?.Participants?.[0]?.CallId;
 
   if (actionType === "JoinChimeMeeting") {
     console.log("Caller successfully joined Chime meeting");
     return { SchemaVersion: "1.0", Actions: [] };
   }
 
-  if (actionType === "PlayAudio") {
-    const callId = event.CallDetails?.Participants?.[0]?.CallId;
-    if (callId) {
-      console.log("PlayAudio finished, looping hold music for callId:", callId);
-      return {
-        SchemaVersion: "1.0",
-        Actions: [
-          {
-            Type: "PlayAudio",
-            Parameters: {
-              CallId: callId,
-              AudioSource: {
-                Type: "S3",
-                BucketName: process.env.HOLD_MUSIC_BUCKET || "astropro-assets",
-                Key: "audio/hold-music.wav",
-              },
-            },
+  // Pause finished — loop another 30s pause to keep caller on hold
+  if (actionType === "Pause") {
+    console.log("Pause finished, looping another 30s hold for callId:", callId);
+    return {
+      SchemaVersion: "1.0",
+      Actions: [
+        {
+          Type: "Pause",
+          Parameters: {
+            CallId: callId,
+            DurationInMilliseconds: 30000,
           },
-        ],
-      };
-    }
+        },
+      ],
+    };
   }
 
   return { SchemaVersion: "1.0", Actions: [] };
@@ -251,7 +278,7 @@ function hangupWithMessage(message, callId) {
       Parameters: {
         CallId: callId,
         Text: message,
-        Engine: "Neural",
+        Engine: "neural",
         LanguageCode: "en-US",
         VoiceId: "Joanna",
       },
