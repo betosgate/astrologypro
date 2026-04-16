@@ -451,23 +451,25 @@ export function ReadingPageTemplate(props: ReadingPageTemplateProps) {
             <div className="h-px bg-gradient-to-r from-transparent via-[#c9a84c]/20 to-transparent" />
           </div>
 
-          {/* SECTION F — Mid-page CTA Banner */}
-          <section className="px-4 pb-4 sm:px-6 lg:px-8">
-            <div className="mx-auto max-w-5xl">
-              <div className="flex flex-col items-center justify-between gap-4 rounded-2xl border border-[#c9a84c]/20 bg-[#c9a84c]/5 px-6 py-5 sm:flex-row">
-                <p className="text-sm text-[#b8bcd0]/70">
-                  <span className="font-semibold text-[#f5f0e8]">Ready to book?</span>
-                  {" "}Browse available {sessionLabel} and find your match.
-                </p>
-                <a
-                  href="#diviners"
-                  className="inline-flex items-center gap-2 rounded-lg bg-[#c9a84c] px-5 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-[#e2c97e]"
-                >
-                  Find a Reader <ArrowRight className="size-3.5" aria-hidden="true" />
-                </a>
+          {/* SECTION F — Mid-page CTA Banner (only shown when readers are available) */}
+          {diviners.length > 0 && (
+            <section className="px-4 pb-4 sm:px-6 lg:px-8">
+              <div className="mx-auto max-w-5xl">
+                <div className="flex flex-col items-center justify-between gap-4 rounded-2xl border border-[#c9a84c]/20 bg-[#c9a84c]/5 px-6 py-5 sm:flex-row">
+                  <p className="text-sm text-[#b8bcd0]/70">
+                    <span className="font-semibold text-[#f5f0e8]">Ready to book?</span>
+                    {" "}Browse available {sessionLabel} and find your match.
+                  </p>
+                  <a
+                    href="#diviners"
+                    className="inline-flex items-center gap-2 rounded-lg bg-[#c9a84c] px-5 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-[#e2c97e]"
+                  >
+                    Find a Reader <ArrowRight className="size-3.5" aria-hidden="true" />
+                  </a>
+                </div>
               </div>
-            </div>
-          </section>
+            </section>
+          )}
 
           {/* SECTION G — Client Testimonials */}
           <section className="px-4 py-16 sm:px-6 lg:px-8">
@@ -563,38 +565,24 @@ export function ReadingPageTemplate(props: ReadingPageTemplateProps) {
             </div>
           </section>
 
-          {/* SECTION H — Diviner Grid */}
-          <section id="diviners" className="scroll-mt-20 px-4 py-16 sm:px-6 lg:px-8">
-            <div className="mx-auto max-w-5xl">
-              <h2 className="mb-2 text-center text-2xl font-bold text-[#f5f0e8] sm:text-3xl">
-                {divinerSectionTitle}
-              </h2>
-              <p className="mb-10 text-center text-sm text-[#b8bcd0]/50">
-                {divinerSectionSubtitle}
-              </p>
-              {diviners.length > 0 ? (
+          {/* SECTION H — Diviner Grid (hidden entirely when no readers available) */}
+          {diviners.length > 0 && (
+            <section id="diviners" className="scroll-mt-20 px-4 py-16 sm:px-6 lg:px-8">
+              <div className="mx-auto max-w-5xl">
+                <h2 className="mb-2 text-center text-2xl font-bold text-[#f5f0e8] sm:text-3xl">
+                  {divinerSectionTitle}
+                </h2>
+                <p className="mb-10 text-center text-sm text-[#b8bcd0]/50">
+                  {divinerSectionSubtitle}
+                </p>
                 <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                   {diviners.map((d) => (
                     <DivinerCard key={d.username} diviner={d} />
                   ))}
                 </div>
-              ) : (
-                <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] py-16 text-center">
-                  <p className="text-[#b8bcd0]/50">
-                    New practitioners are joining soon. Browse all readers in the meantime.
-                  </p>
-                </div>
-              )}
-              <div className="mt-8 text-center">
-                <Link
-                  href={discoverLink}
-                  className="inline-flex items-center gap-1.5 text-sm text-[#c9a84c]/70 transition-colors hover:text-[#c9a84c]"
-                >
-                  {discoverLabel} <ArrowRight className="size-3.5" aria-hidden="true" />
-                </Link>
               </div>
-            </div>
-          </section>
+            </section>
+          )}
 
           {/* SECTION I — Email Lead Capture */}
           <section className="px-4 py-16 sm:px-6 lg:px-8">
@@ -733,10 +721,11 @@ export function ReadingPageTemplate(props: ReadingPageTemplateProps) {
                 </p>
                 <div className="mt-8">
                   <a
-                    href="#diviners"
+                    href={diviners.length > 0 ? "#diviners" : (relatedReadings[0]?.href ?? "/readings")}
                     className="inline-flex h-12 items-center gap-2 rounded-lg bg-[#c9a84c] px-8 text-sm font-semibold text-black shadow-[0_0_20px_rgba(201,168,76,0.3)] transition-all hover:bg-[#e2c97e]"
                   >
-                    {ctaButtonLabel}
+                    {diviners.length > 0 ? ctaButtonLabel : "Explore Related Readings"}
+                    <ArrowRight className="size-4" aria-hidden="true" />
                   </a>
                 </div>
               </div>
