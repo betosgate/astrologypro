@@ -457,6 +457,10 @@ export function ChimeSessionRoom({
   const overtimeMinutes = isOvertime ? elapsedMinutes - scheduledDuration : 0;
   const totalCost = basePrice + overtimeMinutes * overageRate;
 
+  // Derived: whether the remote participant has actually joined the Chime session
+  const isRemotePresent = participants.some((p) => !p.isLocal);
+  const remoteName = role === "diviner" ? clientName : divinerName;
+
   const handleToggleMute = useCallback(() => {
     if (!meetingSessionRef.current) return;
     if (isMuted) {
@@ -638,13 +642,14 @@ export function ChimeSessionRoom({
           bookingId,
           actualDurationMinutes: elapsedMinutes,
           sessionNotes,
+          chatTranscript: chatMessages,
         }),
       });
       toast.success("Session ended. Recording will be available shortly.");
     } catch {
       toast.error("Failed to save session data. Please contact support.");
     }
-  }, [bookingId, elapsedMinutes, sessionNotes]);
+  }, [bookingId, elapsedMinutes, sessionNotes, chatMessages]);
 
   const handleSendChat = () => {
     const text = chatInput.trim();
@@ -921,8 +926,19 @@ export function ChimeSessionRoom({
             <span className="hidden text-sm font-medium sm:inline">
               {serviceName}
             </span>
-            <span className="hidden text-sm text-muted-foreground md:inline">
-              with {role === "diviner" ? clientName : divinerName}
+            <span className="hidden items-center gap-1.5 text-sm text-muted-foreground md:inline-flex">
+              with {remoteName}
+              {isRemotePresent ? (
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-medium text-emerald-400">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                  Joined
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 rounded-full bg-zinc-500/15 px-1.5 py-0.5 text-[10px] font-medium text-zinc-400">
+                  <span className="h-1.5 w-1.5 rounded-full bg-zinc-400" />
+                  Not joined
+                </span>
+              )}
             </span>
             <Badge
               variant="outline"
@@ -999,10 +1015,6 @@ export function ChimeSessionRoom({
             const contentTile = tiles.find((t) => t.isContent);
             const localTile   = tiles.find((t) => t.isLocal && !t.isContent);
             const remoteTiles = tiles.filter((t) => !t.isLocal && !t.isContent);
-            const remoteName  = role === "diviner" ? clientName : divinerName;
-            // True once the remote participant has joined the Chime meeting
-            // (presence callback fires). False = they haven't connected yet.
-            const isRemotePresent = participants.some((p) => !p.isLocal);
 
             /** Callback-ref: mount → add to map & bind; unmount → remove */
             const videoRef = (tileId: number, muted = false) =>

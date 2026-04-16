@@ -27,6 +27,9 @@ import { MIGRATION_SQL as MIG_20260413000126 } from "@/data/migrations/202604130
 import { MIGRATION_SQL as MIG_20260414000002 } from "@/data/migrations/20260414000002_booking_session_started_at";
 import { MIGRATION_SQL as MIG_20260414000026 } from "@/data/migrations/20260414000026_chime_sip_rule_id";
 import { MIGRATION_SQL as MIG_20260415000001 } from "@/data/migrations/20260415000001_chime_pipeline_id";
+import { MIGRATION_SQL as MIG_20260416000001 } from "@/data/migrations/20260416000001_phone_call_notifications";
+import { MIGRATION_SQL as MIG_20260416000002 } from "@/data/migrations/20260416000002_phone_sessions_status_expand";
+import { MIGRATION_SQL as MIG_20260416000003 } from "@/data/migrations/20260416000003_add_chat_transcript";
 
 /**
  * Allowlisted migrations that the admin migration runner can execute.
@@ -283,6 +286,30 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Adds chime_pipeline_id text column to bookings. Stores the Media Capture Pipeline ARN created when a Chime session starts. Required to trigger the concatenation pipeline on session end, which merges all segment files into a single named MP4 under recordings/{bookingId}/final/{meetingId}.mp4.",
     sortKey: "20260415000001",
     sql: MIG_20260415000001,
+  },
+  "20260416000001_phone_call_notifications": {
+    id: "20260416000001_phone_call_notifications",
+    title: "Phone call notifications table",
+    description:
+      "Creates phone_call_notifications table — stores inbound call notifications from the SMA Lambda. The diviner's browser widget polls this table to show incoming calls. Rows transition: ringing → accepted | declined | expired. RLS enabled with diviner-select, diviner-update, and service-role-all policies.",
+    sortKey: "20260416000001",
+    sql: MIG_20260416000001,
+  },
+  "20260416000002_phone_sessions_status_expand": {
+    id: "20260416000002_phone_sessions_status_expand",
+    title: "Expand phone_sessions status constraint",
+    description:
+      "Adds 'accepted' and 'declined' to the phone_sessions.status CHECK constraint. Required by the Chime accept/decline routes which set these values when a diviner answers or rejects an inbound call.",
+    sortKey: "20260416000002",
+    sql: MIG_20260416000002,
+  },
+  "20260416000003_add_chat_transcript": {
+    id: "20260416000003_add_chat_transcript",
+    title: "Add chat_transcript to bookings",
+    description:
+      "Adds chat_transcript JSONB column to bookings. Stores the full array of chat messages exchanged during a video session. Each entry: {from, text, time}. Populated by end-meeting and end-session APIs when the diviner ends the call.",
+    sortKey: "20260416000003",
+    sql: MIG_20260416000003,
   },
 };
 

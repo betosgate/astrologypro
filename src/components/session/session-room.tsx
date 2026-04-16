@@ -139,6 +139,7 @@ export function SessionRoom({
           bookingId,
           actualDurationMinutes: elapsedMinutes,
           sessionNotes,
+          chatTranscript: chatMessages,
         }),
       });
       toast.success("Session ended. Recording will be available shortly.");

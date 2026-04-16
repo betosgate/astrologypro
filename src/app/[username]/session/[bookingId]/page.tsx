@@ -145,7 +145,7 @@ export default async function SessionPage({ params, searchParams }: PageProps) {
           <div className="flex items-center gap-4 text-sm text-muted-foreground">
             <span className="flex items-center gap-1.5">
               <User className="size-3.5 text-primary" />
-              {clientName}
+              <span className="text-xs text-muted-foreground/70">Client:</span> {clientName}
             </span>
             <span className="flex items-center gap-1.5">
               <CalendarDays className="size-3.5 text-primary" />
