@@ -138,11 +138,25 @@ export async function POST(request: NextRequest) {
 
         console.log("[chime/voice/accept] Sent UpdateSipMediaApplicationCall to bridge caller. transactionId:", transactionId, "meetingId:", chimeMeetingId);
       } catch (bridgeErr) {
-        // Log but don't fail the accept — the diviner is still connected
         console.error("[chime/voice/accept] Failed to bridge PSTN caller:", bridgeErr);
+        // Return error details so we can debug from the browser console
+        return NextResponse.json({
+          chimeMeetingId,
+          attendeeId: attendee.attendeeId,
+          joinToken: attendee.joinToken,
+          bridgeError: bridgeErr instanceof Error ? bridgeErr.message : String(bridgeErr),
+          bridgeDetails: { transactionId, smaId },
+        });
       }
     } else {
       console.warn("[chime/voice/accept] Cannot bridge PSTN caller. transactionId:", transactionId, "smaId:", smaId);
+      return NextResponse.json({
+        chimeMeetingId,
+        attendeeId: attendee.attendeeId,
+        joinToken: attendee.joinToken,
+        bridgeError: "Missing transactionId or CHIME_SMA_ID",
+        bridgeDetails: { transactionId: transactionId ?? "NOT SET", smaId: smaId ?? "NOT SET" },
+      });
     }
 
     // ── Mark notification as accepted ──────────────────────────────────────
