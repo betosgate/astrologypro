@@ -1,11 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   AlertTriangle,
   CheckCircle,
@@ -27,6 +29,9 @@ import {
   Send,
   Captions,
   CaptionsOff,
+  Save,
+  Loader2,
+  Check,
 } from "lucide-react";
 import { encodeAudioEvent, floatToPcm16, decodeTranscriptEvent } from "@/lib/transcribe-stream";
 import { toast } from "sonner";
@@ -36,6 +41,18 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+
+/** Lightweight tooltip wrapper — wraps any interactive element with a Radix tooltip */
+function Tip({ label, children, side = "top" }: { label: string; children: React.ReactNode; side?: "top" | "bottom" | "left" | "right" }) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{children}</TooltipTrigger>
+      <TooltipContent side={side} className="bg-zinc-800 text-zinc-100 text-xs border-zinc-700">
+        {label}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
 
 interface ChimeSessionRoomProps {
   bookingId: string;
@@ -95,6 +112,9 @@ export function ChimeSessionRoom({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showSidebar, setShowSidebar] = useState(false);
   const [sessionNotes, setSessionNotes] = useState("");
+  const [notesSaving, setNotesSaving] = useState(false);
+  const [notesSaved, setNotesSaved] = useState(false);
+  const notesSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [chatMessages, setChatMessages] = useState<
     { from: string; text: string; time: string }[]
   >([]);
@@ -121,6 +141,7 @@ export function ChimeSessionRoom({
   const [isCaptionsEnabled, setIsCaptionsEnabled] = useState(false);
   const [captionText, setCaptionText] = useState("");
   const [captionIsPartial, setCaptionIsPartial] = useState(false);
+  const [captionSpeaker, setCaptionSpeaker] = useState("");
   const transcribeWsRef = useRef<WebSocket | null>(null);
   const transcribeAudioCtxRef = useRef<AudioContext | null>(null);
   const transcribeStreamRef = useRef<MediaStream | null>(null);
@@ -377,6 +398,39 @@ export function ChimeSessionRoom({
           }
         );
 
+        // Live captions — client receives caption text broadcast by diviner
+        meetingSession.audioVideo.realtimeSubscribeToReceiveDataMessage(
+          "captions",
+          (dataMessage: any) => {
+            const payload =
+              typeof dataMessage.data === "string"
+                ? dataMessage.data
+                : new TextDecoder().decode(dataMessage.data as Uint8Array);
+            try {
+              const msg = JSON.parse(payload);
+              if (msg.type === "text") {
+                setCaptionText(msg.text ?? "");
+                setCaptionIsPartial(msg.isPartial ?? false);
+                setCaptionSpeaker(msg.speaker ?? "");
+                // Auto-clear after final result
+                if (!msg.isPartial && msg.text) {
+                  if (captionClearTimerRef.current) clearTimeout(captionClearTimerRef.current);
+                  captionClearTimerRef.current = setTimeout(() => {
+                    setCaptionText("");
+                    setCaptionSpeaker("");
+                  }, 4000);
+                }
+              } else if (msg.type === "toggle") {
+                setIsCaptionsEnabled(msg.enabled);
+                if (!msg.enabled) {
+                  setCaptionText("");
+                  setCaptionSpeaker("");
+                }
+              }
+            } catch { /* ignore malformed */ }
+          }
+        );
+
         meetingSession.audioVideo.addObserver({
           audioVideoDidStart: () => {
             meetingSession.audioVideo.startLocalVideoTile();
@@ -506,7 +560,25 @@ export function ChimeSessionRoom({
     }
   }, [isScreenSharing]);
 
+  // ── Helper: broadcast caption data to the other participant via Chime ────
+  // ── Helper: broadcast caption data to the other participant via Chime ────
+  const broadcastCaption = useCallback(
+    (payload: { type: string; text?: string; isPartial?: boolean; enabled?: boolean; speaker?: string }) => {
+      if (!meetingSessionRef.current) return;
+      try {
+        meetingSessionRef.current.audioVideo.realtimeSendDataMessage(
+          "captions",
+          JSON.stringify(payload),
+          2_000
+        );
+      } catch { /* non-critical */ }
+    },
+    []
+  );
+
   // ── Live captions toggle (AWS Transcribe Streaming) ──────────────────────
+  // Only the diviner can start/stop transcription. Caption text is broadcast
+  // to the client via Chime data messaging so both see the same captions.
   const handleToggleCaptions = useCallback(async () => {
     // ── STOP ──────────────────────────────────────────────────────────────
     if (isCaptionsEnabled) {
@@ -519,6 +591,8 @@ export function ChimeSessionRoom({
       if (captionClearTimerRef.current) clearTimeout(captionClearTimerRef.current);
       setCaptionText("");
       setIsCaptionsEnabled(false);
+      // Notify client to hide captions
+      broadcastCaption({ type: "toggle", enabled: false });
       return;
     }
 
@@ -534,58 +608,112 @@ export function ChimeSessionRoom({
       ws.binaryType = "arraybuffer";
       transcribeWsRef.current = ws;
 
-      // 3. Capture microphone audio at 16 kHz (Transcribe's required rate)
+      // 3. Capture mic audio for Transcribe via getUserMedia.
+      //    Chrome allows multiple streams from the same mic — Chime SDK
+      //    already has one, this opens a second that coexists fine.
+      console.log("[captions] Opening mic stream for Transcribe");
       const stream = await navigator.mediaDevices.getUserMedia({
-        audio: { sampleRate: 16000, channelCount: 1, echoCancellation: true, noiseSuppression: true },
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
       });
       transcribeStreamRef.current = stream;
+      console.log("[captions] Mic stream obtained, tracks:", stream.getAudioTracks().length);
 
-      const audioCtx = new AudioContext({ sampleRate: 16000 });
+      // Use the browser's default sample rate (typically 48000) — forcing 16000
+      // can cause ScriptProcessor to never fire on some browsers/OS combos.
+      // We downsample to 16000 manually before sending to Transcribe.
+      const audioCtx = new AudioContext();
       transcribeAudioCtxRef.current = audioCtx;
+      const nativeSampleRate = audioCtx.sampleRate;
+      console.log("[captions] AudioContext created, sampleRate:", nativeSampleRate);
+
+      // Ensure context is running (browsers may suspend until user gesture)
+      if (audioCtx.state === "suspended") await audioCtx.resume();
+      console.log("[captions] AudioContext state:", audioCtx.state);
 
       const source = audioCtx.createMediaStreamSource(stream);
 
-      // Inline the AudioWorklet processor as a Blob URL — no extra public file needed.
-      // The worklet runs in a dedicated audio thread and transfers Float32 buffers
-      // to the main thread via postMessage, which we then encode and send to Transcribe.
-      const workletBlob = new Blob(
-        [`class P extends AudioWorkletProcessor{process(i){if(i[0]&&i[0][0]){const c=i[0][0].slice();this.port.postMessage(c.buffer,[c.buffer]);}return true;}}registerProcessor("pcm-sender",P);`],
-        { type: "application/javascript" }
-      );
-      const workletUrl = URL.createObjectURL(workletBlob);
-      await audioCtx.audioWorklet.addModule(workletUrl);
-      URL.revokeObjectURL(workletUrl);
+      // Downsample from native rate (e.g. 48000) to 16000 for Transcribe
+      const downsampleRatio = nativeSampleRate / 16000;
 
-      const workletNode = new AudioWorkletNode(audioCtx, "pcm-sender");
-      source.connect(workletNode);
+      function downsample(input: Float32Array): Float32Array {
+        if (downsampleRatio <= 1) return input;
+        const outputLength = Math.floor(input.length / downsampleRatio);
+        const output = new Float32Array(outputLength);
+        for (let i = 0; i < outputLength; i++) {
+          output[i] = input[Math.floor(i * downsampleRatio)];
+        }
+        return output;
+      }
 
-      // 4. Stream PCM16 audio once WebSocket is open
-      ws.onopen = () => {
-        workletNode.port.onmessage = (e: MessageEvent<ArrayBuffer>) => {
-          if (ws.readyState !== WebSocket.OPEN) return;
-          const pcm = floatToPcm16(new Float32Array(e.data));
-          ws.send(encodeAudioEvent(pcm));
-        };
+      const bufferSize = 4096;
+      const scriptNode = audioCtx.createScriptProcessor(bufferSize, 1, 1);
+      let audioChunkCount = 0;
+
+      scriptNode.onaudioprocess = (event: AudioProcessingEvent) => {
+        if (ws.readyState !== WebSocket.OPEN) return;
+        const input = event.inputBuffer.getChannelData(0);
+        // Debug: log first few chunks
+        if (audioChunkCount < 5) {
+          const maxVal = input.reduce((max, v) => Math.max(max, Math.abs(v)), 0);
+          console.log(`[captions] chunk #${audioChunkCount} amplitude: ${maxVal.toFixed(4)}, samples: ${input.length}`);
+          audioChunkCount++;
+        }
+        const downsampled = downsample(input);
+        const pcm = floatToPcm16(downsampled);
+        ws.send(encodeAudioEvent(pcm));
       };
 
-      // 5. Receive transcript events and update caption state
+      source.connect(scriptNode);
+      scriptNode.connect(audioCtx.destination);
+      console.log("[captions] ScriptProcessor connected, waiting for audio data...");
+
+      // 4. ScriptProcessor already streams audio via onaudioprocess above.
+      //    The ws.readyState check inside onaudioprocess ensures we only
+      //    send after the WebSocket is open — no separate onopen needed.
+      ws.onopen = () => {
+        console.log("[captions] WebSocket to Transcribe opened");
+      };
+
+      // 5. Receive transcript events, update local state, and broadcast to client
+      let msgCount = 0;
       ws.onmessage = (e) => {
+        if (msgCount < 5) {
+          console.log(`[captions] WS message #${msgCount}, type: ${e.data instanceof ArrayBuffer ? 'ArrayBuffer' : typeof e.data}, size: ${e.data instanceof ArrayBuffer ? e.data.byteLength : (e.data as string).length}`);
+          msgCount++;
+        }
         const chunk = decodeTranscriptEvent(e.data as ArrayBuffer);
+        if (msgCount < 8) {
+          console.log(`[captions] decoded chunk:`, chunk);
+        }
         if (!chunk || !chunk.text) return;
 
         setCaptionText(chunk.text);
         setCaptionIsPartial(chunk.isPartial);
+        setCaptionSpeaker(divinerName); // Transcription captures diviner's mic
+
+        // Broadcast to client so they see the same captions (with speaker name)
+        broadcastCaption({ type: "text", text: chunk.text, isPartial: chunk.isPartial, speaker: divinerName });
 
         // Auto-clear caption 4 s after a final (non-partial) result
         if (!chunk.isPartial) {
           if (captionClearTimerRef.current) clearTimeout(captionClearTimerRef.current);
-          captionClearTimerRef.current = setTimeout(() => setCaptionText(""), 4000);
+          captionClearTimerRef.current = setTimeout(() => {
+            setCaptionText("");
+            setCaptionSpeaker("");
+            broadcastCaption({ type: "text", text: "", isPartial: false });
+          }, 4000);
         }
       };
 
-      ws.onerror = () => {
+      ws.onerror = (err) => {
+        console.error("[captions] WebSocket error:", err);
         toast.error("Captions connection error. Please try again.");
         setIsCaptionsEnabled(false);
+        broadcastCaption({ type: "toggle", enabled: false });
       };
 
       // 6. Auto-reconnect when the 5-min pre-signed URL expires
@@ -598,11 +726,13 @@ export function ChimeSessionRoom({
       };
 
       setIsCaptionsEnabled(true);
+      // Notify client to show captions
+      broadcastCaption({ type: "toggle", enabled: true });
     } catch (err) {
       console.error("Captions start failed:", err);
       toast.error("Could not start captions. Check microphone permissions.");
     }
-  }, [isCaptionsEnabled]);
+  }, [isCaptionsEnabled, broadcastCaption]);
 
   const handleEndSession = useCallback(async () => {
     setSessionEnded(true);
@@ -681,64 +811,109 @@ export function ChimeSessionRoom({
     }
   };
 
+  // ── Save session notes to DB ──────────────────────────────────────────
+  const handleSaveNotes = useCallback(async () => {
+    if (!sessionNotes.trim() && !notesSaved) return; // nothing to save
+    setNotesSaving(true);
+    setNotesSaved(false);
+    try {
+      const res = await fetch("/api/bookings/session-notes", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bookingId, sessionNotes, role, clientToken }),
+      });
+      if (res.ok) {
+        setNotesSaved(true);
+        // Reset the "saved" indicator after 3s
+        setTimeout(() => setNotesSaved(false), 3000);
+      } else {
+        const data = await res.json().catch(() => ({}));
+        toast.error((data as { error?: string }).error ?? "Failed to save notes");
+      }
+    } catch {
+      toast.error("Failed to save notes");
+    } finally {
+      setNotesSaving(false);
+    }
+  }, [bookingId, sessionNotes, notesSaved, role]);
+
+  // Auto-save notes 3 seconds after the user stops typing
+  const handleNotesChange = useCallback((value: string) => {
+    setSessionNotes(value);
+    setNotesSaved(false);
+    if (notesSaveTimerRef.current) clearTimeout(notesSaveTimerRef.current);
+    notesSaveTimerRef.current = setTimeout(() => {
+      // Trigger save via the latest value (we read from the ref-captured closure)
+      // Since handleSaveNotes reads sessionNotes from state, we schedule it
+      // after the state update has flushed.
+    }, 3000);
+  }, []);
+
+  // Debounced auto-save effect — triggers 3s after last notes edit
+  useEffect(() => {
+    if (!sessionNotes || notesSaving) return;
+    if (notesSaveTimerRef.current) clearTimeout(notesSaveTimerRef.current);
+    notesSaveTimerRef.current = setTimeout(() => {
+      handleSaveNotes();
+    }, 3000);
+    return () => {
+      if (notesSaveTimerRef.current) clearTimeout(notesSaveTimerRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionNotes]);
+
   const formatTime = (min: number, sec: number) =>
     `${min.toString().padStart(2, "0")}:${sec.toString().padStart(2, "0")}`;
 
   // Recording consent screen
   if (!consentGiven) {
     return (
-      <div className="flex min-h-[80vh] items-center justify-center p-4">
-        <Card className="max-w-lg bg-card border-primary/20">
-          <CardHeader className="text-center">
-            <Shield className="mx-auto h-12 w-12 text-primary" />
-            <CardTitle className="mt-4 text-xl gold-text">
+      <div className="flex min-h-[80vh] items-center justify-center bg-zinc-950 p-4">
+        <div className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-900 p-8 shadow-2xl">
+          <div className="text-center">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-b from-primary/20 to-primary/5 ring-1 ring-primary/30">
+              <Shield className="h-8 w-8 text-primary" />
+            </div>
+            <h2 className="mt-5 text-xl font-bold text-zinc-100">
               Session Recording Consent
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4 text-center">
-            <p className="text-muted-foreground">
+            </h2>
+            <p className="mt-3 text-sm leading-relaxed text-zinc-400">
               This session with{" "}
-              <strong className="text-foreground">
+              <strong className="text-zinc-200">
                 {role === "client" ? divinerName : clientName}
               </strong>{" "}
               will be recorded for your benefit. The recording will be
               available for you to rewatch and optionally share.
             </p>
-            <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm">
-              <p className="font-medium text-primary">Session Details</p>
-              <p className="mt-1 text-muted-foreground">
-                {serviceName} &middot; {scheduledDuration} min &middot; $
-                {basePrice.toFixed(2)}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                ${overageRate.toFixed(2)}/min after {scheduledDuration}{" "}
-                minutes
-              </p>
-            </div>
-            <Badge
-              variant="outline"
-              className="bg-primary/10 text-primary border-primary/20"
-            >
-              Powered by AWS Chime
-            </Badge>
-            <Button
-              size="lg"
-              className="w-full bg-primary hover:bg-primary/80 text-primary-foreground"
-              onClick={() => {
-                setConsentGiven(true);
-                // sessionStarted is set after API returns sessionStartedAt
-                // Record join for no-show tracking (fire-and-forget)
-                fetch("/api/chime/participant-joined", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ bookingId, role, clientToken }),
-                }).catch(() => {});
-              }}
-            >
-              <Video className="mr-2 h-4 w-4" />I Consent — Join Session
-            </Button>
-          </CardContent>
-        </Card>
+          </div>
+
+          <div className="mt-6 rounded-xl border border-zinc-700/50 bg-zinc-800/50 p-4 text-center text-sm">
+            <p className="font-semibold text-primary">Session Details</p>
+            <p className="mt-1.5 text-zinc-300">
+              {serviceName} &middot; {scheduledDuration} min &middot; $
+              {basePrice.toFixed(2)}
+            </p>
+            <p className="mt-1 text-xs text-zinc-500">
+              ${overageRate.toFixed(2)}/min after {scheduledDuration}{" "}
+              minutes
+            </p>
+          </div>
+
+          <button
+            className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3.5 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition-all hover:bg-primary/90 hover:shadow-primary/30"
+            onClick={() => {
+              setConsentGiven(true);
+              fetch("/api/chime/participant-joined", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ bookingId, role, clientToken }),
+              }).catch(() => {});
+            }}
+          >
+            <Video className="h-4 w-4" />
+            I Consent — Join Session
+          </button>
+        </div>
       </div>
     );
   }
@@ -746,28 +921,26 @@ export function ChimeSessionRoom({
   // Connection error screen
   if (connectionError) {
     return (
-      <div className="flex min-h-[80vh] items-center justify-center p-4">
-        <Card className="max-w-lg bg-card border-primary/20">
-          <CardHeader className="text-center">
-            <AlertTriangle className="mx-auto h-12 w-12 text-destructive" />
-            <CardTitle className="mt-4 text-xl">
-              Connection Error
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4 text-center">
-            <p className="text-muted-foreground">{connectionError}</p>
-            <Button
-              className="bg-primary hover:bg-primary/80 text-primary-foreground"
-              onClick={() => {
-                setConnectionError(null);
-                initLockRef.current = false;
-                setChimeSdkReady(false);
-              }}
-            >
-              Retry Connection
-            </Button>
-          </CardContent>
-        </Card>
+      <div className="flex min-h-[80vh] items-center justify-center bg-zinc-950 p-4">
+        <div className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-900 p-8 shadow-2xl text-center">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-red-500/10 ring-1 ring-red-500/20">
+            <AlertTriangle className="h-8 w-8 text-red-400" />
+          </div>
+          <h2 className="mt-5 text-xl font-bold text-zinc-100">
+            Connection Error
+          </h2>
+          <p className="mt-3 text-sm text-zinc-400">{connectionError}</p>
+          <button
+            className="mt-6 rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground shadow-lg transition-all hover:bg-primary/90"
+            onClick={() => {
+              setConnectionError(null);
+              initLockRef.current = false;
+              setChimeSdkReady(false);
+            }}
+          >
+            Retry Connection
+          </button>
+        </div>
       </div>
     );
   }
@@ -775,53 +948,63 @@ export function ChimeSessionRoom({
   // Session ended screen
   if (sessionEnded) {
     return (
-      <div className="flex min-h-[80vh] items-center justify-center p-4">
-        <Card className="max-w-lg bg-card border-primary/20">
-          <CardHeader className="text-center">
-            <CheckCircle className="mx-auto h-12 w-12 text-primary" />
-            <CardTitle className="mt-4 text-xl">
-              Session Complete
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4 text-center">
-            <div className="rounded-lg border-border border bg-card p-4">
-              <p className="text-sm text-muted-foreground">Duration</p>
-              <p className="text-2xl font-bold">
-                {formatTime(elapsedMinutes, elapsedSeconds)}
-              </p>
-              {isOvertime && (
-                <p className="text-sm text-amber-400">
-                  +{overtimeMinutes} overtime minutes ($
-                  {(overtimeMinutes * overageRate).toFixed(2)})
-                </p>
-              )}
-              <Separator className="my-3" />
-              <p className="text-sm text-muted-foreground">Total</p>
-              <p className="text-xl font-bold text-primary">
-                ${totalCost.toFixed(2)}
-              </p>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              Your session recording will be emailed to you shortly. You
-              can also access it from your portal.
+      <div className="flex min-h-[80vh] items-center justify-center bg-zinc-950 p-4">
+        <div className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-900 p-8 shadow-2xl text-center">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-b from-primary/20 to-primary/5 ring-1 ring-primary/30">
+            <CheckCircle className="h-8 w-8 text-primary" />
+          </div>
+          <h2 className="mt-5 text-xl font-bold text-zinc-100">
+            Session Complete
+          </h2>
+
+          <div className="mt-6 rounded-xl border border-zinc-700/50 bg-zinc-800/50 p-5">
+            <p className="text-xs uppercase tracking-wider text-zinc-500">Duration</p>
+            <p className="mt-1 text-3xl font-bold text-zinc-100">
+              {formatTime(elapsedMinutes, elapsedSeconds)}
             </p>
-            {role === "client" && (
-              <div className="space-y-2">
-                <Button asChild className="w-full bg-primary hover:bg-primary/80 text-primary-foreground">
-                  <a href="/portal/bookings">View My Bookings</a>
-                </Button>
-                <Button variant="outline" asChild className="w-full">
-                  <a href={`/${username}`}>Book Another Session</a>
-                </Button>
-              </div>
+            {isOvertime && (
+              <p className="mt-1 text-sm text-amber-400">
+                +{overtimeMinutes} overtime minutes ($
+                {(overtimeMinutes * overageRate).toFixed(2)})
+              </p>
             )}
-            {role === "diviner" && (
-              <Button asChild className="w-full bg-primary hover:bg-primary/80 text-primary-foreground">
-                <a href="/dashboard/bookings">Back to Dashboard</a>
-              </Button>
-            )}
-          </CardContent>
-        </Card>
+            <div className="my-4 h-px bg-zinc-700/50" />
+            <p className="text-xs uppercase tracking-wider text-zinc-500">Total</p>
+            <p className="mt-1 text-2xl font-bold text-primary">
+              ${totalCost.toFixed(2)}
+            </p>
+          </div>
+
+          <p className="mt-4 text-sm text-zinc-400">
+            Your session recording will be emailed to you shortly. You
+            can also access it from your portal.
+          </p>
+
+          {role === "client" && (
+            <div className="mt-6 space-y-2.5">
+              <a
+                href="/portal/bookings"
+                className="flex w-full items-center justify-center rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground shadow-lg transition-all hover:bg-primary/90"
+              >
+                View My Bookings
+              </a>
+              <a
+                href={`/${username}`}
+                className="flex w-full items-center justify-center rounded-xl border border-zinc-700 bg-zinc-800 py-3 text-sm font-medium text-zinc-200 transition-all hover:bg-zinc-700"
+              >
+                Book Another Session
+              </a>
+            </div>
+          )}
+          {role === "diviner" && (
+            <a
+              href="/dashboard/bookings"
+              className="mt-6 flex w-full items-center justify-center rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground shadow-lg transition-all hover:bg-primary/90"
+            >
+              Back to Dashboard
+            </a>
+          )}
+        </div>
       </div>
     );
   }
@@ -829,86 +1012,92 @@ export function ChimeSessionRoom({
   // Chat panel content
   const chatPanel = (
     <div className="flex flex-1 flex-col">
-      <div className="border-b border-border p-3">
-        <p className="flex items-center gap-1.5 text-xs font-semibold uppercase text-muted-foreground">
+      <div className="border-b border-zinc-800/60 p-3">
+        <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
           <MessageSquare className="h-3 w-3 text-primary" />
           Chat
         </p>
       </div>
       <div className="flex-1 overflow-y-auto p-3">
         {chatMessages.length === 0 && (
-          <p className="text-center text-xs text-muted-foreground">
+          <p className="py-6 text-center text-xs text-zinc-500">
             Send a message if you need to communicate via text during the
             session.
           </p>
         )}
         {chatMessages.map((msg, i) => (
-          <div key={i} className="mb-2">
+          <div key={i} className="mb-3">
             <p className="text-xs">
-              <span className="font-medium text-primary">{msg.from}</span>
-              <span className="ml-2 text-muted-foreground">{msg.time}</span>
+              <span className="font-semibold text-primary">{msg.from}</span>
+              <span className="ml-2 text-zinc-500">{msg.time}</span>
             </p>
-            <p className="text-xs text-foreground">{msg.text}</p>
+            <p className="mt-0.5 text-xs leading-relaxed text-zinc-300">{msg.text}</p>
           </div>
         ))}
       </div>
-      <div className="flex gap-2 border-t border-border p-3">
+      <div className="flex gap-2 border-t border-zinc-800/60 p-3">
         <input
           type="text"
           value={chatInput}
           onChange={(e) => setChatInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSendChat()}
           placeholder="Type a message..."
-          className="flex-1 rounded-md border border-primary/20 bg-transparent px-3 py-1.5 text-xs outline-none focus:ring-1 focus:ring-primary"
+          className="flex-1 rounded-lg border border-zinc-700/50 bg-zinc-800/50 px-3 py-2 text-xs text-zinc-200 outline-none placeholder:text-zinc-500 focus:border-primary/40 focus:ring-1 focus:ring-primary/20"
         />
-        <Button size="icon" variant="ghost" onClick={handleSendChat}>
-          <Send className="h-3.5 w-3.5" />
-        </Button>
+        <Tip label="Send message" side="top">
+          <button
+            className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/90 text-white transition-colors hover:bg-primary"
+            onClick={handleSendChat}
+          >
+            <Send className="h-3.5 w-3.5" />
+          </button>
+        </Tip>
       </div>
     </div>
   );
 
   // Active session
   return (
-    <div className="relative flex h-[calc(100vh-2rem)] gap-0 overflow-hidden rounded-xl border border-border bg-background">
+    <TooltipProvider delayDuration={300}>
+    <div className="relative flex h-[calc(100vh-2rem)] gap-0 overflow-hidden rounded-xl border border-zinc-800/60 bg-zinc-950">
 
       {/* ── Waiting for diviner overlay (client only) ────────────────────────
           Rendered as an absolute layer so audio/video elements stay mounted
           and Chime bindings stay valid. Disappears the moment the diviner's
           attendee presence event fires — no refresh required.              */}
       {role === "client" && !isDivinerPresent && (
-        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center gap-6 bg-background/97 p-6 text-center backdrop-blur-sm">
+        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center gap-6 bg-zinc-950/98 p-6 text-center backdrop-blur-md">
           {/* Pulsing avatar rings */}
-          <div className="relative mx-auto h-28 w-28">
-            <div className="absolute inset-0 animate-ping rounded-full bg-primary/20" />
+          <div className="relative mx-auto h-32 w-32">
+            <div className="absolute inset-0 animate-ping rounded-full bg-primary/15" />
             <div
-              className="absolute inset-3 animate-ping rounded-full bg-primary/15"
+              className="absolute inset-4 animate-ping rounded-full bg-primary/10"
               style={{ animationDelay: "0.45s" }}
             />
-            <div className="relative flex h-full w-full items-center justify-center rounded-full border border-primary/30 bg-primary/10">
-              <User className="h-10 w-10 text-primary" />
+            <div className="relative flex h-full w-full items-center justify-center rounded-full border-2 border-primary/30 bg-gradient-to-b from-primary/15 to-primary/5">
+              <User className="h-12 w-12 text-primary" />
             </div>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-3">
             <h2 className="text-2xl font-bold gold-text">
               Waiting for {divinerName}
             </h2>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-zinc-400">
               {chimeSdkReady
                 ? "You're connected. The session will start automatically when your diviner joins."
                 : "Connecting to session…"}
             </p>
           </div>
 
-          <div className="rounded-lg border border-primary/20 bg-primary/5 px-6 py-4 text-sm">
-            <p className="font-medium text-primary">{serviceName}</p>
-            <p className="mt-1 text-muted-foreground">
+          <div className="rounded-xl border border-primary/20 bg-primary/5 px-8 py-5 text-sm backdrop-blur-sm">
+            <p className="font-semibold text-primary">{serviceName}</p>
+            <p className="mt-1.5 text-zinc-400">
               {scheduledDuration} min &middot; ${basePrice.toFixed(2)}
             </p>
           </div>
 
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-zinc-500">
             This page updates automatically — no need to refresh.
           </p>
         </div>
@@ -916,73 +1105,66 @@ export function ChimeSessionRoom({
 
       {/* Main video area */}
       <div className="flex flex-1 flex-col">
-        {/* Top bar */}
-        <div className="flex items-center justify-between border-b border-border bg-background px-2 py-2 md:px-4">
-          <div className="flex items-center gap-2 md:gap-3">
-            <Badge className="animate-pulse gap-1 bg-primary text-primary-foreground hover:bg-primary">
-              <span className="h-2 w-2 rounded-full bg-primary-foreground" />
-              REC
-            </Badge>
-            <span className="hidden text-sm font-medium sm:inline">
+        {/* Top bar — minimal, dark, with key info only */}
+        <div className="flex items-center justify-between bg-zinc-900/80 px-3 py-2 md:px-5">
+          <div className="flex items-center gap-2.5 md:gap-3">
+            {/* REC indicator */}
+            <div className="flex items-center gap-1.5 rounded-full bg-red-500/15 px-2.5 py-1">
+              <span className="h-2 w-2 animate-pulse rounded-full bg-red-500" />
+              <span className="text-[11px] font-semibold tracking-wide text-red-400">REC</span>
+            </div>
+            <span className="hidden text-sm font-medium text-zinc-200 sm:inline">
               {serviceName}
             </span>
-            <span className="hidden items-center gap-1.5 text-sm text-muted-foreground md:inline-flex">
+            <span className="hidden text-sm text-zinc-500 md:inline">
               with {remoteName}
-              {isRemotePresent ? (
-                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-medium text-emerald-400">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                  Joined
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1 rounded-full bg-zinc-500/15 px-1.5 py-0.5 text-[10px] font-medium text-zinc-400">
-                  <span className="h-1.5 w-1.5 rounded-full bg-zinc-400" />
-                  Not joined
-                </span>
-              )}
             </span>
-            <Badge
-              variant="outline"
-              className="bg-primary/10 text-primary border-primary/20 text-xs"
-            >
-              Chime
-            </Badge>
-            <Badge
-              variant="outline"
-              className="gap-1 border-primary/20 text-xs"
-            >
+            {isRemotePresent ? (
+              <span className="hidden items-center gap-1 md:inline-flex">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                <span className="text-[11px] text-emerald-400">Joined</span>
+              </span>
+            ) : (
+              <span className="hidden items-center gap-1 md:inline-flex">
+                <span className="h-1.5 w-1.5 rounded-full bg-zinc-500" />
+                <span className="text-[11px] text-zinc-500">Waiting</span>
+              </span>
+            )}
+            <span className="hidden items-center gap-1 rounded-full bg-zinc-800 px-2 py-0.5 text-[11px] text-zinc-400 md:inline-flex">
               <User className="h-3 w-3" />
               {participants.length}
-            </Badge>
+            </span>
           </div>
 
-          {/* Timer */}
+          {/* Timer — centered feel */}
           <div
-            className={`flex items-center gap-1.5 rounded-full px-2 py-1 text-xs font-mono font-bold md:gap-2 md:px-3 md:text-sm ${
+            className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-mono font-bold md:gap-2 md:px-4 md:text-sm ${
               isOvertime
-                ? "bg-amber-500/20 text-amber-400"
-                : "bg-primary/10 text-primary"
+                ? "bg-amber-500/15 text-amber-400 ring-1 ring-amber-500/30"
+                : "bg-zinc-800 text-zinc-200"
             }`}
           >
             <Clock className="h-3 w-3 md:h-3.5 md:w-3.5" />
             {formatTime(elapsedMinutes, elapsedSeconds)}
-            <span className="hidden text-xs font-normal md:inline">
+            <span className="hidden text-[11px] font-normal text-zinc-500 md:inline">
               / {scheduledDuration}:00
             </span>
           </div>
 
           <div className="flex items-center gap-1 md:gap-2">
             {!isMobile && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setShowSidebar(!showSidebar)}
-              >
-                {showSidebar ? (
-                  <Minimize2 className="h-4 w-4" />
-                ) : (
-                  <Maximize2 className="h-4 w-4" />
-                )}
-              </Button>
+              <Tip label={showSidebar ? "Hide sidebar" : "Show sidebar"} side="bottom">
+                <button
+                  className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-zinc-200"
+                  onClick={() => setShowSidebar(!showSidebar)}
+                >
+                  {showSidebar ? (
+                    <Minimize2 className="h-4 w-4" />
+                  ) : (
+                    <Maximize2 className="h-4 w-4" />
+                  )}
+                </button>
+              </Tip>
             )}
           </div>
         </div>
@@ -996,15 +1178,15 @@ export function ChimeSessionRoom({
           {!chimeSdkReady && (
             <div className="absolute inset-0 z-20 flex items-center justify-center bg-zinc-950">
               <div className="text-center">
-                <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                <p className="mt-3 text-sm text-muted-foreground">Connecting…</p>
+                <div className="mx-auto h-10 w-10 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                <p className="mt-4 text-sm text-zinc-400">Connecting to session…</p>
               </div>
             </div>
           )}
 
           {/* Overtime badge */}
           {isOvertime && (
-            <div className="absolute left-3 top-3 z-10 flex items-center gap-1.5 rounded-full bg-amber-500/90 px-3 py-1.5 text-xs font-semibold text-black shadow-lg">
+            <div className="absolute left-4 top-4 z-10 flex items-center gap-2 rounded-full bg-amber-500/90 px-4 py-2 text-xs font-semibold text-black shadow-lg backdrop-blur-sm">
               <AlertTriangle className="h-3.5 w-3.5" />
               +{overtimeMinutes} min overtime (${(overtimeMinutes * overageRate).toFixed(2)}/min)
             </div>
@@ -1032,32 +1214,68 @@ export function ChimeSessionRoom({
                 }
               };
 
+            // Helper: "John Doe" → "JD"
+            const getInitials = (name: string) =>
+              name
+                .split(" ")
+                .map((w) => w[0] ?? "")
+                .join("")
+                .toUpperCase()
+                .slice(0, 2) || "??";
+
+            const myName = role === "diviner" ? divinerName : clientName;
+
+            /** Name label pill — overlaid on video tiles */
+            const nameLabel = (name: string, isYou = false, position: "bottom-left" | "bottom-center" = "bottom-left") => (
+              <div className={`absolute z-[2] ${
+                position === "bottom-center"
+                  ? "bottom-4 left-1/2 -translate-x-1/2"
+                  : "bottom-3 left-3"
+              }`}>
+                <div className="flex items-center gap-1.5 rounded-full bg-black/60 px-3 py-1.5 backdrop-blur-sm">
+                  <span className="text-xs font-medium text-white">{isYou ? "You" : name}</span>
+                </div>
+              </div>
+            );
+
+            /** Avatar circle for camera-off states */
+            const avatarCircle = (name: string, size: "sm" | "md" | "lg" = "md") => {
+              const sizes = {
+                sm: "h-10 w-10 text-sm",
+                md: "h-20 w-20 text-2xl",
+                lg: "h-28 w-28 text-4xl",
+              };
+              return (
+                <div className={`flex items-center justify-center rounded-full bg-gradient-to-b from-zinc-700 to-zinc-800 ${sizes[size]}`}>
+                  <span className="font-bold text-zinc-300">
+                    {getInitials(name)}
+                  </span>
+                </div>
+              );
+            };
+
             /* ── PRESENTATION MODE: screen share active ─────────────────── */
             if (contentTile) {
-              // Use our own isScreenSharing state — NOT contentTile.isLocal.
-              // Chime SDK sets localTile:false on content share tiles (they're treated
-              // as a separate "#content" attendee), so contentTile.isLocal is always
-              // false and cannot be used to distinguish sharer from viewer.
-              // isScreenSharing is set by our own addContentShareObserver callbacks,
-              // so it is always accurate: true only for the person who started the share.
               return (
                 <div className="absolute inset-0 flex">
                   {/* Screen share — main panel */}
                   <div className="flex min-w-0 flex-1 items-center justify-center bg-black">
                     {isScreenSharing ? (
-                      <div className="flex flex-col items-center gap-4 text-center">
-                        <div className="flex h-20 w-20 items-center justify-center rounded-full border border-primary/30 bg-primary/10">
+                      <div className="flex flex-col items-center gap-5 text-center">
+                        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-b from-primary/20 to-primary/5 ring-1 ring-primary/30">
                           <Monitor className="h-9 w-9 text-primary" />
                         </div>
-                        <p className="text-base font-semibold text-white">
-                          You are presenting your screen
-                        </p>
-                        <p className="text-sm text-zinc-400">
-                          Others can see your screen. Stop sharing to return to the meeting view.
-                        </p>
+                        <div>
+                          <p className="text-base font-semibold text-white">
+                            You are presenting your screen
+                          </p>
+                          <p className="mt-1 text-sm text-zinc-400">
+                            Others can see your screen.
+                          </p>
+                        </div>
                         <button
                           onClick={handleToggleScreenShare}
-                          className="mt-2 rounded-lg border border-destructive/50 bg-destructive/20 px-4 py-2 text-sm font-medium text-destructive-foreground hover:bg-destructive/30 transition-colors"
+                          className="rounded-full bg-red-500/90 px-6 py-2.5 text-sm font-medium text-white shadow-lg transition-all hover:bg-red-500 hover:shadow-red-500/25"
                         >
                           Stop Sharing
                         </button>
@@ -1073,11 +1291,11 @@ export function ChimeSessionRoom({
                   </div>
 
                   {/* Camera strip — right panel */}
-                  <div className="flex w-44 flex-shrink-0 flex-col gap-1 overflow-y-auto bg-zinc-900 p-1">
+                  <div className="flex w-48 flex-shrink-0 flex-col gap-2 overflow-y-auto bg-zinc-900/50 p-2">
                     {remoteTiles.map((tile) => (
                       <div
                         key={tile.tileId}
-                        className="relative overflow-hidden rounded-lg bg-zinc-800"
+                        className="relative overflow-hidden rounded-xl bg-zinc-800"
                         style={{ aspectRatio: "16/9" }}
                       >
                         <video
@@ -1086,14 +1304,12 @@ export function ChimeSessionRoom({
                           playsInline
                           className="h-full w-full object-cover"
                         />
-                        <span className="absolute bottom-1 left-1 rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-medium text-white">
-                          {remoteName}
-                        </span>
+                        {nameLabel(remoteName)}
                       </div>
                     ))}
                     {localTile && (
                       <div
-                        className="relative overflow-hidden rounded-lg bg-zinc-800"
+                        className="relative overflow-hidden rounded-xl bg-zinc-800"
                         style={{ aspectRatio: "16/9" }}
                       >
                         <video
@@ -1101,47 +1317,36 @@ export function ChimeSessionRoom({
                           autoPlay
                           playsInline
                           className="h-full w-full object-cover"
+                          style={{ transform: "scaleX(-1)" }}
                         />
-                        <span className="absolute bottom-1 left-1 rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-medium text-white">
-                          You
-                        </span>
+                        {nameLabel(myName, true)}
                       </div>
                     )}
-                    {/* Remote camera off — initials avatar in strip (only when they've joined) */}
+                    {/* Remote camera off in strip */}
                     {remoteTiles.length === 0 && isRemotePresent && (
                       <div
-                        className="flex flex-col items-center justify-center gap-1 rounded-lg bg-zinc-800"
+                        className="flex flex-col items-center justify-center gap-2 rounded-xl bg-zinc-800"
                         style={{ aspectRatio: "16/9" }}
                       >
-                        <div className="flex h-8 w-8 items-center justify-center rounded-full border border-primary/30 bg-primary/15">
-                          <span className="text-xs font-bold text-primary">
-                            {remoteName.split(" ").map((w) => w[0] ?? "").join("").toUpperCase().slice(0, 2) || "??"}
-                          </span>
-                        </div>
-                        <span className="text-[9px] text-zinc-400">{remoteName}</span>
+                        {avatarCircle(remoteName, "sm")}
+                        <span className="text-[10px] text-zinc-400">{remoteName}</span>
                       </div>
                     )}
-                    {/* Remote not yet connected — waiting placeholder in strip */}
                     {remoteTiles.length === 0 && !isRemotePresent && (
                       <div
-                        className="flex flex-col items-center justify-center gap-1 rounded-lg bg-zinc-800/50"
+                        className="flex flex-col items-center justify-center gap-1 rounded-xl bg-zinc-800/40"
                         style={{ aspectRatio: "16/9" }}
                       >
-                        <span className="text-[9px] text-zinc-500">Waiting for {remoteName}…</span>
+                        <span className="text-[10px] text-zinc-500">Waiting for {remoteName}…</span>
                       </div>
                     )}
-                    {/* Self camera off — initials avatar in strip */}
                     {!localTile && (
                       <div
-                        className="flex flex-col items-center justify-center gap-1 rounded-lg bg-zinc-800"
+                        className="flex flex-col items-center justify-center gap-2 rounded-xl bg-zinc-800"
                         style={{ aspectRatio: "16/9" }}
                       >
-                        <div className="flex h-8 w-8 items-center justify-center rounded-full border border-primary/30 bg-primary/15">
-                          <span className="text-xs font-bold text-primary">
-                            {(role === "diviner" ? divinerName : clientName).split(" ").map((w) => w[0] ?? "").join("").toUpperCase().slice(0, 2) || "??"}
-                          </span>
-                        </div>
-                        <span className="text-[9px] text-zinc-400">You</span>
+                        {avatarCircle(myName, "sm")}
+                        <span className="text-[10px] text-zinc-400">You</span>
                       </div>
                     )}
                   </div>
@@ -1151,69 +1356,81 @@ export function ChimeSessionRoom({
 
             /* ── GALLERY MODE: no screen share ──────────────────────────── */
 
-            // Helper: "John Doe" → "JD", "Client" → "CL"
-            const getInitials = (name: string) =>
-              name
-                .split(" ")
-                .map((w) => w[0] ?? "")
-                .join("")
-                .toUpperCase()
-                .slice(0, 2) || "??";
-
-            const myName = role === "diviner" ? divinerName : clientName;
-
-            // ── BOTH CAMERAS OFF — equal grid (Google Meet / Teams style) ──
-            // When nobody has their camera on, show two equal tiles side by side.
-            // Neither person should dominate the view — it's a symmetric state.
-            // If the remote participant hasn't joined yet, show a waiting state
-            // instead of a "Camera off" avatar for them.
+            // ── BOTH CAMERAS OFF — equal grid ──────────────────────────
             if (remoteTiles.length === 0 && !localTile) {
               return (
-                <div className="absolute inset-0 flex items-center justify-center gap-4 bg-zinc-950 p-6">
-                  {/* Remote tile — waiting or camera off */}
-                  <div className="flex flex-1 flex-col items-center justify-center gap-3 rounded-2xl border border-zinc-700/50 bg-zinc-900 py-10">
+                <div className="absolute inset-0 flex items-center justify-center gap-3 bg-zinc-950 p-4 md:gap-4 md:p-6">
+                  {/* Remote tile */}
+                  <div className="flex h-full flex-1 flex-col items-center justify-center gap-4 rounded-2xl bg-zinc-900/80">
                     {isRemotePresent ? (
                       <>
-                        <div className="flex h-20 w-20 items-center justify-center rounded-full border-2 border-primary/30 bg-primary/10">
-                          <span className="text-3xl font-bold text-primary">
-                            {getInitials(remoteName)}
-                          </span>
+                        {avatarCircle(remoteName, "lg")}
+                        <div className="text-center">
+                          <p className="text-sm font-semibold text-zinc-200">{remoteName}</p>
+                          <p className="mt-1 text-xs text-zinc-500">Camera off</p>
                         </div>
-                        <p className="text-sm font-semibold text-zinc-200">{remoteName}</p>
-                        <p className="text-xs text-zinc-500">Camera off</p>
                       </>
                     ) : (
                       <>
-                        <div className="flex h-20 w-20 items-center justify-center rounded-full border-2 border-zinc-700/50 bg-zinc-800">
-                          <span className="text-3xl font-bold text-zinc-500">…</span>
+                        <div className="flex h-28 w-28 items-center justify-center rounded-full bg-zinc-800 ring-1 ring-zinc-700/50">
+                          <User className="h-10 w-10 text-zinc-500" />
                         </div>
-                        <p className="text-sm font-semibold text-zinc-400">Waiting for {remoteName}</p>
-                        <p className="text-xs text-zinc-600">Not yet in session</p>
+                        <div className="text-center">
+                          <p className="text-sm font-semibold text-zinc-400">Waiting for {remoteName}</p>
+                          <p className="mt-1 text-xs text-zinc-600">Not yet in session</p>
+                        </div>
                       </>
                     )}
                   </div>
-                  {/* Self avatar tile */}
-                  <div className="flex flex-1 flex-col items-center justify-center gap-3 rounded-2xl border border-zinc-700/50 bg-zinc-900 py-10">
-                    <div className="flex h-20 w-20 items-center justify-center rounded-full border-2 border-primary/30 bg-primary/10">
-                      <span className="text-3xl font-bold text-primary">
-                        {getInitials(myName)}
-                      </span>
+                  {/* Self tile */}
+                  <div className="flex h-full flex-1 flex-col items-center justify-center gap-4 rounded-2xl bg-zinc-900/80">
+                    {avatarCircle(myName, "lg")}
+                    <div className="text-center">
+                      <p className="text-sm font-semibold text-zinc-200">{myName}</p>
+                      <p className="mt-1 text-xs text-zinc-500">You &middot; Camera off</p>
                     </div>
-                    <p className="text-sm font-semibold text-zinc-200">{myName}</p>
-                    <p className="text-xs text-zinc-500">You · Camera off</p>
                   </div>
                 </div>
               );
             }
 
-            // ── ONE OR BOTH CAMERAS ON — spotlight + PIP ──────────────────
-            // Remote always fills the main area (video or avatar).
-            // Self always sits in the bottom-right PIP slot (video or avatar).
+            // ── BOTH CAMERAS ON — 50/50 side-by-side with rounded tiles ─
+            if (remoteTiles.length > 0 && localTile) {
+              return (
+                <div className="absolute inset-0 flex items-stretch gap-2 bg-zinc-950 p-2 md:gap-3 md:p-3">
+                  {/* Remote participant */}
+                  <div className="relative flex-1 overflow-hidden rounded-2xl bg-zinc-900">
+                    {remoteTiles.map((tile) => (
+                      <video
+                        key={tile.tileId}
+                        ref={videoRef(tile.tileId)}
+                        autoPlay
+                        playsInline
+                        className="h-full w-full object-cover"
+                      />
+                    ))}
+                    {nameLabel(remoteName)}
+                  </div>
+                  {/* Self */}
+                  <div className="relative flex-1 overflow-hidden rounded-2xl bg-zinc-900">
+                    <video
+                      ref={videoRef(localTile.tileId, true)}
+                      autoPlay
+                      playsInline
+                      className="h-full w-full object-cover"
+                      style={{ transform: "scaleX(-1)" }}
+                    />
+                    {nameLabel(myName, true)}
+                  </div>
+                </div>
+              );
+            }
+
+            // ── ONE CAMERA ON — spotlight + floating PIP ─────────────────
             return (
               <>
                 {/* ── Remote participant — main area ─────────────────────── */}
                 {remoteTiles.length > 0 ? (
-                  // Camera on — video fills the area
                   remoteTiles.map((tile) => (
                     <video
                       key={tile.tileId}
@@ -1224,80 +1441,68 @@ export function ChimeSessionRoom({
                     />
                   ))
                 ) : isRemotePresent ? (
-                  // Remote joined but camera off — large avatar fills main area
-                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-zinc-900">
-                    <div className="flex h-28 w-28 items-center justify-center rounded-full border-2 border-primary/30 bg-primary/10">
-                      <span className="text-4xl font-bold text-primary">
-                        {getInitials(remoteName)}
-                      </span>
-                    </div>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-5 bg-zinc-900">
+                    {avatarCircle(remoteName, "lg")}
                     <div className="text-center">
                       <p className="text-base font-semibold text-zinc-200">{remoteName}</p>
-                      <p className="mt-0.5 text-xs text-zinc-500">Camera off</p>
+                      <p className="mt-1 text-xs text-zinc-500">Camera off</p>
                     </div>
                   </div>
                 ) : (
-                  // Remote hasn't joined yet — waiting placeholder
-                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-zinc-950">
-                    <div className="flex h-28 w-28 items-center justify-center rounded-full border-2 border-zinc-700/50 bg-zinc-800">
-                      <span className="text-4xl font-bold text-zinc-500">…</span>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-5 bg-zinc-950">
+                    <div className="flex h-28 w-28 items-center justify-center rounded-full bg-zinc-800 ring-1 ring-zinc-700/50">
+                      <User className="h-10 w-10 text-zinc-500" />
                     </div>
                     <div className="text-center">
                       <p className="text-base font-semibold text-zinc-400">Waiting for {remoteName}</p>
-                      <p className="mt-0.5 text-xs text-zinc-600">Not yet in session</p>
+                      <p className="mt-1 text-xs text-zinc-600">Not yet in session</p>
                     </div>
                   </div>
                 )}
 
                 {/* Remote name label (only when video is on) */}
-                {remoteTiles.length > 0 && (
-                  <span className="absolute bottom-20 left-4 z-[2] rounded bg-black/60 px-2 py-1 text-xs font-medium text-white">
-                    {remoteName}
-                  </span>
-                )}
+                {remoteTiles.length > 0 && nameLabel(remoteName)}
 
-                {/* ── Self-view PIP — always bottom-right ─────────────────── */}
+                {/* ── Self-view PIP — floating bottom-right ────────────────── */}
                 <div
-                  className="absolute bottom-4 right-4 z-10 w-40 overflow-hidden rounded-xl border-2 border-primary/50 shadow-2xl"
+                  className="absolute bottom-4 right-4 z-10 w-44 overflow-hidden rounded-xl shadow-2xl ring-1 ring-white/10 transition-transform hover:scale-105"
                   style={{ aspectRatio: "16/9" }}
                 >
                   {localTile ? (
-                    // Camera on — video
                     <video
                       ref={videoRef(localTile.tileId, true)}
                       autoPlay
                       playsInline
                       className="h-full w-full object-cover"
+                      style={{ transform: "scaleX(-1)" }}
                     />
                   ) : (
-                    // Camera off — initials avatar (same tile size)
-                    <div className="flex h-full w-full flex-col items-center justify-center gap-1 bg-zinc-800">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-full border border-primary/30 bg-primary/15">
-                        <span className="text-sm font-bold text-primary">
-                          {getInitials(myName)}
-                        </span>
-                      </div>
-                      <span className="text-[9px] text-zinc-400">You</span>
+                    <div className="flex h-full w-full flex-col items-center justify-center gap-1.5 bg-zinc-800">
+                      {avatarCircle(myName, "sm")}
                     </div>
                   )}
-                  <span className="absolute bottom-1 left-1 rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-medium text-white">
-                    You
-                  </span>
+                  <div className="absolute bottom-1.5 left-1.5">
+                    <div className="flex items-center gap-1 rounded-full bg-black/60 px-2 py-0.5 backdrop-blur-sm">
+                      <span className="text-[10px] font-medium text-white">You</span>
+                    </div>
+                  </div>
                 </div>
               </>
             );
           })()}
 
           {/* ── Live captions overlay ───────────────────────────────────────
-               Sits just above the controls bar, full width, z-30 so it stays
-               on top of video but below any modal/sheet. Partial results are
+               Sits above the controls bar, full width. Partial results are
                shown in a lighter colour; final results are white.           */}
           {isCaptionsEnabled && captionText && (
-            <div className="absolute bottom-2 left-1/2 z-30 w-[90%] max-w-3xl -translate-x-1/2 px-2">
-              <div className="rounded-xl bg-black/75 px-5 py-3 text-center backdrop-blur-sm">
+            <div className="absolute bottom-4 left-1/2 z-30 w-[85%] max-w-2xl -translate-x-1/2">
+              <div className="rounded-2xl bg-black/80 px-6 py-3.5 shadow-2xl backdrop-blur-md">
+                {captionSpeaker && (
+                  <p className="mb-1 text-xs font-semibold text-primary">{captionSpeaker}</p>
+                )}
                 <p
-                  className={`text-sm leading-snug md:text-base ${
-                    captionIsPartial ? "text-zinc-300" : "text-white font-medium"
+                  className={`text-sm leading-relaxed md:text-base ${
+                    captionIsPartial ? "text-zinc-300 italic" : "text-white font-medium"
                   }`}
                 >
                   {captionText}
@@ -1308,9 +1513,9 @@ export function ChimeSessionRoom({
 
           {/* Captions active indicator (when no text yet) */}
           {isCaptionsEnabled && !captionText && (
-            <div className="absolute bottom-2 left-1/2 z-30 -translate-x-1/2">
-              <div className="flex items-center gap-2 rounded-full bg-black/60 px-4 py-1.5 text-xs text-zinc-400 backdrop-blur-sm">
-                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary" />
+            <div className="absolute bottom-4 left-1/2 z-30 -translate-x-1/2">
+              <div className="flex items-center gap-2 rounded-full bg-black/70 px-5 py-2 text-xs text-zinc-300 shadow-lg backdrop-blur-md">
+                <span className="h-2 w-2 animate-pulse rounded-full bg-primary" />
                 Listening for speech…
               </div>
             </div>
@@ -1319,164 +1524,213 @@ export function ChimeSessionRoom({
           {/* Mobile quick-access buttons */}
           {isMobile && (
             <div className="absolute bottom-3 right-3 z-20 flex flex-col gap-2">
-              <Button
-                variant="secondary"
-                size="icon"
-                className="h-10 w-10 rounded-full border border-primary/20 bg-card shadow-lg"
-                onClick={() => setShowSidebar(!showSidebar)}
-              >
-                <FileText className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="secondary"
-                size="icon"
-                className="h-10 w-10 rounded-full border border-primary/20 bg-card shadow-lg"
-                onClick={() => setMobileChatOpen(true)}
-              >
-                <MessageSquare className="h-4 w-4" />
-              </Button>
+              <Tip label="Session info" side="left">
+                <button
+                  className="flex h-11 w-11 items-center justify-center rounded-full bg-zinc-800/90 shadow-lg ring-1 ring-white/10 backdrop-blur-sm transition-colors hover:bg-zinc-700"
+                  onClick={() => setShowSidebar(!showSidebar)}
+                >
+                  <FileText className="h-4 w-4 text-zinc-300" />
+                </button>
+              </Tip>
+              <Tip label="Open chat" side="left">
+                <button
+                  className="flex h-11 w-11 items-center justify-center rounded-full bg-zinc-800/90 shadow-lg ring-1 ring-white/10 backdrop-blur-sm transition-colors hover:bg-zinc-700"
+                  onClick={() => setMobileChatOpen(true)}
+                >
+                  <MessageSquare className="h-4 w-4 text-zinc-300" />
+                </button>
+              </Tip>
             </div>
           )}
         </div>
 
-        {/* Bottom controls */}
-        <div className="flex items-center justify-center gap-2 border-t border-border bg-muted px-3 py-2 md:gap-3 md:px-4 md:py-3">
-          <Button
-            variant={isMuted ? "destructive" : "outline"}
-            size="icon"
-            className={isMuted ? "" : "border-primary/30"}
-            onClick={handleToggleMute}
-          >
-            {isMuted ? (
-              <MicOff className="h-4 w-4" />
-            ) : (
-              <Mic className="h-4 w-4" />
-            )}
-          </Button>
-          <Button
-            variant={isVideoOff ? "destructive" : "outline"}
-            size="icon"
-            className={isVideoOff ? "" : "border-primary/30"}
-            onClick={handleToggleVideo}
-          >
-            {isVideoOff ? (
-              <VideoOff className="h-4 w-4" />
-            ) : (
-              <Video className="h-4 w-4" />
-            )}
-          </Button>
-          <Button
-            variant={isScreenSharing ? "secondary" : "outline"}
-            size="icon"
-            className={isScreenSharing ? "border-primary/60 bg-primary/20" : "border-primary/30"}
-            onClick={handleToggleScreenShare}
-            title={isScreenSharing ? "Stop sharing" : "Share screen"}
-          >
-            <Monitor className="h-4 w-4" />
-          </Button>
-          {/* Live captions (AWS Transcribe) */}
-          <Button
-            variant={isCaptionsEnabled ? "secondary" : "outline"}
-            size="icon"
-            className={isCaptionsEnabled ? "border-primary/60 bg-primary/20" : "border-primary/30"}
-            onClick={handleToggleCaptions}
-            title={isCaptionsEnabled ? "Turn off captions" : "Turn on live captions"}
-          >
-            {isCaptionsEnabled ? (
-              <Captions className="h-4 w-4 text-primary" />
-            ) : (
-              <CaptionsOff className="h-4 w-4" />
-            )}
-          </Button>
-          {role === "diviner" && (
-            <Button
-              variant="destructive"
-              onClick={handleEndSession}
-              className="gap-2"
+        {/* Bottom controls — floating pill style */}
+        <div className="flex items-center justify-center gap-2 bg-zinc-900/80 px-4 py-3 md:gap-3 md:px-6 md:py-4">
+          {/* Mic */}
+          <Tip label={isMuted ? "Unmute microphone" : "Mute microphone"}>
+            <button
+              className={`flex h-11 w-11 items-center justify-center rounded-full transition-all md:h-12 md:w-12 ${
+                isMuted
+                  ? "bg-red-500/90 text-white shadow-lg shadow-red-500/20 hover:bg-red-500"
+                  : "bg-zinc-700/80 text-zinc-200 ring-1 ring-white/10 hover:bg-zinc-600"
+              }`}
+              onClick={handleToggleMute}
             >
-              <PhoneOff className="h-4 w-4" />
-              <span className="hidden sm:inline">End Session</span>
-            </Button>
+              {isMuted ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
+            </button>
+          </Tip>
+          {/* Camera */}
+          <Tip label={isVideoOff ? "Turn on camera" : "Turn off camera"}>
+            <button
+              className={`flex h-11 w-11 items-center justify-center rounded-full transition-all md:h-12 md:w-12 ${
+                isVideoOff
+                  ? "bg-red-500/90 text-white shadow-lg shadow-red-500/20 hover:bg-red-500"
+                  : "bg-zinc-700/80 text-zinc-200 ring-1 ring-white/10 hover:bg-zinc-600"
+              }`}
+              onClick={handleToggleVideo}
+            >
+              {isVideoOff ? <VideoOff className="h-5 w-5" /> : <Video className="h-5 w-5" />}
+            </button>
+          </Tip>
+          {/* Screen share */}
+          <Tip label={isScreenSharing ? "Stop sharing screen" : "Share your screen"}>
+            <button
+              className={`flex h-11 w-11 items-center justify-center rounded-full transition-all md:h-12 md:w-12 ${
+                isScreenSharing
+                  ? "bg-primary/90 text-white shadow-lg shadow-primary/20 hover:bg-primary"
+                  : "bg-zinc-700/80 text-zinc-200 ring-1 ring-white/10 hover:bg-zinc-600"
+              }`}
+              onClick={handleToggleScreenShare}
+            >
+              <Monitor className="h-5 w-5" />
+            </button>
+          </Tip>
+          {/* Live captions (AWS Transcribe) — only diviner can toggle */}
+          {role === "diviner" && (
+            <Tip label={isCaptionsEnabled ? "Turn off live captions" : "Turn on live captions"}>
+              <button
+                className={`flex h-11 w-11 items-center justify-center rounded-full transition-all md:h-12 md:w-12 ${
+                  isCaptionsEnabled
+                    ? "bg-primary/90 text-white shadow-lg shadow-primary/20 hover:bg-primary"
+                    : "bg-zinc-700/80 text-zinc-200 ring-1 ring-white/10 hover:bg-zinc-600"
+                }`}
+                onClick={handleToggleCaptions}
+              >
+                {isCaptionsEnabled ? <Captions className="h-5 w-5" /> : <CaptionsOff className="h-5 w-5" />}
+              </button>
+            </Tip>
+          )}
+
+          {/* Separator before end session */}
+          {role === "diviner" && (
+            <>
+              <div className="mx-1 h-8 w-px bg-zinc-700 md:mx-2" />
+              <Tip label="End this session">
+                <button
+                  className="flex h-11 items-center gap-2 rounded-full bg-red-500/90 px-5 text-sm font-medium text-white shadow-lg shadow-red-500/20 transition-all hover:bg-red-500 md:h-12 md:px-6"
+                  onClick={handleEndSession}
+                >
+                  <PhoneOff className="h-4 w-4" />
+                  <span className="hidden sm:inline">End Session</span>
+                </button>
+              </Tip>
+            </>
           )}
         </div>
       </div>
 
       {/* Desktop Sidebar */}
       {showSidebar && !isMobile && (
-        <div className="flex w-80 flex-col border-l border-border bg-muted">
+        <div className="flex w-80 flex-col border-l border-zinc-800/60 bg-zinc-900/95">
           {/* Billing info */}
-          <div className="border-b border-border p-3">
+          <div className="border-b border-zinc-800/60 p-4">
             <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Base</span>
-              <span>
+              <span className="text-zinc-400">Base</span>
+              <span className="text-zinc-200">
                 ${basePrice.toFixed(2)} / {scheduledDuration} min
               </span>
             </div>
             {isOvertime && (
-              <div className="mt-1 flex items-center justify-between text-sm">
+              <div className="mt-1.5 flex items-center justify-between text-sm">
                 <span className="text-amber-400">Overtime</span>
                 <span className="text-amber-400">
                   +${(overtimeMinutes * overageRate).toFixed(2)}
                 </span>
               </div>
             )}
-            <div className="mt-1 flex items-center justify-between font-medium">
-              <span className="flex items-center gap-1">
-                <DollarSign className="h-3.5 w-3.5 text-primary" />
+            <div className="mt-2 flex items-center justify-between rounded-lg bg-zinc-800/50 px-3 py-2">
+              <span className="flex items-center gap-1.5 text-sm font-medium text-zinc-300">
+                <DollarSign className="h-4 w-4 text-primary" />
                 Running Total
               </span>
-              <span className="text-primary">${totalCost.toFixed(2)}</span>
+              <span className="text-lg font-bold text-primary">${totalCost.toFixed(2)}</span>
             </div>
           </div>
 
           {/* Client info (diviner only) */}
           {role === "diviner" && (
-            <div className="border-b border-border p-3">
-              <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase text-muted-foreground">
+            <div className="border-b border-zinc-800/60 p-4">
+              <p className="mb-3 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
                 <Sparkles className="h-3 w-3 text-primary" />
                 Client Info
               </p>
-              <p className="text-sm font-medium">{clientName}</p>
+              <p className="text-sm font-semibold text-zinc-200">{clientName}</p>
               {clientBirthData?.date && (
-                <p className="mt-1 text-xs text-muted-foreground">
+                <p className="mt-1.5 text-xs text-zinc-400">
                   Born: {clientBirthData.date}
                   {clientBirthData.time && ` at ${clientBirthData.time}`}
                   {clientBirthData.city && ` in ${clientBirthData.city}`}
                 </p>
               )}
               {questionnaire?.focusQuestion && (
-                <div className="mt-2 rounded bg-primary/5 p-2 text-xs">
-                  <p className="font-medium text-primary">
-                    Focus Question:
+                <div className="mt-3 rounded-lg bg-primary/5 p-3 text-xs ring-1 ring-primary/10">
+                  <p className="font-semibold text-primary">
+                    Focus Question
                   </p>
-                  <p className="mt-0.5 text-muted-foreground">
+                  <p className="mt-1 leading-relaxed text-zinc-300">
                     {questionnaire.focusQuestion}
                   </p>
                 </div>
               )}
               {questionnaire?.lifeArea && (
-                <Badge variant="outline" className="mt-1 text-xs border-primary/30 text-primary">
+                <span className="mt-2 inline-block rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
                   {questionnaire.lifeArea}
-                </Badge>
+                </span>
               )}
             </div>
           )}
 
-          {/* Session notes (diviner only) */}
-          {role === "diviner" && (
-            <div className="border-b border-border p-3">
-              <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase text-muted-foreground">
-                <FileText className="h-3 w-3 text-primary" />
-                Session Notes
+          {/* Diviner info (client only) */}
+          {role === "client" && (
+            <div className="border-b border-zinc-800/60 p-4">
+              <p className="mb-3 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+                <Sparkles className="h-3 w-3 text-primary" />
+                Your Diviner
               </p>
-              <Textarea
-                value={sessionNotes}
-                onChange={(e) => setSessionNotes(e.target.value)}
-                placeholder="Private notes about this session..."
-                className="h-24 resize-none text-xs"
-              />
+              <p className="text-sm font-semibold text-zinc-200">{divinerName}</p>
+              <p className="mt-1 text-xs text-zinc-400">{serviceName}</p>
             </div>
           )}
+
+          {/* Session notes — available for both roles */}
+          <div className="border-b border-zinc-800/60 p-4">
+            <div className="mb-3 flex items-center justify-between">
+              <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+                <FileText className="h-3 w-3 text-primary" />
+                {role === "diviner" ? "Session Notes" : "My Notes"}
+              </p>
+              {/* Save status / button */}
+              <div className="flex items-center gap-1.5">
+                {notesSaved && (
+                  <span className="flex items-center gap-1 text-[10px] text-emerald-400">
+                    <Check className="h-3 w-3" /> Saved
+                  </span>
+                )}
+                {notesSaving && (
+                  <span className="flex items-center gap-1 text-[10px] text-zinc-400">
+                    <Loader2 className="h-3 w-3 animate-spin" /> Saving…
+                  </span>
+                )}
+                <Tip label="Save notes now" side="left">
+                  <button
+                    className="flex h-7 items-center gap-1 rounded-md bg-zinc-800 px-2.5 text-[11px] font-medium text-zinc-300 ring-1 ring-zinc-700/50 transition-colors hover:bg-zinc-700 hover:text-zinc-100 disabled:opacity-50"
+                    onClick={handleSaveNotes}
+                    disabled={notesSaving || !sessionNotes.trim()}
+                  >
+                    <Save className="h-3 w-3" />
+                    Save
+                  </button>
+                </Tip>
+              </div>
+            </div>
+            <Textarea
+              value={sessionNotes}
+              onChange={(e) => setSessionNotes(e.target.value)}
+              placeholder={role === "diviner" ? "Private notes about this session..." : "Take notes during your session..."}
+              className="h-24 resize-none border-zinc-700/50 bg-zinc-800/50 text-xs text-zinc-200 placeholder:text-zinc-500 focus:border-primary/40 focus:ring-primary/20"
+            />
+            <p className="mt-1.5 text-[10px] text-zinc-600">Auto-saves after you stop typing</p>
+          </div>
 
           {/* Chat */}
           {chatPanel}
@@ -1486,46 +1740,46 @@ export function ChimeSessionRoom({
       {/* Mobile sidebar sheet */}
       {isMobile && (
         <Sheet open={showSidebar} onOpenChange={setShowSidebar}>
-          <SheetContent side="right" className="w-[85vw] p-0 sm:max-w-sm bg-muted">
-            <SheetHeader className="border-b border-border px-4 py-3">
-              <SheetTitle>Session Info</SheetTitle>
+          <SheetContent side="right" className="w-[85vw] p-0 sm:max-w-sm bg-zinc-900">
+            <SheetHeader className="border-b border-zinc-800/60 px-4 py-3">
+              <SheetTitle className="text-zinc-200">Session Info</SheetTitle>
             </SheetHeader>
             <div className="flex flex-col overflow-y-auto">
-              <div className="border-b border-border p-3">
+              <div className="border-b border-zinc-800/60 p-4">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Base</span>
-                  <span>
+                  <span className="text-zinc-400">Base</span>
+                  <span className="text-zinc-200">
                     ${basePrice.toFixed(2)} / {scheduledDuration} min
                   </span>
                 </div>
                 {isOvertime && (
-                  <div className="mt-1 flex items-center justify-between text-sm">
+                  <div className="mt-1.5 flex items-center justify-between text-sm">
                     <span className="text-amber-400">Overtime</span>
                     <span className="text-amber-400">
                       +${(overtimeMinutes * overageRate).toFixed(2)}
                     </span>
                   </div>
                 )}
-                <div className="mt-1 flex items-center justify-between font-medium">
-                  <span className="flex items-center gap-1">
-                    <DollarSign className="h-3.5 w-3.5 text-primary" />
+                <div className="mt-2 flex items-center justify-between rounded-lg bg-zinc-800/50 px-3 py-2">
+                  <span className="flex items-center gap-1.5 text-sm font-medium text-zinc-300">
+                    <DollarSign className="h-4 w-4 text-primary" />
                     Running Total
                   </span>
-                  <span className="text-primary">
+                  <span className="text-lg font-bold text-primary">
                     ${totalCost.toFixed(2)}
                   </span>
                 </div>
               </div>
 
               {role === "diviner" && (
-                <div className="border-b border-border p-3">
-                  <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase text-muted-foreground">
+                <div className="border-b border-zinc-800/60 p-4">
+                  <p className="mb-3 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
                     <Sparkles className="h-3 w-3 text-primary" />
                     Client Info
                   </p>
-                  <p className="text-sm font-medium">{clientName}</p>
+                  <p className="text-sm font-semibold text-zinc-200">{clientName}</p>
                   {clientBirthData?.date && (
-                    <p className="mt-1 text-xs text-muted-foreground">
+                    <p className="mt-1.5 text-xs text-zinc-400">
                       Born: {clientBirthData.date}
                       {clientBirthData.time &&
                         ` at ${clientBirthData.time}`}
@@ -1534,11 +1788,11 @@ export function ChimeSessionRoom({
                     </p>
                   )}
                   {questionnaire?.focusQuestion && (
-                    <div className="mt-2 rounded bg-primary/5 p-2 text-xs">
-                      <p className="font-medium text-primary">
-                        Focus Question:
+                    <div className="mt-3 rounded-lg bg-primary/5 p-3 text-xs ring-1 ring-primary/10">
+                      <p className="font-semibold text-primary">
+                        Focus Question
                       </p>
-                      <p className="mt-0.5 text-muted-foreground">
+                      <p className="mt-1 leading-relaxed text-zinc-300">
                         {questionnaire.focusQuestion}
                       </p>
                     </div>
@@ -1546,20 +1800,53 @@ export function ChimeSessionRoom({
                 </div>
               )}
 
-              {role === "diviner" && (
-                <div className="p-3">
-                  <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase text-muted-foreground">
-                    <FileText className="h-3 w-3 text-primary" />
-                    Session Notes
+              {role === "client" && (
+                <div className="border-b border-zinc-800/60 p-4">
+                  <p className="mb-3 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+                    <Sparkles className="h-3 w-3 text-primary" />
+                    Your Diviner
                   </p>
-                  <Textarea
-                    value={sessionNotes}
-                    onChange={(e) => setSessionNotes(e.target.value)}
-                    placeholder="Private notes about this session..."
-                    className="h-32 resize-none text-xs"
-                  />
+                  <p className="text-sm font-semibold text-zinc-200">{divinerName}</p>
+                  <p className="mt-1 text-xs text-zinc-400">{serviceName}</p>
                 </div>
               )}
+
+              {/* Notes — both roles */}
+              <div className="p-4">
+                <div className="mb-3 flex items-center justify-between">
+                  <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+                    <FileText className="h-3 w-3 text-primary" />
+                    {role === "diviner" ? "Session Notes" : "My Notes"}
+                  </p>
+                  <div className="flex items-center gap-1.5">
+                    {notesSaved && (
+                      <span className="flex items-center gap-1 text-[10px] text-emerald-400">
+                        <Check className="h-3 w-3" /> Saved
+                      </span>
+                    )}
+                    {notesSaving && (
+                      <span className="flex items-center gap-1 text-[10px] text-zinc-400">
+                        <Loader2 className="h-3 w-3 animate-spin" /> Saving…
+                      </span>
+                    )}
+                    <button
+                      className="flex h-7 items-center gap-1 rounded-md bg-zinc-800 px-2.5 text-[11px] font-medium text-zinc-300 ring-1 ring-zinc-700/50 transition-colors hover:bg-zinc-700 hover:text-zinc-100 disabled:opacity-50"
+                      onClick={handleSaveNotes}
+                      disabled={notesSaving || !sessionNotes.trim()}
+                    >
+                      <Save className="h-3 w-3" />
+                      Save
+                    </button>
+                  </div>
+                </div>
+                <Textarea
+                  value={sessionNotes}
+                  onChange={(e) => setSessionNotes(e.target.value)}
+                  placeholder={role === "diviner" ? "Private notes about this session..." : "Take notes during your session..."}
+                  className="h-32 resize-none border-zinc-700/50 bg-zinc-800/50 text-xs text-zinc-200 placeholder:text-zinc-500 focus:border-primary/40 focus:ring-primary/20"
+                />
+                <p className="mt-1.5 text-[10px] text-zinc-600">Auto-saves after you stop typing</p>
+              </div>
             </div>
           </SheetContent>
         </Sheet>
@@ -1570,15 +1857,16 @@ export function ChimeSessionRoom({
         <Sheet open={mobileChatOpen} onOpenChange={setMobileChatOpen}>
           <SheetContent
             side="bottom"
-            className="h-[60vh] rounded-t-xl p-0 bg-muted"
+            className="h-[60vh] rounded-t-xl p-0 bg-zinc-900"
           >
-            <SheetHeader className="border-b border-border px-4 py-3">
-              <SheetTitle>Chat</SheetTitle>
+            <SheetHeader className="border-b border-zinc-800/60 px-4 py-3">
+              <SheetTitle className="text-zinc-200">Chat</SheetTitle>
             </SheetHeader>
             {chatPanel}
           </SheetContent>
         </Sheet>
       )}
     </div>
+    </TooltipProvider>
   );
 }

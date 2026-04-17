@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
-import { createHmac, createHash } from "crypto";
+import { SignatureV4 } from "@smithy/signature-v4";
+import { Sha256 } from "@aws-crypto/sha256-js";
+import { HttpRequest } from "@smithy/protocol-http";
 
 export const dynamic = "force-dynamic";
 
@@ -7,11 +9,9 @@ export const dynamic = "force-dynamic";
  * Generates a pre-signed WebSocket URL for AWS Transcribe Streaming.
  * The client connects directly to AWS Transcribe — no audio passes through our server.
  * URL is valid for 5 minutes; the client reconnects automatically when it expires.
+ *
+ * Uses the official @smithy/signature-v4 presigner to avoid hand-rolled SigV4 bugs.
  */
-
-function hmac(key: Buffer | string, data: string): Buffer {
-  return createHmac("sha256", key).update(data).digest();
-}
 
 export async function GET() {
   const region =
@@ -23,76 +23,59 @@ export async function GET() {
     process.env.AWS_CHIME_ACCESS_KEY_ID ??
     process.env.AWS_ACCESS_KEY_ID;
 
-  const secretKey =
+  const secretAccessKey =
     process.env.AWS_CHIME_SECRET_ACCESS_KEY ??
     process.env.AWS_SECRET_ACCESS_KEY;
 
-  if (!accessKeyId || !secretKey) {
+  const sessionToken =
+    process.env.AWS_CHIME_SESSION_TOKEN ??
+    process.env.AWS_SESSION_TOKEN ??
+    undefined;
+
+  if (!accessKeyId || !secretAccessKey) {
     return NextResponse.json(
       { error: "AWS credentials not configured" },
       { status: 500 }
     );
   }
 
-  const now = new Date();
-  // YYYYMMDDTHHMMSSZ  (strip dashes, colons, milliseconds)
-  const amzDate = now
-    .toISOString()
-    .replace(/[-:]|\.\d{3}/g, "")
-    .replace("Z", "Z");
-  const dateStamp = amzDate.slice(0, 8);
+  const signer = new SignatureV4({
+    credentials: { accessKeyId, secretAccessKey, ...(sessionToken ? { sessionToken } : {}) },
+    region,
+    service: "transcribe",
+    sha256: Sha256,
+  });
 
-  const host = `transcribestreaming.${region}.amazonaws.com`;
-  const path = "/stream-transcription-websocket";
+  // Build the request to presign
+  const request = new HttpRequest({
+    method: "GET",
+    protocol: "wss:",
+    hostname: `transcribestreaming.${region}.amazonaws.com`,
+    port: 8443,
+    path: "/stream-transcription-websocket",
+    query: {
+      "language-code": "en-US",
+      "media-encoding": "pcm",
+      "sample-rate": "16000",
+      "show-speaker-label": "false",
+    },
+    headers: {
+      host: `transcribestreaming.${region}.amazonaws.com:8443`,
+    },
+  });
 
-  // Build query params — must be sorted alphabetically for signing
-  const params: [string, string][] = [
-    ["X-Amz-Algorithm", "AWS4-HMAC-SHA256"],
-    ["X-Amz-Credential", `${accessKeyId}/${dateStamp}/${region}/transcribe/aws4_request`],
-    ["X-Amz-Date", amzDate],
-    ["X-Amz-Expires", "300"],
-    ["X-Amz-SignedHeaders", "host"],
-    ["language-code", "en-US"],
-    ["media-encoding", "pcm"],
-    ["sample-rate", "16000"],
-    ["show-speaker-label", "false"],
-  ];
-  params.sort(([a], [b]) => a.localeCompare(b));
+  const presigned = await signer.presign(request, {
+    expiresIn: 300, // 5 minutes
+  });
 
-  const queryString = params
-    .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
+  // Reconstruct the full URL from the presigned request
+  const qs = Object.entries(presigned.query ?? {})
+    .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`)
     .join("&");
 
-  // AWS Signature V4
-  const canonicalRequest = [
-    "GET",
-    path,
-    queryString,
-    `host:${host}\n`,
-    "host",
-    // SHA256 of empty payload
-    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-  ].join("\n");
+  const signedUrl = `wss://transcribestreaming.${region}.amazonaws.com:8443${presigned.path}?${qs}`;
 
-  const credentialScope = `${dateStamp}/${region}/transcribe/aws4_request`;
-  const stringToSign = [
-    "AWS4-HMAC-SHA256",
-    amzDate,
-    credentialScope,
-    createHash("sha256").update(canonicalRequest).digest("hex"),
-  ].join("\n");
-
-  const signingKey = hmac(
-    hmac(
-      hmac(hmac("AWS4" + secretKey, dateStamp), region),
-      "transcribe"
-    ),
-    "aws4_request"
-  );
-
-  const signature = hmac(signingKey, stringToSign).toString("hex");
-
-  const signedUrl = `wss://${host}:8443${path}?${queryString}&X-Amz-Signature=${signature}`;
+  console.log("[signed-url] Generated presigned URL (first 200 chars):", signedUrl.slice(0, 200));
 
   return NextResponse.json({ url: signedUrl });
 }

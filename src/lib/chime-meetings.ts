@@ -247,10 +247,14 @@ function extractPipelineId(pipelineIdOrArn: string): string {
   return arnMatch ? arnMatch[1] : pipelineIdOrArn;
 }
 
-/** Resolve AWS account ID from STS for ARN construction */
+/** Resolve AWS account ID from STS for ARN construction (cached after first call) */
+let _cachedAccountId: string | null = null;
 async function getAccountId(): Promise<string> {
-  // Use env var if set (avoids an STS call per request)
+  // Use env var if set (avoids an STS call entirely)
   if (process.env.AWS_ACCOUNT_ID) return process.env.AWS_ACCOUNT_ID;
+
+  // Return cached value on subsequent calls
+  if (_cachedAccountId) return _cachedAccountId;
 
   const { STSClient, GetCallerIdentityCommand } = await import(
     "@aws-sdk/client-sts"
@@ -259,5 +263,6 @@ async function getAccountId(): Promise<string> {
     region: process.env.AWS_CHIME_REGION ?? process.env.AWS_REGION ?? "us-east-1",
   });
   const identity = await sts.send(new GetCallerIdentityCommand({}));
-  return identity.Account ?? "";
+  _cachedAccountId = identity.Account ?? "";
+  return _cachedAccountId;
 }

@@ -46,6 +46,7 @@ interface BookingDetailProps {
     notes: string | null;
     booking_notes?: string | null;
     session_notes?: string | null;
+    client_session_notes?: string | null;
     client_name: string;
     client_email: string;
     client_id?: string | null;
@@ -233,7 +234,7 @@ export function BookingDetailSheet({ booking, linkedOrder }: BookingDetailProps)
       const res = await fetch("/api/bookings/session-notes", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ bookingId: booking.id, sessionNotes }),
+        body: JSON.stringify({ bookingId: booking.id, sessionNotes, role: "diviner" }),
       });
       if (!res.ok) {
         const data = await res.json();
@@ -850,6 +851,20 @@ export function BookingDetailSheet({ booking, linkedOrder }: BookingDetailProps)
             </div>
           )}
 
+
+          {/* ── Client's Session Notes (read-only for diviner) ────────── */}
+          {booking.client_session_notes && (
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1.5">
+                <NotebookPen className="size-3.5" />
+                Client&apos;s Notes
+                <span className="text-xs font-normal text-muted-foreground">(from client)</span>
+              </Label>
+              <div className="rounded-lg bg-muted/30 p-3">
+                <p className="text-sm whitespace-pre-wrap text-muted-foreground">{booking.client_session_notes}</p>
+              </div>
+            </div>
+          )}
 
           {/* ── Note to Client ────────────────────────────────────────── */}
           {booking.status !== "canceled" && (
