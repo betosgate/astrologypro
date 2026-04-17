@@ -2241,64 +2241,495 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
 },
 
       // ---------------Business Relationships--------------//
-      { 
-        name: "horoscope_business_setup", 
-        label: "Business: Professional Synergy", 
-        description: "Strategic partnership analysis.", 
-        group: "Horoscope Toolkit",
-        subModule: "Business Relationships",
-        purpose: "Analyzes two charts for professional effectiveness, financial synergy, and power dynamics.",
-        bullets: [
-          "Wealth-alignment indicators (2nd & 8th houses)",
-          "Authority/Saturn-boundary assessments",
-          "Project-completion velocity scores",
-          "Optimal meeting-time recommendations for the pair"
-        ]
-      },
-      { 
-        name: "horoscope_business_result", 
-        label: "Business: Professional Synergy", 
-        description: "Strategic alliance analytics.", 
-        group: "Horoscope Toolkit",
-        subModule: "Business Relationships",
-        purpose: "Evaluates the productive and financial potential of a partnership, focusing on authority and wealth-building.",
-        bullets: [
-          "Financial house (2nd/8th) interaction metrics",
-          "Authority and discipline (Saturn) compatibility",
-          "Wealth creation velocity and risk assessments",
-          "Best strategic timing for contract signing or launches"
-        ]
-      },
-      { 
-        name: "horoscope_horary_setup", 
-        label: "Horary: Momentary Answers", 
-        description: "The astrology of questions.", 
-        group: "Horoscope Toolkit",
-        subModule: "Predictive Event (Horary)",
-        purpose: "A specialized predictive tool that analyzes the chart of the exact moment a question is asked and understood.",
-        bullets: [
-          "Automatic 'Question Timestamp' capture",
-          "Cusp-of-querent vs Cusp-of-quesited logic",
-          "Strict horary validity checks (Too early/Too late)",
-          "Clear 'Yes/No' indicators with technical rationale"
-        ]
-      },
-      { 
-        name: "horoscope_horary_result", 
-        label: "Horary: Momentary Synthesis", 
-        description: "Decoding the divine answer.", 
-        group: "Horoscope Toolkit",
-        subModule: "Predictive Event (Horary)",
-        purpose: "Provides the technical and AI-derived answer to a specific question based on the astrological moment.",
-        bullets: [
-          "Momentum-based 'Yes/No' decision matrix",
-          "Critical house-ruler aspect tracking",
-          "Traditional dignity and receptivity scores",
-          "Technical rationale for every predictive judgment"
-        ]
-      },
 
-      // Planetary Returns & Oppositions
+      {
+  "name": "horoscope_business_relationships_entry_setup",
+  "label": "Business Relationships: Entry & Generation Setup",
+  "description": "Enter both persons' birth details to generate the full business relationship reading and result screens in sequence.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Business Relationships",
+  "purpose": "This is the first screen of the Business Relationships module. The user must enter date of birth, time of birth, and place of birth for both Person 1 and Person 2. These three birth details are required because the system uses them to calculate two accurate natal charts. After all required fields are filled correctly, the Generate Reading button becomes active. Once the user clicks Generate Reading, the platform starts building the business relationship reading based on both charts and displays the results screen by screen. The generated response depends on DOB, TOB, and POB for both people, because those details affect planetary positions, houses, angles, chart overlays, aspects, elemental balance, timing patterns, and partnership analysis. This setup screen is important because if birth time or birth place is wrong, the business compatibility reading may also change.",
+  "bullets": [
+    "📅 Step 1 — Enter Date of Birth: The user enters the birth date for both persons so the system can calculate the planetary positions for each natal chart.",
+    "🕒 Step 2 — Enter Time of Birth: The user enters the exact birth time for both persons because Ascendant, house cusps, chart angles, and deeper business compatibility calculations depend on correct timing.",
+    "📍 Step 3 — Enter Place of Birth: The user enters the birth place for both persons so the system can use the correct geographic coordinates and timezone for accurate chart creation.",
+    "📝 Step 4 — Area of Inquiry (Optional): The user may enter a focus such as partnership, leadership, communication, trust, strategy, finance, teamwork, or long-term business growth.",
+    "✅ Step 5 — Generate Reading Activation: After both persons' required birth details are completed correctly, the Generate Reading button becomes enabled.",
+    "📊 Result Screen 1 — Compatibility Score / Summary: The system shows a first overview of the business relationship through Sun compatibility, Moon dynamics, and core partnership tone so the user can quickly understand the basic alignment.",
+    "🔗 Result Screen 2 — Synastry Horoscope: The platform compares both natal charts directly and explains how one person's planets interact with the other person's planets in communication, leadership, decision-making, cooperation, and business strategy.",
+    "🌌 Result Screen 3 — Composite Horoscope: The system creates the composite chart to explain the business relationship itself as one shared partnership with its own identity, emotional climate, and practical working structure.",
+    "🪐 Result Screen 4 — Davison Relationship: The platform creates the Davison chart to explain how the business connection lives and develops in real life through shared purpose, growth pattern, and working direction.",
+    "🌍 Result Screen 5 — Elemental Balance: The system compares Fire, Earth, Air, and Water between both charts to explain communication style, practical grounding, ambition, emotional intelligence, and natural working chemistry.",
+    "⏳ Result Screen 6 — Timing, Major Aspects, and Professional Alignment: The reading highlights important aspect connections, active working patterns, strategic collaboration, growth lessons, karmic or developmental themes, and deeper professional alignment between both people."
+  ]
+},
+     {
+  "name": "horoscope_business_relationships_setup",
+  "label": "Business Relationships: Compatibility Chart Setup",
+  "description": "Enter both persons' birth details to generate the business relationship charts and professional compatibility reading.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Business Relationships",
+  "purpose": "This section is used to generate business relationship charts between two people. The system takes date of birth, time of birth, and place of birth for both Person 1 and Person 2, then creates two separate natal charts. After that, it compares both charts to understand how the professional relationship works through leadership style, communication pattern, trust level, decision-making ability, teamwork, responsibility, business strengths, and possible friction points. The chart helps astrologers understand whether the business relationship is naturally cooperative, strategically strong, mentally aligned, financially practical, stable for partnership, or more challenging in professional settings. It is useful because business compatibility depends not only on personality, but also on timing, responsibility, shared goals, communication style, authority balance, and the ability to build success together.",
+  "bullets": [
+    "💼 Two-Person Birth Data Input — The system uses date of birth, time of birth, and place of birth for both people to calculate two accurate natal charts.",
+    "🌌 Individual Chart Creation — Each person's chart is created first so their planets, signs, houses, and chart angles can be studied separately before professional comparison begins.",
+    "🔗 Business Compatibility Comparison — The platform then compares Person 1 and Person 2 charts to identify how their energies interact in work, business, leadership, communication, and long-term partnership.",
+    "📊 What The Chart Shows — It shows professional temperament, decision style, communication flow, teamwork pattern, responsibility level, trust potential, conflict areas, and business growth dynamics between the two people.",
+    "🧠 Leadership And Authority Meaning — Helps astrologers understand who naturally leads, who supports structure, how authority is handled, and whether the partnership works better as equal collaboration or role-based cooperation.",
+    "💬 Communication And Strategy Meaning — Shows how the two people discuss ideas, solve problems, make plans, negotiate, and manage pressure in a professional environment.",
+    "🏆 Strength And Weakness Detection — Reveals where the business relationship flows naturally, where trust is strong, where ambition matches well, and where misunderstandings or power struggles may appear.",
+    "🏠 House Overlay Insight — Shows which life and work areas each person activates in the other, such as money, career, contracts, management, networking, planning, or public reputation.",
+    "⏳ Timing And Growth Potential — Helps explain whether the business relationship is suitable for long-term work, expansion, shared goals, and sustainable results over time.",
+    "📈 Why This Chart Is Used — It is used to understand compatibility in business, partnership strength, communication in work, trust in decisions, leadership balance, and long-term success potential.",
+    "🔍 What We Understand From This Chart — It helps identify business strengths, teamwork quality, leadership compatibility, possible conflict zones, financial practicality, and how both people can grow professionally together.",
+    "🚀 Practical Use — Useful for business partnership readings, co-founder compatibility, manager and employee dynamics, client relationship insight, professional teamwork analysis, and understanding the deeper purpose of a business connection."
+  ]
+},
+   {
+  "name": "horoscope_business_synastry_interpretations",
+  "label": "Business Relationships: Synastry Interpretations",
+  "description": "Professional compatibility cards showing how one person's planets connect with the other person's planets in a business relationship.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Business Relationships",
+  "purpose": "This section is generated after the system receives date of birth, time of birth, and place of birth for both people and creates two natal charts. The platform then compares both charts through synastry, which means it studies how one person's planets, signs, houses, and chart angles interact with the other person's chart. The purpose of this screen is to explain the strongest business compatibility aspects in a clear card format. In this example, aspects such as Sun conjunction Sun and Sun trine Moon show how shared values, leadership style, emotional understanding, and cooperation can support a professional relationship. This screen helps astrologers understand whether two people can work together smoothly, align on goals, communicate well, respect each other's working style, and manage pressure in a productive way.",
+  "bullets": [
+    "💼 How It Is Generated — The system uses date of birth, time of birth, and place of birth for both people to calculate two accurate natal charts, then compares them through synastry to identify important professional compatibility aspects.",
+    "🌌 Why This Screen Is Used — It is used to explain the strongest person-to-person business dynamics, showing how the two people align in goals, communication, work style, emotional understanding, and cooperation.",
+    "☀ Sun Conjunction Sun Block — This block explains a strong alignment in identity, purpose, values, leadership tone, and professional direction between the two people.",
+    "♎ Sun in Libra Conjunction Sun in Libra Meaning — This type of connection often shows shared professional values, fairness, diplomacy, balanced judgment, partnership thinking, and the ability to collaborate with mutual respect.",
+    "🤝 Business Value Of Sun Conjunction Sun — This aspect can help both people work toward common goals, understand each other's priorities, and build a business relationship based on harmony, shared vision, and cooperation.",
+    "☀ Sun Trine Moon Block — This block explains supportive flow between one person's conscious goals and the other person's emotional responses, instincts, and working comfort.",
+    "🌙 Meaning Of Sun Trine Moon In Business — This aspect often shows mutual understanding, emotional intelligence in collaboration, easier trust, supportive communication, and a natural ability to handle business pressure together.",
+    "🧠 Professional Relationship Insight — The cards help astrologers understand whether one person naturally supports the other's leadership, whether emotional reactions fit well with decision-making style, and whether teamwork feels smooth or forced.",
+    "💬 Easy Card Format — Each major synastry connection is shown in a separate readable card so users can understand one business dynamic at a time without confusion.",
+    "⚖ Harmony And Challenge Value — This screen helps reveal where the professional relationship feels naturally aligned, where cooperation comes easily, and where deeper adjustment may still be needed in business settings.",
+    "📖 Show More Purpose — Each business synastry card can include a Show More action so the astrologer or user can open a deeper explanation of that specific professional aspect.",
+    "🔮 What We Understand From This Screen — It helps reveal shared goals, leadership compatibility, emotional support in work, collaboration style, respect level, and the overall strength of the business connection.",
+    "🚀 Practical Use — Useful for co-founder compatibility, business partnership readings, client and advisor matching, manager and employee dynamics, strategic collaboration insight, and understanding the deeper structure of a professional relationship."
+  ]
+},
+
+{
+  "name": "horoscope_business_synastry_interpretations",
+  "label": "Business Relationships: Synastry Interpretations",
+  "description": "Professional compatibility cards showing how one person's planets connect with the other person's planets in a business relationship.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Business Relationships",
+  "purpose": "This section is generated after the system receives date of birth, time of birth, and place of birth for both people and creates two natal charts. The platform then compares both charts through synastry, which means it studies how one person's planets, signs, houses, and chart angles interact with the other person's chart. The purpose of this screen is to explain the strongest business compatibility aspects in a clear card format. In this example, aspects such as Sun conjunction Sun and Sun trine Moon show how shared values, leadership style, emotional understanding, and cooperation can support a professional relationship. This screen helps astrologers understand whether two people can work together smoothly, align on goals, communicate well, respect each other's working style, and manage pressure in a productive way.",
+  "bullets": [
+    "💼 How It Is Generated — The system uses date of birth, time of birth, and place of birth for both people to calculate two accurate natal charts, then compares them through synastry to identify important professional compatibility aspects.",
+    "🌌 Why This Screen Is Used — It is used to explain the strongest person-to-person business dynamics, showing how the two people align in goals, communication, work style, emotional understanding, and cooperation.",
+    "☀ Sun Conjunction Sun Block — This block explains a strong alignment in identity, purpose, values, leadership tone, and professional direction between the two people.",
+    "♎ Sun in Libra Conjunction Sun in Libra Meaning — This type of connection often shows shared professional values, fairness, diplomacy, balanced judgment, partnership thinking, and the ability to collaborate with mutual respect.",
+    "🤝 Business Value Of Sun Conjunction Sun — This aspect can help both people work toward common goals, understand each other's priorities, and build a business relationship based on harmony, shared vision, and cooperation.",
+    "☀ Sun Trine Moon Block — This block explains supportive flow between one person's conscious goals and the other person's emotional responses, instincts, and working comfort.",
+    "🌙 Meaning Of Sun Trine Moon In Business — This aspect often shows mutual understanding, emotional intelligence in collaboration, easier trust, supportive communication, and a natural ability to handle business pressure together.",
+    "🧠 Professional Relationship Insight — The cards help astrologers understand whether one person naturally supports the other's leadership, whether emotional reactions fit well with decision-making style, and whether teamwork feels smooth or forced.",
+    "💬 Easy Card Format — Each major synastry connection is shown in a separate readable card so users can understand one business dynamic at a time without confusion.",
+    "⚖ Harmony And Challenge Value — This screen helps reveal where the professional relationship feels naturally aligned, where cooperation comes easily, and where deeper adjustment may still be needed in business settings.",
+    "📖 Show More Purpose — Each business synastry card can include a Show More action so the astrologer or user can open a deeper explanation of that specific professional aspect.",
+    "🔮 What We Understand From This Screen — It helps reveal shared goals, leadership compatibility, emotional support in work, collaboration style, respect level, and the overall strength of the business connection.",
+    "🚀 Practical Use — Useful for co-founder compatibility, business partnership readings, client and advisor matching, manager and employee dynamics, strategic collaboration insight, and understanding the deeper structure of a professional relationship."
+  ]
+},
+
+{
+  "name": "horoscope_business_composite_interpretations",
+  "label": "Business Relationships: Composite Horoscope",
+  "description": "A shared business chart reading that explains the combined identity, emotional tone, and practical working structure of the partnership through major composite placements.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Business Relationships",
+  "purpose": "This section is generated after the system receives date of birth, time of birth, and place of birth for both people and creates two natal charts. It then builds the composite chart, which represents the business relationship itself as one shared chart instead of reading each person separately. The purpose of this screen is to explain important composite placements, such as the Sun in Libra in the 3rd house and the Moon in Virgo in the 2nd house, so astrologers can understand how the professional relationship works as a combined unit. It shows the partnership's core identity, communication style, emotional working tone, financial attitude, operational discipline, and the practical foundation that supports business success.",
+  "bullets": [
+    "💼 How It Is Generated — The system uses date of birth, time of birth, and place of birth for both people to calculate two natal charts, then combines them into one composite business relationship chart.",
+    "🌌 Why This Chart Is Used — It is used to understand the business partnership itself as one shared entity, not only as a comparison between two separate people.",
+    "☀ Sun Placement Block — This block explains the main identity, purpose, visibility, and strategic direction of the business relationship.",
+    "♎ Sun in Libra Meaning — This placement shows a business partnership built on balance, fairness, diplomacy, cooperation, negotiation, and the ability to work through mutual agreement.",
+    "🏠 Sun in the 3rd House Meaning — This placement highlights communication, planning, discussion, coordination, idea-sharing, messaging, and day-to-day business exchange as central strengths of the partnership.",
+    "☀ Sun in Libra in the 3rd House — This combination suggests a professional relationship that succeeds through clear discussion, thoughtful strategy, mutual listening, and well-balanced communication in business matters.",
+    "🌙 Moon Placement Block — This block explains the emotional and operational tone of the partnership, including how the relationship handles practical needs, security, and internal stability.",
+    "♍ Moon in Virgo Meaning — This placement shows a practical, detail-focused, disciplined, and service-oriented approach, where care is expressed through efficiency, reliability, and attention to quality.",
+    "🏠 Moon in the 2nd House Meaning — This placement highlights money, shared resources, financial security, assets, values, and the need to create a stable material base for the business relationship.",
+    "🌙 Moon in Virgo in the 2nd House — This combination suggests that the partnership feels strongest when finances are handled carefully, responsibilities are organized well, and both people work with consistency, precision, and measurable value.",
+    "📊 What This Screen Shows In Business Terms — It shows whether the partnership is centered on negotiation, communication, resource management, financial stability, disciplined operations, and shared practical values.",
+    "⚖ Partnership Strength Meaning — Strong composite placements like these often indicate that the business relationship can succeed through balanced leadership, organized workflow, and dependable decision-making.",
+    "💬 Show More Purpose — Each placement card includes a Show More option so the astrologer or user can open a deeper explanation of that specific composite business placement.",
+    "🧠 What We Understand From This Screen — It helps reveal how the partnership presents itself, how it thinks and communicates, how it manages resources, and what kind of professional environment the relationship naturally creates.",
+    "🚀 Practical Use — Useful for business partnership readings, co-founder compatibility analysis, professional collaboration insight, management dynamics, financial trust assessment, and understanding the shared purpose of a business connection."
+  ]
+},
+{
+  "name": "horoscope_business_composite_deep_analysis",
+  "label": "Business Relationships: Deep Composite Analysis",
+  "description": "A detailed business partnership reading for one important composite placement, with expanded interpretation and picture representation.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Business Relationships",
+  "purpose": "This screen opens when the user clicks Show More on an important composite business placement. The system first uses date of birth, time of birth, and place of birth for both people to generate two natal charts. It then creates the composite chart, which represents the business relationship itself as one shared professional entity. From that composite chart, one meaningful placement is selected for deeper explanation. In this example, Moon in Virgo in the 2nd house shows a business partnership that is practical, careful, detail-focused, and strongly concerned with financial order, shared resources, and long-term material stability. The purpose of this screen is to help astrologers understand how one specific composite placement shapes the partnership's working style, money handling, value system, emotional discipline, and capacity for building secure results together.",
+  "bullets": [
+    "💼 How It Is Generated — The system uses both persons' date of birth, time of birth, and place of birth to calculate two natal charts, then combines them into one composite business relationship chart and selects one key placement for deeper interpretation.",
+    "🌌 Why This Screen Is Used — It gives a more complete explanation of one important composite placement so the astrologer can understand the deeper structure of the business partnership beyond the short summary card.",
+    "🌙 Main Placement Title — The title at the top shows the exact composite placement being analyzed, such as Moon in Virgo in the 2nd House, so the focus of the reading is immediately clear.",
+    "📖 Main Interpretation Block — This first large text section explains the full business meaning of the selected placement in natural language, showing how the partnership behaves in real operations, value management, and long-term planning.",
+    "🌙 Moon Meaning In Business Composite — The Moon represents the emotional and operational climate of the partnership, including trust, comfort level, instinctive responses, internal stability, and how the business relationship feels from the inside.",
+    "♍ Virgo Meaning In Business — Virgo brings precision, practicality, analysis, method, organization, efficiency, accountability, and careful attention to details that affect performance and reliability.",
+    "🏠 2nd House Meaning In Business — The 2nd house represents money, assets, financial security, shared resources, material value, earnings, ownership, sustainability, and what the partnership is trying to build and protect.",
+    "🌙 Moon in Virgo in the 2nd House Meaning — This combination suggests a business relationship that becomes strongest when finances are organized carefully, responsibilities are handled methodically, and shared resources are managed with discipline, accuracy, and practical awareness.",
+    "📈 Financial And Resource Focus — This placement often shows a partnership that naturally pays close attention to budgeting, value creation, operational stability, asset management, and measurable results.",
+    "🤝 Shared Value System — It can indicate that both people feel more secure when the business is structured well, expectations are clear, and money matters are handled with realism, consistency, and mutual responsibility.",
+    "🖼 Picture Representation Purpose — The image visually breaks the placement into three layers so the astrologer can quickly understand the sign meaning, house meaning, and the combined business result of the placement.",
+    "♍ Left Visual Block Meaning — The left side explains Virgo qualities such as practicality, duty, efficiency, order, reliability, carefulness, service, precision, responsibility, and workmanship.",
+    "🏠 Right Visual Block Meaning — The right side explains 2nd house themes such as property, ownership, pay, capital, holdings, budget, value, assets, surplus, and financial assurance.",
+    "✨ Center Blend Meaning — The center area combines Virgo and 2nd house energy, showing shared themes such as income, resources, stability, savings, security, investments, tangible assets, financial prosperity, and disciplined material growth.",
+    "🧠 What We Understand From This Screen — It helps reveal whether the partnership is naturally suited for careful planning, sustainable financial growth, organized resource management, and building trust through practical results.",
+    "🔮 Why It Matters In Real Business Life — This placement can explain why the partnership may succeed through precision, budgeting, consistency, and shared respect for stability rather than impulsive or risky decision-making.",
+    "🚀 Practical Use — Useful for business partnership readings, co-founder financial compatibility analysis, resource management insight, operational stability assessment, and understanding the long-term material strength of a professional relationship."
+  ]
+},
+{
+  "name": "horoscope_business_davison_relationship",
+  "label": "Business Relationships: Davison Relationship",
+  "description": "A Davison business relationship reading that explains how the partnership functions as a real shared entity through important sign and house placements.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Business Relationships",
+  "purpose": "This section is generated after the system receives date of birth, time of birth, and place of birth for both people and calculates the Davison relationship chart. The Davison chart is created from the midpoint in time and space between both birth charts, and it represents the business relationship itself as a real shared partnership. In this screen, the Sun and Moon are interpreted through their Davison chart placements to show the core identity, direction, emotional climate, creativity, innovation style, and long-term growth pattern of the professional connection. This is useful because it helps astrologers understand not just how two individuals compare, but how the business relationship actually lives, works, develops, and expresses itself in real-world partnership.",
+  "bullets": [
+    "💼 How It Is Generated — The system uses date of birth, time of birth, and place of birth for both people to create two natal charts, then calculates the Davison chart using the midpoint of time and space between them.",
+    "🌌 Why The Davison Chart Is Used — It is used to understand the business partnership as one real shared relationship, rather than only comparing two separate personalities.",
+    "☀ Sun In The Davison Chart Block — This block explains the main identity, visible direction, purpose, leadership tone, and overall mission of the business relationship.",
+    "♎ Sun in Libra Meaning — This placement shows a business partnership built on fairness, diplomacy, negotiation, balanced decision-making, cooperation, and professional mutual respect.",
+    "🏠 Sun in the 9th House Meaning — This placement highlights growth through learning, expansion, long-range vision, higher knowledge, travel, international thinking, philosophy, ethics, and wider market perspective.",
+    "☀ Sun in Libra in the 9th House — This combination suggests a business relationship that grows through shared vision, strategic expansion, broad thinking, ethical partnership, new ideas, and the ability to work together toward larger goals.",
+    "🌙 Moon In The Davison Chart Block — This block explains the emotional and internal working atmosphere of the partnership, including how the relationship feels from the inside and how it handles inspiration, morale, and emotional flow.",
+    "♒ Moon in Aquarius Meaning — This placement shows innovation, independence, unconventional thinking, originality, objectivity, future-minded vision, and emotional detachment that can support bold business ideas.",
+    "🏠 Moon in the 5th House Meaning — This placement highlights creativity, experimentation, innovation, enterprise, self-expression, risk-taking, and the ability to bring fresh ideas into visible projects.",
+    "🌙 Moon in Aquarius in the 5th House — This combination suggests a business partnership that thrives through original ideas, creative ventures, progressive thinking, innovation-driven work, and the freedom to build something unique together.",
+    "🧠 What This Screen Explains In Business Terms — It shows what the partnership is fundamentally built around, how it grows, what inspires it emotionally, and how shared vision turns into real professional direction.",
+    "⚖ Strategic And Emotional Balance — The Sun placement shows the business purpose and external direction, while the Moon placement shows the internal tone, creative spirit, and emotional way the partnership responds to change and opportunity.",
+    "💬 Show More Purpose — Each Davison placement card includes a Show More option so the astrologer or user can open a deeper explanation of that specific business relationship placement.",
+    "🔮 What We Understand From This Screen — It helps reveal whether the business bond is growth-oriented, ethically aligned, intellectually expansive, creative, innovative, future-focused, and capable of building something meaningful together.",
+    "🚀 Practical Use — Useful for business partnership readings, co-founder compatibility analysis, shared vision assessment, strategic collaboration insight, innovation-based partnership reading, and understanding the long-term purpose of a professional relationship."
+  ]
+},
+
+{
+  "name": "horoscope_business_major_aspects",
+  "label": "Business Relationships: Major Aspects & Connections",
+  "description": "A focused business compatibility screen that highlights the strongest planet-to-planet connections between both people and explains how each one affects the professional relationship.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Business Relationships",
+  "purpose": "This section is generated after the system receives date of birth, time of birth, and place of birth for both people and creates two natal charts. The platform then compares both charts through synastry and selects the most important cross-chart aspects for business analysis. These major aspect cards explain how one person's planets interact with the other person's planets in a professional setting, revealing the strongest patterns of communication, strategy, execution, innovation, conflict handling, shared goals, and long-term working dynamics. The purpose of this screen is to help astrologers quickly identify the main strengths and tension points in the business relationship, so users can understand where cooperation comes naturally and where more structure, patience, or role clarity may be needed.",
+  "bullets": [
+    "💼 How It Is Generated — The system uses date of birth, time of birth, and place of birth for both people to calculate two natal charts, then compares them to find the strongest synastry aspects that influence the business relationship.",
+    "🌌 Why This Screen Is Used — It is used to show the most important professional aspect links first, so the astrologer can quickly understand the main business strengths, opportunities, and challenge patterns between both people.",
+    "☀ Sun Conjunction Mercury Block — This block explains a strong connection between leadership identity and communication, showing how ideas, planning, messaging, and strategic thinking work between the two people.",
+    "🧠 Meaning Of Sun Conjunction Mercury In Business — This aspect often shows strong idea exchange, persuasive communication, shared planning ability, mental alignment, faster decision support, and the ability to turn discussion into strategy.",
+    "♎ Libra Influence In This Aspect — With Libra emphasis, this connection often supports diplomacy, balanced thinking, negotiation, collaboration, and reaching agreements through respectful discussion.",
+    "📈 Professional Value Of Sun Conjunction Mercury — This aspect can be very useful for meetings, planning, strategy, branding, advisory work, partnerships, and business situations where communication quality directly affects success.",
+    "♂ Mars Square Uranus Block — This block explains a more intense and unstable connection between action, urgency, disruption, freedom, and sudden change in the business dynamic.",
+    "⚡ Meaning Of Mars Square Uranus In Business — This aspect can show innovation, bold action, creative disruption, and fast problem-solving, but it can also bring impulsive decisions, instability, clashes in pace, or conflict over control and independence.",
+    "🏗 Operational Tension Meaning — This type of aspect may create pressure around leadership roles, work rhythm, responsibility boundaries, implementation style, and how quickly change should happen inside the partnership.",
+    "⚖ Growth Through Challenge — Even though Mars square Uranus can feel difficult, it may also push the partnership toward innovation, faster adaptation, fresh thinking, and more flexible business problem-solving if handled carefully.",
+    "💬 Why The Data Is Shown In Cards — Each major aspect is presented as a separate card so users can understand one business dynamic at a time instead of reading one long mixed explanation.",
+    "📖 Show More Purpose — Each card includes a Show More option so the astrologer or user can open a deeper explanation of that exact business aspect without overloading the main screen.",
+    "🧠 What We Understand From This Screen — It helps reveal where the business relationship is strongest in communication, strategy, cooperation, and shared thinking, and where it may face friction in action, freedom, timing, or structure.",
+    "🚀 Practical Use — Useful for business partnership readings, co-founder compatibility, manager and employee dynamics, strategic collaboration insight, communication assessment, and understanding the main strengths and risks in a professional relationship."
+  ]
+},
+
+{
+  "name": "horoscope_business_compatibility_summary",
+  "label": "Business Relationships: Compatibility Score / Summary",
+  "description": "A quick professional compatibility summary that explains the business connection through core Sun and Moon sign dynamics.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Business Relationships",
+  "purpose": "This section is generated after the system receives date of birth, time of birth, and place of birth for both people and creates two natal charts. It then compares key professional compatibility indicators, especially Sun sign compatibility and Moon sign dynamics, to produce a clear first-level business relationship summary. The purpose of this screen is to help astrologers and users quickly understand how the two people align in leadership style, decision-making values, emotional working rhythm, stress response, and practical cooperation before moving into deeper synastry, composite, or Davison business analysis.",
+  "bullets": [
+    "💼 How It Is Generated — The system uses date of birth, time of birth, and place of birth for both people to calculate two natal charts, then compares major placements that are most important for professional compatibility.",
+    "☀ Sun Sign Compatibility Block — This block explains how both people connect through core identity, leadership style, business values, decision-making approach, and overall partnership direction.",
+    "♎ Sun in Libra with ♎ Sun in Libra Meaning — This combination often shows diplomacy, fairness, balanced judgment, collaboration, and a strong desire to build a business relationship through mutual respect and cooperative planning.",
+    "⚖ Business Strength Of Sun Compatibility — This placement can support negotiation, client handling, partnership management, and shared strategic thinking, but it may also create delays if both people avoid conflict or hesitate in decision-making.",
+    "🌙 Moon Sign Dynamics Block — This block explains the emotional working style of the partnership, including stress response, comfort needs, practical support, and the way both people emotionally handle pressure in business situations.",
+    "♉ Moon in Taurus with ♍ Moon in Virgo Meaning — This combination often shows a grounded, practical, and dependable professional bond where stability, order, reliability, and useful support become important strengths.",
+    "🧠 Emotional Working Value — Taurus Moon can bring steadiness and calm, while Virgo Moon adds detail-awareness and analytical care, making the partnership stronger in operations, consistency, and practical management.",
+    "🔄 Challenge Inside Moon Dynamics — Even with strong practical compatibility, differences may arise because Taurus prefers steady pace and comfort, while Virgo prefers adjustment, refinement, and constant improvement.",
+    "📊 Why This Screen Is Used — It gives a fast but meaningful overview of business compatibility before the user moves into more detailed relationship charts and deeper professional analysis.",
+    "💬 Easy Summary Card Format — The information is shown in separate cards so users can understand leadership compatibility and emotional working dynamics one layer at a time.",
+    "📖 Show More Purpose — Each summary card can include a Show More action so deeper explanation can be opened without making the main screen too heavy.",
+    "🔮 What We Understand From This Screen — It helps reveal whether the business relationship is naturally cooperative, emotionally steady, practically supportive, and strategically aligned, or whether adjustment may be needed in decision-making and stress handling.",
+    "🚀 Practical Use — Useful for business partnership readings, co-founder compatibility, manager and employee analysis, professional collaboration insight, and giving users a simple first understanding of the business connection."
+  ]
+},
+
+{
+  "name": "horoscope_business_elemental_balance",
+  "label": "Business Relationships: Elemental Balance",
+  "description": "A business compatibility screen that explains elemental balance and working interaction style between both people.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Business Relationships",
+  "purpose": "This section is generated after the system receives date of birth, time of birth, and place of birth for both people and creates two natal charts. The platform then studies the elemental distribution and interaction pattern in both charts to understand how the business relationship functions at a natural energy level. The purpose of this screen is to help astrologers understand whether the partnership is more intellectual, practical, strategic, emotional, or action-driven, and how both people naturally respond to pressure, planning, communication, innovation, and execution in business. It is useful because elemental balance often explains why a professional partnership feels mentally aligned, practically strong, highly motivated, emotionally disconnected, or in need of better stability and teamwork.",
+  "bullets": [
+    "💼 How It Is Generated — The system uses date of birth, time of birth, and place of birth for both people to calculate two natal charts, then compares the elemental emphasis across both charts for business compatibility.",
+    "🌍 Why This Screen Is Used — It is used to understand the natural business chemistry of the partnership before going into deeper aspect-based or advanced relationship analysis.",
+    "🔥 Fire Element Meaning — Fire represents drive, ambition, action, confidence, initiative, boldness, risk-taking, enthusiasm, and the energy that pushes a business partnership forward.",
+    "🏔 Earth Element Meaning — Earth represents practicality, stability, discipline, consistency, structure, financial realism, reliability, and the ability to turn plans into tangible business results.",
+    "🌬 Air Element Meaning — Air represents communication, ideas, strategy, planning, intellectual exchange, networking, flexibility, and collaborative thinking in business.",
+    "🌊 Water Element Meaning — Water represents intuition, emotional intelligence, empathy, sensitivity, trust, inner understanding, and the emotional tone of professional interaction.",
+    "🌍 Elemental Balance Block — This block explains the overall balance of elements across both charts and shows the main natural working chemistry of the business relationship.",
+    "🌬 Strong Air Influence Meaning — A strong Air influence often shows a partnership built on communication, idea generation, planning, adaptability, discussion, networking, and intellectual collaboration.",
+    "🌊 Lack Of Water Meaning — A weaker Water presence may suggest difficulty in emotional understanding, empathy, sensitivity, or reading the unspoken emotional tone inside the partnership.",
+    "🔥 Fire Element Block — This block explains how much ambition, energy, passion, courage, and sustained motivation exist between both partners in business.",
+    "🔥 Balanced Fire Meaning — When Fire is present in a balanced way, the partnership may have healthy drive, enthusiasm, and confidence to move goals forward, take initiative, and act with momentum.",
+    "🔥 Fire Imbalance Risk — If Fire is active but not well supported, the relationship may show bursts of motivation followed by stress, impatience, burnout, or uneven energy management.",
+    "🏔 Earth Element Block — This block explains how much groundedness, order, financial realism, resource management, practical follow-through, and operational stability are present in the partnership.",
+    "🏔 Low Earth Meaning — When Earth is underrepresented, the business relationship may have strong ideas but struggle with execution, structure, consistency, budgeting, or long-term material planning.",
+    "⚖ Element Interaction Meaning — This screen also helps show how one person's elemental strengths may complement or challenge the other's, such as Air supporting strategy while Earth supports execution, or Fire pushing action while Water supports trust and emotional balance.",
+    "💬 Show More Purpose — Each elemental section can include a Show More action so the astrologer or user can open a deeper explanation of that specific business energy pattern.",
+    "🧠 What We Understand From This Screen — It helps reveal whether the partnership is mentally aligned, practically strong, emotionally aware, action-driven, or imbalanced in a way that affects business success.",
+    "🔮 Business Meaning In Real Life — This screen can explain why two people work well in planning but struggle in emotional understanding, why motivation is strong but consistency is weak, or why practical grounding must be consciously developed.",
+    "🚀 Practical Use — Useful for business partnership readings, co-founder compatibility, management dynamics, strategy-and-execution balance analysis, financial stability insight, and understanding the deeper energetic structure of a professional relationship."
+  ]
+},
+
+{
+  "name": "horoscope_business_timing_transits",
+  "label": "Business Relationships: Timing & Transits",
+  "description": "A professional relationship timing screen that highlights active business connections, shared momentum, emotional coordination, and communication flow between both charts.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Business Relationships",
+  "purpose": "This section is generated after the system receives date of birth, time of birth, and place of birth for both people and creates two natal charts. The platform then compares the charts and highlights key active business connections that show how the partnership functions in timing, decision-making, emotional coordination, and shared action. In this screen, aspect cards such as Sun conjunction Sun, Moon sextile Moon, and Mars conjunction Mercury explain where the business relationship gains clarity, cooperation, mutual understanding, strategic strength, and practical momentum. The purpose of this screen is to help astrologers understand when the professional connection feels naturally aligned, where teamwork flows easily, and how both people support each other in communication, planning, execution, and business growth.",
+  "bullets": [
+    "💼 How It Is Generated — The system uses date of birth, time of birth, and place of birth for both people to calculate two natal charts, then compares them to identify the strongest active connections that influence the business relationship.",
+    "⏳ Why This Screen Is Used — It is used to show how important professional dynamics become expressed through major aspect links, helping astrologers understand timing, collaboration style, and business flow between both people.",
+    "☀ Sun Conjunction Sun Block — This block explains a strong alignment in identity, values, professional purpose, and long-term vision, showing that both people naturally understand each other's direction and business priorities.",
+    "♎ Sun in Libra Conjunction Sun in Libra Meaning — This connection often shows diplomacy, shared balance, fairness, partnership-minded thinking, and smoother cooperation in negotiations, planning, and professional decision-making.",
+    "🌙 Moon Sextile Moon Block — This block explains emotional compatibility in the working relationship, showing supportive understanding, mutual encouragement, adaptable cooperation, and a healthy emotional exchange under pressure.",
+    "♈ Aries Moon and ♒ Aquarius Moon Sextile Meaning — This pairing can support a forward-thinking business bond where action, innovation, emotional independence, and mutual motivation work together in a productive way.",
+    "♂ Mars Conjunction Mercury Block — This block explains energized communication, active discussion, faster decision-making, strategic debate, initiative, and a business relationship that moves through ideas into action quickly.",
+    "🧠 Meaning Of Mars Conjunction Mercury In Business — This aspect often shows strong problem-solving ability, persuasive communication, quick response, decisive thinking, and the ability to turn conversation into planning and execution.",
+    "⚖ Harmony And Productivity Insight — The cards help reveal where the professional relationship feels aligned, emotionally cooperative, mentally active, and capable of solving business challenges through teamwork.",
+    "📊 What This Screen Shows In Business Terms — It highlights shared leadership rhythm, emotional coordination, communication quality, and active partnership energy that directly affect meetings, planning, strategy, and results.",
+    "💬 Why The Data Is Shown In Cards — Each business timing connection is shown in a separate card so the user can understand one professional dynamic at a time instead of reading one long mixed explanation.",
+    "📖 Show More Purpose — Each card includes a Show More option so the astrologer or user can open a deeper explanation of that specific business aspect without making the main screen too crowded.",
+    "🔮 What We Understand From This Screen — It helps reveal when the business relationship is strongest in cooperation, communication, emotional support, and shared strategic movement, and where the partnership can work most effectively together.",
+    "🚀 Practical Use — Useful for business partnership readings, co-founder compatibility, management dynamics, communication assessment, strategic collaboration insight, and understanding the active working flow of a professional relationship."
+  ]
+},
+
+{
+  "name": "horoscope_business_professional_alignment",
+  "label": "Business Relationships: Professional Alignment & Goals",
+  "description": "A business relationship screen that highlights deeper professional purpose, strategic alignment, healing lessons, and long-term growth patterns between both people.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Business Relationships",
+  "purpose": "This section is generated after the system receives date of birth, time of birth, and place of birth for both people and creates two natal charts. The platform then compares advanced business relationship indicators, especially Chiron, Lunar Nodes, Mercury, Pluto, and strategic asteroid-style themes such as Pallas, to understand how the partnership supports growth, learning, strategy, healing, and professional purpose. The purpose of this screen is to help astrologers understand whether the business relationship is only practical, or whether it also carries deeper development themes such as mutual healing, strategic intelligence, shared destiny, and long-term goal alignment. It is useful because strong professional partnerships are not built only on skills, but also on how two people support each other's growth, solve challenges together, and develop a meaningful shared direction.",
+  "bullets": [
+    "💼 How It Is Generated — The system uses date of birth, time of birth, and place of birth for both people to calculate two natal charts, then compares advanced relationship indicators that affect strategy, growth, shared purpose, and professional evolution.",
+    "🎯 Why This Screen Is Used — It is used to explain the deeper level of a business relationship, especially where the partnership supports healing, long-term development, strategic thinking, and shared professional direction.",
+    "🩹 Chiron And Lunar Nodes Interplay Block — This block explains how Chiron connections and Lunar Node links shape the partnership through healing, learning, vulnerability, karma, and meaningful long-term growth.",
+    "🩹 Chiron Meaning In Business — Chiron represents wounds, growth through difficulty, wisdom gained through challenge, and the ability to turn vulnerable areas into deeper strength and maturity.",
+    "☊ North Node Meaning In Professional Partnership — The North Node represents future growth, direction, destiny, learning, and the qualities the partnership is meant to develop over time.",
+    "☋ South Node Meaning In Professional Partnership — The South Node represents familiarity, past patterns, existing strengths, comfort zones, and lessons the partnership may bring from older experience into the present.",
+    "✨ Chiron And Nodes Meaning In Business — When Chiron interacts strongly with the Lunar Nodes, the partnership may become a major growth relationship where both people help each other face weaknesses, build resilience, and move toward more mature professional purpose.",
+    "🧠 Professional Healing And Growth Value — This kind of connection can show that the relationship teaches empathy, self-awareness, emotional intelligence, and stronger collaboration through real challenges rather than only easy success.",
+    "🛡 Pallas Aspects And Strategic Collaboration Block — This block explains how intelligence, pattern recognition, problem-solving skill, strategic planning, and practical wisdom operate inside the partnership.",
+    "🦉 Pallas Meaning In Business — Pallas is linked with strategy, insight, design thinking, systems understanding, and the ability to solve complex professional problems with clarity and skill.",
+    "📈 Strategic Collaboration Meaning — Strong Pallas-style connections can show that both people think well together, plan effectively, see patterns quickly, and create practical solutions for business growth and challenge management.",
+    "☿ Mercury And Strategic Thinking Value — Mercury-based aspects in this kind of screen help explain communication skill, analysis, negotiation, planning quality, and the speed at which both people can align on ideas and execution.",
+    "⚖ Why These Blocks Matter Together — Chiron and Nodes explain deeper professional growth and karmic learning, while Pallas and strategic links explain how the partnership can actually function intelligently and solve real business problems together.",
+    "💬 Show More Purpose — Each block includes a Show More option so the astrologer or user can open a deeper explanation of that specific professional alignment theme without overloading the main screen.",
+    "🧠 What We Understand From This Screen — It helps reveal whether the partnership supports mutual growth, strategic intelligence, healing through challenge, long-term alignment, and meaningful professional evolution.",
+    "🔮 Business Meaning In Real Life — This screen can explain why a partnership feels deeply important, why the two people learn so much from each other, why strategy feels strong, or why certain professional challenges actually strengthen the shared mission.",
+    "🚀 Practical Use — Useful for business partnership readings, co-founder compatibility, strategic collaboration insight, leadership growth analysis, karmic business connection readings, and understanding the deeper purpose and direction of a professional relationship."
+  ]
+},
+      // -----------Predictive Event (Horary)--------------//
+      {
+  "name": "horoscope_predictive_event_entry_setup",
+  "label": "Predictive Event (Horary): Entry & Generation Setup",
+  "description": "Enter birth details and your question to generate the full predictive event reading and result screens in sequence.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Predictive Event (Horary)",
+  "purpose": "This is the first screen of the Predictive Event (Horary) module. The user must enter date of birth, time of birth, and place of birth. These birth details are required because the system uses them to calculate the natal reference chart accurately. The user must also enter a clear question, because horary-style predictive guidance depends on the subject or event being asked about. After all required fields are filled correctly, the Generate Reading button becomes active. Once the user clicks Generate Reading, the platform starts building the predictive event reading based on the user's DOB, TOB, POB, and question, then displays the results screen by screen. The generated response depends on these details because they affect planetary positions, houses, angles, transit-to-natal contacts, activated life areas, timing recommendations, and the final guidance. This setup screen is important because if birth time, birth place, or the question is wrong or incomplete, the predictive reading may also change.",
+  "bullets": [
+    "📅 Step 1 — Enter Date of Birth: The user enters the birth date so the system can calculate the natal planetary positions.",
+    "🕒 Step 2 — Enter Time of Birth: The user enters the exact birth time because Ascendant, house cusps, chart angles, and timing-sensitive predictive calculations depend on correct timing.",
+    "📍 Step 3 — Enter Place of Birth: The user enters the birth place so the system can use the correct geographic coordinates and timezone for accurate chart creation.",
+    "❓ Step 4 — Enter Your Question: The user enters the specific question or event focus, such as career, relationship, decision timing, opportunity, or another life concern, so the predictive reading has a clear subject.",
+    "✅ Step 5 — Generate Reading Activation: After the required birth details and question are completed correctly, the Generate Reading button becomes enabled.",
+    "📊 Result Screen 1 — Chart View: The system generates the predictive chart view so the user can see the wheel chart, aspect structure, and overall astrological pattern behind the reading.",
+    "📅 Result Screen 2 — Recommendation on Date and Timeline: The platform highlights the most favorable period, top choice date, and other supportive dates for the user's question or goal.",
+    "🔗 Result Screen 3 — Aspect Guidance: The reading shows the most important transit-to-natal aspects so the user can understand which planetary connections are supporting the recommended timing.",
+    "🪐 Result Screen 4 — Planetary Timing Blocks: The platform explains the role of important transiting planets, such as Jupiter, Mars, or Venus, and how each one contributes to the event timing.",
+    "🏠 Result Screen 5 — House Activation: The system shows which natal houses are activated during the recommended period so the user can understand which life areas are most affected.",
+    "🧠 Result Screen 6 — Summary and Recommendations: The reading combines the strongest timing window, key transits, active houses, and practical guidance into a final clear recommendation for action."
+  ]
+},
+    {
+  "name": "horoscope_predictive_event_horary_chart",
+  "label": "Predictive Event (Horary): Chart View",
+  "description": "A horary-style predictive chart generated from the user's birth details to help understand the event-focused reading in a clear visual form.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Predictive Event (Horary)",
+  "purpose": "This screen is shown after the user enters date of birth, time of birth, and place of birth, and the system generates the Predictive Event (Horary) response. The chart view helps the user and astrologer visually understand the planetary structure being used for the event-based reading. It displays the main Western wheel chart and its aspect view so the relationship between planets, signs, houses, and angular patterns can be read more clearly. The purpose of this chart is to make the prediction easier to understand by showing where the important energies are placed, which houses are active, how planets connect with each other, and what patterns may influence the event or question being studied.",
+  "bullets": [
+    "📅 Input-Based Generation — The system uses the user's date of birth, time of birth, and place of birth to calculate the chart that supports the Predictive Event reading.",
+    "🕒 Why Exact Birth Time Matters — Time of birth is important because house cusps, Ascendant, Midheaven, and angle-sensitive placements change with time and affect the predictive reading.",
+    "📍 Why Place of Birth Matters — Place of birth is used for correct coordinates and timezone so the chart is calculated accurately.",
+    "🌌 Chart Creation Process — After the required birth details are entered, the system calculates planetary positions, zodiac signs, houses, and aspect lines, then displays them in wheel-chart format.",
+    "🪐 Left Wheel Chart Meaning — The left chart shows the zodiac wheel with houses, planets, angles, and placements, helping astrologers see where each energy is positioned.",
+    "📐 Right Aspect Chart Meaning — The right chart emphasizes planetary relationships and aspect geometry, making it easier to study supportive, tense, or highly active connections.",
+    "🏠 House Meaning In The Chart — The 12 houses show which life areas are activated in the event reading, such as communication, work, relationships, career, money, or inner concerns.",
+    "♈ Zodiac Sign Meaning — Each sign shows the style or tone through which a planet is expressing itself in the chart.",
+    "🔗 Aspect Line Meaning — The lines inside the chart show how planets are interacting through conjunctions, trines, sextiles, squares, oppositions, and other aspect patterns.",
+    "🎯 What The User Understands From This Chart — The chart helps show which themes are strongest, where the pressure or support is located, and which parts of life or decision-making are most influenced in the predictive reading.",
+    "📊 Why This Chart Is Useful — It gives a visual foundation for the written prediction, so the user can understand that the result is based on actual chart structure and not only on text interpretation.",
+    "🧠 Astrologer-Friendly Use — Astrologers can use this screen to quickly identify dominant houses, active planets, strong aspects, and overall chart emphasis for the event analysis.",
+    "✨ Predictive Reading Support — This chart supports the event forecast by showing the underlying astrological pattern behind the generated response.",
+    "🚀 Practical Use — Useful for event timing insight, question-based analysis, understanding active chart energies, and giving the user a clearer view of how the predictive result is formed."
+  ]
+},
+  {
+  "name": "horoscope_predictive_event_recommendation_timeline",
+  "label": "Predictive Event (Horary): Recommendation on Date and Timeline",
+  "description": "A guided timeline screen that highlights the most supportive dates and periods for taking action based on the generated predictive chart.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Predictive Event (Horary)",
+  "purpose": "This section is generated after the user enters date of birth, time of birth, and place of birth, and the system completes the Predictive Event reading. The platform studies the chart and identifies the most supportive period for the user's question, goal, or planned action. Instead of only giving one prediction, this screen translates the chart into a practical timeline by showing the best dates, other helpful dates, and the reasons those dates are stronger. It helps the user understand when to begin, when to act, and which windows are more favorable for progress, opportunity, communication, networking, or career movement.",
+  "bullets": [
+    "📅 Timeline Window Meaning — This section shows a recommended time range, such as between one month and another, to indicate when the overall energy is more supportive for the user's goal or event.",
+    "⭐ Top Choice Date — The strongest recommended date is highlighted first so the user can quickly identify the most favorable moment for action.",
+    "🗓 Additional Favorable Dates — The screen can also list other supportive dates that are good alternatives if the main recommended day is not possible.",
+    "🔭 How It Is Generated — The system uses the user's date of birth, time of birth, and place of birth to create the predictive chart, then studies planetary timing, supportive aspects, and active chart periods to identify stronger dates.",
+    "🪐 Transit Support Meaning — The recommended dates are chosen because important moving planets form helpful connections to key natal placements, increasing support for the event or decision.",
+    "🏠 Life Area Focus — The dates are explained in relation to the area of life being activated, such as career, communication, leadership, networking, opportunity, or visibility.",
+    "📈 Why One Date Is Better Than Another — The screen explains why a certain date is stronger, for example because it improves confidence, communication, attraction of opportunities, or strategic thinking.",
+    "💬 Easy User Understanding — This screen turns technical astrological timing into a clear practical recommendation so the user does not need to interpret raw chart data alone.",
+    "🎯 Action Guidance Purpose — It helps the user decide when to launch, speak, apply, meet, negotiate, present, or begin something important.",
+    "🧠 What The User Understands From This Screen — The user can clearly see the best period, best day, backup days, and the main reason those dates are astrologically supportive.",
+    "✨ Why This Screen Is Useful — It makes the predictive reading more practical by giving not only meaning, but also timing guidance that can be used in real decisions.",
+    "🚀 Practical Use — Useful for choosing favorable dates for career steps, business action, communication, important meetings, applications, launches, and other event-based decisions."
+  ]
+},
+
+{
+  "name": "horoscope_predictive_event_aspects",
+  "label": "Predictive Event (Horary): Aspect Guidance",
+  "description": "A focused aspect screen showing the most supportive transit-to-natal connections behind the recommended dates and event timing.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Predictive Event (Horary)",
+  "purpose": "This section is generated after the user enters date of birth, time of birth, and place of birth, and the system completes the Predictive Event reading. The platform then studies the important transit-to-natal aspects active around the recommended dates and displays them as separate cards. Each block explains which moving planet is interacting with which natal planet, what kind of aspect is formed, on which date it becomes important, and what kind of opportunity, support, or momentum it brings. The purpose of this screen is to help the user understand why certain dates are recommended and what astrological force is making that time more favorable for action.",
+  "bullets": [
+    "📅 How It Is Generated — The system uses the user's date of birth, time of birth, and place of birth to calculate the natal chart, then checks current and upcoming planetary transits to find strong supportive event-timing aspects.",
+    "🪐 Transit to Natal Meaning — Each card compares a moving planet in the sky with a natal planet in the birth chart to show how present timing is activating the user's personal chart.",
+    "🔗 Aspect Block Purpose — Every block explains one specific transit aspect so the user can understand why that date is important and what kind of influence is active.",
+    "♃ Jupiter Trine Venus Block — This block shows a supportive transit that can increase attraction, confidence, creativity, growth, opportunity, and positive visibility, especially for goals linked with expression, leadership, or favorable outcomes.",
+    "♂ Mars Sextile Mercury Block — This block shows a productive transit that can strengthen communication, fast thinking, strategy, planning, execution, and practical decision-making.",
+    "♀ Venus Sextile Jupiter Block — This block shows a harmonious transit that can improve networking, goodwill, support, optimism, relationship flow, and expansion through pleasant opportunities.",
+    "📆 Date Meaning — The date shown in each card marks the time when that transit becomes especially strong or useful for taking action.",
+    "🏠 House Meaning In The Reading — The interpretation may mention natal houses, such as the 5th or 6th house, to show which life area is being activated by the transit.",
+    "✨ Why These Aspects Matter — Supportive aspects such as trines and sextiles are often used to recommend better dates because they usually indicate smoother energy flow, easier progress, and more constructive outcomes.",
+    "💬 Easy Card Format — This screen turns technical aspect calculations into short readable guidance so the user can quickly understand which dates are strongest and why.",
+    "🎯 What The User Understands From This Screen — The user can clearly see which transit supports creativity, which helps communication and work, and which improves connection, visibility, or expansion.",
+    "📊 Why This Screen Is Useful — It gives a practical astrological reason behind the timeline recommendation, so the user understands that the best dates are based on real chart activation.",
+    "🧠 Astrologer-Friendly Use — Astrologers can use this screen to quickly explain the logic behind recommended dates without having to read all raw transit calculations separately.",
+    "🚀 Practical Use — Useful for choosing the best days for career action, communication, meetings, launches, decisions, planning, networking, and other event-based steps."
+  ]
+},
+
+{
+  "name": "horoscope_predictive_event_planets",
+  "label": "Predictive Event (Horary): Planetary Timing Blocks",
+  "description": "A focused timing screen that explains how specific transiting planets are supporting the recommended event period and what each planetary influence means.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Predictive Event (Horary)",
+  "purpose": "This section is generated after the user enters date of birth, time of birth, and place of birth, and the system completes the Predictive Event reading. The platform studies the important transiting planets that are active during the recommended time window and displays them as separate planetary guidance blocks. Each block explains which planet is currently active, the time period or exact date when its influence is strongest, which natal placement it is affecting, and what kind of support it brings to the user's event, goal, or decision. The purpose of this screen is to help the user understand the timing in a simpler way by showing one active planet at a time instead of only showing raw aspect calculations.",
+  "bullets": [
+    "🪐 Planet Block Meaning — Each block focuses on one transiting planet and explains how that planet is influencing the user's natal chart during the predictive period.",
+    "📅 Date or Time Window Meaning — Some blocks show an exact date, while others show a wider date range, depending on how long the planetary influence remains active and useful.",
+    "♃ Transiting Jupiter Block — This block explains a growth-oriented influence that supports expansion, confidence, visibility, opportunities, success, and positive development.",
+    "♃ Jupiter Meaning In This Screen — Jupiter is shown when the timing supports progress, attraction of opportunities, optimism, wider reach, or beneficial outcomes connected with the user's goal.",
+    "♂ Transiting Mars Block — This block explains an action-oriented influence that supports movement, initiative, execution, courage, productivity, and decisive effort.",
+    "♂ Mars Meaning In This Screen — Mars is shown when the timing helps with communication action, problem-solving, execution speed, practical momentum, and taking direct steps forward.",
+    "♀ Transiting Venus Block — This block explains a harmonious influence that supports connection, goodwill, collaboration, attraction, networking, and smoother relationship flow.",
+    "♀ Venus Meaning In This Screen — Venus is shown when the timing improves cooperation, support from others, social ease, pleasant outcomes, or alignment with personal values and goals.",
+    "🔗 Transit to Natal Meaning — Each planetary block is based on how the moving planet is forming a connection to an important natal planet in the birth chart.",
+    "🏠 House Activation Meaning — The interpretation may mention natal houses to show which area of life is being activated, such as creativity, work, communication, leadership, networking, or public action.",
+    "✨ Why These Blocks Are Useful — These blocks help the user understand not just the best date, but also which planet is creating the support and what type of energy is available at that time.",
+    "💬 Easy User Understanding — This screen simplifies the predictive reading by separating the timing into clear planetary guidance blocks instead of showing everything as one long explanation.",
+    "🧠 What The User Understands From This Screen — The user can see which planet supports growth, which helps action, and which improves connection or opportunity during the recommended timeline.",
+    "🚀 Practical Use — Useful for understanding when to act, when to communicate, when to network, when to expand plans, and which planetary timing is most supportive for the event being considered."
+  ]
+},
+
+{
+  "name": "horoscope_predictive_event_house_activation",
+  "label": "Predictive Event (Horary): House Activation",
+  "description": "A focused timing screen that explains which natal houses are activated during the recommended period and what those activations mean for the user's event or decision.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Predictive Event (Horary)",
+  "purpose": "This section is generated after the user enters date of birth, time of birth, and place of birth, and the system completes the Predictive Event reading. The platform studies the important transit-to-natal influences and then shows which natal houses are being activated during the recommended timeline. The purpose of this screen is to help the user understand not only which dates are supportive, but also which areas of life are receiving the strongest energy. In this example, the 5th house and 6th house are highlighted because specific transits are activating creativity, self-expression, networking, work, planning, and daily execution. This makes the predictive reading easier to understand in practical life terms.",
+  "bullets": [
+    "🏠 House Activation Meaning — This screen explains which natal houses become active during the recommended event period and what those houses represent in the user's life.",
+    "📅 Time Window Meaning — Each house block may show a date range or a specific day to indicate when that house is being strongly activated by transits.",
+    "🌟 5th House Activation Block — This block explains a period when the 5th house becomes active, highlighting creativity, self-expression, attraction, visibility, confidence, artistic effort, and opportunity through personal flair.",
+    "♃ Jupiter And ♀ Venus Support In The 5th House — When supportive transits activate the 5th house, they may increase charm, optimism, attraction of opportunities, networking strength, creative confidence, and personal magnetism.",
+    "💼 Practical Meaning Of 5th House Activation — This kind of activation can be favorable for leadership, creative work, visibility, public expression, relationship-based opportunities, and projects that need inspiration or confidence.",
+    "🛠 6th House Activation Block — This block explains a period or day when the 6th house becomes active, highlighting work, routines, problem-solving, organization, planning, service, productivity, and execution.",
+    "♂ Mars And ☿ Mercury Support In The 6th House — When supportive transits activate the 6th house, they may improve communication in work settings, strategic thinking, planning ability, practical action, and attention to detail.",
+    "📈 Practical Meaning Of 6th House Activation — This kind of activation can be favorable for getting tasks done, solving work problems, managing responsibilities, improving workflow, and taking clear practical steps toward goals.",
+    "🔭 How It Is Generated — The system uses the user's date of birth, time of birth, and place of birth to calculate the natal chart, then studies which transits are activating specific natal houses during the selected predictive period.",
+    "🧠 Why This Screen Is Useful — It helps the user understand where the astrological energy is landing in real life, so the recommendation feels practical instead of abstract.",
+    "💬 Easy User Understanding — Instead of only naming planets and aspects, this screen explains the event timing through life areas that the user can recognize more easily, such as creativity, work, routine, goals, and opportunity.",
+    "🎯 What The User Understands From This Screen — The user can clearly see which life area is strongest during the recommended period and why a certain date is better for visibility, action, communication, or career-related movement.",
+    "📊 Why House Activation Matters — Even when the same transit looks positive, the house it activates changes the meaning. This screen helps explain whether the support is more creative, practical, relational, financial, or work-focused.",
+    "🚀 Practical Use — Useful for choosing the right time for launches, communication, creative work, job action, planning, execution, and event-based decisions connected to the most activated life area."
+  ]
+},
+
+{
+  "name": "horoscope_predictive_event_summary",
+  "label": "Predictive Event (Horary): Summary",
+  "description": "A final summary screen that brings the most favorable period, key transits, and activated life areas into one clear recommendation.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Predictive Event (Horary)",
+  "purpose": "This section is generated after the user enters date of birth, time of birth, and place of birth, and the system completes the Predictive Event reading. The platform studies the natal chart, checks the strongest transits, identifies the most activated houses, and then combines that information into one final recommendation. The purpose of this screen is to give the user a simple, clear answer about the best period for action. Instead of showing many separate technical details, it summarizes the most important timing window, the strongest supporting transits, and the main life areas being activated, so the user can understand the final result easily.",
+  "bullets": [
+    "📅 Final Recommended Time Window — This block shows the most supportive overall period for the user's goal, event, or decision.",
+    "⭐ Main Opportunity Summary — It highlights why this period is important by combining the strongest supportive astrological factors into one clear message.",
+    "🪐 Key Transit Summary — The screen brings together the most helpful transit influences, such as Jupiter support, Mars support, or other strong aspects active during the period.",
+    "🏠 House Activation Summary — It explains which natal houses are most active during that time, such as the 5th house for creativity and visibility or the 6th house for work, planning, and execution.",
+    "🎯 Practical Meaning — The summary converts chart language into real-life advice, such as when to focus on career growth, communication, strategy, networking, or launching something important.",
+    "🔭 How It Is Generated — The system uses the user's date of birth, time of birth, and place of birth to calculate the natal chart, then studies transits, aspects, and house activation to find the strongest timing window.",
+    "💬 Easy User Understanding — This screen is designed to be simple and direct, so the user can understand the final recommendation without reading every technical block separately.",
+    "🧠 What The User Understands From This Screen — The user can quickly see the best period, why that period is strong, and which life themes are being supported the most.",
+    "📊 Why This Screen Is Useful — It acts as the final conclusion of the predictive reading, combining chart meaning, timing, and practical advice into one short summary.",
+    "🚀 Practical Use — Useful for choosing the best period for career advancement, communication, planning, launches, meetings, applications, and other important event-based actions."
+  ]
+},
+
+{
+  "name": "horoscope_predictive_event_recommendations",
+  "label": "Predictive Event (Horary): Recommendations",
+  "description": "A practical guidance screen that turns the predictive timing analysis into a clear action recommendation for the user.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Predictive Event (Horary)",
+  "purpose": "This section is generated after the user enters date of birth, time of birth, and place of birth, and the system completes the Predictive Event reading. After analyzing the natal chart, supportive transits, active houses, and recommended time window, the platform converts that astrological timing into a practical recommendation. The purpose of this screen is to tell the user what kind of action is best supported during the favorable period. In this example, the reading recommends focusing on creative and strategic initiatives because the activated houses and transit support indicate stronger potential for visibility, planning, communication, and opportunity. This makes the forecast easier to use in real life because the user receives not only timing, but also clear direction.",
+  "bullets": [
+    "📅 Recommended Time Window Meaning — This block highlights the period when the chart shows the strongest support for the user's goal or planned action.",
+    "🎯 Main Recommendation Meaning — The screen explains what the user should focus on during that period, such as creative work, strategic planning, communication, leadership, or professional growth.",
+    "🏠 House-Based Recommendation — The advice is based on which natal houses are activated, so the recommendation matches the life areas receiving the strongest energy.",
+    "🪐 Transit Support Meaning — The recommendation is shaped by the strongest helpful transits, showing what type of opportunity or action is most supported during that timeline.",
+    "🎨 Creative Initiative Meaning — If the 5th house or other expressive placements are active, the system may recommend creative projects, visibility, leadership, self-expression, or innovation.",
+    "🧠 Strategic Initiative Meaning — If work and planning houses are active, the system may recommend strategy, communication, execution, professional planning, or structured problem-solving.",
+    "🔭 How It Is Generated — The system uses the user's date of birth, time of birth, and place of birth to build the natal chart, then studies transits, aspects, and house activation to generate practical advice.",
+    "💬 Easy User Understanding — This screen turns technical chart analysis into a clear recommendation so the user can understand what to do, not only what is happening astrologically.",
+    "📈 Why This Screen Is Useful — It connects prediction with action, helping the user use the favorable timing in a practical and confident way.",
+    "🧠 What The User Understands From This Screen — The user can clearly see the best type of action to take during the recommended period and why that action is astrologically supported.",
+    "✨ Action Guidance Purpose — This screen helps the user translate astrology into decision-making by showing where to place effort for better results.",
+    "🚀 Practical Use — Useful for planning career steps, launching ideas, starting creative work, making strategic decisions, improving communication, and using favorable timing more effectively."
+  ]
+},
+      // ------------------Jupiter Return------------------//
       { 
         name: "horoscope_jupiter_return_setup", 
         label: "Jupiter Return", 
