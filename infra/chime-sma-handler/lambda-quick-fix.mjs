@@ -119,7 +119,7 @@ async function handleNewInboundCall(event) {
       const errText = await lookupRes.text();
       console.error("Lookup failed:", lookupRes.status, errText);
       return hangupWithMessage(
-        "We couldn't find your account. Please book a session online.",
+        "We couldn't match your phone number to an upcoming booking. Please book a session online before calling.",
         callId
       );
     }
