@@ -45,14 +45,33 @@ async function getDiviner(username: string) {
 
 async function getServices(divinerId: string) {
   const supabase = createAdminClient();
-  const { data } = await supabase
+  const { data: rawServices } = await supabase
     .from("services")
-    .select("*")
+    .select("*, template_id")
     .eq("diviner_id", divinerId)
     .eq("is_active", true)
     .order("is_featured", { ascending: false })
     .order("sort_order", { ascending: true });
-  return applyRuntimePricesToServices(supabase, data ?? []);
+
+  if (!rawServices || rawServices.length === 0) return [];
+
+  // Task 05: enforce template access control
+  // Fetch all published template IDs for this diviner in one query
+  const { data: publishedDs } = await supabase
+    .from("diviner_services")
+    .select("template_id")
+    .eq("diviner_id", divinerId)
+    .eq("is_enabled", true)
+    .eq("is_published", true);
+
+  const publishedTemplateIds = new Set((publishedDs ?? []).map((r) => r.template_id));
+
+  // Keep service if: freestyle (no template_id) OR template is published
+  const accessible = rawServices.filter(
+    (s) => !s.template_id || publishedTemplateIds.has(s.template_id)
+  );
+
+  return applyRuntimePricesToServices(supabase, accessible);
 }
 
 /* ------------------------------------------------------------------ */
