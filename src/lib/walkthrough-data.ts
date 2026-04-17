@@ -3491,36 +3491,641 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
   ]
 },
 // ------------------Mars Return------------------//
-      { 
-        name: "horoscope_mars_return_setup", 
-        label: "Mars Return", 
-        description: "Action, energy, and drive forecasting for the 2-year Mars cycle.", 
-        group: "Horoscope Toolkit",
-        subModule: "Mars Return",
-        purpose: "Charts the return of Mars to its natal position, mapping out a new two-year cycle of energy, ambition, physical drive, and personal assertion.",
-        bullets: [
-          "Calculation of the 2-year Mars cycle reset",
-          "Areas of increased energy and motivation",
-          "Potential conflict or frustration triggers",
-          "Strategic planning for goal execution"
-        ]
-      },
+     
+  {
+    "name": "horoscope_mars_return_entry_setup",
+    "label": "Mars Return: Entry & Generation Setup",
+    "description": "Enter birth details to generate the full Mars Return reading and result screens in sequence.",
+    "group": "Horoscope Toolkit",
+    "subModule": "Mars Return",
+    "purpose": "This is the first screen of the Mars Return module. The user must enter date of birth, time of birth, and place of birth. These three birth details are required because the system uses them to calculate the natal chart accurately and identify the exact natal position of Mars. After all required birth fields are filled correctly, the Generate Reading button becomes active. Once the user clicks Generate Reading, the platform calculates the next exact Mars Return date and builds the full Mars Return reading screen by screen. The generated response depends on DOB, TOB, and POB because those details affect natal Mars sign, degree, house placement, chart angles, house cusps, return chart structure, aspects, drive patterns, conflict themes, motivation cycles, and all deeper interpretations. This setup screen is important because if birth time or birth place is incorrect, the Mars Return timing, life-area activation, and interpretation may also change.",
+    "bullets": [
+      "📅 Step 1 — Enter Date of Birth: The user enters the birth date so the system can calculate natal planetary positions and locate natal Mars correctly.",
+      "🕒 Step 2 — Enter Time of Birth: The user enters the exact birth time because Ascendant, house cusps, chart angles, and natal Mars house placement depend on correct timing.",
+      "📍 Step 3 — Enter Place of Birth: The user enters the birth place so the system can use the correct geographic coordinates and timezone for accurate natal and return chart calculation.",
+      "📝 Step 4 — Area of Inquiry (Optional): The user may enter a focus such as ambition, conflict, confidence, relationships, career momentum, health drive, discipline, or personal courage.",
+      "✅ Step 5 — Generate Reading Activation: After the required birth details are completed correctly, the Generate Reading button becomes enabled.",
+      "📊 Result Screen 1 — Chart View: The system generates the Mars Return wheel charts so the user can visually see the return chart structure, planetary placements, and overall aspect pattern.",
+      "📋 Result Screen 2 — Return Data & Positions: The platform shows the birth reference, natal Mars placement, next Mars Return date, house system, and key planetary positions in the return chart.",
+      "🔥 Result Screen 3 — Upcoming Mars Return Analysis: The reading explains the general meaning of the new Mars cycle across life areas such as career, relationships, personal growth, health, family, social life, and spiritual direction.",
+      "🪐 Result Screen 4 — Planet Information & Planet Cards: The system shows detailed planetary data and then generates readable interpretation cards for important return planets such as Moon, Mercury, Venus, Sun, Mars, and others.",
+      "🔺 Result Screen 5 — Decan Interpretation Modal: If a triangle decan symbol is present on a planet card, the user can open a deeper decan-based image or text interpretation for that placement.",
+      "🏠 Result Screen 6 — House Information & House Cards: The platform shows the return house table, house distribution view, and individual house interpretation cards explaining how each life area is shaped during the cycle.",
+      "✨ Result Screen 7 — Dharma, Karma, and Key Points: The reading highlights fulfillment themes, karmic lessons, and important points such as Ascendant, Midheaven, Vertex, and Lilith for deeper cycle understanding.",
+      "🔗 Result Screen 8 — Aspects, Aspect Cards, and Deep Aspect Analysis: The system shows the technical aspect table, readable aspect summary cards, and deeper aspect modals with symbolic picture representation for major return aspects."
+    ]
+  },
+  {
+    "name": "horoscope_mars_return_chart_v4",
+    "label": "Mars Return: Chart View",
+    "description": "Visual wheel charts showing the full Mars Return pattern and planetary aspect structure.",
+    "group": "Horoscope Toolkit",
+    "subModule": "Mars Return",
+    "purpose": "This screen is generated after the user enters date of birth, time of birth, and place of birth. The system first calculates the natal chart, identifies natal Mars, then finds the next time transiting Mars returns to the same zodiac degree and sign as natal Mars. After that, it builds the Mars Return chart and displays it in wheel format. The left wheel shows the full Western chart with signs, houses, planets, and angles. The right wheel highlights the aspect geometry so astrologers can quickly see the relationship pattern between planets. The purpose of this screen is to help users understand the structure of the new Mars cycle visually before moving into deeper interpretation about energy, ambition, assertion, conflict, and action planning.",
+    "bullets": [
+      "♂ Mars Return Basis — The chart is created when transiting Mars returns to its natal sign and degree, marking a fresh cycle of action, drive, courage, and personal assertion.",
+      "📅 Birth Data Based Generation — Uses DOB, TOB, and POB to calculate the natal chart, natal Mars position, and the exact upcoming Mars Return chart.",
+      "🌌 Left Wheel Chart Meaning — Shows the full Mars Return chart with planets, signs, houses, and angles for complete return-cycle interpretation.",
+      "📐 Right Aspect Chart Meaning — Shows planetary aspect geometry so supportive, tense, and high-energy patterns can be understood more quickly.",
+      "🏠 House Activation Value — Helps reveal which life areas are most strongly energized during the Mars Return cycle, such as work, relationships, confidence, conflict, health, or hidden effort.",
+      "🔥 Why Mars Return Matters — Mars Return shows where energy rises, where motivation resets, and where the user may need strategic self-control or bold action.",
+      "🧠 Why This Screen Is Useful — Gives a visual foundation for the Mars Return reading before the user moves into tables, positions, and narrative interpretation.",
+      "🚀 Practical Use — Useful for action forecasting, motivation analysis, conflict awareness, productivity planning, and understanding the overall energetic structure of the Mars Return."
+    ]
+  },
+  {
+    "name": "horoscope_mars_return_positions",
+    "label": "Mars Return: Return Data & Positions",
+    "description": "A technical summary of the Mars Return chart, including birth reference, return date, and major planetary placements.",
+    "group": "Horoscope Toolkit",
+    "subModule": "Mars Return",
+    "purpose": "This screen is generated after the system calculates the user's Mars Return from date of birth, time of birth, and place of birth. It presents the core technical data needed for interpretation, including birth details, house system, natal Mars position, next Mars Return date, and the sign-house placements of key planets and points in the return chart. The purpose of this screen is to give astrologers a quick structural overview of the Mars Return before moving into narrative analysis. It helps users see exactly where Mars is returning, which houses are activated, and which planets are especially important in the new cycle of effort, ambition, and personal drive.",
+    "bullets": [
+      "📅 Birth Reference Row — Shows the user's date of birth, place of birth, and time of birth used to calculate the natal and Mars Return charts.",
+      "🏛 House System — Shows which house system is used for the return interpretation, such as Whole Sign.",
+      "♂ Mars At Birth — Shows natal Mars' original sign, degree, and house, which becomes the anchor point for calculating the Mars Return.",
+      "🔄 Next Mars Return Date — Shows the exact future date when Mars returns to its natal position and the new Mars cycle begins.",
+      "📍 Positions Section — Lists the major placements of Ascendant, Mars, Moon, Sun, Mercury, Venus, Jupiter, Saturn, Uranus, Neptune, Pluto, Nodes, Chiron, and other important return points.",
+      "🏠 Sign + House Meaning — Each placement shows not only the zodiac sign but also the life area where that force becomes active in the return cycle.",
+      "🧠 Why This Screen Is Useful — Gives a precise technical map of the Mars Return chart so deeper interpretation can be built on clearly visible placements.",
+      "🚀 Practical Use — Useful for astrologers, advanced users, technical chart checking, and preparing the deeper Mars Return reading."
+    ]
+  },
+  {
+    "name": "horoscope_mars_return_analysis_v1",
+    "label": "Mars Return: Upcoming Cycle Analysis",
+    "description": "A life-area reading of the upcoming Mars Return, explaining how the new cycle may affect drive, career, relationships, health, family, social energy, and spiritual direction.",
+    "group": "Horoscope Toolkit",
+    "subModule": "Mars Return",
+    "purpose": "This section is generated after the Mars Return chart is calculated from the user's DOB, TOB, and POB. The system analyzes Mars' sign and house placement, along with major aspects to other return and natal factors, and translates the result into life-area guidance. This screen explains how the new Mars cycle may influence general momentum, career action, relationship tension or passion, personal growth, health habits, family dynamics, social activity, and spiritual or inner-strength themes. The purpose is to turn technical Mars Return placements into a readable roadmap for the years surrounding this action cycle.",
+    "bullets": [
+      "🔥 General Theme — Explains the overall tone of the Mars Return, such as rising courage, inner tension, hidden effort, bold reinvention, or more private strategic movement.",
+      "💼 Career Section — Shows how the cycle may affect ambition, initiative, workplace action, behind-the-scenes effort, leadership style, and practical advancement.",
+      "❤️ Relationship Section — Explains how drive, passion, conflict style, emotional reactions, and relationship boundaries may become more visible or tested.",
+      "🌱 Personal Growth Section — Shows where the user is being pushed to develop confidence, courage, independence, and stronger personal direction.",
+      "🩺 Health Section — Highlights vitality, stress, recovery, routines, burnout risk, physical energy, and the need for better self-management.",
+      "🏠 Family Section — Explains how the cycle may activate private emotions, family tension, hidden frustration, or the need for more patience and direct communication.",
+      "🤝 Social Section — Shows how friendships, group activity, community involvement, and social priorities may shift under new Mars energy.",
+      "🔮 Spiritual Section — Explains inner awakening, subconscious motivation, retreat energy, intuitive courage, and the urge to confront deeper emotional patterns.",
+      "✨ Why This Screen Is Useful — Gives a broad but practical interpretation of the Mars Return, organized by life area instead of only technical astrology."
+    ]
+  },
+  {
+    "name": "horoscope_mars_return_planet_information",
+    "label": "Mars Return: Planet Information",
+    "description": "A detailed planetary data table showing sign, degree, house, speed, retrograde status, and normalized position for the Mars Return chart.",
+    "group": "Horoscope Toolkit",
+    "subModule": "Mars Return",
+    "purpose": "This screen is generated after the Mars Return chart is calculated using the user's DOB, TOB, and POB. It presents the technical placement data for each important return planet and point. The table helps astrologers verify where each body falls by sign and house, how fast it is moving, whether it is retrograde, and how the placement is refined by degree. The purpose of this screen is to support precise interpretation and create the basis for the later narrative planet cards.",
+    "bullets": [
+      "🪐 Planet Column — Shows the planetary body or point being interpreted, such as Moon, Mercury, Venus, Sun, Mars, Jupiter, Saturn, Uranus, Neptune, Pluto, Node, Chiron, or Lilith.",
+      "♈ Sign Column — Shows the zodiac sign where that return placement is located.",
+      "📐 Full Degree Column — Shows the exact zodiac longitude of the placement in the Mars Return chart.",
+      "🏠 House Column — Shows which return house the placement occupies, revealing where that energy acts most strongly in life.",
+      "📏 Norm Degree Column — Shows the degree inside the sign itself, helping refine whether the placement is early, middle, or late in expression.",
+      "⚡ Speed Column — Shows how quickly the planet is moving, helping interpret whether the energy is active, slow, steady, or highly emphasized.",
+      "🔁 Retro Column — Shows whether the placement is retrograde, indicating a more inward, revisiting, delayed, or reflective expression.",
+      "🧠 Why This Table Is Useful — Gives astrologers a clean technical reference before moving into interpretive cards and deeper analysis.",
+      "🚀 Practical Use — Useful for accurate chart reading, technical validation, advanced astrology work, and building deeper Mars Return interpretations."
+    ]
+  },
+  {
+    "name": "horoscope_mars_return_planet_cards",
+    "label": "Mars Return: Planet Interpretation Cards",
+    "description": "Readable Mars Return interpretation cards for each planet, combining sign, house, degree, speed, retrograde status, and optional decan marker.",
+    "group": "Horoscope Toolkit",
+    "subModule": "Mars Return",
+    "purpose": "This section is generated after the Mars Return chart is calculated using the user's date of birth, time of birth, and place of birth. The system creates a separate interpretation card for each important return placement and translates raw chart values into practical meaning. Each card combines the planet, zodiac sign, house, full degree, normalized degree, speed, and retrograde status into an easy-to-read explanation. Some cards also show a small triangle symbol, which means a decan-based interpretation is available. The purpose of this screen is to let users understand the Mars Return one placement at a time without needing to read the full chart at once.",
+    "bullets": [
+      "🌙 Moon Card Meaning — Explains the emotional tone of the cycle, instinctive reactions, relationship sensitivity, mood shifts, and where emotional balance is tested or strengthened.",
+      "🧠 Mercury Card Meaning — Explains thinking style, communication pattern, quick decisions, confidence in speech, and how ideas are expressed during the Mars Return.",
+      "♀ Venus Card Meaning — Explains attraction, relationship style, personal values, charm, social magnetism, and how pleasure or desire is expressed in the cycle.",
+      "🌞 Sun Card Meaning — Explains identity, confidence, self-expression, personal courage, leadership, and the main life direction emphasized during the Mars Return.",
+      "♂ Mars Card Meaning — Explains the core theme of the cycle: action, assertion, physical drive, willpower, conflict style, and where energy demands release.",
+      "♈ Sign + House Synthesis — Each card combines sign and house to explain both how the energy behaves and where it acts most strongly.",
+      "📐 Degree Meaning — Uses exact degree and normalized degree to refine the tone and maturity of the interpretation.",
+      "⚡ Speed Meaning — Uses planetary speed to show whether the influence is swift, intense, steady, or slow-building.",
+      "🔁 Retrograde Layer — Adds inward, reflective, reviewing, or delayed themes when a return placement is retrograde.",
+      "🔺 Decan Indicator — A small triangle near the planet name means a deeper decan interpretation can be opened for that placement.",
+      "📖 Show More Purpose — The Show More action opens a deeper modal with expanded meaning, symbolism, and refined interpretation.",
+      "✨ Why This Screen Is Useful — Makes the Mars Return easy to read planet by planet for both astrologers and general users."
+    ]
+  },
+  {
+    "name": "horoscope_mars_return_decan_modal",
+    "label": "Mars Return: Planet Decan Interpretation",
+    "description": "A deeper symbolic interpretation screen that explains a planet's decan meaning through imagery, tarot-style association, and mythic symbolism.",
+    "group": "Horoscope Toolkit",
+    "subModule": "Mars Return",
+    "purpose": "This screen appears when the user clicks the triangle symbol on a Mars Return planet card, indicating that a decan interpretation is available. The system first calculates the Mars Return chart from DOB, TOB, and POB, then checks the exact degree of the selected planet and determines which 10-degree decan of the zodiac sign it belongs to. In the example shown, the Sun is placed in Aries and linked to a specific Aries decan image and text layer. The purpose of this screen is to give a more refined layer of meaning beyond sign and house by using decan symbolism, visual imagery, tarot-style correspondences, mundane themes, and mythic associations.",
+    "bullets": [
+      "🔺 Decan Trigger Meaning — This modal opens only when the selected return planet has a decan marker available.",
+      "📐 What a Decan Means — Each zodiac sign is divided into 3 decans of 10 degrees each, and the exact degree decides which decan the planet belongs to.",
+      "🌞 Planet Decan Focus — The screen explains how the selected planet, such as the Sun, expresses itself in a more nuanced way inside that decan.",
+      "♈ Sign Base Meaning — The base sign gives the main psychological and energetic tone, while the decan adds a secondary influence that refines it.",
+      "🃏 Tarot Layer — The modal may connect the decan to a tarot-style card image to symbolize the deeper psychological or spiritual meaning of the placement.",
+      "🏛 Mundane Force Theme — A concept such as virtue, courage, visibility, fulfillment, power, or leadership may be used to explain the real-world style of the decan.",
+      "🏺 Greek or Mythic Figure Layer — Mythic figures add archetypal meaning and make the decan easier to understand symbolically.",
+      "🖼 Image Representation Purpose — The image helps users grasp the decan visually through symbolism rather than only text.",
+      "🧠 Why This Screen Is Useful — It explains why two people with the same planet in the same sign can still express it differently depending on exact degree.",
+      "📖 Text Toggle Purpose — The modal can allow users to switch between image and text mode for a clearer learning experience.",
+      "🚀 Practical Use — Useful for advanced Mars Return reading, refined planet interpretation, symbolic teaching, and deep astrological analysis."
+    ]
+  },
+  {
+    "name": "horoscope_mars_return_house_information",
+    "label": "Mars Return: House Information",
+    "description": "A technical house-cusp table showing the sign and degree of all 12 houses in the Mars Return chart.",
+    "group": "Horoscope Toolkit",
+    "subModule": "Mars Return",
+    "purpose": "This screen is generated after the Mars Return chart is calculated from the user's date of birth, time of birth, and place of birth. It lists all 12 return houses, the zodiac sign on each house cusp, and the exact cusp degree. The purpose of this screen is to give astrologers a clear structural map of the Mars Return chart before the house meanings are expanded into narrative interpretation. It shows which signs rule which life areas during the Mars cycle and where the main themes of effort, pressure, courage, relationships, work, and action are organized.",
+    "bullets": [
+      "🏠 House Column — Shows each return house from House 1 to House 12.",
+      "♈ Sign Column — Shows the zodiac sign ruling each house cusp in the Mars Return chart.",
+      "📐 Degree Column — Shows the exact zodiac degree for each house cusp, refining interpretation and chart precision.",
+      "⬆ 1st House / Ascendant Value — Reveals the personal tone, instinctive style, self-presentation, and overall approach to the Mars Return cycle.",
+      "💰 2nd House Value — Shows how money, values, self-worth, and material drive are energized in the cycle.",
+      "🗣 3rd House Value — Shows communication, learning, decisions, nearby environment, and daily mental effort themes.",
+      "🏆 10th House Value — Shows career, public image, ambition, authority, and long-term professional direction.",
+      "🧠 Why This Table Is Useful — It helps astrologers see the full house structure before reading the detailed house cards.",
+      "📊 Technical Reading Support — Useful for verifying cusp signs and building accurate house-based interpretation.",
+      "🚀 Practical Use — Useful for advanced chart reading, house analysis, client work, and understanding how the Mars Return organizes life themes."
+    ]
+  },
+  {
+    "name": "horoscope_mars_return_house_cards_part_1",
+    "label": "Mars Return: House Interpretation Cards — Part 1",
+    "description": "Readable house-by-house cards showing how the early houses of the Mars Return chart shape identity, values, communication, home, and creativity.",
+    "group": "Horoscope Toolkit",
+    "subModule": "Mars Return",
+    "purpose": "This section is generated after the Mars Return chart is calculated and the system identifies the sign placed on each return house cusp. The platform then creates short interpretation cards for the houses, explaining what each life area means and how the ruling sign colors that part of the Mars Return cycle. This screen includes the visual house-distribution map and the first set of house cards, such as House 1 through House 5. The purpose is to help users understand the cycle in life-area form instead of reading the whole chart all at once.",
+    "bullets": [
+      "📊 House Distribution Map — The top visual layout shows where planets fall across the 12 houses, helping astrologers see concentration and life-area emphasis quickly.",
+      "🏠 House 1 Card — Explains identity, self-image, first impression, personal style, and how the user enters the Mars Return cycle.",
+      "♓ Pisces on the Ascendant Example — Pisces rising can show stronger intuition, sensitivity, compassion, emotional openness, and a softer outer style during the cycle.",
+      "💰 House 2 Card — Explains values, money, possessions, self-worth, and how material security is handled during the Mars Return.",
+      "♈ Aries on the 2nd House Example — Aries on the 2nd house can show bold earning instincts, quicker financial moves, strong desire for independence, and lessons about impulsive spending or value assertion.",
+      "🗣 House 3 Card — Explains communication, learning, writing, practical thinking, siblings, and daily mental rhythm.",
+      "♉ Taurus in the 3rd House Example — Taurus ruling the 3rd house can show steady speech, practical learning, patient thinking, and preference for grounded information.",
+      "🏡 House 4 Card — Explains home, roots, family, private life, and the emotional foundation of the Mars Return cycle.",
+      "♊ Gemini on the 4th House Example — Gemini on the 4th house can show a lively home atmosphere, stronger mental activity at home, family discussion, and changeable domestic themes.",
+      "🎨 House 5 Card — Explains creativity, romance, joy, self-expression, personal passion, and how the user seeks pleasure and inspiration.",
+      "♋ Cancer in the 5th House Example — Cancer on the 5th house can show emotionally rich creativity, protective love, strong attachment in romance, and artistic expression rooted in feeling.",
+      "📖 Show More Purpose — Each house card can open a deeper modal with fuller interpretation for that specific house.",
+      "✨ Why This Screen Is Useful — It breaks the Mars Return into early life-area cards so the user can understand the cycle in a structured and simple way."
+    ]
+  },
+  {
+    "name": "horoscope_mars_return_house_cards_part_2",
+    "label": "Mars Return: House Interpretation Cards — Part 2",
+    "description": "Readable house-by-house cards showing how the later houses of the Mars Return chart shape work, relationships, career, purpose, and inner growth.",
+    "group": "Horoscope Toolkit",
+    "subModule": "Mars Return",
+    "purpose": "This section continues the Mars Return house interpretation sequence after the house cusps are calculated from the user's DOB, TOB, and POB. The system converts each house-sign combination into readable cards so the user can understand the life areas affected by the Mars Return. This screen focuses on the later houses, especially House 6 through House 12, showing how work, relationships, transformation, belief, career, social contribution, and solitude are colored during the cycle.",
+    "bullets": [
+      "🛠 House 6 Card — Explains work, routine, service, daily discipline, health habits, and practical responsibilities.",
+      "♌ Leo on the 6th House Example — Leo ruling the 6th house can show pride in work, need for recognition through service, creative output in routine tasks, and leadership in practical settings.",
+      "🤝 House 7 Card — Explains partnerships, commitment, open rivals, negotiations, and the role of others in the cycle.",
+      "♍ Virgo on the 7th House Example — Virgo on the 7th house can show careful relationship analysis, practical partnership needs, service themes, and stronger attention to balance and improvement in one-to-one bonds.",
+      "🔄 House 8 Card — Explains shared resources, trust, crisis, transformation, deep emotional merging, and power exchange.",
+      "♎ Libra on the 8th House Example — Libra in the 8th house can show fairness concerns in shared matters, strong need for balance in intimacy, and negotiations around dependency or emotional exchange.",
+      "🌍 House 9 Card — Explains travel, belief, learning, philosophy, long-range vision, and higher understanding.",
+      "♏ Scorpio on the 9th House Example — Scorpio in the 9th house can show intense beliefs, transformative learning, strong intuition, and deep searching for truth.",
+      "🏆 House 10 Card — Explains career, public role, authority, ambition, and visible life direction.",
+      "♐ Sagittarius on the 10th House Example — Sagittarius on the 10th house can show bold public direction, growth through teaching or vision, and career expansion through broader perspective.",
+      "👥 House 11 Card — Explains community, goals, networks, group support, and future plans.",
+      "♑ Capricorn on the 11th House Example — Capricorn in the 11th house can show disciplined long-term goals, serious friendships, strategic alliances, and achievement through structure.",
+      "🌙 House 12 Card — Explains retreat, subconscious patterns, hidden effort, endings, spiritual reflection, and inner healing.",
+      "♒ Aquarius on the 12th House Example — Aquarius in the 12th house can show unconventional inner life, detached healing patterns, hidden insight, and spiritual growth through originality and perspective shifts.",
+      "📖 Show More Purpose — Each house card can open a deeper interpretation modal for fuller astrologer-level insight.",
+      "✨ Why This Screen Is Useful — It helps users understand how the Mars Return affects later life areas that often hold career, social, karmic, and spiritual meaning."
+    ]
+  },
+  {
+    "name": "horoscope_mars_return_dharma_karma",
+    "label": "Mars Return: Dharma & Karma",
+    "description": "A focused screen that explains growth path, higher purpose, karmic lessons, and action-based maturity themes inside the Mars Return cycle.",
+    "group": "Horoscope Toolkit",
+    "subModule": "Mars Return",
+    "purpose": "This section is generated after the Mars Return chart is calculated and the system evaluates purpose-oriented and karmic placements, including the Sun, Jupiter, Saturn, Neptune, Mars, Moon, and important aspects between them. It separates the reading into Dharma and Karma so users can understand both the path of fulfillment and the major lessons that must be faced. The purpose of this screen is to show where courage, self-assertion, service, emotional balance, public direction, discipline, and spiritual growth are most emphasized in the Mars Return cycle.",
+    "bullets": [
+      "✨ Dharma Section — Explains the path of growth, meaning, fulfillment, and the qualities the user is encouraged to develop during the Mars Return.",
+      "🌞 Sun-Based Purpose — Shows how identity, initiative, courage, and self-direction open the path of growth during the cycle.",
+      "♃ Jupiter-Based Expansion — Supportive Jupiter themes can show growth through wisdom, faith, hidden support, learning, and broader perspective.",
+      "🔮 Neptune Link — Helpful Neptune themes can show spiritual insight, inner imagination, dream awareness, and growth through compassion or surrender.",
+      "🪨 Karma Section — Explains karmic lessons, pressure points, emotional burdens, hidden frustration, health discipline, relationship imbalance, and the action lessons that must be faced.",
+      "♄ Saturn Lesson Meaning — Saturn often shows responsibility, structure, work discipline, limits, consequences, and the effort required to mature through action.",
+      "🌙 Moon Tension Meaning — Challenging Moon aspects can point to emotional reactivity, relationship patterns, mood-driven conflict, or the need for better emotional regulation.",
+      "⚖ Balance of Action and Surrender — The screen helps show where direct effort is needed and where restraint, patience, or self-awareness is equally important.",
+      "📖 Show More Purpose — Each Dharma or Karma block can open a deeper explanation for astrologers who want a fuller reading.",
+      "🧠 Why This Screen Is Useful — It helps the user see not only what is opening up in the Mars cycle, but also what must be managed, healed, and strengthened for wise action."
+    ]
+  },
+  {
+    "name": "horoscope_mars_return_aspects_table",
+    "label": "Mars Return: Aspects Table",
+    "description": "A technical aspect table showing planetary relationships, orb closeness, degree differences, and exactness indicators in the Mars Return chart.",
+    "group": "Horoscope Toolkit",
+    "subModule": "Mars Return",
+    "purpose": "This screen is generated after the Mars Return chart is calculated and the system compares planets and points to find major aspects. It presents a structured table showing the aspected planet, the aspecting planet, orb, degree difference, exact degrees, and aspect type. It also includes a proximity color legend so astrologers can quickly see whether an aspect is extremely exact, just past, just before, or farther from exactness. The purpose of this screen is to give a precise technical overview of the most important aspect relationships shaping the Mars Return cycle.",
+    "bullets": [
+      "🔭 Aspect Proximity Indicator — The color key shows how close each aspect is to exact, helping astrologers judge strength and immediacy quickly.",
+      "🪐 Aspected Planet Column — Shows the planet or point receiving the aspect.",
+      "☀ Aspecting Planet Column — Shows the planet creating the aspect relationship.",
+      "📏 Orb Column — Shows how far the aspect is from exactness, which strongly affects its intensity.",
+      "📐 Diff Column — Shows the degree separation difference used to verify the aspect relationship.",
+      "🎯 Aspect Type Column — Shows whether the relationship is a conjunction, sextile, trine, square, opposition, and so on.",
+      "🏛 Point Inclusion — The table may include special points such as the Ascendant or Midheaven, not only planets.",
+      "🧠 Why This Table Is Useful — It gives astrologers a fast technical scan of the strongest Mars Return dynamics before moving into readable aspect cards.",
+      "⚖ Exactness Value — Very close aspects usually have stronger and more immediate influence in the Mars Return cycle.",
+      "🚀 Practical Use — Useful for advanced chart work, precise aspect analysis, client explanation, and identifying the dominant energetic patterns of the Mars Return."
+    ]
+  },
+  {
+    "name": "horoscope_mars_return_aspect_cards",
+    "label": "Mars Return: Aspect Interpretation Cards",
+    "description": "Readable aspect cards that explain the main Mars Return aspects in simple language, including practical meaning and orb influence.",
+    "group": "Horoscope Toolkit",
+    "subModule": "Mars Return",
+    "purpose": "This section is generated after the system calculates the major Mars Return aspects and selects the strongest or most meaningful ones for interpretation. Each aspect is turned into a separate readable card, such as Sun conjunction Mercury or Sun sextile Jupiter. The cards explain the aspect type, the two planets involved, and the practical meaning of that energy during the Mars Return cycle. The purpose of this screen is to help users understand the strongest aspect themes without needing to read the full technical table.",
+    "bullets": [
+      "☀ Sun Conjunction Mercury Card — Explains strong alignment between identity and communication, quick thinking, self-expression, confidence in ideas, and the risk of over-identifying with personal opinions.",
+      "☀ Sun Sextile Jupiter Card — Explains natural optimism, growth, confidence, encouragement, wider opportunity, and a more hopeful approach to action and visibility.",
+      "📏 Orb Meaning — The card may mention how close the orb is, helping show whether the aspect is especially strong or more moderate.",
+      "🔗 Aspect Type Meaning — Each card explains the style of the aspect, such as conjunction for blending and intensity or sextile for supportive opportunity.",
+      "💬 Easy Reading Format — Converts technical aspect data into short readable guidance for quick understanding.",
+      "🎯 Real-Life Meaning — Connects the aspect to practical themes such as communication, leadership, confidence, learning, momentum, growth, and self-belief.",
+      "📖 Show More Purpose — Each card can open a deeper modal with fuller interpretation and visual symbolism.",
+      "✨ Why This Screen Is Useful — It gives a user-friendly summary of the strongest aspects shaping the Mars Return cycle."
+    ]
+  },
+  {
+    "name": "horoscope_mars_return_deep_aspect_analysis",
+    "label": "Mars Return: Deep Aspect Analysis",
+    "description": "A detailed interpretation screen for one selected Mars Return aspect, with expanded text and picture representation.",
+    "group": "Horoscope Toolkit",
+    "subModule": "Mars Return",
+    "purpose": "This screen opens when the user clicks Show More on a Mars Return aspect card. The system selects one important aspect and explains it in much greater depth. In the example shown, Sun conjunction Mercury is expanded into a fuller psychological and practical reading. The purpose of this screen is to show how one exact aspect influences identity, communication style, mental speed, confidence, persuasion, focus, and self-expression during the Mars Return cycle, while the picture representation gives a faster symbolic understanding of the blended planetary forces.",
+    "bullets": [
+      "🔗 Selected Aspect Focus — This screen explains one key aspect in depth, such as Sun conjunction Mercury.",
+      "☀ Sun Meaning Layer — The Sun represents identity, purpose, confidence, vitality, visibility, and conscious self-expression.",
+      "☿ Mercury Meaning Layer — Mercury represents thought, communication, learning, logic, writing, speech, analysis, and mental processing.",
+      "☌ Conjunction Meaning Layer — A conjunction shows blending, intensity, direct fusion, and a strong combined expression of the two energies.",
+      "📏 Orb Meaning — The orb helps show how strongly the aspect is active in the Mars Return cycle, with tighter orbs usually feeling stronger.",
+      "🧠 Psychological Interpretation — Explains how the user may experience sharper thinking, quicker self-expression, stronger personal opinions, and a more mentally driven sense of identity.",
+      "🎯 Practical Life Interpretation — Shows how this aspect may appear through speaking up, leadership in communication, strong planning, persuasive expression, faster decision-making, and clear idea ownership.",
+      "🖼 Picture Representation Purpose — The image visually breaks the aspect into Sun qualities, Mercury qualities, and the merged field in the center.",
+      "🌞 Left Visual Field — Shows the Sun-side traits such as ego, purpose, identity, confidence, self-expression, authority, and vitality.",
+      "☿ Right Visual Field — Shows the Mercury-side traits such as logic, thought, ideas, writing, perception, analysis, curiosity, and communication.",
+      "🤝 Center Blend Meaning — Shows the merged aspect qualities such as mental clarity, persuasive speech, articulate identity, quick decision-making, focused expression, and confidence in ideas.",
+      "✨ Why This Screen Is Useful — It helps astrologers and users move beyond the short aspect summary into deeper symbolic and life-level interpretation.",
+      "🚀 Practical Use — Useful for deep client readings, communication analysis, confidence and identity work, and advanced Mars Return aspect interpretation."
+    ]
+  },
+  {
+    "name": "horoscope_mars_return_angles_points",
+    "label": "Mars Return: Ascendant, Midheaven & Vertex",
+    "description": "A focused interpretation screen for the Mars Return Ascendant, Midheaven, and Vertex, showing personal tone, career direction, and pivotal encounter themes.",
+    "group": "Horoscope Toolkit",
+    "subModule": "Mars Return",
+    "purpose": "This section is generated after the Mars Return chart is calculated from the user's date of birth, time of birth, and place of birth. The system identifies important chart points such as the Ascendant, Midheaven, and Vertex, then calculates their exact degrees and zodiac signs inside the Mars Return chart. The purpose of this screen is to help astrologers and users understand the personal tone of the cycle, the public or career direction of the period, and the meaningful encounters or turning points that may arise. It translates exact angular and point data into clear interpretation.",
+    "bullets": [
+      "⬆ Ascendant Degree Meaning — Shows the exact degree of the return Ascendant and explains the user's personal style, instinctive response, outer behavior, and the overall tone of the Mars Return cycle.",
+      "♓ Ascendant in Pisces Example — Pisces rising in the return can show greater intuition, empathy, sensitivity, imagination, and a softer but spiritually aware approach to life.",
+      "🏆 Midheaven Degree Meaning — Shows the exact degree of the Midheaven and explains career direction, ambition, public image, authority path, and visible achievement themes.",
+      "♐ Midheaven in Sagittarius Example — Sagittarius on the Midheaven can show growth through learning, travel, teaching, broad vision, optimism, and a more adventurous public path.",
+      "✨ Vertex Degree Meaning — Shows the exact degree of the Vertex and explains meaningful encounters, fated turning points, and deep transformational relationships or experiences.",
+      "♍ Vertex in Virgo Example — Virgo on the Vertex can show important turning points through service, health, work improvement, practical duty, skill refinement, and useful relationships.",
+      "📐 Exact Degree Refinement — The interpretation uses precise degree values to refine how the angular points are expressed and how strongly they may be felt.",
+      "🧠 Why These Points Matter — The Ascendant, Midheaven, and Vertex are major directional points that help explain the personal, public, and fated tone of the Mars Return cycle.",
+      "💬 Easy Reading Format — Converts technical angular and point data into simple practical guidance so users can understand the message clearly.",
+      "🚀 Practical Use — Useful for yearly identity guidance, career forecasting, public-path interpretation, encounter timing, and understanding the strongest directional points of the Mars Return."
+    ]
+  },
+  {
+    "name": "horoscope_mars_return_lilith_information",
+    "label": "Mars Return: Lilith Interpretation",
+    "description": "A focused Lilith screen showing sign, degree, house, speed, retrograde status, and the deeper interpretive meaning of Lilith in the Mars Return chart.",
+    "group": "Horoscope Toolkit",
+    "subModule": "Mars Return",
+    "purpose": "This section is generated after the Mars Return chart is calculated using the user's date of birth, time of birth, and place of birth. The system identifies Lilith's exact sign, degree, house, speed, and retrograde status in the return chart, then translates that placement into a readable interpretation. The purpose of this screen is to help astrologers and users understand the raw, shadow, instinctive, rebellious, and uncompromising themes that may become active during the Mars Return cycle. In the example shown, Lilith in Capricorn in the 10th house highlights themes of ambition, authority tension, public pressure, recognition hunger, and the urge to define one's own path in career and success.",
+    "bullets": [
+      "⚫ Lilith Placement Data — Shows Lilith's sign, full degree, house, normalized degree, speed, and retrograde status for accurate technical interpretation.",
+      "♑ Lilith in Capricorn Meaning — Lilith in Capricorn often emphasizes shadow themes around control, authority, achievement, ambition, social rules, status pressure, and resistance to limitation.",
+      "🏠 Lilith in the 10th House Meaning — The 10th house links Lilith to career, public image, recognition, leadership, reputation, and the user's relationship with authority structures.",
+      "✨ Combined Meaning — Lilith in Capricorn in the 10th house can show intense ambition, discomfort with control, fear of restriction, strong desire for success, and rebellion against career expectations that feel false or oppressive.",
+      "📐 Degree Meaning — The exact degree refines the intensity and tone of the placement, helping astrologers read Lilith with more accuracy.",
+      "⚡ Speed Meaning — Lilith's speed can help describe whether the influence feels more active, subtle, or gradually unfolding in the Mars Return cycle.",
+      "🔁 Retrograde Status — A direct Lilith emphasizes a more outward expression of the shadow theme, while retrograde would indicate a more inward or internalized struggle.",
+      "🧠 Shadow and Authenticity Theme — This screen helps explain where the user may confront suppressed ambition, hidden resentment, power tension, public pressure, or the need for deeper authenticity in career direction.",
+      "💬 Easy Reading Format — Converts technical Lilith data into a direct readable interpretation that users can understand without advanced astrology knowledge.",
+      "🚀 Practical Use — Useful for shadow-work insight, career-pattern analysis, authority tension guidance, public-image reading, and advanced Mars Return interpretation."
+    ]
+  },
+  
 
       // ------------------Uranus Opposition------------------//
-      { 
-        name: "horoscope_uranus_opposition_setup", 
-        label: "Uranus Opposition", 
-        description: "The mid-life astrological transit analysis.", 
-        group: "Horoscope Toolkit",
-        subModule: "Uranus Opposition",
-        purpose: "Maps out the major mid-life transit (around age 40-42) when transiting Uranus opposes natal Uranus, often bringing unexpected changes, awakenings, and shifts in direction.",
-        bullets: [
-          "Timing of the exact opposition points",
-          "Themes of rebellion, freedom, and authenticity",
-          "Major life shifts and breakthrough moments",
-          "Navigating mid-life awakenings safely"
-        ]
-      },
+   
+  {
+    "name": "horoscope_uranus_opposition_entry_setup",
+    "label": "Uranus Opposition: Entry & Generation Setup",
+    "description": "Enter birth details to generate the full Uranus Opposition reading and result screens in sequence.",
+    "group": "Horoscope Toolkit",
+    "subModule": "Uranus Opposition",
+    "purpose": "This is the first screen of the Uranus Opposition module. The user must enter date of birth, time of birth, and place of birth. These three birth details are required because the system uses them to calculate the natal chart accurately and identify the exact natal position of Uranus. After all required birth fields are filled correctly, the Generate Reading button becomes active. Once the user clicks Generate Reading, the platform calculates the upcoming Uranus Opposition period and builds the full Uranus Opposition reading screen by screen. The generated response depends on DOB, TOB, and POB because those details affect natal Uranus sign, degree, house placement, chart angles, house cusps, opposition timing window, return-style chart structure, aspects, liberation themes, life-direction shifts, and all deeper interpretations. This setup screen is important because if birth time or birth place is incorrect, the Uranus Opposition timing, activated life areas, and interpretation may also change.",
+    "bullets": [
+      "📅 Step 1 — Enter Date of Birth: The user enters the birth date so the system can calculate natal planetary positions and locate natal Uranus correctly.",
+      "🕒 Step 2 — Enter Time of Birth: The user enters the exact birth time because Ascendant, house cusps, chart angles, and natal Uranus house placement depend on correct timing.",
+      "📍 Step 3 — Enter Place of Birth: The user enters the birth place so the system can use the correct geographic coordinates and timezone for accurate natal and opposition-cycle chart calculation.",
+      "📝 Step 4 — Area of Inquiry (Optional): The user may enter a focus such as freedom, career change, identity shift, relationships, purpose, reinvention, spiritual awakening, or mid-life transition.",
+      "✅ Step 5 — Generate Reading Activation: After the required birth details are completed correctly, the Generate Reading button becomes enabled.",
+      "📊 Result Screen 1 — Chart View: The system generates the Uranus Opposition wheel charts so the user can visually see the chart structure, planetary placements, and overall aspect pattern.",
+      "📋 Result Screen 2 — Opposition Data & Positions: The platform shows the birth reference, natal Uranus placement, next Uranus Opposition time window, house system, and key planetary positions in the generated chart.",
+      "⚡ Result Screen 3 — Upcoming Uranus Opposition Analysis: The reading explains the general meaning of the Uranus Opposition across life areas such as career, relationships, personal growth, health, family, social life, and spirituality.",
+      "🪐 Result Screen 4 — Planet Information & Planet Cards: The system shows detailed planetary data and then generates readable interpretation cards for important planets such as Moon, Mercury, Venus, Sun, Uranus, and others.",
+      "🔺 Result Screen 5 — Decan Interpretation Modal: If a triangle decan symbol is present on a planet card, the user can open a deeper decan-based image or text interpretation for that placement.",
+      "🏠 Result Screen 6 — House Information & House Cards: The platform shows the house table, house distribution view, and individual house interpretation cards explaining how each life area is reshaped during the Uranus Opposition.",
+      "✨ Result Screen 7 — Dharma, Karma, and Key Themes: The reading highlights purpose themes, karmic lessons, and liberation patterns for deeper awakening-cycle understanding.",
+      "🔗 Result Screen 8 — Aspects, Aspect Cards, and Deep Aspect Analysis: The system shows the technical aspect table, readable aspect summary cards, and deeper aspect modals with symbolic picture representation for major Uranus Opposition aspects."
+    ]
+  },
+  {
+    "name": "horoscope_uranus_opposition_chart",
+    "label": "Uranus Opposition: Chart View",
+    "description": "Visual wheel charts showing the Uranus Opposition pattern and planetary aspect structure.",
+    "group": "Horoscope Toolkit",
+    "subModule": "Uranus Opposition",
+    "purpose": "This screen is generated after the user enters date of birth, time of birth, and place of birth. The system first calculates the natal chart, identifies natal Uranus, then maps the Uranus Opposition period when transiting Uranus reaches the opposite polarity from natal Uranus. After that, it builds the chart and displays it in wheel format. The left wheel shows the full Western chart with signs, houses, planets, and angles. The right wheel highlights the aspect geometry so astrologers can quickly see the pattern of tension, awakening, and breakthrough. The purpose of this screen is to help users understand the structure of the Uranus Opposition visually before moving into deeper interpretation about change, freedom, disruption, reinvention, and life redirection.",
+    "bullets": [
+      "⚡ Uranus Opposition Basis — The chart is built around the life phase when Uranus opposes natal Uranus, often linked with awakening, disruption, independence, and major turning points.",
+      "📅 Birth Data Based Generation — Uses DOB, TOB, and POB to calculate the natal chart, natal Uranus position, and the exact Uranus Opposition timing window.",
+      "🌌 Left Wheel Chart Meaning — Shows the full chart with planets, signs, houses, and angles for complete opposition-cycle interpretation.",
+      "📐 Right Aspect Chart Meaning — Shows planetary aspect geometry so supportive, tense, and breakthrough patterns can be understood more quickly.",
+      "🏠 House Activation Value — Helps reveal which life areas are most strongly reshaped during the Uranus Opposition, such as work, relationships, identity, purpose, freedom, or emotional habits.",
+      "⚡ Why This Screen Is Useful — Gives a visual foundation for the Uranus Opposition reading before the user moves into tables, positions, and narrative interpretation.",
+      "🚀 Practical Use — Useful for awakening-cycle forecasting, life-change analysis, freedom themes, reinvention planning, and understanding the overall energetic structure of the Uranus Opposition."
+    ]
+  },
+  {
+    "name": "horoscope_uranus_opposition_positions",
+    "label": "Uranus Opposition: Opposition Data & Positions",
+    "description": "A technical summary of the Uranus Opposition chart, including birth reference, opposition period, and major planetary placements.",
+    "group": "Horoscope Toolkit",
+    "subModule": "Uranus Opposition",
+    "purpose": "This screen is generated after the system calculates the user's Uranus Opposition from date of birth, time of birth, and place of birth. It presents the core technical data needed for interpretation, including birth details, house system, natal Uranus position, next Uranus Opposition period, and the sign-house placements of key planets and points in the generated chart. The purpose of this screen is to give astrologers a quick structural overview of the Uranus Opposition before moving into narrative analysis. It helps users see exactly where Uranus is being opposed, which houses are activated, and which planets are especially important in this cycle of awakening and change.",
+    "bullets": [
+      "📅 Birth Reference Row — Shows the user's date of birth, place of birth, and time of birth used to calculate the natal and Uranus Opposition charts.",
+      "🏛 House System — Shows which house system is used for the interpretation, such as Whole Sign.",
+      "⚡ Uranus At Birth — Shows natal Uranus' original sign, degree, and house, which becomes the anchor point for calculating the opposition cycle.",
+      "🔄 Next Uranus Opposition Period — Shows the future time window when transiting Uranus opposes natal Uranus and the major awakening cycle becomes active.",
+      "📍 Positions Section — Lists the major placements of Ascendant, Uranus, Moon, Sun, Mercury, Venus, Mars, Jupiter, Saturn, Neptune, Pluto, Nodes, and other important points.",
+      "🏠 Sign + House Meaning — Each placement shows not only the zodiac sign but also the life area where that force becomes active in the cycle.",
+      "🧠 Why This Screen Is Useful — Gives a precise technical map of the Uranus Opposition chart so deeper interpretation can be built on clearly visible placements.",
+      "🚀 Practical Use — Useful for astrologers, advanced users, technical chart checking, and preparing the deeper Uranus Opposition reading."
+    ]
+  },
+  {
+    "name": "horoscope_uranus_opposition_analysis_v1",
+    "label": "Uranus Opposition: Upcoming Cycle Analysis",
+    "description": "A life-area reading of the upcoming Uranus Opposition, explaining how the cycle may affect identity, career, relationships, family, health, social life, and spiritual direction.",
+    "group": "Horoscope Toolkit",
+    "subModule": "Uranus Opposition",
+    "purpose": "This section is generated after the Uranus Opposition chart is calculated from the user's DOB, TOB, and POB. The system analyzes Uranus' sign and house placement, along with major aspects to other chart factors, and translates the result into life-area guidance. This screen explains how the Uranus Opposition may influence general life direction, career shifts, relationship reevaluation, personal awakening, health routines, family changes, social reinvention, and spiritual expansion. The purpose is to turn technical Uranus Opposition placements into a readable roadmap for the years surrounding this major liberation threshold.",
+    "bullets": [
+      "⚡ General Theme — Explains the overall tone of the Uranus Opposition, such as awakening, disruption, freedom, change, reinvention, and release from old limits.",
+      "💼 Career Section — Shows how the cycle may affect professional direction, desire for independence, unconventional work paths, public identity, and career disruption or innovation.",
+      "❤️ Relationship Section — Explains how the cycle may reshape commitment patterns, closeness, autonomy, communication, and relationship expectations.",
+      "🌱 Personal Growth Section — Shows where the user is being challenged to break old patterns, question beliefs, and redefine personal identity.",
+      "🩺 Health Section — Highlights lifestyle change, nervous-system pressure, routine disruption, healing through new methods, and the need for balance and adaptability.",
+      "🏠 Family Section — Explains how home life, family roles, roots, and private emotional foundations may go through sudden shifts or new understanding.",
+      "🤝 Social Section — Shows how communities, friendships, group belonging, and social identity may be restructured during the cycle.",
+      "🔮 Spiritual Section — Explains spiritual awakening, expanded awareness, questioning rigid beliefs, and freedom through deeper insight.",
+      "✨ Why This Screen Is Useful — Gives a broad but practical interpretation of the Uranus Opposition, organized by life area instead of only technical astrology."
+    ]
+  },
+  {
+    "name": "horoscope_uranus_opposition_planet_information",
+    "label": "Uranus Opposition: Planet Information",
+    "description": "A detailed planetary data table showing sign, degree, house, speed, retrograde status, and normalized position for the Uranus Opposition chart.",
+    "group": "Horoscope Toolkit",
+    "subModule": "Uranus Opposition",
+    "purpose": "This screen is generated after the Uranus Opposition chart is calculated using the user's DOB, TOB, and POB. It presents the technical placement data for each important planet and point. The table helps astrologers verify where each body falls by sign and house, how fast it is moving, whether it is retrograde, and how the placement is refined by degree. The purpose of this screen is to support precise interpretation and create the basis for the later narrative planet cards.",
+    "bullets": [
+      "🪐 Planet Column — Shows the planetary body or point being interpreted, such as Moon, Mercury, Venus, Sun, Mars, Jupiter, Saturn, Uranus, Neptune, Pluto, Node, Chiron, or Part of Fortune.",
+      "♈ Sign Column — Shows the zodiac sign where that placement is located.",
+      "📐 Full Degree Column — Shows the exact zodiac longitude of the placement in the Uranus Opposition chart.",
+      "🏠 House Column — Shows which house the placement occupies, revealing where that energy acts most strongly in life.",
+      "📏 Norm Degree Column — Shows the degree inside the sign itself, helping refine whether the placement is early, middle, or late in expression.",
+      "⚡ Speed Column — Shows how quickly the planet is moving, helping interpret whether the energy is active, slow, steady, or highly emphasized.",
+      "🔁 Retro Column — Shows whether the placement is retrograde, indicating a more inward, reflective, delayed, or revisiting expression.",
+      "🧠 Why This Table Is Useful — Gives astrologers a clean technical reference before moving into interpretive cards and deeper analysis.",
+      "🚀 Practical Use — Useful for accurate chart reading, technical validation, advanced astrology work, and building deeper Uranus Opposition interpretations."
+    ]
+  },
+  {
+    "name": "horoscope_uranus_opposition_planet_cards",
+    "label": "Uranus Opposition: Planet Interpretation Cards",
+    "description": "Readable Uranus Opposition interpretation cards for each planet, combining sign, house, degree, speed, retrograde status, and optional decan marker.",
+    "group": "Horoscope Toolkit",
+    "subModule": "Uranus Opposition",
+    "purpose": "This section is generated after the Uranus Opposition chart is calculated using the user's date of birth, time of birth, and place of birth. The system creates a separate interpretation card for each important placement and translates raw chart values into practical meaning. Each card combines the planet, zodiac sign, house, full degree, normalized degree, speed, and retrograde status into an easy-to-read explanation. Some cards also show a small triangle symbol, which means a decan-based interpretation is available. The purpose of this screen is to let users understand the Uranus Opposition one placement at a time without needing to read the full chart at once.",
+    "bullets": [
+      "🌙 Moon Card Meaning — Explains the emotional tone of the cycle, instinctive responses, security needs, mood intensity, and where emotional change is strongest.",
+      "🧠 Mercury Card Meaning — Explains thinking style, communication pattern, intuition, relationship dialogue, and how ideas are expressed during the Uranus Opposition.",
+      "♀ Venus Card Meaning — Explains values, attraction, pleasure, beauty, relationships, belief-based desire, and how connection is reshaped in the cycle.",
+      "🌞 Sun Card Meaning — Explains identity, confidence, self-expression, partnership focus, and the main life purpose emphasized during the Uranus Opposition.",
+      "⚡ Uranus Card Meaning — Explains the core theme of the cycle: liberation, disruption, awakening, freedom, unpredictability, and authentic self-renewal.",
+      "♈ Sign + House Synthesis — Each card combines sign and house to explain both how the energy behaves and where it acts most strongly.",
+      "📐 Degree Meaning — Uses exact degree and normalized degree to refine the tone and maturity of the interpretation.",
+      "⚡ Speed Meaning — Uses planetary speed to show whether the influence is swift, intense, steady, or slow-building.",
+      "🔁 Retrograde Layer — Adds inward, reflective, revisiting, or delayed themes when a placement is retrograde.",
+      "🔺 Decan Indicator — A small triangle near the planet name means a deeper decan interpretation can be opened for that placement.",
+      "📖 Show More Purpose — The Show More action opens a deeper modal with expanded meaning, symbolism, and refined interpretation.",
+      "✨ Why This Screen Is Useful — Makes the Uranus Opposition easy to read planet by planet for both astrologers and general users."
+    ]
+  },
+  {
+    "name": "horoscope_uranus_opposition_decan_modal",
+    "label": "Uranus Opposition: Planet Decan Interpretation",
+    "description": "A deeper symbolic interpretation screen that explains a planet's decan meaning through imagery, tarot-style association, and mythic symbolism.",
+    "group": "Horoscope Toolkit",
+    "subModule": "Uranus Opposition",
+    "purpose": "This screen appears when the user clicks the triangle symbol on a Uranus Opposition planet card, indicating that a decan interpretation is available. The system first calculates the chart from DOB, TOB, and POB, then checks the exact degree of the selected planet and determines which 10-degree decan of the zodiac sign it belongs to. In the example shown, the Sun is placed in Aries and linked to a specific Aries decan image and text layer. The purpose of this screen is to give a more refined layer of meaning beyond sign and house by using decan symbolism, visual imagery, tarot-style correspondences, mundane themes, and mythic associations.",
+    "bullets": [
+      "🔺 Decan Trigger Meaning — This modal opens only when the selected placement has a decan marker available.",
+      "📐 What a Decan Means — Each zodiac sign is divided into 3 decans of 10 degrees each, and the exact degree decides which decan the planet belongs to.",
+      "🌞 Planet Decan Focus — The screen explains how the selected planet, such as the Sun, expresses itself in a more nuanced way inside that decan.",
+      "♈ Sign Base Meaning — The base sign gives the main psychological and energetic tone, while the decan adds a secondary influence that refines it.",
+      "🃏 Tarot Layer — The modal may connect the decan to a tarot-style card image to symbolize the deeper psychological or spiritual meaning of the placement.",
+      "🏛 Mundane Force Theme — A concept such as virtue, courage, recognition, aspiration, growth, or moral power may be used to explain the real-world style of the decan.",
+      "🏺 Greek or Mythic Figure Layer — Mythic figures add archetypal meaning and make the decan easier to understand symbolically.",
+      "🖼 Image Representation Purpose — The image helps users grasp the decan visually through symbolism rather than only text.",
+      "🧠 Why This Screen Is Useful — It explains why two people with the same planet in the same sign can still express it differently depending on exact degree.",
+      "📖 Text Toggle Purpose — The modal can allow users to switch between image and text mode for a clearer learning experience.",
+      "🚀 Practical Use — Useful for advanced Uranus Opposition reading, refined planet interpretation, symbolic teaching, and deep astrological analysis."
+    ]
+  },
+  {
+    "name": "horoscope_uranus_opposition_house_information",
+    "label": "Uranus Opposition: House Information",
+    "description": "A technical house-cusp table showing the sign and degree of all 12 houses in the Uranus Opposition chart.",
+    "group": "Horoscope Toolkit",
+    "subModule": "Uranus Opposition",
+    "purpose": "This screen is generated after the Uranus Opposition chart is calculated from the user's date of birth, time of birth, and place of birth. It lists all 12 houses, the zodiac sign on each house cusp, and the exact cusp degree. The purpose of this screen is to give astrologers a clear structural map of the Uranus Opposition chart before the house meanings are expanded into narrative interpretation. It shows which signs rule which life areas during the awakening cycle and where the main themes of reinvention, relationship change, work shifts, purpose, and freedom are organized.",
+    "bullets": [
+      "🏠 House Column — Shows each house from House 1 to House 12.",
+      "♈ Sign Column — Shows the zodiac sign ruling each house cusp in the Uranus Opposition chart.",
+      "📐 Degree Column — Shows the exact zodiac degree for each house cusp, refining interpretation and chart precision.",
+      "⬆ 1st House / Ascendant Value — Reveals the personal tone, instinctive style, self-presentation, and overall approach to the Uranus Opposition cycle.",
+      "💰 2nd House Value — Shows how money, values, self-worth, and material stability are affected during the cycle.",
+      "🗣 3rd House Value — Shows communication, learning, decision-making, nearby environment, and daily mental activity themes.",
+      "🏆 10th House Value — Shows career, public image, ambition, authority, and visible life direction.",
+      "🧠 Why This Table Is Useful — It helps astrologers see the full house structure before reading the detailed house cards.",
+      "📊 Technical Reading Support — Useful for verifying cusp signs and building accurate house-based interpretation.",
+      "🚀 Practical Use — Useful for advanced chart reading, house analysis, client work, and understanding how the Uranus Opposition organizes life themes."
+    ]
+  },
+  {
+    "name": "horoscope_uranus_opposition_house_cards_part_1",
+    "label": "Uranus Opposition: House Interpretation Cards — Part 1",
+    "description": "Readable house-by-house cards showing how the early houses of the Uranus Opposition chart shape identity, values, communication, home, and creativity.",
+    "group": "Horoscope Toolkit",
+    "subModule": "Uranus Opposition",
+    "purpose": "This section is generated after the Uranus Opposition chart is calculated and the system identifies the sign placed on each house cusp. The platform then creates short interpretation cards for the houses, explaining what each life area means and how the ruling sign colors that part of the Uranus Opposition cycle. This screen includes the visual house-distribution map and the first set of house cards, such as House 1 through House 5. The purpose is to help users understand the cycle in life-area form instead of reading the whole chart all at once.",
+    "bullets": [
+      "📊 House Distribution Map — The top visual layout shows where planets fall across the 12 houses, helping astrologers see concentration and life-area emphasis quickly.",
+      "🏠 House 1 Card — Explains identity, self-image, first impression, personal style, and how the user enters the Uranus Opposition cycle.",
+      "♍ Virgo Rising Example — Virgo rising can show careful self-observation, detail-focus, practical analysis, and stronger attention to health, wellness, and improvement.",
+      "💰 House 2 Card — Explains values, money, possessions, self-worth, and how material security is handled during the cycle.",
+    "📖 Show More Purpose — Each house card can open a deeper modal with fuller interpretation for that specific house.",
+      "✨ Why This Screen Is Useful — It breaks the Uranus Opposition into early life-area cards so the user can understand the cycle in a structured and simple way."
+    ]
+  },
+  
+  {
+    "name": "horoscope_uranus_opposition_dharma_karma",
+    "label": "Uranus Opposition: Dharma & Karma",
+    "description": "A focused screen that explains growth path, higher purpose, karmic lessons, and awakening themes inside the Uranus Opposition cycle.",
+    "group": "Horoscope Toolkit",
+    "subModule": "Uranus Opposition",
+    "purpose": "This section is generated after the Uranus Opposition chart is calculated and the system evaluates purpose-oriented and karmic placements, including Venus, Sun, Jupiter, Saturn, Uranus, Neptune, Nodes, and important aspects between them. It separates the reading into Dharma and Karma so users can understand both the path of fulfillment and the major lessons that must be faced. The purpose of this screen is to show where purpose, freedom, belief expansion, relational growth, responsibility, aspiration, and karmic release are most emphasized in the Uranus Opposition cycle.",
+    "bullets": [
+      "✨ Dharma Section — Explains the path of growth, meaning, fulfillment, and the qualities the user is encouraged to develop during the Uranus Opposition.",
+      "♀ Venus-Based Purpose — Shows how values, beauty, relationship wisdom, learning, and meaningful experience can guide the path of purpose.",
+      "☀ Sun + Jupiter Support — Helpful Sun-Jupiter themes can show confidence, expansion, belief growth, travel, knowledge, generosity, and alignment with a larger vision.",
+      "⚡ Uranian Opportunity — Supportive Uranus links can show growth through unconventional paths, innovation, authenticity, and openness to new experience.",
+      "🪨 Karma Section — Explains karmic lessons, pressure points, old habits, duty patterns, aspiration conflicts, and the discipline required to move forward with clarity.",
+      "♄ Saturn Lesson Meaning — Saturn often shows responsibility, long-term realism, maturity, limits, and the work needed to stabilize freedom.",
+      "☋ South Node Meaning — The South Node can point to old tendencies, sacrifice patterns, over-service, confusion, or habits that must be released for healthier growth.",
+      "⚖ Freedom vs Structure — The screen helps show where liberation must be balanced with responsibility, discipline, and clearer life direction.",
+      "📖 Show More Purpose — Each Dharma or Karma block can open a deeper explanation for astrologers who want a fuller reading.",
+      "🧠 Why This Screen Is Useful — It helps the user see not only what is opening up in the Uranus cycle, but also what must be released, disciplined, and understood for true awakening."
+    ]
+  },
+  {
+    "name": "horoscope_uranus_opposition_aspects_table",
+    "label": "Uranus Opposition: Aspects Table",
+    "description": "A technical aspect table showing planetary relationships, orb closeness, degree differences, and exactness indicators in the Uranus Opposition chart.",
+    "group": "Horoscope Toolkit",
+    "subModule": "Uranus Opposition",
+    "purpose": "This screen is generated after the Uranus Opposition chart is calculated and the system compares planets and points to find major aspects. It presents a structured table showing the aspected planet, the aspecting planet, orb, degree difference, exact degrees, and aspect type. It also includes a proximity color legend so astrologers can quickly see whether an aspect is extremely exact, just past, just before, or farther from exactness. The purpose of this screen is to give a precise technical overview of the most important aspect relationships shaping the Uranus Opposition cycle.",
+    "bullets": [
+      "🔭 Aspect Proximity Indicator — The color key shows how close each aspect is to exact, helping astrologers judge strength and immediacy quickly.",
+      "🪐 Aspected Planet Column — Shows the planet or point receiving the aspect.",
+      "☀ Aspecting Planet Column — Shows the planet creating the aspect relationship.",
+      "📏 Orb Column — Shows how far the aspect is from exactness, which strongly affects its intensity.",
+      "📐 Diff Column — Shows the degree separation difference used to verify the aspect relationship.",
+      "🎯 Aspect Type Column — Shows whether the relationship is a trine, sextile, square, conjunction, opposition, and so on.",
+      "🏛 Point Inclusion — The table may include special points such as the Midheaven, not only planets.",
+      "🧠 Why This Table Is Useful — It gives astrologers a fast technical scan of the strongest Uranus Opposition dynamics before moving into readable aspect cards.",
+      "⚖ Exactness Value — Very close aspects usually have stronger and more immediate influence in the Uranus Opposition cycle.",
+      "🚀 Practical Use — Useful for advanced chart work, precise aspect analysis, client explanation, and identifying the dominant energetic patterns of the Uranus Opposition."
+    ]
+  },
+  {
+    "name": "horoscope_uranus_opposition_aspect_cards",
+    "label": "Uranus Opposition: Aspect Interpretation Cards",
+    "description": "Readable aspect cards that explain the main Uranus Opposition aspects in simple language, including practical meaning and orb influence.",
+    "group": "Horoscope Toolkit",
+    "subModule": "Uranus Opposition",
+    "purpose": "This section is generated after the system calculates the major Uranus Opposition aspects and selects the strongest or most meaningful ones for interpretation. Each aspect is turned into a separate readable card, such as Sun trine Jupiter, Sun trine Saturn, Venus square Saturn, or Venus sextile Uranus. The cards explain the aspect type, the two planets involved, and the practical meaning of that energy during the Uranus Opposition cycle. The purpose of this screen is to help users understand the strongest aspect themes without needing to read the full technical table.",
+    "bullets": [
+      "☀ Sun Trine Jupiter Card — Explains optimism, growth, opportunity, broader vision, confidence, and supportive expansion during the awakening cycle.",
+      "☀ Sun Trine Saturn Card — Explains discipline, stability, responsibility, maturity, and constructive structure that supports long-term progress.",
+      "♀ Venus Square Saturn Card — Explains tension between love or desire and responsibility, showing where patience, realism, and emotional maturity are required.",
+      "♀ Venus Sextile Uranus Card — Explains supportive change in relationships, freedom in values, fresh experiences, and openness to unconventional connection.",
+      "📏 Orb Meaning — The card may mention how close the orb is, helping show whether the aspect is especially strong or more moderate.",
+      "🔗 Aspect Type Meaning — Each card explains the style of the aspect, such as trine for easy flow, square for challenge, or sextile for supportive opportunity.",
+      "💬 Easy Reading Format — Converts technical aspect data into short readable guidance for quick understanding.",
+      "🎯 Real-Life Meaning — Connects the aspect to practical themes such as confidence, relationships, structure, opportunity, awakening, and change management.",
+      "📖 Show More Purpose — Each card can open a deeper modal with fuller interpretation and visual symbolism.",
+      "✨ Why This Screen Is Useful — It gives a user-friendly summary of the strongest aspects shaping the Uranus Opposition cycle."
+    ]
+  },
+  {
+    "name": "horoscope_uranus_opposition_deep_aspect_analysis",
+    "label": "Uranus Opposition: Deep Aspect Analysis",
+    "description": "A detailed interpretation screen for one selected Uranus Opposition aspect, with expanded text and picture representation.",
+    "group": "Horoscope Toolkit",
+    "subModule": "Uranus Opposition",
+    "purpose": "This screen opens when the user clicks Show More on a Uranus Opposition aspect card. The system selects one important aspect and explains it in much greater depth. In the example shown, Sun trine Jupiter is expanded into a fuller psychological and practical reading. The purpose of this screen is to show how one exact aspect influences identity, optimism, generosity, expansion, timing, belief, and visible growth during the Uranus Opposition cycle, while the picture representation gives a faster symbolic understanding of the blended planetary forces.",
+    "bullets": [
+      "🔗 Selected Aspect Focus — This screen explains one key aspect in depth, such as Sun trine Jupiter.",
+      "☀ Sun Meaning Layer — The Sun represents identity, purpose, confidence, vitality, visibility, and conscious self-expression.",
+      "♃ Jupiter Meaning Layer — Jupiter represents growth, wisdom, generosity, opportunity, faith, learning, expansion, and abundance.",
+      "△ Trine Meaning Layer — A trine shows ease, harmony, natural flow, encouragement, and constructive support between two energies.",
+      "📏 Orb Meaning — The orb helps show how strongly the aspect is active in the Uranus Opposition cycle, with tighter orbs usually feeling stronger.",
+      "🧠 Psychological Interpretation — Explains how the user may experience stronger hope, wider perspective, open-hearted confidence, and a natural ability to grow through change.",
+      "🎯 Practical Life Interpretation — Shows how this aspect may appear through opportunity, recognition, learning, success, belief expansion, or confidence in taking the next step.",
+      "🖼 Picture Representation Purpose — The image visually breaks the aspect into Sun qualities, Jupiter qualities, and the merged field in the center.",
+      "🌞 Left Visual Field — Shows the Sun-side traits such as brilliance, clarity, identity, radiance, confidence, source energy, and visible purpose.",
+      "♃ Right Visual Field — Shows the Jupiter-side traits such as expansion, learning, generosity, joy, travel, philosophy, aspiration, and blessing.",
+      "🤝 Center Blend Meaning — Shows the merged aspect qualities such as optimism, wisdom, harmony, opportunity, confidence, prosperity, abundance, and balanced growth.",
+      "✨ Why This Screen Is Useful — It helps astrologers and users move beyond the short aspect summary into deeper symbolic and life-level interpretation.",
+      "🚀 Practical Use — Useful for deep client readings, growth-cycle analysis, confidence and belief work, and advanced Uranus Opposition aspect interpretation."
+    ]
+  },
+
+  {
+    "name": "horoscope_uranus_opposition_angles_points",
+    "label": "Uranus Opposition: Ascendant, Midheaven & Vertex",
+    "description": "A focused interpretation screen for the Uranus Opposition Ascendant, Midheaven, and Vertex, showing personal tone, career direction, and pivotal encounter themes.",
+    "group": "Horoscope Toolkit",
+    "subModule": "Uranus Opposition",
+    "purpose": "This section is generated after the Uranus Opposition chart is calculated from the user's date of birth, time of birth, and place of birth. The system identifies important chart points such as the Ascendant, Midheaven, and Vertex, then calculates their exact degrees and zodiac signs inside the Uranus Opposition chart. The purpose of this screen is to help astrologers and users understand the personal tone of the cycle, the public or career direction of the period, and the meaningful encounters or turning points that may arise. It translates exact angular and point data into clear interpretation.",
+    "bullets": [
+      "⬆ Ascendant Degree Meaning — Shows the exact degree of the opposition Ascendant and explains the user's personal style, instinctive response, outer behavior, and the overall tone of the Uranus Opposition cycle.",
+      "♓ Ascendant in Pisces Example — Pisces rising in the opposition chart can show greater intuition, empathy, sensitivity, imagination, and a softer but spiritually aware approach to life.",
+      "🏆 Midheaven Degree Meaning — Shows the exact degree of the Midheaven and explains career direction, ambition, public image, authority path, and visible achievement themes.",
+      "♐ Midheaven in Sagittarius Example — Sagittarius on the Midheaven can show growth through learning, travel, teaching, broad vision, optimism, and a more adventurous public path.",
+      "✨ Vertex Degree Meaning — Shows the exact degree of the Vertex and explains meaningful encounters, fated turning points, and deep transformational relationships or experiences.",
+      "♍ Vertex in Virgo Example — Virgo on the Vertex can show important turning points through service, health, work improvement, practical duty, skill refinement, and useful relationships.",
+      "📐 Exact Degree Refinement — The interpretation uses precise degree values to refine how the angular points are expressed and how strongly they may be felt.",
+      "🧠 Why These Points Matter — The Ascendant, Midheaven, and Vertex are major directional points that help explain the personal, public, and fated tone of the Uranus Opposition cycle.",
+      "💬 Easy Reading Format — Converts technical angular and point data into simple practical guidance so users can understand the message clearly.",
+      "🚀 Practical Use — Useful for yearly identity guidance, career forecasting, public-path interpretation, encounter timing, and understanding the strongest directional points of the Uranus Opposition."
+    ]
+  },
+  {
+    "name": "horoscope_uranus_opposition_lilith_information",
+    "label": "Uranus Opposition: Lilith Interpretation",
+    "description": "A focused Lilith screen showing sign, degree, house, speed, retrograde status, and the deeper interpretive meaning of Lilith in the Uranus Opposition chart.",
+    "group": "Horoscope Toolkit",
+    "subModule": "Uranus Opposition",
+    "purpose": "This section is generated after the Uranus Opposition chart is calculated using the user's date of birth, time of birth, and place of birth. The system identifies Lilith's exact sign, degree, house, speed, and retrograde status in the opposition chart, then translates that placement into a readable interpretation. The purpose of this screen is to help astrologers and users understand the raw, shadow, instinctive, rebellious, and uncompromising themes that may become active during the Uranus Opposition cycle. In the example shown, Lilith in Capricorn in the 10th house highlights themes of ambition, authority tension, public pressure, recognition hunger, and the urge to define one's own path in career and success.",
+    "bullets": [
+      "⚫ Lilith Placement Data — Shows Lilith's sign, full degree, house, normalized degree, speed, and retrograde status for accurate technical interpretation.",
+      "♑ Lilith in Capricorn Meaning — Lilith in Capricorn often emphasizes shadow themes around control, authority, achievement, ambition, social rules, status pressure, and resistance to limitation.",
+      "🏠 Lilith in the 10th House Meaning — The 10th house links Lilith to career, public image, recognition, leadership, reputation, and the user's relationship with authority structures.",
+      "✨ Combined Meaning — Lilith in Capricorn in the 10th house can show intense ambition, discomfort with control, fear of restriction, strong desire for success, and rebellion against career expectations that feel false or oppressive.",
+      "📐 Degree Meaning — The exact degree refines the intensity and tone of the placement, helping astrologers read Lilith with more accuracy.",
+      "⚡ Speed Meaning — Lilith's speed can help describe whether the influence feels more active, subtle, or gradually unfolding in the Uranus Opposition cycle.",
+      "🔁 Retrograde Status — A direct Lilith emphasizes a more outward expression of the shadow theme, while retrograde would indicate a more inward or internalized struggle.",
+      "🧠 Shadow and Authenticity Theme — This screen helps explain where the user may confront suppressed ambition, hidden resentment, power tension, public pressure, or the need for deeper authenticity in career direction.",
+      "💬 Easy Reading Format — Converts technical Lilith data into a direct readable interpretation that users can understand without advanced astrology knowledge.",
+      "🚀 Practical Use — Useful for shadow-work insight, career-pattern analysis, authority tension guidance, public-image reading, and advanced Uranus Opposition interpretation."
+    ]
+  },
 
 
       // Programs
