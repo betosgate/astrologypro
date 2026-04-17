@@ -24,26 +24,40 @@ function getChimeRegion() {
   return process.env.AWS_CHIME_REGION ?? process.env.AWS_REGION ?? "us-east-1";
 }
 
+// ── Singleton clients — reuse across requests to avoid cold TCP/TLS per call ─
+let _meetingsClient: ChimeSDKMeetingsClient | null = null;
+let _voiceClient: ChimeSDKVoiceClient | null = null;
+let _mediaPipelinesClient: ChimeSDKMediaPipelinesClient | null = null;
+
 export function getChimeMeetingsClient(): ChimeSDKMeetingsClient {
-  const region = getChimeRegion();
-  const credentials = getChimeCredentials();
-  return credentials
-    ? new ChimeSDKMeetingsClient({ region, credentials })
-    : new ChimeSDKMeetingsClient({ region });
+  if (!_meetingsClient) {
+    const region = getChimeRegion();
+    const credentials = getChimeCredentials();
+    _meetingsClient = credentials
+      ? new ChimeSDKMeetingsClient({ region, credentials })
+      : new ChimeSDKMeetingsClient({ region });
+  }
+  return _meetingsClient;
 }
 
 export function getChimeVoiceClient(): ChimeSDKVoiceClient {
-  const region = getChimeRegion();
-  const credentials = getChimeCredentials();
-  return credentials
-    ? new ChimeSDKVoiceClient({ region, credentials })
-    : new ChimeSDKVoiceClient({ region });
+  if (!_voiceClient) {
+    const region = getChimeRegion();
+    const credentials = getChimeCredentials();
+    _voiceClient = credentials
+      ? new ChimeSDKVoiceClient({ region, credentials })
+      : new ChimeSDKVoiceClient({ region });
+  }
+  return _voiceClient;
 }
 
 export function getChimeMediaPipelinesClient(): ChimeSDKMediaPipelinesClient {
-  const region = getChimeRegion();
-  const credentials = getChimeCredentials();
-  return credentials
-    ? new ChimeSDKMediaPipelinesClient({ region, credentials })
-    : new ChimeSDKMediaPipelinesClient({ region });
+  if (!_mediaPipelinesClient) {
+    const region = getChimeRegion();
+    const credentials = getChimeCredentials();
+    _mediaPipelinesClient = credentials
+      ? new ChimeSDKMediaPipelinesClient({ region, credentials })
+      : new ChimeSDKMediaPipelinesClient({ region });
+  }
+  return _mediaPipelinesClient;
 }

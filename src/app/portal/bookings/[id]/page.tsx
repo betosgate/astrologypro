@@ -60,7 +60,7 @@ export default async function BookingDetailPage({ params }: PageProps) {
   const { data: booking } = await admin
     .from("bookings")
     .select(
-      "id, scheduled_at, status, duration_minutes, base_price, session_notes, chat_transcript, booking_token, metadata, questionnaire_responses, services(name, slug), diviners(id, display_name, username), clients(id, full_name, email, user_id)"
+      "id, scheduled_at, status, duration_minutes, base_price, session_notes, client_session_notes, chat_transcript, booking_token, metadata, questionnaire_responses, services(name, slug), diviners(id, display_name, username), clients(id, full_name, email, user_id)"
     )
     .eq("id", id)
     .single();
@@ -75,6 +75,7 @@ export default async function BookingDetailPage({ params }: PageProps) {
     duration_minutes: number;
     base_price: number;
     session_notes: string | null;
+    client_session_notes: string | null;
     chat_transcript: { from: string; text: string; time: string }[] | null;
     booking_token: string | null;
     metadata: { availability_title?: string; is_reminder?: boolean } | null;
@@ -289,17 +290,33 @@ export default async function BookingDetailPage({ params }: PageProps) {
             </>
           )}
 
-          {/* Session Notes */}
+          {/* Diviner Session Notes */}
           {b.session_notes && (
             <>
               <Separator />
               <div className="space-y-1">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <FileText className="size-4" />
-                  Session Notes
+                  Diviner&apos;s Session Notes
                 </div>
                 <p className="text-sm rounded-lg bg-muted/30 p-3 whitespace-pre-wrap">
                   {b.session_notes}
+                </p>
+              </div>
+            </>
+          )}
+
+          {/* Client Session Notes */}
+          {b.client_session_notes && (
+            <>
+              <Separator />
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <FileText className="size-4" />
+                  My Notes
+                </div>
+                <p className="text-sm rounded-lg bg-muted/30 p-3 whitespace-pre-wrap">
+                  {b.client_session_notes}
                 </p>
               </div>
             </>

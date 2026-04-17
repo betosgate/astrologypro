@@ -77,31 +77,97 @@ export interface TranscriptChunk {
   isPartial: boolean;
 }
 
+let _decodeLogCount = 0;
+
 export function decodeTranscriptEvent(data: ArrayBuffer): TranscriptChunk | null {
   try {
     const view = new DataView(data);
     const totalLen = view.getUint32(0);
     const headerLen = view.getUint32(4);
 
-    // Parse headers to find :event-type
+    // Parse ALL headers
     let o = 12;
-    let eventType = "";
+    const headers: Record<string, string> = {};
     while (o < 12 + headerLen) {
       const nameLen = view.getUint8(o++);
       const name = new TextDecoder().decode(new Uint8Array(data, o, nameLen)); o += nameLen;
       const vType = view.getUint8(o++);
       if (vType === 7) {
+        // String type
         const vLen = view.getUint16(o); o += 2;
         const value = new TextDecoder().decode(new Uint8Array(data, o, vLen)); o += vLen;
-        if (name === ":event-type") eventType = value;
+        headers[name] = value;
+      } else if (vType === 0) {
+        // Bool true
+        headers[name] = "true";
+      } else if (vType === 1) {
+        // Bool false
+        headers[name] = "false";
+      } else if (vType === 2) {
+        // Byte
+        headers[name] = String(view.getUint8(o)); o += 1;
+      } else if (vType === 3) {
+        // Short
+        headers[name] = String(view.getInt16(o)); o += 2;
+      } else if (vType === 4) {
+        // Int
+        headers[name] = String(view.getInt32(o)); o += 4;
+      } else if (vType === 5) {
+        // Long
+        o += 8;
+        headers[name] = "[long]";
+      } else if (vType === 6) {
+        // Bytes
+        const vLen = view.getUint16(o); o += 2;
+        o += vLen;
+        headers[name] = `[bytes:${vLen}]`;
+      } else if (vType === 8) {
+        // Timestamp
+        o += 8;
+        headers[name] = "[timestamp]";
+      } else if (vType === 9) {
+        // UUID
+        o += 16;
+        headers[name] = "[uuid]";
+      } else {
+        // Unknown — stop parsing to avoid infinite loop
+        break;
       }
+    }
+
+    const eventType = headers[":event-type"] ?? "";
+    const messageType = headers[":message-type"] ?? "";
+    const exceptionType = headers[":exception-type"] ?? "";
+
+    // Log first few messages for debugging
+    if (_decodeLogCount < 10) {
+      console.log(`[transcribe] headers:`, headers);
+      _decodeLogCount++;
+    }
+
+    // Handle exception messages from Transcribe
+    if (messageType === "exception" || exceptionType) {
+      const payloadStart = 12 + headerLen;
+      const payloadLen = totalLen - payloadStart - 4;
+      if (payloadLen > 0) {
+        const errText = new TextDecoder().decode(new Uint8Array(data, payloadStart, payloadLen));
+        console.error(`[transcribe] Exception: ${exceptionType}`, errText);
+      }
+      return null;
     }
 
     if (eventType !== "TranscriptEvent") return null;
 
     const payloadStart = 12 + headerLen;
     const payloadLen = totalLen - payloadStart - 4;
-    const json = JSON.parse(new TextDecoder().decode(new Uint8Array(data, payloadStart, payloadLen)));
+    const payloadText = new TextDecoder().decode(new Uint8Array(data, payloadStart, payloadLen));
+
+    if (_decodeLogCount < 15) {
+      console.log(`[transcribe] payload:`, payloadText.slice(0, 300));
+      _decodeLogCount++;
+    }
+
+    const json = JSON.parse(payloadText);
 
     const results: any[] = json?.Transcript?.Results ?? [];
     if (!results.length) return null;
@@ -111,7 +177,11 @@ export function decodeTranscriptEvent(data: ArrayBuffer): TranscriptChunk | null
     if (!text) return null;
 
     return { text, isPartial: Boolean(result.IsPartial) };
-  } catch {
+  } catch (err) {
+    if (_decodeLogCount < 10) {
+      console.error("[transcribe] decode error:", err);
+      _decodeLogCount++;
+    }
     return null;
   }
 }

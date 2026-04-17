@@ -81,7 +81,15 @@ export default async function SessionPage({ params, searchParams }: PageProps) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) notFound();
 
-    const { data } = await supabase
+    // Determine role first
+    const [{ data: diviner }, { data: clientRecord }] = await Promise.all([
+      supabase.from("diviners").select("id, display_name, username").eq("user_id", user.id).maybeSingle(),
+      supabase.from("clients").select("id").eq("user_id", user.id).maybeSingle(),
+    ]);
+
+    // Use admin client for booking fetch so joins (clients, diviners, services)
+    // are not blocked by RLS — the diviner needs to see the client's name.
+    const { data } = await admin
       .from("bookings")
       .select(BOOKING_SELECT)
       .eq("id", bookingId)
@@ -89,11 +97,6 @@ export default async function SessionPage({ params, searchParams }: PageProps) {
 
     if (!data) notFound();
     booking = data;
-
-    const [{ data: diviner }, { data: clientRecord }] = await Promise.all([
-      supabase.from("diviners").select("id, display_name, username").eq("user_id", user.id).maybeSingle(),
-      supabase.from("clients").select("id").eq("user_id", user.id).maybeSingle(),
-    ]);
 
     if (diviner && diviner.id === booking.diviner_id) {
       role = "diviner";

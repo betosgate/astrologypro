@@ -19,6 +19,7 @@ interface CalendarBooking {
   duration_minutes: number;
   status: string;
   session_notes: string | null;
+  client_session_notes: string | null;
   booking_notes: string | null;
   base_price: number | null;
   stripe_payment_intent_id: string | null;
@@ -88,7 +89,7 @@ export default async function CalendarPage() {
     supabase
       .from("bookings")
       .select(
-        "id, scheduled_at, duration_minutes, status, session_notes, booking_notes, base_price, stripe_payment_intent_id, questionnaire_responses, refund_amount, refunded_at, refund_reason, metadata, services(name), clients(full_name, email, phone, birth_date, birth_time, birth_city)"
+        "id, scheduled_at, duration_minutes, status, session_notes, client_session_notes, booking_notes, base_price, stripe_payment_intent_id, questionnaire_responses, refund_amount, refunded_at, refund_reason, metadata, services(name), clients(full_name, email, phone, birth_date, birth_time, birth_city)"
       )
       .eq("owner_id", ownerId)
       .in("status", ["pending", "pending_payment", "confirmed", "in_progress"])
