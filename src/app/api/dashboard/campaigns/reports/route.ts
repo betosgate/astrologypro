@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
  * Returns campaign performance metrics for the authenticated diviner.
  * Query params: period=30d|90d|1y|all (default: 30d)
  */
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -47,7 +47,7 @@ export async function GET(request: Request) {
     // Step 1: Fetch diviner's campaigns
     const { data: campaignsData, error: campErr } = await admin
       .from("affiliate_campaigns")
-      .select("id, name, status, start_date, end_date, commission_type, commission_value, budget_cap_cents, spent_cents, target_product_type, created_at")
+      .select("id, name, status, start_date, end_date, commission_type, commission_value, budget_cap_cents, spent_cents, target_product_type, destination_type, destination_service_template_id, channel, created_at")
       .eq("diviner_id", diviner.id);
 
     if (campErr) throw campErr;
@@ -67,11 +67,14 @@ export async function GET(request: Request) {
         },
         campaigns: [],
         monthly: [],
+        destination_comparison: [],
+        top_services: [],
+        channel_performance: [],
       });
     }
 
-    // Step 2: Fetch affiliates and conversions for those campaigns in parallel
-    const [affiliatesRes, conversionsRes] = await Promise.all([
+    // Step 2: Fetch affiliates, conversions, and clicks for those campaigns in parallel
+    const [affiliatesRes, conversionsRes, clicksRes] = await Promise.all([
       admin
         .from("campaign_affiliates")
         .select("campaign_id, affiliate_id, affiliate_type")
@@ -80,10 +83,15 @@ export async function GET(request: Request) {
         .from("campaign_conversions")
         .select("id, campaign_id, affiliate_id, affiliate_type, order_amount_cents, commission_amount_cents, converted_at")
         .in("campaign_id", campaignIds),
+      admin
+        .from("campaign_clicks")
+        .select("campaign_id, is_bot, is_unique_click")
+        .in("campaign_id", campaignIds),
     ]);
 
     const allCampaignAffiliates = affiliatesRes.data ?? [];
     const allConversions = conversionsRes.data ?? [];
+    const allClicks = clicksRes.data ?? [];
 
     // Filter conversions by period
     const conversions = periodStart
@@ -211,7 +219,86 @@ export async function GET(request: Request) {
       }))
       .sort((a, b) => a.month.localeCompare(b.month));
 
-    return NextResponse.json({ summary, campaigns, monthly });
+    // ---- Click counts per campaign ----
+    const campClickMap = new Map<string, { human: number; unique: number }>();
+    for (const c of allClicks) {
+      if (c.is_bot) continue;
+      const entry = campClickMap.get(c.campaign_id) ?? { human: 0, unique: 0 };
+      entry.human++;
+      if (c.is_unique_click) entry.unique++;
+      campClickMap.set(c.campaign_id, entry);
+    }
+
+    // ---- Destination comparison: PROFILE vs SERVICE ----
+    const destMap = new Map<string, { campaigns: number; conversions: number; revenue: number; human_clicks: number; unique_clicks: number }>();
+    for (const camp of allCampaigns) {
+      const dtype = (camp as Record<string, unknown>).destination_type as string | null ?? "unset";
+      const entry = destMap.get(dtype) ?? { campaigns: 0, conversions: 0, revenue: 0, human_clicks: 0, unique_clicks: 0 };
+      entry.campaigns++;
+      const convStats = campaignConvMap.get(camp.id) ?? { count: 0, revenue: 0, commissions: 0 };
+      entry.conversions += convStats.count;
+      entry.revenue += convStats.revenue;
+      const clicks = campClickMap.get(camp.id) ?? { human: 0, unique: 0 };
+      entry.human_clicks += clicks.human;
+      entry.unique_clicks += clicks.unique;
+      destMap.set(dtype, entry);
+    }
+    const destination_comparison = Array.from(destMap.entries()).map(([destination_type, data]) => ({
+      destination_type,
+      campaigns: data.campaigns,
+      conversions: data.conversions,
+      revenue: round2(data.revenue / 100),
+      human_clicks: data.human_clicks,
+      unique_clicks: data.unique_clicks,
+      conversion_rate: data.unique_clicks > 0
+        ? parseFloat(((data.conversions / data.unique_clicks) * 100).toFixed(1))
+        : 0,
+    }));
+
+    // ---- Top services: SERVICE campaigns sorted by conversions ----
+    const serviceCampaigns = allCampaigns
+      .filter((c) => (c as Record<string, unknown>).destination_type === "SERVICE")
+      .map((camp) => {
+        const convStats = campaignConvMap.get(camp.id) ?? { count: 0, revenue: 0, commissions: 0 };
+        const clicks = campClickMap.get(camp.id) ?? { human: 0, unique: 0 };
+        return {
+          campaign_id: camp.id,
+          campaign_name: camp.name,
+          service_template_id: (camp as Record<string, unknown>).destination_service_template_id as string | null,
+          conversions: convStats.count,
+          revenue: round2(convStats.revenue / 100),
+          human_clicks: clicks.human,
+          unique_clicks: clicks.unique,
+        };
+      })
+      .sort((a, b) => b.conversions - a.conversions)
+      .slice(0, 10);
+    const top_services = serviceCampaigns;
+
+    // ---- Channel performance ----
+    const channelMap = new Map<string, { campaigns: number; conversions: number; revenue: number; human_clicks: number }>();
+    for (const camp of allCampaigns) {
+      const ch = ((camp as Record<string, unknown>).channel as string | null) ?? "unset";
+      const entry = channelMap.get(ch) ?? { campaigns: 0, conversions: 0, revenue: 0, human_clicks: 0 };
+      entry.campaigns++;
+      const convStats = campaignConvMap.get(camp.id) ?? { count: 0, revenue: 0, commissions: 0 };
+      entry.conversions += convStats.count;
+      entry.revenue += convStats.revenue;
+      const clicks = campClickMap.get(camp.id) ?? { human: 0, unique: 0 };
+      entry.human_clicks += clicks.human;
+      channelMap.set(ch, entry);
+    }
+    const channel_performance = Array.from(channelMap.entries())
+      .map(([channel, data]) => ({
+        channel,
+        campaigns: data.campaigns,
+        conversions: data.conversions,
+        revenue: round2(data.revenue / 100),
+        human_clicks: data.human_clicks,
+      }))
+      .sort((a, b) => b.conversions - a.conversions);
+
+    return NextResponse.json({ summary, campaigns, monthly, destination_comparison, top_services, channel_performance });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Internal error";
     return NextResponse.json(

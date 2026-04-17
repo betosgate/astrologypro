@@ -43,7 +43,11 @@ import {
   Target,
   Users,
   Calendar,
+  BarChart3,
 } from "lucide-react";
+import { CampaignUrlDisplay } from "@/components/dashboard/campaign-url-display";
+import { CampaignAutoPauseBanner } from "@/components/dashboard/campaign-auto-pause-banner";
+import { CampaignDestinationBadge } from "@/components/dashboard/campaign-destination-badge";
 
 interface CampaignAffiliate {
   id: string;
@@ -85,6 +89,15 @@ interface CampaignDetail {
   created_at: string;
   affiliates: CampaignAffiliate[];
   conversions: Conversion[];
+  // Destination fields
+  destination_type: "PROFILE" | "SERVICE" | null;
+  destination_service_template_id: string | null;
+  campaign_code: string | null;
+  share_url: string | null;
+  auto_paused: boolean;
+  auto_pause_reason: string | null;
+  can_reactivate: boolean;
+  channel: string | null;
 }
 
 const STATUS_BADGE: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
@@ -283,6 +296,11 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" asChild>
+            <Link href={`/dashboard/campaigns/${id}/analytics`}>
+              <BarChart3 className="mr-2 size-3.5" />Analytics
+            </Link>
+          </Button>
           <Button variant="outline" size="sm" onClick={openEdit}>
             <Pencil className="mr-2 size-3.5" />Edit
           </Button>
@@ -293,6 +311,45 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
           )}
         </div>
       </div>
+
+      {/* Auto-pause banner */}
+      {campaign.auto_paused && (
+        <CampaignAutoPauseBanner
+          campaignId={campaign.id}
+          reason={campaign.auto_pause_reason}
+          canReactivate={campaign.can_reactivate}
+          onReactivated={loadCampaign}
+        />
+      )}
+
+      {/* Destination + Campaign URL */}
+      {(campaign.destination_type || campaign.share_url) && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm">Destination & Campaign Link</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-muted-foreground w-24 shrink-0">Destination</span>
+              <CampaignDestinationBadge destinationType={campaign.destination_type} />
+            </div>
+            {campaign.channel && (
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-muted-foreground w-24 shrink-0">Channel</span>
+                <span className="text-sm capitalize">{campaign.channel}</span>
+              </div>
+            )}
+            {campaign.share_url && (
+              <CampaignUrlDisplay
+                url={campaign.share_url}
+                code={campaign.campaign_code ?? undefined}
+                label="Campaign URL"
+                showOpenButton
+              />
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Campaign Info Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

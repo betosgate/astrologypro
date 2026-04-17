@@ -904,7 +904,13 @@ export default async function ServiceDetailPage({
       {/* Bottom padding on mobile for sticky bar */}
       <div className="h-24 md:hidden" />
 
-      <PageTracker divinerId={diviner.id} path={`/${username}/services/${slug}`} username={diviner.username} />
+      <PageTracker
+        divinerId={diviner.id}
+        path={`/${username}/services/${slug}`}
+        username={diviner.username}
+        serviceTemplateId={service.template_id ?? undefined}
+        serviceSlug={service.slug}
+      />
     </>
   );
 }
