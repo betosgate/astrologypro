@@ -40,7 +40,9 @@ import {
   Users,
   Target,
   AlertTriangle,
+  BarChart3,
 } from "lucide-react";
+import Link from "next/link";
 import { CampaignDestinationBadge } from "@/components/dashboard/campaign-destination-badge";
 
 interface Campaign {
@@ -263,7 +265,14 @@ export default function AdminCampaignsPage() {
             All affiliate campaigns across the platform.
           </p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/admin/campaigns/analytics">
+              <BarChart3 className="mr-2 size-4" />
+              Analytics
+            </Link>
+          </Button>
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button onClick={resetForm}>
               <Plus className="mr-2 size-4" />
@@ -336,6 +345,7 @@ export default function AdminCampaignsPage() {
             </div>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {/* Summary */}

@@ -43,6 +43,7 @@ import {
   Target,
   Users,
   Calendar,
+  BarChart3,
 } from "lucide-react";
 import { CampaignUrlDisplay } from "@/components/dashboard/campaign-url-display";
 import { CampaignAutoPauseBanner } from "@/components/dashboard/campaign-auto-pause-banner";
@@ -295,6 +296,11 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" asChild>
+            <Link href={`/dashboard/campaigns/${id}/analytics`}>
+              <BarChart3 className="mr-2 size-3.5" />Analytics
+            </Link>
+          </Button>
           <Button variant="outline" size="sm" onClick={openEdit}>
             <Pencil className="mr-2 size-3.5" />Edit
           </Button>
