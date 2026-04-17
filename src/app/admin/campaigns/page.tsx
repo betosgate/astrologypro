@@ -39,7 +39,11 @@ import {
   Megaphone,
   Users,
   Target,
+  AlertTriangle,
+  BarChart3,
 } from "lucide-react";
+import Link from "next/link";
+import { CampaignDestinationBadge } from "@/components/dashboard/campaign-destination-badge";
 
 interface Campaign {
   id: string;
@@ -58,6 +62,11 @@ interface Campaign {
   affiliates_count: number;
   conversions_count: number;
   created_at: string;
+  destination_type: "PROFILE" | "SERVICE" | null;
+  campaign_code: string | null;
+  share_url: string | null;
+  auto_paused_at: string | null;
+  auto_pause_reason: string | null;
 }
 
 interface Diviner {
@@ -256,7 +265,14 @@ export default function AdminCampaignsPage() {
             All affiliate campaigns across the platform.
           </p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/admin/campaigns/analytics">
+              <BarChart3 className="mr-2 size-4" />
+              Analytics
+            </Link>
+          </Button>
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button onClick={resetForm}>
               <Plus className="mr-2 size-4" />
@@ -329,6 +345,7 @@ export default function AdminCampaignsPage() {
             </div>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {/* Summary */}
@@ -403,6 +420,8 @@ export default function AdminCampaignsPage() {
                     <TableHead>Name</TableHead>
                     <TableHead>Diviner</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Destination</TableHead>
+                    <TableHead>Code</TableHead>
                     <TableHead>Dates</TableHead>
                     <TableHead>Commission</TableHead>
                     <TableHead>Affiliates</TableHead>
@@ -414,10 +433,33 @@ export default function AdminCampaignsPage() {
                 <TableBody>
                   {campaigns.map((c) => (
                     <TableRow key={c.id}>
-                      <TableCell className="font-medium">{c.name}</TableCell>
+                      <TableCell className="font-medium">
+                        {c.name}
+                        {c.auto_paused_at && (
+                          <div className="flex items-center gap-1 mt-0.5 text-[11px] text-amber-600">
+                            <AlertTriangle className="size-3" /> Auto-paused
+                          </div>
+                        )}
+                      </TableCell>
                       <TableCell className="text-muted-foreground">{c.diviner_name}</TableCell>
                       <TableCell>
-                        <Badge variant={STATUS_BADGE[c.status] ?? "outline"}>{c.status}</Badge>
+                        {c.auto_paused_at ? (
+                          <Badge variant="destructive" className="gap-1">
+                            <AlertTriangle className="size-2.5" />Auto-Paused
+                          </Badge>
+                        ) : (
+                          <Badge variant={STATUS_BADGE[c.status] ?? "outline"}>{c.status}</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <CampaignDestinationBadge destinationType={c.destination_type} />
+                      </TableCell>
+                      <TableCell>
+                        {c.campaign_code ? (
+                          <code className="font-mono text-[11px] text-muted-foreground">{c.campaign_code}</code>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
                       </TableCell>
                       <TableCell className="text-sm">
                         {fmtDate(c.start_date)}
