@@ -35,6 +35,7 @@ type BookingDetail = {
   stripe_payment_status: string | null;
   questionnaire_responses: Record<string, unknown> | null;
   session_notes: string | null;
+  client_session_notes: string | null;
   chat_transcript: { from: string; text: string; time: string }[] | null;
   cancellation_reason: string | null;
   canceled_at: string | null;
@@ -105,7 +106,7 @@ async function getBooking(id: string): Promise<BookingDetail | null> {
       `id, scheduled_at, duration_minutes, actual_duration_minutes,
        base_price, total_amount, overage_amount, status,
        stripe_payment_intent_id, stripe_payment_status,
-       questionnaire_responses, session_notes, chat_transcript,
+       questionnaire_responses, session_notes, client_session_notes, chat_transcript,
        cancellation_reason, canceled_at,
        google_calendar_event_id, outlook_calendar_event_id,
        daily_room_url, booking_token, created_at, updated_at,
@@ -370,6 +371,21 @@ export default async function AdminBookingDetailPage({
           </CardHeader>
           <CardContent>
             <p className="text-sm whitespace-pre-wrap">{booking.session_notes}</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Client session notes */}
+      {booking.client_session_notes && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <FileText className="h-4 w-4" />
+              Client&apos;s Session Notes
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm whitespace-pre-wrap">{booking.client_session_notes}</p>
           </CardContent>
         </Card>
       )}

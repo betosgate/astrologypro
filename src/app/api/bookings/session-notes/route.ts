@@ -1,14 +1,54 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
 /**
  * PATCH /api/bookings/session-notes
- * Save session notes for a completed booking. Only the owning diviner can write notes.
+ * Save session notes during or after a live session.
+ *
+ * - Diviner → writes to `session_notes`
+ * - Client  → writes to `client_session_notes`
+ *
+ * Both roles are verified against the booking before writing.
  */
 export async function PATCH(request: NextRequest) {
   try {
+    const { bookingId, sessionNotes, role, clientToken } = await request.json();
+
+    if (!bookingId) {
+      return NextResponse.json({ error: "Missing bookingId" }, { status: 400 });
+    }
+
+    const admin = createAdminClient();
+
+    // ── Token-based client access (unauthenticated guest) ─────────────────
+    if (clientToken && role === "client") {
+      const { data: booking, error } = await admin
+        .from("bookings")
+        .select("id")
+        .eq("id", bookingId)
+        .eq("booking_token", clientToken)
+        .single();
+
+      if (error || !booking) {
+        return NextResponse.json({ error: "Invalid session token" }, { status: 403 });
+      }
+
+      const { error: updateError } = await admin
+        .from("bookings")
+        .update({ client_session_notes: sessionNotes ?? null })
+        .eq("id", bookingId);
+
+      if (updateError) {
+        return NextResponse.json({ error: updateError.message }, { status: 500 });
+      }
+
+      return NextResponse.json({ success: true });
+    }
+
+    // ── Authenticated access ──────────────────────────────────────────────
     const supabase = await createClient();
     const {
       data: { user },
@@ -18,31 +58,48 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { bookingId, sessionNotes } = await request.json();
+    // Determine role and column
+    if (role === "diviner") {
+      const { data: diviner } = await supabase
+        .from("diviners")
+        .select("id")
+        .eq("user_id", user.id)
+        .single();
 
-    if (!bookingId) {
-      return NextResponse.json({ error: "Missing bookingId" }, { status: 400 });
-    }
+      if (!diviner) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
 
-    // Verify the diviner owns this booking
-    const { data: diviner } = await supabase
-      .from("diviners")
-      .select("id")
-      .eq("user_id", user.id)
-      .single();
+      const { error } = await admin
+        .from("bookings")
+        .update({ session_notes: sessionNotes ?? null })
+        .eq("id", bookingId)
+        .eq("diviner_id", diviner.id);
 
-    if (!diviner) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
+      if (error) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+    } else {
+      // Client (authenticated)
+      const { data: client } = await supabase
+        .from("clients")
+        .select("id")
+        .eq("user_id", user.id)
+        .single();
 
-    const { error } = await supabase
-      .from("bookings")
-      .update({ session_notes: sessionNotes ?? null })
-      .eq("id", bookingId)
-      .eq("diviner_id", diviner.id);
+      if (!client) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      const { error } = await admin
+        .from("bookings")
+        .update({ client_session_notes: sessionNotes ?? null })
+        .eq("id", bookingId)
+        .eq("client_id", client.id);
+
+      if (error) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
     }
 
     return NextResponse.json({ success: true });

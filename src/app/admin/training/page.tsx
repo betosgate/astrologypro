@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { FilterX } from "lucide-react";
 import {
   TrainingEntityTable,
   StatusBadge,
@@ -66,10 +67,10 @@ type Quiz = {
 const fmt = (d: string) =>
   d
     ? new Date(d).toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-      })
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    })
     : "—";
 
 function formatRoleName(role: string) {
@@ -700,13 +701,15 @@ export default function TrainingPage() {
         {filtersActive && (
           <div className="self-end">
             <Button
-              variant="ghost"
+              variant="outline"
               size="sm"
               onClick={() => {
                 setSearchTerm("");
                 setStatusFilter("all");
               }}
+              className="gap-1.5"
             >
+              <FilterX className="size-3.5" />
               Reset
             </Button>
           </div>
@@ -738,83 +741,83 @@ export default function TrainingPage() {
       )}
 
       {initialLoadDone && (
-      <>
-      <TrainingEntityTable
-        config={programConfig}
-        rows={programData.rows}
-        serverTotal={programData.total}
-        rawCount={programData.total}
-        filtersActive={filtersActive}
-        currentSearch={searchTerm}
-        currentStatus={statusFilter}
-        onMutated={mutatePrograms}
-        onRefresh={() => loadPrograms(programState)}
-        isRefreshing={programsRefreshing}
-        serverPage={programData.page}
-        serverPageSize={programData.pageSize}
-        onTableStateChange={(st) => {
-          setProgramState(st);
-          void loadPrograms(st);
-        }}
-      />
+        <>
+          <TrainingEntityTable
+            config={programConfig}
+            rows={programData.rows}
+            serverTotal={programData.total}
+            rawCount={programData.total}
+            filtersActive={filtersActive}
+            currentSearch={searchTerm}
+            currentStatus={statusFilter}
+            onMutated={mutatePrograms}
+            onRefresh={() => loadPrograms(programState)}
+            isRefreshing={programsRefreshing}
+            serverPage={programData.page}
+            serverPageSize={programData.pageSize}
+            onTableStateChange={(st) => {
+              setProgramState(st);
+              void loadPrograms(st);
+            }}
+          />
 
-      <TrainingEntityTable
-        config={categoryConfig}
-        rows={categoryData.rows}
-        serverTotal={categoryData.total}
-        rawCount={categoryData.total}
-        filtersActive={filtersActive}
-        currentSearch={searchTerm}
-        currentStatus={statusFilter}
-        onMutated={mutateCategories}
-        onRefresh={() => loadCategories(categoryState)}
-        isRefreshing={categoriesRefreshing}
-        serverPage={categoryData.page}
-        serverPageSize={categoryData.pageSize}
-        onTableStateChange={(st) => {
-          setCategoryState(st);
-          void loadCategories(st);
-        }}
-      />
+          <TrainingEntityTable
+            config={categoryConfig}
+            rows={categoryData.rows}
+            serverTotal={categoryData.total}
+            rawCount={categoryData.total}
+            filtersActive={filtersActive}
+            currentSearch={searchTerm}
+            currentStatus={statusFilter}
+            onMutated={mutateCategories}
+            onRefresh={() => loadCategories(categoryState)}
+            isRefreshing={categoriesRefreshing}
+            serverPage={categoryData.page}
+            serverPageSize={categoryData.pageSize}
+            onTableStateChange={(st) => {
+              setCategoryState(st);
+              void loadCategories(st);
+            }}
+          />
 
-      <TrainingEntityTable
-        config={lessonConfig}
-        rows={lessonData.rows}
-        serverTotal={lessonData.total}
-        rawCount={lessonData.total}
-        filtersActive={filtersActive}
-        currentSearch={searchTerm}
-        currentStatus={statusFilter}
-        onMutated={mutateLessons}
-        onRefresh={() => loadLessons(lessonState)}
-        isRefreshing={lessonsRefreshing}
-        serverPage={lessonData.page}
-        serverPageSize={lessonData.pageSize}
-        onTableStateChange={(st) => {
-          setLessonState(st);
-          void loadLessons(st);
-        }}
-      />
+          <TrainingEntityTable
+            config={lessonConfig}
+            rows={lessonData.rows}
+            serverTotal={lessonData.total}
+            rawCount={lessonData.total}
+            filtersActive={filtersActive}
+            currentSearch={searchTerm}
+            currentStatus={statusFilter}
+            onMutated={mutateLessons}
+            onRefresh={() => loadLessons(lessonState)}
+            isRefreshing={lessonsRefreshing}
+            serverPage={lessonData.page}
+            serverPageSize={lessonData.pageSize}
+            onTableStateChange={(st) => {
+              setLessonState(st);
+              void loadLessons(st);
+            }}
+          />
 
-      <TrainingEntityTable
-        config={quizConfig}
-        rows={quizData.rows}
-        serverTotal={quizData.total}
-        rawCount={quizData.total}
-        filtersActive={filtersActive}
-        currentSearch={searchTerm}
-        currentStatus={statusFilter}
-        onMutated={mutateQuizzes}
-        onRefresh={() => loadQuizzes(quizState)}
-        isRefreshing={quizzesRefreshing}
-        serverPage={quizData.page}
-        serverPageSize={quizData.pageSize}
-        onTableStateChange={(st) => {
-          setQuizState(st);
-          void loadQuizzes(st);
-        }}
-      />
-      </>
+          <TrainingEntityTable
+            config={quizConfig}
+            rows={quizData.rows}
+            serverTotal={quizData.total}
+            rawCount={quizData.total}
+            filtersActive={filtersActive}
+            currentSearch={searchTerm}
+            currentStatus={statusFilter}
+            onMutated={mutateQuizzes}
+            onRefresh={() => loadQuizzes(quizState)}
+            isRefreshing={quizzesRefreshing}
+            serverPage={quizData.page}
+            serverPageSize={quizData.pageSize}
+            onTableStateChange={(st) => {
+              setQuizState(st);
+              void loadQuizzes(st);
+            }}
+          />
+        </>
       )}
     </div>
   );

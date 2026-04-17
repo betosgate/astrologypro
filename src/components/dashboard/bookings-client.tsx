@@ -519,6 +519,7 @@ export function BookingsClient({
                               payment_intent_id: paymentIntentId,
                               notes: booking.session_notes as string | null,
                               session_notes: (booking.session_notes as string) ?? null,
+                              client_session_notes: (booking.client_session_notes as string) ?? null,
                               booking_notes: (booking.booking_notes as string) ?? null,
                               client_name: client?.full_name ?? "Unknown",
                               client_email: client?.email ?? "",

@@ -1,15 +1,28 @@
 "use client";
 
 import { useEffect } from "react";
+import { trackLandingEvent, trackScrollDepth, trackTimeOnPage } from "@/lib/landing-page-events";
 
 interface PageTrackerProps {
   divinerId: string;
   path: string;
   username?: string;
+  /** New: service-level tracking */
+  serviceTemplateId?: string;
+  serviceSlug?: string;
+  attributionSource?: string;
 }
 
-export function PageTracker({ divinerId, path, username }: PageTrackerProps) {
+export function PageTracker({
+  divinerId,
+  path,
+  username,
+  serviceTemplateId,
+  serviceSlug,
+  attributionSource,
+}: PageTrackerProps) {
   useEffect(() => {
+    // General page view tracking (existing /api/analytics/track)
     const data = JSON.stringify({
       divinerId,
       path,
@@ -28,17 +41,41 @@ export function PageTracker({ divinerId, path, username }: PageTrackerProps) {
         headers: { "Content-Type": "application/json" },
         body: data,
         keepalive: true,
-      }).catch(() => {
-        // Silently ignore tracking failures
-      });
+      }).catch(() => {});
     }
 
-    // Set preferred diviner cookie client-side to avoid server-side restriction
+    // Set preferred diviner cookie client-side
     if (username) {
       const maxAge = 60 * 60 * 24 * 90; // 90 days
       document.cookie = `preferred_diviner=${username}; path=/; max-age=${maxAge}; samesite=lax`;
     }
-  }, [divinerId, path, username]);
+
+    // Service-level analytics
+    if (serviceTemplateId && serviceSlug) {
+      // Fire page_view event
+      trackLandingEvent({
+        diviner_id: divinerId,
+        service_template_id: serviceTemplateId,
+        service_slug: serviceSlug,
+        event_type: "page_view",
+        referrer: document.referrer || undefined,
+        utm_source: new URLSearchParams(window.location.search).get("utm_source") ?? undefined,
+        utm_medium: new URLSearchParams(window.location.search).get("utm_medium") ?? undefined,
+        utm_campaign: new URLSearchParams(window.location.search).get("utm_campaign") ?? undefined,
+      });
+
+      // Set up scroll depth tracking
+      const cleanupScroll = trackScrollDepth(divinerId, serviceTemplateId, serviceSlug);
+      // Set up time on page tracking
+      const cleanupTime = trackTimeOnPage(divinerId, serviceTemplateId, serviceSlug);
+
+      return () => {
+        cleanupScroll();
+        cleanupTime();
+      };
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [divinerId, path, username, serviceTemplateId, serviceSlug]);
 
   return null;
 }

@@ -12,7 +12,7 @@ const SAFE_SELECT =
 
 // Full select including columns added by later migrations
 const FULL_SELECT =
-  "id, scheduled_at, status, duration_minutes, base_price, stripe_payment_intent_id, session_notes, booking_notes, metadata, questionnaire_responses, client_id, service_id, refund_amount, refunded_at, refund_reason";
+  "id, scheduled_at, status, duration_minutes, base_price, stripe_payment_intent_id, session_notes, client_session_notes, booking_notes, metadata, questionnaire_responses, client_id, service_id, refund_amount, refunded_at, refund_reason";
 
 export default async function BookingsPage() {
   const supabase = await createClient();

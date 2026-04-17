@@ -244,6 +244,7 @@ const NAV_GROUPS = [
     items: [
       { label: "Tarot Spreads", href: "/admin/tarot/spreads", icon: Shuffle },
       { label: "Tarot Cards", href: "/admin/tarot/cards", icon: LayoutGrid },
+      { label: "Tarot Practice", href: "/admin/tarot/readings", icon: Sparkles },
       { label: "Rituals", href: "/admin/rituals", icon: Flame },
     ],
   },
