@@ -77,6 +77,7 @@ import {
   Rocket,
   Layers3,
   Timer,
+  CalendarCheck,
 } from "lucide-react";
 
 // ─── Nav structure ─────────────────────────────────────────────────────────────
@@ -197,6 +198,8 @@ const NAV_GROUPS = [
       { label: "Settings", href: "/admin/training/settings", icon: Settings2 },
       // { label: "Class Config", href: "/admin/class-config", icon: LayoutDashboard },
       { label: "Certificate Config", href: "/admin/certificate-config", icon: GraduationCap },
+      { label: "Tabbie Appt Config", href: "/admin/tabbie-appointment", icon: CalendarCheck },
+      { label: "Tabbie Appt Monitor", href: "/admin/trainee-tabbie-appointments", icon: CalendarCheck },
     ],
   },
   {
