@@ -16,9 +16,17 @@ interface OrderForBookingInput {
 
 export function getOrderStatusForService(
   service: ServicePurchaseShape,
-  hasPaid: boolean
+  hasPaid: boolean,
+  options?: {
+    /** When true, intake data was already collected (e.g. booking wizard pre-checkout form) */
+    intakeCompleted?: boolean;
+  }
 ): string {
   if (!hasPaid) return "pending_payment";
+
+  // If intake was already collected (booking wizard handles this pre-checkout),
+  // skip the awaiting_intake step entirely.
+  if (options?.intakeCompleted) return "paid";
 
   const purchaseConfig = getServicePurchaseConfig(service);
   return purchaseConfig.requiresPostPaymentIntake ? "awaiting_intake" : "paid";

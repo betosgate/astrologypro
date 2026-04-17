@@ -717,20 +717,60 @@ function SettingsContent() {
                     </div>
                   </div>
 
-                  {stripeStatus.recentPayouts && stripeStatus.recentPayouts.length > 0 && (
+                  {/* Payout schedule info */}
+                  {stripeStatus.payoutSchedule && (
+                    <div className="rounded-md bg-muted/40 p-3">
+                      <p className="text-xs text-muted-foreground mb-1">Payout Schedule</p>
+                      <p className="text-sm font-medium capitalize">
+                        {stripeStatus.payoutSchedule.interval === "manual"
+                          ? "Manual (payouts must be triggered)"
+                          : stripeStatus.payoutSchedule.interval === "daily"
+                            ? `Daily (${stripeStatus.payoutSchedule.delay_days ?? 2}-day rolling delay)`
+                            : stripeStatus.payoutSchedule.interval === "weekly"
+                              ? `Weekly on ${stripeStatus.payoutSchedule.weekly_anchor ?? "monday"}s`
+                              : stripeStatus.payoutSchedule.interval === "monthly"
+                                ? `Monthly on the ${stripeStatus.payoutSchedule.monthly_anchor ?? 1}${["st","nd","rd"][((stripeStatus.payoutSchedule.monthly_anchor ?? 1) % 10) - 1] || "th"}`
+                                : stripeStatus.payoutSchedule.interval}
+                      </p>
+                      {stripeStatus.payoutsDisabledReason && (
+                        <p className="text-xs text-red-400 mt-1">
+                          Payouts disabled: {stripeStatus.payoutsDisabledReason.replace(/_/g, " ")}
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* No pending balance and no payouts — explain why */}
+                  {stripeStatus.balance?.pending > 0 && stripeStatus.balance?.available === 0 && (
+                    <p className="text-xs text-muted-foreground bg-amber-500/10 rounded-md p-2">
+                      Funds are pending while Stripe verifies the payments. They typically become available within 2–7 business days depending on your payout schedule.
+                    </p>
+                  )}
+
+                  {stripeStatus.recentPayouts && stripeStatus.recentPayouts.length > 0 ? (
                     <div>
                       <p className="text-xs font-medium mb-2">Recent Payouts</p>
                       <div className="space-y-1.5">
-                        {stripeStatus.recentPayouts.map((p) => (
-                          <div key={p.id} className="flex items-center justify-between text-xs">
+                        {stripeStatus.recentPayouts.map((p: { id: string; arrivalDate: string; amount: number; status: string }) => (
+                          <div key={p.id} className="flex items-center justify-between text-xs rounded-md bg-muted/30 px-2 py-1.5">
                             <span className="text-muted-foreground">{p.arrivalDate}</span>
                             <span className="font-medium">${p.amount.toFixed(2)}</span>
-                            <span className={p.status === "paid" ? "text-green-500" : "text-amber-500"}>
-                              {p.status}
+                            <span className={
+                              p.status === "paid" ? "text-green-500 font-medium"
+                              : p.status === "in_transit" ? "text-blue-400"
+                              : p.status === "failed" ? "text-red-400"
+                              : "text-amber-500"
+                            }>
+                              {p.status === "in_transit" ? "In Transit" : p.status}
                             </span>
                           </div>
                         ))}
                       </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <p className="text-xs font-medium mb-1">Recent Payouts</p>
+                      <p className="text-xs text-muted-foreground">No payouts yet. Funds will be paid out to your bank account according to your payout schedule.</p>
                     </div>
                   )}
 

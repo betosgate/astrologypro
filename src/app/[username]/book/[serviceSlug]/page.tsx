@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { BookingWizard } from "@/components/booking/booking-wizard";
 import { APP_URL } from "@/lib/constants";
 import Link from "next/link";
@@ -15,6 +16,7 @@ interface PageProps {
 
 async function getDivinerAndService(username: string, serviceSlug: string) {
   const supabase = await createClient();
+  const admin = createAdminClient();
 
   const { data: diviner } = await supabase
     .from("diviners")
@@ -38,7 +40,24 @@ async function getDivinerAndService(username: string, serviceSlug: string) {
     service ? [service] : []
   );
 
-  return { diviner, service: resolvedService ?? service };
+  const base = resolvedService ?? service;
+  if (!base) return { diviner, service: null };
+
+  // Use the availability template's duration_minutes if one is linked to this service,
+  // so the booking page reflects the actual scheduled session length.
+  const { data: template } = await admin
+    .from("availability_templates")
+    .select("duration_minutes")
+    .or(`owner_id.eq.${diviner.id},diviner_id.eq.${diviner.id}`)
+    .eq("service_id", base.id)
+    .eq("is_active", true)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const duration = template?.duration_minutes ?? base.duration_minutes;
+
+  return { diviner, service: { ...base, duration_minutes: duration } };
 }
 
 export async function generateMetadata({

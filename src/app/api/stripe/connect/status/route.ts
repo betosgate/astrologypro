@@ -70,6 +70,8 @@ export async function GET() {
       chargesEnabled: status.chargesEnabled,
       payoutsEnabled: status.payoutsEnabled,
       detailsSubmitted: status.detailsSubmitted,
+      payoutSchedule: status.payoutSchedule,
+      payoutsDisabledReason: status.payoutsDisabledReason,
       balance: {
         available: (availableUsd?.amount ?? 0) / 100,
         pending: (pendingUsd?.amount ?? 0) / 100,

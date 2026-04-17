@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { formatCurrency } from "@/lib/format";
 import {
   ASTROLOGY_TEMPLATES,
@@ -51,6 +52,9 @@ import {
   ChevronUp,
   ChevronDown,
   GripVertical,
+  AlertTriangle,
+  CalendarCheck,
+  CalendarPlus,
   // Thumbnail icons — Astrology
   Sun,
   Sunrise,
@@ -153,7 +157,7 @@ function AddServiceModal({
 }: {
   state: AddModalState | null;
   onClose: () => void;
-  onAdded: () => void;
+  onAdded: (serviceName: string) => void;
 }) {
   const [price, setPrice] = useState(state?.price ?? "");
   const [loading, startTransition] = useTransition();
@@ -184,8 +188,7 @@ function AddServiceModal({
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.detail ?? "Failed to add service");
-        toast.success(`"${state.template.name}" added`);
-        onAdded();
+        onAdded(state.template.name);
         onClose();
       } catch (err) {
         setError(err instanceof Error ? err.message : "Something went wrong");
@@ -241,9 +244,18 @@ function AddServiceModal({
                   onChange={(e) => { setPrice(e.target.value); setError(null); }}
                 />
               </div>
-              <p className="text-xs text-muted-foreground">
-                Suggested: {formatCurrency(state.template.suggested_price)}
-              </p>
+              <div className="flex items-center gap-2">
+                <p className="text-xs text-muted-foreground">
+                  Suggested: {formatCurrency(state.template.suggested_price)}
+                </p>
+                <button
+                  type="button"
+                  className="text-xs text-primary underline-offset-2 hover:underline"
+                  onClick={() => { setPrice(state.template.suggested_price.toString()); setError(null); }}
+                >
+                  Use default
+                </button>
+              </div>
               {error && <p className="text-xs text-red-500">{error}</p>}
             </div>
           </div>
@@ -333,6 +345,39 @@ export function ServicesClient({ services: initialServices, resolvedPackage }: S
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [reorderingId, setReorderingId] = useState<string | null>(null);
+
+  // Track which services have availability set up
+  const [serviceAvailability, setServiceAvailability] = useState<Record<string, boolean>>({});
+  const [hasGlobalAvailability, setHasGlobalAvailability] = useState(false);
+  const [availabilityLoaded, setAvailabilityLoaded] = useState(false);
+
+  const loadAvailability = useCallback(async () => {
+    try {
+      const res = await fetch("/api/dashboard/availability");
+      if (!res.ok) return;
+      const { templates } = await res.json();
+      const map: Record<string, boolean> = {};
+      let hasGlobal = false;
+      for (const t of templates ?? []) {
+        if (t.is_active) {
+          if (t.service_id) {
+            map[t.service_id] = true;
+          } else {
+            hasGlobal = true;
+          }
+        }
+      }
+      setServiceAvailability(map);
+      setHasGlobalAvailability(hasGlobal);
+      setAvailabilityLoaded(true);
+    } catch {
+      // Silently fail — availability check is non-critical
+    }
+  }, []);
+
+  useEffect(() => {
+    loadAvailability();
+  }, [loadAvailability]);
 
   const addedNames = new Set(services.map((s) => s.name.toLowerCase()));
 
@@ -429,7 +474,18 @@ export function ServicesClient({ services: initialServices, resolvedPackage }: S
       <AddServiceModal
         state={addModal}
         onClose={() => setAddModal(null)}
-        onAdded={() => router.refresh()}
+        onAdded={(serviceName: string) => {
+          toast.success(`"${serviceName}" added`, {
+            description: "Set up availability so clients can book this service.",
+            action: {
+              label: "Set Availability",
+              onClick: () => router.push("/dashboard/availability"),
+            },
+            duration: 8000,
+          });
+          router.refresh();
+          loadAvailability();
+        }}
       />
 
       <div className="space-y-8">
@@ -483,6 +539,33 @@ export function ServicesClient({ services: initialServices, resolvedPackage }: S
           )}
         </div>
 
+        {/* ── Availability Warning Banner ─────────────────────────────── */}
+        {availabilityLoaded && services.length > 0 && (() => {
+          const servicesWithoutAvailability = services.filter(
+            (s) => s.is_active && !serviceAvailability[s.id]
+          );
+          if (servicesWithoutAvailability.length === 0) return null;
+          return (
+            <div className="flex items-start gap-3 rounded-lg border border-amber-500/30 bg-amber-500/5 p-4">
+              <AlertTriangle className="size-5 text-amber-500 shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-amber-600">
+                  {servicesWithoutAvailability.length} service{servicesWithoutAvailability.length > 1 ? "s" : ""} without availability
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Clients cannot book {servicesWithoutAvailability.length > 1 ? "these services" : `"${servicesWithoutAvailability[0].name}"`} until you set up availability.
+                </p>
+              </div>
+              <Link href="/dashboard/availability">
+                <Button size="sm" variant="outline" className="shrink-0 border-amber-500/30 text-amber-600 hover:bg-amber-500/10">
+                  <CalendarPlus className="mr-1.5 size-3.5" />
+                  Set Availability
+                </Button>
+              </Link>
+            </div>
+          );
+        })()}
+
         {/* ── Your Services ─────────────────────────────────────────────── */}
         <Card>
           <CardHeader>
@@ -520,7 +603,7 @@ export function ServicesClient({ services: initialServices, resolvedPackage }: S
                     <TableHead>Duration</TableHead>
                     <TableHead>Price</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead className="w-24 text-center">Actions</TableHead>
+                    <TableHead className="w-28 text-center">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -585,19 +668,48 @@ export function ServicesClient({ services: initialServices, resolvedPackage }: S
                           {formatCurrency(service.base_price)}
                         </TableCell>
                         <TableCell>
-                          <Badge
-                            variant="outline"
-                            className={
-                              service.is_active
-                                ? "bg-green-500/10 text-green-600 border-green-500/20"
-                                : "bg-muted text-muted-foreground"
-                            }
-                          >
-                            {service.is_active ? "Active" : "Inactive"}
-                          </Badge>
+                          <div className="flex flex-col gap-1">
+                            <Badge
+                              variant="outline"
+                              className={
+                                service.is_active
+                                  ? "bg-green-500/10 text-green-600 border-green-500/20"
+                                  : "bg-muted text-muted-foreground"
+                              }
+                            >
+                              {service.is_active ? "Active" : "Inactive"}
+                            </Badge>
+                            {availabilityLoaded && (
+                              serviceAvailability[service.id] ? (
+                                <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 text-[10px] gap-0.5">
+                                  <CalendarCheck className="size-2.5" />
+                                  Availability Set
+                                </Badge>
+                              ) : (
+                                <Link href="/dashboard/availability" title="Set up availability for this service">
+                                  <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/20 text-[10px] gap-0.5 cursor-pointer hover:bg-amber-500/20 transition-colors">
+                                    <AlertTriangle className="size-2.5" />
+                                    No Availability
+                                  </Badge>
+                                </Link>
+                              )
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center justify-center gap-1">
+                            {availabilityLoaded && !serviceAvailability[service.id] && (
+                              <Link href="/dashboard/availability">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="size-8 text-amber-500 hover:text-amber-600"
+                                  title="Set availability"
+                                >
+                                  <CalendarPlus className="size-4" />
+                                </Button>
+                              </Link>
+                            )}
                             <Button
                               variant="ghost"
                               size="icon"
