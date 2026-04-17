@@ -125,6 +125,12 @@
   --sidebar-ring: #c9a84c;
 }
 
+/* Fix native <select> <option> visibility in dark mode */
+.dark select option {
+  background-color: #0d1230;
+  color: #f5f0e8;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
