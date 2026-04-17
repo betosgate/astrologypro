@@ -376,7 +376,7 @@ async function handleManualBookingCheckoutCompleted(
   const { data: booking } = await supabase
     .from("bookings")
     .select(
-      "id, booking_token, scheduled_at, duration_minutes, base_price, metadata, questionnaire_responses, diviner_id, client_id, service_id, services(id, name, slug, category, duration_minutes, requires_birth_data, intake_template_id, product_kind, is_subscription, requires_birth_time, requires_birth_city, requires_partner_data, pre_checkout_fields, post_checkout_fields), diviners(id, display_name, username), clients(id, email, full_name)"
+      "id, booking_token, scheduled_at, duration_minutes, base_price, metadata, questionnaire_responses, diviner_id, client_id, service_id, services(id, name, slug, category, duration_minutes, requires_birth_data, intake_template_id, product_kind, is_subscription, requires_birth_time, requires_birth_city, requires_partner_data, pre_checkout_fields, post_checkout_fields), diviners(id, display_name, username, chime_phone_number), clients(id, email, full_name)"
     )
     .eq("id", bookingId)
     .single();
@@ -399,7 +399,7 @@ async function handleManualBookingCheckoutCompleted(
     pre_checkout_fields?: unknown;
     post_checkout_fields?: unknown;
   } | null;
-  const div = (booking as Record<string, unknown>).diviners as { id: string; display_name: string; username?: string } | null;
+  const div = (booking as Record<string, unknown>).diviners as { id: string; display_name: string; username?: string; chime_phone_number?: string | null } | null;
   const clientRecord = (booking as Record<string, unknown>).clients as { id: string; email: string; full_name: string | null } | null;
   const meta = (booking as Record<string, unknown>).metadata as { availability_title?: string; availability_description?: string } | null;
 
@@ -415,7 +415,7 @@ async function handleManualBookingCheckoutCompleted(
     currency: session.currency ?? "usd",
     stripePaymentIntentId:
       typeof session.payment_intent === "string" ? session.payment_intent : session.id,
-    status: getOrderStatusForService(svc, true),
+    status: getOrderStatusForService(svc, true, { intakeCompleted: true }),
     paidAt: new Date().toISOString(),
   });
 
@@ -459,6 +459,7 @@ async function handleManualBookingCheckoutCompleted(
       dateTime: formattedDateTime,
       duration: durationMins,
       sessionLink,
+      phoneNumber: div.chime_phone_number ?? undefined,
     }),
     sendBookingAccessInstructions({
       clientEmail: clientRecord.email,
@@ -490,7 +491,7 @@ async function handleManualBookingCheckoutCompleted(
   {
     createCalendarEvent(div.id, {
       title: `${eventTitle} — ${clientRecord.full_name ?? clientRecord.email}`,
-      description: buildCalendarDescription(meta?.availability_description ?? null, appUrl, booking.booking_token as string | undefined),
+      description: buildCalendarDescription(meta?.availability_description ?? null, appUrl, booking.booking_token as string | undefined, { sessionLink, phoneNumber: div.chime_phone_number }),
       startTime: startTime.toISOString(),
       endTime: endTime.toISOString(),
       clientEmail: clientRecord.email,
@@ -1682,7 +1683,7 @@ async function handlePaymentIntentSucceeded(
   const { data: booking } = await supabase
     .from("bookings")
     .select(
-      "id, booking_token, scheduled_at, duration_minutes, base_price, diviner_id, client_id, service_id, metadata, questionnaire_responses, services(id, name, slug, category, duration_minutes, requires_birth_data, intake_template_id, product_kind, is_subscription, requires_birth_time, requires_birth_city, requires_partner_data, pre_checkout_fields, post_checkout_fields), diviners(id, display_name, user_id, username), clients(id, email, full_name, user_id)"
+      "id, booking_token, scheduled_at, duration_minutes, base_price, diviner_id, client_id, service_id, metadata, questionnaire_responses, services(id, name, slug, category, duration_minutes, requires_birth_data, intake_template_id, product_kind, is_subscription, requires_birth_time, requires_birth_city, requires_partner_data, pre_checkout_fields, post_checkout_fields), diviners(id, display_name, user_id, username, chime_phone_number), clients(id, email, full_name, user_id)"
     )
     .eq("id", bookingId)
     .single();
@@ -1710,6 +1711,7 @@ async function handlePaymentIntentSucceeded(
     display_name: string;
     user_id: string;
     username?: string;
+    chime_phone_number?: string | null;
   } | null;
   const clientRecord = (booking as Record<string, unknown>).clients as {
     id: string;
@@ -1736,7 +1738,7 @@ async function handlePaymentIntentSucceeded(
     amountCents: paymentIntent.amount,
     currency: paymentIntent.currency ?? "usd",
     stripePaymentIntentId: paymentIntent.id,
-    status: getOrderStatusForService(svc, true),
+    status: getOrderStatusForService(svc, true, { intakeCompleted: true }),
     paidAt: new Date().toISOString(),
   });
 
@@ -1853,6 +1855,7 @@ async function handlePaymentIntentSucceeded(
     }),
     sessionLink,
     duration: svc.duration_minutes,
+    phoneNumber: div.chime_phone_number ?? undefined,
   };
 
   // Gather additional attendees from questionnaire_responses
@@ -1947,6 +1950,7 @@ async function handlePaymentIntentSucceeded(
         bookingMeta?.availability_description ?? null,
         appUrl,
         booking.booking_token as string | undefined,
+        { sessionLink, phoneNumber: div?.chime_phone_number },
       ),
       startTime: startTime.toISOString(),
       endTime: endTime.toISOString(),
