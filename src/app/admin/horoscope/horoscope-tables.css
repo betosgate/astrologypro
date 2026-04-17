@@ -335,8 +335,8 @@
 
 /* Pluto */
 .planet-interp-pluto {
-    background: linear-gradient(166deg, #8B0000 0%, #CD5C5C 100%) !important;
-    color: #ffffff !important;
+    background: linear-gradient(166deg, rgb(240, 160, 35) 0%, rgb(248, 214, 71) 100%) !important;
+    color: #000000 !important;
 }
 
 /* Other sections */
