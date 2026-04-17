@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import {
   Card,
@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Input } from "@/components/ui/input";
 import {
   Phone,
   PhoneIncoming,
@@ -35,6 +36,7 @@ import {
   TrendingUp,
   ArrowUpRight,
   Timer,
+  Search,
 } from "lucide-react";
 
 type CallRecord = {
@@ -175,14 +177,27 @@ export default function PhoneCallsPage() {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState("all");
+  const [perPage, setPerPage] = useState(10);
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [loading, setLoading] = useState(true);
-  const limit = 20;
+  const debounceRef = useRef<NodeJS.Timeout>();
+
+  // Debounce search input by 400ms
+  useEffect(() => {
+    debounceRef.current = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(1);
+    }, 400);
+    return () => clearTimeout(debounceRef.current);
+  }, [search]);
 
   const fetchCalls = useCallback(async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+      const params = new URLSearchParams({ page: String(page), limit: String(perPage) });
       if (statusFilter !== "all") params.set("status", statusFilter);
+      if (debouncedSearch) params.set("search", debouncedSearch);
 
       const res = await fetch(`/api/dashboard/phone-calls?${params}`);
       if (res.ok) {
@@ -196,13 +211,13 @@ export default function PhoneCallsPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, statusFilter]);
+  }, [page, statusFilter, perPage, debouncedSearch]);
 
   useEffect(() => {
     fetchCalls();
   }, [fetchCalls]);
 
-  const totalPages = Math.ceil(total / limit);
+  const totalPages = Math.ceil(total / perPage);
 
   return (
     <div className="space-y-8">
@@ -301,19 +316,41 @@ export default function PhoneCallsPage() {
                 {total} call{total !== 1 ? "s" : ""} recorded
               </CardDescription>
             </div>
-            <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(1); }}>
-              <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder="Filter" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Calls</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="accepted">Accepted</SelectItem>
-                <SelectItem value="failed">Missed</SelectItem>
-                <SelectItem value="declined">Declined</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Search name, phone, email..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="w-[220px] pl-8 h-9 text-sm"
+                />
+              </div>
+              <Select value={String(perPage)} onValueChange={(v) => { setPerPage(Number(v)); setPage(1); }}>
+                <SelectTrigger className="w-[80px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="5">5</SelectItem>
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="20">20</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(1); }}>
+                <SelectTrigger className="w-[150px]">
+                  <SelectValue placeholder="Filter" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Calls</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="accepted">Accepted</SelectItem>
+                  <SelectItem value="failed">Missed</SelectItem>
+                  <SelectItem value="declined">Declined</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </CardHeader>
 
@@ -429,7 +466,7 @@ export default function PhoneCallsPage() {
           {totalPages > 1 && (
             <div className="flex items-center justify-between border-t px-6 py-3">
               <p className="text-xs text-muted-foreground">
-                Showing {(page - 1) * limit + 1}–{Math.min(page * limit, total)} of {total}
+                Showing {(page - 1) * perPage + 1}–{Math.min(page * perPage, total)} of {total}
               </p>
               <div className="flex gap-1.5">
                 <Button

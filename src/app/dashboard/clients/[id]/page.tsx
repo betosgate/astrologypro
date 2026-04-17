@@ -9,6 +9,10 @@ import {
   User,
   Mail,
   Phone,
+  PhoneIncoming,
+  PhoneOff,
+  PhoneMissed,
+  PhoneOutgoing,
   MapPin,
   Calendar,
   DollarSign,
@@ -22,6 +26,7 @@ import {
   AlertCircle,
   BookOpen,
   MessageSquare,
+  Timer,
 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -50,6 +55,43 @@ function fmtDateTime(iso: string | null | undefined) {
     hour: "numeric",
     minute: "2-digit",
   });
+}
+
+function fmtDuration(seconds: number | null | undefined) {
+  if (!seconds) return "0s";
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  if (m === 0) return `${s}s`;
+  return s > 0 ? `${m}m ${s}s` : `${m}m`;
+}
+
+function fmtDurationLong(seconds: number) {
+  if (seconds < 60) return `${seconds} sec`;
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  if (h === 0) return `${m} min`;
+  return m > 0 ? `${h}h ${m}m` : `${h}h`;
+}
+
+// ── Phone call status helpers ────────────────────────────────────────────────
+
+const CALL_STATUS: Record<string, { label: string; cls: string; icon: React.ReactNode }> = {
+  completed: { label: "Completed", cls: "bg-emerald-500/10 text-emerald-400 border-emerald-500/25", icon: <CheckCircle2 className="size-3" /> },
+  active:    { label: "Active",    cls: "bg-blue-500/10 text-blue-400 border-blue-500/25",         icon: <PhoneIncoming className="size-3" /> },
+  accepted:  { label: "Accepted",  cls: "bg-blue-500/10 text-blue-400 border-blue-500/25",         icon: <PhoneIncoming className="size-3" /> },
+  pending:   { label: "Ringing",   cls: "bg-amber-500/10 text-amber-400 border-amber-500/25",      icon: <Phone className="size-3" /> },
+  failed:    { label: "Missed",    cls: "bg-red-500/10 text-red-400 border-red-500/25",            icon: <PhoneMissed className="size-3" /> },
+  declined:  { label: "Declined",  cls: "bg-red-500/10 text-red-400 border-red-500/25",            icon: <PhoneOff className="size-3" /> },
+};
+
+function CallStatusBadge({ status }: { status: string }) {
+  const s = CALL_STATUS[status] ?? { label: status, cls: "", icon: null };
+  return (
+    <Badge variant="outline" className={`text-[10px] gap-1 ${s.cls}`}>
+      {s.icon}
+      {s.label}
+    </Badge>
+  );
 }
 
 // ── Status helpers ────────────────────────────────────────────────────────────
@@ -119,7 +161,7 @@ export default async function ClientDetailPage({
   if (!relation) notFound();
 
   // ── Parallel data fetch ────────────────────────────────────────────────────
-  const [bookingsRes, tarotRes, birthChartRes, toolkitRes, testimonialsRes] = await Promise.all([
+  const [bookingsRes, tarotRes, birthChartRes, toolkitRes, testimonialsRes, phoneCallsRes] = await Promise.all([
     // All bookings between this client and diviner
     admin
       .from("bookings")
@@ -166,6 +208,15 @@ export default async function ClientDetailPage({
       .eq("diviner_id", diviner.id)
       .eq("client_id", id)
       .order("created_at", { ascending: false }),
+
+    // Phone call sessions for this client with this diviner
+    admin
+      .from("phone_sessions")
+      .select("id, caller_phone, session_type, status, started_at, ended_at, duration_seconds, phone_provider, created_at, booking_id")
+      .eq("diviner_id", diviner.id)
+      .eq("client_id", id)
+      .order("created_at", { ascending: false })
+      .limit(50),
   ]);
 
   const bookings = (bookingsRes.data ?? []) as any[];
@@ -173,6 +224,13 @@ export default async function ClientDetailPage({
   const birthCharts = (birthChartRes.data ?? []) as any[];
   const toolkitReadings = (toolkitRes.data ?? []) as any[];
   const testimonials = (testimonialsRes.data ?? []) as any[];
+  const phoneCalls = (phoneCallsRes.data ?? []) as any[];
+
+  // Phone call stats
+  const completedCalls = phoneCalls.filter((c: any) => c.status === "completed");
+  const missedCalls = phoneCalls.filter((c: any) => ["failed", "declined"].includes(c.status));
+  const totalCallDuration = completedCalls.reduce((sum: number, c: any) => sum + (c.duration_seconds ?? 0), 0);
+  const avgCallDuration = completedCalls.length > 0 ? Math.round(totalCallDuration / completedCalls.length) : 0;
 
   const upcomingBookings = bookings.filter(
     (b) => new Date(b.scheduled_at) >= new Date() && ["confirmed", "pending"].includes(b.status)
@@ -290,6 +348,123 @@ export default async function ClientDetailPage({
                 </div>
               </div>
             ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ── Phone Calls ── */}
+      {phoneCalls.length > 0 && (
+        <Card className="border-primary/20 overflow-hidden">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <div className="flex size-7 items-center justify-center rounded-lg bg-primary/10">
+                <Phone className="size-3.5 text-primary" />
+              </div>
+              Phone Calls
+              <Badge variant="outline" className="ml-auto text-[10px] bg-primary/10 text-primary border-primary/25">
+                {phoneCalls.length} calls
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0 space-y-4">
+            {/* Stats row */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="rounded-lg border bg-emerald-500/5 p-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <CheckCircle2 className="size-3.5 text-emerald-400" />
+                  <span className="text-[10px] text-muted-foreground">Completed</span>
+                </div>
+                <p className="text-lg font-bold text-emerald-400">{completedCalls.length}</p>
+              </div>
+              <div className="rounded-lg border bg-red-500/5 p-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <PhoneMissed className="size-3.5 text-red-400" />
+                  <span className="text-[10px] text-muted-foreground">Missed</span>
+                </div>
+                <p className="text-lg font-bold text-red-400">{missedCalls.length}</p>
+              </div>
+              <div className="rounded-lg border bg-blue-500/5 p-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <Timer className="size-3.5 text-blue-400" />
+                  <span className="text-[10px] text-muted-foreground">Total Time</span>
+                </div>
+                <p className="text-lg font-bold text-blue-400">{fmtDurationLong(totalCallDuration)}</p>
+              </div>
+              <div className="rounded-lg border bg-violet-500/5 p-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <Clock className="size-3.5 text-violet-400" />
+                  <span className="text-[10px] text-muted-foreground">Avg Duration</span>
+                </div>
+                <p className="text-lg font-bold text-violet-400">{fmtDurationLong(avgCallDuration)}</p>
+              </div>
+            </div>
+
+            {/* Call list */}
+            <div className="divide-y divide-border/40">
+              {phoneCalls.map((call: any) => (
+                <div key={call.id} className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
+                  {/* Icon */}
+                  <div className={`flex size-8 shrink-0 items-center justify-center rounded-full ${
+                    call.status === "completed"
+                      ? "bg-emerald-500/10"
+                      : ["failed", "declined"].includes(call.status)
+                      ? "bg-red-500/10"
+                      : ["active", "accepted"].includes(call.status)
+                      ? "bg-blue-500/10"
+                      : "bg-amber-500/10"
+                  }`}>
+                    {call.status === "completed" ? (
+                      <PhoneOutgoing className="size-3.5 text-emerald-400" />
+                    ) : ["failed", "declined"].includes(call.status) ? (
+                      <PhoneMissed className="size-3.5 text-red-400" />
+                    ) : ["active", "accepted"].includes(call.status) ? (
+                      <PhoneIncoming className="size-3.5 text-blue-400" />
+                    ) : (
+                      <Phone className="size-3.5 text-amber-400" />
+                    )}
+                  </div>
+
+                  {/* Details */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="text-xs font-medium">
+                        {call.session_type === "scheduled_dialin" ? "Scheduled Dial-in" : "Phone Call"}
+                      </p>
+                      {["active", "accepted"].includes(call.status) && (
+                        <span className="flex items-center gap-1 text-[10px] font-semibold text-blue-400">
+                          <span className="size-1.5 rounded-full bg-blue-400 animate-pulse" />
+                          LIVE
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[10px] text-muted-foreground">
+                      {fmtDateTime(call.started_at ?? call.created_at)}
+                      {call.caller_phone && ` · ${call.caller_phone}`}
+                    </p>
+                  </div>
+
+                  {/* Duration + Status */}
+                  <div className="flex items-center gap-2 shrink-0">
+                    {call.duration_seconds != null && call.duration_seconds > 0 && (
+                      <span className="text-xs font-medium text-muted-foreground">
+                        {fmtDuration(call.duration_seconds)}
+                      </span>
+                    )}
+                    <CallStatusBadge status={call.status} />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Link to full call history */}
+            <div className="pt-1">
+              <Link
+                href="/dashboard/phone-calls"
+                className="text-xs text-primary hover:underline"
+              >
+                View full call history →
+              </Link>
+            </div>
           </CardContent>
         </Card>
       )}
@@ -495,7 +670,7 @@ export default async function ClientDetailPage({
       )}
 
       {/* Empty state if truly no activity */}
-      {totalReadings === 0 && bookings.length === 0 && testimonials.length === 0 && (
+      {totalReadings === 0 && bookings.length === 0 && testimonials.length === 0 && phoneCalls.length === 0 && (
         <Card className="border-dashed">
           <CardContent className="py-12 text-center">
             <FileText className="size-8 text-muted-foreground mx-auto mb-3" />

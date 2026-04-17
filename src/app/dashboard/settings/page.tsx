@@ -57,6 +57,7 @@ interface DivinerSettings {
   notification_payout: boolean;
   twilio_phone_number: string | null;
   twilio_phone_sid: string | null;
+  chime_phone_number: string | null;
   phone_dialin_enabled: boolean;
   phone_mobile: string | null;
   phone_answer_mode: "mobile" | "browser" | "both";
@@ -171,7 +172,7 @@ function SettingsContent() {
   const [stripeStatusLoading, setStripeStatusLoading] = useState(false);
 
   // Phone state
-  const [phoneProvisioning, setPhoneProvisioning] = useState(false);
+  // phoneProvisioning state removed — admin manages phone number provisioning
   const [phoneSessions, setPhoneSessions] = useState<PhoneSession[]>([]);
 
   // Loyalty state
@@ -233,7 +234,7 @@ function SettingsContent() {
       const { data } = await supabase
         .from("diviners")
         .select(
-          "id, subscription_status, plan_id, stripe_subscription_id, stripe_account_id, charges_enabled, payouts_enabled, paypal_onboarded, paypal_merchant_id, youtube_channel_id, notification_email, notification_sms, notification_booking_confirmed, notification_booking_cancelled, notification_payout, twilio_phone_number, twilio_phone_sid, phone_dialin_enabled, phone_mobile, phone_answer_mode"
+          "id, subscription_status, plan_id, stripe_subscription_id, stripe_account_id, charges_enabled, payouts_enabled, paypal_onboarded, paypal_merchant_id, youtube_channel_id, notification_email, notification_sms, notification_booking_confirmed, notification_booking_cancelled, notification_payout, twilio_phone_number, twilio_phone_sid, chime_phone_number, phone_dialin_enabled, phone_mobile, phone_answer_mode"
         )
         .eq("user_id", user.id)
         .single();
@@ -295,6 +296,7 @@ function SettingsContent() {
           notification_payout: data.notification_payout ?? true,
           twilio_phone_number: data.twilio_phone_number ?? null,
           twilio_phone_sid: data.twilio_phone_sid ?? null,
+          chime_phone_number: data.chime_phone_number ?? null,
           phone_dialin_enabled: data.phone_dialin_enabled ?? false,
           phone_mobile: data.phone_mobile ?? null,
           phone_answer_mode: data.phone_answer_mode ?? "both",
@@ -966,126 +968,55 @@ function SettingsContent() {
 
         {/* Phone Tab */}
         <TabsContent value="phone" className="mt-6 space-y-6">
+          {/* Dedicated Phone Number — View Only */}
           <Card>
             <CardHeader>
-              <CardTitle>Dedicated Phone Number</CardTitle>
+              <CardTitle>Your Phone Number</CardTitle>
               <CardDescription>
-                Get a phone number so clients can dial in for readings.
+                Your dedicated phone number is managed by the platform admin.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {settings.twilio_phone_number ? (
-                <>
-                  <div className="flex items-center gap-3 rounded-lg border p-4">
+              {(settings.chime_phone_number || settings.twilio_phone_number) ? (
+                <div className="flex items-center gap-3 rounded-lg border bg-muted/30 p-4">
+                  <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-green-500/10">
                     <Phone className="size-5 text-green-500" />
-                    <div className="flex-1">
-                      <p className="text-lg font-semibold">
-                        {settings.twilio_phone_number}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Your dedicated phone number
-                      </p>
-                    </div>
-                    <Badge
-                      variant={
-                        settings.phone_dialin_enabled ? "default" : "secondary"
-                      }
-                    >
-                      {settings.phone_dialin_enabled ? "Active" : "Inactive"}
-                    </Badge>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium">Phone Dial-in</p>
-                      <p className="text-xs text-muted-foreground">
-                        Allow clients to call this number for readings
-                      </p>
-                    </div>
-                    <Switch
-                      checked={settings.phone_dialin_enabled}
-                      onCheckedChange={async (checked) => {
-                        const supabase = createClient();
-                        const { error } = await supabase
-                          .from("diviners")
-                          .update({ phone_dialin_enabled: !!checked })
-                          .eq("id", settings.id);
-                        if (error) {
-                          toast.error("Failed to update phone dial-in setting");
-                        } else {
-                          setSettings({
-                            ...settings,
-                            phone_dialin_enabled: !!checked,
-                          });
-                          toast.success(
-                            checked
-                              ? "Phone dial-in enabled"
-                              : "Phone dial-in disabled"
-                          );
-                        }
-                      }}
-                    />
+                  <div className="flex-1">
+                    <p className="text-lg font-semibold">
+                      {settings.chime_phone_number ?? settings.twilio_phone_number}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Clients can call this number for readings
+                    </p>
                   </div>
-                </>
-              ) : (
-                <div className="space-y-3">
-                  <p className="text-sm text-muted-foreground">
-                    You do not have a dedicated phone number yet. Provision one
-                    to allow clients to call in for phone readings.
-                  </p>
-                  <Button
-                    onClick={async () => {
-                      setPhoneProvisioning(true);
-                      try {
-                        const res = await fetch(
-                          "/api/twilio/provision-number",
-                          { method: "POST" }
-                        );
-                        const data = await res.json();
-                        if (!res.ok) {
-                          toast.error(
-                            data.error ?? "Failed to provision number"
-                          );
-                          return;
-                        }
-                        setSettings({
-                          ...settings,
-                          twilio_phone_number: data.phoneNumber,
-                          phone_dialin_enabled: true,
-                        });
-                        toast.success(
-                          `Phone number provisioned: ${data.phoneNumber}`
-                        );
-                      } catch {
-                        toast.error("Failed to provision phone number");
-                      } finally {
-                        setPhoneProvisioning(false);
-                      }
-                    }}
-                    disabled={phoneProvisioning}
+                  <Badge
+                    variant={settings.phone_dialin_enabled ? "default" : "secondary"}
                   >
-                    {phoneProvisioning ? (
-                      <>
-                        <Loader2 className="mr-2 size-4 animate-spin" />
-                        Provisioning...
-                      </>
-                    ) : (
-                      <>
-                        <Phone className="mr-2 size-4" />
-                        Get a Dedicated Phone Number
-                      </>
-                    )}
-                  </Button>
+                    {settings.phone_dialin_enabled ? "Active" : "Inactive"}
+                  </Badge>
+                </div>
+              ) : (
+                <div className="rounded-lg border border-dashed bg-muted/20 p-6 text-center">
+                  <Phone className="mx-auto size-8 text-muted-foreground/50 mb-2" />
+                  <p className="text-sm text-muted-foreground">
+                    No phone number assigned yet.
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Contact the platform admin to get a dedicated phone number for your readings.
+                  </p>
                 </div>
               )}
             </CardContent>
           </Card>
 
-          {settings.twilio_phone_number && (
+          {/* Call Answering Mode — Editable */}
+          {(settings.chime_phone_number || settings.twilio_phone_number) && (
             <Card>
               <CardHeader>
-                <CardTitle>Call Answering</CardTitle>
+                <CardTitle>Call Answering Mode</CardTitle>
                 <CardDescription>
-                  Choose how you want to receive incoming calls. You can answer in your browser, on your mobile phone, or both at the same time.
+                  Choose how you want to receive incoming calls from clients.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-5">
@@ -1099,7 +1030,7 @@ function SettingsContent() {
                     id="phone-mobile-input"
                   />
                   <p className="text-xs text-muted-foreground">
-                    When a client calls, we&apos;ll also ring this number so you never miss a reading.
+                    When a client calls, we&apos;ll also ring this number so you can answer from your phone.
                   </p>
                 </div>
                 <div className="space-y-2">
@@ -1116,9 +1047,9 @@ function SettingsContent() {
                             : "border-input hover:border-primary/50"
                         }`}
                       >
-                        <p className="font-medium capitalize">{mode === "both" ? "Browser + Mobile" : mode === "browser" ? "Browser only" : "Mobile only"}</p>
+                        <p className="font-medium">{mode === "both" ? "Both" : mode === "browser" ? "Browser Widget" : "Mobile Phone"}</p>
                         <p className="mt-0.5 text-xs text-muted-foreground">
-                          {mode === "both" ? "Recommended" : mode === "browser" ? "Dashboard widget" : "Ring your phone"}
+                          {mode === "both" ? "Recommended — rings everywhere" : mode === "browser" ? "Answer from dashboard" : "Ring your mobile"}
                         </p>
                       </button>
                     ))}
@@ -1148,6 +1079,7 @@ function SettingsContent() {
             </Card>
           )}
 
+          {/* Phone Reading Pricing — View Only */}
           <Card>
             <CardHeader>
               <CardTitle>Phone Reading Pricing</CardTitle>
@@ -1158,17 +1090,17 @@ function SettingsContent() {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-3 gap-4 text-center">
-                <div className="rounded-lg border p-3">
+                <div className="rounded-lg border bg-muted/30 p-3">
                   <p className="text-xs text-muted-foreground">Base Price</p>
                   <p className="text-lg font-bold">$25.00</p>
                   <p className="text-xs text-muted-foreground">First 20 min</p>
                 </div>
-                <div className="rounded-lg border p-3">
+                <div className="rounded-lg border bg-muted/30 p-3">
                   <p className="text-xs text-muted-foreground">Overage</p>
                   <p className="text-lg font-bold">$0.50</p>
                   <p className="text-xs text-muted-foreground">Per extra min</p>
                 </div>
-                <div className="rounded-lg border p-3">
+                <div className="rounded-lg border bg-muted/30 p-3">
                   <p className="text-xs text-muted-foreground">You Earn</p>
                   <p className="text-lg font-bold">80%</p>
                   <p className="text-xs text-muted-foreground">Of each call</p>
@@ -1177,6 +1109,7 @@ function SettingsContent() {
             </CardContent>
           </Card>
 
+          {/* Phone Session History — View Only */}
           {phoneSessions.length > 0 && (
             <Card>
               <CardHeader>
@@ -1202,7 +1135,7 @@ function SettingsContent() {
                     );
                     return (
                       <div className="mb-4 grid grid-cols-3 gap-4 text-center">
-                        <div className="rounded-lg border p-3">
+                        <div className="rounded-lg border bg-muted/30 p-3">
                           <p className="text-xs text-muted-foreground">
                             Total Calls
                           </p>
@@ -1210,7 +1143,7 @@ function SettingsContent() {
                             {completed.length}
                           </p>
                         </div>
-                        <div className="rounded-lg border p-3">
+                        <div className="rounded-lg border bg-muted/30 p-3">
                           <p className="text-xs text-muted-foreground">
                             Total Revenue
                           </p>
@@ -1218,7 +1151,7 @@ function SettingsContent() {
                             {formatCurrency(totalRevenue)}
                           </p>
                         </div>
-                        <div className="rounded-lg border p-3">
+                        <div className="rounded-lg border bg-muted/30 p-3">
                           <p className="text-xs text-muted-foreground">
                             Phone Costs
                           </p>
