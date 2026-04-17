@@ -54,7 +54,7 @@ export async function GET(
 
   const { data: services, error: servicesError } = await admin
     .from("services")
-    .select("*")
+    .select("*, template_id")
     .eq("diviner_id", diviner.id)
     .eq("is_active", true)
     .order("is_featured", { ascending: false })
@@ -72,7 +72,20 @@ export async function GET(
     );
   }
 
-  const visibleServices = filterVisiblePublicServices(services ?? []).map((service) => ({
+  // Task 05: enforce template access control
+  const { data: publishedDs } = await admin
+    .from("diviner_services")
+    .select("template_id")
+    .eq("diviner_id", diviner.id)
+    .eq("is_enabled", true)
+    .eq("is_published", true);
+
+  const publishedTemplateIds = new Set((publishedDs ?? []).map((r) => r.template_id));
+  const accessibleServices = (services ?? []).filter(
+    (s) => !s.template_id || publishedTemplateIds.has(s.template_id)
+  );
+
+  const visibleServices = filterVisiblePublicServices(accessibleServices).map((service) => ({
     ...service,
     is_time_based: isTimeBasedPublicService(service),
   }));

@@ -166,6 +166,23 @@ export async function POST(_req: NextRequest) {
     );
   }
 
+  // Task 05: if a template_id is provided, verify diviner_services access
+  const templateId = typeof body.template_id === "string" ? body.template_id : null;
+  if (templateId) {
+    const { data: dsAccess } = await admin
+      .from("diviner_services")
+      .select("is_enabled")
+      .eq("diviner_id", diviner.id)
+      .eq("template_id", templateId)
+      .maybeSingle();
+    if (!dsAccess || !dsAccess.is_enabled) {
+      return NextResponse.json(
+        { type: "https://httpstatuses.com/403", title: "Forbidden", status: 403, detail: "This service template is not enabled for your account" },
+        { status: 403 },
+      );
+    }
+  }
+
   // Generate slug from name
   const slug = name
     .toLowerCase()
@@ -185,6 +202,7 @@ export async function POST(_req: NextRequest) {
       base_price,
       is_active,
       requires_birth_data: body.requires_birth_data !== false,
+      ...(templateId ? { template_id: templateId } : {}),
     })
     .select("id, name, slug, category, description, duration_minutes, base_price, is_active, created_at")
     .single();

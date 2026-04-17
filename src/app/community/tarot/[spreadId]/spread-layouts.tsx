@@ -150,34 +150,45 @@ export function ThreeCardLayout({ positionLabels, drawnCards, onReveal, onCardCl
 // ─── 2. Five Card Complex Question (5 in a row with group brackets) ──────────
 
 export function FiveCardLayout({ positionLabels, drawnCards, onReveal, onCardClick, cardBackUrl }: LayoutProps) {
-  // Layout: 5 cards in a row
-  // Group labels below: [0,1] = INSIDE, [2,3] = OUTSIDE, [4] = RESULT
-  // Bottom bar: "NATURE OF THE PROBLEM / Environment" | "POSSIBLE SOLUTIONS"
+  const CW = 160;
+  const CH = 230;
   return (
-    <div className="flex flex-col items-center gap-6">
-      {/* 5 cards in a row */}
-      <div className="flex flex-wrap justify-center gap-4 md:gap-6">
-        {positionLabels.map((label, i) => (
-          <CardSlot key={i} index={i} label={label} drawn={drawnCards[i]} onReveal={onReveal} onCardClick={onCardClick} cardBackUrl={cardBackUrl} cardWidth={170} cardHeight={250} />
-        ))}
+    <div className="flex flex-col items-center gap-8">
+      {/* Card groups */}
+      <div className="flex flex-wrap justify-center gap-6">
+        {/* INSIDE group: cards 1 & 2 */}
+        <div className="flex flex-col items-center gap-3">
+          <h3 className="text-sm font-bold uppercase tracking-widest text-emerald-400 border-b border-emerald-500/40 pb-1 px-4">Inside</h3>
+          <div className="flex gap-4 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4">
+            {[0, 1].map((i) => (
+              <CardSlot key={i} index={i} label={positionLabels[i]} drawn={drawnCards[i]} onReveal={onReveal} onCardClick={onCardClick} cardBackUrl={cardBackUrl} cardWidth={CW} cardHeight={CH} />
+            ))}
+          </div>
+        </div>
+
+        {/* OUTSIDE group: cards 3 & 4 */}
+        <div className="flex flex-col items-center gap-3">
+          <h3 className="text-sm font-bold uppercase tracking-widest text-amber-400 border-b border-amber-500/40 pb-1 px-4">Outside</h3>
+          <div className="flex gap-4 rounded-xl border border-amber-500/20 bg-amber-500/5 p-4">
+            {[2, 3].map((i) => (
+              <CardSlot key={i} index={i} label={positionLabels[i]} drawn={drawnCards[i]} onReveal={onReveal} onCardClick={onCardClick} cardBackUrl={cardBackUrl} cardWidth={CW} cardHeight={CH} />
+            ))}
+          </div>
+        </div>
+
+        {/* RESULT group: card 5 */}
+        <div className="flex flex-col items-center gap-3">
+          <h3 className="text-sm font-bold uppercase tracking-widest text-indigo-400 border-b border-indigo-500/40 pb-1 px-4">Result</h3>
+          <div className="flex gap-4 rounded-xl border border-indigo-500/20 bg-indigo-500/5 p-4">
+            <CardSlot index={4} label={positionLabels[4]} drawn={drawnCards[4]} onReveal={onReveal} onCardClick={onCardClick} cardBackUrl={cardBackUrl} cardWidth={CW} cardHeight={CH} />
+          </div>
+        </div>
       </div>
-      {/* Group labels */}
-      <div className="hidden md:flex justify-center gap-0 w-full max-w-[850px]">
-        <div className="flex-1 text-center border-t-2 border-l-2 border-emerald-500/60 pt-2 ml-4">
-          <span className="text-xs font-bold uppercase tracking-widest text-emerald-400">Inside</span>
-        </div>
-        <div className="flex-1 text-center border-t-2 border-emerald-500/60 pt-2">
-          <span className="text-xs font-bold uppercase tracking-widest text-emerald-400">Outside</span>
-        </div>
-        <div className="w-[160px] text-center border-t-2 border-r-2 border-emerald-500/60 pt-2 mr-4">
-          <span className="text-xs font-bold uppercase tracking-widest text-emerald-400">Result</span>
-        </div>
-      </div>
-      {/* Bottom bar */}
-      <div className="hidden md:flex justify-center gap-4 w-full max-w-[850px]">
+
+      {/* Bottom labels */}
+      <div className="hidden md:flex justify-center gap-8 w-full max-w-[900px]">
         <div className="flex-1 text-center">
           <p className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Nature of the Problem</p>
-          <p className="text-xs text-muted-foreground/70">Environment</p>
         </div>
         <div className="flex-1 text-center">
           <p className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Possible Solutions</p>

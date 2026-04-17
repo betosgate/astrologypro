@@ -41,11 +41,25 @@ export async function GET(request: NextRequest) {
   const status = searchParams.get("status");
   const from = searchParams.get("from");
   const to = searchParams.get("to");
+  const search = searchParams.get("search")?.trim();
   const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
   const limit = Math.min(50, Math.max(1, parseInt(searchParams.get("limit") ?? "20", 10)));
   const offset = (page - 1) * limit;
 
   try {
+    // If there's a search term, first find matching client IDs
+    let matchingClientIds: string[] | null = null;
+
+    if (search) {
+      const { data: matchedClients } = await admin
+        .from("clients")
+        .select("id")
+        .or(`full_name.ilike.%${search}%,email.ilike.%${search}%,phone.ilike.%${search}%`)
+        .limit(100);
+
+      matchingClientIds = matchedClients?.map((c) => c.id) ?? [];
+    }
+
     let query = admin
       .from("phone_sessions")
       .select(
@@ -75,6 +89,16 @@ export async function GET(request: NextRequest) {
     }
     if (to) {
       query = query.lte("created_at", to);
+    }
+
+    // Apply search filter: match caller_phone directly OR client IDs from name/email search
+    if (search) {
+      if (matchingClientIds && matchingClientIds.length > 0) {
+        query = query.or(`caller_phone.ilike.%${search}%,client_id.in.(${matchingClientIds.join(",")})`);
+      } else {
+        // No matching clients — only search by phone number
+        query = query.ilike("caller_phone", `%${search}%`);
+      }
     }
 
     const { data: calls, count, error } = await query;

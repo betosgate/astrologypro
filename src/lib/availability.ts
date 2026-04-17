@@ -182,16 +182,9 @@ function buildWindowsForDate({
       if (template.isActive === false) return false;
       if (!allTemplates) {
         if (serviceId) {
-          // Prefer service-specific templates. Fall back to generics only when
-          // no templates are explicitly linked to this service.
-          const hasServiceSpecific = templates.some(
-            (t) => t.serviceId === serviceId && t.isActive !== false
-          );
-          if (hasServiceSpecific) {
-            if (template.serviceId !== serviceId) return false;
-          } else {
-            if (template.serviceId) return false;
-          }
+          // Only show templates explicitly linked to this service.
+          // Services without dedicated availability won't show any slots.
+          if (template.serviceId !== serviceId) return false;
         } else if (template.serviceId) {
           return false;
         }
@@ -211,15 +204,25 @@ function buildWindowsForDate({
       slotIntervalMinutes: template.durationMinutes || durationMinutes,
     }));
 
-  const legacyWindows = weeklySlots
-    .filter((slot) => slot.dayOfWeek === dayOfWeek)
-    .map<AvailabilityWindow>((slot) => ({
-      source: "legacy",
-      timezone,
-      startTime: slot.startTime,
-      endTime: slot.endTime,
-      slotIntervalMinutes: durationMinutes,
-    }));
+  // Legacy weekly slots are the old scheduling system. Skip them when:
+  // 1. A serviceId is provided (legacy slots can't be scoped to services)
+  // 2. The diviner has active templates (templates are the modern replacement)
+  const hasActiveTemplates = (templates ?? []).some(
+    (t) => t.isActive !== false
+  );
+  const skipLegacy = !!serviceId || hasActiveTemplates;
+
+  const legacyWindows = skipLegacy
+    ? []
+    : weeklySlots
+        .filter((slot) => slot.dayOfWeek === dayOfWeek)
+        .map<AvailabilityWindow>((slot) => ({
+          source: "legacy",
+          timezone,
+          startTime: slot.startTime,
+          endTime: slot.endTime,
+          slotIntervalMinutes: durationMinutes,
+        }));
 
   return [...templateWindows, ...legacyWindows];
 }

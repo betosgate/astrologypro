@@ -903,7 +903,7 @@ export default async function CommunityDashboardPage() {
         )}
 
         {/* Mystery School access / upgrade — secondary CTA, only for Perennial members */}
-        {isPerennial && (
+        {/* {isPerennial && (
           <Card className="border-dashed border-purple-500/30">
             <CardContent className="py-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-2 min-w-0">
@@ -949,7 +949,7 @@ export default async function CommunityDashboardPage() {
               </Button>
             </CardContent>
           </Card>
-        )}
+        )} */}
       </section>
 
       {/* ═══════════════════════════════════════════════════════════════════

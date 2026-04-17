@@ -51,13 +51,27 @@ async function getService(divinerId: string, slug: string) {
   const supabase = createAdminClient();
   const { data } = await supabase
     .from("services")
-    .select("*")
+    .select("*, template_id")
     .eq("diviner_id", divinerId)
     .eq("slug", slug)
     .eq("is_active", true)
     .maybeSingle();
   if (!data || filterVisiblePublicServices([data]).length === 0) {
     return null;
+  }
+
+  // Task 05: enforce template access control — 404 if not enabled+published
+  if (data.template_id) {
+    const { data: ds } = await supabase
+      .from("diviner_services")
+      .select("is_enabled, is_published")
+      .eq("diviner_id", divinerId)
+      .eq("template_id", data.template_id)
+      .maybeSingle();
+    // Missing mapping or not enabled+published → treat as not found (don't reveal existence)
+    if (!ds || !ds.is_enabled || !ds.is_published) {
+      return null;
+    }
   }
 
   const [service] = await applyRuntimePricesToServices(supabase, [data]);

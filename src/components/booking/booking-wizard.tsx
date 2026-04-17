@@ -24,6 +24,7 @@ import {
   ShieldAlert,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
+import { CitySearch, type CityResult } from "@/components/booking/city-search";
 import { format } from "date-fns";
 import { getServicePurchaseConfig } from "@/lib/service-purchase";
 import { cn } from "@/lib/utils";
@@ -105,6 +106,9 @@ interface BookingDetails {
   birthDate: string;
   birthTime: string;
   birthCity: string;
+  birthLat: number | null;
+  birthLng: number | null;
+  birthTimezone: string;
   notes: string;
 }
 
@@ -115,6 +119,9 @@ const INITIAL_DETAILS: BookingDetails = {
   birthDate: "",
   birthTime: "",
   birthCity: "",
+  birthLat: null,
+  birthLng: null,
+  birthTimezone: "",
   notes: "",
 };
 
@@ -168,12 +175,14 @@ function StripePaymentForm({
   submitting,
   setSubmitting,
   policyAcknowledged,
+  bookingId,
 }: {
   onSuccess: () => void;
   onError: (msg: string) => void;
   submitting: boolean;
   setSubmitting: (v: boolean) => void;
   policyAcknowledged: boolean;
+  bookingId?: string | null;
 }) {
   const stripe = useStripe();
   const elements = useElements();
@@ -186,7 +195,7 @@ function StripePaymentForm({
     setSubmitting(true);
     onError("");
 
-    const { error } = await stripe.confirmPayment({
+    const { error, paymentIntent } = await stripe.confirmPayment({
       elements,
       confirmParams: {
         return_url: `${window.location.origin}/booking/success`,
@@ -198,6 +207,20 @@ function StripePaymentForm({
       onError(error.message ?? "Payment failed. Please try again.");
       setSubmitting(false);
     } else {
+      // Notify the backend as a webhook fallback — verify payment and update
+      // booking/order status so they don't stay stuck in pending_payment.
+      if (paymentIntent?.id && bookingId) {
+        fetch("/api/stripe/confirm-payment", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            paymentIntentId: paymentIntent.id,
+            bookingId,
+          }),
+        }).catch(() => {
+          // Non-critical — webhook will handle it if this fails
+        });
+      }
       onSuccess();
     }
   }
@@ -274,7 +297,6 @@ export function BookingWizard({
   const [clientTimezone, setClientTimezone] = useState(diviner.timezone || "UTC");
   const resolvedServiceName = hideServiceName ? (bookingLabel ?? "Reading Session") : (bookingLabel ?? service.name);
   const availabilityQuery = availabilityServiceId ? `&serviceId=${availabilityServiceId}` : "";
-  const purchaseConfig = getServicePurchaseConfig(service);
 
   // Effective price: slot's linked service price takes priority over the service prop's base_price.
   // If the slot has NO linked service (availabilityServiceId is null), it is an unscoped
@@ -417,8 +439,9 @@ export function BookingWizard({
           bookingDetails.email.trim() &&
           bookingDetails.phone.trim() &&
           phoneValid &&
-          (!service.requires_birth_data || bookingDetails.birthDate) &&
-          (!service.requires_birth_city || bookingDetails.birthCity.trim())
+          bookingDetails.notes.trim() &&
+          (!(service.requires_birth_data || service.requires_birth_time || service.requires_birth_city) || bookingDetails.birthDate) &&
+          (!(service.requires_birth_data || service.requires_birth_time || service.requires_birth_city) || (bookingDetails.birthCity.trim() && bookingDetails.birthLat != null))
         );
       }
       case 2:
@@ -456,6 +479,9 @@ export function BookingWizard({
             ...(bookingDetails.birthDate ? { birthDate: bookingDetails.birthDate } : {}),
             ...(bookingDetails.birthTime ? { birthTime: bookingDetails.birthTime } : {}),
             ...(bookingDetails.birthCity ? { birthCity: bookingDetails.birthCity } : {}),
+            ...(bookingDetails.birthLat != null ? { birthLat: bookingDetails.birthLat } : {}),
+            ...(bookingDetails.birthLng != null ? { birthLng: bookingDetails.birthLng } : {}),
+            ...(bookingDetails.birthTimezone ? { birthTimezone: bookingDetails.birthTimezone } : {}),
           },
           affiliateCode,
           policyAcknowledgedAt: policyAcknowledged ? new Date().toISOString() : undefined,
@@ -830,6 +856,9 @@ export function BookingWizard({
                     autoComplete="tel"
                     required
                   />
+                  <p className="text-xs text-muted-foreground">
+                    Make sure this is correct — your session call will be connected to this number. A wrong number means the call won&apos;t go through.
+                  </p>
                   {bookingDetails.phone && !/^\+\d{1,3}\s?\d{6,14}$/.test(bookingDetails.phone.replace(/[\s()-]/g, "").replace(/^(\+\d{1,3})/, "$1")) && (
                     <p className="text-xs text-destructive">
                       Please enter a valid phone number starting with country code (e.g. +1 or +91)
@@ -877,32 +906,53 @@ export function BookingWizard({
                         />
                       </div>
                     )}
-                    {service.requires_birth_city && (
-                      <div className="space-y-2 md:col-span-2">
-                        <Label htmlFor="booking-birth-city">
-                          City of Birth <span className="text-destructive">*</span>
-                        </Label>
-                        <Input
-                          id="booking-birth-city"
-                          value={bookingDetails.birthCity}
-                          onChange={(e) =>
-                            setBookingDetails((prev) => ({
-                              ...prev,
-                              birthCity: e.target.value,
-                            }))
-                          }
-                          placeholder="e.g. Mumbai, India"
-                        />
-                      </div>
-                    )}
+                    <div className="space-y-2 md:col-span-2">
+                      <Label htmlFor="booking-birth-city">
+                        Place of Birth <span className="text-destructive">*</span>
+                      </Label>
+                      <CitySearch
+                        id="booking-birth-city"
+                        value={bookingDetails.birthCity}
+                        placeholder="Search city, e.g. Mumbai, India"
+                        onChange={(result: CityResult) =>
+                          setBookingDetails((prev) => ({
+                            ...prev,
+                            birthCity: result.city,
+                            birthLat: result.lat,
+                            birthLng: result.lng,
+                            birthTimezone: result.timezone,
+                          }))
+                        }
+                        onTextChange={(text) =>
+                          setBookingDetails((prev) => ({
+                            ...prev,
+                            birthCity: text,
+                            // Clear lat/lng when user types manually (force re-selection)
+                            birthLat: null,
+                            birthLng: null,
+                            birthTimezone: "",
+                          }))
+                        }
+                      />
+                      {bookingDetails.birthCity && bookingDetails.birthLat != null && (
+                        <p className="text-xs text-amber-500/80">
+                          {bookingDetails.birthCity} — {bookingDetails.birthLat.toFixed(4)}°, {bookingDetails.birthLng?.toFixed(4)}° ({bookingDetails.birthTimezone})
+                        </p>
+                      )}
+                      {bookingDetails.birthCity && bookingDetails.birthLat == null && (
+                        <p className="text-xs text-destructive">
+                          Please select a location from the dropdown
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </div>
               )}
 
-              {/* Notes — always shown */}
+              {/* Notes — required */}
               <div className="space-y-2">
                 <Label htmlFor="booking-notes">
-                  Notes <span className="text-muted-foreground">(optional)</span>
+                  Notes <span className="text-destructive">*</span>
                 </Label>
                 <Textarea
                   id="booking-notes"
@@ -915,17 +965,10 @@ export function BookingWizard({
                     }))
                   }
                   placeholder="Anything you'd like the practitioner to know before your session…"
+                  required
                 />
               </div>
 
-              {purchaseConfig.requiresPostPaymentIntake && (
-                <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-4 text-sm text-muted-foreground">
-                  After payment, we&apos;ll ask only for the details needed for{" "}
-                  <span className="font-medium text-foreground">{resolvedServiceName}</span>.
-                  {purchaseConfig.postCheckoutFields.includes("birth_details") &&
-                    " Birth data will be collected in the secure post-purchase intake."}
-                </div>
-              )}
             </div>
           )}
 
@@ -1008,20 +1051,11 @@ export function BookingWizard({
                 </div>
 
                 {/* Policy notice */}
-                {isFreeBooking ? (
+                {isFreeBooking && (
                   <div className="flex items-start gap-3 rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-4">
                     <ShieldAlert className="mt-0.5 size-4 shrink-0 text-emerald-500" />
                     <p className="text-xs text-muted-foreground leading-relaxed">
                       This is a <strong className="text-foreground">free appointment</strong>. No payment is required. Please be on time — out of respect for the diviner&apos;s schedule.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="flex items-start gap-3 rounded-lg border border-amber-500/20 bg-amber-500/5 p-4">
-                    <ShieldAlert className="mt-0.5 size-4 shrink-0 text-amber-500" />
-                    <p className="text-xs text-muted-foreground leading-relaxed">
-                      By proceeding with payment, you agree that{" "}
-                      <strong className="text-foreground">50% of the payment is retained as a no-show fee</strong>{" "}
-                      if you do not attend without prior notice, and that cancellations within 24 hours are non-refundable.
                     </p>
                   </div>
                 )}
@@ -1077,6 +1111,7 @@ export function BookingWizard({
                       submitting={submitting}
                       setSubmitting={setSubmitting}
                       policyAcknowledged={policyAcknowledged}
+                      bookingId={bookingId}
                     />
                   </Elements>
                 )}
@@ -1133,8 +1168,11 @@ export function BookingWizard({
                   const pc = bookingDetails.phone.replace(/[\s()-]/g, "");
                   if (!/^\+\d{7,15}$/.test(pc)) { missing.push("Valid Phone (e.g. +1... or +91...)"); if (!firstMissingId) firstMissingId = "booking-phone"; }
                 }
-                if (service.requires_birth_data && !bookingDetails.birthDate) { missing.push("Date of Birth"); if (!firstMissingId) firstMissingId = "booking-birth-date"; }
-                if (service.requires_birth_city && !bookingDetails.birthCity.trim()) { missing.push("City of Birth"); if (!firstMissingId) firstMissingId = "booking-birth-city"; }
+                const needsBirthData = service.requires_birth_data || service.requires_birth_time || service.requires_birth_city;
+                if (needsBirthData && !bookingDetails.birthDate) { missing.push("Date of Birth"); if (!firstMissingId) firstMissingId = "booking-birth-date"; }
+                if (needsBirthData && !bookingDetails.birthCity.trim()) { missing.push("Place of Birth"); if (!firstMissingId) firstMissingId = "booking-birth-city"; }
+                else if (needsBirthData && bookingDetails.birthLat == null) { missing.push("Place of Birth (select from dropdown)"); if (!firstMissingId) firstMissingId = "booking-birth-city"; }
+                if (!bookingDetails.notes.trim()) { missing.push("Notes"); if (!firstMissingId) firstMissingId = "booking-notes"; }
                 toast.error(`Please fill in: ${missing.join(", ")}`);
                 // Scroll to and focus the first missing field
                 if (firstMissingId) {
