@@ -48,7 +48,13 @@ import {
   BarChart3,
   TrendingUp,
   ArrowUpDown,
+  AlertTriangle,
+  CheckCircle,
+  Link2,
 } from "lucide-react";
+import { CampaignDestinationPicker, type DestinationValue } from "@/components/dashboard/campaign-destination-picker";
+import { CampaignUrlDisplay } from "@/components/dashboard/campaign-url-display";
+import { CampaignDestinationBadge } from "@/components/dashboard/campaign-destination-badge";
 
 /* ─────────────── Campaign list types ─────────────── */
 
@@ -71,6 +77,21 @@ interface Campaign {
   conversions_count: number;
   total_commission_cents: number;
   created_at: string;
+  // Destination fields
+  destination_type: "PROFILE" | "SERVICE" | null;
+  destination_service_template_id: string | null;
+  campaign_code: string | null;
+  share_url: string | null;
+  auto_paused_at: string | null;
+  auto_pause_reason: string | null;
+}
+
+interface CreatedCampaignResult {
+  id: string;
+  name: string;
+  campaign_code: string | null;
+  share_url: string | null;
+  destination_type: "PROFILE" | "SERVICE" | null;
 }
 
 const STATUS_BADGE: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
@@ -79,6 +100,7 @@ const STATUS_BADGE: Record<string, "default" | "secondary" | "destructive" | "ou
   paused: "outline",
   completed: "default",
   expired: "destructive",
+  archived: "outline",
 };
 
 function fmtCents(cents: number) {
@@ -488,6 +510,7 @@ export default function DashboardCampaignsPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [filterStatus, setFilterStatus] = useState("");
+  const [createdCampaign, setCreatedCampaign] = useState<CreatedCampaignResult | null>(null);
 
   // Form state
   const [formName, setFormName] = useState("");
@@ -501,6 +524,11 @@ export default function DashboardCampaignsPage() {
   const [formUtmSource, setFormUtmSource] = useState("");
   const [formUtmMedium, setFormUtmMedium] = useState("");
   const [formUtmCampaign, setFormUtmCampaign] = useState("");
+  const [formDestination, setFormDestination] = useState<DestinationValue>({
+    destination_type: null,
+    destination_service_template_id: null,
+  });
+  const [formChannel, setFormChannel] = useState("");
 
   function resetForm() {
     setFormName("");
@@ -514,6 +542,9 @@ export default function DashboardCampaignsPage() {
     setFormUtmSource("");
     setFormUtmMedium("");
     setFormUtmCampaign("");
+    setFormDestination({ destination_type: null, destination_service_template_id: null });
+    setFormChannel("");
+    setCreatedCampaign(null);
   }
 
   const loadCampaigns = useCallback(async () => {
@@ -537,6 +568,10 @@ export default function DashboardCampaignsPage() {
       toast.error("Name and start date are required");
       return;
     }
+    if (formDestination.destination_type === "SERVICE" && !formDestination.destination_service_template_id) {
+      toast.error("Please select a service destination");
+      return;
+    }
     setSaving(true);
     const res = await fetch("/api/dashboard/campaigns", {
       method: "POST",
@@ -553,16 +588,19 @@ export default function DashboardCampaignsPage() {
         utm_source: formUtmSource || undefined,
         utm_medium: formUtmMedium || undefined,
         utm_campaign: formUtmCampaign || undefined,
+        destination_type: formDestination.destination_type || undefined,
+        destination_service_template_id: formDestination.destination_service_template_id || undefined,
+        channel: formChannel || undefined,
       }),
     });
     if (res.ok) {
-      toast.success("Campaign created");
-      setDialogOpen(false);
-      resetForm();
+      const json = await res.json();
+      const created = json.data as CreatedCampaignResult;
+      setCreatedCampaign(created);
       await loadCampaigns();
     } else {
       const err = await res.json();
-      toast.error(err.title ?? "Failed to create campaign");
+      toast.error(err.detail ?? err.title ?? "Failed to create campaign");
     }
     setSaving(false);
   }
@@ -590,72 +628,157 @@ export default function DashboardCampaignsPage() {
           </DialogTrigger>
           <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
             <DialogHeader>
-              <DialogTitle>Create Campaign</DialogTitle>
+              <DialogTitle>{createdCampaign ? "Campaign Created!" : "Create Campaign"}</DialogTitle>
               <DialogDescription>
-                Set up a new promotional campaign for your affiliates.
+                {createdCampaign
+                  ? "Your campaign is ready. Copy the URL to share with affiliates."
+                  : "Set up a new promotional campaign for your affiliates."}
               </DialogDescription>
             </DialogHeader>
-            <div className="mt-4 space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="c-name">Campaign Name</Label>
-                <Input id="c-name" value={formName} onChange={(e) => setFormName(e.target.value)} placeholder="Spring Promotion 2026" />
+
+            {createdCampaign ? (
+              /* ── Success screen ── */
+              <div className="mt-4 space-y-5">
+                <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-800 dark:bg-emerald-950/30">
+                  <CheckCircle className="size-5 shrink-0 text-emerald-600" />
+                  <div>
+                    <p className="text-sm font-medium text-emerald-800 dark:text-emerald-300">{createdCampaign.name}</p>
+                    <p className="text-xs text-emerald-700 dark:text-emerald-400">
+                      {createdCampaign.destination_type === "PROFILE" ? "Profile destination" : "Service destination"}
+                    </p>
+                  </div>
+                </div>
+
+                {createdCampaign.share_url ? (
+                  <CampaignUrlDisplay
+                    url={createdCampaign.share_url}
+                    code={createdCampaign.campaign_code ?? undefined}
+                    label="Campaign URL — share this with affiliates"
+                    showOpenButton
+                  />
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    No campaign URL generated (campaign created without destination).
+                  </p>
+                )}
+
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => {
+                      setDialogOpen(false);
+                      resetForm();
+                    }}
+                  >
+                    Done
+                  </Button>
+                  <Button
+                    className="flex-1"
+                    onClick={resetForm}
+                  >
+                    <Plus className="mr-1.5 size-4" />
+                    Create Another
+                  </Button>
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="c-desc">Description (optional)</Label>
-                <Textarea id="c-desc" value={formDesc} onChange={(e) => setFormDesc(e.target.value)} placeholder="Details about this campaign..." rows={2} />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
+            ) : (
+              /* ── Creation form ── */
+              <div className="mt-4 space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="c-start">Start Date</Label>
-                  <Input id="c-start" type="date" value={formStartDate} onChange={(e) => setFormStartDate(e.target.value)} />
+                  <Label htmlFor="c-name">Campaign Name</Label>
+                  <Input id="c-name" value={formName} onChange={(e) => setFormName(e.target.value)} placeholder="Spring Promotion 2026" />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="c-end">End Date (optional)</Label>
-                  <Input id="c-end" type="date" value={formEndDate} onChange={(e) => setFormEndDate(e.target.value)} />
+                  <Label htmlFor="c-desc">Description (optional)</Label>
+                  <Textarea id="c-desc" value={formDesc} onChange={(e) => setFormDesc(e.target.value)} placeholder="Details about this campaign..." rows={2} />
                 </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
+
+                {/* Destination picker */}
+                <div className="rounded-lg border p-3 space-y-1">
+                  <CampaignDestinationPicker
+                    value={formDestination}
+                    onChange={(dest) => setFormDestination(dest)}
+                    disabled={saving}
+                  />
+                </div>
+
+                {/* Channel */}
                 <div className="space-y-2">
-                  <Label>Commission Type</Label>
-                  <select className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm" value={formCommType} onChange={(e) => setFormCommType(e.target.value)}>
-                    <option value="percentage">Percentage</option>
-                    <option value="fixed">Fixed amount</option>
+                  <Label>Channel (optional)</Label>
+                  <select
+                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
+                    value={formChannel}
+                    onChange={(e) => setFormChannel(e.target.value)}
+                    disabled={saving}
+                  >
+                    <option value="">Select channel…</option>
+                    <option value="facebook">Facebook</option>
+                    <option value="instagram">Instagram</option>
+                    <option value="whatsapp">WhatsApp</option>
+                    <option value="youtube">YouTube</option>
+                    <option value="email">Email</option>
+                    <option value="twitter">Twitter / X</option>
+                    <option value="tiktok">TikTok</option>
+                    <option value="linkedin">LinkedIn</option>
+                    <option value="direct">Direct</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="c-start">Start Date</Label>
+                    <Input id="c-start" type="date" value={formStartDate} onChange={(e) => setFormStartDate(e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="c-end">End Date (optional)</Label>
+                    <Input id="c-end" type="date" value={formEndDate} onChange={(e) => setFormEndDate(e.target.value)} />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Commission Type</Label>
+                    <select className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm" value={formCommType} onChange={(e) => setFormCommType(e.target.value)}>
+                      <option value="percentage">Percentage</option>
+                      <option value="fixed">Fixed amount</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>{formCommType === "percentage" ? "Commission %" : "Fixed amount ($)"}</Label>
+                    <Input type="number" min="0" value={formCommValue} onChange={(e) => setFormCommValue(e.target.value)} />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="c-budget">Budget Cap ($, optional)</Label>
+                  <Input id="c-budget" type="number" min="0" value={formBudgetCap} onChange={(e) => setFormBudgetCap(e.target.value)} placeholder="Max commission payout in dollars" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Target Product Type</Label>
+                  <select className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm" value={formTargetProduct} onChange={(e) => setFormTargetProduct(e.target.value)}>
+                    <option value="">All products</option>
+                    <option value="session">Sessions</option>
+                    <option value="package">Packages</option>
+                    <option value="subscription">Subscriptions</option>
                   </select>
                 </div>
                 <div className="space-y-2">
-                  <Label>{formCommType === "percentage" ? "Commission %" : "Fixed amount ($)"}</Label>
-                  <Input type="number" min="0" value={formCommValue} onChange={(e) => setFormCommValue(e.target.value)} />
+                  <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">UTM Parameters</Label>
+                  <div className="grid grid-cols-3 gap-2">
+                    <Input placeholder="utm_source" value={formUtmSource} onChange={(e) => setFormUtmSource(e.target.value)} />
+                    <Input placeholder="utm_medium" value={formUtmMedium} onChange={(e) => setFormUtmMedium(e.target.value)} />
+                    <Input placeholder="utm_campaign" value={formUtmCampaign} onChange={(e) => setFormUtmCampaign(e.target.value)} />
+                  </div>
                 </div>
+                <Button onClick={handleCreate} disabled={saving} className="w-full">
+                  {saving ? (
+                    <><Loader2 className="mr-2 size-4 animate-spin" />Creating…</>
+                  ) : (
+                    "Create Campaign"
+                  )}
+                </Button>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="c-budget">Budget Cap ($, optional)</Label>
-                <Input id="c-budget" type="number" min="0" value={formBudgetCap} onChange={(e) => setFormBudgetCap(e.target.value)} placeholder="Max commission payout in dollars" />
-              </div>
-              <div className="space-y-2">
-                <Label>Target Product Type</Label>
-                <select className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm" value={formTargetProduct} onChange={(e) => setFormTargetProduct(e.target.value)}>
-                  <option value="">All products</option>
-                  <option value="session">Sessions</option>
-                  <option value="package">Packages</option>
-                  <option value="subscription">Subscriptions</option>
-                </select>
-              </div>
-              <div className="space-y-2">
-                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">UTM Parameters</Label>
-                <div className="grid grid-cols-3 gap-2">
-                  <Input placeholder="utm_source" value={formUtmSource} onChange={(e) => setFormUtmSource(e.target.value)} />
-                  <Input placeholder="utm_medium" value={formUtmMedium} onChange={(e) => setFormUtmMedium(e.target.value)} />
-                  <Input placeholder="utm_campaign" value={formUtmCampaign} onChange={(e) => setFormUtmCampaign(e.target.value)} />
-                </div>
-              </div>
-              <Button onClick={handleCreate} disabled={saving} className="w-full">
-                {saving ? (
-                  <><Loader2 className="mr-2 size-4 animate-spin" />Creating...</>
-                ) : (
-                  "Create Campaign"
-                )}
-              </Button>
-            </div>
+            )}
           </DialogContent>
         </Dialog>
       </div>
@@ -782,20 +905,65 @@ export default function DashboardCampaignsPage() {
                         <TableRow>
                           <TableHead>Name</TableHead>
                           <TableHead>Status</TableHead>
+                          <TableHead>Destination</TableHead>
+                          <TableHead>Campaign URL</TableHead>
                           <TableHead>Dates</TableHead>
                           <TableHead>Commission</TableHead>
                           <TableHead>Affiliates</TableHead>
                           <TableHead>Conversions</TableHead>
-                          <TableHead>Spent / Budget</TableHead>
                           <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {campaigns.map((c) => (
                           <TableRow key={c.id}>
-                            <TableCell className="font-medium">{c.name}</TableCell>
+                            <TableCell className="font-medium">
+                              <div>
+                                {c.name}
+                                {c.auto_paused_at && (
+                                  <div className="flex items-center gap-1 mt-0.5 text-[11px] text-amber-600 dark:text-amber-400">
+                                    <AlertTriangle className="size-3" />
+                                    Auto-paused
+                                  </div>
+                                )}
+                              </div>
+                            </TableCell>
                             <TableCell>
-                              <Badge variant={STATUS_BADGE[c.status] ?? "outline"}>{c.status}</Badge>
+                              {c.auto_paused_at ? (
+                                <Badge variant="destructive" className="gap-1">
+                                  <AlertTriangle className="size-2.5" />
+                                  Auto-Paused
+                                </Badge>
+                              ) : (
+                                <Badge variant={STATUS_BADGE[c.status] ?? "outline"}>{c.status}</Badge>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <CampaignDestinationBadge
+                                destinationType={c.destination_type}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              {c.share_url ? (
+                                <div className="flex items-center gap-1.5">
+                                  <code className="font-mono text-[11px] text-muted-foreground">
+                                    {c.campaign_code}
+                                  </code>
+                                  <button
+                                    type="button"
+                                    title="Copy URL"
+                                    onClick={async () => {
+                                      await navigator.clipboard.writeText(c.share_url!);
+                                      toast.success("URL copied");
+                                    }}
+                                    className="p-0.5 rounded hover:bg-muted"
+                                  >
+                                    <Link2 className="size-3 text-muted-foreground" />
+                                  </button>
+                                </div>
+                              ) : (
+                                <span className="text-xs text-muted-foreground">—</span>
+                              )}
                             </TableCell>
                             <TableCell className="text-sm">
                               {fmtDate(c.start_date)}
@@ -808,12 +976,6 @@ export default function DashboardCampaignsPage() {
                             </TableCell>
                             <TableCell>{c.affiliates_count}</TableCell>
                             <TableCell>{c.conversions_count}</TableCell>
-                            <TableCell>
-                              {fmtCents(c.total_commission_cents)}
-                              {c.budget_cap_cents ? (
-                                <span className="text-xs text-muted-foreground"> / {fmtCents(c.budget_cap_cents)}</span>
-                              ) : null}
-                            </TableCell>
                             <TableCell className="text-right">
                               <Button variant="ghost" size="icon" className="size-8" asChild title="View details">
                                 <Link href={`/dashboard/campaigns/${c.id}`}>
