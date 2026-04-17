@@ -24,6 +24,10 @@ You are implementing two connected features for the AstrologyPro Next.js app. Th
 
 ### Feature B depends on Feature A. You MUST build Feature A first (at minimum Tasks 01-05) before starting Feature B.
 
+### Verification Follow-Ups
+**Task file:** `verification-followups.md`
+**Summary:** Bugs and missing items found during local verification after the feature implementation. Complete these before marking the sprint done.
+
 ---
 
 ## Global Execution Order (Follow This Exactly)
