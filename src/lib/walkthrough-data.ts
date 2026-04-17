@@ -723,7 +723,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
 },
 
   {
-  "name": "horoscope_solar_setup",
+  "name": "horoscope_solar_setup_V3",
   "label": "Solar Return: Annual Chart Setup",
   "description": "Your yearly solar return chart is being prepared from your birth details and selected return year.",
   "group": "Horoscope Toolkit",
@@ -740,7 +740,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
 
 
     {
-  "name": "horoscope_solar_synthesis_v1",
+  "name": "horoscope_solar_synthesis_v3",
   "label": "Solar Return: Yearly Themes & Planet Table",
   "description": "Your annual solar return chart is translated into a structured planetary table for quick interpretation.",
   "group": "Horoscope Toolkit",
@@ -759,7 +759,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
 },
     
 {
-  "name": "horoscope_solar_processing",
+  "name": "horoscope_solar_processing_v3",
   "label": "Solar Return: Generating Your Yearly Reading",
   "description": "Your annual solar return chart and planet interpretations are being prepared.",
   "group": "Horoscope Toolkit",
@@ -800,53 +800,53 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
 },
 
 {
-  "name": "horoscope_solar_planet_interpretations",
-  "label": "Solar Return: Planet-by-Planet Interpretations",
-  "description": "Detailed yearly meanings for each planetary placement in the Solar Return chart.",
+  "name": "horoscope_nativity_house_interpretations_v3",
+  "label": "Nativity: House Interpretations",
+  "description": "AI-generated house-by-house meanings that explain how each house cusp sign shapes a specific area of life.",
   "group": "Horoscope Toolkit",
   "subModule": "Solar Return",
-  "purpose": "This section is generated after the user provides date of birth, time of birth, and place of birth, along with the selected solar return year and location. The system calculates the exact Solar Return moment and builds the yearly chart. It then analyzes each planet individually by combining its zodiac sign and house placement to generate clear, easy-to-read interpretations. Each block explains how that specific planet will influence the user's behavior, emotions, decisions, relationships, work, and personal growth throughout the year. This format allows astrologers to quickly read each planetary influence separately while also helping general users understand the meaning in a simple and structured way.",
+  "purpose": "This section is generated after the user enters date of birth, time of birth, and place of birth, and the system calculates the natal chart. The platform first determines the Ascendant, then calculates all 12 house cusps and identifies which zodiac sign rules each house. After that, the AI converts each house-sign combination into readable interpretations. In this screen, each card explains one house at a time, such as the Ascendant influence, 2nd house values and finances, or 3rd house communication style. The purpose of this screen is to help users and astrologers understand how different life areas are shaped by the signs placed on each house cusp.",
   "bullets": [
-    "☀ How It Is Generated — Uses birth details to calculate the Solar Return chart and determine each planet’s sign and house placement for the year.",
-    "🪐 Planet-by-Planet Breakdown — Each section focuses on one planet (Sun, Moon, Mars, etc.) and explains its specific yearly influence.",
-    "♈ Sign Influence — Shows how the zodiac sign shapes the expression of the planet (e.g., Libra adds balance, Aquarius adds innovation, Cancer adds emotion).",
-    "🏠 House Influence — Explains the life area where the planet’s energy will be most active (e.g., 1st house = self, 6th = work/health, 11th = friendships).",
-    "🔗 Combined Interpretation — Merges planet + sign + house into a meaningful yearly prediction for real-life understanding.",
-    "💬 Simple Explanation Style — Written in easy language so both astrologers and normal users can quickly understand the message.",
-    "📖 Expandable Content (Show More) — Provides a short summary first, with an option to expand and read deeper insights.",
-    "🎯 Life Impact Insight — Helps identify where energy will be focused, such as identity (Sun), emotions (Moon), action (Mars), communication (Mercury), and relationships (Venus).",
-    "⚖️ Balanced Guidance — Highlights both positive opportunities and possible challenges for each planetary placement.",
-    "🔄 Yearly Theme Building — When all planets are read together, they form the complete story of the Solar Return year.",
-    "✨ Why This Section Is Useful — Allows astrologers to quickly interpret each planetary influence without manually analyzing the full chart.",
-    "🚀 Practical Use — Useful for yearly predictions, client consultations, self-awareness, and planning important life decisions."
+    "🏠 House Interpretation Generation — The system calculates all 12 natal houses from DOB, TOB, and POB, then reads the zodiac sign placed on each house cusp.",
+    "⬆ Ascendant / 1st House Meaning — The first card often explains the Ascendant sign, showing personality style, outward behavior, self-image, health habits, and the way the person approaches life.",
+    "💰 2nd House Meaning — This card explains money, values, possessions, self-worth, resources, and the practical way the person builds security.",
+    "🗣 3rd House Meaning — This card explains communication style, learning pattern, curiosity, siblings, local environment, and how the person expresses ideas.",
+    "♍ Example of Virgo Rising Meaning — If the Solar or Natal Ascendant is in Virgo, the reading may focus on order, routine, detail, discipline, discernment, and practical self-management.",
+    "♎ Example of Libra on 2nd House Meaning — If Libra rules the 2nd house, the reading may focus on balance in finances, harmony in values, partnership in earning, and fairness in resource management.",
+    "♏ Example of Scorpio on 3rd House Meaning — If Scorpio rules the 3rd house, the reading may focus on intense communication, deep thinking, uncovering truth, strategic speech, and transformative conversations.",
+    "🧠 Why This Screen Is Useful — It breaks the chart into life areas so the user can understand one topic at a time instead of reading the whole chart at once.",
+    "📖 Card-by-Card Reading Style — Each block gives a short interpretation of one house so the user can quickly understand what that life area means.",
+    "🔍 What The User Understands From This Screen — The user can clearly see how identity, money, communication, and other life themes are shaped by the signs on their house cusps.",
+    "✨ Astrologer-Friendly Value — This screen helps astrologers quickly explain house rulership themes in simple language without needing to interpret every cusp manually.",
+    "🚀 Practical Use — Useful for personality readings, life-area analysis, money and value insight, communication understanding, and explaining how the natal chart organizes daily life."
   ]
 },
 
 {
-  "name": "horoscope_solar_deep_analysis_v1",
+  "name": "horoscope_solar_deep_analysis_v3",
   "label": "Solar Return: Deep Astrological Analysis",
-  "description": "In-depth interpretation of planetary placements with visual and psychological insights.",
+  "description": "In-depth interpretation of key Solar Return points such as Ascendant, Midheaven, and Vertex, with practical yearly meaning.",
   "group": "Horoscope Toolkit",
   "subModule": "Solar Return",
-  "purpose": "This section is generated after the Solar Return chart is calculated using the user's date of birth, time of birth, place of birth, and selected return year and location. The system analyzes each planet's placement by combining three key factors: the planet itself, the zodiac sign it is in, and the house it occupies. It then produces a deep, easy-to-understand interpretation explaining how that specific combination will influence the user's personality, behavior, decisions, and life direction during the year. This section is especially useful for astrologers because it translates technical chart data into meaningful psychological and practical insights, while also supporting visual understanding through symbolic image representation.",
+  "purpose": "This section is generated after the Solar Return chart is calculated using the user's date of birth, time of birth, place of birth, and selected return year and location. The system analyzes important chart points such as the Ascendant, Midheaven, and Vertex by combining the point itself, the zodiac sign it falls in, and its role in the Solar Return year. It then produces a deep, easy-to-understand interpretation explaining how these placements influence the user's personal direction, career focus, public image, encounters, and life themes during the year. This section is especially useful for astrologers because it translates technical Solar Return chart data into meaningful psychological, practical, and predictive insights.",
   "bullets": [
-    "☀ Planet + Sign + House Synthesis — Combines the planet (what energy), sign (how it behaves), and house (where it acts) to create a complete yearly interpretation.",
-    "🧠 Psychological Interpretation — Explains how the placement influences mindset, emotions, personality traits, and behavioral patterns during the year.",
-    "🎯 Life Focus Explanation — Highlights the main areas of life affected, such as identity, relationships, career, communication, or personal growth.",
-    "💬 Easy-to-Understand Narrative — Converts complex astrological data into simple, readable text so both astrologers and general users can understand it clearly.",
-    "🪐 Example Insight — 'Sun in Libra in 1st House' shows a year focused on self-identity, social charm, balance, and how others perceive you.",
-    "🖼 Visual Representation — Displays a symbolic diagram that breaks down the meaning of the sign, house, and their combined influence for faster understanding.",
-    "♈ Sign Meaning Layer — Explains the qualities of the zodiac sign (e.g., Libra = balance, harmony, relationships, diplomacy).",
-    "🏠 House Meaning Layer — Explains the life area (e.g., 1st House = self, personality, appearance, first impressions).",
-    "🔗 Combined Meaning — Shows how sign and house energies merge (e.g., Libra traits expressed through personal identity and self-image).",
-    "✨ Why This Section Is Important — Helps astrologers quickly interpret yearly influences without manually combining multiple chart factors.",
-    "📊 Practical Use — Useful for client readings, yearly forecasting, personality insights, and identifying key opportunities and challenges.",
-    "🚀 Outcome — Provides a clear understanding of how each planetary placement shapes the overall theme and experience of the solar return year."
+    "⬆ Ascendant Interpretation — The Solar Return Ascendant shows the personal tone of the year, including self-image, behavior, approach to life, health focus, and the way the user presents themselves during the year.",
+    "♍ Example Ascendant Meaning — Virgo Ascendant in the Solar Return suggests a year of self-improvement, practicality, discipline, detail-awareness, health focus, and refining routines for better results.",
+    "🏆 Midheaven Interpretation — The Solar Return Midheaven shows career direction, public image, status, ambition, visible achievements, and the professional tone of the year.",
+    "♊ Example Midheaven Meaning — Gemini on the Midheaven suggests a year where communication, networking, flexibility, learning, speaking, writing, and multitasking become important for career progress.",
+    "✨ Vertex Interpretation — The Solar Return Vertex highlights meaningful encounters, important opportunities, fated turning points, and connections that may strongly influence the year.",
+    "♐ Example Vertex Meaning — Sagittarius on the Vertex suggests growth through learning, travel, exploration, belief expansion, and opportunities that widen the user's perspective and purpose.",
+    "🧠 Psychological Interpretation — Explains how these key chart points influence mindset, motivation, confidence, behavior, and life direction during the Solar Return year.",
+    "🎯 Life Focus Explanation — Highlights the main yearly themes such as self-development, career growth, public recognition, destiny encounters, learning, or broader personal expansion.",
+    "💬 Easy-to-Understand Narrative — Converts technical Solar Return data into simple and readable text so both astrologers and general users can understand it clearly.",
+    "🔗 Point + Sign Meaning — Combines the chart point itself with the zodiac sign quality to explain both what area is activated and how that energy behaves during the year.",
+    "✨ Why This Section Is Important — Helps astrologers quickly interpret yearly direction through the most important Solar Return angles and special points without manually combining multiple factors.",
+    "🚀 Practical Use — Useful for yearly forecasting, client readings, career guidance, self-development insights, and identifying the strongest themes and opportunities of the Solar Return year."
   ]
 },
 
 {
-  "name": "horoscope_solar_aspects_v1",
+  "name": "horoscope_solar_aspects_v3",
   "label": "Solar Return: Planetary Aspects Analysis",
   "description": "Relationship dynamics between Solar Return planets and natal planets for yearly influence.",
   "group": "Horoscope Toolkit",
@@ -914,7 +914,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
 },
 
 {
-  "name": "horoscope_solar_planet_information",
+  "name": "horoscope_solar_planet_information_v3",
   "label": "Solar Return: Planet Information",
   "description": "Detailed planetary positions and technical data for the solar return chart.",
   "group": "Horoscope Toolkit",
@@ -937,30 +937,60 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
 },
 
 {
-  "name": "horoscope_solar_planet_cards",
+  "name": "horoscope_solar_planet_cards_v3",
   "label": "Solar Return: Planet Interpretation Cards",
-  "description": "Readable interpretation cards for each planet with sign, house, degree, speed, retrograde status, and optional decan marker.",
+  "description": "Readable interpretation cards for each Solar Return planet with sign, house, degree, speed, retrograde status, and optional decan marker.",
   "group": "Horoscope Toolkit",
   "subModule": "Solar Return",
-  "purpose": "This section is generated after the user enters date of birth, time of birth, and place of birth, then selects the Solar Return year and location. The system calculates the Solar Return chart and creates a separate interpretation card for each planet. Each card explains the planet's yearly meaning using its sign, house, full degree, normalized degree, and speed. It gives astrologers and users an easy way to read planet-by-planet yearly guidance in a visual card format. If a special symbol such as a triangle appears near the planet name, it can represent an additional astrological layer such as the decan, which gives more refined meaning to that planet's placement.",
+  "purpose": "This section is generated after the user enters date of birth, time of birth, and place of birth, then selects the Solar Return year and return location. The system calculates the Solar Return chart and creates a separate interpretation card for each important planet. Each card turns raw chart values into readable yearly meaning by combining the planet, zodiac sign, house placement, full degree, normalized degree, speed, and retrograde status. In this screen, cards such as Moon, Mercury, Venus, and Sun help explain emotional tone, thinking style, relationships, creativity, identity, and life focus for the year ahead. Some planets may also show a small triangle icon, which indicates that a Decan interpretation is available. The decan adds a finer layer of meaning by showing which 10-degree section of the sign the planet falls in, helping astrologers read the placement with more nuance and precision.",
   "bullets": [
     "☀ Planet Card Generation — Creates one interpretation card for each Solar Return planet using the calculated yearly chart data.",
-    "🪐 Planet Name Header — Shows the planet being interpreted, such as Sun, Moon, or Mercury.",
-    "♈ Sign + House Tag — Displays the zodiac sign and house placement, such as Libra - House 6 or Aries - House 1.",
-    "📐 Degree-Based Meaning — Uses full degree and norm degree to refine the interpretation and explain how mature, early, or specialized the placement is.",
-    "⚡ Speed Meaning — Uses planetary speed to describe whether the energy is steady, fast-moving, slow, reflective, or intensified.",
-    "🔁 Retrograde Layer — Can include retrograde status to explain whether the planet's influence is more inward, delayed, karmic, or reflective.",
-    "🔺 Decan Indicator — The triangle-like symbol can be stored as a decan marker, showing the decan or sub-division of the zodiac sign for deeper interpretation.",
-    "🧠 Why Decan Is Useful — Decan adds a finer interpretive layer inside the zodiac sign, helping astrologers understand the planet's more specific tone, style, and expression.",
-    "💬 Easy Reading Format — The card turns technical chart values into simple readable yearly guidance for both astrologers and general users.",
-    "📖 Expandable Content — The Show More action can reveal a longer version of the interpretation with advanced astrological detail.",
-    "✨ Visual Interpretation Support — Card layout, icons, sign labels, and optional decan symbols help astrologers scan the yearly chart more quickly.",
-    "🚀 Practical Use — Useful for yearly forecasts, client readings, planet-by-planet analysis, and advanced astrology UI presentation."
+    "🪐 Planet Header Meaning — Shows the planet being interpreted, such as Moon, Mercury, Venus, or Sun, so the user knows which yearly influence is being explained.",
+    "🌙 Moon Card Meaning — Explains emotional responses, inner habits, subconscious needs, instinctive reactions, and how feelings may operate during the Solar Return year.",
+    "🧠 Mercury Card Meaning — Explains thinking style, communication habits, planning ability, learning pattern, analysis, and the way the user processes information during the year.",
+    "♀ Venus Card Meaning — Explains relationships, attraction, beauty, affection, pleasure, social charm, creativity, artistic flow, and personal values during the year.",
+    "🌞 Sun Card Meaning — Explains core identity, confidence, purpose, visibility, self-expression, and the main life direction emphasized in the Solar Return year.",
+    "♈ Sign + House Layer — Each card combines the zodiac sign and house placement, such as Aries in House 12 or Virgo in House 6, to show both how the energy behaves and where it becomes active.",
+    "📐 Degree-Based Meaning — Uses the exact degree and normalized degree to refine the interpretation, showing whether the placement feels early, mature, transitional, or more specialized in tone.",
+    "⚡ Speed Indicator — Uses planetary speed to describe whether the energy acts quickly, actively, steadily, slowly, reflectively, or with increased intensity during the year.",
+    "🔁 Retrograde Layer — Includes retrograde status to explain whether the planet's influence becomes more inward, delayed, karmic, private, or self-reflective.",
+    "🔺 Decan Indicator — A small triangle-like icon near the planet means a decan-based interpretation is available for that placement.",
+    "📐 What A Decan Means — Each zodiac sign is divided into 3 decans of 10 degrees each, and the planet's exact degree decides which decan it belongs to.",
+    "🧠 Why Decans Matter — Decans refine the reading by adding a second tone to the planet, helping astrologers explain why two people with the same sign placement can still experience that sign differently.",
+    "💬 Easy Reading Format — The card turns technical Solar Return values into simple readable yearly guidance for both astrologers and general users.",
+    "📖 Expandable Content — The Show More action can reveal a longer interpretation with deeper house meaning, degree precision, speed analysis, retrograde explanation, and decan refinement.",
+    "✨ Visual Interpretation Support — Card layout, planet icons, colored sections, sign labels, and optional decan symbols help astrologers scan the yearly chart more quickly.",
+    "🚀 Practical Use — Useful for yearly forecasts, client readings, planet-by-planet analysis, relationship and creativity insight, identity guidance, and advanced astrology UI presentation."
   ]
 },
 
 {
-  "name": "horoscope_solar_planet_insights",
+  "name": "horoscope_nativity_mercury_decan_image_v3",
+  "label": "Nativity: Mercury Decans in Virgo",
+  "description": "A deeper visual interpretation screen showing Mercury's decan meaning inside Virgo through symbolic imagery and extended text analysis.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Nativity Birth Chart",
+  "purpose": "This screen appears when a planet has a decan marker and the user opens the deeper decan interpretation. In this example, the screen explains Mercury in Virgo through its decan layer. The system first calculates the user's natal chart from date of birth, time of birth, and place of birth, then finds Mercury's exact zodiac degree. Based on that degree, it identifies which 10-degree section of Virgo Mercury belongs to. Here, Mercury is shown in the third decan of Virgo, which adds a Venus influence to Mercury's usual Virgo expression. The purpose of this screen is to help astrologers and users understand the finer style, tone, symbolism, and hidden nuance of Mercury's placement beyond only sign and house.",
+  "bullets": [
+    "☿ Mercury Decan Meaning — This screen explains the deeper sub-layer of Mercury's placement inside Virgo, showing how Mercury behaves in a more refined and specialized way.",
+    "📐 How It Is Generated — The system uses date of birth, time of birth, and place of birth to calculate the natal chart, then checks Mercury's exact degree inside Virgo to identify its decan.",
+    "🔺 Why This Screen Opens — It appears when a decan interpretation is available and the user opens the deeper decan view from the planet card or decan indicator.",
+    "🧩 What a Decan Means — Each zodiac sign is divided into 3 decans of 10 degrees each, and the exact degree of the planet decides which decan it belongs to.",
+    "🌿 Virgo Base Meaning — Virgo gives Mercury qualities such as analysis, precision, logic, organization, detail-awareness, method, and practical intelligence.",
+    "💚 Third Decan of Virgo Meaning — The third decan of Virgo adds Venus influence, blending Mercury's intellect with refinement, beauty, value-building, harmony, and cultivated skill.",
+    "🎨 Venus Influence In This Decan — This can make Mercury in Virgo more graceful in expression, more polished in thinking, more artistic in problem-solving, and more focused on refinement, craft, and material value.",
+    "🃏 Tarot Layer Meaning — The image connects this decan with the Ten of Disks, showing themes of long-term achievement, stability, resources, wealth, and the result of careful effort over time.",
+    "💰 Mundane Force Meaning — The screen highlights wealth or abundance as a symbolic theme, suggesting value built through discipline, skill, careful planning, and practical mastery.",
+    "🏛 Mythic / Greek Daemon Layer — The symbolic figure such as Ploutos adds a mythic meaning of prosperity, resource growth, and abundance arising from sustained intelligent effort.",
+    "🖼 Image Representation Purpose — The visual card and symbolic artwork help the astrologer quickly understand the decan through color, tarot, mythology, and archetypal meaning rather than text alone.",
+    "🧠 Why This Screen Is Useful — It explains why two people with Mercury in Virgo can still think, speak, and process information differently depending on the exact decan.",
+    "💬 What The User Understands From This Screen — The user can understand Mercury's deeper tone in communication, learning, analysis, refinement, material thinking, and how intelligence is expressed with extra nuance.",
+    "🚀 Practical Use — Useful for advanced natal interpretation, refined Mercury analysis, communication style insight, decan-based astrology reading, and symbolic teaching for deeper chart understanding."
+  ]
+},
+
+{
+  "name": "horoscope_solar_planet_insights_v3",
   "label": "Solar Return: Planet Insights",
   "description": "Structured insight points for each planet in the Solar Return chart, with visual support for fast astrological reading.",
   "group": "Horoscope Toolkit",
@@ -982,7 +1012,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
   ]
 },
 {
-  "name": "horoscope_solar_house_information",
+  "name": "horoscope_solar_house_information_v3",
   "label": "Solar Return: House Information",
   "description": "Structured table showing house-wise sign placements, degrees, and planetary distribution for the solar year.",
   "group": "Horoscope Toolkit",
@@ -1003,7 +1033,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
 },
 
 {
-  "name": "horoscope_solar_house_insights",
+  "name": "horoscope_solar_house_insights_v3",
   "label": "Solar Return: House Insights",
   "description": "Detailed interpretation of each house in the Solar Return chart with visual house distribution.",
   "group": "Horoscope Toolkit",
@@ -1025,7 +1055,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
 },
 
 {
-  "name": "horoscope_solar_house_deep_analysis",
+  "name": "horoscope_solar_house_deep_analysis_v3",
   "label": "Solar Return: Deep House Analysis",
   "description": "Expanded house interpretation shown in a modal after the user clicks Show More.",
   "group": "Horoscope Toolkit",
@@ -1093,7 +1123,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
 },
 
     {
-  name: "horoscope_nativity_result_aspects_v1",
+  name: "horoscope_nativity_result_aspects_v4",
   label: "Solar Return: Aspect Dynamics",
   description: "A detailed table showing how planets interact with each other in the birth chart.",
   group: "Horoscope Toolkit",
@@ -1112,6 +1142,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
     "🔍 Advanced Use — Useful for personality analysis, emotional patterns, relationship interpretation, career tendencies, and professional chart verification."
   ]
 },
+
 
 
     {
@@ -1149,7 +1180,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
   ]
 },
       {
-  name: "horoscope_nativity_interpret_angles_v2",
+  name: "horoscope_nativity_interpret_angles_v4",
   label: "Solar Return: Angles & Points",
   description: "A clear reading of the Ascendant, Midheaven, and Vertex, showing personality style, career direction, and important turning points.",
   group: "Horoscope Toolkit",
@@ -1200,7 +1231,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
   ]
 },
    {
-  "name": "horoscope_weekly_chart",
+  "name": "horoscope_weekly_chart_v3",
   "label": "Weekly Transits: Weekly Chart View",
   "description": "A weekly transit chart generated from the user's date of birth, time of birth, and place of birth, showing how current planetary movements interact with the natal chart.",
   "group": "Horoscope Toolkit",
@@ -1222,7 +1253,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
 
 
  {
-  "name": "horoscope_weekly_relation",
+  "name": "horoscope_weekly_relation_v3",
   "label": "Weekly Transits: Transit Relation Table",
   "description": "A structured weekly table showing how transit planets form aspects with natal planets on specific dates.",
   "group": "Horoscope Toolkit",
@@ -1242,7 +1273,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
   ]
 },
 {
-  "name": "horoscope_weekly_transit_interpretations",
+  "name": "horoscope_weekly_transit_interpretations_v3",
   "label": "Weekly Transits: Transit Interpretations",
   "description": "Short weekly interpretation cards showing how current transit planets affect natal planets on specific dates.",
   "group": "Horoscope Toolkit",
@@ -1264,7 +1295,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
   ]
 },
     {
-  "name": "horoscope_weekly_planet_deep_analysis",
+  "name": "horoscope_weekly_planet_deep_analysis_v3",
   "label": "Weekly Transits: Deep Planet Analysis",
   "description": "A deeper weekly reading of key natal planets, showing how their sign, house, speed, and current transit activation shape the week's experiences.",
   "group": "Horoscope Toolkit",
@@ -1287,7 +1318,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
 },
 
 {
-  "name": "horoscope_weekly_transit_cards",
+  "name": "horoscope_weekly_transit_cards_v3",
   "label": "Weekly Transits: Transit Event Cards",
   "description": "Short weekly transit cards that explain how moving planets affect natal planets on specific dates during the selected week.",
   "group": "Horoscope Toolkit",
@@ -1330,7 +1361,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
 },
 
 {
-  "name": "horoscope_monthly_chart",
+  "name": "horoscope_monthly_chart_v3",
   "label": "Monthly Transits + Lunar Return: Chart View",
   "description": "A combined monthly transit and lunar return chart generated from the user's birth details, showing how monthly planetary movement interacts with the natal chart.",
   "group": "Horoscope Toolkit",
@@ -1352,7 +1383,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
   ]
 },
       {
-  "name": "horoscope_monthly_relation",
+  "name": "horoscope_monthly_relation_v3",
   "label": "Monthly Transits: Future Transit Relation Table",
   "description": "A monthly transit table showing how future moving planets form aspects with natal planets and key natal points on specific dates.",
   "group": "Horoscope Toolkit",
@@ -1377,7 +1408,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
 },
 
 {
-  "name": "horoscope_monthly_transit_interpretations",
+  "name": "horoscope_monthly_transit_interpretations_v3",
   "label": "Monthly Transits: Transit Interpretation Cards",
   "description": "Readable monthly transit cards showing how future moving planets activate natal planets on important dates.",
   "group": "Horoscope Toolkit",
@@ -1400,7 +1431,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
 },
 
 {
-  "name": "horoscope_monthly_transit_deep_analysis",
+  "name": "horoscope_monthly_transit_deep_analysis_v3",
   "label": "Monthly Transits: Deep Astrological Analysis",
   "description": "A detailed monthly interpretation screen for a specific future transit event, opened after the user clicks Show More.",
   "group": "Horoscope Toolkit",
@@ -1423,25 +1454,27 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
 },
 
 {
-  "name": "horoscope_monthly_transit_cards",
+  "name": "horoscope_monthly_transit_cards_v3",
   "label": "Monthly Transits: Transit Event Cards",
-  "description": "Short monthly transit cards showing how future moving planets activate natal planets on important dates during the selected month.",
+  "description": "Readable monthly transit cards showing important transit-to-natal events on specific dates, with practical interpretation for the selected month.",
   "group": "Horoscope Toolkit",
   "subModule": "Monthly Transits",
-  "purpose": "This section is generated after the user enters date of birth, time of birth, and place of birth, and the system creates the natal birth chart as the base reference. Then it calculates the future transit positions for the selected month and compares those moving planets with the natal planets and important natal points. When a strong or meaningful monthly aspect is found, the platform creates a separate transit event card for that date. Each card explains the transit planet, the natal planet being activated, the aspect type, the exact monthly date, and the practical meaning of that influence. This helps astrologers quickly understand which monthly events are most important, which energies are supportive or challenging, and how the user's emotions, creativity, confidence, relationships, motivation, and personal growth may be influenced during the month.",
+  "purpose": "This section is generated after the user enters date of birth, time of birth, and place of birth, and the system creates the natal birth chart as the base reference. The platform then calculates the future transit positions for the selected month and compares those moving planets with natal planets and important natal points. When a strong or meaningful transit becomes exact on a specific day, the system creates a separate event card for that date. In this screen, cards such as Mars square natal Saturn and Jupiter sextile natal Mercury show the transit planet, aspect type, natal planet being activated, and the exact calendar date. The purpose of this section is to help astrologers and users quickly understand which monthly dates bring challenge, growth, communication support, pressure, discipline, opportunity, or strategic development.",
   "bullets": [
-    "📅 Date-Based Monthly Event — Each card is linked to a specific date in the selected month when the transit becomes exact or strongest.",
-    "🪐 Transit Planet Focus — Shows the moving planet creating the monthly influence, such as Venus, Jupiter, Mars, Mercury, Saturn, or Uranus.",
-    "🌌 Natal Planet Activation — Shows which natal planet is being triggered, such as the Sun, Moon, Mars, Mercury, Venus, Pluto, or Ascendant.",
-    "🔗 Aspect Meaning — Explains the relationship between the transit planet and natal planet, such as Trine, Square, Opposition, Conjunction, or Sextile.",
-    "💬 Short Interpretation Card — Gives a brief and readable monthly explanation so astrologers can scan the main transit message quickly.",
-    "⚖️ Support vs Challenge Insight — Helps identify whether the transit brings harmony, ease, pressure, emotional intensity, optimism, maturity, or transformation.",
-    "🎯 Real-Life Monthly Meaning — Connects the transit to practical experiences such as relationships, confidence, creativity, communication, conflict management, emotional healing, and personal development.",
-    "📖 Show More Support — Each monthly transit card can open a deeper analysis screen for astrologers who want a fuller explanation of that specific transit event.",
+    "📅 Exact Date Event Cards — Each card is tied to a specific date in the selected month when the transit becomes exact or most influential, such as May 17, 2026.",
+    "🪐 Transit Planet Focus — Shows the moving planet creating the temporary monthly influence, such as Mars or Jupiter.",
+    "🌌 Natal Planet Activation — Shows which natal planet is being triggered, such as Saturn or Mercury, so the user can understand which part of the birth chart is being affected.",
+    "🔗 Aspect Type Meaning — Explains the relationship between the transit planet and natal planet, such as Square for tension, pressure, and adjustment, or Sextile for support, opportunity, and constructive progress.",
+    "⚔️ Challenging Transit Example — A card like Mars square natal Saturn highlights pressure, obstacles, discipline, frustration, delayed progress, and the need for patience, structure, and persistence.",
+    "✨ Supportive Transit Example — A card like Jupiter sextile natal Mercury highlights learning, communication growth, strategic thinking, networking, opportunity, teaching, and clearer mental flow.",
+    "💬 Readable Monthly Guidance — Each card converts technical transit data into a practical and easy-to-understand message so the user can quickly grasp the meaning of the date.",
+    "🎯 Real-Life Interpretation — The cards connect the transit to practical life themes such as career effort, professional development, communication skill, decision-making, strategy, growth, or delays.",
+    "⚖️ Support vs Challenge Insight — Helps astrologers quickly identify whether the monthly event brings tension, discipline, expansion, ease, opportunity, or mental clarity.",
+    "📖 Show More Support — Each monthly transit card can open a deeper explanation screen for users or astrologers who want a fuller analysis of that specific event.",
     "📍 Birth Data Based Generation — The cards are based on the user's date of birth, time of birth, and place of birth because accurate natal chart calculation is required before monthly transit comparison can happen.",
-    "🔄 Monthly Transit Comparison Engine — The system compares future monthly moving planets against natal planets and natal points to detect the strongest short-term activations.",
-    "🧠 Astrologer-Friendly Use — This format helps astrologers quickly identify the meaning of each major monthly transit without manually interpreting every aspect from the relation table.",
-    "🚀 Practical Use — Useful for monthly forecasting, client guidance, planning important dates, understanding emotional or relationship shifts, and identifying the strongest transit messages of the month."
+    "🔄 Monthly Transit Comparison Engine — The system compares future monthly moving planets against natal planets and key natal points to detect the strongest short-term activations.",
+    "🧠 Astrologer-Friendly Use — This format helps astrologers scan the month quickly and explain why a particular day is more difficult, more productive, or more supportive than others.",
+    "🚀 Practical Use — Useful for monthly forecasting, planning important dates, career timing, communication timing, professional decision-making, and understanding the strongest transit messages of the month."
   ]
 },
 
@@ -1497,7 +1530,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
   ]
 },
      {
-  "name": "horoscope_synastry_setup",
+  "name": "horoscope_synastry_setup_v3",
   "label": "Romantic: Synastry Setup",
   "description": "Enter both partners' birth details to generate the romantic synastry chart and relationship compatibility reading.",
   "group": "Horoscope Toolkit",
@@ -1519,7 +1552,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
   ]
 },
      {
-  "name": "horoscope_synastry_interpretations",
+  "name": "horoscope_synastry_interpretations_v4",
   "label": "Romantic: Synastry Interpretations",
   "description": "Readable relationship interpretation cards showing how one partner's planets connect with the other partner's planets.",
   "group": "Horoscope Toolkit",
