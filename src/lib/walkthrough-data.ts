@@ -4106,6 +4106,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
       "🚀 Practical Use — Useful for yearly identity guidance, career forecasting, public-path interpretation, encounter timing, and understanding the strongest directional points of the Uranus Opposition."
     ]
   },
+
   {
     "name": "horoscope_uranus_opposition_lilith_information",
     "label": "Uranus Opposition: Lilith Interpretation",
@@ -4127,6 +4128,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
     ]
   },
 
+  
 
       // Programs
       { 
@@ -5693,6 +5695,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Download CSV — export the full transaction log or payout history for your accountant or tax filing"
         ]
       },
+      
       {
         name: "finance",
         label: "Finance Dashboard",
