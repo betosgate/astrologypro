@@ -4,8 +4,17 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
-// GET /api/dashboard/campaigns/[id]
-// Campaign detail with affiliates and conversions
+const VALID_TRANSITIONS: Record<string, string[]> = {
+  draft: ["active", "archived"],
+  active: ["paused", "completed"],
+  paused: ["active", "completed", "archived"],
+  completed: ["archived"],
+  expired: ["archived"],
+};
+
+// ── GET /api/dashboard/campaigns/[id] ────────────────────────────────────────
+// Campaign detail with affiliates, conversions, and destination info
+
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -51,17 +60,37 @@ export async function GET(
   if (effectiveStatus === "active" && campaign.end_date) {
     if (new Date(campaign.end_date) < new Date()) {
       effectiveStatus = "expired";
+      // Deactivate tracking link for expired campaign
+      if (campaign.tracking_link_id) {
+        admin
+          .from("tracking_links")
+          .update({ is_active: false })
+          .eq("id", campaign.tracking_link_id)
+          .then(() => {})
+          .catch(() => {});
+      }
     }
   }
 
-  // Fetch affiliates enrolled in this campaign
+  // Check if destination is still valid (for auto-paused campaigns)
+  let isDestinationStillValid = true;
+  if (campaign.destination_type === "SERVICE" && campaign.destination_service_template_id) {
+    const { data: ds } = await admin
+      .from("diviner_services")
+      .select("is_enabled")
+      .eq("diviner_id", diviner.id)
+      .eq("template_id", campaign.destination_service_template_id)
+      .maybeSingle();
+    isDestinationStillValid = ds?.is_enabled === true;
+  }
+
+  // Fetch affiliates
   const { data: affiliates } = await admin
     .from("campaign_affiliates")
     .select("*")
     .eq("campaign_id", id)
     .order("joined_at", { ascending: false });
 
-  // Enrich affiliates with names from diviner_affiliates
   const affiliateIds = (affiliates ?? [])
     .filter((a: { affiliate_type: string }) => a.affiliate_type === "diviner_affiliate")
     .map((a: { affiliate_id: string }) => a.affiliate_id);
@@ -87,7 +116,6 @@ export async function GET(
     .order("converted_at", { ascending: false })
     .limit(100);
 
-  // Per-affiliate conversion stats
   const affiliateStats: Record<string, { conversions: number; commission_cents: number }> = {};
   for (const conv of conversions ?? []) {
     const key = conv.affiliate_id;
@@ -107,14 +135,19 @@ export async function GET(
     data: {
       ...campaign,
       status: effectiveStatus,
+      auto_paused: campaign.auto_paused_at !== null,
+      auto_pause_reason: campaign.auto_pause_reason ?? null,
+      can_reactivate:
+        campaign.auto_paused_at !== null && isDestinationStillValid,
       affiliates: enrichedAffiliates,
       conversions: conversions ?? [],
     },
   });
 }
 
-// PATCH /api/dashboard/campaigns/[id]
-// Update campaign (name, dates, status, commission, etc.)
+// ── PATCH /api/dashboard/campaigns/[id] ──────────────────────────────────────
+// Update campaign (name, dates, status, commission, destination, etc.)
+
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -140,7 +173,7 @@ export async function PATCH(
 
   const { data: diviner } = await admin
     .from("diviners")
-    .select("id")
+    .select("id, username")
     .eq("user_id", user.id)
     .single();
 
@@ -151,10 +184,12 @@ export async function PATCH(
     );
   }
 
-  // Verify ownership
+  // Verify ownership + load current campaign
   const { data: existing } = await admin
     .from("affiliate_campaigns")
-    .select("id, diviner_id, status")
+    .select(
+      "id, diviner_id, status, destination_type, destination_service_template_id, auto_paused_at, tracking_link_id"
+    )
     .eq("id", id)
     .eq("diviner_id", diviner.id)
     .single();
@@ -166,14 +201,74 @@ export async function PATCH(
     );
   }
 
-  const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
   const b = body as Record<string, unknown>;
+  const updates: Record<string, unknown> = {
+    updated_at: new Date().toISOString(),
+    updated_by: user.id,
+  };
 
+  // ── Status transition validation ──
+  if (typeof b.status === "string") {
+    const newStatus = b.status;
+    const currentStatus = existing.status;
+
+    if (!VALID_TRANSITIONS[currentStatus]?.includes(newStatus)) {
+      return NextResponse.json(
+        {
+          type: "https://httpstatuses.io/422",
+          title: "Invalid status transition",
+          detail: `Cannot change from '${currentStatus}' to '${newStatus}'.`,
+        },
+        { status: 422 }
+      );
+    }
+
+    // Cannot activate without a destination
+    if (newStatus === "active" && !existing.destination_type && !b.destination_type) {
+      return NextResponse.json(
+        {
+          type: "https://httpstatuses.io/422",
+          title: "Validation error",
+          detail: "Cannot activate: no destination set. Edit the campaign to add a destination.",
+        },
+        { status: 422 }
+      );
+    }
+
+    // Cannot activate if linked service is disabled
+    const destType = (b.destination_type ?? existing.destination_type) as string | null;
+    const destTemplateId = (b.destination_service_template_id ?? existing.destination_service_template_id) as string | null;
+    if (newStatus === "active" && destType === "SERVICE" && destTemplateId) {
+      const { data: ds } = await admin
+        .from("diviner_services")
+        .select("is_enabled")
+        .eq("diviner_id", diviner.id)
+        .eq("template_id", destTemplateId)
+        .maybeSingle();
+      if (!ds?.is_enabled) {
+        return NextResponse.json(
+          {
+            type: "https://httpstatuses.io/422",
+            title: "Validation error",
+            detail: "Cannot activate: linked service is currently disabled.",
+          },
+          { status: 422 }
+        );
+      }
+    }
+
+    // Activating from auto-paused state: clear auto-pause fields
+    if (newStatus === "active" && existing.auto_paused_at) {
+      updates.auto_paused_at = null;
+      updates.auto_pause_reason = null;
+    }
+
+    updates.status = newStatus;
+  }
+
+  // ── Basic field updates ──
   if (typeof b.name === "string" && b.name.trim()) updates.name = b.name.trim();
   if (typeof b.description === "string") updates.description = b.description.trim();
-  if (typeof b.status === "string" && ["draft", "active", "paused", "completed"].includes(b.status)) {
-    updates.status = b.status;
-  }
   if (typeof b.start_date === "string") updates.start_date = b.start_date;
   if (typeof b.end_date === "string") updates.end_date = b.end_date || null;
   if (typeof b.commission_type === "string") updates.commission_type = b.commission_type;
@@ -183,6 +278,105 @@ export async function PATCH(
   if (typeof b.utm_source === "string") updates.utm_source = b.utm_source || null;
   if (typeof b.utm_medium === "string") updates.utm_medium = b.utm_medium || null;
   if (typeof b.utm_campaign === "string") updates.utm_campaign = b.utm_campaign || null;
+  if (typeof b.channel === "string") updates.channel = b.channel || null;
+  if (typeof b.content_variant === "string") updates.content_variant = b.content_variant || null;
+
+  // ── Destination change ──
+  const changingDestination =
+    b.destination_type !== undefined || b.destination_service_template_id !== undefined;
+
+  if (changingDestination) {
+    const newDestType = (b.destination_type ?? existing.destination_type) as string | null;
+
+    if (newDestType && !["PROFILE", "SERVICE"].includes(newDestType)) {
+      return NextResponse.json(
+        { type: "https://httpstatuses.io/422", title: "Validation error", detail: "destination_type must be PROFILE or SERVICE." },
+        { status: 422 }
+      );
+    }
+
+    if (newDestType === "PROFILE") {
+      updates.destination_type = "PROFILE";
+      updates.destination_profile_id = diviner.id;
+      updates.destination_service_template_id = null;
+      updates.destination_diviner_service_id = null;
+
+      // Update tracking link destination if it exists
+      if (existing.tracking_link_id) {
+        admin
+          .from("tracking_links")
+          .update({
+            destination_type: "PROFILE",
+            destination_entity_id: diviner.id,
+            destination_url: `/${diviner.username}`,
+          })
+          .eq("id", existing.tracking_link_id)
+          .then(() => {})
+          .catch(() => {});
+      }
+    } else if (newDestType === "SERVICE") {
+      const newTemplateId = (b.destination_service_template_id ?? existing.destination_service_template_id) as string | null;
+      if (!newTemplateId) {
+        return NextResponse.json(
+          { type: "https://httpstatuses.io/422", title: "Validation error", detail: "destination_service_template_id is required." },
+          { status: 422 }
+        );
+      }
+
+      const { data: template } = await admin
+        .from("service_templates")
+        .select("id, slug, is_active")
+        .eq("id", newTemplateId)
+        .maybeSingle();
+
+      if (!template || !template.is_active) {
+        return NextResponse.json(
+          { type: "https://httpstatuses.io/422", title: "Validation error", detail: "Service template not found or inactive." },
+          { status: 422 }
+        );
+      }
+
+      const { data: ds } = await admin
+        .from("diviner_services")
+        .select("id, is_enabled")
+        .eq("diviner_id", diviner.id)
+        .eq("template_id", newTemplateId)
+        .maybeSingle();
+
+      if (!ds || !ds.is_enabled) {
+        return NextResponse.json(
+          { type: "https://httpstatuses.io/403", title: "Forbidden", detail: "This service is not enabled for your account." },
+          { status: 403 }
+        );
+      }
+
+      updates.destination_type = "SERVICE";
+      updates.destination_service_template_id = newTemplateId;
+      updates.destination_diviner_service_id = ds.id;
+      updates.destination_profile_id = null;
+
+      // If previously auto-paused and changing destination, clear auto-pause fields
+      // (diviner must manually activate — status stays paused)
+      if (existing.auto_paused_at) {
+        updates.auto_paused_at = null;
+        updates.auto_pause_reason = null;
+      }
+
+      // Update tracking link destination if it exists
+      if (existing.tracking_link_id) {
+        admin
+          .from("tracking_links")
+          .update({
+            destination_type: "SERVICE",
+            destination_entity_id: newTemplateId,
+            destination_url: `/${diviner.username}/services/${template.slug}`,
+          })
+          .eq("id", existing.tracking_link_id)
+          .then(() => {})
+          .catch(() => {});
+      }
+    }
+  }
 
   const { data, error } = await admin
     .from("affiliate_campaigns")
@@ -201,8 +395,9 @@ export async function PATCH(
   return NextResponse.json({ data });
 }
 
-// DELETE /api/dashboard/campaigns/[id]
+// ── DELETE /api/dashboard/campaigns/[id] ─────────────────────────────────────
 // Delete draft campaigns only
+
 export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
