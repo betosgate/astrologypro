@@ -241,10 +241,13 @@ src/app/api/dashboard/landing-pages/[templateId]/publish/route.ts → Publish / 
 src/app/api/dashboard/landing-pages/[templateId]/preview/route.ts → Preview draft content (Task 06)
 src/app/api/dashboard/landing-pages/[templateId]/upload/route.ts → Image upload for sections (Task 06)
 
--- Admin moderation --
+-- Admin moderation + edit on behalf --
 src/app/api/admin/landing-pages/moderation/route.ts  → Moderation queue (Task 06)
 src/app/api/admin/landing-pages/moderation/[targetId]/route.ts → Approve/flag/reject (Task 06)
 src/app/api/admin/landing-pages/section-types/route.ts → Manage section types (Task 06)
+src/app/api/admin/landing-pages/[landingPageId]/sections/route.ts → Admin: GET/POST sections on behalf (Task 06)
+src/app/api/admin/landing-pages/[landingPageId]/sections/[sectionId]/route.ts → Admin: GET/PATCH section on behalf (Task 06)
+src/app/api/admin/landing-pages/[landingPageId]/publish/route.ts → Admin: publish/unpublish on behalf (Task 06)
 
 -- Analytics --
 src/app/api/dashboard/landing-pages/[templateId]/analytics/route.ts → Per-service analytics (Task 08)

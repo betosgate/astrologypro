@@ -957,6 +957,61 @@ PATCH /api/admin/landing-pages/moderation/[targetId]
 - Returns: updated record
 ```
 
+#### Admin: Edit On Behalf of Diviner
+
+**File to create:** `src/app/api/admin/landing-pages/[landingPageId]/sections/[sectionId]/route.ts`
+
+```
+GET /api/admin/landing-pages/{landingPageId}/sections/{sectionId}
+- Auth: admin
+- Returns: full section data (draft + published content)
+
+PATCH /api/admin/landing-pages/{landingPageId}/sections/{sectionId}
+- Auth: admin
+- Body: same as diviner PATCH (title, subtitle, content_json, body_html, etc.)
+- Action:
+  1. Update draft_content_json and/or draft_body_html
+  2. Set is_draft = true
+  3. Set updated_by = admin user_id
+  4. Sanitize body_html
+  5. Log in service_access_audit_log with performed_by_role = 'admin'
+- Returns: updated section
+- Use case: admin fixes inappropriate content, corrects errors, or adds content
+  for a diviner who requested help
+```
+
+**File to create:** `src/app/api/admin/landing-pages/[landingPageId]/sections/route.ts`
+
+```
+GET /api/admin/landing-pages/{landingPageId}/sections
+- Auth: admin
+- Returns: all sections for a landing page (same format as diviner endpoint)
+
+POST /api/admin/landing-pages/{landingPageId}/sections
+- Auth: admin
+- Body: same as diviner POST (section_type, content_json, etc.)
+- Action: creates section on behalf of diviner
+- Sets created_by = admin user_id
+- Bypasses max_per_page check if admin explicitly overrides
+- Returns: created section
+```
+
+**File to create:** `src/app/api/admin/landing-pages/[landingPageId]/publish/route.ts`
+
+```
+POST /api/admin/landing-pages/{landingPageId}/publish
+- Auth: admin
+- Action: publish the page on behalf of diviner (same as diviner publish)
+- Can override moderation blocks if admin chooses
+- Logs action with performed_by_role = 'admin'
+
+POST /api/admin/landing-pages/{landingPageId}/unpublish
+- Auth: admin
+- Action: unpublish the page
+```
+
+The admin RLS policy (`slp_admin` and `slps_admin`) already grants full read/write access to all landing pages and sections. These admin API routes simply provide the endpoints to exercise that access with proper audit logging.
+
 #### `src/app/api/admin/landing-pages/section-types/route.ts`
 
 ```
