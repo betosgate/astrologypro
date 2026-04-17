@@ -1141,7 +1141,7 @@ function PlanetReturnSummaryTable({ tab, birth, returnDate, natalData, responseD
   return (
     <div className="horoscope-table-container">
       <div className="horoscope-table-header">
-        <h3>{label} Return — Summary</h3>
+        <h3>{label} Return</h3>
       </div>
       <div className="horoscope-table-wrapper">
         <table className="horoscope-table">
@@ -1237,7 +1237,7 @@ function getPlanetReturnAnalysisStyle(tab: string): { background: string; color:
       };
     case "mars":
       return {
-        background: "linear-gradient(166deg, #4a0000 0%, #c62828 100%)",
+        background: "linear-gradient(166deg, #FF0000 0%, #B22222 100%)",
         color: "#fff",
       };
     case "uranus":

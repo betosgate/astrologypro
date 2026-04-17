@@ -45,13 +45,10 @@ function CardSlot({
 }) {
   const isRevealed = drawn !== null;
 
-  // Label height proportional to card — old site was 155px for 348px image (44%)
-  const labelHeight = Math.round(cardHeight * 0.4);
-
   return (
     <div
-      className={`group flex flex-col items-center cursor-pointer ${rotateCard ? "rotate-90" : ""}`}
-      style={{ width: cardWidth }}
+      className={`cursor-pointer ${rotateCard ? "rotate-90" : ""}`}
+      style={{ width: cardWidth, height: cardHeight, perspective: 800 }}
       onClick={() => {
         if (isRevealed && onCardClick) {
           onCardClick(drawn);
@@ -73,43 +70,56 @@ function CardSlot({
       }}
       aria-label={isRevealed ? `View ${drawn.card.name} full size` : `Click to reveal ${label}`}
     >
-      {/* Card image area */}
       <div
-        className="relative overflow-hidden rounded-t-lg border-[3px] border-b-0 border-[#343a45] group-hover:border-indigo-400/60 transition-colors duration-300"
-        style={{ width: cardWidth, height: cardHeight, background: isRevealed ? "#000" : "#2a2e37" }}
+        className="relative w-full h-full transition-transform duration-700"
+        style={{
+          transformStyle: "preserve-3d",
+          transform: isRevealed ? "rotateY(180deg)" : "rotateY(0deg)",
+        }}
       >
-        {isRevealed ? (
-          <img
-            src={drawn.card.image_url ?? ""}
-            alt={drawn.card.name}
-            className="h-full w-full object-contain animate-[fadeIn_0.5s_ease-in]"
-          />
-        ) : (
+        {/* ── Back face (card back with overlay label) ── */}
+        <div
+          className="absolute inset-0 rounded-lg border-[3px] border-[#343a45] hover:border-indigo-400/60 transition-colors duration-300 overflow-hidden bg-[#2a2e37]"
+          style={{ backfaceVisibility: "hidden" }}
+        >
           <img
             src={cardBackUrl}
             alt="Card back"
             className="h-full w-full object-cover"
           />
-        )}
-      </div>
-      {/* Label area — white panel below card like old site */}
-      <div
-        className="flex flex-col items-center justify-center text-center rounded-b-lg border-[3px] border-t-0 border-[#343a45] group-hover:border-indigo-400/60 transition-colors duration-300"
-        style={{
-          width: cardWidth,
-          minHeight: labelHeight,
-          background: "linear-gradient(to bottom, #f0f0f0, #ffffff)",
-        }}
-      >
-        <span className="font-bold text-red-600" style={{ fontSize: Math.max(24, cardWidth * 0.16) }}>
-          {index + 1}
-        </span>
-        <span
-          className="font-medium text-black leading-tight px-2 line-clamp-2"
-          style={{ fontSize: Math.max(11, cardWidth * 0.075) }}
+          {/* Overlay label at bottom */}
+          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent pt-10 pb-3 px-2 text-center">
+            <span className="block font-bold text-red-500" style={{ fontSize: Math.max(28, cardWidth * 0.18) }}>
+              {index + 1}
+            </span>
+            <span className="block font-semibold text-white/90 leading-tight line-clamp-2" style={{ fontSize: Math.max(13, cardWidth * 0.085) }}>
+              {label}
+            </span>
+          </div>
+        </div>
+
+        {/* ── Front face (revealed card image) ── */}
+        <div
+          className="absolute inset-0 rounded-lg border-[3px] border-[#343a45] hover:border-indigo-400/60 transition-colors duration-300 overflow-hidden bg-black"
+          style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}
         >
-          {label}
-        </span>
+          {drawn && (
+            <img
+              src={drawn.card.image_url ?? ""}
+              alt={drawn.card.name}
+              className="h-full w-full object-contain"
+            />
+          )}
+          {/* Overlay label at bottom of revealed card too */}
+          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent pt-10 pb-3 px-2 text-center">
+            <span className="block font-bold text-red-500" style={{ fontSize: Math.max(24, cardWidth * 0.15) }}>
+              {index + 1}
+            </span>
+            <span className="block font-semibold text-white/90 leading-tight line-clamp-2" style={{ fontSize: Math.max(12, cardWidth * 0.08) }}>
+              {label}
+            </span>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -140,34 +150,45 @@ export function ThreeCardLayout({ positionLabels, drawnCards, onReveal, onCardCl
 // ─── 2. Five Card Complex Question (5 in a row with group brackets) ──────────
 
 export function FiveCardLayout({ positionLabels, drawnCards, onReveal, onCardClick, cardBackUrl }: LayoutProps) {
-  // Layout: 5 cards in a row
-  // Group labels below: [0,1] = INSIDE, [2,3] = OUTSIDE, [4] = RESULT
-  // Bottom bar: "NATURE OF THE PROBLEM / Environment" | "POSSIBLE SOLUTIONS"
+  const CW = 160;
+  const CH = 230;
   return (
-    <div className="flex flex-col items-center gap-6">
-      {/* 5 cards in a row */}
-      <div className="flex flex-wrap justify-center gap-4 md:gap-6">
-        {positionLabels.map((label, i) => (
-          <CardSlot key={i} index={i} label={label} drawn={drawnCards[i]} onReveal={onReveal} onCardClick={onCardClick} cardBackUrl={cardBackUrl} cardWidth={170} cardHeight={250} />
-        ))}
+    <div className="flex flex-col items-center gap-8">
+      {/* Card groups */}
+      <div className="flex flex-wrap justify-center gap-6">
+        {/* INSIDE group: cards 1 & 2 */}
+        <div className="flex flex-col items-center gap-3">
+          <h3 className="text-sm font-bold uppercase tracking-widest text-emerald-400 border-b border-emerald-500/40 pb-1 px-4">Inside</h3>
+          <div className="flex gap-4 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4">
+            {[0, 1].map((i) => (
+              <CardSlot key={i} index={i} label={positionLabels[i]} drawn={drawnCards[i]} onReveal={onReveal} onCardClick={onCardClick} cardBackUrl={cardBackUrl} cardWidth={CW} cardHeight={CH} />
+            ))}
+          </div>
+        </div>
+
+        {/* OUTSIDE group: cards 3 & 4 */}
+        <div className="flex flex-col items-center gap-3">
+          <h3 className="text-sm font-bold uppercase tracking-widest text-amber-400 border-b border-amber-500/40 pb-1 px-4">Outside</h3>
+          <div className="flex gap-4 rounded-xl border border-amber-500/20 bg-amber-500/5 p-4">
+            {[2, 3].map((i) => (
+              <CardSlot key={i} index={i} label={positionLabels[i]} drawn={drawnCards[i]} onReveal={onReveal} onCardClick={onCardClick} cardBackUrl={cardBackUrl} cardWidth={CW} cardHeight={CH} />
+            ))}
+          </div>
+        </div>
+
+        {/* RESULT group: card 5 */}
+        <div className="flex flex-col items-center gap-3">
+          <h3 className="text-sm font-bold uppercase tracking-widest text-indigo-400 border-b border-indigo-500/40 pb-1 px-4">Result</h3>
+          <div className="flex gap-4 rounded-xl border border-indigo-500/20 bg-indigo-500/5 p-4">
+            <CardSlot index={4} label={positionLabels[4]} drawn={drawnCards[4]} onReveal={onReveal} onCardClick={onCardClick} cardBackUrl={cardBackUrl} cardWidth={CW} cardHeight={CH} />
+          </div>
+        </div>
       </div>
-      {/* Group labels */}
-      <div className="hidden md:flex justify-center gap-0 w-full max-w-[850px]">
-        <div className="flex-1 text-center border-t-2 border-l-2 border-emerald-500/60 pt-2 ml-4">
-          <span className="text-xs font-bold uppercase tracking-widest text-emerald-400">Inside</span>
-        </div>
-        <div className="flex-1 text-center border-t-2 border-emerald-500/60 pt-2">
-          <span className="text-xs font-bold uppercase tracking-widest text-emerald-400">Outside</span>
-        </div>
-        <div className="w-[160px] text-center border-t-2 border-r-2 border-emerald-500/60 pt-2 mr-4">
-          <span className="text-xs font-bold uppercase tracking-widest text-emerald-400">Result</span>
-        </div>
-      </div>
-      {/* Bottom bar */}
-      <div className="hidden md:flex justify-center gap-4 w-full max-w-[850px]">
+
+      {/* Bottom labels */}
+      <div className="hidden md:flex justify-center gap-8 w-full max-w-[900px]">
         <div className="flex-1 text-center">
           <p className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Nature of the Problem</p>
-          <p className="text-xs text-muted-foreground/70">Environment</p>
         </div>
         <div className="flex-1 text-center">
           <p className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Possible Solutions</p>
@@ -239,30 +260,60 @@ export function HorseshoeLayout({ positionLabels, drawnCards, onReveal, onCardCl
 // ─── 4. Seven Card 6 Month Forward Review (star/radial) ──────────────────────
 
 export function ForwardReviewLayout({ positionLabels, drawnCards, onReveal, onCardClick, cardBackUrl }: LayoutProps) {
-  const CW = 150;
-  const CH = 220;
+  // Old site: radial/star pattern with rotated cards
+  // Card 7 (Clarity) at center, cards fan outward at angles
+  // Positions from old Angular component:
+  //   0 (Sunset): top-left, rotated 90deg
+  //   6 (Clarity): top-center, normal
+  //   1 (Horizon): top-right, rotated 90deg
+  //   2 (Obstacle): bottom-left, rotated -135deg
+  //   3 (Strength): top-right area, rotated 40deg
+  //   5 (Navigation): bottom-left area, rotated 135deg
+  //   4 (Advice): bottom-right area, rotated 133deg
+  const CW = 160;
+  const CH = 230;
+
+  // Card positions: [left%, top%, rotation]
+  const positions: [number, number, number][] = [
+    [12, 20, -45],      // 0: Sunset (top-left, angled)
+    [88, 20, 45],        // 1: Horizon (top-right, angled)
+    [12, 75, -135],      // 2: Obstacle (bottom-left, angled)
+    [88, 75, 135],       // 3: Strength (bottom-right, angled)
+    [50, 88, 0],         // 4: Advice (bottom center, upright)
+    [50, 12, 0],         // 5: Navigation (top center, upright)
+    [50, 50, 0],         // 6: Clarity (center, upright)
+  ];
+
   return (
-    <div className="flex flex-col items-center gap-10">
-      {/* Top row: 3 cards */}
-      <div className="flex flex-wrap justify-center gap-6">
-        {[0, 1, 2].map((i) => (
-          <CardSlot key={i} index={i} label={positionLabels[i]} drawn={drawnCards[i]} onReveal={onReveal} onCardClick={onCardClick} cardBackUrl={cardBackUrl} cardWidth={CW} cardHeight={CH} />
+    <div className="flex flex-col items-center">
+      {/* Desktop: radial/star layout */}
+      <div className="hidden lg:block relative mx-auto" style={{ width: 1000, height: 1200 }}>
+        {positionLabels.map((label, i) => {
+          const pos = positions[i];
+          if (!pos) return null;
+          const [leftPct, topPct, rotation] = pos;
+          return (
+            <div
+              key={i}
+              className="absolute"
+              style={{
+                left: `${leftPct}%`,
+                top: `${topPct}%`,
+                transform: `translate(-50%, -50%) rotate(${rotation}deg)`,
+              }}
+            >
+              <CardSlot index={i} label={label} drawn={drawnCards[i]} onReveal={onReveal} onCardClick={onCardClick} cardBackUrl={cardBackUrl} cardWidth={CW} cardHeight={CH} />
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Tablet / Mobile: simple grid fallback */}
+      <div className="flex lg:hidden flex-wrap justify-center gap-4">
+        {positionLabels.map((label, i) => (
+          <CardSlot key={i} index={i} label={label} drawn={drawnCards[i]} onReveal={onReveal} onCardClick={onCardClick} cardBackUrl={cardBackUrl} cardWidth={130} cardHeight={190} />
         ))}
       </div>
-      {/* Middle row: 2 cards wider apart */}
-      <div className="flex flex-wrap justify-center gap-20">
-        {[3, 4].map((i) => (
-          <CardSlot key={i} index={i} label={positionLabels[i]} drawn={drawnCards[i]} onReveal={onReveal} onCardClick={onCardClick} cardBackUrl={cardBackUrl} cardWidth={CW} cardHeight={CH} />
-        ))}
-      </div>
-      {/* Bottom row: 2 cards */}
-      {positionLabels.length > 5 && (
-        <div className="flex flex-wrap justify-center gap-6">
-          {[5, 6].filter((i) => i < positionLabels.length).map((i) => (
-            <CardSlot key={i} index={i} label={positionLabels[i]} drawn={drawnCards[i]} onReveal={onReveal} onCardClick={onCardClick} cardBackUrl={cardBackUrl} cardWidth={CW} cardHeight={CH} />
-          ))}
-        </div>
-      )}
     </div>
   );
 }

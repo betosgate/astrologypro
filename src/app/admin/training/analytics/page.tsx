@@ -242,6 +242,9 @@ export default function TrainingAnalyticsPage() {
 
   // Quizzes tab
   const [quizzes, setQuizzes] = useState<QuizRow[]>([]);
+  const [quizzesTotal, setQuizzesTotal] = useState(0);
+  const [quizzesPage, setQuizzesPage] = useState(1);
+  const [quizzesPageSize, setQuizzesPageSize] = useState(25);
   const [quizzesLoading, setQuizzesLoading] = useState(false);
   const [quizzesFetched, setQuizzesFetched] = useState(false);
 
@@ -252,10 +255,12 @@ export default function TrainingAnalyticsPage() {
   const handleReset = () => {
     setUsersSearch(""); setUsersSort("name"); setUsersPage(1);
     setProgramsSearch(""); setCategoriesSearch(""); setSelectedProgram("all"); setSelectedCategory("all");
+    setQuizzesPage(1);
     fetchUsers(1, "", "name", usersPageSize);
     fetchPrograms();
     fetchCategories("all");
     fetchLessons("all");
+    fetchQuizzes(1);
   };
 
   const handleRefresh = () => {
@@ -269,7 +274,7 @@ export default function TrainingAnalyticsPage() {
     fetchPrograms();
     fetchCategories(selectedProgram);
     fetchLessons(selectedCategory);
-    fetchQuizzes();
+    fetchQuizzes(quizzesPage);
 
     setTimeout(() => setIsRefreshing(false), 500);
   };
@@ -378,13 +383,25 @@ export default function TrainingAnalyticsPage() {
   };
 
   // ── Fetch quizzes ─────────────────────────────────────────────────────────────
-  const fetchQuizzes = () => {
-    if (quizzesFetched) return;
+  const fetchQuizzes = (page?: number, limitOverride?: number) => {
     setQuizzesLoading(true);
-    fetch("/api/admin/training/analytics/quizzes")
+    const p = page ?? quizzesPage;
+    const limit = limitOverride ?? quizzesPageSize;
+    const params = new URLSearchParams({
+      page: String(p),
+      limit: String(limit),
+    });
+
+    fetch(`/api/admin/training/analytics/quizzes?${params}`)
       .then((r) => r.json())
-      .then((d) => setQuizzes(Array.isArray(d?.quizzes) ? d.quizzes : []))
-      .catch(() => setQuizzes([]))
+      .then((d) => {
+        setQuizzes(Array.isArray(d?.quizzes) ? d.quizzes : []);
+        setQuizzesTotal(typeof d?.total === "number" ? d.total : 0);
+      })
+      .catch(() => {
+        setQuizzes([]);
+        setQuizzesTotal(0);
+      })
       .finally(() => {
         setQuizzesLoading(false);
         setQuizzesFetched(true);
@@ -417,6 +434,18 @@ export default function TrainingAnalyticsPage() {
     setUsersPageSize(size);
     setUsersPage(1);
     fetchUsers(1, usersSearch, usersSort, size);
+  };
+
+  const handleQuizPageChange = (newPage: number) => {
+    setQuizzesPage(newPage);
+    fetchQuizzes(newPage);
+  };
+
+  const handleQuizPageSizeChange = (newSize: string) => {
+    const size = parseInt(newSize, 10);
+    setQuizzesPageSize(size);
+    setQuizzesPage(1);
+    fetchQuizzes(1, size);
   };
 
   // ── Tab change handler ────────────────────────────────────────────────────────
@@ -1139,7 +1168,20 @@ export default function TrainingAnalyticsPage() {
         </TabsContent>
 
         {/* ── Quizzes tab ───────────────────────────────────────────────────── */}
-        <TabsContent value="quizzes" className="mt-6">
+        <TabsContent value="quizzes" className="mt-6 space-y-4">
+          <div className="flex items-center justify-end gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fetchQuizzes(quizzesPage)}
+              disabled={quizzesLoading}
+              className="gap-1.5"
+            >
+              <RefreshCw className={cn("size-3.5", quizzesLoading && "animate-spin")} />
+              Refresh
+            </Button>
+          </div>
+
           <Card>
             <CardContent className="p-0">
               {quizzesLoading ? (
@@ -1208,6 +1250,82 @@ export default function TrainingAnalyticsPage() {
               )}
             </CardContent>
           </Card>
+
+          {/* Pagination */}
+          <div
+            className={cn(
+              "flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-muted-foreground mt-4",
+              quizzesLoading && "opacity-50 pointer-events-none"
+            )}
+          >
+            <div className="flex items-center gap-3">
+              <p>
+                Showing {quizzesTotal === 0 ? 0 : Math.min((quizzesPage - 1) * quizzesPageSize + 1, quizzesTotal)}–
+                {Math.min(quizzesPage * quizzesPageSize, quizzesTotal)} of {quizzesTotal}
+              </p>
+              <Select value={String(quizzesPageSize)} onValueChange={handleQuizPageSizeChange}>
+                <SelectTrigger className="h-8 w-28">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {[10, 25, 50].map((n) => (
+                    <SelectItem key={n} value={String(n)}>
+                      {n} / page
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {Math.ceil(quizzesTotal / quizzesPageSize) > 1 && (
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 w-8 p-0"
+                  disabled={quizzesPage <= 1}
+                  onClick={() => handleQuizPageChange(quizzesPage - 1)}
+                >
+                  <ChevronLeft className="size-4" />
+                </Button>
+
+                {Array.from({ length: Math.ceil(quizzesTotal / quizzesPageSize) }, (_, i) => i + 1)
+                  .filter((p) => p === 1 || p === Math.ceil(quizzesTotal / quizzesPageSize) || Math.abs(p - quizzesPage) <= 2)
+                  .reduce<(number | "…")[]>((acc, p, idx, arr) => {
+                    if (idx > 0 && (p as number) - (arr[idx - 1] as number) > 1) acc.push("…");
+                    acc.push(p);
+                    return acc;
+                  }, [])
+                  .map((p, idx) =>
+                    p === "…" ? (
+                      <span key={`ellipsis-${idx}`} className="px-2">
+                        ...
+                      </span>
+                    ) : (
+                      <Button
+                        key={p}
+                        variant={p === quizzesPage ? "default" : "outline"}
+                        size="sm"
+                        className="h-8 w-8 p-0"
+                        onClick={() => handleQuizPageChange(p as number)}
+                      >
+                        {p}
+                      </Button>
+                    )
+                  )}
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 w-8 p-0"
+                  disabled={quizzesPage >= Math.ceil(quizzesTotal / quizzesPageSize)}
+                  onClick={() => handleQuizPageChange(quizzesPage + 1)}
+                >
+                  <ChevronRight className="size-4" />
+                </Button>
+              </div>
+            )}
+          </div>
         </TabsContent>
       </Tabs>
     </div>
