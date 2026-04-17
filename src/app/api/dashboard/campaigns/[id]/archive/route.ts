@@ -80,12 +80,11 @@ export async function POST(
 
   // Deactivate tracking link
   if (campaign.tracking_link_id) {
-    admin
+    void admin
       .from("tracking_links")
       .update({ is_active: false })
       .eq("id", campaign.tracking_link_id)
-      .then(() => {})
-      .catch(() => {});
+      .then(() => {}, () => {});
   }
 
   return NextResponse.json({ data });
