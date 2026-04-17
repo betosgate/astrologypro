@@ -427,7 +427,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
      
      
       { 
-        name: "horoscope_nativity_processing_v2", 
+        name: "horoscope_nativity_processing_v3", 
         label: "Nativity: Generating Your Reading", 
         description: "Your core astrological architecture is being synthesized.", 
         group: "Horoscope Toolkit",
@@ -442,7 +442,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
         ]
       },
       { 
-        name: "horoscope_nativity_result_planets_v1", 
+        name: "horoscope_nativity_result_planets_v4", 
         label: "Nativity: Planet Information Table", 
         description: "The raw foundation of your entire birth chart — every planet, sign, house, and degree.", 
         group: "Horoscope Toolkit",
@@ -458,69 +458,27 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "🔁 Retro Column — 'Yes' means the planet is in retrograde (appears to move backward). Saturn Retro = delayed career success but eventual strength. Neptune Retro = deep intuition and spiritual confusion. Node Retro = strong karmic life path and destiny-driven experiences."
         ]
       },
-      {
-        name: "horoscope_nativity_result_interpret_v1",
-        label: "Nativity: AI Interpretation — Sun, Moon & Mercury",
-        description: "How the AI converts your raw chart data into personal life readings.",
-        group: "Horoscope Toolkit",
-        subModule: "Nativity Birth Chart",
-        purpose: "This screen transforms raw astronomical data into personal meaning. For each planet, the AI uses a formula: Planet + Sign + House + Degree + Speed = Your Reading. The Sun block reveals your core identity and life direction. The Moon block explains your emotional nature and subconscious patterns. The Mercury block breaks down your thinking style and communication strengths. Each colored block shows the planet's sign and house badge in the top-right corner — click 'Show More' to unlock the full deep-dive interpretation.",
-        bullets: [
-          "🌞 Sun (e.g. Libra · House 6) — Your core identity and life purpose. Libra in House 6 means you thrive in structured, balanced work environments and succeed through teamwork, diplomacy, and collaboration.",
-          "🌙 Moon (e.g. Aries · House 12) — Your emotional world and inner patterns. Aries in House 12 means you feel things deeply and boldly, but process emotions internally and privately — often handling challenges alone.",
-          "🧠 Mercury (e.g. Virgo · House 6) — Your thinking style and communication. Virgo in House 6 means you have a sharp analytical mind with strong attention to detail — excellent for technical work, analysis, and problem-solving.",
-          "⚡ Speed Indicator — A fast-moving planet (like Moon at 13.20) has an active, daily influence on your life. A slow planet means deeper, long-term impact.",
-          "🔁 Retrograde Flag — If a planet shows 'Retro', its energy turns inward. Mercury Retro = overthinking. Saturn Retro = delayed but eventual success.",
-          "📖 Click 'Show More' — Opens the full deep-dive modal with house placement details, degree precision, speed analysis, and actionable career/life advice."
-        ]
-      },
-      {
-  name: "horoscope_nativity_interpret_deep_v1",
-  label: "Nativity: Deep Sun Insights",
-  description: "A clear, structured breakdown of your Sun placement, explaining your identity, work style, and life direction.",
-  group: "Horoscope Toolkit",
-  subModule: "Nativity Birth Chart",
-  purpose: "This panel opens when the user clicks 'Show More' on the Sun section. It provides a deeper but easy-to-understand explanation of how the Sun’s sign, house, degree, speed, and motion influence personality, daily life, and career. Instead of complex astrology terms, it explains each factor step-by-step so users can clearly understand how their core identity works in real life.",
-  bullets: [
-    "🏠 House Placement — Explains which area of life (work, relationships, career, etc.) your core identity is focused on.",
-    "♎ Zodiac Sign Meaning — Describes your natural personality traits, behavior style, and how you express yourself.",
-    "📐 Degree Insight — Shows how strongly your Sun expresses its sign qualities and whether it represents a new beginning or mature energy.",
-    "⚡ Speed Influence — Explains whether your actions and decisions are fast, steady, or slow, and how you approach life pace.",
-    "🔁 Motion (Direct/Retrograde) — Clarifies whether your energy is expressed outwardly or more internally.",
-    "💼 Practical Life Impact — Provides real-world meaning for your work style, habits, and how you succeed in daily life."
-  ]
-},
-    {
-  name: "horoscope_nativity_interpret_visual_v1",
-  label: "Nativity: Visual Personality Guide (Sun in Libra)",
-  description: "A simple visual explanation of how your Sun and zodiac sign combine to shape your core personality.",
-  group: "Horoscope Toolkit",
-  subModule: "Nativity Birth Chart",
-  purpose: "This visual panel helps users quickly understand the meaning of their Sun placement by showing three layers in one diagram. The left section explains the natural qualities of the Sun, such as identity, confidence, purpose, and self-expression. The right section explains the qualities of the zodiac sign, such as Libra’s balance, fairness, diplomacy, charm, and relationship focus. The center section shows the blended traits created when the Sun expresses itself through Libra, helping users understand how their core identity behaves in real life. It is designed to make astrology easy, visual, and immediately understandable even for users with no prior astrology knowledge.",
-  bullets: [
-    "☀️ Left Section — Shows the core qualities of the Sun, including identity, vitality, confidence, purpose, willpower, leadership, and self-expression.",
-    "♎ Right Section — Shows the traits of the zodiac sign, such as Libra’s harmony, fairness, diplomacy, sociability, peace-making, charm, and relationship orientation.",
-    "✨ Center Blend — Explains the combined personality created by Sun in Libra, such as balance, cooperation, equality, justice, partnership, tact, refinement, and peaceful social intelligence.",
-    "🧠 Easy Interpretation — Helps astrologers and users quickly understand how the planet’s natural energy changes when expressed through a specific zodiac sign.",
-    "🎨 Visual Learning Tool — Useful as a clear reference for chart explanation, client sharing, personal reflection, or educational astrology content."
-  ]
-},
-   {
-  name: "horoscope_nativity_result_interpret_v2",
-  label: "Nativity: Venus, Mars & Decan Insights",
-  description: "Explains your love style, motivation, action patterns, and the deeper decan layer linked to a planet.",
-  group: "Horoscope Toolkit",
-  subModule: "Nativity Birth Chart",
-  purpose: "This section presents deeper interpretations for Venus and Mars, helping users understand how they relate, attract, desire, act, and pursue goals. Venus explains love, beauty, charm, pleasure, values, and relationship style. Mars explains drive, ambition, courage, assertiveness, conflict style, and the way a person takes action in daily life and career. Some planets also show a small triangle icon, which indicates that a Decan interpretation is available. The decan is a more detailed astrological layer that divides each zodiac sign into three 10-degree sections, adding nuance to the planet’s expression. This helps astrologers and users understand not only the sign and house of a planet, but also the subtler tone, style, and secondary influence shaping that placement.",
-  bullets: [
-    "💛 Venus Reading — Explains attraction style, relationship needs, beauty preferences, charm, pleasure, creativity, and how love energy is expressed.",
-    "🔥 Mars Reading — Shows motivation, ambition, courage, action style, work drive, assertiveness, and how the user goes after goals or handles conflict.",
-    "🔺 Triangle Icon (Decan) — Indicates that an extra interpretive layer is available for that planet through the Decan system.",
-    "📐 What a Decan Means — Each zodiac sign is divided into 3 decans of 10 degrees each, and the planet’s exact degree decides which decan it belongs to.",
+  {
+  "name": "horoscope_nativity_result_interpret_v3",
+  "label": "Nativity: AI Interpretation — Moon, Mercury, Venus & Sun",
+  "description": "How the AI converts your raw chart data into personal life readings, including Venus meaning and Decan refinement.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Nativity Birth Chart",
+  "purpose": "This screen transforms raw astronomical data into personal meaning. For each planet, the AI uses a formula: Planet + Sign + House + Degree + Speed = Your Reading. The Sun block reveals your core identity and life direction. The Moon block explains your emotional nature and subconscious patterns. The Mercury block breaks down your thinking style and communication strengths. The Venus block explains love, beauty, charm, pleasure, values, creativity, attraction style, and relationship expression. Some planets also show a small triangle icon, which means a Decan interpretation is available. A decan is a deeper astrological layer that divides each zodiac sign into three 10-degree sections, adding nuance to the planet's expression. This helps astrologers and users understand not only the sign and house of a planet, but also the subtler tone, style, and secondary influence shaping that placement. Each colored block shows the planet's sign and house badge in the top-right corner — click 'Show More' to unlock the full deep-dive interpretation.",
+  "bullets": [
+    "🌙 Moon (e.g. Aries · House 12) — Your emotional world and inner patterns. Aries in House 12 means you feel things deeply and boldly, but process emotions internally and privately — often handling challenges alone.",
+    "🧠 Mercury (e.g. Virgo · House 6) — Your thinking style and communication. Virgo in House 6 means you have a sharp analytical mind with strong attention to detail — excellent for technical work, analysis, and problem-solving.",
+    "♀ Venus (e.g. Leo · House 5) — Your love style, attraction pattern, creativity, beauty, pleasure, and values. Venus in Leo in House 5 means you express affection warmly and dramatically — often bringing romance, artistic talent, confidence, joy, and magnetic self-expression into your life.",
+    "🌞 Sun (e.g. Libra · House 6) — Your core identity and life purpose. Libra in House 6 means you thrive in structured, balanced work environments and succeed through teamwork, diplomacy, and collaboration.",
+    "📐 What a Decan Means — Each zodiac sign is divided into 3 decans of 10 degrees each, and the planet's exact degree decides which decan it belongs to.",
     "🧠 Why Decans Matter — Decans refine the reading by adding a second tone to the planet, helping astrologers explain why two people with the same sign placement can still feel different.",
-    "🎨 Visual Planet Cards — Each planet appears in its own colored block so users can quickly identify, read, and compare different personal energies."
+    "🔺 Decan Indicator — A small triangle icon beside a planet means an extra decan-based interpretation is available for that placement.",
+    "⚡ Speed Indicator — A fast-moving planet (like Moon at 13.20) has an active, daily influence on your life. A slow planet means deeper, long-term impact.",
+    "🔁 Retrograde Flag — If a planet shows 'Retro', its energy turns inward. Mercury Retro = overthinking. Saturn Retro = delayed but eventual success.",
+    "📖 Click 'Show More' — Opens the full deep-dive modal with house placement details, degree precision, speed analysis, Venus/Mars-style personal expression meaning where relevant, decan refinement, and actionable career/life advice."
   ]
 },
+
   {
   name: "horoscope_nativity_decan_detail_v1",
   label: "Nativity: Decan Wisdom (Mercury)",
@@ -537,9 +495,42 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
     "📚 Advanced Layer — Helps astrologers understand subtle differences between similar placements by adding a refined, symbolic, and historical perspective."
   ]
 },
+      {
+  name: "horoscope_nativity_interpret_deep_v3",
+  label: "Nativity: Deep Sun Insights",
+  description: "A clear, structured breakdown of your Sun placement, explaining your identity, work style, and life direction.",
+  group: "Horoscope Toolkit",
+  subModule: "Nativity Birth Chart",
+  purpose: "This panel opens when the user clicks 'Show More' on the Sun section. It provides a deeper but easy-to-understand explanation of how the Sun’s sign, house, degree, speed, and motion influence personality, daily life, and career. Instead of complex astrology terms, it explains each factor step-by-step so users can clearly understand how their core identity works in real life.",
+  bullets: [
+    "🏠 House Placement — Explains which area of life (work, relationships, career, etc.) your core identity is focused on.",
+    "♎ Zodiac Sign Meaning — Describes your natural personality traits, behavior style, and how you express yourself.",
+    "📐 Degree Insight — Shows how strongly your Sun expresses its sign qualities and whether it represents a new beginning or mature energy.",
+    "⚡ Speed Influence — Explains whether your actions and decisions are fast, steady, or slow, and how you approach life pace.",
+    "🔁 Motion (Direct/Retrograde) — Clarifies whether your energy is expressed outwardly or more internally.",
+    "💼 Practical Life Impact — Provides real-world meaning for your work style, habits, and how you succeed in daily life."
+  ]
+},
+    {
+  name: "horoscope_nativity_interpret_visual_v3",
+  label: "Nativity: Visual Personality Guide (Sun in Libra)",
+  description: "A simple visual explanation of how your Sun and zodiac sign combine to shape your core personality.",
+  group: "Horoscope Toolkit",
+  subModule: "Nativity Birth Chart",
+  purpose: "This visual panel helps users quickly understand the meaning of their Sun placement by showing three layers in one diagram. The left section explains the natural qualities of the Sun, such as identity, confidence, purpose, and self-expression. The right section explains the qualities of the zodiac sign, such as Libra’s balance, fairness, diplomacy, charm, and relationship focus. The center section shows the blended traits created when the Sun expresses itself through Libra, helping users understand how their core identity behaves in real life. It is designed to make astrology easy, visual, and immediately understandable even for users with no prior astrology knowledge.",
+  bullets: [
+    "☀️ Left Section — Shows the core qualities of the Sun, including identity, vitality, confidence, purpose, willpower, leadership, and self-expression.",
+    "♎ Right Section — Shows the traits of the zodiac sign, such as Libra’s harmony, fairness, diplomacy, sociability, peace-making, charm, and relationship orientation.",
+    "✨ Center Blend — Explains the combined personality created by Sun in Libra, such as balance, cooperation, equality, justice, partnership, tact, refinement, and peaceful social intelligence.",
+    "🧠 Easy Interpretation — Helps astrologers and users quickly understand how the planet’s natural energy changes when expressed through a specific zodiac sign.",
+    "🎨 Visual Learning Tool — Useful as a clear reference for chart explanation, client sharing, personal reflection, or educational astrology content."
+  ]
+},
+
+
     
      {
-  name: "horoscope_nativity_result_houses_v1",
+  name: "horoscope_nativity_result_houses_v3",
   label: "Nativity: House Information",
   description: "A clear breakdown of all 12 houses, their signs, degrees, and planet placements.",
   group: "Horoscope Toolkit",
@@ -556,7 +547,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
   ]
 },
  {
-  name: "horoscope_nativity_house_interpret_v2",
+  name: "horoscope_nativity_house_interpret_v3",
   label: "Nativity: House Interpretations",
   description: "Easy-to-understand interpretations of each house, showing how different life areas are shaped in the birth chart.",
   group: "Horoscope Toolkit",
@@ -570,7 +561,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
     "📖 Expandable Reading — Supports deeper interpretation through 'Show More' sections for users who want a fuller explanation of each house."
   ]
 },{
-  name: "horoscope_nativity_house_visual_v3",
+  name: "horoscope_nativity_house_visual_v4",
   label: "Nativity: House Visual Guide (Aries in 1st House)",
   description: "A visual explanation of how a zodiac sign and house combine to shape personality and life expression.",
   group: "Horoscope Toolkit",
@@ -616,7 +607,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
   ]
 },
     {
-  name: "horoscope_nativity_result_aspects_v1",
+  name: "horoscope_nativity_result_aspects_v3",
   label: "Nativity: Aspect Dynamics",
   description: "A detailed table showing how planets interact with each other in the birth chart.",
   group: "Horoscope Toolkit",
@@ -670,7 +661,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
   ]
 },
       {
-  name: "horoscope_nativity_interpret_angles_v2",
+  name: "horoscope_nativity_interpret_angles_v3",
   label: "Nativity: Angles & Points",
   description: "A clear reading of the Ascendant, Midheaven, and Vertex, showing personality style, career direction, and important turning points.",
   group: "Horoscope Toolkit",
