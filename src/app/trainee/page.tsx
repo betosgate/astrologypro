@@ -12,6 +12,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { TrainingDebugControls } from "@/components/trainee/training-debug-controls";
 import {
   BookOpen,
   Calendar,
@@ -403,13 +404,18 @@ export default async function TraineeDashboardPage() {
           </h1>
           <p className="text-muted-foreground">Welcome back, {trainee.name}</p>
         </div>
-        <Badge
-          variant={
-            trainee.training_status === "active" ? "default" : "secondary"
-          }
-        >
-          {trainee.training_status}
-        </Badge>
+        <div className="flex items-center gap-3">
+          {user.email === "trainee1@test.astrologypro.com" && (
+            <TrainingDebugControls />
+          )}
+          <Badge
+            variant={
+              trainee.training_status === "active" ? "default" : "secondary"
+            }
+          >
+            {trainee.training_status}
+          </Badge>
+        </div>
       </div>
 
       {/* ── Cross-sell banners ────────────────────────────────────────────── */}
