@@ -142,16 +142,15 @@ export async function GET(request: Request) {
   });
 
   // Deactivate tracking links for expired campaigns (async, non-blocking)
-  const expiredIds = enriched
+  const expiredIds = (enriched as Array<Record<string, unknown>>)
     .filter((c) => c.status === "expired")
     .map((c) => c.id as string);
   if (expiredIds.length > 0) {
-    admin
+    void admin
       .from("tracking_links")
       .update({ is_active: false })
       .in("campaign_id", expiredIds)
-      .then(() => {})
-      .catch(() => {});
+      .then(() => {}, () => {});
   }
 
   return NextResponse.json({ data: enriched, nextCursor, hasMore });

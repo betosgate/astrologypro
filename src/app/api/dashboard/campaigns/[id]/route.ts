@@ -62,12 +62,11 @@ export async function GET(
       effectiveStatus = "expired";
       // Deactivate tracking link for expired campaign
       if (campaign.tracking_link_id) {
-        admin
+        void admin
           .from("tracking_links")
           .update({ is_active: false })
           .eq("id", campaign.tracking_link_id)
-          .then(() => {})
-          .catch(() => {});
+          .then(() => {}, () => {});
       }
     }
   }
@@ -303,7 +302,7 @@ export async function PATCH(
 
       // Update tracking link destination if it exists
       if (existing.tracking_link_id) {
-        admin
+        void admin
           .from("tracking_links")
           .update({
             destination_type: "PROFILE",
@@ -311,8 +310,7 @@ export async function PATCH(
             destination_url: `/${diviner.username}`,
           })
           .eq("id", existing.tracking_link_id)
-          .then(() => {})
-          .catch(() => {});
+          .then(() => {}, () => {});
       }
     } else if (newDestType === "SERVICE") {
       const newTemplateId = (b.destination_service_template_id ?? existing.destination_service_template_id) as string | null;
@@ -364,7 +362,7 @@ export async function PATCH(
 
       // Update tracking link destination if it exists
       if (existing.tracking_link_id) {
-        admin
+        void admin
           .from("tracking_links")
           .update({
             destination_type: "SERVICE",
@@ -372,8 +370,7 @@ export async function PATCH(
             destination_url: `/${diviner.username}/services/${template.slug}`,
           })
           .eq("id", existing.tracking_link_id)
-          .then(() => {})
-          .catch(() => {});
+          .then(() => {}, () => {});
       }
     }
   }
