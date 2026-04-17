@@ -370,7 +370,7 @@ function TriggerVideoPlayer({
       const vid = videoRef.current;
       if (vid) {
         vid.currentTime = rewindTarget;
-        vid.play().then(() => {}, () => {});
+        vid.play().then(() => { }, () => { });
       }
       setRewindCountdown(null);
       setActiveTrigger(null);
@@ -400,7 +400,7 @@ function TriggerVideoPlayer({
               }
               rewatchTriggerId.current = null;
             }
-          }, () => {});
+          }, () => { });
         }, 5000);
       }
       return;
@@ -536,7 +536,7 @@ function TriggerVideoPlayer({
         if (json.lesson_complete) {
           onLessonCompleted?.();
         }
-        videoRef.current?.play().then(() => {}, () => {});
+        videoRef.current?.play().then(() => { }, () => { });
       } else {
         // Wrong answer — start rewind countdown
         rewatchTriggerId.current = activeTrigger.id;
@@ -695,14 +695,14 @@ export function LessonViewerClient(props: LessonViewerProps) {
     ...videos,
     ...(videoUrl && !videos.some((v) => v.video_url === videoUrl)
       ? [
-          {
-            id: "legacy",
-            title: null,
-            video_url: videoUrl,
-            duration_mins: durationMins,
-            priority: -1,
-          },
-        ]
+        {
+          id: "legacy",
+          title: null,
+          video_url: videoUrl,
+          duration_mins: durationMins,
+          priority: -1,
+        },
+      ]
       : []),
   ].sort((a, b) => a.priority - b.priority);
 
@@ -778,7 +778,7 @@ export function LessonViewerClient(props: LessonViewerProps) {
   // Record lesson start on mount
   useEffect(() => {
     fetch(`/api/trainee/training/lessons/${lessonId}/start`, { method: "POST" })
-      .catch(() => {}); // fire-and-forget, don't block UI
+      .catch(() => { }); // fire-and-forget, don't block UI
   }, [lessonId]);
 
   // Track the latest video position for heartbeat reporting
@@ -858,19 +858,32 @@ export function LessonViewerClient(props: LessonViewerProps) {
           delta_seconds: delta,
           last_position_seconds: latestPositionRef.current,
         }),
-      }).catch(() => {}); // fire-and-forget
+      }).catch(() => { }); // fire-and-forget
     }, 10_000);
 
     return () => clearInterval(interval);
   }, [lessonId]);
 
-  // All assets + legacy pdf_url
-  const allAssets: LessonAsset[] = [
-    ...assets,
-    ...(pdfUrl && !assets.some((a) => a.url === pdfUrl)
-      ? [
+  // All assets + legacy pdf_url (now supporting JSON array)
+  let extraAssets: LessonAsset[] = [];
+  if (pdfUrl) {
+    if (pdfUrl.startsWith("[")) {
+      try {
+        const urls: string[] = JSON.parse(pdfUrl);
+        extraAssets = urls.map((url, idx) => ({
+          id: `extra-pdf-${idx}`,
+          title: urls.length === 1 ? "Lesson PDF" : `Lesson PDF ${idx + 1}`,
+          asset_type: "pdf" as const,
+          url,
+          file_size_bytes: null,
+          is_downloadable: true,
+          priority: -1,
+        }));
+      } catch {
+        // Fallback for malformed JSON
+        extraAssets = [
           {
-            id: "legacy-pdf",
+            id: "extra-pdf",
             title: "Lesson PDF",
             asset_type: "pdf" as const,
             url: pdfUrl,
@@ -878,8 +891,26 @@ export function LessonViewerClient(props: LessonViewerProps) {
             is_downloadable: true,
             priority: -1,
           },
-        ]
-      : []),
+        ];
+      }
+    } else {
+      extraAssets = [
+        {
+          id: "extra-pdf",
+          title: "Lesson PDF",
+          asset_type: "pdf" as const,
+          url: pdfUrl,
+          file_size_bytes: null,
+          is_downloadable: true,
+          priority: -1,
+        },
+      ];
+    }
+  }
+
+  const allAssets: LessonAsset[] = [
+    ...assets,
+    ...extraAssets.filter((extra) => !assets.some((a) => a.url === extra.url)),
   ].sort((a, b) => a.priority - b.priority);
 
   return (
@@ -1174,79 +1205,79 @@ export function LessonViewerClient(props: LessonViewerProps) {
 
         {/* ── Right: Sidebar ────────────────────────────────────────────── */}
         {hasSidebarRail && (
-        <aside className="w-full lg:w-72 shrink-0 space-y-4 lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto">
-          {/* Lesson navigation */}
-          {sidebarLessons.length > 0 && (
-            <div className="rounded-xl border bg-card overflow-hidden">
-              <div className="px-4 py-3 border-b">
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                  Lessons
-                </p>
-              </div>
-              <div className="divide-y">
-                {sidebarLessons.map((l, i) => (
-                  <div
-                    key={l.id}
-                    onClick={
-                      l.locked
-                        ? () =>
+          <aside className="w-full lg:w-72 shrink-0 space-y-4 lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto">
+            {/* Lesson navigation */}
+            {sidebarLessons.length > 0 && (
+              <div className="rounded-xl border bg-card overflow-hidden">
+                <div className="px-4 py-3 border-b">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                    Lessons
+                  </p>
+                </div>
+                <div className="divide-y">
+                  {sidebarLessons.map((l, i) => (
+                    <div
+                      key={l.id}
+                      onClick={
+                        l.locked
+                          ? () =>
                             toast.warning("Locked", {
                               description:
                                 "Complete the previous lesson first to continue in sequence.",
                             })
-                        : undefined
-                    }
-                    className={cn(
-                      "flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors",
-                      l.current ? "bg-primary/5" : "hover:bg-muted/40",
-                      l.locked ? "opacity-50 cursor-not-allowed" : ""
-                    )}
-                  >
-                    {/* Status icon */}
-                    <div className="shrink-0 w-4 flex justify-center">
-                      {l.completed ? (
-                        <CheckCircle2 className="size-3.5 text-green-500" />
-                      ) : l.locked ? (
-                        <Lock className="size-3 text-muted-foreground/50" />
+                          : undefined
+                      }
+                      className={cn(
+                        "flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors",
+                        l.current ? "bg-primary/5" : "hover:bg-muted/40",
+                        l.locked ? "opacity-50 cursor-not-allowed" : ""
+                      )}
+                    >
+                      {/* Status icon */}
+                      <div className="shrink-0 w-4 flex justify-center">
+                        {l.completed ? (
+                          <CheckCircle2 className="size-3.5 text-green-500" />
+                        ) : l.locked ? (
+                          <Lock className="size-3 text-muted-foreground/50" />
+                        ) : (
+                          <div className="size-3.5 rounded-full border-2 border-muted-foreground/40" />
+                        )}
+                      </div>
+
+                      {/* Number */}
+                      <span className="text-xs text-muted-foreground/60 tabular-nums w-5 shrink-0">
+                        {String(i + 1).padStart(2, "0")}.
+                      </span>
+
+                      {/* Title */}
+                      {l.locked || l.current ? (
+                        <span
+                          className={cn(
+                            "flex-1 text-xs truncate",
+                            l.current ? "font-semibold text-primary" : "text-muted-foreground"
+                          )}
+                        >
+                          {l.title}
+                        </span>
                       ) : (
-                        <div className="size-3.5 rounded-full border-2 border-muted-foreground/40" />
+                        <Link
+                          href={`/trainee/training/${programId}/${categoryId}/${l.id}`}
+                          className="flex-1 text-xs truncate hover:text-primary transition-colors"
+                        >
+                          {l.title}
+                        </Link>
                       )}
                     </div>
-
-                    {/* Number */}
-                    <span className="text-xs text-muted-foreground/60 tabular-nums w-5 shrink-0">
-                      {String(i + 1).padStart(2, "0")}.
-                    </span>
-
-                    {/* Title */}
-                    {l.locked || l.current ? (
-                      <span
-                        className={cn(
-                          "flex-1 text-xs truncate",
-                          l.current ? "font-semibold text-primary" : "text-muted-foreground"
-                        )}
-                      >
-                        {l.title}
-                      </span>
-                    ) : (
-                      <Link
-                        href={`/trainee/training/${programId}/${categoryId}/${l.id}`}
-                        className="flex-1 text-xs truncate hover:text-primary transition-colors"
-                      >
-                        {l.title}
-                      </Link>
-                    )}
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Quiz section removed from sidebar — now rendered inline in the
+            {/* Quiz section removed from sidebar — now rendered inline in the
               main content column (see below the assets section) so the
               learner sees it as part of the lesson flow rather than a
               buried sidebar widget. */}
-        </aside>
+          </aside>
         )}
       </div>
     </>
