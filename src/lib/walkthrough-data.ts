@@ -2754,34 +2754,743 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
   ]
 },
       // ------------------Jupiter Return------------------//
-      { 
-        name: "horoscope_jupiter_return_setup", 
-        label: "Jupiter Return", 
-        description: "Calculate and interpret your Jupiter Return.", 
-        group: "Horoscope Toolkit",
-        subModule: "Jupiter Return",
-        purpose: "Analyzes the approximately 12-year cycle of Jupiter returning to its natal position, highlighting periods of expansion, luck, and spiritual growth.",
-        bullets: [
-          "Exact return date calculation",
-          "House activation and growth areas",
-          "Transiting aspects to natal planets",
-          "Opportunities for advancement and learning"
-        ]
-      },
-      { 
-        name: "horoscope_saturn_return_setup", 
-        label: "Saturn Return", 
-        description: "Detailed analysis of your Saturn Return.", 
-        group: "Horoscope Toolkit",
-        subModule: "Saturn Return",
-        purpose: "Evaluates the critical 28-30 year planetary milestone where Saturn returns to its natal degree, signifying maturity, major life lessons, and restructuring.",
-        bullets: [
-          "Identification of exact Saturn Return dates",
-          "Karmic lessons and maturity milestones",
-          "Career and relationship restructuring",
-          "Tools for navigating Saturnian pressure"
-        ]
-      },
+
+      {
+  "name": "horoscope_jupiter_return_entry_setup",
+  "label": "Jupiter Return: Entry & Generation Setup",
+  "description": "Enter birth details to generate the full Jupiter Return reading and result screens in sequence.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Jupiter Return",
+  "purpose": "This is the first screen of the Jupiter Return module. The user must enter date of birth, time of birth, and place of birth. These three birth details are required because the system uses them to calculate the natal chart accurately and identify the exact natal position of Jupiter. After all required birth fields are filled correctly, the Generate Reading button becomes active. Once the user clicks Generate Reading, the platform calculates the next exact Jupiter Return date and builds the full Jupiter Return reading screen by screen. The generated response depends on DOB, TOB, and POB because those details affect natal Jupiter's sign, degree, house placement, chart angles, house cusps, return chart structure, aspects, growth themes, and all deeper interpretations. This setup screen is important because if birth time or birth place is incorrect, the Jupiter Return analysis, timing, and life-area interpretation may also change.",
+  "bullets": [
+    "📅 Step 1 — Enter Date of Birth: The user enters the birth date so the system can calculate the natal planetary positions and locate natal Jupiter correctly.",
+    "🕒 Step 2 — Enter Time of Birth: The user enters the exact birth time because Ascendant, house cusps, chart angles, and Jupiter's natal house placement depend on correct timing.",
+    "📍 Step 3 — Enter Place of Birth: The user enters the birth place so the system can use the correct geographic coordinates and timezone for accurate natal and return chart calculation.",
+    "📝 Step 4 — Area of Inquiry (Optional): The user may enter a focus such as career growth, life direction, relationships, finances, learning, expansion, or spiritual development.",
+    "✅ Step 5 — Generate Reading Activation: After the required birth details are completed correctly, the Generate Reading button becomes enabled.",
+    "📊 Result Screen 1 — Chart View: The system generates the Jupiter Return wheel charts so the user can visually see the return chart structure, planetary placements, and overall aspect pattern.",
+    "📋 Result Screen 2 — Return Data & Positions: The platform shows the birth reference, natal Jupiter placement, next Jupiter Return date, house system, and key planetary positions in the return chart.",
+    "🌟 Result Screen 3 — Upcoming Jupiter Return Analysis: The reading explains the general meaning of the new 12-year cycle across life areas such as career, relationships, growth, health, family, social life, and spirituality.",
+    "🪐 Result Screen 4 — Planet Information & Planet Cards: The system shows detailed planetary data and then generates readable interpretation cards for important return planets such as Moon, Mercury, Venus, Sun, Jupiter, and others.",
+    "🔺 Result Screen 5 — Decan Interpretation Modal: If a triangle decan symbol is present on a planet card, the user can open a deeper decan-based image or text interpretation for that placement.",
+    "🏠 Result Screen 6 — House Information & House Cards: The platform shows the return house table, house distribution view, and individual house interpretation cards explaining how each life area is shaped during the cycle.",
+    "✨ Result Screen 7 — Dharma, Karma, and Key Points: The reading highlights fulfillment themes, karmic lessons, and important points such as Ascendant, Midheaven, Vertex, and Lilith for deeper cycle understanding.",
+    "🔗 Result Screen 8 — Aspects, Aspect Cards, and Deep Aspect Analysis: The system shows the technical aspect table, readable aspect summary cards, and deeper aspect modals with symbolic picture representation for major return aspects."
+  ]
+},
+     {
+  "name": "horoscope_jupiter_return_chart_view",
+  "label": "Jupiter Return: Chart View",
+  "description": "Visual wheel charts that show the full Jupiter Return pattern and its planetary aspect structure.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Jupiter Return",
+  "purpose": "This screen is generated after the user enters date of birth, time of birth, and place of birth. The system first calculates the natal chart, identifies natal Jupiter, then finds the next time transiting Jupiter returns to the same zodiac degree and sign as natal Jupiter. After that, it builds the Jupiter Return chart and displays it in wheel format. The left chart shows the main Western wheel with planets, signs, houses, and angles. The right chart highlights the aspect geometry and overall pattern of planetary relationships in the return chart. The purpose of this screen is to help astrologers and users visually understand the full Jupiter Return cycle, including where expansion, opportunity, growth, learning, networks, and long-term development are emphasized.",
+  "bullets": [
+    "♃ Jupiter Return Basis — The chart is created when transiting Jupiter returns to the same zodiac position it held at birth, beginning a new 12-year growth cycle.",
+    "📅 How It Is Generated — Uses DOB, TOB, and POB to calculate the natal chart, natal Jupiter position, and the exact upcoming Jupiter Return chart.",
+    "🪐 Left Wheel Chart Meaning — Shows the complete Jupiter Return chart with planets, signs, houses, and angles for full interpretation.",
+    "📐 Right Aspect Chart Meaning — Shows the planetary relationship pattern through aspect lines, making supportive and challenging configurations easier to read.",
+    "🏠 House Activation Value — Helps reveal which life areas are emphasized during this Jupiter cycle, such as career, community, finance, learning, or relationships.",
+    "✨ Why This Screen Is Useful — Gives a visual foundation for the return reading before the user goes into tables, planet details, and interpretation blocks.",
+    "🚀 Practical Use — Useful for cycle forecasting, opportunity mapping, growth themes, and understanding the overall energetic pattern of the next Jupiter period."
+  ]
+},
+{
+  "name": "horoscope_jupiter_return_positions",
+  "label": "Jupiter Return: Return Data & Positions",
+  "description": "A technical summary of the Jupiter Return chart, including birth reference, return date, and major planetary placements.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Jupiter Return",
+  "purpose": "This screen is generated after the system calculates the user's Jupiter Return from date of birth, time of birth, and place of birth. It presents the core chart data needed for interpretation, including birth details, house system, natal Jupiter position, next Jupiter Return date, and the sign-house placements of key planets and points in the return chart. The purpose of this screen is to give astrologers a quick technical overview of the cycle before moving into narrative analysis. It helps users see exactly where Jupiter is returning, which houses are activated, and which planets are retrograde or strategically important in the new cycle.",
+  "bullets": [
+    "📅 Birth Reference Row — Shows the user's date of birth, place of birth, and time of birth used to calculate the natal chart and return chart.",
+    "🏛 House System — Shows which house system is used for the return interpretation, such as Whole Sign.",
+    "♃ Jupiter At Birth — Shows natal Jupiter's original sign, degree, and house, which is the anchor for calculating the return.",
+    "🔄 Next Jupiter Return Date — Shows the exact future date when Jupiter returns to its natal position and the new cycle begins.",
+    "📍 Positions Section — Lists the major placements of Ascendant, Jupiter, Moon, Sun, Mercury, Venus, Mars, Saturn, Uranus, Neptune, Pluto, Nodes, and other key points in the return chart.",
+    "🔁 Retrograde Visibility — Helps astrologers identify which return placements are retrograde, adding a reflective or delayed tone to that part of the cycle.",
+    "🧠 Why This Screen Is Useful — Gives a precise technical map of the return chart so interpretation can be built on clearly visible positions.",
+    "🚀 Practical Use — Useful for astrologers, advanced users, technical chart checking, and preparing the deeper Jupiter Return reading."
+  ]
+},
+
+
+{
+  "name": "horoscope_jupiter_return_analys_v1",
+  "label": "Jupiter Return: Upcoming Cycle Analysis",
+  "description": "A life-area reading of the upcoming Jupiter Return, explaining how the new 12-year cycle may affect growth, career, relationships, health, family, and spiritual direction.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Jupiter Return",
+  "purpose": "This section is generated after the Jupiter Return chart is calculated from the user's DOB, TOB, and POB. The system analyzes Jupiter's sign and house placement, along with major aspects to other return and natal factors, and translates the result into life-area guidance. This screen explains how the new Jupiter cycle may influence general growth, career opportunities, relationships, personal development, health patterns, family matters, social expansion, and spiritual evolution. The purpose is to turn technical chart placements into a readable roadmap for the coming years.",
+  "bullets": [
+    "🌟 General Theme — Explains the overall tone of the new Jupiter cycle, such as expansion, visibility, learning, leadership, networks, or broader life growth.",
+    "💼 Career Section — Shows how the return may affect professional development, promotion, opportunity, recognition, collaboration, or long-range goals.",
+    "❤️ Relationship Section — Explains how social circles, important contacts, partnership dynamics, and meaningful new people may enter the cycle.",
+    "🌱 Personal Growth Section — Shows where the user is being pushed to expand beliefs, confidence, knowledge, or life direction.",
+    "🩺 Health Section — Highlights health awareness, emotional balance, routines, and where caution or healing may be needed.",
+    "🏠 Family Section — Explains how home life, roots, emotional foundations, or family transformation may play a role in the cycle.",
+    "🤝 Social Section — Shows the role of community, friendships, groups, networking, and collaborative opportunity.",
+    "🔮 Spiritual Section — Explains deeper inner growth, intuition, philosophy, and the soul-level meaning of the cycle.",
+    "✨ Why This Screen Is Useful — Gives a broad but practical interpretation of the return, organized by life area instead of only technical astrology."
+  ]
+},
+
+{
+  "name": "horoscope_jupiter_return_planet_information",
+  "label": "Jupiter Return: Planet Information",
+  "description": "A detailed planetary data table showing sign, degree, house, speed, retrograde status, and normalized position for the Jupiter Return chart.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Jupiter Return",
+  "purpose": "This screen is generated after the Jupiter Return chart is calculated using the user's DOB, TOB, and POB. It presents the technical placement data for each important return planet and point. The table helps astrologers verify where each body falls by sign and house, how fast it is moving, whether it is retrograde, and how the placement is refined by degree. The purpose of this screen is to support precise interpretation and create the basis for the later narrative planet cards.",
+  "bullets": [
+    "🪐 Planet Column — Shows the planetary body or point being interpreted, such as Moon, Mercury, Venus, Sun, Jupiter, Saturn, Uranus, Neptune, Pluto, Node, or Chiron.",
+    "♈ Sign Column — Shows the zodiac sign where that return placement is located.",
+    "📐 Full Degree Column — Shows the exact zodiac longitude of the placement in the return chart.",
+    "🏠 House Column — Shows which return house the placement occupies, revealing where that energy acts most strongly in life.",
+    "📏 Norm Degree Column — Shows the degree inside the sign itself, helping refine early, middle, or late placement meaning.",
+    "⚡ Speed Column — Shows how quickly the planet is moving, which helps interpret whether the energy is active, slow, steady, or highly emphasized.",
+    "🔁 Retro Column — Shows whether the placement is retrograde, indicating a more inward, revisiting, delayed, or reflective expression.",
+    "🧠 Why This Table Is Useful — Gives astrologers a clean technical reference before moving into interpretive cards and deeper analysis.",
+    "🚀 Practical Use — Useful for accurate chart reading, technical validation, advanced astrology work, and building deeper Jupiter Return interpretations."
+  ]
+},
+{
+  "name": "horoscope_jupiter_return_planet_cards",
+  "label": "Jupiter Return: Planet Interpretation Cards",
+  "description": "Readable Jupiter Return interpretation cards for each planet, combining sign, house, degree, speed, retrograde status, and optional decan marker.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Jupiter Return",
+  "purpose": "This section is generated after the Jupiter Return chart is calculated using the user's date of birth, time of birth, and place of birth. The system creates a separate interpretation card for each important return placement and translates raw chart values into practical meaning. Each card combines the planet, zodiac sign, house, full degree, normalized degree, speed, and retrograde status into an easy-to-read explanation. Some cards also show a small triangle symbol, which means a decan-based interpretation is available. The purpose of this screen is to let users understand the Jupiter Return one placement at a time without needing to read the full chart at once.",
+  "bullets": [
+    "🌙 Moon Card Meaning — Explains the emotional tone of the cycle, instinctive responses, public feeling, and where emotional focus is strongest.",
+    "🧠 Mercury Card Meaning — Explains thinking style, communication, planning, analysis, and how ideas are expressed during the cycle.",
+    "♀ Venus Card Meaning — Explains relationships, attraction, values, beauty, harmony, and social or creative flow in the return.",
+    "🌞 Sun Card Meaning — Explains identity, visibility, confidence, purpose, and the central life direction of the Jupiter cycle.",
+    "♈ Sign + House Synthesis — Each card combines sign and house to explain both how the energy behaves and where it acts.",
+    "📐 Degree Meaning — Uses exact degree and normalized degree to refine the tone of the interpretation.",
+    "⚡ Speed Meaning — Uses planetary speed to show whether the influence is swift, intense, steady, or slow-building.",
+    "🔁 Retrograde Layer — Adds inward, reflective, karmic, or revisiting themes when a return placement is retrograde.",
+    "🔺 Decan Indicator — A small triangle near the planet name means a deeper decan interpretation can be opened for that placement.",
+    "📖 Show More Purpose — The Show More action opens a deeper modal with extra meaning, symbolism, and refined interpretation.",
+    "✨ Why This Screen Is Useful — Makes the return easy to read planet by planet for both astrologers and general users."
+  ]
+},
+
+{
+  "name": "horoscope_jupiter_return_decan_modal",
+  "label": "Jupiter Return: Planet Decan Interpretation",
+  "description": "A deeper symbolic interpretation screen that explains a planet's decan meaning through imagery, tarot-style association, and mythic symbolism.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Jupiter Return",
+  "purpose": "This screen appears when the user clicks the triangle symbol on a Jupiter Return planet card, indicating that a decan interpretation is available. The system first calculates the return chart from DOB, TOB, and POB, then checks the exact degree of the selected planet and determines which 10-degree decan of the zodiac sign it belongs to. In this example, the Moon is shown in Cancer with a decan-specific interpretation. The purpose of this screen is to give a more refined layer of meaning beyond sign and house by using decan symbolism, visual imagery, tarot-style correspondences, mundane themes, and mythic associations.",
+  "bullets": [
+    "🔺 Decan Trigger Meaning — This modal opens only when the selected return planet has a decan marker available.",
+    "📐 What a Decan Means — Each zodiac sign is divided into 3 decans of 10 degrees each, and the exact degree decides which decan the planet belongs to.",
+    "🌙 Planet Decan Focus — The screen explains how the selected planet, such as the Moon, expresses itself in a more nuanced way inside that decan.",
+    "♋ Sign Base Meaning — The base sign gives the main emotional or psychological tone, while the decan adds a secondary influence that refines it.",
+    "🃏 Tarot Layer — The modal may connect the decan to a tarot-style card image to symbolize the deeper psychological or spiritual meaning of the placement.",
+    "🏛 Mundane Force Theme — A concept such as luxury, wealth, endurance, or refinement may be used to explain the real-world style of the decan.",
+    "🏺 Greek Daemon / Mythic Layer — Mythic figures add archetypal meaning and make the decan easier to understand symbolically.",
+    "🖼 Image Representation Purpose — The image helps users grasp the decan visually through symbolism rather than only text.",
+    "🧠 Why This Screen Is Useful — It explains why two people with the same planet in the same sign can still express it differently depending on exact degree.",
+    "📖 Text Toggle Purpose — The modal can allow users to switch between image and text mode for a clearer learning experience.",
+    "🚀 Practical Use — Useful for advanced Jupiter Return reading, refined planet interpretation, symbolic teaching, and deep astrological analysis."
+  ]
+},
+{
+  "name": "horoscope_jupiter_return_deep_planet_analysis",
+  "label": "Jupiter Return: Deep Astrological Analysis",
+  "description": "A deeper interpretation screen for one selected Jupiter Return planet, with expanded meaning and picture representation.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Jupiter Return",
+  "purpose": "This screen opens when the user clicks Show More on a Jupiter Return planet card. The system first uses date of birth, time of birth, and place of birth to calculate the natal chart and the upcoming Jupiter Return chart. Then it selects one return placement for deeper interpretation. In this example, the Sun in Libra in the 1st house is expanded into a fuller reading. The purpose of this screen is to explain how one specific return planet shapes identity, confidence, expression, motivation, and yearly direction, while the picture representation helps astrologers and users understand the symbolic blend of the planet and sign more quickly.",
+  "bullets": [
+    "☀ Selected Planet Focus — This screen analyzes one Jupiter Return planet in detail, such as the Sun, after the user opens the deeper view.",
+    "📍 Planet + Sign + House Meaning — The reading combines the planet itself, the zodiac sign, and the return house to explain both the style and life area of the influence.",
+    "📐 Degree Interpretation — The exact degree refines the reading by showing how the placement expresses itself with extra detail and maturity.",
+    "⚡ Speed Interpretation — The planet's speed is used to explain whether the yearly influence feels steady, active, intensified, or slow-building.",
+    "🔁 Retrograde Interpretation — If the planet is retrograde, the reading can explain inward processing, reflection, revision, or delayed outward expression.",
+    "♎ Sun in Libra Meaning — Shows a year focused on balance, charm, fairness, diplomacy, relationship awareness, and graceful self-expression.",
+    "🏠 Sun in the 1st House Meaning — Shows a year where identity, personal presence, self-development, confidence, and the way others see you become central themes.",
+    "🖼 Picture Representation Purpose — The image visually combines Sun symbolism, Libra qualities, and the merged meaning in the center so the interpretation becomes faster to grasp.",
+    "🎯 Why This Screen Is Useful — It moves beyond the short card summary and gives a fuller psychological and practical reading of one important return placement.",
+    "🚀 Practical Use — Useful for year-ahead identity guidance, client readings, personality focus, and understanding the strongest planet themes inside the Jupiter Return cycle."
+  ]
+},
+
+{
+  "name": "horoscope_jupiter_return_house_information",
+  "label": "Jupiter Return: House Information",
+  "description": "A technical house-cusp table showing the sign and degree of all 12 houses in the Jupiter Return chart.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Jupiter Return",
+  "purpose": "This screen is generated after the Jupiter Return chart is calculated from the user's date of birth, time of birth, and place of birth. It lists all 12 return houses, the zodiac sign on each house cusp, and the exact cusp degree. The purpose of this screen is to give astrologers a clean structural map of the Jupiter Return chart before the house meanings are expanded into narrative interpretation. It shows which signs rule which life areas during the return cycle and where the main themes of the year are organized.",
+  "bullets": [
+    "🏠 House Column — Shows each return house from House 1 to House 12.",
+    "♈ Sign Column — Shows the zodiac sign ruling each house cusp in the Jupiter Return chart.",
+    "📐 Degree Column — Shows the exact zodiac degree for each house cusp, refining interpretation and chart accuracy.",
+    "⬆ 1st House / Ascendant Value — Reveals the personal tone, attitude, self-presentation, and yearly approach to life.",
+    "💰 2nd House Value — Shows how money, resources, self-worth, and material priorities are framed in the return cycle.",
+    "🗣 3rd House Value — Shows communication, learning, close environment, and mental activity themes.",
+    "🏆 10th House Value — Shows career, public image, goals, recognition, and professional direction in the cycle.",
+    "🧠 Why This Table Is Useful — It helps astrologers see the full house structure before reading the detailed house cards.",
+    "📊 Technical Reading Support — Useful for verifying cusp signs and building accurate house-based interpretation.",
+    "🚀 Practical Use — Useful for advanced chart reading, house analysis, client work, and understanding how the Jupiter Return organizes life themes."
+  ]
+},
+{
+  "name": "horoscope_jupiter_return_house_cards",
+  "label": "Jupiter Return: House Interpretation Cards",
+  "description": "Readable house-by-house cards showing how each return house cusp sign shapes specific life areas during the Jupiter Return cycle.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Jupiter Return",
+  "purpose": "This section is generated after the Jupiter Return chart is calculated and the system identifies the sign placed on each return house cusp. The platform then creates short interpretation cards for the houses, explaining what each life area means and how the ruling sign colors that part of the cycle. The screenshot shows the visual house-distribution map plus readable house cards, such as House 1, House 2, House 3, House 4, and House 5. The purpose of this screen is to help users understand the year house by house instead of reading the entire chart at once.",
+  "bullets": [
+    "📊 House Distribution Map — The top visual layout shows where planets fall across the 12 houses, helping astrologers see concentration and house emphasis quickly.",
+    "🏠 House 1 Card — Explains identity, self-image, first impression, personal approach, and how the user enters the new cycle.",
+    "💰 House 2 Card — Explains values, money, possessions, self-worth, and how resources are handled during the return year.",
+    "♍ Example House 1 Meaning — Virgo rising in the return can show a practical, analytical, disciplined, and improvement-focused yearly approach.",
+    "♎ Example House 2 Meaning — Libra on the 2nd house can show financial balance, partnership value, aesthetics, and fairness in resource use.",
+    "📖 Show More Purpose — Each house card can open a deeper modal with fuller interpretation for that specific house.",
+    "✨ Why This Screen Is Useful — It breaks the Jupiter Return into life-area cards so the user can understand the cycle in a simple, organized way."
+  ]
+},
+
+{
+  "name": "horoscope_jupiter_return_dharma_karma",
+  "label": "Jupiter Return: Dharma & Karma",
+  "description": "A focused screen that explains growth path, higher purpose, karmic lessons, and major tension patterns inside the Jupiter Return cycle.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Jupiter Return",
+  "purpose": "This section is generated after the Jupiter Return chart is calculated and the system evaluates purpose-oriented and karmic placements, including Jupiter, the Nodes, Saturn, Pluto, the Moon, and major aspects between them. It separates the reading into Dharma and Karma so users can understand both the path of expansion and the lessons that must be faced. The purpose of this screen is to show where fulfillment, leadership, social contribution, responsibility, emotional release, and maturity are most strongly emphasized in the return cycle.",
+  "bullets": [
+    "✨ Dharma Section — Explains the path of growth, fulfillment, opportunity, and the qualities the user is encouraged to develop during the cycle.",
+    "♃ Jupiter-Based Purpose — Shows how Jupiter placement and supportive aspects reveal expansion, optimism, leadership, and beneficial social or creative development.",
+    "☊ Node Support — The North Node can highlight the direction of growth, purpose, and personal evolution during the return.",
+    "🪨 Karma Section — Explains karmic lessons, pressure points, limitations, emotional burdens, and the maturity work required in the cycle.",
+    "♄ Saturn Lesson Meaning — Saturn often shows responsibility, discipline, delay, structure, and necessary life lessons tied to effort and realism.",
+    "♇ Pluto / Moon Tension Meaning — Deeper aspects can show emotional intensity, authority issues, family pressure, or transformation through challenge.",
+    "⚖ Expansion vs Discipline — The screen helps show where optimism must be balanced with effort, realism, and practical responsibility.",
+    "📖 Show More Purpose — Each Dharma or Karma block can open a deeper explanation for astrologers who want a fuller reading.",
+    "🧠 Why This Screen Is Useful — It helps the user see not only what is opening up in the cycle, but also what must be worked through for lasting growth.",
+    "🚀 Practical Use — Useful for purpose reading, karmic insight, growth planning, and understanding the deeper spiritual and practical lesson of the Jupiter Return."
+  ]
+},
+{
+  "name": "horoscope_jupiter_return_aspects_table",
+  "label": "Jupiter Return: Aspects Table",
+  "description": "A technical aspect table showing planetary relationships, orb closeness, degree differences, and exactness indicators in the Jupiter Return chart.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Jupiter Return",
+  "purpose": "This screen is generated after the Jupiter Return chart is calculated and the system compares planets and points to find major aspects. It presents a structured table showing the aspected planet, the aspecting planet, orb, degree difference, exact degrees, and aspect type. It also includes a proximity color legend so astrologers can quickly see whether an aspect is extremely exact, just past, just before, or farther from exactness. The purpose of this screen is to give a precise technical overview of the most important aspect relationships shaping the return cycle.",
+  "bullets": [
+    "🔭 Aspect Proximity Indicator — The color key shows how close each aspect is to exact, helping astrologers judge strength and immediacy quickly.",
+    "🪐 Aspected Planet Column — Shows the planet or point receiving the aspect.",
+    "☀ Aspecting Planet Column — Shows the planet creating the aspect relationship.",
+    "📏 Orb Column — Shows how far the aspect is from exactness, which strongly affects intensity.",
+    "📐 Diff Column — Shows the degree separation difference used to verify the aspect relationship.",
+    "🎯 Aspect Type Column — Shows whether the relationship is a conjunction, sextile, square, trine, opposition, and so on.",
+    "🏛 Point Inclusion — The table may include special points such as the Midheaven or other important chart markers, not only planets.",
+    "🧠 Why This Table Is Useful — It gives astrologers a fast technical scan of the strongest return dynamics before moving into narrative aspect cards.",
+    "⚖ Exactness Value — Very close aspects usually have stronger and more immediate influence in the return year.",
+    "🚀 Practical Use — Useful for advanced chart work, precise aspect analysis, client explanation, and identifying the dominant energetic patterns of the cycle."
+  ]
+},
+{
+  "name": "horoscope_jupiter_return_aspect_cards",
+  "label": "Jupiter Return: Aspect Interpretation Cards",
+  "description": "Readable aspect cards that explain the main return aspects in simple language, including practical meaning and orb influence.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Jupiter Return",
+  "purpose": "This section is generated after the system calculates the major Jupiter Return aspects and selects the strongest or most meaningful ones for interpretation. Each aspect is turned into a separate readable card, such as Sun sextile Mars or Sun conjunction Mercury. The cards explain the aspect type, the two planets involved, and the practical meaning of that energy during the return cycle. The purpose of this screen is to help users understand the most important aspect themes without needing to read the full technical table.",
+  "bullets": [
+    "☀ Sun Sextile Mars Card — Explains flowing action, confidence, initiative, vitality, productivity, and the ability to act with energy and purpose.",
+    "☀ Sun Conjunction Mercury Card — Explains strong mental focus, communication ability, self-expression, strategy, and the merging of identity with ideas.",
+    "📏 Orb Meaning — The card may mention how close the orb is, helping show whether the aspect is especially strong or more moderate.",
+    "🔗 Aspect Type Meaning — Each card explains the style of the aspect, such as sextile for opportunity and productive flow or conjunction for concentrated emphasis.",
+    "💬 Easy Reading Format — Converts technical aspect data into short readable guidance for quick understanding.",
+    "🎯 Real-Life Meaning — Connects the aspect to practical themes such as confidence, speaking, decisions, leadership, motivation, and problem-solving.",
+    "📖 Show More Purpose — Each card can open a deeper modal with fuller interpretation and visual symbolism.",
+    "✨ Why This Screen Is Useful — It gives a user-friendly summary of the strongest aspects shaping the return year."
+  ]
+},
+{
+  "name": "horoscope_jupiter_return_deep_aspect_analysis",
+  "label": "Jupiter Return: Deep Aspect Analysis",
+  "description": "A detailed interpretation screen for one selected Jupiter Return aspect, with expanded text and picture representation.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Jupiter Return",
+  "purpose": "This screen opens when the user clicks Show More on a Jupiter Return aspect card. The system selects one important aspect and explains it in much greater depth. In this example, Sun sextile Mars is expanded into a fuller psychological and practical reading. The purpose of this screen is to show how one exact aspect influences energy, action, confidence, leadership, resourcefulness, and life direction during the return cycle, while the picture representation gives a faster symbolic understanding of the blended planetary forces.",
+  "bullets": [
+    "🔗 Selected Aspect Focus — This screen explains one key aspect in depth, such as Sun sextile Mars.",
+    "☀ Sun Meaning Layer — The Sun represents identity, purpose, confidence, vitality, visibility, and conscious direction.",
+    "♂ Mars Meaning Layer — Mars represents drive, action, courage, desire, momentum, conflict style, and initiative.",
+    "✨ Sextile Meaning Layer — A sextile shows support, opportunity, constructive movement, and productive cooperation between two energies.",
+    "📏 Close Orb Meaning — A very close orb increases the power, immediacy, and practical usefulness of the aspect in the return cycle.",
+    "📖 Expanded Interpretation — The long text explains how the aspect may appear in leadership, problem-solving, confidence, motivation, and action under pressure.",
+    "🖼 Picture Representation Purpose — The image visually breaks the aspect into Sun qualities, Mars qualities, and the combined supportive field in the center.",
+    "🌞 Left Visual Field — Shows the Sun-side traits such as confidence, purpose, identity, radiance, focus, and self-expression.",
+    "♂ Right Visual Field — Shows the Mars-side traits such as drive, bravery, heat, combativeness, passion, strength, and action.",
+    "🤝 Center Blend Meaning — Shows the merged aspect qualities such as synergy, empowerment, resourcefulness, momentum, proactive energy, and harmonious action.",
+    "🎯 Why This Screen Is Useful — It helps astrologers and users move beyond the short aspect summary into deeper life meaning and symbolic understanding.",
+    "🚀 Practical Use — Useful for deep client readings, leadership and motivation analysis, action timing, and advanced Jupiter Return aspect interpretation."
+  ]
+},
+{
+  "name": "horoscope_jupiter_return_additional_aspect_cards",
+  "label": "Jupiter Return: Additional Aspect Interpretation Cards",
+  "description": "Readable Jupiter Return aspect cards that explain major supportive and challenging aspect patterns with practical yearly meaning.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Jupiter Return",
+  "purpose": "This section is generated after the system calculates the Jupiter Return chart from the user's date of birth, time of birth, and place of birth, then compares the return planets and points to identify the strongest aspect patterns. The platform converts each important aspect into a separate readable card so the user can understand the main message quickly. In this screen, aspects such as Jupiter sextile Venus and Jupiter square Saturn explain how growth, abundance, responsibility, discipline, values, opportunities, and long-term effort interact during the Jupiter Return cycle. The purpose of this screen is to help astrologers and users understand where expansion flows easily and where maturity, patience, and structural effort are required.",
+  "bullets": [
+    "♃ Jupiter Sextile Venus Card — Explains a supportive connection between growth, abundance, attraction, values, harmony, relationships, and opportunities for pleasant expansion.",
+    "💛 Meaning of Jupiter Sextile Venus — This aspect often shows easier luck, social grace, material support, generosity, creative flow, and the ability to attract helpful people or beneficial conditions.",
+    "♃ Jupiter Square Saturn Card — Explains tension between expansion and limitation, optimism and realism, opportunity and duty, or desire for growth versus the need for structure.",
+    "🪨 Meaning of Jupiter Square Saturn — This aspect often shows a lesson in balancing ambition with patience, faith with discipline, and possibility with practical responsibility.",
+    "📏 Orb Interpretation — Each card uses the orb value to explain how strongly the aspect is felt and how exact or active it is in the Jupiter Return chart.",
+    "⚖ Support vs Pressure Insight — Helps show which aspects bring natural ease and which require conscious effort, maturity, and strategic handling.",
+    "💬 Easy Reading Format — Converts technical aspect relationships into practical yearly guidance for both astrologers and general users.",
+    "📖 Show More Purpose — Each aspect card can open a deeper analysis screen with expanded interpretation and symbolic picture representation.",
+    "🧠 Why This Screen Is Useful — It helps users understand the most important return aspects without reading the full technical aspect table.",
+    "🚀 Practical Use — Useful for yearly forecasting, abundance timing, growth planning, responsibility awareness, client readings, and identifying major supportive or challenging aspect themes in the Jupiter Return cycle."
+  ]
+},
+
+{
+  "name": "horoscope_jupiter_return_jupiter_square_saturn_modal",
+  "label": "Jupiter Return: Deep Aspect Analysis — Jupiter Square Saturn",
+  "description": "A detailed modal interpretation of Jupiter square Saturn, with expanded meaning and symbolic picture representation.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Jupiter Return",
+  "purpose": "This screen opens when the user clicks Show More on the Jupiter square Saturn aspect card inside the Jupiter Return reading. The system first calculates the Jupiter Return chart from the user's DOB, TOB, and POB, then identifies Jupiter square Saturn as one of the meaningful aspects of the cycle. The modal gives a deeper explanation of how the desire for expansion, optimism, and opportunity represented by Jupiter interacts with the discipline, pressure, and structural demands represented by Saturn. The purpose of this screen is to help astrologers and users understand the psychological, practical, and symbolic meaning of this tension, while the picture representation visually breaks down Jupiter traits, Saturn traits, and the square's central challenge.",
+  "bullets": [
+    "♃ Jupiter Meaning Layer — Jupiter represents growth, expansion, confidence, optimism, opportunity, learning, vision, abundance, and the desire to move beyond current limits.",
+    "♄ Saturn Meaning Layer — Saturn represents discipline, duty, structure, responsibility, patience, boundaries, realism, long-term effort, and earned stability.",
+    "□ Square Meaning Layer — A square is a tension aspect that creates friction, pressure, challenge, and the need for adjustment, integration, or conscious effort.",
+    "📏 Orb Strength Meaning — The orb helps show how strongly the aspect is active in the return cycle, with a tighter orb indicating stronger immediate influence.",
+    "🧠 Psychological Interpretation — Explains the inner conflict between wanting to expand quickly and needing to proceed carefully, realistically, and with greater maturity.",
+    "🎯 Practical Life Interpretation — Shows how this aspect may appear through delays, work pressure, responsibility, overextension, hesitation, or the need to build a stronger foundation before growth can stabilize.",
+    "🖼 Picture Representation Purpose — The visual layout helps users understand Jupiter on one side, Saturn on the other, and the center square field as the point of tension and lesson.",
+    "♃ Left Visual Field — Shows Jupiter qualities such as optimism, abundance, philosophy, opportunity, travel, expansion, inspiration, and generosity.",
+    "♄ Right Visual Field — Shows Saturn qualities such as discipline, boundaries, perseverance, endurance, accountability, authority, practicality, and structure.",
+    "□ Center Conflict Field — Shows the square's tension themes such as delays, restriction, misalignment, missed opportunities, practical challenges, burden, hesitation, and imbalance.",
+    "✨ Growth Through Pressure — This aspect often becomes a source of strength when the user learns to balance ambition with discipline and hope with realism.",
+    "📖 Why This Screen Is Useful — It gives much deeper meaning than the short aspect card and helps astrologers explain the aspect as a life lesson rather than only a difficulty.",
+    "🚀 Practical Use — Useful for yearly challenge analysis, growth-through-discipline insight, advanced client readings, and understanding why this Jupiter cycle may demand patience before expansion becomes stable."
+  ]
+},
+
+{
+  "name": "horoscope_jupiter_return_angles_points",
+  "label": "Jupiter Return: Ascendant, Midheaven & Vertex",
+  "description": "A focused interpretation screen for the Jupiter Return Ascendant, Midheaven, and Vertex, showing personal tone, career direction, and pivotal encounter themes.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Jupiter Return",
+  "purpose": "This section is generated after the Jupiter Return chart is calculated from the user's date of birth, time of birth, and place of birth. The system identifies important chart points such as the Ascendant, Midheaven, and Vertex, then calculates their exact degrees and zodiac signs inside the Jupiter Return chart. The purpose of this screen is to help astrologers and users understand the personal tone of the cycle, the public or career direction of the year, and the meaningful encounters or turning points that may arise. It translates exact angular and point data into clear yearly interpretation.",
+  "bullets": [
+    "⬆ Ascendant Degree Meaning — Shows the exact degree of the return Ascendant and explains the user's personal style, approach to life, first impression, and the overall tone of the Jupiter Return cycle.",
+    "♍ Ascendant in Virgo Example — Virgo rising in the return can show a year centered on precision, analysis, order, refinement, practical self-management, and careful observation.",
+    "🏆 Midheaven Degree Meaning — Shows the exact degree of the Midheaven and explains career direction, public image, ambition, professional visibility, and how the user moves toward achievement.",
+    "♊ Midheaven in Gemini Example — Gemini on the Midheaven can show a year of communication, adaptability, learning, speaking, writing, networking, versatility, and intellectually active career development.",
+    "✨ Vertex Degree Meaning — Shows the exact degree of the Vertex and explains important encounters, meaningful turning points, fate-like openings, and people or situations that may strongly influence the cycle.",
+    "♈ Vertex in Aries Example — Aries on the Vertex can show bold encounters, action-driven turning points, leadership tests, initiative, courage, and pivotal moments that require independence and self-assertion.",
+    "📐 Exact Degree Refinement — The interpretation uses the precise degree values to refine how the angular points are expressed and how strongly they may be felt.",
+    "🧠 Why These Points Matter — The Ascendant, Midheaven, and Vertex are major directional points that help explain the personal, public, and fated tone of the return cycle.",
+    "💬 Easy Reading Format — Converts technical angular and point data into simple practical guidance so users can understand the message clearly.",
+    "🚀 Practical Use — Useful for yearly identity guidance, career forecasting, public-path interpretation, encounter timing, and understanding the strongest directional points of the Jupiter Return."
+  ]
+},
+{
+  "name": "horoscope_jupiter_return_lilith_information",
+  "label": "Jupiter Return: Lilith Interpretation",
+  "description": "A focused Lilith screen showing sign, degree, house, speed, retrograde status, and the deeper interpretive meaning of Lilith in the Jupiter Return chart.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Jupiter Return",
+  "purpose": "This section is generated after the Jupiter Return chart is calculated using the user's date of birth, time of birth, and place of birth. The system identifies Lilith's exact sign, degree, house, speed, and retrograde status in the return chart, then translates that placement into a readable interpretation. The purpose of this screen is to help astrologers and users understand the raw, shadow, instinctive, and uncompromising themes that may become active during the Jupiter Return cycle. In this example, Lilith in Leo in the 11th house highlights issues of recognition, authenticity, group belonging, self-expression, and the desire to be seen without losing individuality.",
+  "bullets": [
+    "⚫ Lilith Placement Data — Shows Lilith's sign, full degree, house, normalized degree, speed, and retrograde status for accurate technical interpretation.",
+    "♌ Lilith in Leo Meaning — Lilith in Leo often emphasizes pride, visibility, recognition, creative self-expression, dignity, passion, and the need to be seen as unique and authentic.",
+    "🏠 Lilith in the 11th House Meaning — The 11th house links Lilith to groups, friendships, social networks, communities, future goals, collective belonging, and one's role inside wider circles.",
+    "✨ Combined Meaning — Lilith in Leo in the 11th house can show a powerful wish to shine inside communities while also revealing sensitivity around being ignored, overshadowed, or not fully appreciated by the group.",
+    "📐 Degree Meaning — The exact degree refines the intensity and tone of the placement, helping astrologers read the placement with more precision.",
+    "⚡ Speed Meaning — Lilith's speed can help describe whether the influence feels more active, subtle, or gradually unfolding in the return cycle.",
+    "🔁 Retrograde Status — If Lilith were retrograde, it could add inward shadow processing, but in this example the direct motion emphasizes a more outward expression.",
+    "🧠 Shadow and Authenticity Theme — This screen helps explain where the user may confront issues of approval, individuality, creative truth, and the courage to belong without conforming.",
+    "💬 Easy Reading Format — Converts technical Lilith data into a direct readable interpretation that users can understand without deep technical astrology knowledge.",
+    "🚀 Practical Use — Useful for shadow work insight, group-dynamics analysis, self-expression themes, authenticity guidance, and advanced Jupiter Return interpretation."
+  ]
+},
+      // ------------------Saturn Return------------------//
+      {
+  "name": "horoscope_saturn_return_entry_setup",
+  "label": "Saturn Return: Entry & Generation Setup",
+  "description": "Enter birth details to generate the full Saturn Return reading and result screens in sequence.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Saturn Return",
+  "purpose": "This is the first screen of the Saturn Return module. The user must enter date of birth, time of birth, and place of birth. These three birth details are required because the system uses them to calculate the natal chart accurately and identify the exact natal position of Saturn. After all required birth fields are filled correctly, the Generate Reading button becomes active. Once the user clicks Generate Reading, the platform calculates the next exact Saturn Return date and builds the full Saturn Return reading screen by screen. The generated response depends on DOB, TOB, and POB because those details affect natal Saturn's sign, degree, house placement, chart angles, house cusps, return chart structure, aspects, karmic themes, maturity lessons, and all deeper interpretations. This setup screen is important because if birth time or birth place is incorrect, the Saturn Return analysis, timing, and life-area interpretation may also change.",
+  "bullets": [
+    "📅 Step 1 — Enter Date of Birth: The user enters the birth date so the system can calculate the natal planetary positions and locate natal Saturn correctly.",
+    "🕒 Step 2 — Enter Time of Birth: The user enters the exact birth time because Ascendant, house cusps, chart angles, and Saturn's natal house placement depend on correct timing.",
+    "📍 Step 3 — Enter Place of Birth: The user enters the birth place so the system can use the correct geographic coordinates and timezone for accurate natal and return chart calculation.",
+    "📝 Step 4 — Area of Inquiry (Optional): The user may enter a focus such as career pressure, life lessons, relationships, responsibility, finances, maturity, restructuring, or spiritual growth.",
+    "✅ Step 5 — Generate Reading Activation: After the required birth details are completed correctly, the Generate Reading button becomes enabled.",
+    "📊 Result Screen 1 — Chart View: The system generates the Saturn Return wheel charts so the user can visually see the return chart structure, planetary placements, and overall aspect pattern.",
+    "📋 Result Screen 2 — Return Data & Positions: The platform shows the birth reference, natal Saturn placement, next Saturn Return date, house system, and key planetary positions in the return chart.",
+    "🌟 Result Screen 3 — Upcoming Saturn Return Analysis: The reading explains the general meaning of the new Saturn cycle across life areas such as career, relationships, personal growth, health, family, social life, and spirituality.",
+    "🪐 Result Screen 4 — Planet Information & Planet Cards: The system shows detailed planetary data and then generates readable interpretation cards for important return planets such as Moon, Mercury, Venus, Sun, Saturn, and others.",
+    "🔺 Result Screen 5 — Decan Interpretation Modal: If a triangle decan symbol is present on a planet card, the user can open a deeper decan-based image or text interpretation for that placement.",
+    "🏠 Result Screen 6 — House Information & House Cards: The platform shows the return house table, house distribution view, and individual house interpretation cards explaining how each life area is shaped during the cycle.",
+    "✨ Result Screen 7 — Dharma, Karma, and Key Points: The reading highlights fulfillment themes, karmic lessons, and important points such as Ascendant, Midheaven, Vertex, and Lilith for deeper cycle understanding.",
+    "🔗 Result Screen 8 — Aspects, Aspect Cards, and Deep Aspect Analysis: The system shows the technical aspect table, readable aspect summary cards, and deeper aspect modals with symbolic picture representation for major return aspects."
+  ]
+},
+     {
+  "name": "horoscope_saturn_return_chart",
+  "label": "Saturn Return: Chart View",
+  "description": "Visual wheel charts showing the full Saturn Return pattern and planetary aspect structure.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Saturn Return",
+  "purpose": "This screen is generated after the user enters date of birth, time of birth, and place of birth. The system first calculates the natal chart, identifies natal Saturn, then finds the next time transiting Saturn returns to the same zodiac degree and sign as natal Saturn. After that, it builds the Saturn Return chart and displays it in wheel format. The left wheel shows the full Western chart with signs, houses, planets, and angles. The right wheel highlights the aspect geometry so astrologers can quickly see the relationship pattern between planets. The purpose of this screen is to help users understand the structure of the Saturn Return cycle visually before moving into deeper interpretation about maturity, responsibility, karmic lessons, and long-term life restructuring.",
+  "bullets": [
+    "🪐 Saturn Return Basis — The chart is created when transiting Saturn returns to its natal sign and degree, marking a major maturity cycle and life restructuring phase.",
+    "📅 Birth Data Based Generation — Uses DOB, TOB, and POB to calculate the natal chart, natal Saturn position, and the exact upcoming Saturn Return chart.",
+    "🌌 Left Wheel Chart Meaning — Shows the full Saturn Return chart with planets, signs, houses, and angles for complete return-cycle interpretation.",
+    "📐 Right Aspect Chart Meaning — Shows planetary aspect geometry so supportive, tense, and transformational patterns can be understood more quickly.",
+    "🏠 House Activation Value — Helps reveal which life areas are most strongly emphasized during the Saturn Return cycle, such as money, career, relationships, duty, or inner growth.",
+    "🧠 Why This Screen Is Useful — Gives a visual foundation for the Saturn Return reading before the user moves into tables, positions, and narrative interpretation.",
+    "🚀 Practical Use — Useful for cycle forecasting, maturity milestones, life restructuring analysis, and understanding the overall energetic structure of the Saturn Return."
+  ]
+},
+{
+  "name": "horoscope_saturn_return_positions",
+  "label": "Saturn Return: Return Data & Positions",
+  "description": "A technical summary of the Saturn Return chart, including birth reference, return date, and major planetary placements.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Saturn Return",
+  "purpose": "This screen is generated after the system calculates the user's Saturn Return from date of birth, time of birth, and place of birth. It presents the core technical data needed for interpretation, including birth details, house system, natal Saturn position, next Saturn Return date, and the sign-house placements of key planets and points in the return chart. The purpose of this screen is to give astrologers a quick structural overview of the Saturn Return before moving into narrative analysis. It helps users see exactly where Saturn is returning, which houses are activated, and which planets are retrograde or especially important in the new cycle of maturity and responsibility.",
+  "bullets": [
+    "📅 Birth Reference Row — Shows the user's date of birth, place of birth, and time of birth used to calculate the natal and Saturn Return charts.",
+    "🏛 House System — Shows which house system is used for the return interpretation, such as Whole Sign.",
+    "♄ Saturn At Birth — Shows natal Saturn's original sign, degree, and house, which becomes the anchor point for calculating the Saturn Return.",
+    "🔄 Next Saturn Return Date — Shows the exact future date when Saturn returns to its natal position and the new Saturn cycle begins.",
+    "📍 Positions Section — Lists the major placements of Ascendant, Saturn, Moon, Sun, Mercury, Venus, Mars, Jupiter, Uranus, Neptune, Pluto, Nodes, and other important return points.",
+    "🔁 Retrograde Visibility — Helps astrologers identify which return placements are retrograde, adding a reflective, delayed, karmic, or inner-processing tone to that part of the cycle.",
+    "🧠 Why This Screen Is Useful — Gives a precise technical map of the Saturn Return chart so deeper interpretation can be built on clearly visible placements.",
+    "🚀 Practical Use — Useful for astrologers, advanced users, technical chart checking, and preparing the deeper Saturn Return reading."
+  ]
+},
+{
+  "name": "horoscope_saturn_return_analysis_v1",
+  "label": "Saturn Return: Upcoming Cycle Analysis",
+  "description": "A life-area reading of the upcoming Saturn Return, explaining how the new cycle may affect growth, career, relationships, health, family, and spiritual direction.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Saturn Return",
+  "purpose": "This section is generated after the Saturn Return chart is calculated from the user's DOB, TOB, and POB. The system analyzes Saturn's sign and house placement, along with major aspects to other return and natal factors, and translates the result into life-area guidance. This screen explains how the new Saturn cycle may influence general life direction, career responsibilities, relationships, personal growth, health patterns, family matters, social restructuring, and spiritual maturity. The purpose is to turn technical Saturn Return placements into a readable roadmap for the years surrounding this major maturity threshold.",
+  "bullets": [
+    "🪨 General Theme — Explains the overall tone of the Saturn Return, such as responsibility, reevaluation, restructuring, maturity, realism, and long-term foundation building.",
+    "💼 Career Section — Shows how the return may affect professional ambition, recognition, pressure, responsibility, leadership, financial stability, and structural career decisions.",
+    "❤️ Relationship Section — Explains how the cycle may reshape social connections, friendship quality, communication maturity, and relationship boundaries.",
+    "🌱 Personal Growth Section — Shows where the user is being challenged to develop self-discipline, responsibility, stronger identity, and emotional maturity.",
+    "🩺 Health Section — Highlights routines, stress management, physical discipline, balance, and where extra caution or healing attention may be required.",
+    "🏠 Family Section — Explains how home life, family roles, emotional obligations, and inner foundations may become part of the Saturn lesson.",
+    "🤝 Social Section — Shows how the user's social circle may be tested, refined, matured, or restructured during the return.",
+    "🔮 Spiritual Section — Explains deeper inner growth, belief re-evaluation, and the development of grounded wisdom through life experience.",
+    "✨ Why This Screen Is Useful — Gives a broad but practical interpretation of the Saturn Return, organized by life area instead of only technical astrology."
+  ]
+},
+
+{
+  "name": "horoscope_saturn_return_planet_information",
+  "label": "Saturn Return: Planet Information",
+  "description": "A detailed planetary data table showing sign, degree, house, speed, retrograde status, and normalized position for the Saturn Return chart.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Saturn Return",
+  "purpose": "This screen is generated after the Saturn Return chart is calculated using the user's DOB, TOB, and POB. It presents the technical placement data for each important return planet and point. The table helps astrologers verify where each body falls by sign and house, how fast it is moving, whether it is retrograde, and how the placement is refined by degree. The purpose of this screen is to support precise interpretation and create the basis for the later narrative planet cards.",
+  "bullets": [
+    "🪐 Planet Column — Shows the planetary body or point being interpreted, such as Moon, Mercury, Venus, Sun, Mars, Jupiter, Saturn, Uranus, Neptune, Pluto, Node, Chiron, or Part of Fortune.",
+    "♈ Sign Column — Shows the zodiac sign where that return placement is located.",
+    "📐 Full Degree Column — Shows the exact zodiac longitude of the placement in the Saturn Return chart.",
+    "🏠 House Column — Shows which return house the placement occupies, revealing where that energy acts most strongly in life.",
+    "📏 Norm Degree Column — Shows the degree inside the sign itself, helping refine whether the placement is early, middle, or late in expression.",
+    "⚡ Speed Column — Shows how quickly the planet is moving, helping interpret whether the energy is active, slow, steady, or highly emphasized.",
+    "🔁 Retro Column — Shows whether the placement is retrograde, indicating a more inward, revisiting, reflective, or karmic expression.",
+    "🧠 Why This Table Is Useful — Gives astrologers a clean technical reference before moving into interpretive cards and deeper analysis.",
+    "🚀 Practical Use — Useful for accurate chart reading, technical validation, advanced astrology work, and building deeper Saturn Return interpretations."
+  ]
+},
+
+{
+  "name": "horoscope_saturn_return_planet_cards",
+  "label": "Saturn Return: Planet Interpretation Cards",
+  "description": "Readable Saturn Return interpretation cards for each planet, combining sign, house, degree, speed, retrograde status, and optional decan marker.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Saturn Return",
+  "purpose": "This section is generated after the Saturn Return chart is calculated using the user's date of birth, time of birth, and place of birth. The system creates a separate interpretation card for each important return placement and translates raw chart values into practical meaning. Each card combines the planet, zodiac sign, house, full degree, normalized degree, speed, and retrograde status into an easy-to-read explanation. Some cards also show a small triangle symbol, which means a decan-based interpretation is available. The purpose of this screen is to let users understand the Saturn Return one placement at a time without needing to read the full chart at once.",
+  "bullets": [
+    "🌙 Moon Card Meaning — Explains the emotional tone of the cycle, instinctive responses, social or personal belonging, and where emotional fulfillment is strongest.",
+    "🧠 Mercury Card Meaning — Explains thinking style, communication pattern, planning ability, ambition expression, and how ideas are communicated during the Saturn Return.",
+    "♀ Venus Card Meaning — Explains relationships, attraction, values, social charm, pleasure, and how connection and affection are expressed in the cycle.",
+    "🌞 Sun Card Meaning — Explains identity, confidence, self-expression, public direction, and the main life purpose emphasized during the Saturn Return.",
+    "♈ Sign + House Synthesis — Each card combines sign and house to explain both how the energy behaves and where it acts most strongly.",
+    "📐 Degree Meaning — Uses exact degree and normalized degree to refine the tone and maturity of the interpretation.",
+    "⚡ Speed Meaning — Uses planetary speed to show whether the influence is swift, intense, steady, or slow-building.",
+    "🔁 Retrograde Layer — Adds inward, reflective, karmic, or revisiting themes when a return placement is retrograde.",
+    "🔺 Decan Indicator — A small triangle near the planet name means a deeper decan interpretation can be opened for that placement.",
+    "📖 Show More Purpose — The Show More action opens a deeper modal with expanded meaning, symbolism, and refined interpretation.",
+    "✨ Why This Screen Is Useful — Makes the Saturn Return easy to read planet by planet for both astrologers and general users."
+  ]
+},
+
+{
+  "name": "horoscope_saturn_return_decan_modal",
+  "label": "Saturn Return: Planet Decan Interpretation",
+  "description": "A deeper symbolic interpretation screen that explains a planet's decan meaning through imagery, tarot-style association, and mythic symbolism.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Saturn Return",
+  "purpose": "This screen appears when the user clicks the triangle symbol on a Saturn Return planet card, indicating that a decan interpretation is available. The system first calculates the Saturn Return chart from DOB, TOB, and POB, then checks the exact degree of the selected planet and determines which 10-degree decan of the zodiac sign it belongs to. In this example, the Moon is shown in Taurus with a decan-specific interpretation. The purpose of this screen is to give a more refined layer of meaning beyond sign and house by using decan symbolism, visual imagery, tarot-style correspondences, mundane themes, and mythic associations.",
+  "bullets": [
+    "🔺 Decan Trigger Meaning — This modal opens only when the selected return planet has a decan marker available.",
+    "📐 What a Decan Means — Each zodiac sign is divided into 3 decans of 10 degrees each, and the exact degree decides which decan the planet belongs to.",
+    "🌙 Planet Decan Focus — The screen explains how the selected planet, such as the Moon, expresses itself in a more nuanced way inside that decan.",
+    "♉ Sign Base Meaning — The base sign gives the main emotional or psychological tone, while the decan adds a secondary influence that refines it.",
+    "🃏 Tarot Layer — The modal may connect the decan to a tarot-style card image to symbolize the deeper psychological or spiritual meaning of the placement.",
+    "🏛 Mundane Force Theme — A concept such as success, luxury, wealth, endurance, or fulfillment may be used to explain the real-world style of the decan.",
+    "🏺 Greek or Mythic Figure Layer — Mythic figures add archetypal meaning and make the decan easier to understand symbolically.",
+    "🖼 Image Representation Purpose — The image helps users grasp the decan visually through symbolism rather than only text.",
+    "🧠 Why This Screen Is Useful — It explains why two people with the same planet in the same sign can still express it differently depending on exact degree.",
+    "📖 Text Toggle Purpose — The modal can allow users to switch between image and text mode for a clearer learning experience.",
+    "🚀 Practical Use — Useful for advanced Saturn Return reading, refined planet interpretation, symbolic teaching, and deep astrological analysis."
+  ]
+},
+
+{
+  "name": "horoscope_saturn_return_house_information",
+  "label": "Saturn Return: House Information",
+  "description": "A technical house-cusp table showing the sign and degree of all 12 houses in the Saturn Return chart.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Saturn Return",
+  "purpose": "This screen is generated after the Saturn Return chart is calculated from the user's date of birth, time of birth, and place of birth. It lists all 12 return houses, the zodiac sign on each house cusp, and the exact cusp degree. The purpose of this screen is to give astrologers a clear structural map of the Saturn Return chart before the house meanings are expanded into narrative interpretation. It shows which signs rule which life areas during the return cycle and where the main themes of responsibility, restructuring, and growth are organized.",
+  "bullets": [
+    "🏠 House Column — Shows each return house from House 1 to House 12.",
+    "♈ Sign Column — Shows the zodiac sign ruling each house cusp in the Saturn Return chart.",
+    "📐 Degree Column — Shows the exact zodiac degree for each house cusp, refining interpretation and chart precision.",
+    "⬆ 1st House / Ascendant Value — Reveals the personal tone, attitude, self-presentation, and yearly approach to life.",
+    "💰 2nd House Value — Shows how money, values, self-worth, and material security are structured in the return cycle.",
+    "🗣 3rd House Value — Shows communication, learning, nearby environment, and daily mental pattern themes.",
+    "🏆 10th House Value — Shows career, public image, ambition, authority, and long-term professional direction.",
+    "🧠 Why This Table Is Useful — It helps astrologers see the full house structure before reading the detailed house cards.",
+    "📊 Technical Reading Support — Useful for verifying cusp signs and building accurate house-based interpretation.",
+    "🚀 Practical Use — Useful for advanced chart reading, house analysis, client work, and understanding how the Saturn Return organizes life themes."
+  ]
+},
+{
+  "name": "horoscope_saturn_return_house_cards_part_1",
+  "label": "Saturn Return: House Interpretation Cards — Part 1",
+  "description": "Readable house-by-house cards showing how the early houses of the Saturn Return chart shape personal identity, values, and communication.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Saturn Return",
+  "purpose": "This section is generated after the Saturn Return chart is calculated and the system identifies the sign placed on each return house cusp. The platform then creates short interpretation cards for the houses, explaining what each life area means and how the ruling sign colors that part of the Saturn Return cycle. This first screen includes the visual house-distribution map and the first set of house cards, including House 1 and House 2. The purpose is to help users understand the cycle in life-area form instead of reading the whole chart all at once.",
+  "bullets": [
+    "📊 House Distribution Map — The top visual layout shows where planets fall across the 12 houses, helping astrologers see concentration and life-area emphasis quickly.",
+    "🏠 House 1 Card — Explains identity, self-image, first impression, emotional approach, and how the user enters the Saturn Return cycle.",
+    "♋ Cancer Rising Example — Cancer on the Ascendant can show a year of stronger sensitivity, nurturing instincts, family connection, emotional self-protection, and seeking security.",
+    "💰 House 2 Card — Explains values, money, possessions, self-worth, and how material security is handled during the Saturn Return.",
+    "♌ Leo on the 2nd House Example — Leo on the 2nd house can show strong pride in values, desire for recognition through what one creates or owns, generosity, and lessons around worth and display.",
+    "📖 Show More Purpose — Each house card can open a deeper modal with fuller interpretation for that specific house.",
+    "✨ Why This Screen Is Useful — It breaks the Saturn Return into early life-area cards so the user can understand the cycle in a structured and simple way."
+  ]
+},
+
+{
+  "name": "horoscope_saturn_return_house_cards_part_2",
+  "label": "Saturn Return: House Interpretation Cards — Part 2",
+  "description": "Readable house-by-house cards showing how the next houses of the Saturn Return chart shape communication, home life, creativity, and emotional development.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Saturn Return",
+  "purpose": "This section continues the Saturn Return house interpretation sequence after the house cusps are calculated from the user's DOB, TOB, and POB. The system converts each house-sign combination into readable cards so the user can understand the life areas affected by the Saturn Return. This screen focuses on House 3, House 4, and House 5, showing how learning, home, family, creativity, romance, and self-expression are colored during the return cycle.",
+  "bullets": [
+    "🗣 House 3 Card — Explains communication, learning, writing, problem-solving, mental style, siblings, and nearby environment.",
+    "♍ Virgo on the 3rd House Example — Virgo ruling the 3rd house can show analytical thinking, precision, careful speech, strong observation, and a methodical learning style.",
+    "🏡 House 4 Card — Explains home, roots, family, emotional security, private life, and the inner foundation of the Saturn Return cycle.",
+    "♎ Libra on the 4th House Example — Libra on the 4th house can show the need for peace, fairness, beauty, partnership, and balance within the home and family dynamic.",
+    "🎨 House 5 Card — Explains creativity, self-expression, romance, joy, passion, children, and the desire to bring something meaningful into life.",
+    "♏ Scorpio on the 5th House Example — Scorpio in the 5th house can show intense creative drive, deep emotional connections, transformative romance, and a powerful urge to express hidden depths.",
+    "📖 Show More Purpose — Each house card can open a deeper interpretation modal for fuller astrologer-level insight.",
+    "✨ Why This Screen Is Useful — It helps users understand the Saturn Return through specific life themes instead of only technical chart data."
+  ]
+},
+
+{
+  "name": "horoscope_saturn_return_dharma_karma",
+  "label": "Saturn Return: Dharma & Karma",
+  "description": "A focused screen that explains growth path, higher purpose, karmic lessons, and maturity challenges inside the Saturn Return cycle.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Saturn Return",
+  "purpose": "This section is generated after the Saturn Return chart is calculated and the system evaluates purpose-oriented and karmic placements, including Saturn, Jupiter, the Nodes, Neptune, and important aspects between them. It separates the reading into Dharma and Karma so users can understand both the path of fulfillment and the major lessons that must be faced. The purpose of this screen is to show where service, spiritual understanding, self-worth, financial responsibility, belief restructuring, and grounded maturity are most emphasized in the Saturn Return cycle.",
+  "bullets": [
+    "✨ Dharma Section — Explains the path of growth, meaning, fulfillment, and the qualities the user is encouraged to develop during the Saturn Return.",
+    "♃ Jupiter-Based Purpose — Shows how Jupiter placement and supportive aspects reveal opportunity through service, learning, routine improvement, and broader philosophical understanding.",
+    "🧠 Mercury Support — Helpful Mercury aspects can show that communication, confidence, clarity, and learning are key tools for moving toward one's purpose.",
+    "🔮 Neptune Link — Supportive Neptune themes can show spiritual insight, intuitive growth, and deeper understanding of purpose through inner awareness.",
+    "🪨 Karma Section — Explains karmic lessons, pressure points, emotional burdens, financial or self-worth challenges, and the maturity work required in the cycle.",
+    "♄ Saturn Lesson Meaning — Saturn often shows responsibility, structure, boundaries, hardship, and the life lessons that shape lasting inner strength.",
+    "☋ South Node Meaning — The South Node can point to old tendencies, familiar patterns, spiritual escape habits, or beliefs that must be released for growth.",
+    "⚖ Reality vs Idealism — The screen helps show where dreams and spiritual ideals must be grounded in practical action, responsibility, and stronger values.",
+    "📖 Show More Purpose — Each Dharma or Karma block can open a deeper explanation for astrologers who want a fuller reading.",
+    "🧠 Why This Screen Is Useful — It helps the user see not only what is opening up in the Saturn cycle, but also what must be faced, disciplined, and transformed for real maturity."
+  ]
+},
+
+{
+  "name": "horoscope_saturn_return_aspects_table",
+  "label": "Saturn Return: Aspects Table",
+  "description": "A technical aspect table showing planetary relationships, orb closeness, degree differences, and exactness indicators in the Saturn Return chart.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Saturn Return",
+  "purpose": "This screen is generated after the Saturn Return chart is calculated and the system compares planets and points to find major aspects. It presents a structured table showing the aspected planet, the aspecting planet, orb, degree difference, exact degrees, and aspect type. It also includes a proximity color legend so astrologers can quickly see whether an aspect is extremely exact, just past, just before, or farther from exactness. The purpose of this screen is to give a precise technical overview of the most important aspect relationships shaping the Saturn Return cycle.",
+  "bullets": [
+    "🔭 Aspect Proximity Indicator — The color key shows how close each aspect is to exact, helping astrologers judge strength and immediacy quickly.",
+    "🪐 Aspected Planet Column — Shows the planet or point receiving the aspect.",
+    "☀ Aspecting Planet Column — Shows the planet creating the aspect relationship.",
+    "📏 Orb Column — Shows how far the aspect is from exactness, which strongly affects its intensity.",
+    "📐 Diff Column — Shows the degree separation difference used to verify the aspect relationship.",
+    "🎯 Aspect Type Column — Shows whether the relationship is a trine, sextile, square, conjunction, opposition, and so on.",
+    "🏛 Point Inclusion — The table may include special points such as the Ascendant, not only planets.",
+    "🧠 Why This Table Is Useful — It gives astrologers a fast technical scan of the strongest Saturn Return dynamics before moving into readable aspect cards.",
+    "⚖ Exactness Value — Very close aspects usually have stronger and more immediate influence in the Saturn Return cycle.",
+    "🚀 Practical Use — Useful for advanced chart work, precise aspect analysis, client explanation, and identifying the dominant energetic patterns of the Saturn Return."
+  ]
+},
+
+{
+  "name": "horoscope_saturn_return_aspect_cards",
+  "label": "Saturn Return: Aspect Interpretation Cards",
+  "description": "Readable aspect cards that explain the main Saturn Return aspects in simple language, including practical meaning and orb influence.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Saturn Return",
+  "purpose": "This section is generated after the system calculates the major Saturn Return aspects and selects the strongest or most meaningful ones for interpretation. Each aspect is turned into a separate readable card, such as Sun trine Pluto or Moon sextile Mars. The cards explain the aspect type, the two planets involved, and the practical meaning of that energy during the Saturn Return cycle. The purpose of this screen is to help users understand the strongest aspect themes without needing to read the full technical table.",
+  "bullets": [
+    "☀ Sun Trine Pluto Card — Explains transformation, regeneration, depth, hidden power, strong influence, inner strength, and the ability to create meaningful change.",
+    "🌙 Moon Sextile Mars Card — Explains supportive emotional action, courage, resilience, instinctive confidence, balanced assertion, and constructive use of feelings.",
+    "📏 Orb Meaning — The card may mention how close the orb is, helping show whether the aspect is especially strong or more moderate.",
+    "🔗 Aspect Type Meaning — Each card explains the style of the aspect, such as trine for natural flow and empowerment or sextile for opportunity and supportive action.",
+    "💬 Easy Reading Format — Converts technical aspect data into short readable guidance for quick understanding.",
+    "🎯 Real-Life Meaning — Connects the aspect to practical themes such as confidence, emotional strength, transformation, leadership, motivation, and resilience.",
+    "📖 Show More Purpose — Each card can open a deeper modal with fuller interpretation and visual symbolism.",
+    "✨ Why This Screen Is Useful — It gives a user-friendly summary of the strongest aspects shaping the Saturn Return cycle."
+  ]
+},
+{
+  "name": "horoscope_saturn_return_deep_aspect_analysis",
+  "label": "Saturn Return: Deep Aspect Analysis",
+  "description": "A detailed interpretation screen for one selected Saturn Return aspect, with expanded text and picture representation.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Saturn Return",
+  "purpose": "This screen opens when the user clicks Show More on a Saturn Return aspect card. The system selects one important aspect and explains it in much greater depth. In this example, Sun trine Pluto is expanded into a fuller psychological and practical reading. The purpose of this screen is to show how one exact aspect influences identity, power, resilience, transformation, leadership, and inner intensity during the Saturn Return cycle, while the picture representation gives a faster symbolic understanding of the blended planetary forces.",
+  "bullets": [
+    "🔗 Selected Aspect Focus — This screen explains one key aspect in depth, such as Sun trine Pluto.",
+    "☀ Sun Meaning Layer — The Sun represents identity, purpose, confidence, vitality, visibility, and conscious self-expression.",
+    "♇ Pluto Meaning Layer — Pluto represents transformation, depth, hidden truth, power, shadow work, regeneration, and profound inner change.",
+    "△ Trine Meaning Layer — A trine shows ease, harmony, natural flow, empowerment, and constructive support between two energies.",
+    "📏 Orb Meaning — The orb helps show how strongly the aspect is active in the Saturn Return cycle, with tighter orbs usually feeling stronger.",
+    "🧠 Psychological Interpretation — Explains how the user may experience inner power, courage to face deeper truths, and the capacity to transform from within.",
+    "🎯 Practical Life Interpretation — Shows how this aspect may appear through leadership, self-mastery, resilience, deep influence, strong presence, and powerful life change.",
+    "🖼 Picture Representation Purpose — The image visually breaks the aspect into Sun qualities, Pluto qualities, and the merged transformative field in the center.",
+    "🌞 Left Visual Field — Shows the Sun-side traits such as identity, radiance, purpose, vitality, confidence, and self-expression.",
+    "♇ Right Visual Field — Shows the Pluto-side traits such as secrecy, rebirth, shadow, mastery, obsession, transformation, and inner depth.",
+    "🤝 Center Blend Meaning — Shows the merged aspect qualities such as reform, resilience, charisma, strategic power, magnetism, emotional depth, and transformative influence.",
+    "✨ Why This Screen Is Useful — It helps astrologers and users move beyond the short aspect summary into deeper symbolic and life-level interpretation.",
+    "🚀 Practical Use — Useful for deep client readings, transformation analysis, leadership and shadow-work insight, and advanced Saturn Return aspect interpretation."
+  ]
+},
+
+{
+  "name": "horoscope_saturn_return_additional_aspect_cards",
+  "label": "Saturn Return: Additional Aspect Interpretation Cards",
+  "description": "Readable Saturn Return aspect cards showing important challenging and supportive aspect patterns with practical meaning.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Saturn Return",
+  "purpose": "This section is generated after the system calculates the Saturn Return chart from the user's date of birth, time of birth, and place of birth, then compares the return planets and points to identify the strongest aspect patterns. The platform converts each important aspect into a separate readable card so the user can understand the main message quickly. In this screen, aspects such as Saturn opposition Neptune and Uranus trine Ascendant explain how realism, responsibility, dreams, awakening, originality, personal identity, and life-direction shifts interact during the Saturn Return cycle. The purpose of this screen is to help astrologers and users understand where the cycle creates tension, where it brings liberation, and how those patterns may affect maturity, clarity, self-expression, and adaptation.",
+  "bullets": [
+    "♄ Saturn Opposition Neptune Card — Explains tension between structure and imagination, realism and idealism, duty and escape, practical limits and spiritual longing.",
+    "🌊 Meaning of Saturn Opposition Neptune — This aspect often shows confusion, disillusionment, blurred boundaries, spiritual testing, and the need to ground dreams into practical reality.",
+    "⚡ Uranus Trine Ascendant Card — Explains supportive change, originality, self-renewal, personal freedom, and the ability to adapt to new circumstances with confidence.",
+    "✨ Meaning of Uranus Trine Ascendant — This aspect often shows innovation, authenticity, independence, and a natural ease with personal reinvention and unconventional self-expression.",
+    "📏 Orb Interpretation — Each card can include orb meaning to show how exact, active, and influential the aspect is inside the Saturn Return chart.",
+    "⚖️ Support vs Challenge Insight — Helps users quickly identify which aspects require discipline and grounding, and which ones open the way for freedom, progress, and new identity expression.",
+    "💬 Easy Reading Format — Converts technical aspect data into short readable guidance for both astrologers and general users.",
+    "📖 Show More Purpose — Each aspect card can open a deeper analysis modal with expanded interpretation and symbolic picture representation.",
+    "🧠 Why This Screen Is Useful — It helps users understand the strongest Saturn Return dynamics without reading the full technical aspect table.",
+    "🚀 Practical Use — Useful for maturity-cycle guidance, reality-versus-dream analysis, identity development, client readings, and understanding the most important aspect themes in the Saturn Return."
+  ]
+},
+{
+  "name": "horoscope_saturn_return_deep_aspect_analysis_additional",
+  "label": "Saturn Return: Deep Aspect Analysis — Saturn Opposition Neptune",
+  "description": "A detailed modal interpretation of Saturn opposition Neptune, with expanded meaning and symbolic picture representation.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Saturn Return",
+  "purpose": "This screen opens when the user clicks Show More on the Saturn opposition Neptune aspect card inside the Saturn Return reading. The system first calculates the Saturn Return chart from the user's DOB, TOB, and POB, then identifies Saturn opposition Neptune as one of the meaningful aspects of the cycle. The modal gives a deeper explanation of how reality, duty, and structure represented by Saturn interact with imagination, spirituality, intuition, and dissolution represented by Neptune. The purpose of this screen is to help astrologers and users understand the psychological, practical, and symbolic meaning of this opposition, while the picture representation visually breaks down Saturn traits, Neptune traits, and the central polarity of confusion versus clarity.",
+  "bullets": [
+    "♄ Saturn Meaning Layer — Saturn represents discipline, structure, responsibility, caution, maturity, boundaries, realism, and the need to build lasting foundations.",
+    "♆ Neptune Meaning Layer — Neptune represents dreams, imagination, intuition, spirituality, compassion, illusion, sensitivity, and subtle emotional or psychic awareness.",
+    "☍ Opposition Meaning Layer — An opposition creates polarity, tension, projection, inner conflict, and the need to balance two forces that pull in opposite directions.",
+    "📏 Orb Strength Meaning — The orb helps show how strongly the aspect is active in the Saturn Return cycle, with closer orbs usually feeling more central and influential.",
+    "🧠 Psychological Interpretation — Explains how the user may struggle between practical reality and idealistic vision, or between emotional sensitivity and the need for clear boundaries.",
+    "🎯 Practical Life Interpretation — Shows how this aspect may appear through confusion, disillusionment, uncertainty, spiritual searching, boundary issues, and the need to make dreams workable.",
+    "🖼 Picture Representation Purpose — The visual layout helps users understand Saturn on one side, Neptune on the other, and the center opposition field as the point of tension and integration.",
+    "♄ Left Visual Field — Shows Saturn-side traits such as discipline, duty, structure, practicality, loyalty, stability, patience, and groundedness.",
+    "♆ Right Visual Field — Shows Neptune-side traits such as sensitivity, intuition, compassion, fluidity, transcendence, empathy, creativity, and mysticism.",
+    "☍ Center Conflict Field — Shows the opposition themes such as illusion, dream, confusion, uncertainty, escapism, misalignment, absorption, fantasy, and the challenge of integration.",
+    "✨ Growth Through Integration — This aspect becomes a source of maturity when the user learns how to honor inspiration without losing reality, and how to stay grounded without closing off imagination.",
+    "📖 Why This Screen Is Useful — It gives much deeper meaning than the short aspect card and helps astrologers explain the aspect as a life lesson in clarity, resilience, and spiritual realism.",
+    "🚀 Practical Use — Useful for shadow-work insight, spiritual grounding, emotional-boundary guidance, advanced client readings, and understanding one of the most subtle Saturn Return aspect lessons."
+  ]
+},
+
+{
+  "name": "horoscope_saturn_return_angles_points_additional_v1",
+  "label": "Saturn Return: Ascendant, Midheaven & Vertex",
+  "description": "A focused interpretation screen for the Saturn Return Ascendant, Midheaven, and Vertex, showing personal tone, career direction, and pivotal encounter themes.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Saturn Return",
+  "purpose": "This section is generated after the Saturn Return chart is calculated from the user's date of birth, time of birth, and place of birth. The system identifies important chart points such as the Ascendant, Midheaven, and Vertex, then calculates their exact degrees and zodiac signs inside the Saturn Return chart. The purpose of this screen is to help astrologers and users understand the personal tone of the cycle, the public or career direction of the year, and the meaningful encounters or turning points that may arise. It translates exact angular and point data into clear yearly interpretation.",
+  "bullets": [
+    "⬆ Ascendant Degree Meaning — Shows the exact degree of the return Ascendant and explains the user's personal style, demeanor, instinctive response, and the overall tone of the Saturn Return cycle.",
+    "♋ Ascendant in Cancer Example — Cancer rising in the return can show greater sensitivity, empathy, protectiveness, intuition, emotional receptivity, and the need to create safety and belonging.",
+    "🏆 Midheaven Degree Meaning — Shows the exact degree of the Midheaven and explains career direction, ambition, public image, authority path, and visible achievement themes.",
+    "♈ Midheaven in Aries Example — Aries on the Midheaven can show bold career moves, leadership drive, independence, initiative, and a push toward direct action in public life.",
+    "✨ Vertex Degree Meaning — Shows the exact degree of the Vertex and explains meaningful encounters, fated turning points, and deep transformational relationships or experiences.",
+    "♏ Vertex in Scorpio Example — Scorpio on the Vertex can show intense meetings, life-changing connections, deep emotional truth, transformation, and encounters that awaken personal power.",
+    "📐 Exact Degree Refinement — The interpretation uses precise degree values to refine how the angular points are expressed and how strongly they may be felt.",
+    "🧠 Why These Points Matter — The Ascendant, Midheaven, and Vertex are major directional points that help explain the personal, public, and fated tone of the Saturn Return cycle.",
+    "💬 Easy Reading Format — Converts technical angular and point data into simple practical guidance so users can understand the message clearly.",
+    "🚀 Practical Use — Useful for yearly identity guidance, career forecasting, public-path interpretation, encounter timing, and understanding the strongest directional points of the Saturn Return."
+  ]
+},
+
+{
+  "name": "horoscope_saturn_return_lilith_information_additional",
+  "label": "Saturn Return: Lilith Interpretation",
+  "description": "A focused Lilith screen showing sign, degree, house, speed, retrograde status, and the deeper interpretive meaning of Lilith in the Saturn Return chart.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Saturn Return",
+  "purpose": "This section is generated after the Saturn Return chart is calculated using the user's date of birth, time of birth, and place of birth. The system identifies Lilith's exact sign, degree, house, speed, and retrograde status in the return chart, then translates that placement into a readable interpretation. The purpose of this screen is to help astrologers and users understand the raw, shadow, instinctive, rebellious, and uncompromising themes that may become active during the Saturn Return cycle. In this example, Lilith in Libra in the 4th house highlights themes of fairness, shadow dynamics in relationships, home-life tension, emotional independence, and the refusal to fit into roles that feel false or restrictive.",
+  "bullets": [
+    "⚫ Lilith Placement Data — Shows Lilith's sign, full degree, house, normalized degree, speed, and retrograde status for accurate technical interpretation.",
+    "♎ Lilith in Libra Meaning — Lilith in Libra often emphasizes shadow themes around fairness, justice, balance, approval, partnership, relational tension, and hidden dissatisfaction beneath outward harmony.",
+    "🏠 Lilith in the 4th House Meaning — The 4th house links Lilith to home, roots, emotional security, family conditioning, private life, and deep inner belonging patterns.",
+    "✨ Combined Meaning — Lilith in Libra in the 4th house can show hidden tension around peace within the family, imbalance in home relationships, or a desire to rebel against emotional roles that feel unfair or restrictive.",
+    "📐 Degree Meaning — The exact degree refines the intensity and tone of the placement, helping astrologers read Lilith with more accuracy.",
+    "⚡ Speed Meaning — Lilith's speed can help describe whether the influence feels more active, subtle, or gradually unfolding in the Saturn Return cycle.",
+    "🔁 Retrograde Status — In this example Lilith is direct, which emphasizes a more outward expression of the shadow theme rather than a fully internalized one.",
+    "🧠 Shadow and Authenticity Theme — This screen helps explain where the user may confront hidden resentment, suppressed emotional truth, relational imbalance, or the need for deeper authenticity at home and within close bonds.",
+    "💬 Easy Reading Format — Converts technical Lilith data into a direct readable interpretation that users can understand without advanced astrology knowledge.",
+    "🚀 Practical Use — Useful for shadow-work insight, family-pattern analysis, home and belonging themes, emotional-boundary guidance, and advanced Saturn Return interpretation."
+  ]
+},
+// ------------------Mars Return------------------//
       { 
         name: "horoscope_mars_return_setup", 
         label: "Mars Return", 
@@ -2796,6 +3505,8 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Strategic planning for goal execution"
         ]
       },
+
+      // ------------------Uranus Opposition------------------//
       { 
         name: "horoscope_uranus_opposition_setup", 
         label: "Uranus Opposition", 
