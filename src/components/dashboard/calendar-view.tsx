@@ -69,6 +69,7 @@ interface Booking {
   duration_minutes: number;
   status: string;
   session_notes: string | null;
+  client_session_notes?: string | null;
   booking_notes?: string | null;
   base_price?: number | null;
   stripe_payment_intent_id?: string | null;
@@ -962,6 +963,14 @@ export function CalendarView({
                     <p className="text-xs text-muted-foreground italic">No notes added yet.</p>
                   )}
                 </div>
+
+                {/* ── Client's Session Notes ────────────────────────── */}
+                {selectedBooking.client_session_notes && (
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground flex items-center gap-1">Client&apos;s Notes</p>
+                    <div className="text-sm bg-muted/30 p-3 rounded border overflow-auto max-h-[120px] whitespace-pre-wrap">{selectedBooking.client_session_notes}</div>
+                  </div>
+                )}
 
                 {/* ── Actions ───────────────────────────────────────── */}
                 {!selectedBooking.metadata?.is_reminder && (

@@ -97,10 +97,10 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
 
   const admin = createAdminClient();
 
-  // Verify ownership
+  // Verify ownership and fetch template_id for access check
   const { data: existing } = await admin
     .from("services")
-    .select("id")
+    .select("id, template_id")
     .eq("id", id)
     .eq("diviner_id", diviner.id)
     .maybeSingle();
@@ -110,6 +110,22 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
       { type: "https://httpstatuses.com/404", title: "Not found", status: 404, detail: "Service not found" },
       { status: 404 },
     );
+  }
+
+  // Task 05: if service is template-based, require is_enabled before diviner can edit
+  if (existing.template_id) {
+    const { data: dsAccess } = await admin
+      .from("diviner_services")
+      .select("is_enabled")
+      .eq("diviner_id", diviner.id)
+      .eq("template_id", existing.template_id)
+      .maybeSingle();
+    if (!dsAccess || !dsAccess.is_enabled) {
+      return NextResponse.json(
+        { type: "https://httpstatuses.com/403", title: "Forbidden", status: 403, detail: "This service template is not enabled for your account" },
+        { status: 403 },
+      );
+    }
   }
 
   let body: Record<string, unknown>;

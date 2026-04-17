@@ -16,6 +16,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient as createServerClient } from "@/lib/supabase/server";
 import { formatCurrency } from "@/lib/format";
 import { getServiceImageUrl } from "@/lib/service-images";
 import { APP_URL } from "@/lib/constants";
@@ -26,10 +27,13 @@ import { filterVisiblePublicServices, getServiceCategoryLabel } from "@/lib/publ
 import { buildServiceDetailSchemaGraph } from "@/lib/seo/schema-builders";
 import { applyRuntimePricesToServices } from "@/lib/runtime-service-pricing";
 import { canPubliclySellService } from "@/lib/payout-readiness";
+import { getDraftLandingPage } from "@/lib/landing-page-builder";
+import { SectionRenderer } from "@/components/landing/section-renderer";
+import { PreviewBanner } from "@/components/landing/preview-banner";
 
 interface PageProps {
   params: Promise<{ username: string; slug: string }>;
-  searchParams: Promise<{ ref?: string }>;
+  searchParams: Promise<{ ref?: string; preview?: string }>;
 }
 
 /* ------------------------------------------------------------------ */
@@ -51,13 +55,27 @@ async function getService(divinerId: string, slug: string) {
   const supabase = createAdminClient();
   const { data } = await supabase
     .from("services")
-    .select("*")
+    .select("*, template_id")
     .eq("diviner_id", divinerId)
     .eq("slug", slug)
     .eq("is_active", true)
     .maybeSingle();
   if (!data || filterVisiblePublicServices([data]).length === 0) {
     return null;
+  }
+
+  // Task 05: enforce template access control — 404 if not enabled+published
+  if (data.template_id) {
+    const { data: ds } = await supabase
+      .from("diviner_services")
+      .select("is_enabled, is_published")
+      .eq("diviner_id", divinerId)
+      .eq("template_id", data.template_id)
+      .maybeSingle();
+    // Missing mapping or not enabled+published → treat as not found (don't reveal existence)
+    if (!ds || !ds.is_enabled || !ds.is_published) {
+      return null;
+    }
   }
 
   const [service] = await applyRuntimePricesToServices(supabase, [data]);
@@ -173,13 +191,66 @@ export default async function ServiceDetailPage({
   searchParams,
 }: PageProps) {
   const { username, slug } = await params;
-  const { ref } = await searchParams;
+  const { ref, preview } = await searchParams;
 
   const diviner = await getDiviner(username);
   if (!diviner) notFound();
 
   const service = await getService(diviner.id, slug);
   if (!service) notFound();
+
+  // ── Preview mode: render draft landing page sections if available ──────────
+  if (preview === "true" && service.template_id) {
+    const authClient = await createServerClient();
+    const { data: { user } } = await authClient.auth.getUser();
+
+    // Only the owning diviner can preview draft content
+    const { data: divinerRow } = await createAdminClient()
+      .from("diviners")
+      .select("id")
+      .eq("user_id", user?.id ?? "")
+      .eq("id", diviner.id)
+      .maybeSingle();
+
+    if (divinerRow) {
+      const draftPage = await getDraftLandingPage(
+        createAdminClient(),
+        diviner.id,
+        service.template_id,
+      );
+
+      if (draftPage) {
+        const refParam = ref ? `?ref=${encodeURIComponent(ref)}` : "";
+        const bookUrl = `/${username}/book/${service.slug}${refParam}`;
+        const bookingEnabled = canPubliclySellService(service, diviner);
+        const builderUrl = `/dashboard/landing-pages/${service.template_id}/builder`;
+
+        return (
+          <>
+            <PreviewBanner templateId={service.template_id} builderUrl={builderUrl} />
+            <div className="min-h-screen bg-cosmos-950">
+              {draftPage.sections
+                .filter((s) => s.is_enabled)
+                .sort((a, b) => a.display_order - b.display_order)
+                .map((section) => (
+                  <SectionRenderer
+                    key={section.id}
+                    section={section}
+                    context={{
+                      service,
+                      bookUrl,
+                      bookingEnabled,
+                      testimonials: [],
+                    }}
+                  />
+                ))}
+            </div>
+          </>
+        );
+      }
+    }
+    // If auth fails or no draft page, fall through to the default page
+  }
 
   const [testimonials, bookingCount] = await Promise.all([
     getTestimonials(diviner.id, 3),
@@ -833,7 +904,13 @@ export default async function ServiceDetailPage({
       {/* Bottom padding on mobile for sticky bar */}
       <div className="h-24 md:hidden" />
 
-      <PageTracker divinerId={diviner.id} path={`/${username}/services/${slug}`} username={diviner.username} />
+      <PageTracker
+        divinerId={diviner.id}
+        path={`/${username}/services/${slug}`}
+        username={diviner.username}
+        serviceTemplateId={service.template_id ?? undefined}
+        serviceSlug={service.slug}
+      />
     </>
   );
 }

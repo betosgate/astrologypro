@@ -29,11 +29,25 @@ async function getDivinerAndService(username: string, serviceSlug: string) {
 
   const { data: service } = await supabase
     .from("services")
-    .select("id, name, slug, description, duration_minutes, base_price, pricing_item_key, category, requires_birth_data, intake_template_id, product_kind, is_subscription, requires_birth_time, requires_birth_city, requires_partner_data, pre_checkout_fields, post_checkout_fields")
+    .select("id, name, slug, description, duration_minutes, base_price, pricing_item_key, category, requires_birth_data, intake_template_id, product_kind, is_subscription, requires_birth_time, requires_birth_city, requires_partner_data, pre_checkout_fields, post_checkout_fields, template_id")
     .eq("diviner_id", diviner.id)
     .eq("slug", serviceSlug)
     .eq("is_active", true)
     .single();
+
+  // Task 05: enforce template access control — block booking if not published
+  if (service?.template_id) {
+    const { data: ds } = await admin
+      .from("diviner_services")
+      .select("is_enabled, is_published")
+      .eq("diviner_id", diviner.id)
+      .eq("template_id", service.template_id)
+      .maybeSingle();
+    if (!ds || !ds.is_enabled || !ds.is_published) {
+      // Return service as null to trigger "Service unavailable" path
+      return { diviner, service: null };
+    }
+  }
 
   const [resolvedService] = await applyRuntimePricesToServices(
     supabase,

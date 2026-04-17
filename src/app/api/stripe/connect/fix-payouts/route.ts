@@ -9,13 +9,14 @@ export const dynamic = "force-dynamic";
  * POST /api/stripe/connect/fix-payouts
  *
  * Diagnostic + fix endpoint for connected account payout issues.
- * Checks whether the connected account has a bank account attached
- * and the payout schedule is set correctly. In test mode, attaches
- * a Stripe test bank token if missing.
  *
- * Also allows triggering a manual test payout.
+ * Actions:
+ *   "diagnose" — full account diagnosis (default)
+ *   "fix"      — attach test bank + set daily payouts
+ *   "topup"    — add test funds as available balance (test mode only)
+ *   "payout"   — trigger a manual payout of available balance
  *
- * Body (optional): { action?: "diagnose" | "fix" | "payout" }
+ * Body: { action?: "diagnose" | "fix" | "topup" | "payout", amount?: number }
  */
 export async function POST(req: NextRequest) {
   try {
@@ -45,116 +46,118 @@ export async function POST(req: NextRequest) {
     const accountId = diviner.stripe_account_id as string;
     const body = (await req.json().catch(() => ({}))) as {
       action?: string;
+      amount?: number;
     };
     const action = body.action ?? "diagnose";
 
-    // Retrieve full account details
-    const account = await stripe.accounts.retrieve(accountId);
-
-    // Check if test mode
     const isTestMode = (process.env.STRIPE_SECRET_KEY ?? "").startsWith(
       "sk_test_"
     );
 
-    // Check external accounts (bank accounts)
-    const externalAccounts = await stripe.accounts.listExternalAccounts(
-      accountId,
-      { limit: 10 }
-    );
-    const hasBankAccount = externalAccounts.data.some(
-      (ea) => ea.object === "bank_account"
-    );
-
-    // Check balance
-    const balance = await stripe.balance.retrieve(
-      {},
-      { stripeAccount: accountId }
-    );
-    const availableUsd = balance.available.find((b) => b.currency === "usd");
-    const pendingUsd = balance.pending.find((b) => b.currency === "usd");
-
-    // Check recent payouts
-    const payouts = await stripe.payouts.list(
-      { limit: 5 },
-      { stripeAccount: accountId }
-    );
-
-    const diagnosis = {
-      accountId,
-      isTestMode,
-      chargesEnabled: account.charges_enabled,
-      payoutsEnabled: account.payouts_enabled,
-      detailsSubmitted: account.details_submitted,
-      payoutSchedule: account.settings?.payouts?.schedule ?? null,
-      hasBankAccount,
-      externalAccounts: externalAccounts.data.map((ea) => ({
-        id: ea.id,
-        object: ea.object,
-        ...(ea.object === "bank_account"
-          ? {
-              bankName: (ea as { bank_name?: string }).bank_name,
-              last4: (ea as { last4?: string }).last4,
-              status: (ea as { status?: string }).status,
-            }
-          : {}),
-      })),
-      balance: {
-        available: (availableUsd?.amount ?? 0) / 100,
-        pending: (pendingUsd?.amount ?? 0) / 100,
-      },
-      recentPayouts: payouts.data.map((p) => ({
-        id: p.id,
-        amount: p.amount / 100,
-        status: p.status,
-        arrivalDate: new Date(p.arrival_date * 1000).toISOString(),
-      })),
-      requirements: {
-        currentlyDue: account.requirements?.currently_due ?? [],
-        eventuallyDue: account.requirements?.eventually_due ?? [],
-        disabledReason: account.requirements?.disabled_reason ?? null,
-      },
-      issues: [] as string[],
-      fixes: [] as string[],
-    };
-
-    // Diagnose issues
-    if (!hasBankAccount) {
-      diagnosis.issues.push(
-        "No bank account attached — payouts cannot be created"
+    // ─── DIAGNOSE ──────────────────────────────────────────────
+    if (action === "diagnose") {
+      const account = await stripe.accounts.retrieve(accountId);
+      const externalAccounts = await stripe.accounts.listExternalAccounts(
+        accountId,
+        { limit: 10 }
       );
-    }
-    if (account.settings?.payouts?.schedule?.interval === "manual") {
-      diagnosis.issues.push(
-        "Payout schedule is set to MANUAL — payouts will not auto-create"
+      const balance = await stripe.balance.retrieve(
+        {},
+        { stripeAccount: accountId }
       );
-    }
-    if (!account.payouts_enabled) {
-      diagnosis.issues.push("Payouts are not enabled on this account");
-    }
-    if (
-      (pendingUsd?.amount ?? 0) > 0 &&
-      (availableUsd?.amount ?? 0) === 0 &&
-      isTestMode
-    ) {
-      diagnosis.issues.push(
-        "All funds are pending (test mode does not auto-mature funds)"
+      const payouts = await stripe.payouts.list(
+        { limit: 5 },
+        { stripeAccount: accountId }
       );
-    }
-    if (diagnosis.issues.length === 0) {
-      diagnosis.issues.push("No issues found — payouts should work normally");
+
+      const availableUsd = balance.available.find(
+        (b) => b.currency === "usd"
+      );
+      const pendingUsd = balance.pending.find((b) => b.currency === "usd");
+      const hasBankAccount = externalAccounts.data.some(
+        (ea) => ea.object === "bank_account"
+      );
+
+      const issues: string[] = [];
+      if (!hasBankAccount) {
+        issues.push(
+          'No bank account attached — run with action:"fix" to attach one'
+        );
+      }
+      if (account.settings?.payouts?.schedule?.interval === "manual") {
+        issues.push(
+          'Payout schedule is MANUAL — run with action:"fix" to set daily'
+        );
+      }
+      if (!account.payouts_enabled) {
+        issues.push("Payouts are not enabled on this account");
+      }
+      if (
+        (pendingUsd?.amount ?? 0) > 0 &&
+        (availableUsd?.amount ?? 0) === 0 &&
+        isTestMode
+      ) {
+        issues.push(
+          'All funds are pending — test mode does not auto-mature. Run with action:"topup" to add available test funds'
+        );
+      }
+      if (issues.length === 0) {
+        issues.push("No issues found — payouts should work normally");
+      }
+
+      return NextResponse.json({
+        action: "diagnose",
+        accountId,
+        isTestMode,
+        chargesEnabled: account.charges_enabled,
+        payoutsEnabled: account.payouts_enabled,
+        detailsSubmitted: account.details_submitted,
+        payoutSchedule: account.settings?.payouts?.schedule ?? null,
+        hasBankAccount,
+        externalAccounts: externalAccounts.data.map((ea) => ({
+          id: ea.id,
+          object: ea.object,
+          ...(ea.object === "bank_account"
+            ? {
+                bankName: (ea as { bank_name?: string }).bank_name,
+                last4: (ea as { last4?: string }).last4,
+                status: (ea as { status?: string }).status,
+              }
+            : {}),
+        })),
+        balance: {
+          available: (availableUsd?.amount ?? 0) / 100,
+          pending: (pendingUsd?.amount ?? 0) / 100,
+        },
+        recentPayouts: payouts.data.map((p) => ({
+          id: p.id,
+          amount: p.amount / 100,
+          status: p.status,
+          arrivalDate: new Date(p.arrival_date * 1000).toISOString(),
+        })),
+        issues,
+      });
     }
 
-    // Fix mode — attach test bank and set payout schedule
+    // ─── FIX ──────────────────────────────────────────────────
     if (action === "fix") {
+      const account = await stripe.accounts.retrieve(accountId);
+      const externalAccounts = await stripe.accounts.listExternalAccounts(
+        accountId,
+        { limit: 10 }
+      );
+      const hasBankAccount = externalAccounts.data.some(
+        (ea) => ea.object === "bank_account"
+      );
+      const fixes: string[] = [];
+
       if (!hasBankAccount && isTestMode) {
-        // Attach Stripe's test bank account token
         await stripe.accounts.createExternalAccount(accountId, {
           external_account: "btok_us",
         });
-        diagnosis.fixes.push("Attached test bank account (btok_us)");
+        fixes.push("Attached test bank account (btok_us)");
       }
 
-      // Ensure payout schedule is daily with minimum delay
       if (account.settings?.payouts?.schedule?.interval === "manual") {
         await stripe.accounts.update(accountId, {
           settings: {
@@ -166,32 +169,102 @@ export async function POST(req: NextRequest) {
             },
           },
         });
-        diagnosis.fixes.push(
-          "Updated payout schedule to daily with minimum delay"
+        fixes.push("Updated payout schedule to daily with minimum delay");
+      }
+
+      if (fixes.length === 0) {
+        fixes.push(
+          "No fixes needed — bank account exists and schedule is daily"
         );
       }
 
-      if (diagnosis.fixes.length === 0) {
-        diagnosis.fixes.push("No fixes needed");
+      return NextResponse.json({ action: "fix", fixes });
+    }
+
+    // ─── TOPUP ────────────────────────────────────────────────
+    // In test mode, create a direct charge on the connected account
+    // using a test card. This lands as available balance immediately.
+    if (action === "topup") {
+      if (!isTestMode) {
+        return NextResponse.json(
+          { error: "Topup test funds is only available in test mode" },
+          { status: 400 }
+        );
+      }
+
+      const topupAmount = Math.round((body.amount ?? 100) * 100); // default $100
+
+      try {
+        // Create a test charge directly on the connected account
+        // using Stripe's test token — this settles immediately as available
+        const charge = await stripe.charges.create(
+          {
+            amount: topupAmount,
+            currency: "usd",
+            source: "tok_bypassPending", // Stripe test token that bypasses pending
+            description: "Test topup to make funds available",
+          },
+          { stripeAccount: accountId }
+        );
+
+        // Check balance after
+        const balance = await stripe.balance.retrieve(
+          {},
+          { stripeAccount: accountId }
+        );
+        const availableUsd = balance.available.find(
+          (b) => b.currency === "usd"
+        );
+
+        return NextResponse.json({
+          action: "topup",
+          success: true,
+          chargeId: charge.id,
+          amount: topupAmount / 100,
+          newAvailableBalance: (availableUsd?.amount ?? 0) / 100,
+          message: `Added $${(topupAmount / 100).toFixed(2)} as available balance. Now run action:"payout" to trigger a payout.`,
+        });
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "Topup failed";
+        return NextResponse.json(
+          {
+            action: "topup",
+            success: false,
+            error: msg,
+            hint: "Try using Stripe CLI instead: stripe charges create --amount 10000 --currency usd --source tok_bypassPending --stripe-account=" +
+              accountId,
+          },
+          { status: 400 }
+        );
       }
     }
 
-    // Payout mode — trigger a manual payout of available balance
+    // ─── PAYOUT ───────────────────────────────────────────────
     if (action === "payout") {
+      const balance = await stripe.balance.retrieve(
+        {},
+        { stripeAccount: accountId }
+      );
+      const availableUsd = balance.available.find(
+        (b) => b.currency === "usd"
+      );
+      const pendingUsd = balance.pending.find((b) => b.currency === "usd");
       const availableAmount = availableUsd?.amount ?? 0;
 
       if (availableAmount <= 0) {
-        diagnosis.fixes.push(
-          `No available funds to pay out (available: $${(availableAmount / 100).toFixed(2)}, pending: $${((pendingUsd?.amount ?? 0) / 100).toFixed(2)})`
-        );
+        return NextResponse.json({
+          action: "payout",
+          success: false,
+          balance: {
+            available: 0,
+            pending: (pendingUsd?.amount ?? 0) / 100,
+          },
+          message:
+            'No available funds to pay out. In test mode, first run action:"topup" to add available test funds, then run action:"payout".',
+        });
+      }
 
-        // In test mode, try to move pending to available first
-        if (isTestMode && (pendingUsd?.amount ?? 0) > 0) {
-          diagnosis.fixes.push(
-            "In test mode, pending funds don't auto-mature. Use Stripe Dashboard → Developers → Clock to advance time, or use stripe CLI: stripe testclock advance"
-          );
-        }
-      } else {
+      try {
         const payout = await stripe.payouts.create(
           {
             amount: availableAmount,
@@ -199,17 +272,41 @@ export async function POST(req: NextRequest) {
           },
           { stripeAccount: accountId }
         );
-        diagnosis.fixes.push(
-          `Payout created: ${payout.id} for $${(payout.amount / 100).toFixed(2)} — status: ${payout.status}`
+
+        return NextResponse.json({
+          action: "payout",
+          success: true,
+          payoutId: payout.id,
+          amount: payout.amount / 100,
+          status: payout.status,
+          arrivalDate: new Date(
+            payout.arrival_date * 1000
+          ).toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+          }),
+          message: `Payout of $${(payout.amount / 100).toFixed(2)} created — status: ${payout.status}`,
+        });
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "Payout failed";
+        return NextResponse.json(
+          { action: "payout", success: false, error: msg },
+          { status: 400 }
         );
       }
     }
 
-    return NextResponse.json(diagnosis);
+    return NextResponse.json(
+      {
+        error: `Unknown action: "${action}". Use: diagnose, fix, topup, or payout`,
+      },
+      { status: 400 }
+    );
   } catch (error) {
     console.error("[stripe/connect/fix-payouts] error:", error);
     const message =
-      error instanceof Error ? error.message : "Failed to diagnose payouts";
+      error instanceof Error ? error.message : "Failed to process request";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
