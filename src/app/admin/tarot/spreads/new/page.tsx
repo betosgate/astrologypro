@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { createClient } from "@/lib/supabase/client";
+// createClient no longer needed — uploads go through server API route
 import {
   Dialog,
   DialogContent,
@@ -23,7 +23,6 @@ import {
 import { ArrowLeft, Loader2, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 
-const BUCKET = "all-frontend-assets";
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 
@@ -71,23 +70,21 @@ export default function NewTarotSpreadPage() {
 
     setUploading(true);
 
-    const ext = file.name.split(".").pop() ?? "jpg";
-    const path = `divine-infinity-being/tarot-spread-image/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-    const supabase = createClient();
+    const body = new FormData();
+    body.append("file", file);
+    body.append("kind", "spread");
 
-    const { error: uploadError } = await supabase.storage
-      .from(BUCKET)
-      .upload(path, file, { upsert: false });
-
-    if (uploadError) {
-      toast.error(`Upload failed: ${uploadError.message}`);
+    try {
+      const res = await fetch("/api/admin/tarot/upload", { method: "POST", body });
+      const data = await res.json();
+      if (!res.ok) { toast.error(data.error ?? "Upload failed"); return; }
+      setThumbnailUrl(data.url);
+      setForm((prev) => ({ ...prev, image_url: "" }));
+    } catch {
+      toast.error("Upload failed");
+    } finally {
       setUploading(false);
-      return;
     }
-
-    const { data: urlData } = supabase.storage.from(BUCKET).getPublicUrl(path);
-    setThumbnailUrl(urlData.publicUrl);
-    setUploading(false);
   }
 
   async function handleSubmit(e: React.FormEvent) {

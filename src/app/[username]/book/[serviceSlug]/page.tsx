@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { BookingWizard } from "@/components/booking/booking-wizard";
 import { APP_URL } from "@/lib/constants";
 import Link from "next/link";
@@ -15,6 +16,7 @@ interface PageProps {
 
 async function getDivinerAndService(username: string, serviceSlug: string) {
   const supabase = await createClient();
+  const admin = createAdminClient();
 
   const { data: diviner } = await supabase
     .from("diviners")
@@ -27,18 +29,49 @@ async function getDivinerAndService(username: string, serviceSlug: string) {
 
   const { data: service } = await supabase
     .from("services")
-    .select("id, name, slug, description, duration_minutes, base_price, pricing_item_key, category, requires_birth_data, intake_template_id, product_kind, is_subscription, requires_birth_time, requires_birth_city, requires_partner_data, pre_checkout_fields, post_checkout_fields")
+    .select("id, name, slug, description, duration_minutes, base_price, pricing_item_key, category, requires_birth_data, intake_template_id, product_kind, is_subscription, requires_birth_time, requires_birth_city, requires_partner_data, pre_checkout_fields, post_checkout_fields, template_id")
     .eq("diviner_id", diviner.id)
     .eq("slug", serviceSlug)
     .eq("is_active", true)
     .single();
+
+  // Task 05: enforce template access control — block booking if not published
+  if (service?.template_id) {
+    const { data: ds } = await admin
+      .from("diviner_services")
+      .select("is_enabled, is_published")
+      .eq("diviner_id", diviner.id)
+      .eq("template_id", service.template_id)
+      .maybeSingle();
+    if (!ds || !ds.is_enabled || !ds.is_published) {
+      // Return service as null to trigger "Service unavailable" path
+      return { diviner, service: null };
+    }
+  }
 
   const [resolvedService] = await applyRuntimePricesToServices(
     supabase,
     service ? [service] : []
   );
 
-  return { diviner, service: resolvedService ?? service };
+  const base = resolvedService ?? service;
+  if (!base) return { diviner, service: null };
+
+  // Use the availability template's duration_minutes if one is linked to this service,
+  // so the booking page reflects the actual scheduled session length.
+  const { data: template } = await admin
+    .from("availability_templates")
+    .select("duration_minutes")
+    .or(`owner_id.eq.${diviner.id},diviner_id.eq.${diviner.id}`)
+    .eq("service_id", base.id)
+    .eq("is_active", true)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const duration = template?.duration_minutes ?? base.duration_minutes;
+
+  return { diviner, service: { ...base, duration_minutes: duration } };
 }
 
 export async function generateMetadata({

@@ -1,8 +1,114 @@
 /**
- * Service template catalog — predefined service types available for diviners
- * to add to their practice. Templates are never stored in the DB; they are
- * used to pre-fill the "Add Service" form with sensible defaults.
+ * Service template catalog — predefined service types available for diviners.
+ *
+ * Hardcoded arrays (ASTROLOGY_TEMPLATES, TAROT_TEMPLATES, ALL_SERVICE_TEMPLATES)
+ * are kept for backward compatibility and as a fallback.
+ *
+ * Prefer the async functions (getActiveServiceTemplates, getServiceTemplatesByCategory)
+ * which query the database and reflect admin changes in real time.
  */
+
+import { createAdminClient } from "@/lib/supabase/admin";
+
+// ── DB-backed service template (superset of ServiceTemplate) ─────────────────
+
+export interface DbServiceTemplate {
+  id: string;
+  name: string;
+  slug: string;
+  category: "astrology" | "tarot";
+  description: string | null;
+  long_description: string | null;
+  base_price: number;
+  overage_rate: number | null;
+  duration_minutes: number;
+  is_primary: boolean;
+  requires_birth_data: boolean;
+  trigger_event: string | null;
+  sort_order: number;
+  display_order: number;
+  is_active: boolean;
+  icon_name: string | null;
+  color: string | null;
+  whats_included: string[];
+  who_its_for: string[];
+  faq: { question: string; answer: string }[];
+  seo_title: string | null;
+  seo_description: string | null;
+  created_at: string;
+  updated_at: string | null;
+}
+
+/**
+ * Fetch all active service templates from the database.
+ * Replaces the old hardcoded arrays for dynamic admin-managed catalog.
+ * Uses the admin client (server-side only).
+ */
+export async function getActiveServiceTemplates(): Promise<DbServiceTemplate[]> {
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("service_templates")
+    .select("*")
+    .eq("is_active", true)
+    .order("display_order", { ascending: true });
+
+  if (error) throw new Error(`Failed to fetch service templates: ${error.message}`);
+  return (data ?? []) as DbServiceTemplate[];
+}
+
+/**
+ * Fetch active service templates filtered by category.
+ */
+export async function getServiceTemplatesByCategory(
+  category: "astrology" | "tarot"
+): Promise<DbServiceTemplate[]> {
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("service_templates")
+    .select("*")
+    .eq("is_active", true)
+    .eq("category", category)
+    .order("display_order", { ascending: true });
+
+  if (error) throw new Error(`Failed to fetch service templates: ${error.message}`);
+  return (data ?? []) as DbServiceTemplate[];
+}
+
+/**
+ * Fetch a single service template by slug.
+ */
+export async function getServiceTemplateBySlug(
+  slug: string
+): Promise<DbServiceTemplate | null> {
+  const admin = createAdminClient();
+  const { data } = await admin
+    .from("service_templates")
+    .select("*")
+    .eq("slug", slug)
+    .eq("is_active", true)
+    .maybeSingle();
+  return (data as DbServiceTemplate | null);
+}
+
+/**
+ * Fetch a single service template by id.
+ */
+export async function getServiceTemplateById(
+  id: string
+): Promise<DbServiceTemplate | null> {
+  const admin = createAdminClient();
+  const { data } = await admin
+    .from("service_templates")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+  return (data as DbServiceTemplate | null);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Legacy hardcoded arrays — kept for backward compatibility.
+// These are used by the onboarding UI as a fallback and for icon/color mapping.
+// ─────────────────────────────────────────────────────────────────────────────
 
 export interface ServiceTemplate {
   key: string;

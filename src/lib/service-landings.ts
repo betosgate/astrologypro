@@ -37,6 +37,7 @@ export async function getServiceLandingTemplates() {
   const { data, error } = await admin
     .from("service_templates")
     .select("*")
+    .eq("is_active", true)           // Task 05: only show admin-active templates
     .order("sort_order", { ascending: true })
     .order("name", { ascending: true });
 
@@ -66,10 +67,19 @@ export async function getServiceLandingTemplate(slug: string) {
 
 export async function getServiceLandingDiviners(serviceSlug: string) {
   const admin = createAdminClient();
+
+  // Task 05: first resolve the template_id for this slug so we can check diviner_services
+  const { data: template } = await admin
+    .from("service_templates")
+    .select("id")
+    .eq("slug", serviceSlug)
+    .eq("is_active", true)
+    .maybeSingle();
+
   const { data: services, error } = await admin
     .from("services")
     .select(
-      "id, slug, name, description, duration_minutes, base_price, category, diviner_id, " +
+      "id, slug, name, description, duration_minutes, base_price, category, diviner_id, template_id, " +
         "diviners!inner(id, username, display_name, tagline, bio, avatar_url, is_certified, specialties, is_active, onboarding_completed, account_status, charges_enabled, payouts_enabled, stripe_account_id)",
     )
     .eq("slug", serviceSlug)
@@ -80,7 +90,26 @@ export async function getServiceLandingDiviners(serviceSlug: string) {
     return [];
   }
 
+  // Task 05: fetch all diviner_services rows that are enabled+published for this template
+  // Freestyle services (template_id = null) skip this check
+  let publishedDivinerIds: Set<string> | null = null;
+  if (template) {
+    const { data: ds } = await admin
+      .from("diviner_services")
+      .select("diviner_id")
+      .eq("template_id", template.id)
+      .eq("is_enabled", true)
+      .eq("is_published", true);
+    publishedDivinerIds = new Set((ds ?? []).map((r) => r.diviner_id));
+  }
+
   const visibleServices = (services as unknown as Array<Record<string, unknown>>).filter((row) => {
+    // Task 05: enforce access control — skip diviners who haven't published this template
+    if (template && publishedDivinerIds !== null) {
+      const divinerId = (row.diviner_id as string) ?? "";
+      if (!publishedDivinerIds.has(divinerId)) return false;
+    }
+    // Freestyle services (no template): skip access control check
     const divinerRelation = row.diviners;
     const diviner = Array.isArray(divinerRelation) ? divinerRelation[0] : divinerRelation;
     if (!diviner || typeof diviner !== "object") return false;

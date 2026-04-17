@@ -135,7 +135,7 @@ function formatTimeRange(start: string, end: string): string {
 }
 
 function validate(form: FormState): string | null {
-  if (!form.start_date || !form.end_date) return "Start and end date are required.";
+  if (!form.start_date) return "Start date is required.";
   if (form.end_date < form.start_date) return "End date must be on or after start date.";
   if (!form.start_time || !form.end_time) return "Start and end time are required.";
   if (form.end_time <= form.start_time) return "End time must be after start time.";
@@ -188,7 +188,9 @@ export default function AvailabilityPage() {
 
   function openCreate() {
     setEditTarget(null);
-    setForm(defaultForm());
+    const browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const matched = TIMEZONE_OPTIONS.find((o) => o.value === browserTz);
+    setForm({ ...defaultForm(), timezone: matched ? browserTz : "America/New_York" });
     setFormError(null);
     setDialogOpen(true);
   }
@@ -234,7 +236,11 @@ export default function AvailabilityPage() {
         service_id: form.service_id || null,
         title: form.title.trim() || "Available",
         start_date: form.start_date,
-        end_date: form.end_date,
+        end_date: form.end_date || (() => {
+          const d = new Date(form.start_date + "T12:00:00");
+          d.setFullYear(d.getFullYear() + 2);
+          return d.toISOString().slice(0, 10);
+        })(),
         weekdays: form.weekdays,
         start_time: form.start_time,
         end_time: form.end_time,
@@ -259,14 +265,19 @@ export default function AvailabilityPage() {
         });
       }
 
+      const json = await res.json();
       if (!res.ok) {
-        const json = await res.json();
         setFormError(json.error ?? "Failed to save.");
         return;
       }
 
+      const saved = json.template as AvailabilityTemplate;
+      setTemplates((prev) =>
+        editTarget
+          ? prev.map((t) => (t.id === saved.id ? saved : t))
+          : [saved, ...prev]
+      );
       setDialogOpen(false);
-      await loadTemplates();
     } finally {
       setSaving(false);
     }
@@ -521,7 +532,7 @@ export default function AvailabilityPage() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="av-end-date">End Date</Label>
+                <Label htmlFor="av-end-date">End Date <span className="text-muted-foreground font-normal">(optional — defaults to 2 years)</span></Label>
                 <Input
                   id="av-end-date"
                   type="date"
