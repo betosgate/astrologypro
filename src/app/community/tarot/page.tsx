@@ -1,13 +1,12 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Sparkles } from "lucide-react";
 
-export const metadata = { title: "Tarot Spreads - AstrologyPro" };
+export const metadata = { title: "Tarot Readings - AstrologyPro" };
 
-export default async function TarotSpreadsPage() {
+export default async function CommunityTarotPage() {
   const supabase = await createClient();
   const {
     data: { user },
@@ -23,63 +22,74 @@ export default async function TarotSpreadsPage() {
   if (!member) redirect("/get-started");
   if (member.membership_status !== "active") redirect("/join/community/resubscribe");
 
-  // Fetch spreads from DB
-  const { data: spreads } = await supabase
-    .from("tarot_spreads")
-    .select("id, name, description, card_count, layout_json, image_url, priority")
-    .eq("is_active", true)
-    .order("priority", { ascending: true });
+  // Fetch user's saved readings
+  const { data: readings } = await supabase
+    .from("tarot_readings")
+    .select("id, spread_name, created_at, notes, share_token")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false })
+    .limit(20);
+
+  const hasReadings = readings && readings.length > 0;
 
   return (
     <div className="space-y-8">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Tarot Spreads</h1>
+          <h1 className="text-3xl font-bold tracking-tight">My Tarot Readings</h1>
           <p className="mt-1 text-muted-foreground">
-            Choose a spread and begin an interactive card reading.
+            View your tarot card readings.
           </p>
         </div>
-        <Button asChild variant="outline" size="sm">
-          <Link href="/community/tarot/history">My Reading History</Link>
-        </Button>
+        {hasReadings && (
+          <Button asChild variant="outline" size="sm">
+            <Link href="/community/tarot/history">View All History</Link>
+          </Button>
+        )}
       </div>
 
-      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        {(spreads ?? []).map((spread) => (
-          <Card
-            key={spread.id}
-            className="flex flex-col border bg-card transition-shadow hover:shadow-md overflow-hidden"
-          >
-            {spread.image_url && (
-              <div className="relative h-40 w-full bg-muted">
-                <img
-                  src={spread.image_url}
-                  alt={spread.name}
-                  className="h-full w-full object-cover"
-                />
+      {hasReadings ? (
+        <div className="space-y-3">
+          {readings.map((r) => (
+            <Link
+              key={r.id}
+              href={`/community/tarot/readings/${r.id}`}
+              className="block rounded-lg border border-border bg-card p-4 transition-colors hover:bg-muted/50"
+            >
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="font-medium">{r.spread_name}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {new Date(r.created_at).toLocaleDateString("en-US", {
+                      month: "long",
+                      day: "numeric",
+                      year: "numeric",
+                      hour: "numeric",
+                      minute: "2-digit",
+                    })}
+                  </p>
+                  {r.notes && (
+                    <p className="mt-1 text-xs text-muted-foreground line-clamp-1">{r.notes}</p>
+                  )}
+                </div>
+                <span className="text-sm text-muted-foreground">View →</span>
               </div>
-            )}
-            <CardHeader className="pb-2">
-              <div className="flex items-start justify-between gap-2">
-                <CardTitle className="text-base leading-snug">{spread.name}</CardTitle>
-                <Badge variant="secondary" className="shrink-0 text-xs">
-                  {spread.card_count} {spread.card_count === 1 ? "card" : "cards"}
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="flex flex-1 flex-col gap-4">
-              <CardDescription className="line-clamp-3 text-sm leading-relaxed">
-                {spread.description}
-              </CardDescription>
-              <div className="mt-auto">
-                <Button asChild className="w-full" size="sm">
-                  <Link href={`/community/tarot/${spread.id}`}>Begin Reading</Link>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+            </Link>
+          ))}
+        </div>
+      ) : (
+        <div className="flex flex-col items-center justify-center gap-5 rounded-2xl border border-dashed border-muted-foreground/20 py-20 text-center">
+          <div className="flex size-16 items-center justify-center rounded-2xl bg-indigo-500/10">
+            <Sparkles className="size-8 text-indigo-400" />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold">No readings yet</h2>
+            <p className="mt-1 max-w-sm text-sm text-muted-foreground">
+              Your tarot card readings will appear here once a diviner creates a reading for you.
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
