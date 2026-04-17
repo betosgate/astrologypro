@@ -356,14 +356,22 @@ export function IntakeForm({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="phone">Phone (optional)</Label>
+          <Label htmlFor="phone">
+            Phone <span className="text-destructive">*</span>
+          </Label>
           <Input
             id="phone"
             type="tel"
             placeholder="+1 (555) 000-0000"
             value={data.phone}
             onChange={(e) => update("phone", e.target.value)}
+            required
           />
+          {data.phone && !/^\+\d{1,3}[\s]?\d{6,14}$/.test(data.phone.replace(/[\s()-]/g, "").replace(/^(\+\d{1,3})/, "$1")) && (
+            <p className="text-xs text-destructive">
+              Enter a valid phone with country code (e.g. +1 or +91)
+            </p>
+          )}
         </div>
       </Section>
 

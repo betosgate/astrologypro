@@ -408,14 +408,19 @@ export function BookingWizard({
     switch (step) {
       case 0:
         return !!selectedSlot;
-      case 1:
+      case 1: {
+        const phoneClean = bookingDetails.phone?.replace(/[\s()-]/g, "") ?? "";
+        const phoneValid = /^\+\d{7,15}$/.test(phoneClean);
         return !!(
           selectedSlot &&
           bookingDetails.fullName.trim() &&
           bookingDetails.email.trim() &&
+          bookingDetails.phone.trim() &&
+          phoneValid &&
           (!service.requires_birth_data || bookingDetails.birthDate) &&
           (!service.requires_birth_city || bookingDetails.birthCity.trim())
         );
+      }
       case 2:
         return true;
       default:
@@ -809,7 +814,7 @@ export function BookingWizard({
                 </div>
                 <div className="space-y-2 md:col-span-2">
                   <Label htmlFor="booking-phone">
-                    Phone <span className="text-muted-foreground">(optional)</span>
+                    Phone <span className="text-destructive">*</span>
                   </Label>
                   <Input
                     id="booking-phone"
@@ -823,7 +828,13 @@ export function BookingWizard({
                     }
                     placeholder="+1 555 123 4567"
                     autoComplete="tel"
+                    required
                   />
+                  {bookingDetails.phone && !/^\+\d{1,3}\s?\d{6,14}$/.test(bookingDetails.phone.replace(/[\s()-]/g, "").replace(/^(\+\d{1,3})/, "$1")) && (
+                    <p className="text-xs text-destructive">
+                      Please enter a valid phone number starting with country code (e.g. +1 or +91)
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -1117,6 +1128,11 @@ export function BookingWizard({
                 let firstMissingId = "";
                 if (!bookingDetails.fullName.trim()) { missing.push("Full Name"); if (!firstMissingId) firstMissingId = "booking-full-name"; }
                 if (!bookingDetails.email.trim()) { missing.push("Email"); if (!firstMissingId) firstMissingId = "booking-email"; }
+                if (!bookingDetails.phone.trim()) { missing.push("Phone Number"); if (!firstMissingId) firstMissingId = "booking-phone"; }
+                else {
+                  const pc = bookingDetails.phone.replace(/[\s()-]/g, "");
+                  if (!/^\+\d{7,15}$/.test(pc)) { missing.push("Valid Phone (e.g. +1... or +91...)"); if (!firstMissingId) firstMissingId = "booking-phone"; }
+                }
                 if (service.requires_birth_data && !bookingDetails.birthDate) { missing.push("Date of Birth"); if (!firstMissingId) firstMissingId = "booking-birth-date"; }
                 if (service.requires_birth_city && !bookingDetails.birthCity.trim()) { missing.push("City of Birth"); if (!firstMissingId) firstMissingId = "booking-birth-city"; }
                 toast.error(`Please fill in: ${missing.join(", ")}`);

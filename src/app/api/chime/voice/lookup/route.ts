@@ -106,11 +106,12 @@ export async function POST(request: NextRequest) {
         });
       }
 
-      // Standalone call: client has card on file
-      if (client.stripe_customer_id && client.default_payment_method_id) {
+      // Client has a booking in the window — enqueue as standalone phone call
+      if (booking) {
         const { data: phoneSession } = await admin
           .from("phone_sessions")
           .insert({
+            booking_id: booking.id,
             diviner_id: diviner.id,
             client_id: client.id,
             caller_phone: callerPhone,
@@ -132,31 +133,21 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // TODO: Remove test bypass before production launch
-    // Temporary: allow call through even without booking/card for testing
-    {
-      const { data: phoneSession } = await admin
-        .from("phone_sessions")
-        .insert({
-          diviner_id: diviner.id,
-          client_id: client?.id ?? null,
-          caller_phone: callerPhone,
-          session_type: "standalone",
-          phone_provider: "chime",
-          started_at: new Date().toISOString(),
-          status: "active",
-        })
-        .select("id")
-        .single();
-
-      return NextResponse.json({
-        action: "enqueue",
-        divinerId: diviner.id,
-        phoneSessionId: phoneSession?.id,
-        phone_answer_mode: diviner.phone_answer_mode ?? "both",
-        phone_mobile: diviner.phone_mobile ?? null,
-      });
+    // No client found or no booking — reject the call
+    if (!client) {
+      console.log("Caller not found in clients table:", callerPhone);
+      return NextResponse.json(
+        { error: "No account found for this phone number. Please book a session online first." },
+        { status: 404 }
+      );
     }
+
+    // Client found but no booking in window
+    console.log("No upcoming booking found for client:", client.id, "and diviner:", diviner.id);
+    return NextResponse.json(
+      { error: "No upcoming booking found. Please book a session before calling." },
+      { status: 404 }
+    );
   } catch (error) {
     console.error("Chime voice lookup error:", error);
     return NextResponse.json(

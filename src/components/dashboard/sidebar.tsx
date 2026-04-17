@@ -28,6 +28,7 @@ import {
   Receipt,
   CreditCard,
   Wallet,
+  Phone,
   Video,
   MonitorPlay,
   Library,
@@ -89,6 +90,7 @@ const navItems: NavItem[] = [
     children: [
       { label: "Live", href: "/dashboard/live", icon: Radio },
       { label: "Video Sessions", href: "/dashboard/video", icon: MonitorPlay },
+      { label: "Phone Calls", href: "/dashboard/phone-calls", icon: Phone },
       { label: "Session Library", href: "/dashboard/library", icon: Library },
     ],
   },
