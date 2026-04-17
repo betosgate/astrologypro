@@ -46,6 +46,7 @@ import {
 } from "@/lib/role-service-packages";
 import { ChimePhoneManager } from "@/components/admin/chime-phone-manager";
 import { DivinerVoicemails } from "@/components/admin/diviner-voicemails";
+import { ServiceAssignment } from "./service-assignment";
 
 export const metadata = { title: "Diviner Detail — Admin" };
 
@@ -526,6 +527,19 @@ export default async function AdminDivinerDetailPage({
             divinerId={diviner.id}
             initialVoicemails={voicemails}
           />
+        </CardContent>
+      </Card>
+
+      {/* ── Service Assignment ───────────────────────────────────────── */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Package className="size-4" />
+            Service Assignment
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ServiceAssignment divinerId={diviner.id} />
         </CardContent>
       </Card>
 

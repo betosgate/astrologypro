@@ -203,6 +203,7 @@ const NAV_GROUPS = [
     label: "Plans",
     items: [
       { label: "Diviner Plans", href: "/admin/diviner-plans", icon: Layers },
+      { label: "Service Templates", href: "/admin/service-templates", icon: LayoutGrid },
       { label: "Service Config", href: "/admin/service-config", icon: Settings2 },
     ],
   },
@@ -243,6 +244,7 @@ const NAV_GROUPS = [
     items: [
       { label: "Tarot Spreads", href: "/admin/tarot/spreads", icon: Shuffle },
       { label: "Tarot Cards", href: "/admin/tarot/cards", icon: LayoutGrid },
+      { label: "Tarot Practice", href: "/admin/tarot/readings", icon: Sparkles },
       { label: "Rituals", href: "/admin/rituals", icon: Flame },
     ],
   },
