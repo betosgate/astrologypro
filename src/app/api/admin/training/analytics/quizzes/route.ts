@@ -13,6 +13,10 @@ export async function GET(req: NextRequest) {
   }
 
   const sp = req.nextUrl.searchParams;
+  const page = Math.max(1, parseInt(sp.get("page") ?? "1", 10));
+  const limit = Math.min(100, Math.max(1, parseInt(sp.get("limit") ?? "25", 10)));
+  const offset = (page - 1) * limit;
+
   const lessonIdFilter = sp.get("lesson_id")?.trim() ?? null;
 
   const admin = createAdminClient();
@@ -187,8 +191,8 @@ export async function GET(req: NextRequest) {
       | undefined;
     const cat = lesson
       ? (categoryMap.get(lesson.category_id) as
-          | { id: string; name: string; training_id: string }
-          | undefined)
+        | { id: string; name: string; training_id: string }
+        | undefined)
       : undefined;
     const programName = cat ? (programNameMap.get(cat.training_id) ?? "") : "";
 
@@ -206,17 +210,17 @@ export async function GET(req: NextRequest) {
     const avg_attempts_to_pass =
       agg.attempts_to_pass_list.length > 0
         ? Math.round(
-            (agg.attempts_to_pass_list.reduce((s, n) => s + n, 0) /
-              agg.attempts_to_pass_list.length) *
-              10
-          ) / 10
+          (agg.attempts_to_pass_list.reduce((s, n) => s + n, 0) /
+            agg.attempts_to_pass_list.length) *
+          10
+        ) / 10
         : 0;
     const first_attempt_pass_count = agg.first_attempt_users.size;
     const first_attempt_pass_rate =
       unique_users_attempted > 0
         ? Math.round(
-            (first_attempt_pass_count / unique_users_attempted) * 1000
-          ) / 10
+          (first_attempt_pass_count / unique_users_attempted) * 1000
+        ) / 10
         : 0;
 
     return {
@@ -238,5 +242,8 @@ export async function GET(req: NextRequest) {
     };
   });
 
-  return NextResponse.json({ quizzes: result });
+  const total = result.length;
+  const paginated = result.slice(offset, offset + limit);
+
+  return NextResponse.json({ quizzes: paginated, total, page, limit });
 }
