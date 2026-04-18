@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "test:ms-webhooks": "tsx --test tests/unit/mystery-school-subscription-lifecycle.test.ts",
+    "test:toolkit-session": "tsx --test tests/unit/service-toolkit-mapping.test.ts",
     "seed": "tsx scripts/seed.ts",
     "migrate": "node scripts/run-migration.js",
     "local:build": "npm run build"

@@ -8,9 +8,10 @@ import { formatDateTime } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
 import { CalendarDays, Clock, User } from "lucide-react";
 import { createChimeMeeting, createChimeAttendee } from "@/lib/chime-meetings";
+import { getSessionLinkForBooking } from "@/lib/service-toolkit-mapping";
 
 const BOOKING_SELECT =
-  "id, scheduled_at, status, duration_minutes, daily_room_url, daily_room_name, video_provider, chime_meeting_id, chime_external_meeting_id, diviner_id, client_id, base_price, questionnaire_responses, services(name, duration_minutes, overage_rate), clients(id, full_name, email, birth_date, birth_time, birth_city), diviners(display_name, username)";
+  "id, scheduled_at, status, duration_minutes, daily_room_url, daily_room_name, video_provider, chime_meeting_id, chime_external_meeting_id, diviner_id, client_id, base_price, questionnaire_responses, services(name, duration_minutes, overage_rate, service_templates(slug, category)), clients(id, full_name, email, birth_date, birth_time, birth_city), diviners(display_name, username)";
 
 interface PageProps {
   params: Promise<{ username: string; bookingId: string }>;
@@ -134,6 +135,21 @@ export default async function SessionPage({ params, searchParams }: PageProps) {
   const scheduledDuration = service?.duration_minutes ?? booking.duration_minutes ?? 60;
   const serviceOverageRate = Number(service?.overage_rate ?? 0.50);
 
+  // Diviner-only toolkit session link — null for clients, null for unmapped
+  // services (hides the button). Server-computed so UI decisions are made
+  // once, not on every client render.
+  const serviceTemplate = service && (Array.isArray(service.service_templates)
+    ? service.service_templates[0]
+    : service.service_templates);
+  const sessionLink =
+    role === "diviner"
+      ? getSessionLinkForBooking({
+          bookingId,
+          templateSlug: serviceTemplate?.slug ?? null,
+          category: serviceTemplate?.category ?? null,
+        })
+      : null;
+
   return (
     <div className="flex min-h-screen flex-col bg-background">
       {/* Session Info Header */}
@@ -184,6 +200,7 @@ export default async function SessionPage({ params, searchParams }: PageProps) {
             time: client.birth_time ?? undefined,
             city: client.birth_city ?? undefined,
           } : undefined}
+          sessionLink={sessionLink}
         />
       ) : (
         <SessionRoom

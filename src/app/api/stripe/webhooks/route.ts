@@ -21,6 +21,7 @@ import { buildCalendarDescription } from "@/lib/calendar-utils";
 import { createMsCalendarEvent } from "@/lib/microsoft-calendar";
 import { ensureOrderForBooking, getOrderStatusForService } from "@/lib/orders";
 import { recordAffiliateCommission } from "@/lib/affiliate-commissions";
+import { getSessionLinkForBooking } from "@/lib/service-toolkit-mapping";
 import {
   getSubscriptionPeriodEndIso,
   mapMysterySchoolLifecycleUpdate,
@@ -1919,6 +1920,15 @@ async function handlePaymentIntentSucceeded(
       const questionnaire = (booking as Record<string, unknown>)
         .questionnaire_responses as Record<string, string> | null;
 
+      const toolkitSessionPath = getSessionLinkForBooking({
+        bookingId,
+        templateSlug: svc?.slug ?? null,
+        category: svc?.category ?? null,
+      });
+      const toolkitSessionUrl = toolkitSessionPath
+        ? `${appUrl}${toolkitSessionPath}`
+        : null;
+
       await sendDivinerNewBookingNotification({
         divinerEmail,
         divinerName: div.display_name,
@@ -1936,6 +1946,7 @@ async function handlePaymentIntentSucceeded(
               lifeArea: questionnaire.lifeArea,
             }
           : undefined,
+        sessionUrl: toolkitSessionUrl,
       });
     } catch (err) {
       console.error("[Webhook] Failed to send diviner booking notification:", err);

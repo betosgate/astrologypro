@@ -34,6 +34,7 @@ import { MIGRATION_SQL as MIG_20260416000006 } from "@/data/migrations/MIG_20260
 import { MIGRATION_SQL as MIG_20260416000005 } from "@/data/migrations/20260416000005_simultaneous_ring";
 import { MIGRATION_SQL as MIG_20260416000004 } from "@/data/migrations/20260416000004_tarot_dynamic_system";
 import { MIGRATION_SQL as MIG_20260416000007 } from "@/data/migrations/20260416000007_drop_tarot_spread_cards";
+import { MIGRATION_SQL as MIG_20260418000001 } from "@/data/migrations/20260418000001_service_toolkit_session";
 
 /**
  * Allowlisted migrations that the admin migration runner can execute.
@@ -346,6 +347,14 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Drops the tarot_spread_cards junction table. Card-to-spread relationship now uses the related_spread_ids UUID[] array column on tarot_cards instead.",
     sortKey: "20260416000007",
     sql: MIG_20260416000007,
+  },
+  "20260418000001_service_toolkit_session": {
+    id: "20260418000001_service_toolkit_session",
+    title: "Service toolkit session (Open Service feature)",
+    description:
+      "Additive migration for the 'Open Service' feature. Adds two nullable columns to bookings: partner_birth_data (JSONB — optional partner birth info for the 3 two-person astrology services) and toolkit_session_opened_at (TIMESTAMPTZ — first-open telemetry). Also adds a partial B-tree index on (partner_birth_data IS NOT NULL) for 'how many two-person bookings have partner data?' reporting. No backfill, no RLS changes, no drops. Rollback = drop both columns.",
+    sortKey: "20260418000001",
+    sql: MIG_20260418000001,
   },
 };
 

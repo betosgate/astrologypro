@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAdminUser } from "@/lib/admin-auth";
+import { requireAdminOrDiviner } from "@/lib/require-admin-or-diviner";
 import { callAstrologyApi } from "@/lib/astrology-api";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -99,7 +99,9 @@ async function updateSettingStatusById(id: string, nextStatus: "active" | "inact
 }
 
 export async function POST(req: NextRequest) {
-  const user = await getAdminUser();
+  // Admin OR registered diviner — the diviner-facing /admin/horoscope/session/
+  // route depends on this endpoint for compute.
+  const user = await requireAdminOrDiviner();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
@@ -127,7 +129,13 @@ export async function POST(req: NextRequest) {
     }
 
     const triedSecrets = new Set<string>();
-    const tryWithRotation = async (candidates: AstrologyApiSettingRow[]) => {
+    type RotationResult = {
+      value: Record<string, unknown> | null;
+      error: Error | null;
+    };
+    const tryWithRotation = async (
+      candidates: AstrologyApiSettingRow[],
+    ): Promise<RotationResult> => {
       let lastError: Error | null = null;
 
       for (const candidate of candidates) {
@@ -140,7 +148,12 @@ export async function POST(req: NextRequest) {
             candidate.status = "active";
           }
 
-          return await callAstrologyApiWithSetting(endpoint, payload, candidate);
+          const value = await callAstrologyApiWithSetting<Record<string, unknown>>(
+            endpoint,
+            payload,
+            candidate,
+          );
+          return { value, error: null };
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
           lastError = err instanceof Error ? err : new Error(message);
@@ -154,15 +167,15 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      return { __rotation_error: lastError } as const;
+      return { value: null, error: lastError };
     };
 
     const activeRows = (rows as AstrologyApiSettingRow[]).filter((row) => row.status === "active");
     const inactiveRows = (rows as AstrologyApiSettingRow[]).filter((row) => row.status !== "active");
 
     const activeAttempt = await tryWithRotation(activeRows);
-    if (!("__rotation_error" in activeAttempt)) {
-      return NextResponse.json(activeAttempt);
+    if (activeAttempt.value) {
+      return NextResponse.json(activeAttempt.value);
     }
 
     if (inactiveRows.length > 0) {
@@ -182,14 +195,14 @@ export async function POST(req: NextRequest) {
       });
 
       const inactiveAttempt = await tryWithRotation(inactiveRows);
-      if (!("__rotation_error" in inactiveAttempt)) {
-        return NextResponse.json(inactiveAttempt);
+      if (inactiveAttempt.value) {
+        return NextResponse.json(inactiveAttempt.value);
       }
 
-      throw inactiveAttempt.__rotation_error ?? activeAttempt.__rotation_error ?? new Error("All AstrologyAPI keys were exhausted");
+      throw inactiveAttempt.error ?? activeAttempt.error ?? new Error("All AstrologyAPI keys were exhausted");
     }
 
-    throw activeAttempt.__rotation_error ?? new Error("All AstrologyAPI keys were exhausted");
+    throw activeAttempt.error ?? new Error("All AstrologyAPI keys were exhausted");
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "AstrologyAPI error";
     return NextResponse.json({ error: msg }, { status: 502 });

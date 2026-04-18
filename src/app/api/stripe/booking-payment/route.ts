@@ -12,6 +12,7 @@ import { getServicePurchaseConfig } from "@/lib/service-purchase";
 import { applyRuntimePricesToServices } from "@/lib/runtime-service-pricing";
 import { isDivinerPayoutReadyForPaidServices } from "@/lib/payout-readiness";
 import { calculateMoneySplit } from "@/lib/money-split";
+import { getSessionLinkForBooking } from "@/lib/service-toolkit-mapping";
 import {
   sendBookingConfirmation,
   sendBookingAccessInstructions,
@@ -823,6 +824,12 @@ export async function POST(request: NextRequest) {
           const divinerEmail = divinerAuth?.user?.email;
           if (!divinerEmail) return;
 
+          const toolkitPath = getSessionLinkForBooking({
+            bookingId: booking.id,
+            templateSlug: service.slug ?? null,
+            category: service.category ?? null,
+          });
+
           await sendDivinerNewBookingNotification({
             divinerEmail,
             divinerName: diviner.display_name,
@@ -840,6 +847,7 @@ export async function POST(request: NextRequest) {
                   lifeArea: questionnaireData.lifeArea as string | undefined,
                 }
               : undefined,
+            sessionUrl: toolkitPath ? `${appUrl}${toolkitPath}` : null,
           });
         })()
       );
