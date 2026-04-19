@@ -35,6 +35,7 @@ import { MIGRATION_SQL as MIG_20260416000005 } from "@/data/migrations/202604160
 import { MIGRATION_SQL as MIG_20260416000004 } from "@/data/migrations/20260416000004_tarot_dynamic_system";
 import { MIGRATION_SQL as MIG_20260416000007 } from "@/data/migrations/20260416000007_drop_tarot_spread_cards";
 import { MIGRATION_SQL as MIG_20260418000001 } from "@/data/migrations/20260418000001_service_toolkit_session";
+import { MIGRATION_SQL as MIG_20260419000001 } from "@/data/migrations/20260419000001_social_accounts";
 
 /**
  * Allowlisted migrations that the admin migration runner can execute.
@@ -355,6 +356,14 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Additive migration for the 'Open Service' feature. Adds two nullable columns to bookings: partner_birth_data (JSONB — optional partner birth info for the 3 two-person astrology services) and toolkit_session_opened_at (TIMESTAMPTZ — first-open telemetry). Also adds a partial B-tree index on (partner_birth_data IS NOT NULL) for 'how many two-person bookings have partner data?' reporting. No backfill, no RLS changes, no drops. Rollback = drop both columns.",
     sortKey: "20260418000001",
     sql: MIG_20260418000001,
+  },
+  "20260419000001_social_accounts": {
+    id: "20260419000001_social_accounts",
+    title: "Social accounts + OAuth state (native social posting, replaces Ayrshare)",
+    description:
+      "Creates social_accounts (per-owner OAuth connections to Twitter/Facebook/Instagram/LinkedIn/TikTok/YouTube — tokens AES-256-GCM encrypted at rest, key in SOCIAL_TOKEN_ENCRYPTION_KEY env var) and social_oauth_states (short-lived CSRF + PKCE verifier store for the OAuth redirect loop). One active connection per (owner_type, owner_id, platform) enforced by partial unique index. RLS enabled on both tables — no public/authenticated policies, all access goes through server routes with service-role client. Only Twitter is enabled in lib/social/platform-registry.ts at launch; other platforms scaffolded but return 'platform not yet enabled'. Additive only — no drops, no backfill. Rollback = drop both tables.",
+    sortKey: "20260419000001",
+    sql: MIG_20260419000001,
   },
 };
 

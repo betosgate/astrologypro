@@ -280,6 +280,7 @@ const NAV_GROUPS = [
     label: "Config",
     items: [
       { label: "Platform Settings", href: "/admin/platform-settings", icon: Settings2 },
+      { label: "Social Connections", href: "/admin/social-connections", icon: Share2 },
       { label: "API Keys", href: "/admin/astrology-keys", icon: Key },
       { label: "Astro System Settings", href: "/admin/astro-system-settings", icon: Key },
       { label: "Calendar Config", href: "/admin/calendar-config", icon: CalendarDays },

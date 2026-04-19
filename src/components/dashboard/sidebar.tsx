@@ -40,6 +40,7 @@ import {
   Rss,
   Target,
   Trophy,
+  Share2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -110,6 +111,7 @@ const navItems: NavItem[] = [
     icon: Megaphone,
     children: [
       { label: "Marketing Hub", href: "/dashboard/marketing", icon: Megaphone },
+      { label: "Social Connections", href: "/dashboard/social-connections", icon: Share2 },
       { label: "Campaigns", href: "/dashboard/campaigns", icon: Target },
       { label: "Affiliates", href: "/dashboard/affiliates", icon: Users2 },
       { label: "Giveaways", href: "/dashboard/giveaways", icon: Trophy },

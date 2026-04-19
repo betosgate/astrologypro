@@ -105,6 +105,30 @@ export async function GET() {
       GEOAPIFY_API_KEY: preview(process.env.GEOAPIFY_API_KEY),
       ANTHROPIC_API_KEY: preview(process.env.ANTHROPIC_API_KEY),
     },
+
+    // ── Social Media (Native Integration — replaces Ayrshare) ─
+    social: {
+      // Required for token encryption at rest (AES-256-GCM).
+      // Must be 32 raw bytes: 64-char hex or base64 of 32 bytes.
+      SOCIAL_TOKEN_ENCRYPTION_KEY: preview(process.env.SOCIAL_TOKEN_ENCRYPTION_KEY),
+
+      // X / Twitter — only platform enabled at launch.
+      TWITTER_CLIENT_ID: preview(process.env.TWITTER_CLIENT_ID),
+      TWITTER_CLIENT_SECRET: preview(process.env.TWITTER_CLIENT_SECRET),
+
+      // Disabled platforms — leave unset at launch. Will be used
+      // when their adapters are flipped on in platform-registry.ts.
+      FACEBOOK_APP_ID: preview(process.env.FACEBOOK_APP_ID),
+      FACEBOOK_APP_SECRET: preview(process.env.FACEBOOK_APP_SECRET),
+      INSTAGRAM_APP_ID: preview(process.env.INSTAGRAM_APP_ID),
+      INSTAGRAM_APP_SECRET: preview(process.env.INSTAGRAM_APP_SECRET),
+      LINKEDIN_CLIENT_ID: preview(process.env.LINKEDIN_CLIENT_ID),
+      LINKEDIN_CLIENT_SECRET: preview(process.env.LINKEDIN_CLIENT_SECRET),
+      TIKTOK_CLIENT_KEY: preview(process.env.TIKTOK_CLIENT_KEY),
+      TIKTOK_CLIENT_SECRET: preview(process.env.TIKTOK_CLIENT_SECRET),
+      YOUTUBE_CLIENT_ID: preview(process.env.YOUTUBE_CLIENT_ID),
+      YOUTUBE_CLIENT_SECRET: preview(process.env.YOUTUBE_CLIENT_SECRET),
+    },
   };
 
   return NextResponse.json(envReport, { status: 200 });
