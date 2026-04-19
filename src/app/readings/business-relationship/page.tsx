@@ -173,6 +173,23 @@ export default async function BusinessRelationshipPage() {
       divinerSectionTitle="Find Your Business Relationship Astrologer"
       divinerSectionSubtitle="These practitioners specialize in partnership and business astrology"
       emailGuideSubject="your business relationship reading"
+      methodNotes={[
+        {
+          label: "Technique",
+          title: "Professional synastry, composite, and timing",
+          desc: "The reader studies chart fit, the partnership’s composite chart, and current transits around contracts, launches, pivots, or separation decisions.",
+        },
+        {
+          label: "Best For",
+          title: "Co-founder and key-partner clarity",
+          desc: "Use it before signing, hiring, fundraising, launching, restructuring, or deciding whether a professional alliance is built to last.",
+        },
+        {
+          label: "Prepare",
+          title: "Bring birth data and business context",
+          desc: "Share both birth records plus the company stage, decision deadline, role split, contract question, or recurring conflict pattern.",
+        },
+      ]}
       faqItems={[
         { q: "Do I need my business partner's birth data?", a: "Yes — you'll need birth date, time, and location for both parties. The quality of the analysis directly corresponds to the precision of the data. If birth time is unknown for one partner, the reading uses a solar chart and focuses on planetary placements rather than house analysis." },
         { q: "Can this reading help me evaluate a potential partner before committing?", a: "Absolutely — this is one of the most valuable use cases. A pre-partnership reading can reveal natural synergies, potential friction points, and communication dynamics before any commitments are made, giving you astrological due diligence to complement financial and legal due diligence." },

@@ -185,21 +185,22 @@ const AXIS_POINTS = [
 
 function NativityHeroVisual() {
   return (
-    <div className="relative isolate mx-auto aspect-square w-full max-w-[38rem] overflow-hidden rounded-lg border border-[#c9a84c]/18 bg-[#070910]">
-      <div className="pointer-events-none absolute inset-0 opacity-60 [background-image:linear-gradient(rgba(255,255,255,0.055)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.055)_1px,transparent_1px)] [background-size:44px_44px]" />
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(201,168,76,0.18),transparent_34%,rgba(102,217,199,0.10)_70%,transparent)]" />
+    <div className="relative isolate mx-auto aspect-square w-full max-w-[43rem] overflow-visible">
+      <div className="pointer-events-none absolute -inset-12 rounded-full bg-[radial-gradient(circle,rgba(201,168,76,0.24)_0%,rgba(102,217,199,0.12)_34%,transparent_68%)] blur-2xl" />
+      <div className="pointer-events-none absolute inset-0 rounded-full opacity-45 [background-image:linear-gradient(rgba(255,255,255,0.075)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.075)_1px,transparent_1px)] [background-size:44px_44px] [mask-image:radial-gradient(circle,black_0%,black_62%,transparent_78%)]" />
+      <div className="pointer-events-none absolute inset-8 rounded-full bg-[linear-gradient(135deg,rgba(201,168,76,0.20),transparent_34%,rgba(102,217,199,0.12)_70%,transparent)]" />
 
-      <div className="absolute left-6 top-6 z-20 rounded-lg border border-white/[0.08] bg-[#06080f]/80 px-4 py-3 backdrop-blur">
+      <div className="absolute left-2 top-6 z-20 rounded-lg border border-white/[0.10] bg-[#06080f]/82 px-4 py-3 shadow-[0_20px_60px_rgba(0,0,0,0.35)] backdrop-blur sm:left-6">
         <p className="text-[10px] font-semibold uppercase tracking-widest text-[#c9a84c]/75">Natal Wheel</p>
         <p className="mt-1 text-sm font-semibold text-[#f5f0e8]">12 houses / 10 planets</p>
       </div>
 
-      <div className="absolute bottom-6 right-6 z-20 max-w-[12rem] rounded-lg border border-white/[0.08] bg-[#06080f]/80 px-4 py-3 text-right backdrop-blur">
+      <div className="absolute bottom-6 right-2 z-20 max-w-[12rem] rounded-lg border border-white/[0.10] bg-[#06080f]/82 px-4 py-3 text-right shadow-[0_20px_60px_rgba(0,0,0,0.35)] backdrop-blur sm:right-6">
         <p className="text-[10px] font-semibold uppercase tracking-widest text-[#66d9c7]/75">Reader Focus</p>
         <p className="mt-1 text-sm font-semibold text-[#f5f0e8]">Purpose, timing, patterns</p>
       </div>
 
-      <div className="absolute left-1/2 top-1/2 size-[84%] -translate-x-1/2 -translate-y-1/2 rounded-full border border-[#c9a84c]/35">
+      <div className="absolute left-1/2 top-1/2 size-[86%] -translate-x-1/2 -translate-y-1/2 rounded-full border border-[#c9a84c]/40 shadow-[0_0_90px_rgba(201,168,76,0.16)]">
         <div className="absolute inset-[5%] rounded-full border border-white/[0.08]" />
         <div className="absolute inset-[14%] rounded-full border border-[#66d9c7]/20" />
         <div className="absolute inset-[24%] rounded-full border border-[#c06b79]/22" />
@@ -260,67 +261,72 @@ function NativityHeroVisual() {
 
 function NativityChartExperience({ readerCtaHref }: { readerCtaHref: string }) {
   return (
-    <section className="px-4 py-16 sm:px-6 lg:px-8">
-      <div className="mx-auto grid max-w-6xl items-center gap-10 lg:grid-cols-[1.02fr_0.98fr]">
-        <div className="relative min-h-[500px] overflow-hidden rounded-lg border border-white/[0.08] bg-[#080a12]">
-          <Image
-            src="/images/services/natal-chart.png"
-            alt="Detailed natal chart reading artwork"
-            fill
-            sizes="(max-width: 1024px) 100vw, 48vw"
-            className="object-cover opacity-55"
-          />
-          <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(6,8,15,0.92),rgba(6,8,15,0.34)_48%,rgba(6,8,15,0.88))]" />
-          <div className="absolute inset-8 rounded-full border border-[#c9a84c]/30" />
-          <div className="absolute inset-16 rounded-full border border-[#66d9c7]/18" />
-          <div className="absolute inset-x-8 top-1/2 h-px bg-[#c9a84c]/25" />
-          <div className="absolute inset-y-8 left-1/2 w-px bg-[#c9a84c]/25" />
-          <div className="absolute left-8 top-8 rounded-lg border border-[#c9a84c]/25 bg-[#06080f]/82 px-4 py-3 backdrop-blur">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-[#c9a84c]/75">Ascendant</p>
-            <p className="mt-1 text-sm font-semibold text-[#f5f0e8]">Outer style and first response</p>
-          </div>
-          <div className="absolute bottom-8 right-8 rounded-lg border border-[#66d9c7]/20 bg-[#06080f]/82 px-4 py-3 text-right backdrop-blur">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-[#66d9c7]/75">Midheaven</p>
-            <p className="mt-1 text-sm font-semibold text-[#f5f0e8]">Work, calling, public path</p>
-          </div>
-        </div>
-
-        <div>
+    <section className="px-4 py-24 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-6xl">
+        <div className="mb-10 max-w-3xl">
           <p className="text-xs font-semibold uppercase tracking-widest text-[#c9a84c]/70">
             Full-chart synthesis
           </p>
-          <h2 className="mt-3 max-w-xl text-3xl font-bold text-[#f5f0e8] sm:text-4xl">
+          <h2 className="mt-3 text-4xl font-bold leading-tight text-[#fff8ea] sm:text-5xl">
             A birth chart reading turns a static wheel into a living map.
           </h2>
-          <p className="mt-5 max-w-xl text-sm leading-relaxed text-[#b8bcd0]/68">
-            The session moves from precise birth data into the story of your planets, houses, angles, and repeating life themes.
-          </p>
+        </div>
 
-          <div className="mt-8 space-y-5">
-            {CHART_LAYERS.map((layer) => (
-              <div key={layer.eyebrow} className="border-l border-[#c9a84c]/28 pl-5">
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-[#66d9c7]/75">
-                  {layer.eyebrow}
-                </p>
-                <h3 className="mt-1 text-base font-semibold text-[#f5f0e8]">{layer.title}</h3>
-                <p className="mt-1 text-sm leading-relaxed text-[#b8bcd0]/58">{layer.desc}</p>
-              </div>
-            ))}
+        <div className="grid items-stretch gap-8 lg:grid-cols-[1.08fr_0.92fr]">
+          <div className="relative min-h-[620px] overflow-hidden rounded-lg border border-white/[0.08] bg-[#080a12]">
+            <Image
+              src="/images/services/natal-chart.png"
+              alt="Detailed natal chart reading artwork"
+              fill
+              sizes="(max-width: 1024px) 100vw, 48vw"
+              className="object-cover opacity-55"
+            />
+            <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(6,8,15,0.92),rgba(6,8,15,0.34)_48%,rgba(6,8,15,0.88))]" />
+            <div className="absolute inset-8 rounded-full border border-[#c9a84c]/30" />
+            <div className="absolute inset-16 rounded-full border border-[#66d9c7]/18" />
+            <div className="absolute inset-x-8 top-1/2 h-px bg-[#c9a84c]/25" />
+            <div className="absolute inset-y-8 left-1/2 w-px bg-[#c9a84c]/25" />
+            <div className="absolute left-8 top-8 rounded-lg border border-[#c9a84c]/25 bg-[#06080f]/82 px-4 py-3 backdrop-blur">
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-[#c9a84c]/75">Ascendant</p>
+              <p className="mt-1 text-sm font-semibold text-[#f5f0e8]">Outer style and first response</p>
+            </div>
+            <div className="absolute bottom-8 right-8 rounded-lg border border-[#66d9c7]/20 bg-[#06080f]/82 px-4 py-3 text-right backdrop-blur">
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-[#66d9c7]/75">Midheaven</p>
+              <p className="mt-1 text-sm font-semibold text-[#f5f0e8]">Work, calling, public path</p>
+            </div>
           </div>
 
-          <div className="mt-9 flex flex-wrap gap-3">
-            <a
-              href={readerCtaHref}
-              className="inline-flex h-11 items-center rounded-lg bg-[#c9a84c] px-6 text-sm font-semibold text-black transition-colors hover:bg-[#e2c97e]"
-            >
-              Choose a Birth Chart Reader
-            </a>
-            <a
-              href="#free-guide"
-              className="inline-flex h-11 items-center rounded-lg border border-white/[0.10] px-5 text-sm font-semibold text-[#f5f0e8] transition-colors hover:border-[#66d9c7]/30 hover:bg-white/[0.04]"
-            >
-              Prepare My Birth Details
-            </a>
+          <div className="flex flex-col justify-center border-y border-[#c9a84c]/16 py-8 lg:border-y-0 lg:border-l lg:pl-10">
+            <p className="max-w-xl text-base leading-8 text-[#f5f0e8]/72">
+              The session moves from precise birth data into the story of your planets, houses, angles, and repeating life themes.
+            </p>
+
+            <div className="mt-8 space-y-5">
+              {CHART_LAYERS.map((layer) => (
+                <div key={layer.eyebrow} className="border-l border-[#c9a84c]/28 pl-5">
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-[#66d9c7]/75">
+                    {layer.eyebrow}
+                  </p>
+                  <h3 className="mt-1 text-base font-semibold text-[#f5f0e8]">{layer.title}</h3>
+                  <p className="mt-1 text-sm leading-relaxed text-[#b8bcd0]/58">{layer.desc}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-9 flex flex-wrap gap-3">
+              <a
+                href={readerCtaHref}
+                className="inline-flex h-11 items-center rounded-lg bg-[#c9a84c] px-6 text-sm font-semibold text-black transition-colors hover:bg-[#e2c97e]"
+              >
+                Choose a Birth Chart Reader
+              </a>
+              <a
+                href="#free-guide"
+                className="inline-flex h-11 items-center rounded-lg border border-white/[0.10] px-5 text-sm font-semibold text-[#f5f0e8] transition-colors hover:border-[#66d9c7]/30 hover:bg-white/[0.04]"
+              >
+                Prepare My Birth Details
+              </a>
+            </div>
           </div>
         </div>
       </div>
@@ -330,7 +336,7 @@ function NativityChartExperience({ readerCtaHref }: { readerCtaHref: string }) {
 
 function NativityAxisSection() {
   return (
-    <section className="px-4 py-14 sm:px-6 lg:px-8">
+    <section className="px-4 py-20 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-6xl">
         <div className="mb-9 flex flex-col justify-between gap-4 md:flex-row md:items-end">
           <div>
@@ -348,7 +354,7 @@ function NativityAxisSection() {
 
         <div className="grid gap-px overflow-hidden rounded-lg border border-white/[0.08] bg-white/[0.08] md:grid-cols-4">
           {AXIS_POINTS.map((point, index) => (
-            <div key={point.label} className="bg-[#080a12] p-6">
+            <div key={point.label} className="bg-[#080a12] p-7 transition-colors hover:bg-[#0d0d0a]">
               <div className="mb-8 flex items-center justify-between">
                 <span className="text-[10px] font-semibold uppercase tracking-widest text-[#66d9c7]/70">
                   Axis {index + 1}
@@ -369,8 +375,8 @@ function NativityAxisSection() {
 
 function NativityPreparationStrip() {
   return (
-    <section className="px-4 pb-8 pt-10 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-6xl overflow-hidden rounded-lg border border-[#c9a84c]/15 bg-[#080a12]">
+    <section className="px-4 pb-12 pt-8 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-6xl overflow-hidden rounded-lg border border-[#c9a84c]/18 bg-[#080a12] shadow-[0_24px_80px_rgba(0,0,0,0.24)]">
         <div className="grid lg:grid-cols-[0.85fr_1.15fr]">
           <div className="relative min-h-[320px] border-b border-white/[0.08] p-7 lg:border-b-0 lg:border-r">
             <div className="absolute inset-0 opacity-40 [background-image:linear-gradient(115deg,transparent_0%,rgba(201,168,76,0.14)_34%,transparent_35%,transparent_62%,rgba(102,217,199,0.12)_63%,transparent_100%)]" />
@@ -424,6 +430,8 @@ export default async function NativityBirthChartPage() {
   return (
     <ReadingPageTemplate
       serviceType="astrology"
+      presentation="immersive"
+      hideServiceVisualCta
       badge="The Foundation of All Astrology"
       heroImage={getReadingOgImageUrl("nativity-birth-chart")}
       heroVisual={<NativityHeroVisual />}
@@ -464,6 +472,23 @@ export default async function NativityBirthChartPage() {
       divinerSectionTitle="Find Your Birth Chart Astrologer"
       divinerSectionSubtitle="These practitioners specialize in natal chart readings"
       emailGuideSubject="your natal chart reading"
+      methodNotes={[
+        {
+          label: "Technique",
+          title: "Natal chart synthesis",
+          desc: "Your astrologer reads planets, signs, houses, angles, and major aspects together rather than treating your sun sign as the whole story.",
+        },
+        {
+          label: "Best For",
+          title: "Lifelong pattern clarity",
+          desc: "Use this session for identity, emotional needs, relationship patterns, vocation, and the repeating themes that shape long-term choices.",
+        },
+        {
+          label: "Prepare",
+          title: "Exact birth data matters",
+          desc: "Bring your date, location, and closest possible birth time so the Ascendant, Midheaven, house structure, and timing-sensitive angles can be read cleanly.",
+        },
+      ]}
       afterTrustContent={<NativityChartExperience readerCtaHref={readerCtaHref} />}
       afterWhatIsContent={<NativityAxisSection />}
       beforeExpectContent={<NativityPreparationStrip />}

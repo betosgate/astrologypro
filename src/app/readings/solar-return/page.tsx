@@ -138,7 +138,7 @@ export default async function SolarReturnPage() {
       heroImage={getReadingOgImageUrl("solar-return")}
       heroTitleBefore="Your Solar Return:"
       heroTitleGradient="A New Year in the Stars"
-      heroSubtitle="Every year on your birthday, the Sun returns to its exact natal position — creating a new energetic blueprint for the year ahead. A Solar Return reading reveals what the universe has in store for you."
+      heroSubtitle="Every year near your birthday, the Sun returns to its exact natal position and opens a new personal-year chart. A Solar Return reading shows which houses, angles, and planetary themes are emphasized for the 12 months ahead."
       heroStats={[
         { value: "Annual", label: "Happens Every Year" },
         { value: "Your Birthday", label: "Personal New Year" },
@@ -200,6 +200,23 @@ export default async function SolarReturnPage() {
       divinerSectionTitle="Find Your Solar Return Astrologer"
       divinerSectionSubtitle="These practitioners specialize in Solar Return readings"
       emailGuideSubject="your Solar Return reading"
+      methodNotes={[
+        {
+          label: "Technique",
+          title: "Annual return chart plus natal context",
+          desc: "The Solar Return chart is read for the exact Sun-to-Sun return, then compared with your natal chart to identify the year’s strongest themes.",
+        },
+        {
+          label: "Best For",
+          title: "Birthday-to-birthday planning",
+          desc: "Use it for annual decisions, relationship and career focus, creative priorities, and timing the year’s most visible opportunities or pressure points.",
+        },
+        {
+          label: "Prepare",
+          title: "Know your location around the return",
+          desc: "Bring birth data and where you expect to be at the return moment; location can shift the Rising sign and house emphasis of the year-ahead chart.",
+        },
+      ]}
       faqItems={[
         {
           q: "What is a Solar Return?",

@@ -40,16 +40,19 @@ export interface ReadingPageTemplateProps {
   divinerSectionSubtitle: string;
   emailGuideSubject: string;
   faqItems: Array<{ q: string; a: string }>;
+  methodNotes?: Array<{ label: string; title: string; desc: string }>;
   ctaTitle: string;
   ctaBody: string;
   ctaButtonLabel: string;
   pageUrl: string;
   serviceSlug?: string;
   heroImage?: string | null;
+  presentation?: "standard" | "immersive";
   heroVisual?: ReactNode;
   afterTrustContent?: ReactNode;
   afterWhatIsContent?: ReactNode;
   beforeExpectContent?: ReactNode;
+  hideServiceVisualCta?: boolean;
   relatedReadings?: Array<{ title: string; href: string; icon: string }>;
 }
 
@@ -184,6 +187,7 @@ export function ReadingPageTemplate(props: ReadingPageTemplateProps) {
     divinerSectionSubtitle,
     emailGuideSubject,
     faqItems,
+    methodNotes = [],
     ctaTitle,
     ctaBody,
     ctaButtonLabel,
@@ -191,10 +195,12 @@ export function ReadingPageTemplate(props: ReadingPageTemplateProps) {
     pageUrl,
     serviceSlug: explicitServiceSlug,
     heroImage,
+    presentation = "standard",
     heroVisual,
     afterTrustContent,
     afterWhatIsContent,
     beforeExpectContent,
+    hideServiceVisualCta = false,
   } = props;
 
   const readerLabel = serviceType === "tarot" ? "Tarot Reader" : "Reader";
@@ -205,6 +211,7 @@ export function ReadingPageTemplate(props: ReadingPageTemplateProps) {
   const primaryCtaLabel = diviners.length > 0 ? `Find a ${readerLabel}` : discoverLabel;
   const sessionLabel = serviceType === "tarot" ? "tarot readers" : "readers";
   const sessionType = serviceType === "astrology" ? "personalized astrological" : "tarot";
+  const isImmersive = presentation === "immersive";
 
   // Build initials from name
   function getInitials(name: string): string {
@@ -217,11 +224,21 @@ export function ReadingPageTemplate(props: ReadingPageTemplateProps) {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#06080f]">
+    <div className={isImmersive ? "flex min-h-screen flex-col bg-[#040504]" : "flex min-h-screen flex-col bg-[#06080f]"}>
       {/* Fixed radial background gradients */}
       <div className="pointer-events-none fixed inset-0 z-0">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_30%_10%,rgba(201,120,28,0.15)_0%,transparent_55%)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_70%_85%,rgba(201,168,76,0.09)_0%,transparent_55%)]" />
+        {isImmersive ? (
+          <>
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_22%_8%,rgba(201,168,76,0.14)_0%,transparent_45%)]" />
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_78%_22%,rgba(102,217,199,0.09)_0%,transparent_42%)]" />
+            <div className="absolute inset-0 bg-[linear-gradient(180deg,#040504_0%,#090806_46%,#050608_100%)]" />
+          </>
+        ) : (
+          <>
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_30%_10%,rgba(201,120,28,0.15)_0%,transparent_55%)]" />
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_70%_85%,rgba(201,168,76,0.09)_0%,transparent_55%)]" />
+          </>
+        )}
       </div>
 
       <div className="relative z-10 flex flex-1 flex-col">
@@ -280,20 +297,37 @@ export function ReadingPageTemplate(props: ReadingPageTemplateProps) {
           />
 
           {/* SECTION A — Hero */}
-          <section className={heroVisual ? "relative overflow-hidden py-14 md:py-20" : "relative overflow-hidden py-20 md:py-28"}>
-            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_60%,rgba(201,168,76,0.07)_0%,transparent_60%)]" />
-            <div className={heroVisual ? "relative mx-auto max-w-7xl px-4" : "relative mx-auto max-w-6xl px-4"}>
-              <div className={heroVisual ? "grid items-center gap-12 lg:grid-cols-[minmax(0,0.88fr)_minmax(28rem,1.12fr)]" : "grid items-center gap-12 md:grid-cols-[1fr_auto]"}>
+          <section
+            className={
+              isImmersive
+                ? "relative isolate overflow-hidden border-b border-[#c9a84c]/10 py-14 md:py-20 xl:py-24"
+                : heroVisual
+                  ? "relative overflow-hidden py-14 md:py-20"
+                  : "relative overflow-hidden py-20 md:py-28"
+            }
+          >
+            <div
+              className={
+                isImmersive
+                  ? "pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_68%_44%,rgba(201,168,76,0.18)_0%,transparent_47%)]"
+                  : "pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_60%,rgba(201,168,76,0.07)_0%,transparent_60%)]"
+              }
+            />
+            {isImmersive && (
+              <div className="pointer-events-none absolute inset-0 opacity-[0.18] [background-image:linear-gradient(rgba(245,240,232,0.07)_1px,transparent_1px),linear-gradient(90deg,rgba(245,240,232,0.07)_1px,transparent_1px)] [background-size:56px_56px]" />
+            )}
+            <div className={isImmersive ? "relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8" : heroVisual ? "relative mx-auto max-w-7xl px-4" : "relative mx-auto max-w-6xl px-4"}>
+              <div className={isImmersive ? "grid min-h-[640px] items-center gap-12 lg:grid-cols-[minmax(0,0.92fr)_minmax(32rem,1.08fr)]" : heroVisual ? "grid items-center gap-12 lg:grid-cols-[minmax(0,0.88fr)_minmax(28rem,1.12fr)]" : "grid items-center gap-12 md:grid-cols-[1fr_auto]"}>
                 {/* Left: text content */}
-                <div className="text-center md:text-left">
+                <div className={isImmersive ? "max-w-3xl text-center md:text-left" : "text-center md:text-left"}>
                   {/* Badge pill */}
-                  <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-[#c9a84c]/20 bg-[#c9a84c]/5 px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-[#c9a84c]">
+                  <div className={isImmersive ? "mb-7 inline-flex items-center gap-2 rounded-full border border-[#c9a84c]/25 bg-[#c9a84c]/10 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-[#f0d680]" : "mb-6 inline-flex items-center gap-2 rounded-full border border-[#c9a84c]/20 bg-[#c9a84c]/5 px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-[#c9a84c]"}>
                     <span className="inline-block size-1.5 rounded-full bg-[#c9a84c]" />
                     {badge}
                   </div>
 
                   {/* H1 */}
-                  <h1 className="text-4xl font-bold tracking-tight text-[#f5f0e8] sm:text-5xl lg:text-6xl">
+                  <h1 className={isImmersive ? "text-5xl font-bold leading-[0.95] tracking-normal text-[#fff8ea] sm:text-6xl lg:text-7xl xl:text-8xl" : "text-4xl font-bold tracking-normal text-[#f5f0e8] sm:text-5xl lg:text-6xl"}>
                     {heroTitleBefore}{" "}
                     <span
                       className="bg-clip-text text-transparent"
@@ -307,37 +341,48 @@ export function ReadingPageTemplate(props: ReadingPageTemplateProps) {
                   </h1>
 
                   {/* Subtitle */}
-                  <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-[#b8bcd0]/75 md:mx-0">
+                  <p className={isImmersive ? "mx-auto mt-7 max-w-2xl text-lg leading-8 text-[#f5f0e8]/78 md:mx-0" : "mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-[#b8bcd0]/75 md:mx-0"}>
                     {heroSubtitle}
                   </p>
 
                   {/* Stats row */}
-                  <div className="mt-10 flex flex-wrap items-center justify-center gap-10 md:justify-start">
-                    {heroStats.map((stat, i) => (
-                      <div key={stat.label} className="flex items-center gap-10">
-                        <div className="text-center">
-                          <p className="text-3xl font-bold text-[#c9a84c]">{stat.value}</p>
-                          <p className="mt-1 text-sm text-[#b8bcd0]/50">{stat.label}</p>
+                  {isImmersive ? (
+                    <div className="mt-9 grid max-w-2xl overflow-hidden rounded-lg border border-white/[0.10] bg-[#080806]/70 text-left backdrop-blur sm:grid-cols-3">
+                      {[...heroStats, { value: `$${startingPrice}`, label: "Starting Price" }].map((stat) => (
+                        <div key={stat.label} className="border-b border-white/[0.08] p-4 last:border-b-0 sm:border-b-0 sm:border-r sm:last:border-r-0">
+                          <p className="text-2xl font-bold text-[#f1d37a]">{stat.value}</p>
+                          <p className="mt-1 text-xs leading-relaxed text-[#f5f0e8]/52">{stat.label}</p>
                         </div>
-                        {i < heroStats.length - 1 && (
-                          <div className="h-10 w-px bg-white/10" aria-hidden="true" />
-                        )}
-                      </div>
-                    ))}
-                    {heroStats.length > 0 && (
-                      <div className="h-10 w-px bg-white/10" aria-hidden="true" />
-                    )}
-                    <div className="text-center">
-                      <p className="text-3xl font-bold text-[#c9a84c]">${startingPrice}</p>
-                      <p className="mt-1 text-sm text-[#b8bcd0]/50">Starting Price</p>
+                      ))}
                     </div>
-                  </div>
+                  ) : (
+                    <div className="mt-10 flex flex-wrap items-center justify-center gap-10 md:justify-start">
+                      {heroStats.map((stat, i) => (
+                        <div key={stat.label} className="flex items-center gap-10">
+                          <div className="text-center">
+                            <p className="text-3xl font-bold text-[#c9a84c]">{stat.value}</p>
+                            <p className="mt-1 text-sm text-[#b8bcd0]/50">{stat.label}</p>
+                          </div>
+                          {i < heroStats.length - 1 && (
+                            <div className="h-10 w-px bg-white/10" aria-hidden="true" />
+                          )}
+                        </div>
+                      ))}
+                      {heroStats.length > 0 && (
+                        <div className="h-10 w-px bg-white/10" aria-hidden="true" />
+                      )}
+                      <div className="text-center">
+                        <p className="text-3xl font-bold text-[#c9a84c]">${startingPrice}</p>
+                        <p className="mt-1 text-sm text-[#b8bcd0]/50">Starting Price</p>
+                      </div>
+                    </div>
+                  )}
 
                   {/* CTA buttons */}
                   <div className="mt-10 flex flex-wrap items-center justify-center gap-4 md:justify-start">
                     <a
                       href={primaryCtaHref}
-                      className="inline-flex h-12 items-center gap-2 rounded-lg bg-[#c9a84c] px-8 text-sm font-semibold text-black shadow-[0_0_20px_rgba(201,168,76,0.3)] transition-all hover:bg-[#e2c97e]"
+                      className={isImmersive ? "inline-flex h-14 items-center gap-2 rounded-lg bg-[#f1d37a] px-8 text-sm font-bold text-black shadow-[0_18px_50px_rgba(201,168,76,0.22)] transition-all hover:bg-[#ffe39a]" : "inline-flex h-12 items-center gap-2 rounded-lg bg-[#c9a84c] px-8 text-sm font-semibold text-black shadow-[0_0_20px_rgba(201,168,76,0.3)] transition-all hover:bg-[#e2c97e]"}
                     >
                       {primaryCtaLabel}
                       <ArrowRight className="size-4" aria-hidden="true" />
@@ -352,9 +397,9 @@ export function ReadingPageTemplate(props: ReadingPageTemplateProps) {
 
                   {/* Hero inline lead capture */}
                   <div className="mt-6">
-                    <div className="mb-3 flex items-center gap-3">
+                    <div className={isImmersive ? "mb-3 flex max-w-md items-center gap-3 md:max-w-sm" : "mb-3 flex items-center gap-3"}>
                       <div className="h-px flex-1 bg-white/10" aria-hidden="true" />
-                      <span className="text-xs uppercase tracking-widest text-[#b8bcd0]/35">
+                      <span className="text-xs uppercase tracking-widest text-[#f5f0e8]/40">
                         or get a free reading guide
                       </span>
                       <div className="h-px flex-1 bg-white/10" aria-hidden="true" />
@@ -392,21 +437,21 @@ export function ReadingPageTemplate(props: ReadingPageTemplateProps) {
           </section>
 
           {/* SECTION B — Trust Bar */}
-          <section className="border-y border-white/[0.06] bg-white/[0.015] px-4 py-4">
-            <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-center gap-6 md:gap-10">
-              <span className="flex items-center gap-2 text-sm text-[#b8bcd0]/60">
+          <section className={isImmersive ? "border-y border-[#c9a84c]/12 bg-[#080806]/82 px-4 py-5 backdrop-blur" : "border-y border-white/[0.06] bg-white/[0.015] px-4 py-4"}>
+            <div className={isImmersive ? "mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-6 md:gap-10" : "mx-auto flex max-w-5xl flex-wrap items-center justify-center gap-6 md:gap-10"}>
+              <span className="flex items-center gap-2 text-sm text-[#f5f0e8]/68">
                 ⭐ 4.9★ average rating
               </span>
               <span className="hidden text-white/20 md:inline">·</span>
-              <span className="flex items-center gap-2 text-sm text-[#b8bcd0]/60">
+              <span className="flex items-center gap-2 text-sm text-[#f5f0e8]/68">
                 📅 12,000+ sessions completed
               </span>
               <span className="hidden text-white/20 md:inline">·</span>
-              <span className="flex items-center gap-2 text-sm text-[#b8bcd0]/60">
+              <span className="flex items-center gap-2 text-sm text-[#f5f0e8]/68">
                 🏆 50+ certified readers
               </span>
               <span className="hidden text-white/20 md:inline">·</span>
-              <span className="flex items-center gap-2 text-sm text-[#b8bcd0]/60">
+              <span className="flex items-center gap-2 text-sm text-[#f5f0e8]/68">
                 🔒 Secure instant booking
               </span>
             </div>
@@ -420,71 +465,73 @@ export function ReadingPageTemplate(props: ReadingPageTemplateProps) {
           {afterTrustContent}
 
           {/* SECTION B.5 — Service Visual CTA */}
-          <section className="px-4 py-14 sm:px-6 lg:px-8">
-            <div className="mx-auto grid max-w-5xl items-center gap-10 lg:grid-cols-[0.9fr_1.1fr]">
-              <div className="relative min-h-[320px] overflow-hidden rounded-2xl border border-[#c9a84c]/10 bg-[#0d1117]/70">
-                {serviceImage ? (
-                  <Image
-                    src={serviceImage}
-                    alt={`${serviceLabel} reading visual`}
-                    fill
-                    sizes="(max-width: 1024px) 100vw, 38vw"
-                    className="object-cover"
-                  />
-                ) : (
-                  <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_35%,rgba(201,168,76,0.18)_0%,transparent_65%)]" />
-                )}
-                <div className="absolute inset-0 bg-gradient-to-t from-[#06080f] via-[#06080f]/35 to-transparent" />
-                <div className="absolute bottom-5 left-5 right-5">
-                  <p className="text-xs font-semibold uppercase tracking-widest text-[#c9a84c]/80">
-                    {serviceType === "tarot" ? "Spread Focus" : "Chart Focus"}
+          {!hideServiceVisualCta && (
+            <section className="px-4 py-14 sm:px-6 lg:px-8">
+              <div className="mx-auto grid max-w-5xl items-center gap-10 lg:grid-cols-[0.9fr_1.1fr]">
+                <div className="relative min-h-[320px] overflow-hidden rounded-2xl border border-[#c9a84c]/10 bg-[#0d1117]/70">
+                  {serviceImage ? (
+                    <Image
+                      src={serviceImage}
+                      alt={`${serviceLabel} reading visual`}
+                      fill
+                      sizes="(max-width: 1024px) 100vw, 38vw"
+                      className="object-cover"
+                    />
+                  ) : (
+                    <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_35%,rgba(201,168,76,0.18)_0%,transparent_65%)]" />
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#06080f] via-[#06080f]/35 to-transparent" />
+                  <div className="absolute bottom-5 left-5 right-5">
+                    <p className="text-xs font-semibold uppercase tracking-widest text-[#c9a84c]/80">
+                      {serviceType === "tarot" ? "Spread Focus" : "Chart Focus"}
+                    </p>
+                    <p className="mt-1 max-w-sm text-xl font-bold text-[#f5f0e8]">
+                      {serviceLabel} Reading
+                    </p>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-widest text-[#c9a84c]/70">
+                    Start with the right context
                   </p>
-                  <p className="mt-1 max-w-sm text-xl font-bold text-[#f5f0e8]">
-                    {serviceLabel} Reading
+                  <h2 className="mt-3 text-2xl font-bold text-[#f5f0e8] sm:text-3xl">
+                    Book this service with a reader who works in this exact style.
+                  </h2>
+                  <p className="mt-4 text-sm leading-relaxed text-[#b8bcd0]/65">
+                    Review what the session covers, send your question or birth details, then choose a practitioner without losing the reading context.
                   </p>
+
+                  <div className="mt-7 grid gap-3 sm:grid-cols-3">
+                    {revealsItems.slice(0, 3).map((item) => (
+                      <div key={item.label} className="border-l border-[#c9a84c]/25 pl-4">
+                        <p className="text-sm font-semibold text-[#f5f0e8]">{item.label}</p>
+                        <p className="mt-1 text-xs leading-relaxed text-[#b8bcd0]/50">
+                          {item.desc}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="mt-8 flex flex-wrap gap-3">
+                    <a
+                      href={primaryCtaHref}
+                      className="inline-flex h-11 items-center gap-2 rounded-lg bg-[#c9a84c] px-6 text-sm font-semibold text-black transition-colors hover:bg-[#e2c97e]"
+                    >
+                      {diviners.length > 0 ? "Choose a Reader" : discoverLabel}
+                      <ArrowRight className="size-4" aria-hidden="true" />
+                    </a>
+                    <a
+                      href="#free-guide"
+                      className="inline-flex h-11 items-center rounded-lg border border-white/[0.08] px-5 text-sm font-semibold text-[#f5f0e8] transition-colors hover:border-[#c9a84c]/25 hover:bg-white/[0.04]"
+                    >
+                      Send My Context First
+                    </a>
+                  </div>
                 </div>
               </div>
-
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-widest text-[#c9a84c]/70">
-                  Start with the right context
-                </p>
-                <h2 className="mt-3 text-2xl font-bold text-[#f5f0e8] sm:text-3xl">
-                  Book this service with a reader who works in this exact style.
-                </h2>
-                <p className="mt-4 text-sm leading-relaxed text-[#b8bcd0]/65">
-                  Review what the session covers, send your question or birth details, then choose a practitioner without losing the reading context.
-                </p>
-
-                <div className="mt-7 grid gap-3 sm:grid-cols-3">
-                  {revealsItems.slice(0, 3).map((item) => (
-                    <div key={item.label} className="border-l border-[#c9a84c]/25 pl-4">
-                      <p className="text-sm font-semibold text-[#f5f0e8]">{item.label}</p>
-                      <p className="mt-1 text-xs leading-relaxed text-[#b8bcd0]/50">
-                        {item.desc}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="mt-8 flex flex-wrap gap-3">
-                  <a
-                    href={primaryCtaHref}
-                    className="inline-flex h-11 items-center gap-2 rounded-lg bg-[#c9a84c] px-6 text-sm font-semibold text-black transition-colors hover:bg-[#e2c97e]"
-                  >
-                    {diviners.length > 0 ? "Choose a Reader" : discoverLabel}
-                    <ArrowRight className="size-4" aria-hidden="true" />
-                  </a>
-                  <a
-                    href="#free-guide"
-                    className="inline-flex h-11 items-center rounded-lg border border-white/[0.08] px-5 text-sm font-semibold text-[#f5f0e8] transition-colors hover:border-[#c9a84c]/25 hover:bg-white/[0.04]"
-                  >
-                    Send My Context First
-                  </a>
-                </div>
-              </div>
-            </div>
-          </section>
+            </section>
+          )}
 
           {/* SECTION C — What Is */}
           <section id="what-is" className="px-4 py-16 sm:px-6 lg:px-8">
@@ -524,6 +571,37 @@ export function ReadingPageTemplate(props: ReadingPageTemplateProps) {
               </div>
             </div>
           </section>
+
+          {methodNotes.length > 0 && (
+            <section className="px-4 pb-6 sm:px-6 lg:px-8">
+              <div className="mx-auto max-w-5xl">
+                <div className="mb-7 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-widest text-[#c9a84c]/70">
+                      Reading Method
+                    </p>
+                    <h2 className="mt-2 text-2xl font-bold text-[#f5f0e8] sm:text-3xl">
+                      How this session works
+                    </h2>
+                  </div>
+                  <p className="max-w-md text-sm leading-relaxed text-[#b8bcd0]/55">
+                    A focused view of the technique, the best use case, and what to prepare before you book.
+                  </p>
+                </div>
+                <div className="grid gap-px overflow-hidden rounded-lg border border-white/[0.08] bg-white/[0.08] md:grid-cols-3">
+                  {methodNotes.map((note) => (
+                    <div key={note.label} className="bg-[#080a12] p-6">
+                      <p className="text-[10px] font-semibold uppercase tracking-widest text-[#c9a84c]/70">
+                        {note.label}
+                      </p>
+                      <h3 className="mt-3 text-base font-semibold text-[#f5f0e8]">{note.title}</h3>
+                      <p className="mt-2 text-sm leading-relaxed text-[#b8bcd0]/58">{note.desc}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </section>
+          )}
 
           {afterWhatIsContent}
 

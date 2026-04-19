@@ -140,7 +140,7 @@ export default async function MonthlyTransitsLunarReturnPage() {
       heroTitleGradient="Your Month Mapped in the Stars"
       heroSubtitle="Each month, the Moon completes its return to your natal position — setting a new emotional tone for the 28 days ahead. Combined with the current planetary transits, this reading gives you the most complete monthly astrological picture available."
       heroStats={[
-        { value: "Monthly", label: "Repeats Every 28 Days" },
+        { value: "~27.3 Days", label: "Moon Returns to Birth Degree" },
         { value: "Dual Technique", label: "Transits + Lunar Return" },
       ]}
       startingPrice={95}
@@ -173,6 +173,23 @@ export default async function MonthlyTransitsLunarReturnPage() {
       divinerSectionTitle="Find Your Monthly Forecast Astrologer"
       divinerSectionSubtitle="These practitioners specialize in lunar return and monthly transit readings"
       emailGuideSubject="your monthly forecast reading"
+      methodNotes={[
+        {
+          label: "Technique",
+          title: "Lunar return plus monthly transit overlay",
+          desc: "The Lunar Return frames the month’s emotional weather while the transit overlay shows the outer events, deadlines, and choices pressing on your natal chart.",
+        },
+        {
+          label: "Best For",
+          title: "Four-week planning",
+          desc: "Use it to plan work rhythms, relationship conversations, recovery windows, creative pushes, and the dates when the month’s themes peak.",
+        },
+        {
+          label: "Prepare",
+          title: "Share your location and month ahead",
+          desc: "Bring birth data, current location, and any known deadlines or personal questions so your reader can connect the return chart to your actual calendar.",
+        },
+      ]}
       faqItems={[
         { q: "What's the difference between a Lunar Return and a Solar Return?", a: "A Solar Return happens once a year around your birthday and maps the annual themes for the entire year ahead. A Lunar Return happens every 27–28 days and sets the emotional and personal focus for that specific month. They operate at different scales: annual vs. monthly." },
         { q: "Does location affect my Lunar Return like it does the Solar Return?", a: "Yes — just like with the Solar Return, where you are physically at the exact moment of your Lunar Return shifts the Rising sign of the chart, changing the house emphases for the month. Some people use this to intentionally influence their monthly emotional climate." },
