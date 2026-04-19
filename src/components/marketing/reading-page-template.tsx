@@ -4,6 +4,7 @@ import { Star, BadgeCheck, ArrowRight } from "lucide-react";
 import { MarketingHeader } from "@/components/marketing/header";
 import { MarketingFooter } from "@/components/marketing/footer";
 import { getDivinerAvatarUrl } from "@/lib/diviner-images";
+import { getReadingImageUrl } from "@/lib/service-images";
 import { ReadingLeadCapture } from "@/components/marketing/reading-lead-capture";
 import { ReadingLeadForm } from "@/components/marketing/reading-lead-form";
 import { ReadingStickyBar } from "@/components/marketing/reading-sticky-bar";
@@ -42,6 +43,7 @@ export interface ReadingPageTemplateProps {
   ctaBody: string;
   ctaButtonLabel: string;
   pageUrl: string;
+  serviceSlug?: string;
   heroImage?: string | null;
   relatedReadings?: Array<{ title: string; href: string; icon: string }>;
 }
@@ -67,8 +69,37 @@ const HOW_IT_WORKS_STEPS = [
   },
 ];
 
-function DivinerCard({ diviner }: { diviner: DivinerLandingCard }) {
+function getReadingSlugFromHref(href: string): string {
+  try {
+    const pathname = href.startsWith("http") ? new URL(href).pathname : href.split("?")[0];
+    return pathname.split("/").filter(Boolean).pop() ?? "";
+  } catch {
+    return href.split("?")[0].split("/").filter(Boolean).pop() ?? "";
+  }
+}
+
+function getLocalImagePath(imageUrl?: string | null): string | null {
+  if (!imageUrl) return null;
+  if (imageUrl.startsWith("/")) return imageUrl;
+
+  try {
+    const url = new URL(imageUrl);
+    return url.hostname === "astrologypro.com" ? url.pathname : null;
+  } catch {
+    return null;
+  }
+}
+
+function DivinerCard({
+  diviner,
+  serviceSlug,
+}: {
+  diviner: DivinerLandingCard;
+  serviceSlug: string;
+}) {
   const avatarUrl = getDivinerAvatarUrl(diviner.avatarUrl);
+  const bookingHref = serviceSlug ? `/${diviner.username}/book/${serviceSlug}` : `/${diviner.username}`;
+
   return (
     <article className="group flex flex-col overflow-hidden rounded-2xl border border-white/5 bg-[#0d1117]/60 transition-all hover:border-[#c9a84c]/30 hover:shadow-[0_0_30px_rgba(201,168,76,0.05)]">
       <div className="relative h-20 overflow-hidden bg-gradient-to-br from-[#c9a84c]/10 to-[#c97a4c]/10">
@@ -116,10 +147,10 @@ function DivinerCard({ diviner }: { diviner: DivinerLandingCard }) {
         )}
         <div className="mb-5 mt-4">
           <Link
-            href={`/${diviner.username}`}
+            href={bookingHref}
             className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-[#c9a84c] px-4 py-2 text-sm font-semibold text-black transition-colors hover:bg-[#e2c97e]"
           >
-            Book a Reading <ArrowRight className="size-3.5" aria-hidden="true" />
+            Book This Reading <ArrowRight className="size-3.5" aria-hidden="true" />
           </Link>
         </div>
       </div>
@@ -153,11 +184,16 @@ export function ReadingPageTemplate(props: ReadingPageTemplateProps) {
     ctaButtonLabel,
     relatedReadings = [],
     pageUrl,
+    serviceSlug: explicitServiceSlug,
     heroImage,
   } = props;
 
   const readerLabel = serviceType === "tarot" ? "Tarot Reader" : "Reader";
   const serviceLabel = heroTitleBefore.trim().replace(/:$/, "");
+  const readingSlug = explicitServiceSlug ?? getReadingSlugFromHref(pageUrl);
+  const serviceImage = getReadingImageUrl(readingSlug) ?? getLocalImagePath(heroImage);
+  const primaryCtaHref = diviners.length > 0 ? "#diviners" : discoverLink;
+  const primaryCtaLabel = diviners.length > 0 ? `Find a ${readerLabel}` : discoverLabel;
   const sessionLabel = serviceType === "tarot" ? "tarot readers" : "readers";
   const sessionType = serviceType === "astrology" ? "personalized astrological" : "tarot";
 
@@ -291,10 +327,17 @@ export function ReadingPageTemplate(props: ReadingPageTemplateProps) {
                   {/* CTA buttons */}
                   <div className="mt-10 flex flex-wrap items-center justify-center gap-4 md:justify-start">
                     <a
-                      href="#diviners"
+                      href={primaryCtaHref}
                       className="inline-flex h-12 items-center gap-2 rounded-lg bg-[#c9a84c] px-8 text-sm font-semibold text-black shadow-[0_0_20px_rgba(201,168,76,0.3)] transition-all hover:bg-[#e2c97e]"
                     >
-                      Find a {readerLabel} ↓
+                      {primaryCtaLabel}
+                      <ArrowRight className="size-4" aria-hidden="true" />
+                    </a>
+                    <a
+                      href="#free-guide"
+                      className="inline-flex h-12 items-center gap-2 rounded-lg border border-[#c9a84c]/25 px-6 text-sm font-semibold text-[#e2c97e] transition-colors hover:border-[#c9a84c]/45 hover:bg-[#c9a84c]/10"
+                    >
+                      Get the Guide
                     </a>
                   </div>
 
@@ -314,15 +357,19 @@ export function ReadingPageTemplate(props: ReadingPageTemplateProps) {
                 </div>
 
                 {/* Right: service image card — desktop only */}
-                {heroImage && (
+                {serviceImage && (
                   <div className="hidden md:block">
                     <div className="relative">
                       <div className="absolute inset-0 rounded-2xl bg-[#c9a84c]/20 blur-2xl" />
-                      <img
-                        src={heroImage}
+                      <Image
+                        src={serviceImage}
                         alt=""
                         aria-hidden="true"
-                        className="relative w-64 rounded-2xl border border-[#c9a84c]/20 object-cover shadow-[0_0_60px_rgba(201,168,76,0.15)]"
+                        width={320}
+                        height={420}
+                        priority
+                        sizes="16rem"
+                        className="relative h-[420px] w-64 rounded-2xl border border-[#c9a84c]/20 object-cover shadow-[0_0_60px_rgba(201,168,76,0.15)]"
                       />
                     </div>
                   </div>
@@ -356,6 +403,73 @@ export function ReadingPageTemplate(props: ReadingPageTemplateProps) {
           <div className="mx-auto max-w-5xl px-4">
             <div className="h-px bg-gradient-to-r from-transparent via-[#c9a84c]/20 to-transparent" />
           </div>
+
+          {/* SECTION B.5 — Service Visual CTA */}
+          <section className="px-4 py-14 sm:px-6 lg:px-8">
+            <div className="mx-auto grid max-w-5xl items-center gap-10 lg:grid-cols-[0.9fr_1.1fr]">
+              <div className="relative min-h-[320px] overflow-hidden rounded-2xl border border-[#c9a84c]/10 bg-[#0d1117]/70">
+                {serviceImage ? (
+                  <Image
+                    src={serviceImage}
+                    alt={`${serviceLabel} reading visual`}
+                    fill
+                    sizes="(max-width: 1024px) 100vw, 38vw"
+                    className="object-cover"
+                  />
+                ) : (
+                  <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_35%,rgba(201,168,76,0.18)_0%,transparent_65%)]" />
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-[#06080f] via-[#06080f]/35 to-transparent" />
+                <div className="absolute bottom-5 left-5 right-5">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-[#c9a84c]/80">
+                    {serviceType === "tarot" ? "Spread Focus" : "Chart Focus"}
+                  </p>
+                  <p className="mt-1 max-w-sm text-xl font-bold text-[#f5f0e8]">
+                    {serviceLabel} Reading
+                  </p>
+                </div>
+              </div>
+
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-widest text-[#c9a84c]/70">
+                  Start with the right context
+                </p>
+                <h2 className="mt-3 text-2xl font-bold text-[#f5f0e8] sm:text-3xl">
+                  Book this service with a reader who works in this exact style.
+                </h2>
+                <p className="mt-4 text-sm leading-relaxed text-[#b8bcd0]/65">
+                  Review what the session covers, send your question or birth details, then choose a practitioner without losing the reading context.
+                </p>
+
+                <div className="mt-7 grid gap-3 sm:grid-cols-3">
+                  {revealsItems.slice(0, 3).map((item) => (
+                    <div key={item.label} className="border-l border-[#c9a84c]/25 pl-4">
+                      <p className="text-sm font-semibold text-[#f5f0e8]">{item.label}</p>
+                      <p className="mt-1 text-xs leading-relaxed text-[#b8bcd0]/50">
+                        {item.desc}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-8 flex flex-wrap gap-3">
+                  <a
+                    href={primaryCtaHref}
+                    className="inline-flex h-11 items-center gap-2 rounded-lg bg-[#c9a84c] px-6 text-sm font-semibold text-black transition-colors hover:bg-[#e2c97e]"
+                  >
+                    {diviners.length > 0 ? "Choose a Reader" : discoverLabel}
+                    <ArrowRight className="size-4" aria-hidden="true" />
+                  </a>
+                  <a
+                    href="#free-guide"
+                    className="inline-flex h-11 items-center rounded-lg border border-white/[0.08] px-5 text-sm font-semibold text-[#f5f0e8] transition-colors hover:border-[#c9a84c]/25 hover:bg-white/[0.04]"
+                  >
+                    Send My Context First
+                  </a>
+                </div>
+              </div>
+            </div>
+          </section>
 
           {/* SECTION C — What Is */}
           <section id="what-is" className="px-4 py-16 sm:px-6 lg:px-8">
@@ -438,7 +552,7 @@ export function ReadingPageTemplate(props: ReadingPageTemplateProps) {
           </section>
 
           {/* SECTION D.5 — Qualified Lead Form (mid-page, after education) */}
-          <section className="px-4 pb-8 sm:px-6 lg:px-8">
+          <section id="free-guide" className="scroll-mt-20 px-4 pb-8 sm:px-6 lg:px-8">
             <div className="mx-auto max-w-2xl">
               <div className="relative overflow-hidden rounded-2xl border border-[#c9a84c]/20 bg-[#0d1117]/80 p-8 sm:p-10">
                 <div className="pointer-events-none absolute -left-10 -top-10 size-52 rounded-full bg-[#c9a84c]/6 blur-3xl" />
@@ -468,6 +582,7 @@ export function ReadingPageTemplate(props: ReadingPageTemplateProps) {
                   <ReadingLeadForm
                     serviceType={serviceType}
                     serviceName={serviceLabel}
+                    serviceSlug={readingSlug}
                     sourceUrl={pageUrl}
                     diviners={diviners}
                   />
@@ -631,7 +746,7 @@ export function ReadingPageTemplate(props: ReadingPageTemplateProps) {
                 </p>
                 <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                   {diviners.map((d) => (
-                    <DivinerCard key={d.username} diviner={d} />
+                    <DivinerCard key={d.username} diviner={d} serviceSlug={readingSlug} />
                   ))}
                 </div>
               </div>
@@ -686,23 +801,48 @@ export function ReadingPageTemplate(props: ReadingPageTemplateProps) {
           {relatedReadings.length > 0 && (
             <section className="px-4 pb-6 pt-4 sm:px-6 lg:px-8">
               <div className="mx-auto max-w-5xl">
-                <h2 className="mb-6 text-center text-xl font-bold text-[#f5f0e8]">
+                <h2 className="mb-2 text-center text-2xl font-bold text-[#f5f0e8] sm:text-3xl">
                   Explore More Readings
                 </h2>
-                <div className="grid gap-3 sm:grid-cols-3">
-                  {relatedReadings.map((r) => (
-                    <Link
-                      key={r.href}
-                      href={r.href}
-                      className="group flex items-center gap-4 rounded-xl border border-white/[0.07] bg-white/[0.02] p-4 transition-all hover:border-[#c9a84c]/30 hover:bg-white/[0.04]"
-                    >
-                      <span className="text-2xl shrink-0" aria-hidden="true">{r.icon}</span>
-                      <span className="text-sm font-semibold text-[#f5f0e8] transition-colors group-hover:text-[#c9a84c]">
-                        {r.title}
-                      </span>
-                      <ArrowRight className="ml-auto size-4 shrink-0 text-[#c9a84c]/40 transition-colors group-hover:text-[#c9a84c]" aria-hidden="true" />
-                    </Link>
-                  ))}
+                <p className="mb-8 text-center text-sm text-[#b8bcd0]/50">
+                  Keep comparing adjacent services before choosing your reader.
+                </p>
+                <div className="grid gap-4 sm:grid-cols-3">
+                  {relatedReadings.map((r) => {
+                    const relatedImage = getReadingImageUrl(getReadingSlugFromHref(r.href));
+
+                    return (
+                      <Link
+                        key={r.href}
+                        href={r.href}
+                        className="group overflow-hidden rounded-2xl border border-white/[0.07] bg-white/[0.02] transition-colors hover:border-[#c9a84c]/30 hover:bg-white/[0.04]"
+                      >
+                        <div className="relative h-36 overflow-hidden bg-[#0d1117]">
+                          {relatedImage ? (
+                            <Image
+                              src={relatedImage}
+                              alt=""
+                              fill
+                              sizes="(max-width: 640px) 100vw, 33vw"
+                              className="object-cover opacity-85 transition-transform duration-300 group-hover:scale-105"
+                            />
+                          ) : (
+                            <div className="flex h-full items-center justify-center text-4xl" aria-hidden="true">
+                              {r.icon}
+                            </div>
+                          )}
+                          <div className="absolute inset-0 bg-gradient-to-t from-[#06080f] via-transparent to-transparent" />
+                        </div>
+                        <div className="flex items-center gap-3 p-4">
+                          <span className="text-2xl shrink-0" aria-hidden="true">{r.icon}</span>
+                          <span className="text-sm font-semibold text-[#f5f0e8] transition-colors group-hover:text-[#c9a84c]">
+                            {r.title}
+                          </span>
+                          <ArrowRight className="ml-auto size-4 shrink-0 text-[#c9a84c]/40 transition-colors group-hover:text-[#c9a84c]" aria-hidden="true" />
+                        </div>
+                      </Link>
+                    );
+                  })}
                 </div>
               </div>
             </section>
@@ -733,10 +873,10 @@ export function ReadingPageTemplate(props: ReadingPageTemplateProps) {
                 </p>
                 <div className="mt-8">
                   <a
-                    href={diviners.length > 0 ? "#diviners" : (relatedReadings[0]?.href ?? "/readings")}
+                    href={diviners.length > 0 ? "#diviners" : discoverLink}
                     className="inline-flex h-12 items-center gap-2 rounded-lg bg-[#c9a84c] px-8 text-sm font-semibold text-black shadow-[0_0_20px_rgba(201,168,76,0.3)] transition-all hover:bg-[#e2c97e]"
                   >
-                    {diviners.length > 0 ? ctaButtonLabel : "Explore Related Readings"}
+                    {diviners.length > 0 ? ctaButtonLabel : discoverLabel}
                     <ArrowRight className="size-4" aria-hidden="true" />
                   </a>
                 </div>
@@ -748,7 +888,7 @@ export function ReadingPageTemplate(props: ReadingPageTemplateProps) {
         <ReadingStickyBar
           serviceLabel={heroTitleBefore.trim().replace(/:$/, "")}
           startingPrice={startingPrice}
-          discoverLink="#diviners"
+          discoverLink={primaryCtaHref}
         />
 
         <MarketingFooter />

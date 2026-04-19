@@ -30,6 +30,7 @@ export interface LeadDivinerCard {
 interface ReadingLeadFormProps {
   serviceType: "astrology" | "tarot";
   serviceName: string;
+  serviceSlug?: string;
   sourceUrl?: string;
   diviners?: LeadDivinerCard[];
 }
@@ -40,6 +41,7 @@ type Status = "idle" | "loading" | "success" | "error";
 export function ReadingLeadForm({
   serviceType,
   serviceName,
+  serviceSlug = "",
   sourceUrl,
   diviners = [],
 }: ReadingLeadFormProps) {
@@ -126,7 +128,11 @@ export function ReadingLeadForm({
             </p>
             <div className="space-y-3">
               {diviners.map((d) => (
-                <DivinerBookingRow key={d.username} diviner={d} serviceType={serviceType} />
+                <DivinerBookingRow
+                  key={d.username}
+                  diviner={d}
+                  serviceSlug={serviceSlug}
+                />
               ))}
             </div>
             <p className="text-center text-xs text-[#b8bcd0]/35">
@@ -412,12 +418,13 @@ export function ReadingLeadForm({
 // ── Diviner booking row ────────────────────────────────────────────────────
 function DivinerBookingRow({
   diviner,
-  serviceType,
+  serviceSlug,
 }: {
   diviner: LeadDivinerCard;
-  serviceType: "astrology" | "tarot";
+  serviceSlug: string;
 }) {
   const avatarUrl = getDivinerAvatarUrl(diviner.avatarUrl);
+  const bookingHref = serviceSlug ? `/${diviner.username}/book/${serviceSlug}` : `/${diviner.username}`;
 
   return (
     <div className="group flex items-center gap-4 rounded-xl border border-white/[0.07] bg-white/[0.02] p-4 transition-all hover:border-[#c9a84c]/30 hover:bg-white/[0.04]">
@@ -465,7 +472,7 @@ function DivinerBookingRow({
           </p>
         )}
         <a
-          href={`/${diviner.username}`}
+          href={bookingHref}
           className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#c9a84c] px-4 text-xs font-bold text-black transition-colors hover:bg-[#e2c97e]"
         >
           <CalendarDays className="size-3.5" aria-hidden="true" />
