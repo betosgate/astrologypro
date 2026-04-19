@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import type { ReactNode } from "react";
 import { Star, BadgeCheck, ArrowRight } from "lucide-react";
 import { MarketingHeader } from "@/components/marketing/header";
 import { MarketingFooter } from "@/components/marketing/footer";
@@ -45,6 +46,10 @@ export interface ReadingPageTemplateProps {
   pageUrl: string;
   serviceSlug?: string;
   heroImage?: string | null;
+  heroVisual?: ReactNode;
+  afterTrustContent?: ReactNode;
+  afterWhatIsContent?: ReactNode;
+  beforeExpectContent?: ReactNode;
   relatedReadings?: Array<{ title: string; href: string; icon: string }>;
 }
 
@@ -186,6 +191,10 @@ export function ReadingPageTemplate(props: ReadingPageTemplateProps) {
     pageUrl,
     serviceSlug: explicitServiceSlug,
     heroImage,
+    heroVisual,
+    afterTrustContent,
+    afterWhatIsContent,
+    beforeExpectContent,
   } = props;
 
   const readerLabel = serviceType === "tarot" ? "Tarot Reader" : "Reader";
@@ -271,10 +280,10 @@ export function ReadingPageTemplate(props: ReadingPageTemplateProps) {
           />
 
           {/* SECTION A — Hero */}
-          <section className="relative overflow-hidden py-20 md:py-28">
+          <section className={heroVisual ? "relative overflow-hidden py-14 md:py-20" : "relative overflow-hidden py-20 md:py-28"}>
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_60%,rgba(201,168,76,0.07)_0%,transparent_60%)]" />
-            <div className="relative mx-auto max-w-6xl px-4">
-              <div className="grid items-center gap-12 md:grid-cols-[1fr_auto]">
+            <div className={heroVisual ? "relative mx-auto max-w-7xl px-4" : "relative mx-auto max-w-6xl px-4"}>
+              <div className={heroVisual ? "grid items-center gap-12 lg:grid-cols-[minmax(0,0.88fr)_minmax(28rem,1.12fr)]" : "grid items-center gap-12 md:grid-cols-[1fr_auto]"}>
                 {/* Left: text content */}
                 <div className="text-center md:text-left">
                   {/* Badge pill */}
@@ -356,8 +365,12 @@ export function ReadingPageTemplate(props: ReadingPageTemplateProps) {
                   </div>
                 </div>
 
-                {/* Right: service image card — desktop only */}
-                {serviceImage && (
+                {/* Right: service visual */}
+                {heroVisual ? (
+                  <div className="mx-auto w-full max-w-xl lg:max-w-none">
+                    {heroVisual}
+                  </div>
+                ) : serviceImage && (
                   <div className="hidden md:block">
                     <div className="relative">
                       <div className="absolute inset-0 rounded-2xl bg-[#c9a84c]/20 blur-2xl" />
@@ -403,6 +416,8 @@ export function ReadingPageTemplate(props: ReadingPageTemplateProps) {
           <div className="mx-auto max-w-5xl px-4">
             <div className="h-px bg-gradient-to-r from-transparent via-[#c9a84c]/20 to-transparent" />
           </div>
+
+          {afterTrustContent}
 
           {/* SECTION B.5 — Service Visual CTA */}
           <section className="px-4 py-14 sm:px-6 lg:px-8">
@@ -510,6 +525,8 @@ export function ReadingPageTemplate(props: ReadingPageTemplateProps) {
             </div>
           </section>
 
+          {afterWhatIsContent}
+
           {/* SECTION D — How It Works */}
           <section className="px-4 py-16 sm:px-6 lg:px-8">
             <div className="mx-auto max-w-5xl">
@@ -590,6 +607,8 @@ export function ReadingPageTemplate(props: ReadingPageTemplateProps) {
               </div>
             </div>
           </section>
+
+          {beforeExpectContent}
 
           {/* SECTION E — What to Expect */}
           <section className="px-4 py-16 sm:px-6 lg:px-8">
