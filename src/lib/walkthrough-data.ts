@@ -5767,7 +5767,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
         name: "overview",
         label: "Practitioner CRM",
         description: "The full-length command centre for your practice — every signal you need to run your day surfaces here on a single scrolling page. At the top, a banner shows promo opportunities (training, community). Below that, Today's Sessions shows your next appointment date, while Planetary Returns — Next 30 Days lists all upcoming planetary return milestones for your client base with exact dates. A profile completion checklist tracks your setup progress with a percentage bar. Eight stat cards follow: This Month Revenue, This Month Bookings, New Clients, Upcoming sessions, Testimonials rating, Client Retention rate, No-Show Rate, and Follow-Ups Due. A Revenue — Last 6 Months bar chart gives the financial arc at a glance. Then two columns of live widgets round out the page: Upcoming Bookings (next 5 appointments with status badges), Quick Actions (View Bookings, Edit Profile, Manage Services, View Live Profile), Check-Ins last 7 days, Gift Certificates outstanding value, Weekly Subscriptions active count, and Active Campaigns with spend vs. budget.",
-        group: "My Schedule",
+        group: "Dashboard",
         purpose: "The primary command center for professional diviners to manage their daily workflow, revenue, and client load.",
         bullets: [
           "Today's Sessions — shows the date of your next confirmed session; 'No sessions today' if the day is clear",
