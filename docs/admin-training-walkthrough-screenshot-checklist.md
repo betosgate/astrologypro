@@ -9,15 +9,21 @@ These screenshots should match the active admin walkthrough entries in `src/lib/
 Current target set:
 
 1. `training_lessons`
-2. `training_program_new`
-3. `training-program-detail`
-4. `training_category_new`
-5. `training_lesson_new`
-6. `training_lesson_edit`
-7. `training_quiz_new`
-8. `quiz-detail-admin`
-9. `training_analytics`
-10. `training_settings`
+2. `quiz-bank-admin`
+3. `training_program_new`
+4. `training-program-detail`
+5. `training_category_new`
+6. `training_lesson_new`
+7. `training_lesson_edit`
+8. `training_quiz_new`
+9. `quiz-detail-admin`
+10. `training_analytics`
+11. `trainee-quiz-scores`
+12. `training_settings`
+
+Currently omitted:
+
+- `certificate-issued-log` — no matching admin issued-certificate audit log/revoke screen exists yet.
 
 ## Capture rules
 
@@ -40,7 +46,17 @@ Current target set:
   - empty tables
   - loading overlays
 
-### 2. `training_program_new.png`
+### 2. `quiz-bank-admin.png`
+- Route: `/admin/training`
+- Show:
+  - bottom `Quizzes` table from the Training Management route
+  - quiz title, linked lesson, question count, status, and created date columns
+  - Refresh, Export, AI Generate, and Add Quiz actions
+- Avoid:
+  - capturing only Programs/Categories/Lessons
+  - loading overlays
+
+### 3. `training_program_new.png`
 - Route: `/admin/training/programs/new`
 - Show:
   - program name field
@@ -51,7 +67,7 @@ Current target set:
 - Best state:
   - at least one role visible in the checklist
 
-### 3. `training-program-detail.png`
+### 4. `training-program-detail.png`
 - Route: first available `/admin/training/programs/:id/edit`
 - Show:
   - edit page heading
@@ -61,7 +77,7 @@ Current target set:
 - Best state:
   - a real program with meaningful seeded content
 
-### 4. `training_category_new.png`
+### 5. `training_category_new.png`
 - Route: `/admin/training/categories/new`
 - Show:
   - category title
@@ -72,7 +88,7 @@ Current target set:
 - Best state:
   - at least one real program available in the selector
 
-### 5. `training_lesson_new.png`
+### 6. `training_lesson_new.png`
 - Route: `/admin/training/lessons/new`
 - Show:
   - lesson title
@@ -83,7 +99,7 @@ Current target set:
 - Best state:
   - at least one real category available
 
-### 6. `training_lesson_edit.png`
+### 7. `training_lesson_edit.png`
 - Route: first available `/admin/training/lessons/:id/edit`
 - Show:
   - edit page heading
@@ -93,7 +109,7 @@ Current target set:
 - Best state:
   - a lesson that already has assets attached
 
-### 7. `training_quiz_new.png`
+### 8. `training_quiz_new.png`
 - Route: `/admin/training/quizzes/new`
 - Show:
   - lesson selector
@@ -103,7 +119,7 @@ Current target set:
 - Best state:
   - at least one lesson available
 
-### 8. `quiz-detail-admin.png`
+### 9. `quiz-detail-admin.png`
 - Route: first available `/admin/training/quizzes/:id/edit`
 - Show:
   - edit page heading
@@ -114,7 +130,7 @@ Current target set:
 - Best state:
   - an existing quiz with at least one question
 
-### 9. `training_analytics.png`
+### 10. `training_analytics.png`
 - Route: `/admin/training/analytics`
 - Show:
   - KPI cards at the top
@@ -123,7 +139,18 @@ Current target set:
 - Best state:
   - visible non-zero metrics
 
-### 10. `training_settings.png`
+### 11. `trainee-quiz-scores.png`
+- Route: `/admin/training/analytics`
+- Show:
+  - Users tab selected
+  - KPI cards at the top
+  - trainee rows with status, lessons, progress, quiz pass rate, average attempts, and time spent
+  - search/sort/export controls
+- Avoid:
+  - skeleton loading state
+  - empty user table
+
+### 12. `training_settings.png`
 - Route: `/admin/training/settings`
 - Show:
   - training access roles section

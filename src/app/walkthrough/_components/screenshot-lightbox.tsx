@@ -158,8 +158,43 @@ export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Pro
   const screenRefs = useRef<Map<string, HTMLElement>>(new Map());
   const containerRef = useRef<HTMLDivElement>(null);
 
+  const groups = useMemo(() => {
+    const grouped: Array<{
+      name: string;
+      subModules: Array<{ name: string; screens: Screen[] }>;
+      totalScreens: number;
+    }> = [];
+
+    for (const screen of screens) {
+      const groupName = screen.group || "Features";
+      const subModuleName = screen.subModule || "General";
+
+      let group = grouped.find((g) => g.name === groupName);
+      if (!group) {
+        group = { name: groupName, subModules: [], totalScreens: 0 };
+        grouped.push(group);
+      }
+
+      let subModule = group.subModules.find((sm) => sm.name === subModuleName);
+      if (!subModule) {
+        subModule = { name: subModuleName, screens: [] };
+        group.subModules.push(subModule);
+      }
+
+      subModule.screens.push(screen);
+      group.totalScreens++;
+    }
+
+    return grouped;
+  }, [screens]);
+
+  const orderedScreens = useMemo(
+    () => groups.flatMap((group) => group.subModules.flatMap((subModule) => subModule.screens)),
+    [groups],
+  );
+
   const open = openIndex !== null;
-  const current = openIndex !== null ? screens[openIndex] : null;
+  const current = openIndex !== null ? orderedScreens[openIndex] : null;
   const getScreenId = useCallback(
     (screen: Screen) => `${screen.name}-${screens.indexOf(screen)}`,
     [screens],
@@ -180,17 +215,17 @@ export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Pro
     setOpenIndex((value) => {
       if (value === null) return null;
       resetZoom();
-      return value > 0 ? value - 1 : screens.length - 1;
+      return value > 0 ? value - 1 : orderedScreens.length - 1;
     });
-  }, [screens.length, resetZoom]);
+  }, [orderedScreens.length, resetZoom]);
 
   const next = useCallback(() => {
     setOpenIndex((value) => {
       if (value === null) return null;
       resetZoom();
-      return value < screens.length - 1 ? value + 1 : 0;
+      return value < orderedScreens.length - 1 ? value + 1 : 0;
     });
-  }, [screens.length, resetZoom]);
+  }, [orderedScreens.length, resetZoom]);
 
   const handleZoom = (delta: number) => {
     setScale(prev => {
@@ -331,36 +366,6 @@ export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Pro
     // Intentionally only on mount — subsequent hash changes are driven by scrollToGroup.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const groups = useMemo(() => {
-    const grouped: Array<{
-      name: string;
-      subModules: Array<{ name: string; screens: Screen[] }>;
-      totalScreens: number;
-    }> = [];
-
-    for (const screen of screens) {
-      const groupName = screen.group || "Features";
-      const subModuleName = screen.subModule || "General";
-
-      let group = grouped.find((g) => g.name === groupName);
-      if (!group) {
-        group = { name: groupName, subModules: [], totalScreens: 0 };
-        grouped.push(group);
-      }
-
-      let subModule = group.subModules.find((sm) => sm.name === subModuleName);
-      if (!subModule) {
-        subModule = { name: subModuleName, screens: [] };
-        group.subModules.push(subModule);
-      }
-
-      subModule.screens.push(screen);
-      group.totalScreens++;
-    }
-
-    return grouped;
-  }, [screens]);
 
   const toggleGroup = (groupName: string) => {
     setExpandedGroups(prev => {
@@ -717,7 +722,7 @@ export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Pro
 
                         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                           {sub.screens.map((screen) => {
-                            const globalIndex = screens.indexOf(screen);
+                            const globalIndex = orderedScreens.indexOf(screen);
                             const screenId = getScreenId(screen);
                             const isScreenActive = activeScreen === screenId;
 
@@ -830,7 +835,7 @@ export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Pro
           <div className="relative z-10 flex items-center justify-between px-4 py-3 sm:px-6">
             <div className="flex min-w-0 items-center gap-3">
               <span className="shrink-0 rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-0.5 text-xs font-medium text-amber-500">
-                {openIndex! + 1} / {screens.length}
+                {openIndex! + 1} / {orderedScreens.length}
               </span>
               <div className="min-w-0">
                 <p className="truncate text-sm font-medium text-white">{current.label}</p>
@@ -980,7 +985,7 @@ export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Pro
 
           <div className="relative z-10 px-4 pb-4 sm:px-6">
             <div className="flex gap-1.5 overflow-x-auto py-2">
-              {screens.map((screen, index) => (
+              {orderedScreens.map((screen, index) => (
                 <button
                   key={getScreenId(screen)}
                   onClick={() => setOpenIndex(index)}
