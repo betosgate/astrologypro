@@ -16,13 +16,17 @@ Current target set:
 6. `resources`
 7. `sessions`
 8. `graduation`
-9. `trainee-profile`
+9. `certificate`
+10. `trainee-profile`
 
-Currently omitted:
+Not part of current active walkthrough:
 
 - Standalone notifications, mentor chat, schedule, bookmarks, badge wall, glossary, peer community, and help screens — no matching `/trainee/*` routes exist currently.
 - Separate training category and lesson detail deep links — the current learner flow uses the program workspace with inline lesson viewing; the detail-view navigation is not active in the UI.
-- `/trainee/certificate` — route redirects incomplete trainees to progress; use `graduation` until a graduated screenshot account is available.
+
+Manual screenshot required:
+
+- `certificate.png` — `/trainee/certificate` is real, but it is only accessible for graduated trainees. The current automated trainee account redirects to `/trainee/progress`, so provide a graduated trainee screenshot manually or run the capture with a graduated trainee account.
 
 ## Capture Rules
 
@@ -101,7 +105,23 @@ Currently omitted:
   - not-yet-graduated card for incomplete trainees, or certificate summary for graduated trainees
   - Continue Training or certificate verification action
 
-### 9. `trainee-profile.png`
+### 9. `certificate.png`
+- Route: `/trainee/certificate`
+- Capture mode: manual unless a graduated trainee account is available.
+- Show:
+  - certificate page heading/action bar
+  - printed certificate body
+  - trainee name
+  - designation and program title
+  - training stats
+  - certificate ID / verification section
+  - Print and Share actions if visible
+- Avoid:
+  - redirected `/trainee/progress` page
+  - browser print dialog
+  - incomplete trainee state
+
+### 10. `trainee-profile.png`
 - Route: `/trainee/profile`
 - Show:
   - profile completion bar
@@ -117,3 +137,5 @@ The capture script resolves:
 - direct routes for all static trainee pages
 
 If a trainee account has no accessible program data, the script should skip the dynamic program-workspace screenshot rather than overwrite valid images with empty or redirect states.
+
+The automation intentionally does not capture `certificate` with the current trainee account because the route redirects incomplete trainees. Add `public/walkthrough/screenshots/trainee/certificate.png` manually after capturing from a graduated trainee.

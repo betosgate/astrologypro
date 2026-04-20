@@ -48,7 +48,7 @@ interface TraineeSummary {
 }
 
 const STATUS_OPTIONS = [
-  { value: "", label: "All Statuses" },
+  { value: "all", label: "All Statuses" },
   { value: "not_required", label: "Not Required" },
   { value: "eligible_to_book", label: "Eligible to Book" },
   { value: "booking_in_progress", label: "Booking In Progress" },
@@ -86,7 +86,7 @@ export default function TabbieAppointmentMonitoringPage() {
   const [pages, setPages] = useState(1);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [error, setError] = useState<string | null>(null);
 
   // Override modal
@@ -108,7 +108,7 @@ export default function TabbieAppointmentMonitoringPage() {
         page: String(page),
         limit: "20",
         ...(search ? { search } : {}),
-        ...(statusFilter ? { status: statusFilter } : {}),
+        ...(statusFilter !== "all" ? { status: statusFilter } : {}),
       });
       const res = await fetch(`/api/admin/tabbie-appointments?${params}`);
       const json = await res.json();
