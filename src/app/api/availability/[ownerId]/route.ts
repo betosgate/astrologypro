@@ -323,40 +323,78 @@ export async function GET(
         })),
       ].sort((a, b) => a.start.localeCompare(b.start));
 
+      // Enrich slot list so the debug response also carries serviceSlug for deep-linking.
+      const serviceIdsDebug = [...new Set(
+        slots
+          .map((s: { availabilityServiceId?: string | null }) => s.availabilityServiceId)
+          .filter(Boolean) as string[]
+      )];
+      let serviceInfoMapDebug: Record<string, { name: string; price: number; slug: string | null }> = {};
+      if (serviceIdsDebug.length > 0) {
+        const { data: services } = await admin
+          .from("services")
+          .select("id, name, base_price, slug")
+          .in("id", serviceIdsDebug);
+        if (services) {
+          for (const svc of services) {
+            serviceInfoMapDebug[svc.id] = {
+              name: svc.name,
+              price: Number(svc.base_price ?? 0),
+              slug: svc.slug ?? null,
+            };
+          }
+        }
+      }
+      const enrichedDebugSlots = slots.map((slot) => {
+        const svcId = (slot as unknown as Record<string, unknown>).availabilityServiceId as string | null;
+        const svcInfo = svcId ? serviceInfoMapDebug[svcId] : null;
+        return {
+          ...slot,
+          serviceName: svcInfo?.name ?? null,
+          servicePrice: svcInfo?.price ?? null,
+          serviceSlug: svcInfo?.slug ?? null,
+        };
+      });
+
       return NextResponse.json({
-        slots,
+        slots: enrichedDebugSlots,
         busySchedule,
         timezone: primaryScheduleTimezone,
       });
     }
 
-    // Enrich slots with service price info when a service is linked
+    // Enrich slots with service info (name, price, slug) when a service is linked
     const serviceIds = [...new Set(
       slots
         .map((s: { availabilityServiceId?: string | null }) => s.availabilityServiceId)
         .filter(Boolean) as string[]
     )];
 
-    let servicePriceMap: Record<string, { name: string; price: number }> = {};
+    let serviceInfoMap: Record<string, { name: string; price: number; slug: string | null }> = {};
     if (serviceIds.length > 0) {
       const { data: services } = await admin
         .from("services")
-        .select("id, name, base_price")
+        .select("id, name, base_price, slug")
         .in("id", serviceIds);
       if (services) {
         for (const svc of services) {
-          servicePriceMap[svc.id] = { name: svc.name, price: Number(svc.base_price ?? 0) };
+          serviceInfoMap[svc.id] = {
+            name: svc.name,
+            price: Number(svc.base_price ?? 0),
+            slug: svc.slug ?? null,
+          };
         }
       }
     }
 
     const enrichedSlots = slots.map((slot) => {
       const svcId = (slot as unknown as Record<string, unknown>).availabilityServiceId as string | null;
-      const svcInfo = svcId ? servicePriceMap[svcId] : null;
+      const svcInfo = svcId ? serviceInfoMap[svcId] : null;
       return {
         ...slot,
         serviceName: svcInfo?.name ?? null,
         servicePrice: svcInfo?.price ?? null,
+        serviceSlug: svcInfo?.slug ?? null,
       };
     });
 

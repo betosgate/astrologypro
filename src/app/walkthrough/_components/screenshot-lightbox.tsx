@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import {
   CalendarDays,
+  Check,
   ChevronLeft,
   ChevronRight,
   Expand,
@@ -15,6 +16,7 @@ import {
   Orbit,
   Search,
   Settings2,
+  Share2,
   Shield,
   ShoppingBag,
   Sparkles,
@@ -123,6 +125,15 @@ const GROUP_DESCRIPTIONS: Record<string, string> = {
   "Mystery School": "Student management, decan oversight, graduation queue, and foundation curriculum configuration.",
 };
 
+// URL-safe slug for folder deep-links (e.g. "Finance & Billing" -> "finance-and-billing")
+function groupSlug(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/&/g, "and")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+}
+
 export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Props) {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
   const [activeGroup, setActiveGroup] = useState(screens[0]?.group || "Features");
@@ -131,6 +142,7 @@ export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Pro
   const [isDragging, setIsDragging] = useState(false);
   const [startPos, setStartPos] = useState({ x: 0, y: 0 });
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const [copiedGroup, setCopiedGroup] = useState<string | null>(null);
 
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set([screens[0]?.group || "Features"]));
   const [expandedSubModules, setExpandedSubModules] = useState<Set<string>>(new Set());
@@ -280,6 +292,46 @@ export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Pro
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  // Deep-link support — if the URL has #section-<slug>, auto-scroll to and expand
+  // that folder on mount. Lets users share a direct link to any folder in the Explorer Index.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const rawHash = window.location.hash.replace(/^#/, "");
+    if (!rawHash) return;
+
+    const match = rawHash.match(/^section-(.+)$/);
+    const slug = match ? match[1] : rawHash;
+    const targetGroupName = screens
+      .map((s) => s.group || "Features")
+      .find((name) => groupSlug(name) === slug);
+    if (!targetGroupName) return;
+
+    // Refs need a frame to populate after mount
+    const timer = window.setTimeout(() => {
+      setExpandedGroups((prev) => {
+        if (prev.has(targetGroupName)) return prev;
+        const next = new Set(prev);
+        next.add(targetGroupName);
+        return next;
+      });
+
+      isClickScrolling.current = true;
+      const element = sectionRefs.current.get(targetGroupName);
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth", block: "start" });
+        setActiveGroup(targetGroupName);
+      }
+      if (scrollTimeout.current) clearTimeout(scrollTimeout.current);
+      scrollTimeout.current = setTimeout(() => {
+        isClickScrolling.current = false;
+      }, 900);
+    }, 200);
+
+    return () => window.clearTimeout(timer);
+    // Intentionally only on mount — subsequent hash changes are driven by scrollToGroup.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const groups = useMemo(() => {
     const grouped: Array<{
       name: string;
@@ -350,6 +402,11 @@ export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Pro
       if (!element) return;
       element.scrollIntoView({ behavior: "smooth", block: "start" });
       setActiveGroup(groupName);
+      // Keep the URL hash in sync so the current folder is always shareable
+      if (typeof window !== "undefined") {
+        const hash = `section-${groupSlug(groupName)}`;
+        window.history.replaceState(null, "", `#${hash}`);
+      }
     });
 
     // Ensure expanded
@@ -360,6 +417,30 @@ export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Pro
       return next;
     });
   };
+
+  // Copy a deep-link to a specific folder/group so the user can share it.
+  // Opening the link scrolls to and expands that folder automatically.
+  const copyGroupLink = useCallback(async (groupName: string) => {
+    if (typeof window === "undefined") return;
+    const url = `${window.location.origin}${window.location.pathname}#section-${groupSlug(groupName)}`;
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch {
+      // Clipboard API can fail in insecure contexts — fall back to a textarea
+      const textarea = document.createElement("textarea");
+      textarea.value = url;
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      document.body.appendChild(textarea);
+      textarea.select();
+      try { document.execCommand("copy"); } catch { /* noop */ }
+      document.body.removeChild(textarea);
+    }
+    setCopiedGroup(groupName);
+    setTimeout(() => {
+      setCopiedGroup((prev) => (prev === groupName ? null : prev));
+    }, 1600);
+  }, []);
 
   const scrollToSubModule = (subModuleName: string, groupName: string) => {
     handleScrollClick(() => {
@@ -450,29 +531,55 @@ export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Pro
               const isActive = activeGroup === group.name;
               const isExpanded = expandedGroups.has(group.name);
 
+              const isCopied = copiedGroup === group.name;
+
               return (
                 <div key={group.name} className="flex flex-col">
-                  <button
-                    onClick={() => {
-                      toggleGroup(group.name);
-                      if (!isExpanded) scrollToGroup(group.name);
-                    }}
+                  <div
                     className={cn(
-                      "flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-xs font-semibold transition-all duration-200",
-                      isActive
-                        ? "text-amber-500"
-                        : "text-[#a5afca] hover:bg-white/5 hover:text-[#f5f0e8]"
+                      "group/row flex w-full items-center gap-1 rounded-xl pr-1 transition-all duration-200",
+                      isActive ? "" : "hover:bg-white/5"
                     )}
                   >
-                    <Icon className={cn("size-3.5 shrink-0", isActive ? "text-amber-500" : "opacity-40")} />
-                    <span className="flex-1 truncate">{group.name}</span>
-                    <ChevronRight
+                    <button
+                      onClick={() => {
+                        toggleGroup(group.name);
+                        if (!isExpanded) scrollToGroup(group.name);
+                      }}
                       className={cn(
-                        "size-3 opacity-30 transition-transform duration-200",
-                        isExpanded && "rotate-90 opacity-60"
+                        "flex min-w-0 flex-1 items-center gap-2.5 rounded-xl px-3 py-2 text-left text-xs font-semibold transition-colors duration-200",
+                        isActive
+                          ? "text-amber-500"
+                          : "text-[#a5afca] group-hover/row:text-[#f5f0e8]"
                       )}
-                    />
-                  </button>
+                    >
+                      <Icon className={cn("size-3.5 shrink-0", isActive ? "text-amber-500" : "opacity-40")} />
+                      <span className="flex-1 truncate">{group.name}</span>
+                      <ChevronRight
+                        className={cn(
+                          "size-3 opacity-30 transition-transform duration-200",
+                          isExpanded && "rotate-90 opacity-60"
+                        )}
+                      />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        copyGroupLink(group.name);
+                      }}
+                      title={isCopied ? "Link copied!" : `Share link to ${group.name}`}
+                      aria-label={isCopied ? "Link copied" : `Share link to ${group.name}`}
+                      className={cn(
+                        "flex size-7 shrink-0 items-center justify-center rounded-lg transition-all duration-200",
+                        isCopied
+                          ? "bg-amber-500/15 text-amber-500"
+                          : "text-[#8e9ab7] hover:bg-white/10 hover:text-amber-500"
+                      )}
+                    >
+                      {isCopied ? <Check className="size-3" /> : <Share2 className="size-3" />}
+                    </button>
+                  </div>
 
                   <div className={cn(
                     "overflow-hidden transition-all duration-300 ease-in-out",
@@ -566,7 +673,7 @@ export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Pro
                 }}
                 data-group={group.name}
                 className="mb-12 scroll-mt-24"
-                id={`section-${group.name.toLowerCase().replace(/\s+/g, "-")}`}
+                id={`section-${groupSlug(group.name)}`}
               >
                 <div className="mb-5 flex items-start gap-3">
                   <div className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl border border-amber-500/20 bg-amber-500/10">
