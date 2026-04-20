@@ -92,6 +92,7 @@ interface CreatedCampaignResult {
   campaign_code: string | null;
   share_url: string | null;
   destination_type: "PROFILE" | "SERVICE" | null;
+  status?: string | null;
 }
 
 const STATUS_BADGE: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
@@ -631,7 +632,9 @@ export default function DashboardCampaignsPage() {
               <DialogTitle>{createdCampaign ? "Campaign Created!" : "Create Campaign"}</DialogTitle>
               <DialogDescription>
                 {createdCampaign
-                  ? "Your campaign is ready. Copy the URL to share with affiliates."
+                  ? (createdCampaign.status && createdCampaign.status !== "active"
+                      ? "Your campaign was created as a draft. Activate it before sharing the URL — draft links will not route to the destination you picked."
+                      : "Your campaign is ready. Copy the URL to share with affiliates.")
                   : "Set up a new promotional campaign for your affiliates."}
               </DialogDescription>
             </DialogHeader>
@@ -653,8 +656,14 @@ export default function DashboardCampaignsPage() {
                   <CampaignUrlDisplay
                     url={createdCampaign.share_url}
                     code={createdCampaign.campaign_code ?? undefined}
-                    label="Campaign URL — share this with affiliates"
+                    label={
+                      createdCampaign.status && createdCampaign.status !== "active"
+                        ? "Campaign URL — inactive until activated"
+                        : "Campaign URL — share this with affiliates"
+                    }
                     showOpenButton
+                    isInactive={!!createdCampaign.status && createdCampaign.status !== "active"}
+                    inactiveReason={createdCampaign.status ?? "Draft"}
                   />
                 ) : (
                   <p className="text-xs text-muted-foreground">

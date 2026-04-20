@@ -5,7 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { getAdminUser } from "@/lib/admin-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
@@ -25,27 +25,15 @@ function getPeriodFrom(period: string): string {
 }
 
 export async function GET(req: NextRequest) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  const admin = createAdminClient();
-
-  // Admin check
-  const { data: profile } = await admin
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  if (!profile || profile.role !== "admin") {
+  const user = await getAdminUser();
+  if (!user) {
     return NextResponse.json(
-      { type: "https://httpstatuses.io/403", title: "Not an admin" },
+      { type: "https://httpstatuses.io/403", title: "Forbidden", status: 403 },
       { status: 403 }
     );
   }
+
+  const admin = createAdminClient();
 
   const url = new URL(req.url);
   const period = url.searchParams.get("period") ?? "30d";

@@ -5,7 +5,7 @@ import { writeAuditLog } from "@/lib/service-audit";
 
 export const dynamic = "force-dynamic";
 
-type RouteParams = { params: { id: string; templateId: string } };
+type RouteParams = { params: Promise<{ id: string; templateId: string }> };
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PATCH /api/admin/diviners/[id]/services/[templateId]
@@ -24,7 +24,7 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
   }
 
   const admin = createAdminClient();
-  const { id: divinerId, templateId } = params;
+  const { id: divinerId, templateId } = await params;
   const now = new Date().toISOString();
 
   // Fetch current diviner_services record
