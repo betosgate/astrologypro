@@ -10,8 +10,11 @@ export const runtime = "nodejs";
  * GET /api/community/plan
  *
  * Returns plan details for the authenticated PM member.
- * community_members has no FK to pm_plan_tiers yet — defaults to the
- * lowest-order active tier (Individual) for all members.
+ *
+ * Reads the member's real saved tier from community_members.pm_tier_id
+ * and matches it against active pm_plan_tiers. Falls back to the
+ * lowest-order active tier only when pm_tier_id is NULL or does not
+ * match any active tier (a warning is logged in that case).
  *
  * Field names in the response are aligned with the Plan / PlanTier
  * TypeScript types used by the page component:
@@ -35,7 +38,6 @@ export async function GET() {
 
     const admin = createAdminClient();
 
-    // community_members — no plan_tier_id FK column yet
     const { data: member, error: memberError } = await admin
       .from("community_members")
       .select(
@@ -43,7 +45,8 @@ export async function GET() {
          membership_status,
          current_period_end,
          stripe_subscription_id,
-         extra_member_count`
+         extra_member_count,
+         pm_tier_id`
       )
       .eq("user_id", user.id)
       .single();
@@ -109,8 +112,20 @@ export async function GET() {
     const availableTiers: MappedTier[] = (rawTiers ?? []).map(
       (t) => mapTier(t as RawTier)
     );
-    // Default to first (lowest-order) active tier — Individual
-    const tier: MappedTier | null = availableTiers[0] ?? null;
+
+    // Resolve the member's current tier from pm_tier_id. Fall back to the
+    // lowest-order active tier only when pm_tier_id is NULL or invalid.
+    const savedTierId = (member as { pm_tier_id?: string | null }).pm_tier_id ?? null;
+    let tier: MappedTier | null = null;
+    if (savedTierId) {
+      tier = availableTiers.find((t) => t.id === savedTierId) ?? null;
+      if (!tier) {
+        console.warn(
+          `[community/plan] pm_tier_id=${savedTierId} for member ${member.id} does not match any active tier — falling back to lowest-order tier`
+        );
+      }
+    }
+    if (!tier) tier = availableTiers[0] ?? null;
 
     const memberCount = (familyMembers ?? []).length;
     const extraMemberCount = tier

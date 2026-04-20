@@ -148,6 +148,10 @@ export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Pro
 
   const open = openIndex !== null;
   const current = openIndex !== null ? screens[openIndex] : null;
+  const getScreenId = useCallback(
+    (screen: Screen) => `${screen.name}-${screens.indexOf(screen)}`,
+    [screens],
+  );
 
   const close = useCallback(() => {
     setOpenIndex(null);
@@ -234,11 +238,11 @@ export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Pro
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
             const groupName = entry.target.getAttribute("data-group-name");
-            const screenName = entry.target.getAttribute("data-screen-name");
+            const screenId = entry.target.getAttribute("data-screen-id");
             const subModuleName = entry.target.getAttribute("data-sub-module-name");
 
             if (groupName) setActiveGroup(groupName);
-            if (screenName) setActiveScreen(screenName);
+            if (screenId) setActiveScreen(screenId);
             if (subModuleName) {
               setActiveSubModule(subModuleName);
               // Auto-expand if not already
@@ -370,7 +374,7 @@ export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Pro
         const group = groups.find(g => g.name === groupName);
         const subModule = group?.subModules.find(sm => sm.name === subModuleName);
         if (subModule?.screens[0]) {
-          scrollToScreenDOM(subModule.screens[0].name, groupName);
+          scrollToScreenDOM(getScreenId(subModule.screens[0]), groupName);
         }
       }
       setActiveSubModule(subModuleName);
@@ -384,23 +388,23 @@ export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Pro
     });
   };
 
-  const scrollToScreenDOM = (screenName: string, groupName: string) => {
+  const scrollToScreenDOM = (screenId: string, groupName: string) => {
     // Try Ref first, fallback to DOM ID search
-    let element = screenRefs.current.get(screenName);
+    let element = screenRefs.current.get(screenId);
     if (!element) {
-      element = document.getElementById(`screen-${screenName}`) || undefined;
+      element = document.getElementById(`screen-${screenId}`) || undefined;
     }
 
     if (!element) return;
 
     element.scrollIntoView({ behavior: "smooth", block: "start" });
-    setActiveScreen(screenName);
+    setActiveScreen(screenId);
     setActiveGroup(groupName);
   };
 
-  const scrollToScreen = (screenName: string, groupName: string) => {
+  const scrollToScreen = (screenId: string, groupName: string) => {
     handleScrollClick(() => {
-      scrollToScreenDOM(screenName, groupName);
+      scrollToScreenDOM(screenId, groupName);
     });
   };
 
@@ -506,11 +510,12 @@ export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Pro
                               hasSubModule && "ml-3 border-l border-white/5 pl-2"
                             )}>
                               {sub.screens.map((screen) => {
-                                const isScreenActive = activeScreen === screen.name;
+                                const screenId = getScreenId(screen);
+                                const isScreenActive = activeScreen === screenId;
                                 return (
                                   <button
-                                    key={screen.name}
-                                    onClick={() => scrollToScreen(screen.name, group.name)}
+                                    key={screenId}
+                                    onClick={() => scrollToScreen(screenId, group.name)}
                                     className={cn(
                                       "group relative flex w-full items-center gap-2.5 rounded-lg py-1.5 pl-3 pr-2 text-left text-[11px] transition-all duration-300",
                                       isScreenActive
@@ -606,17 +611,18 @@ export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Pro
                         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                           {sub.screens.map((screen) => {
                             const globalIndex = screens.indexOf(screen);
-                            const isScreenActive = activeScreen === screen.name;
+                            const screenId = getScreenId(screen);
+                            const isScreenActive = activeScreen === screenId;
 
                             return (
                               <button
-                                key={screen.name}
-                                id={`screen-${screen.name}`}
+                                key={screenId}
+                                id={`screen-${screenId}`}
                                 ref={(element) => {
-                                  if (element) screenRefs.current.set(screen.name, element);
+                                  if (element) screenRefs.current.set(screenId, element);
                                 }}
                                 data-group-name={group.name}
-                                data-screen-name={screen.name}
+                                data-screen-id={screenId}
                                 data-sub-module-name={sub.name}
                                 onClick={() => setOpenIndex(globalIndex)}
                                 className={cn(
@@ -869,7 +875,7 @@ export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Pro
             <div className="flex gap-1.5 overflow-x-auto py-2">
               {screens.map((screen, index) => (
                 <button
-                  key={screen.name}
+                  key={getScreenId(screen)}
                   onClick={() => setOpenIndex(index)}
                   title={screen.label}
                   className={`relative cursor-pointer h-14 w-24 shrink-0 overflow-hidden rounded-xl border-2 transition-all ${index === openIndex

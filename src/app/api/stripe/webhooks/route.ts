@@ -133,6 +133,87 @@ async function handleGiftCheckoutCompleted(
   });
 }
 
+/**
+ * Task 06 — finalize the community plan subscription conversion flow.
+ * Fires when a one-time / no-subscription user completes a new recurring
+ * Stripe Checkout session via /api/community/plan/change-tier/checkout.
+ *
+ * Only runs when session.metadata.flow === "community_plan_subscription_conversion".
+ * Writes pm_tier_id / stripe_customer_id / stripe_subscription_id ONLY after
+ * Stripe confirms the checkout.
+ */
+async function handleCommunityPlanConversionCompleted(
+  session: Stripe.Checkout.Session
+) {
+  const supabase = createAdminClient();
+  const userId = session.metadata?.user_id;
+  const communityMemberId = session.metadata?.community_member_id;
+  const targetTierId = session.metadata?.target_tier_id;
+
+  if (!userId || !communityMemberId || !targetTierId) {
+    console.error(
+      "[Webhook] community_plan_subscription_conversion missing required metadata",
+      { session_id: session.id, metadata: session.metadata }
+    );
+    return;
+  }
+
+  if (session.payment_status && session.payment_status !== "paid" && session.payment_status !== "no_payment_required") {
+    console.warn("[Webhook] conversion checkout not paid — skipping DB update", {
+      session_id: session.id,
+      payment_status: session.payment_status,
+    });
+    return;
+  }
+
+  // Verify target tier still exists and is active
+  const { data: tier } = await supabase
+    .from("pm_plan_tiers")
+    .select("id, is_active")
+    .eq("id", targetTierId)
+    .maybeSingle();
+  if (!tier || !tier.is_active) {
+    console.error(
+      "[Webhook] conversion target tier missing/inactive — manual reconciliation needed",
+      { session_id: session.id, target_tier_id: targetTierId }
+    );
+    return;
+  }
+
+  const customerId =
+    typeof session.customer === "string"
+      ? session.customer
+      : session.customer?.id ?? null;
+  const subscriptionId =
+    typeof session.subscription === "string"
+      ? session.subscription
+      : session.subscription?.id ?? null;
+
+  const { error: updateErr } = await supabase
+    .from("community_members")
+    .update({
+      pm_tier_id: targetTierId,
+      stripe_customer_id: customerId,
+      stripe_subscription_id: subscriptionId,
+      membership_status: "active",
+    })
+    .eq("id", communityMemberId)
+    .eq("user_id", userId); // tenant-scope by user_id too
+  if (updateErr) {
+    console.error(
+      "[Webhook] CRITICAL: conversion payment succeeded but DB update failed — manual reconciliation required",
+      {
+        session_id: session.id,
+        user_id: userId,
+        community_member_id: communityMemberId,
+        target_tier_id: targetTierId,
+        subscription_id: subscriptionId,
+        err: updateErr,
+      }
+    );
+  }
+}
+
 async function handleCommunityCheckoutCompleted(session: Stripe.Checkout.Session) {
   const supabase = createAdminClient();
   const userId = session.metadata?.userId;
@@ -163,6 +244,26 @@ async function handleCommunityCheckoutCompleted(session: Stripe.Checkout.Session
   let communityMemberId: string | null = null;
 
   if (!isMysterySchool) {
+    // Resolve pm_tier_id: prefer explicit metadata (new conversion flow),
+    // otherwise map planType → tier name (Individual/couple → Individual, family → Family).
+    const explicitTargetTierId = session.metadata?.target_tier_id ?? null;
+    let resolvedTierId: string | null = explicitTargetTierId;
+    if (!resolvedTierId) {
+      const desiredTierName = planType === "family" ? "Family" : "Individual";
+      const { data: tierRow } = await supabase
+        .from("pm_plan_tiers")
+        .select("id")
+        .eq("is_active", true)
+        .ilike("name", desiredTierName)
+        .maybeSingle();
+      resolvedTierId = (tierRow?.id as string | undefined) ?? null;
+      if (!resolvedTierId) {
+        console.warn(
+          `[webhook/community] Could not resolve pm_tier_id for planType=${planType} — member will default to lowest-order tier on read`
+        );
+      }
+    }
+
     // PM checkout — upsert community_members as the PM record
     const { data: member } = await supabase
       .from("community_members")
@@ -176,6 +277,7 @@ async function handleCommunityCheckoutCompleted(session: Stripe.Checkout.Session
           plan_type: planType,
           stripe_subscription_id: subscriptionId ?? null,
           joined_at: new Date().toISOString(),
+          ...(resolvedTierId ? { pm_tier_id: resolvedTierId } : {}),
         },
         { onConflict: "user_id" }
       )
@@ -950,6 +1052,15 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   // Route gift certificate checkouts to their own handler
   if (session.metadata?.type === "gift_certificate") {
     return handleGiftCheckoutCompleted(session);
+  }
+
+  // Route Community plan subscription conversion (Task 05/06)
+  // One-time/manual/no-subscription user just completed a new recurring
+  // subscription for a different PM tier.
+  if (
+    session.metadata?.flow === "community_plan_subscription_conversion"
+  ) {
+    return handleCommunityPlanConversionCompleted(session);
   }
 
   // Route community subscription checkouts
