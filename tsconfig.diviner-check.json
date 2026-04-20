@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "next-env.d.ts",
+    "src/app/admin/horoscope/session/[bookingId]/single-horoscope-session.tsx",
+    "src/app/admin/horoscope/session/[bookingId]/page.tsx",
+    "src/app/api/admin/astro/city-search/route.ts",
+    "src/app/admin/horoscope/components/city-autocomplete.tsx"
+  ]
+}

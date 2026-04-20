@@ -18,7 +18,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { Loader2, Sparkles, ExternalLink, AlertCircle } from "lucide-react";
+import { Loader2, Sparkles, ExternalLink, AlertCircle, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -36,6 +36,7 @@ import {
   callAI,
 } from "../../api";
 import { buildAiPrompts } from "../../build-ai-prompts";
+import { CityAutocomplete } from "../../components/city-autocomplete";
 import type { BirthInput, CityOption } from "../../types";
 
 // ─── Timezone helper — computes numeric hour offset for IANA tz on a given date.
@@ -126,6 +127,13 @@ interface Props {
 
 type Phase = "idle" | "computing" | "done" | "error";
 
+// Unknown birth time default — astrology convention uses 12:00 PM (a "noon
+// chart") when the client doesn't know / didn't provide their birth time.
+// Houses and rising sign can't be resolved precisely, but planetary positions
+// are still meaningful. The form surfaces this fallback with an amber note
+// so the diviner can override it.
+const NOON_DEFAULT_TOB = "12:00";
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function cityOf(b: PrefillBirth): CityOption | null {
@@ -143,7 +151,12 @@ function cityOf(b: PrefillBirth): CityOption | null {
 }
 
 function toBirthInput(b: PrefillBirth): BirthInput {
-  return { dob: b.dob, tob: b.tob, city: cityOf(b) };
+  // If the booking didn't capture a TOB, pre-fill with noon. The diviner
+  // can still edit the field before the reading runs. Without this, the
+  // "Generate reading" button stays disabled for every booking whose
+  // intake form didn't include a time — which is most of them today.
+  const tob = b.tob && b.tob.trim() ? b.tob : NOON_DEFAULT_TOB;
+  return { dob: b.dob, tob, city: cityOf(b) };
 }
 
 function isBirthComplete(b: BirthInput): boolean {
@@ -173,6 +186,16 @@ const TWO_PERSON_TABS = new Set([
 
 export function SingleHoroscopeSession(props: Props) {
   const isTwoPerson = TWO_PERSON_TABS.has(props.tabSlug);
+
+  // Track whether a person's TOB was defaulted to noon (booking didn't
+  // capture a time). Drives the amber "using 12:00 PM" note in the UI.
+  const clientTobMissing = !(
+    props.clientBirth.tob && props.clientBirth.tob.trim()
+  );
+  const partnerTobMissing = !!(
+    props.partnerBirth &&
+    !(props.partnerBirth.tob && props.partnerBirth.tob.trim())
+  );
 
   // Form state — pre-filled from props, editable
   const [person1, setPerson1] = useState<BirthInput>(() =>
@@ -356,6 +379,7 @@ export function SingleHoroscopeSession(props: Props) {
             }
             value={person1}
             onChange={setPerson1}
+            tobDefaulted={clientTobMissing}
           />
 
           {isTwoPerson && (
@@ -373,6 +397,7 @@ export function SingleHoroscopeSession(props: Props) {
                 label={`Partner: ${props.partnerBirth?.fullName || ""}`.trim()}
                 value={person2}
                 onChange={setPerson2}
+                tobDefaulted={partnerTobMissing}
               />
             </>
           )}
@@ -499,11 +524,24 @@ function BirthFields({
   label,
   value,
   onChange,
+  tobDefaulted = false,
 }: {
   label: string;
   value: BirthInput;
   onChange: (b: BirthInput) => void;
+  /** True when the booking didn't capture a birth time and we pre-filled
+   *  noon as a fallback. Drives the amber explanatory note. */
+  tobDefaulted?: boolean;
 }) {
+  // City editor state:
+  //  - If the booking didn't supply a city (value.city === null) we open the
+  //    CityAutocomplete by default so the diviner can search and pick one.
+  //  - If the booking already has a city we show a read-only pill with a
+  //    pencil "Change" button. Clicking it swaps to the autocomplete so the
+  //    diviner can correct bad data without leaving the reading view.
+  const [editingCity, setEditingCity] = useState(false);
+  const showAutocomplete = !value.city || editingCity;
+
   return (
     <div className="space-y-3">
       <Label className="text-sm font-medium">{label}</Label>
@@ -517,6 +555,7 @@ function BirthFields({
             type="date"
             value={value.dob}
             onChange={(e) => onChange({ ...value, dob: e.target.value })}
+            className={!value.dob ? "border-amber-500/60" : undefined}
           />
         </div>
         <div>
@@ -528,27 +567,67 @@ function BirthFields({
             type="time"
             value={value.tob}
             onChange={(e) => onChange({ ...value, tob: e.target.value })}
+            className={tobDefaulted ? "border-amber-500/60" : undefined}
           />
         </div>
         <div>
-          <Label htmlFor={`${label}-city`} className="text-xs">
-            Birth City
-          </Label>
-          <Input
-            id={`${label}-city`}
-            type="text"
-            value={value.city?.label ?? ""}
-            readOnly
-            placeholder="—"
-            className="bg-muted/30"
-          />
+          {showAutocomplete ? (
+            <CityAutocomplete
+              label="Birth City"
+              value={value.city}
+              onChange={(c) => {
+                onChange({ ...value, city: c });
+                if (c) setEditingCity(false);
+              }}
+            />
+          ) : (
+            <>
+              <Label htmlFor={`${label}-city`} className="text-xs">
+                Birth City
+              </Label>
+              <div className="flex gap-1.5">
+                <Input
+                  id={`${label}-city`}
+                  type="text"
+                  value={value.city?.label ?? ""}
+                  readOnly
+                  className="bg-muted/30"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="shrink-0"
+                  onClick={() => setEditingCity(true)}
+                  title="Change birth city"
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
+              </div>
+            </>
+          )}
         </div>
       </div>
+      {tobDefaulted && (
+        <div className="flex items-start gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 p-2.5 text-xs">
+          <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-500" />
+          <span>
+            Birth time wasn&apos;t captured at booking — defaulted to{" "}
+            <strong>12:00 PM (noon chart)</strong>. Adjust above if the client
+            provided a specific time. Houses and rising sign will be
+            approximate without a precise birth time.
+          </span>
+        </div>
+      )}
       {!value.city && (
-        <p className="text-xs text-muted-foreground">
-          City lookup is not editable from the session view. To change it, open
-          the booking detail and update the client&apos;s birth location.
-        </p>
+        <div className="flex items-start gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 p-2.5 text-xs">
+          <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-500" />
+          <span>
+            Birth city wasn&apos;t captured at booking. Search above and pick
+            the correct city from the dropdown — lat/lng and timezone are
+            saved automatically.
+          </span>
+        </div>
       )}
     </div>
   );

@@ -44,7 +44,19 @@ function matchProtectedRoute(pathname: string) {
 }
 
 export async function updateSession(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({ request });
+  // Forward the active pathname to downstream server components via a request
+  // header. Next.js does not expose the pathname directly inside layout.tsx
+  // server components (params only include dynamic segment values, not the
+  // full path), so we inject `x-pathname` here and read it back from
+  // `headers()` in the admin layout to branch auth behavior for diviner-
+  // accessible session subroutes. Keep this header name stable — other
+  // server components may start relying on it.
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-pathname", request.nextUrl.pathname);
+
+  let supabaseResponse = NextResponse.next({
+    request: { headers: requestHeaders },
+  });
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -58,7 +70,9 @@ export async function updateSession(request: NextRequest) {
           cookiesToSet.forEach(({ name, value }) =>
             request.cookies.set(name, value),
           );
-          supabaseResponse = NextResponse.next({ request });
+          supabaseResponse = NextResponse.next({
+            request: { headers: requestHeaders },
+          });
           cookiesToSet.forEach(({ name, value, options }) =>
             supabaseResponse.cookies.set(name, value, options),
           );
