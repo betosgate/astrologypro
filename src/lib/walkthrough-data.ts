@@ -4467,20 +4467,20 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
       "↕️ Sortable Headers — Column labels support sorting to help admins organize the table by important fields."
     ]
   },
-  {
-    "name": "tarot_cards_pagination_v1",
-    "label": "Tarot Cards: Pagination & Page Size Controls",
-    "description": "The navigation area used to browse the tarot card library page by page.",
-    "group": "Tools",
-    "subModule": "Tarot Cards",
-    "purpose": "This section supports browsing through a larger tarot card library without loading everything into a single long list. It shows the currently visible record range, lets admins choose how many cards to show per page, and provides numbered page navigation. This improves readability and keeps the library manageable when the deck contains many records or custom card additions.", 
-    "bullets": [
-      "📄 Visible Range Indicator — Shows how many tarot cards are currently visible out of the total result count.",
-      "🔢 Page Size Selector — Allows admins to choose how many cards should appear per page.",
-      "➡️ Numbered Page Navigation — Move between result pages using page buttons and next or previous controls.",
-      "📚 Large Library Support — Keeps large tarot collections easy to browse and maintain."
-    ]
-  },
+  // {
+  //   "name": "tarot_cards_pagination_v1",
+  //   "label": "Tarot Cards: Pagination & Page Size Controls",
+  //   "description": "The navigation area used to browse the tarot card library page by page.",
+  //   "group": "Tools",
+  //   "subModule": "Tarot Cards",
+  //   "purpose": "This section supports browsing through a larger tarot card library without loading everything into a single long list. It shows the currently visible record range, lets admins choose how many cards to show per page, and provides numbered page navigation. This improves readability and keeps the library manageable when the deck contains many records or custom card additions.", 
+  //   "bullets": [
+  //     "📄 Visible Range Indicator — Shows how many tarot cards are currently visible out of the total result count.",
+  //     "🔢 Page Size Selector — Allows admins to choose how many cards should appear per page.",
+  //     "➡️ Numbered Page Navigation — Move between result pages using page buttons and next or previous controls.",
+  //     "📚 Large Library Support — Keeps large tarot collections easy to browse and maintain."
+  //   ]
+  // },
 
 
 
