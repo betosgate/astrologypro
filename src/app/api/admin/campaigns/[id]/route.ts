@@ -84,6 +84,11 @@ export async function PATCH(
   if (typeof b.description === "string") updates.description = b.description.trim();
   if (typeof b.status === "string" && ["draft", "active", "paused", "completed", "expired"].includes(b.status)) {
     updates.status = b.status;
+    // When manually reactivating, clear any auto-pause markers so the UI shows "Active"
+    if (b.status === "active") {
+      updates.auto_paused_at = null;
+      updates.auto_pause_reason = null;
+    }
   }
   if (typeof b.start_date === "string") updates.start_date = b.start_date;
   if (typeof b.end_date === "string") updates.end_date = b.end_date || null;

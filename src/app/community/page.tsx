@@ -665,11 +665,7 @@ export default async function CommunityDashboardPage() {
             })}
           </p>
         </div>
-        <Badge
-          variant={member.membership_status === "active" ? "default" : "secondary"}
-        >
-          {member.membership_status}
-        </Badge>
+
       </div>
 
       {/* ═══════════════════════════════════════════════════════════════════
