@@ -38,6 +38,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { AstroChartsSection } from "@/components/community/astro-charts-section";
+import { ChartQuickActions } from "@/components/community/chart-quick-actions";
 import { ProfileProgressSection } from "@/components/community/profile-progress-section";
 import { MembershipCard, type MembershipSubscription } from "@/components/community/membership-card";
 import { ManageSubscriptionButton } from "@/components/mystery-school/manage-subscription-button";
@@ -987,6 +988,9 @@ export default async function CommunityDashboardPage() {
       ════════════════════════════════════════════════════════════════════ */}
       <section className="space-y-4">
         <SectionHeading icon={Compass} title="Your Charts & Astrology" subtitle="Birth charts, transits, and cosmic insights" />
+
+        {/* Quick Chart Generation — one-click natal/monthly/relationship */}
+        <ChartQuickActions />
 
         {/* Profile Progress + Astro Charts */}
         <div className="grid gap-4 sm:grid-cols-2">
