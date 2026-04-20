@@ -79,6 +79,8 @@ export function BirthCityAutocomplete({
       return;
     }
 
+    // OLD DEBOUNCE (300ms was too fast and caused frequent cancellations)
+    // debounceRef.current = setTimeout(async () => {
     debounceRef.current = setTimeout(async () => {
       if (abortRef.current) abortRef.current.abort();
       const ctrl = new AbortController();
@@ -89,7 +91,7 @@ export function BirthCityAutocomplete({
           `/api/community/nativity-chart/city-search?q=${encodeURIComponent(trimmed)}`,
           { signal: ctrl.signal }
         );
-        if (!res.ok) {
+        if (!res.status.toString().startsWith('2')) { // Handle non-200 responses
           setResults([]);
           return;
         }
@@ -103,7 +105,7 @@ export function BirthCityAutocomplete({
       } finally {
         setLoading(false);
       }
-    }, 300);
+    }, 500);
 
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
