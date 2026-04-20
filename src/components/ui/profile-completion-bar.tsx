@@ -13,21 +13,36 @@ export function ProfileCompletionBar({
   completedCount,
   totalCount,
   onMissingFieldClick,
+  title = "Profile completion",
+  subtitle,
 }: {
   percentage: number;
   missingFields: MissingField[];
   completedCount: number;
   totalCount: number;
   onMissingFieldClick?: (fieldKey: string) => void;
+  /**
+   * Heading shown above the bar. Defaults to "Profile completion" for back-compat.
+   * Use a distinct label (e.g. "Profile Details") when multiple progress bars
+   * live in the same product area so users can tell them apart.
+   */
+  title?: string;
+  /**
+   * Optional secondary descriptor rendered below the counter.
+   */
+  subtitle?: string;
 }) {
   return (
     <div className="rounded-xl border bg-card p-4">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-sm font-medium">Profile completion</p>
+          <p className="text-sm font-medium">{title}</p>
           <p className="text-sm text-muted-foreground">
             {completedCount}/{totalCount} fields complete
           </p>
+          {subtitle && (
+            <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>
+          )}
         </div>
         <div className="text-right">
           <p className="text-2xl font-semibold">{percentage}%</p>

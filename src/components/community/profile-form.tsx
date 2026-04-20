@@ -22,7 +22,10 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, Save, ChevronDown, ChevronUp } from "lucide-react";
 import { toast } from "sonner";
 import { ProfileCompletionBar } from "@/components/ui/profile-completion-bar";
-import { calculateProfileCompletion } from "@/lib/profile-completion";
+import {
+  calculateProfileCompletion,
+  getCommunityProfileFields,
+} from "@/lib/profile-completion";
 import { BirthCityAutocomplete } from "@/components/community/birth-city-autocomplete";
 
 interface CommunityMember {
@@ -90,20 +93,24 @@ export function CommunityProfileForm({ member }: CommunityProfileFormProps) {
       ? "Mystery School"
       : "Perennial Mandalism";
 
-  const completion = calculateProfileCompletion([
-    { key: "community-first-name", label: "First name", value: firstName },
-    { key: "community-last-name", label: "Last name", value: lastName },
-    { key: "community-phone", label: "Phone", value: phone },
-    { key: "community-gender", label: "Gender", value: gender },
-    { key: "community-dob", label: "Birth date", value: dateOfBirth },
-    { key: "community-birth-time", label: "Birth time", value: birthTime },
-    { key: "community-birth-city", label: "Birth city", value: birthCity },
-    { key: "community-address", label: "Address", value: address },
-    { key: "community-city", label: "City", value: city },
-    { key: "community-state", label: "State", value: state },
-    { key: "community-zip", label: "ZIP code", value: zip },
-    { key: "community-occupation", label: "Occupation", value: occupation },
-  ]);
+  // Derived from the single source of truth in lib/profile-completion.ts so
+  // any new profile field only needs to be declared in one place.
+  const completion = calculateProfileCompletion(
+    getCommunityProfileFields({
+      firstName,
+      lastName,
+      phone,
+      gender,
+      dateOfBirth,
+      birthTime,
+      birthCity,
+      address,
+      city,
+      state,
+      zip,
+      occupation,
+    })
+  );
 
   function focusField(fieldKey: string) {
     document.getElementById(fieldKey)?.scrollIntoView({
@@ -167,6 +174,8 @@ export function CommunityProfileForm({ member }: CommunityProfileFormProps) {
   return (
     <form onSubmit={handleSave} className="space-y-6">
       <ProfileCompletionBar
+        title="Profile Details"
+        subtitle="Tracks your personal & birth data only. Charts, family, and account setup progress are shown on your dashboard as Journey Progress."
         percentage={completion.percentage}
         missingFields={completion.missingFields}
         completedCount={completion.completedCount}
