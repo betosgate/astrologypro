@@ -8957,6 +8957,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
         purpose: "This is the primary work surface for trainees. The learner chooses a category, expands an unlocked lesson, studies the content inline, and moves through sequential curriculum without leaving the workspace.",
         bullets: [
           "Left lesson pane displays lesson status, duration, lock state, and inline expanded content",
+          "Expanded lessons keep video, written content, downloads, resources, and the lesson quiz inside the same scrollable workspace panel",
           "Right category rail stays sticky and shows category progress, lock icons, and completion checks",
           "Sequential rules prevent jumping ahead when global or category locks are active",
           "Completing a lesson refreshes progress and can auto-advance the learner to the next available lesson"

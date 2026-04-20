@@ -58,12 +58,13 @@ Conditional capture:
   - Start / Continue action buttons
 
 ### 3. `program-workspace.png`
-- Route: first available `/trainee/training/:programId`
+- Route: preferred `/trainee/training/:programId` for `Tarot Mastery Track` when available; otherwise first available program
 - Show:
   - program header
   - lesson pane on the left
   - category rail on the right
-  - expanded lesson with content visible
+  - expanded lesson with full-width video/content visible
+  - lesson quiz section in the same workspace panel, scrolling the lesson panel if needed
 - Avoid:
   - locked-only program where no lesson can be opened
 
