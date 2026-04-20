@@ -31,6 +31,18 @@ async function waitForStableView(page, ms = 2500) {
   await page.waitForTimeout(ms);
 }
 
+async function scrollToVisibleText(page, text, options = {}) {
+  const locator = page.getByText(text, { exact: options.exact ?? true }).last();
+  await locator.waitFor({ state: "visible", timeout: options.timeout ?? 15000 });
+  await locator.scrollIntoViewIfNeeded();
+  await page.waitForTimeout(options.waitMs ?? 1000);
+}
+
+async function selectTrainingAnalyticsTab(page, tabName) {
+  await page.getByRole("tab", { name: tabName }).click();
+  await waitForStableView(page, 6000);
+}
+
 async function resolveFirstTrainingEditHref(page, entity) {
   const config = {
     program: {
@@ -133,6 +145,12 @@ const roles = [
       { name: "mystery-school", url: "/admin/mystery-school", label: "Mystery School Admin" },
       { name: "audit", url: "/admin/activity-log", label: "Audit Trails" },
       { name: "training_lessons", url: "/admin/training", label: "Training Hub" },
+      {
+        name: "quiz-bank-admin",
+        url: "/admin/training",
+        label: "Quiz Bank",
+        afterNavigate: async (page) => scrollToVisibleText(page, "Quizzes"),
+      },
       { name: "training_program_new", url: "/admin/training/programs/new", label: "Create Training Program" },
       {
         name: "training-program-detail",
@@ -153,6 +171,12 @@ const roles = [
         resolveUrl: async (page) => resolveFirstTrainingEditHref(page, "quiz"),
       },
       { name: "training_analytics", url: "/admin/training/analytics", label: "Training Analytics" },
+      {
+        name: "trainee-quiz-scores",
+        url: "/admin/training/analytics",
+        label: "Trainee Quiz Scores",
+        afterNavigate: async (page) => selectTrainingAnalyticsTab(page, "Users"),
+      },
       { name: "training_settings", url: "/admin/training/settings", label: "Training Settings" },
     ],
   },
@@ -235,6 +259,12 @@ const roles = [
 ];
 
 const roleFilter = process.env.WALKTHROUGH_ROLE?.trim();
+const screenFilter = new Set(
+  (process.env.WALKTHROUGH_SCREENS ?? "")
+    .split(",")
+    .map((screen) => screen.trim())
+    .filter(Boolean),
+);
 const rolesToCapture = roleFilter
   ? roles.filter((role) => role.slug === roleFilter)
   : roles;
@@ -274,13 +304,20 @@ async function captureRole(browser, role) {
     }
   }
 
-  for (const screen of role.screens) {
+  const screensToCapture = screenFilter.size
+    ? role.screens.filter((screen) => screenFilter.has(screen.name))
+    : role.screens;
+
+  for (const screen of screensToCapture) {
     try {
       console.log(`  Capturing ${screen.name}...`);
       const resolved = await navigateForScreen(page, screen);
       if (!resolved) {
         console.log(`  ↷ Skipped ${screen.name} (no capturable route/data available)`);
         continue;
+      }
+      if (typeof screen.afterNavigate === "function") {
+        await screen.afterNavigate(page);
       }
 
       const filePath = path.join(roleDir, `${screen.name}.png`);

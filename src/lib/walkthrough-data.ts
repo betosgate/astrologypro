@@ -5288,13 +5288,13 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
       {
         name: "quiz-bank-admin",
         label: "Quiz Bank",
-        description: "Central library of all quiz questions used across trainee lessons and certifications. Admins can create, edit, tag, and retire questions. Each question is tagged to a lesson topic and difficulty tier.",
+        description: "Central admin list of lesson quizzes used across training programs. Admins can search quizzes, review linked lessons, check question counts, and open quiz editors from one operational table.",
         group: "Training",
-        purpose: "Maintains a structured, reusable pool of assessment questions so lesson authors do not have to duplicate effort when building new quizzes.",
+        purpose: "Gives curriculum managers a single place to audit assessment coverage and maintain quiz quality across the training catalog.",
         bullets: [
-          "Question list with topic tag, difficulty (Beginner / Intermediate / Advanced), and active status",
-          "Inline editor — add answer choices, mark the correct answer, and attach an explanation",
-          "Usage count column showing how many quizzes currently reference each question"
+          "Quiz table with title, linked lesson, question count, active status, and created date",
+          "Search and status filters shared with programs, categories, and lessons",
+          "Quick actions for opening existing quiz editors or creating a new quiz"
         ]
       },
       {
@@ -5624,27 +5624,18 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
       {
         name: "trainee-quiz-scores",
         label: "Trainee Quiz Scores",
-        description: "Detailed quiz score history for a single trainee across all lessons. Shows each attempt, score, pass/fail result, and time taken. Admins can grant a manual pass or reset attempts for extenuating circumstances.",
+        description: "Training analytics view that surfaces trainee progress, quiz pass rate, average attempts, lesson completion, and time spent across the training program.",
         group: "Training",
-        purpose: "Supports admin review of trainee progression, especially when a trainee requests an exception or appeal after repeated quiz failures.",
+        purpose: "Helps admins identify trainees who are progressing smoothly, stalled, or repeatedly struggling with quiz checkpoints.",
         bullets: [
-          "Attempt timeline: date, score percentage, pass/fail badge, time taken",
-          "Most-missed questions panel highlighting knowledge gaps",
-          "Manual pass button with mandatory reason field — creates an audit log entry"
+          "User table with training status, enrolled programs, lesson progress, quiz pass rate, and average attempts",
+          "Search and sort controls for finding trainees by name, completion rate, or quiz performance",
+          "CSV export for offline review of trainee progress and assessment outcomes"
         ]
       },
-      {
-        name: "certificate-issued-log",
-        label: "Certificate Issued Log",
-        description: "Audit log of all training certificates issued by the platform. Each row shows the trainee, program, issue date, certificate ID, and download link. Admins can revoke certificates and trigger re-issue.",
-        group: "Training",
-        purpose: "Creates a tamper-evident record of certifications so credentials can be verified by third parties and revoked if fraud is detected.",
-        bullets: [
-          "Log table with certificate ID, trainee name, program, issue date, and status",
-          "Revoke button with mandatory reason field — certificate becomes invalid and trainee is notified",
-          "Export to PDF — generates a signed certificate log for regulatory record-keeping"
-        ]
-      },
+      // Certificate Issued Log is intentionally omitted for now.
+      // There is a Certificate Config screen and trainee-facing certificate flow,
+      // but no admin issued-certificate audit log/revoke screen currently exists.
       {
         name: "payment-dispute-detail",
         label: "Payment Dispute Detail",
