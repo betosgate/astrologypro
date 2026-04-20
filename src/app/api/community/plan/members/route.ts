@@ -30,24 +30,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body = await request.json();
-    const {
-      full_name,
-      date_of_birth,
-      relationship,
-      birth_time,
-      birth_city,
-      birth_country,
-      notes,
-    } = body as {
-      full_name?: string;
-      date_of_birth?: string;
-      relationship?: string;
-      birth_time?: string;
-      birth_city?: string;
-      birth_country?: string;
-      notes?: string;
+    const body = (await request.json()) as Record<string, unknown>;
+
+    // Accept both snake_case and camelCase payloads from the frontend.
+    // Only the explicitly allowlisted keys are read — unknown fields are ignored.
+    const pickString = (snake: string, camel: string): string | undefined => {
+      const v = (body[snake] ?? body[camel]) as unknown;
+      return typeof v === "string" ? v : undefined;
     };
+
+    const full_name = pickString("full_name", "fullName");
+    const date_of_birth = pickString("date_of_birth", "dateOfBirth");
+    const birth_time = pickString("birth_time", "birthTime");
+    const birth_city = pickString("birth_city", "birthCity");
+    const birth_country = pickString("birth_country", "birthCountry");
+    const relationship =
+      typeof body.relationship === "string" ? body.relationship : undefined;
+    const notes = typeof body.notes === "string" ? body.notes : undefined;
 
     if (!full_name || !date_of_birth) {
       return NextResponse.json(
