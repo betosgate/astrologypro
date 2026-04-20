@@ -6540,7 +6540,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
         name: "campaigns",
         label: "Campaigns",
         description: "Design and run trackable marketing campaigns at /dashboard/campaigns. Every campaign targets exactly one destination — the diviner's profile page OR one of their enabled service landing pages — and gets a unique short URL in the format /r/cmp_XXXXXXXX that logs rich click data for every visitor. The page opens on a Campaigns tab (table of all campaigns) with a sibling Analytics tab for aggregate performance across every campaign. Each row shows name, status (Draft / Active / Paused / Completed), destination badge (Profile or a specific service), the campaign URL with a Copy button, start/end dates, commission rate, and live counts for affiliates, clicks, unique clicks, and conversions. Creating a campaign prompts the diviner for a name, a destination picker populated only with their admin-enabled services, an optional date window, and commission terms for affiliates.",
-        group: "Marketing & Growth",
+        group: "Campaigns",
         purpose: "Lets diviners promote a specific page (profile or single service) and measure exactly which channels, devices, and geographies drive real bookings — tied to the landing-page access-control system so disabled services can never be selected as a destination.",
         bullets: [
           "Destination Picker — shows 'My Profile Page' as the default and a dropdown of enabled service landing pages only; admin-disabled services never appear, even via dev-tools tampering (server validates)",
@@ -6560,7 +6560,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
         name: "campaign_analytics_detail",
         label: "Per-Campaign Analytics",
         description: "Deep-dive analytics for a single campaign at /dashboard/campaigns/[id]/analytics. The page is structured around the question 'where is this campaign's traffic coming from, and how is it converting?' — KPI cards at the top (Total Clicks, Unique Clicks, Bookings, Revenue, Conversion Rate, Bounce indicator), a clicks-over-time chart below them, and three side-by-side breakdowns: Devices (mobile / desktop / tablet), Geo (top countries), and Referrers (direct, social platforms, search engines, other tracking links). A clicks table at the bottom lists individual click events with timestamp, device summary, country, referrer, and unique/repeat flag, so the diviner can audit exactly how a spike or dip happened.",
-        group: "Marketing & Growth",
+        group: "Campaigns",
         purpose: "Answers the practical question of whether this specific campaign is worth continuing — is traffic coming from the audience the diviner expected, and is it actually converting into bookings?",
         bullets: [
           "KPI strip — Total Clicks, Unique Clicks, Bookings, Revenue, Conversion Rate in prominent cards",

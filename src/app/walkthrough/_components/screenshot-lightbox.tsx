@@ -34,6 +34,7 @@ import {
   ChevronDown,
   MessageSquare,
   BarChart3,
+  Target,
   type LucideIcon,
 } from "lucide-react";
 import { type Screen } from "@/lib/walkthrough-data";
@@ -50,6 +51,7 @@ const GROUP_ICONS: Record<string, LucideIcon> = {
   Advocacy: Zap,
   Astrology: Orbit,
   "Astrology Tools": Orbit,
+  Campaigns: Target,
   Commerce: ShoppingBag,
   Community: Users,
   Config: Settings2,
@@ -91,6 +93,7 @@ const GROUP_DESCRIPTIONS: Record<string, string> = {
   Advocacy: "Referral visibility, partner tools, and earnings tracking.",
   Astrology: "Administrative chart engines and specialized data views.",
   "Astrology Tools": "Natal, relationship, and transit tooling.",
+  Campaigns: "Trackable marketing campaigns with per-destination click attribution and analytics.",
   Commerce: "Orders, payouts, and financial visibility.",
   Community: "Shared rituals, gatherings, and member-facing spaces.",
   Config: "Platform settings, legal controls, and audit surfaces.",
