@@ -4263,20 +4263,121 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
       // Training
       { 
         name: "training_lessons", 
-        label: "Programs & Lessons", 
-        description: "Designing lessons and courses.", 
+        label: "Training Hub", 
+        description: "Central workspace for programs, categories, lessons, and quizzes.", 
         group: "Training",
-        purpose: "The architectural tool for building spiritual training journeys and certification paths.",
+        purpose: "This is the main operating screen for training administrators. It brings the curriculum hierarchy into one place so the team can manage programs, categories, lessons, and quizzes without switching between disconnected admin pages.",
         bullets: [
-          "Modular lesson builder with rich media support",
-          "Prerequisite mapping and locking logic",
-          "Interactive quiz and examination designer",
-          "Course-level graduation criteria settings"
+          "Four coordinated tables for programs, categories, lessons, and quizzes",
+          "Shared search and active/inactive filters across the training dataset",
+          "Independent refresh and pagination controls for each entity type",
+          "Fast access to create, edit, and review curriculum records"
         ]
       },
-      { name: "training_analytics", label: "Analytics", description: "Statistical performance of courses.", group: "Training" },
-      { name: "training_settings", label: "Settings", description: "Global settings for the graduation path.", group: "Training" },
-      { name: "class_config", label: "Class Config", description: "Configuration of virtual training rooms.", group: "Training" },
+      {
+        name: "training_program_new",
+        label: "Create Training Program",
+        description: "Top-level setup form for a new training program.",
+        group: "Training",
+        purpose: "Admins use this page to define a new program before any categories or lessons are added. It establishes the program identity, audience, visibility, and progression rules that the rest of the curriculum inherits.",
+        bullets: [
+          "Program name and description define the curriculum container",
+          "Priority controls display order when multiple programs are available",
+          "Allowed roles limit access to the intended learner audience",
+          "Sequential lock determines whether categories must be completed in order"
+        ]
+      },
+      {
+        name: "training_category_new",
+        label: "Create Training Category",
+        description: "Author a category within a selected training program.",
+        group: "Training",
+        purpose: "Categories break a training program into manageable learning sections. This page defines the category's parent program, order, visibility, and progression behavior so learners see a structured path rather than a flat lesson list.",
+        bullets: [
+          "Program assignment links the category to the correct curriculum",
+          "Priority controls the category's position inside the program",
+          "Sequential behavior determines whether lessons unlock in order",
+          "Active status supports staging and controlled release"
+        ]
+      },
+      {
+        name: "training_lesson_new",
+        label: "Create Training Lesson",
+        description: "Lesson authoring form with media, sequencing, and content controls.",
+        group: "Training",
+        purpose: "This is the core authoring screen for learner-facing content. Admins use it to create a lesson, assign it to a category, attach video and PDF resources, add written content, and define how the lesson fits into the larger sequence.",
+        bullets: [
+          "Lesson metadata covers title, description, category, priority, and status",
+          "Video can be provided through YouTube, direct URL, or file upload",
+          "PDF attachments support worksheets, slide decks, and reading material",
+          "Previous lesson and priority fields help maintain a clear sequence"
+        ]
+      },
+      {
+        name: "training_lesson_edit",
+        label: "Lesson Edit & Asset Review",
+        description: "Maintain a live lesson and review its attached media assets.",
+        group: "Training",
+        purpose: "Once lessons are live, curriculum teams need a reliable maintenance screen for correcting content, replacing assets, and updating structure without rebuilding the lesson. This page represents the ongoing editing workflow after initial authoring.",
+        bullets: [
+          "Update lesson copy and metadata without recreating the record",
+          "Review and replace existing video or PDF assets in one workflow",
+          "Adjust lesson order when the curriculum is reorganized",
+          "Support iterative improvements to live training content"
+        ]
+      },
+      {
+        name: "training_quiz_new",
+        label: "Create Lesson Quiz",
+        description: "Build a quiz that is linked to a specific training lesson.",
+        group: "Training",
+        purpose: "This page creates the assessment layer for a lesson. Admins can attach a quiz to the correct lesson, define the initial question set, and prepare the checkpoint that learners must complete as part of the training flow.",
+        bullets: [
+          "Lesson linkage keeps the quiz tied to the correct learning step",
+          "Question authoring supports answer options and correct-answer mapping",
+          "Draft-to-live workflow helps teams prepare quizzes before launch",
+          "Assessment becomes part of learner progression and completion"
+        ]
+      },
+      {
+        name: "training_analytics",
+        label: "Training Analytics",
+        description: "Reporting dashboard for learner progress, completion, and quiz outcomes.",
+        group: "Training",
+        purpose: "This screen helps training managers understand how the curriculum is performing in production. It surfaces completion trends, pass rates, time spent, and drop-off patterns so the team can improve weak lessons and identify blocked learners.",
+        bullets: [
+          "Overview cards summarize trainee volume, completions, and overall pass rate",
+          "Tabbed reports break down performance by users, programs, categories, lessons, and quizzes",
+          "Search, filters, and sorting expose weak content and bottlenecks",
+          "CSV export supports reporting outside the platform"
+        ]
+      },
+      {
+        name: "training_settings",
+        label: "Training Settings",
+        description: "Global controls for training access and progression rules.",
+        group: "Training",
+        purpose: "This is the policy layer for the training center. Administrators use it to decide which user roles can access training at all and whether ordered progression rules should be enforced across the platform.",
+        bullets: [
+          "Role access checklist controls which user types can enter the training center",
+          "Global sequential lock applies ordered progression rules across programs and categories",
+          "Precedence notes explain how global and local sequencing interact",
+          "Last updated metadata supports governance and change tracking"
+        ]
+      },
+      // {
+      //   name: "class_config",
+      //   label: "Class Configuration",
+      //   description: "Setup page for live classes, rooms, or cohort-based training delivery.",
+      //   group: "Training",
+      //   purpose: "This page represents the administrative side of scheduled or instructor-led training delivery. It is useful when the training operation includes live sessions, virtual rooms, or classroom-style overlays on top of self-paced content.",
+      //   bullets: [
+      //     "Configure live-class or room settings for training delivery",
+      //     "Support scheduled, cohort-based, or instructor-led experiences",
+      //     "Keep delivery setup aligned with the underlying training structure",
+      //     "Extend the training module beyond self-paced lessons"
+      //   ]
+      // },
 
       // Commerce
       { 
@@ -5037,13 +5138,13 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
       {
         name: "quiz-detail-admin",
         label: "Quiz Detail",
-        description: "Full editor for a single quiz assigned to a training lesson. Admins configure the question set, passing score, number of attempts allowed, and remediation content. Shows live completion stats once deployed.",
+        description: "Detailed editor for a quiz, including rules, questions, and performance metrics.",
         group: "Training",
-        purpose: "Gives admins granular control over each quiz without touching the broader lesson structure.",
+        purpose: "This page is where admins manage the quality and strictness of a training assessment after it has been created. It combines authoring controls with operational feedback so the team can improve quiz quality without losing sight of how learners are actually performing.",
         bullets: [
-          "Drag-and-drop question ordering with live preview of the student experience",
-          "Passing-score slider and max-attempts spinner with save confirmation",
-          "Submission analytics panel — avg score, pass rate, most-missed question"
+          "Edit the question set and maintain the intended assessment order",
+          "Configure passing score and maximum attempts for the lesson checkpoint",
+          "Review performance signals such as average score, pass rate, and missed questions"
         ]
       },
       {
@@ -5349,13 +5450,13 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
       {
         name: "training-program-detail",
         label: "Training Program Detail",
-        description: "Detail and editor for a single training program (e.g. Astrology Foundations). Shows the ordered list of lessons, quiz assignments, estimated total duration, and enrolled trainee count. Admins can reorder lessons and update metadata.",
+        description: "Detailed view of a training program, including structure, status, and learner impact.",
         group: "Training",
-        purpose: "Gives curriculum designers a structured view of the full program so they can manage lesson order and content gaps in one place.",
+        purpose: "This page gives curriculum managers a full view of one program after it has been created. It is used to verify structure, maintain ordering, track whether the program is complete, and understand how many learners are affected by program-level changes.",
         bullets: [
-          "Lesson list with drag-and-drop reordering and status badges (Draft / Live)",
-          "Program metadata: title, description, prerequisite program, estimated hours",
-          "Enrolled count with link to the filtered trainee list for this program"
+          "Structured view of categories and lessons inside the selected program",
+          "Program metadata such as title, status, and estimated learning duration",
+          "Learner context showing how many trainees are enrolled in the program"
         ]
       },
       {

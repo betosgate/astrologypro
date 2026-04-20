@@ -5,9 +5,117 @@ import { mkdirSync, existsSync } from "fs";
 
 // Relative path setup
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const screenshotDir = path.join(__dirname, "..", "public", "walkthrough", "screenshots");
+const screenshotDir = process.env.WALKTHROUGH_SCREENSHOT_DIR
+  ? path.resolve(process.env.WALKTHROUGH_SCREENSHOT_DIR)
+  : path.join(__dirname, "..", "public", "walkthrough", "screenshots");
 
 const BASE = "http://localhost:3000";
+
+async function waitForAuthSession(context, timeoutMs = 15000) {
+  const started = Date.now();
+  while (Date.now() - started < timeoutMs) {
+    const cookies = await context.cookies();
+    const hasAuthCookie = cookies.some(
+      (cookie) =>
+        cookie.name.includes("auth-token") ||
+        (cookie.name.startsWith("sb-") && cookie.domain.includes("localhost")),
+    );
+    if (hasAuthCookie) return true;
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+  return false;
+}
+
+async function waitForStableView(page, ms = 2500) {
+  await page.waitForLoadState("networkidle", { timeout: 30000 }).catch(() => {});
+  await page.waitForTimeout(ms);
+}
+
+async function resolveFirstTrainingEditHref(page, entity) {
+  const config = {
+    program: {
+      api: "/api/admin/training/programs?pageSize=100",
+      listKey: "programs",
+      buildHref: (item) => `/admin/training/programs/${item.id}/edit`,
+      score: (item) => {
+        const text = `${item.name ?? ""} ${item.description ?? ""}`.toLowerCase();
+        let score = 0;
+        if (item.is_active) score += 10;
+        if (!text.includes("test")) score += 8;
+        if (!text.includes("sanket")) score += 6;
+        if (text.includes("foundation")) score += 5;
+        if (text.includes("astrology")) score += 5;
+        return score;
+      },
+    },
+    lesson: {
+      api: "/api/admin/training/lessons?pageSize=100",
+      listKey: "lessons",
+      buildHref: (item) => `/admin/training/lessons/${item.id}/edit`,
+      score: (item) => {
+        const text = `${item.title ?? ""} ${item.description ?? ""}`.toLowerCase();
+        let score = 0;
+        if (item.is_active) score += 10;
+        if (item.video_url) score += 6;
+        if (!text.includes("test")) score += 8;
+        if (text.includes("astrology")) score += 4;
+        if (text.includes("spread")) score += 3;
+        if (text.includes("major arcana")) score += 3;
+        return score;
+      },
+    },
+    quiz: {
+      api: "/api/admin/training/quizzes?pageSize=100",
+      listKey: "quizzes",
+      buildHref: (item) => `/admin/training/quizzes/${item.id}/edit`,
+      score: (item) => {
+        const text = `${item.title ?? ""} ${item.lesson_title ?? ""}`.toLowerCase();
+        let score = 0;
+        if (item.is_active) score += 10;
+        if (Array.isArray(item.questions) && item.questions.length > 0) score += 6;
+        if (!text.includes("test")) score += 8;
+        if (text.includes("profile")) score += 3;
+        if (text.includes("mysteries")) score += 3;
+        if (text.includes("sacred geometry")) score += 3;
+        return score;
+      },
+    },
+  }[entity];
+
+  if (!config) return null;
+
+  const result = await page.evaluate(async ({ api, listKey }) => {
+    const res = await fetch(api, { credentials: "include" });
+    if (!res.ok) return { ok: false, status: res.status, items: [] };
+    const json = await res.json();
+    return { ok: true, status: res.status, items: json[listKey] ?? [] };
+  }, { api: config.api, listKey: config.listKey });
+
+  if (!result.ok || !result.items.length) return null;
+
+  const best = [...result.items].sort((a, b) => config.score(b) - config.score(a))[0];
+  return `${BASE}${config.buildHref(best)}`;
+}
+
+async function navigateForScreen(page, screen) {
+  if (typeof screen.resolveUrl === "function") {
+    const resolved = await screen.resolveUrl(page);
+    if (!resolved) return null;
+    await page.goto(resolved, { waitUntil: "networkidle", timeout: 30000 });
+    await waitForStableView(page, 3000);
+    if (page.url().includes("/login")) {
+      throw new Error(`Navigation for ${screen.name} resolved to login page`);
+    }
+    return resolved;
+  }
+
+  await page.goto(`${BASE}${screen.url}`, { waitUntil: "networkidle", timeout: 30000 });
+  await waitForStableView(page, 3000);
+  if (page.url().includes("/login")) {
+    throw new Error(`Navigation for ${screen.name} resolved to login page`);
+  }
+  return `${BASE}${screen.url}`;
+}
 
 /**
  * ROLE MAPPINGS & DATA
@@ -24,6 +132,28 @@ const roles = [
       { name: "mundane", url: "/admin/mundane-dashboard", label: "Mundane Studio" },
       { name: "mystery-school", url: "/admin/mystery-school", label: "Mystery School Admin" },
       { name: "audit", url: "/admin/activity-log", label: "Audit Trails" },
+      { name: "training_lessons", url: "/admin/training", label: "Training Hub" },
+      { name: "training_program_new", url: "/admin/training/programs/new", label: "Create Training Program" },
+      {
+        name: "training-program-detail",
+        label: "Training Program Detail",
+        resolveUrl: async (page) => resolveFirstTrainingEditHref(page, "program"),
+      },
+      { name: "training_category_new", url: "/admin/training/categories/new", label: "Create Training Category" },
+      { name: "training_lesson_new", url: "/admin/training/lessons/new", label: "Create Training Lesson" },
+      {
+        name: "training_lesson_edit",
+        label: "Lesson Edit & Asset Review",
+        resolveUrl: async (page) => resolveFirstTrainingEditHref(page, "lesson"),
+      },
+      { name: "training_quiz_new", url: "/admin/training/quizzes/new", label: "Create Lesson Quiz" },
+      {
+        name: "quiz-detail-admin",
+        label: "Quiz Detail",
+        resolveUrl: async (page) => resolveFirstTrainingEditHref(page, "quiz"),
+      },
+      { name: "training_analytics", url: "/admin/training/analytics", label: "Training Analytics" },
+      { name: "training_settings", url: "/admin/training/settings", label: "Training Settings" },
     ],
   },
   {
@@ -104,6 +234,11 @@ const roles = [
   },
 ];
 
+const roleFilter = process.env.WALKTHROUGH_ROLE?.trim();
+const rolesToCapture = roleFilter
+  ? roles.filter((role) => role.slug === roleFilter)
+  : roles;
+
 async function captureRole(browser, role) {
   const roleDir = path.join(screenshotDir, role.slug);
   if (!existsSync(roleDir)) {
@@ -124,8 +259,13 @@ async function captureRole(browser, role) {
       await page.fill('input[type="email"]', role.email);
       await page.fill('input[type="password"]', role.password);
       await page.click('button[type="submit"]');
-      
-      await page.waitForURL((url) => url.toString().includes("localhost"), { timeout: 15000 });
+
+      const sessionReady = await waitForAuthSession(context, 15000);
+      if (!sessionReady) {
+        throw new Error("Auth session cookie was not established after login");
+      }
+
+      await page.waitForTimeout(1500);
       console.log(`  Logged in successfully.`);
     } catch (err) {
       console.error(`  Login failed for ${role.slug}: ${err.message}`);
@@ -137,8 +277,11 @@ async function captureRole(browser, role) {
   for (const screen of role.screens) {
     try {
       console.log(`  Capturing ${screen.name}...`);
-      await page.goto(`${BASE}${screen.url}`, { waitUntil: "networkidle", timeout: 30000 });
-      await page.waitForTimeout(4000); // Wait for animations/data
+      const resolved = await navigateForScreen(page, screen);
+      if (!resolved) {
+        console.log(`  ↷ Skipped ${screen.name} (no capturable route/data available)`);
+        continue;
+      }
 
       const filePath = path.join(roleDir, `${screen.name}.png`);
       await page.screenshot({ path: filePath, fullPage: false });
@@ -159,7 +302,7 @@ async function main() {
 
   const browser = await chromium.launch({ headless: true });
 
-  for (const role of roles) {
+  for (const role of rolesToCapture) {
     console.log(`\n[${role.slug.toUpperCase()}]`);
     await captureRole(browser, role);
   }
