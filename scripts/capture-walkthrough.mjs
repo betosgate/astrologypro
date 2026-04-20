@@ -31,6 +31,17 @@ async function waitForStableView(page, ms = 2500) {
   await page.waitForTimeout(ms);
 }
 
+async function gotoWalkthroughPage(page, url) {
+  try {
+    await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30000 });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (!message.includes("ERR_ABORTED")) throw err;
+    await page.waitForTimeout(1000);
+    if (!page.url().startsWith(url)) throw err;
+  }
+}
+
 async function scrollToVisibleText(page, text, options = {}) {
   const locator = page.getByText(text, { exact: options.exact ?? true }).last();
   await locator.waitFor({ state: "visible", timeout: options.timeout ?? 15000 });
@@ -124,7 +135,7 @@ async function resolveFirstTrainingEditHref(page, entity) {
   return `${BASE}${config.buildHref(best)}`;
 }
 
-async function resolveFirstTraineeTrainingHref(page, entity) {
+async function resolveFirstTraineeTrainingHref(page, entity, options = {}) {
   const result = await page.evaluate(async () => {
     const res = await fetch("/api/trainee/training/programs", {
       credentials: "include",
@@ -143,7 +154,17 @@ async function resolveFirstTraineeTrainingHref(page, entity) {
     return (a.priority ?? 0) - (b.priority ?? 0);
   });
 
+  const preferredProgramName = options.programName?.toLowerCase();
+  const preferredProgram = preferredProgramName
+    ? sortedPrograms.find((item) =>
+        `${item.name ?? ""} ${item.description ?? ""}`.toLowerCase().includes(preferredProgramName),
+      )
+    : null;
+
   const program =
+    (preferredProgram && Array.isArray(preferredProgram.categories) && preferredProgram.categories.length > 0
+      ? preferredProgram
+      : null) ??
     sortedPrograms.find((item) => Array.isArray(item.categories) && item.categories.length > 0) ??
     sortedPrograms[0];
   if (!program?.id) return null;
@@ -172,11 +193,121 @@ async function resolveFirstTraineeTrainingHref(page, entity) {
   return `${BASE}/trainee/training/${program.id}/${category.id}/${lesson.id}`;
 }
 
+async function resolveTraineeCertificateHref(page) {
+  await page.goto(`${BASE}/trainee/certificate`, { waitUntil: "networkidle", timeout: 30000 });
+  await waitForStableView(page, 3000);
+
+  return page.url().includes("/trainee/certificate") ? page.url() : null;
+}
+
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+async function findTraineeLessonWithQuiz(page) {
+  return page.evaluate(async () => {
+    const programId = window.location.pathname.split("/").filter(Boolean)[2];
+    if (!programId) return null;
+
+    const programsRes = await fetch("/api/trainee/training/programs", {
+      credentials: "include",
+    });
+    if (!programsRes.ok) return null;
+
+    const programsJson = await programsRes.json();
+    const programs = Array.isArray(programsJson.programs) ? programsJson.programs : [];
+    const program = programs.find((item) => item.id === programId);
+    if (!program || !Array.isArray(program.categories)) return null;
+
+    const candidates = [];
+    const categories = [...program.categories].sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0));
+
+    for (const category of categories) {
+      if (category.is_locked || !Array.isArray(category.lessons)) continue;
+      const lessons = [...category.lessons].sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0));
+
+      for (const lesson of lessons) {
+        if (lesson.is_locked) continue;
+        const lessonRes = await fetch(`/api/trainee/training/lessons/${lesson.id}`, {
+          credentials: "include",
+        });
+        if (!lessonRes.ok) continue;
+
+        const lessonJson = await lessonRes.json();
+        const detail = lessonJson.lesson ?? {};
+        const quizQuestions = Array.isArray(detail.quiz_questions) ? detail.quiz_questions : [];
+        if (quizQuestions.length === 0) continue;
+
+        const videoUrls = [
+          detail.video_url,
+          ...(Array.isArray(detail.videos) ? detail.videos.map((video) => video.video_url) : []),
+        ].filter(Boolean);
+        const hasEmbedVideo = videoUrls.some((url) => /(?:youtube\.com|youtu\.be|vimeo\.com)/i.test(String(url)));
+
+        candidates.push({
+          categoryName: category.name,
+          lessonTitle: lesson.title,
+          quizCount: quizQuestions.length,
+          hasEmbedVideo,
+          lessonPriority: lesson.priority ?? 0,
+          completed: lesson.completed === true,
+        });
+      }
+    }
+
+    candidates.sort((a, b) => {
+      if (a.hasEmbedVideo !== b.hasEmbedVideo) return a.hasEmbedVideo ? -1 : 1;
+      if (a.completed !== b.completed) return a.completed ? 1 : -1;
+      return a.lessonPriority - b.lessonPriority;
+    });
+
+    return candidates[0] ?? null;
+  });
+}
+
+async function revealTraineeLessonQuiz(page) {
+  const target = await findTraineeLessonWithQuiz(page);
+  if (target?.categoryName) {
+    const categoryButton = page
+      .getByRole("button")
+      .filter({ hasText: new RegExp(escapeRegExp(target.categoryName), "i") })
+      .first();
+    await categoryButton.click().catch(() => {});
+    await page.waitForTimeout(1000);
+  }
+
+  if (target?.lessonTitle) {
+    const quizAlreadyLoaded = await page
+      .getByText("Lesson Quiz", { exact: true })
+      .last()
+      .isVisible()
+      .catch(() => false);
+
+    if (!quizAlreadyLoaded) {
+      const lessonButton = page
+        .getByRole("button")
+        .filter({ hasText: new RegExp(escapeRegExp(target.lessonTitle), "i") })
+        .first();
+      await lessonButton.click().catch(() => {});
+      await page.waitForTimeout(1500);
+    }
+  }
+
+  const quizHeading = page.getByText("Lesson Quiz", { exact: true }).last();
+  await quizHeading.waitFor({ state: "visible", timeout: 15000 }).catch(() => {});
+  if (!(await quizHeading.isVisible().catch(() => false))) {
+    console.log("  ↷ Lesson quiz was not visible for program-workspace; capturing current workspace state");
+    return;
+  }
+  await quizHeading.scrollIntoViewIfNeeded();
+  await page.waitForTimeout(1000);
+}
+
 async function navigateForScreen(page, screen) {
   if (typeof screen.resolveUrl === "function") {
     const resolved = await screen.resolveUrl(page);
     if (!resolved) return null;
-    await page.goto(resolved, { waitUntil: "networkidle", timeout: 30000 });
+    await gotoWalkthroughPage(page, resolved);
     await waitForStableView(page, 3000);
     if (page.url().includes("/login")) {
       throw new Error(`Navigation for ${screen.name} resolved to login page`);
@@ -184,7 +315,7 @@ async function navigateForScreen(page, screen) {
     return resolved;
   }
 
-  await page.goto(`${BASE}${screen.url}`, { waitUntil: "networkidle", timeout: 30000 });
+  await gotoWalkthroughPage(page, `${BASE}${screen.url}`);
   await waitForStableView(page, 3000);
   if (page.url().includes("/login")) {
     throw new Error(`Navigation for ${screen.name} resolved to login page`);
@@ -329,13 +460,20 @@ const roles = [
       {
         name: "program-workspace",
         label: "Program Workspace",
-        resolveUrl: async (page) => resolveFirstTraineeTrainingHref(page, "program"),
+        resolveUrl: async (page) =>
+          resolveFirstTraineeTrainingHref(page, "program", { programName: "Tarot Mastery Track" }),
+        afterNavigate: async (page) => revealTraineeLessonQuiz(page),
       },
       { name: "progress", url: "/trainee/progress", label: "Progress Tracker" },
       { name: "quiz-history", url: "/trainee/quiz-history", label: "Quiz History" },
       { name: "resources", url: "/trainee/resources", label: "Learning Resources" },
       { name: "sessions", url: "/trainee/sessions", label: "Practice Sessions" },
       { name: "graduation", url: "/trainee/training/graduation", label: "Graduation Readiness" },
+      {
+        name: "certificate",
+        label: "Certificate of Completion",
+        resolveUrl: async (page) => resolveTraineeCertificateHref(page),
+      },
       { name: "trainee-profile", url: "/trainee/profile", label: "Trainee Profile" },
     ],
   },
@@ -365,12 +503,15 @@ async function captureRole(browser, role) {
   
   const page = await context.newPage();
 
-  if (role.email) {
-    console.log(`  Logging in as ${role.slug} (${role.email})...`);
+  const loginEmail = process.env.WALKTHROUGH_EMAIL?.trim() || role.email;
+  const loginPassword = process.env.WALKTHROUGH_PASSWORD || role.password;
+
+  if (loginEmail) {
+    console.log(`  Logging in as ${role.slug} (${loginEmail})...`);
     try {
       await page.goto(`${BASE}/login`, { waitUntil: "networkidle" });
-      await page.fill('input[type="email"]', role.email);
-      await page.fill('input[type="password"]', role.password);
+      await page.fill('input[type="email"]', loginEmail);
+      await page.fill('input[type="password"]', loginPassword);
       await page.click('button[type="submit"]');
 
       const sessionReady = await waitForAuthSession(context, 15000);
@@ -378,7 +519,13 @@ async function captureRole(browser, role) {
         throw new Error("Auth session cookie was not established after login");
       }
 
-      await page.waitForTimeout(1500);
+      const landingScreen = role.screens.find((screen) => typeof screen.url === "string");
+      if (landingScreen) {
+        await gotoWalkthroughPage(page, `${BASE}${landingScreen.url}`);
+        await waitForStableView(page, 1500);
+      } else {
+        await page.waitForTimeout(1500);
+      }
       console.log(`  Logged in successfully.`);
     } catch (err) {
       console.error(`  Login failed for ${role.slug}: ${err.message}`);
