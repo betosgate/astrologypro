@@ -4316,6 +4316,18 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
         ]
       },
       {
+        name: "quiz-bank-admin",
+        label: "Quiz Bank",
+        description: "Central admin list of lesson quizzes used across training programs. Admins can search quizzes, review linked lessons, check question counts, and open quiz editors from one operational table.",
+        group: "Training",
+        purpose: "Gives curriculum managers a single place to audit assessment coverage and maintain quiz quality across the training catalog.",
+        bullets: [
+          "Quiz table with title, linked lesson, question count, active status, and created date",
+          "Search and status filters shared with programs, categories, and lessons",
+          "Quick actions for opening existing quiz editors, launching AI generation, or creating a new quiz"
+        ]
+      },
+      {
         name: "training_program_new",
         label: "Create Training Program",
         description: "Top-level setup form for a new training program.",
@@ -4329,6 +4341,19 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
         ]
       },
       {
+        name: "training-program-detail",
+        label: "Training Program Detail",
+        description: "Edit an existing training program and maintain its audience, display order, active status, and internal notes.",
+        group: "Training",
+        purpose: "This page is the maintenance view for a live or staged program. Curriculum managers use it to update program metadata, role access, progression behavior, and notes while preserving the existing curriculum structure underneath it.",
+        bullets: [
+          "Program name, description, priority, and active status control how the program appears to trainees",
+          "Allowed-role checklist governs which learner roles can access the program",
+          "Sequential lock determines whether categories inside the program must be completed in order",
+          "Training notes provide internal context for curriculum decisions, edits, and follow-up tasks"
+        ]
+      },
+      {
         name: "training_category_new",
         label: "Create Training Category",
         description: "Author a category within a selected training program.",
@@ -4339,6 +4364,19 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Priority controls the category's position inside the program",
           "Sequential behavior determines whether lessons unlock in order",
           "Active status supports staging and controlled release"
+        ]
+      },
+      {
+        name: "training-category-detail",
+        label: "Training Category Detail",
+        description: "Edit an existing category and maintain its program placement, lesson sequencing rules, and internal notes.",
+        group: "Training",
+        purpose: "This page is the maintenance view for an existing curriculum section. It lets admins correct category metadata, move the category between programs, adjust lesson unlock behavior, and record operational notes without recreating the category.",
+        bullets: [
+          "Program selector controls where the category appears in the training hierarchy",
+          "Name, description, priority, and active status keep the category accurate after launch",
+          "Sequential lock determines whether lessons inside the category must be completed in order",
+          "Training notes provide an internal audit trail for curriculum decisions and follow-up work"
         ]
       },
       {
@@ -4381,6 +4419,32 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
         ]
       },
       {
+        name: "quiz-detail-admin",
+        label: "Quiz Detail",
+        description: "Detailed editor for a lesson quiz, including quiz metadata, question list, answer options, and remediation controls.",
+        group: "Training",
+        purpose: "This page is where admins maintain assessment quality after a quiz exists. It supports editing questions, answer mappings, explanations, ordering, and wrong-answer remediation so the assessment stays aligned with the lesson content.",
+        bullets: [
+          "Lesson selector and title field keep the quiz attached to the correct training checkpoint",
+          "Question editor supports option text, correct-answer mapping, priority, and explanations",
+          "Remediation controls can point learners back to a specific video timestamp and replay window",
+          "Question list lets admins edit or remove existing questions without rebuilding the quiz"
+        ]
+      },
+      {
+        name: "ai-quiz-generator",
+        label: "AI Quiz Generator",
+        description: "Generate a draft quiz from a PPTX training presentation, review the questions, then save it to a selected lesson.",
+        group: "Training",
+        purpose: "This screen accelerates quiz creation for slide-based training material. Admins upload a presentation, choose a target lesson and question count, review the generated multiple-choice questions, adjust answers or pass score, and save the quiz only after human review.",
+        bullets: [
+          "PPTX upload feeds the AI generation workflow for lesson-aligned quiz drafts",
+          "Lesson selector and question-count control keep generated questions scoped to the right module",
+          "Review panel lets admins edit questions, options, correct answers, and pass score before publishing",
+          "Save and discard actions preserve human approval instead of auto-publishing generated assessments"
+        ]
+      },
+      {
         name: "training_analytics",
         label: "Training Analytics",
         description: "Reporting dashboard for learner progress, completion, and quiz outcomes.",
@@ -4391,6 +4455,18 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Tabbed reports break down performance by users, programs, categories, lessons, and quizzes",
           "Search, filters, and sorting expose weak content and bottlenecks",
           "CSV export supports reporting outside the platform"
+        ]
+      },
+      {
+        name: "trainee-quiz-scores",
+        label: "Trainee Quiz Scores",
+        description: "Training analytics view that surfaces trainee progress, quiz pass rate, average attempts, lesson completion, and time spent across the training program.",
+        group: "Training",
+        purpose: "Helps admins identify trainees who are progressing smoothly, stalled, or repeatedly struggling with quiz checkpoints.",
+        bullets: [
+          "User table with training status, enrolled programs, lesson progress, quiz pass rate, and average attempts",
+          "Search and sort controls for finding trainees by name, completion rate, or quiz performance",
+          "CSV export for offline review of trainee progress and assessment outcomes"
         ]
       },
       {
@@ -5493,30 +5569,6 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
         ]
       },
       {
-        name: "quiz-bank-admin",
-        label: "Quiz Bank",
-        description: "Central admin list of lesson quizzes used across training programs. Admins can search quizzes, review linked lessons, check question counts, and open quiz editors from one operational table.",
-        group: "Training",
-        purpose: "Gives curriculum managers a single place to audit assessment coverage and maintain quiz quality across the training catalog.",
-        bullets: [
-          "Quiz table with title, linked lesson, question count, active status, and created date",
-          "Search and status filters shared with programs, categories, and lessons",
-          "Quick actions for opening existing quiz editors or creating a new quiz"
-        ]
-      },
-      {
-        name: "quiz-detail-admin",
-        label: "Quiz Detail",
-        description: "Detailed editor for a quiz, including rules, questions, and performance metrics.",
-        group: "Training",
-        purpose: "This page is where admins manage the quality and strictness of a training assessment after it has been created. It combines authoring controls with operational feedback so the team can improve quiz quality without losing sight of how learners are actually performing.",
-        bullets: [
-          "Edit the question set and maintain the intended assessment order",
-          "Configure passing score and maximum attempts for the lesson checkpoint",
-          "Review performance signals such as average score, pass rate, and missed questions"
-        ]
-      },
-      {
         name: "package-detail",
         label: "Service Package Detail",
         description: "Detailed view and editor for a single session package sold on the platform. Admins can adjust session count, price, expiry window, and which diviner types are eligible. Includes sales history and active subscriber count.",
@@ -5814,30 +5866,6 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Matrix grid with role rows and feature-area columns — colour-coded green/red per cell",
           "Inline toggle — click any cell to grant or revoke access with a confirmation modal",
           "Change history drawer showing who changed what permission and when"
-        ]
-      },
-      {
-        name: "training-program-detail",
-        label: "Training Program Detail",
-        description: "Detailed view of a training program, including structure, status, and learner impact.",
-        group: "Training",
-        purpose: "This page gives curriculum managers a full view of one program after it has been created. It is used to verify structure, maintain ordering, track whether the program is complete, and understand how many learners are affected by program-level changes.",
-        bullets: [
-          "Structured view of categories and lessons inside the selected program",
-          "Program metadata such as title, status, and estimated learning duration",
-          "Learner context showing how many trainees are enrolled in the program"
-        ]
-      },
-      {
-        name: "trainee-quiz-scores",
-        label: "Trainee Quiz Scores",
-        description: "Training analytics view that surfaces trainee progress, quiz pass rate, average attempts, lesson completion, and time spent across the training program.",
-        group: "Training",
-        purpose: "Helps admins identify trainees who are progressing smoothly, stalled, or repeatedly struggling with quiz checkpoints.",
-        bullets: [
-          "User table with training status, enrolled programs, lesson progress, quiz pass rate, and average attempts",
-          "Search and sort controls for finding trainees by name, completion rate, or quiz performance",
-          "CSV export for offline review of trainee progress and assessment outcomes"
         ]
       },
       // Certificate Issued Log is intentionally omitted for now.
@@ -6594,7 +6622,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
         name: "campaigns",
         label: "Campaigns",
         description: "Design and run trackable marketing campaigns at /dashboard/campaigns. Every campaign targets exactly one destination — the diviner's profile page OR one of their enabled service landing pages — and gets a unique short URL in the format /r/cmp_XXXXXXXX that logs rich click data for every visitor. The page opens on a Campaigns tab (table of all campaigns) with a sibling Analytics tab for aggregate performance across every campaign. Each row shows name, status (Draft / Active / Paused / Completed), destination badge (Profile or a specific service), the campaign URL with a Copy button, start/end dates, commission rate, and live counts for affiliates, clicks, unique clicks, and conversions. Creating a campaign prompts the diviner for a name, a destination picker populated only with their admin-enabled services, an optional date window, and commission terms for affiliates.",
-        group: "Marketing & Growth",
+        group: "Campaigns",
         purpose: "Lets diviners promote a specific page (profile or single service) and measure exactly which channels, devices, and geographies drive real bookings — tied to the landing-page access-control system so disabled services can never be selected as a destination.",
         bullets: [
           "Destination Picker — shows 'My Profile Page' as the default and a dropdown of enabled service landing pages only; admin-disabled services never appear, even via dev-tools tampering (server validates)",
@@ -6614,7 +6642,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
         name: "campaign_analytics_detail",
         label: "Per-Campaign Analytics",
         description: "Deep-dive analytics for a single campaign at /dashboard/campaigns/[id]/analytics. The page is structured around the question 'where is this campaign's traffic coming from, and how is it converting?' — KPI cards at the top (Total Clicks, Unique Clicks, Bookings, Revenue, Conversion Rate, Bounce indicator), a clicks-over-time chart below them, and three side-by-side breakdowns: Devices (mobile / desktop / tablet), Geo (top countries), and Referrers (direct, social platforms, search engines, other tracking links). A clicks table at the bottom lists individual click events with timestamp, device summary, country, referrer, and unique/repeat flag, so the diviner can audit exactly how a spike or dip happened.",
-        group: "Marketing & Growth",
+        group: "Campaigns",
         purpose: "Answers the practical question of whether this specific campaign is worth continuing — is traffic coming from the audience the diviner expected, and is it actually converting into bookings?",
         bullets: [
           "KPI strip — Total Clicks, Unique Clicks, Bookings, Revenue, Conversion Rate in prominent cards",
@@ -8542,22 +8570,22 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
       "A guided learning environment for aspiring practitioners — structured lessons, mentor feedback, quizzes, and certification tracks.",
     icon: GraduationCap,
     gradient: "from-amber-500/20 to-orange-600/10",
-    featureAreas: ["Training", "Progress", "Quiz History", "Resources", "Sessions", "Certification"],
+    featureAreas: ["Dashboard", "Training", "Progress", "Assessment", "Resources", "Mentor Sessions", "Profile", "Graduation"],
     capabilities: [
-      "Access structured training programs with lessons, categories, and programs",
-      "Track granular lesson and category completion progress",
-      "Review complete quiz attempt history with scores and timing",
-      "Download PDFs, docs, and supplemental resources per lesson",
-      "Book and manage practice sessions with assigned mentor",
-      "Earn graduation certificate upon 100% curriculum completion",
+      "Start from a personalised dashboard with current lesson focus, mentor context, recent activity, and graduation readiness",
+      "Browse accessible training programs with category and lesson completion status",
+      "Work inside a two-pane program workspace with categories on the right and inline lesson content on the left",
+      "Complete lessons inside the program workspace using embedded video, PDF assets, triggers, quizzes, and mark-complete progression",
+      "Track lesson completion, module progress, quiz outcomes, and overall training status",
+      "Access downloadable lesson assets, study guides, mentor practice sessions, profile settings, and graduation certificate readiness",
     ],
-    keyPages: ["Dashboard", "Training Programs", "Progress", "Quiz History", "Resources", "Sessions", "Certificate"],
+    keyPages: ["Dashboard", "Training Center", "Program Workspace", "Progress", "Quiz History", "Resources", "Sessions", "Profile", "Graduation"],
     groups: [
       {
         groupLabel: "Training",
         cards: [
           { title: "Dashboard", description: "Current training focus and progress overview", href: "/trainee", icon: LayoutDashboard, status: "live" },
-          { title: "Training Programs", description: "Multi-program curriculum with lessons and categories", href: "/trainee/training", icon: BookOpen, status: "live" },
+          { title: "Training Center", description: "Multi-program curriculum with category and lesson progress", href: "/trainee/training", icon: BookOpen, status: "live" },
           { title: "Progress Tracker", description: "Visual category-by-category completion view", href: "/trainee/progress", icon: TrendingUp, status: "live" },
         ],
       },
@@ -8572,7 +8600,8 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
       {
         groupLabel: "Certification",
         cards: [
-          { title: "Graduation Certificate", description: "Issued on 100% curriculum completion", href: "/trainee/certificate", icon: GraduationCap, status: "live" },
+          { title: "Graduation", description: "Certificate readiness and issued certificate details", href: "/trainee/training/graduation", icon: GraduationCap, status: "live" },
+          { title: "Profile", description: "Trainee identity, package, specialties, birth data, and training status", href: "/trainee/profile", icon: User, status: "live" },
         ],
       },
     ],
@@ -8580,296 +8609,118 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
       {
         name: "trainee-hub",
         label: "Trainee Dashboard",
-        description: "Personal development home — progress, upcoming sessions, and mentor status.",
-        group: "Training",
-        purpose: "The home base for apprentices to manage their skills-based training, mentor interactions, and curriculum progress at a glance.",
+        description: "Personal command center for training progress, current lesson focus, recent completions, quiz performance, mentor context, and graduation readiness.",
+        group: "Dashboard",
+        purpose: "This is the trainee's day-to-day starting point. It combines curriculum progress, recent activity, mentor assignment, practice-session prompts, and next-step calls to action so the learner knows exactly what to do next.",
         bullets: [
-          "Overall curriculum completion percentage and program breakdown",
-          "Upcoming mentor sessions and lesson bookmarks",
-          "Quiz score trends and recent activity feed",
-          "Graduation progress bar with milestone indicators"
+          "Overall progress cards summarize accessible lessons, completed lessons, study time, quiz pass rate, and training status",
+          "Next training target links the learner back into the correct program and category without manual searching",
+          "Recent activity combines lesson completions and quiz attempts into one timeline",
+          "Mentor and Tabbie appointment cards surface supervised-practice context when applicable"
         ]
       },
       {
-        name: "curriculum",
-        label: "Training Programs",
-        description: "Multi-program curriculum with categories and individual lessons.",
+        name: "training-center",
+        label: "Training Center",
+        description: "Program catalog showing every accessible training program with lesson counts, category counts, progress rings, and continue/start actions.",
         group: "Training",
-        purpose: "A structured, browsable catalog of all training programs, categories, and lessons with real-time completion state.",
+        purpose: "This page is the learner's curriculum index. It shows which programs are available, how far each one has progressed, what category is currently active, and whether the learner should start, continue, or review a program.",
         bullets: [
-          "Program and category hierarchy with completion indicators",
-          "Individual lesson detail pages with video, text, and attachments",
-          "In-lesson quizzes with immediate scoring feedback",
-          "Lesson progress auto-saved on navigation"
+          "Top summary splits all accessible lessons into Not Started, Ongoing, and Completed",
+          "Program cards show circular progress, categories, lesson counts, and completion badges",
+          "Current in-progress category appears as an amber status strip on active programs",
+          "CTA changes between Start Program, Continue, and Review Program based on learner state"
+        ]
+      },
+      {
+        name: "program-workspace",
+        label: "Program Workspace",
+        description: "Two-pane program view with lesson cards on the left and category navigation on the right.",
+        group: "Training",
+        purpose: "This is the primary work surface for trainees. The learner chooses a category, expands an unlocked lesson, studies the content inline, and moves through sequential curriculum without leaving the workspace.",
+        bullets: [
+          "Left lesson pane displays lesson status, duration, lock state, and inline expanded content",
+          "Right category rail stays sticky and shows category progress, lock icons, and completion checks",
+          "Sequential rules prevent jumping ahead when global or category locks are active",
+          "Completing a lesson refreshes progress and can auto-advance the learner to the next available lesson"
         ]
       },
       {
         name: "progress",
         label: "Progress Tracker",
-        description: "Category-by-category completion view with percentage breakdowns.",
-        group: "Training",
-        purpose: "A visual progress dashboard showing granular completion state per category and program, including time invested.",
+        description: "Progress dashboard with overall lesson completion, training status, average quiz score, and module-by-module breakdown.",
+        group: "Progress",
+        purpose: "This view gives trainees a transparent record of where they stand. It is useful for checking completion gaps, reviewing which modules still need attention, and confirming readiness for graduation.",
         bullets: [
-          "Progress bars per training category and program",
-          "Total study time and lessons completed counters",
-          "Completion date history per category",
-          "Link-through to incomplete lessons"
+          "Summary cards show lessons completed, active/graduated training status, and average quiz score",
+          "Graduation banner appears when all requirements are complete",
+          "Module breakdown lists each category with completion counts and progress bars",
+          "Lesson rows link directly back into the corresponding training path"
         ]
       },
       {
         name: "quiz-history",
         label: "Quiz History",
-        description: "Complete quiz attempt log with per-lesson scores, pass/fail status, and time taken.",
+        description: "Complete attempt history across lesson quizzes, including pass/fail status, score, attempt number, date, and time taken.",
         group: "Assessment",
-        purpose: "A full audit of all quiz attempts with aggregate stats — total attempted, pass rate, average score, and best score.",
+        purpose: "This page turns quiz performance into a study record. Trainees can see how many quizzes they have attempted, which ones were passed, where retakes happened, and how scores trend over time.",
         bullets: [
-          "Chronological list of all 50 quiz attempts",
-          "Per-attempt score, percentage, and time taken",
-          "Pass/fail indicator with color-coded scoring",
-          "Aggregate stats: avg score, best score, total time, pass rate"
+          "Top badges summarize total time, pass rate, retakes, and graduated status when applicable",
+          "Stat cards show total attempts, passed attempts, average score, and best score",
+          "Attempt list records lesson title, date, duration, attempt number, raw score, percentage, and pass/fail icon",
+          "Score colors highlight strong, moderate, and low performance for quick self-review"
         ]
       },
       {
         name: "resources",
         label: "Learning Resources",
-        description: "Downloadable lesson assets — PDFs, docs, reference sheets, and supplemental links.",
+        description: "Central library for lesson assets and study guides available through the trainee's accessible programs.",
         group: "Assessment",
-        purpose: "A centralized library of all lesson-attached materials, filterable by type, with direct download and external link access.",
+        purpose: "This page saves trainees from hunting through individual lessons for files. It gathers downloadable PDFs, documents, images, external links, video references, and study guides into one resource library.",
         bullets: [
-          "Filterable by asset type: PDF, doc, image, link",
-          "File size shown with download button",
-          "Organized by lesson and program grouping",
-          "External resource links open in new tab"
+          "Quick links jump back to Training Center, My Progress, and Certificate when available",
+          "Lesson assets are grouped by type with file-type icon, lesson, category, file size, and open/download action",
+          "Study Guides section lists lessons with attached PDFs or videos",
+          "Empty states explain when mentors/admins have not attached materials yet"
         ]
       },
       {
         name: "sessions",
         label: "Practice Sessions",
-        description: "Upcoming and past mentor practice session management.",
+        description: "Mentor-supervised practice session area with upcoming bookings, past sessions, session status, and join links when active.",
         group: "Sessions",
-        purpose: "A dedicated area to track all practice sessions booked with an assigned mentor diviner.",
+        purpose: "Practice sessions are where trainees apply the curriculum with mentor oversight. This page explains what is scheduled, what has already happened, and how to join eligible live sessions.",
         bullets: [
-          "Upcoming session countdown with join button",
-          "Past session history with duration and notes",
-          "Session status: confirmed, completed, cancelled",
-          "Direct link to live video room when active"
+          "Upcoming Sessions list shows service, mentor/diviner, date, time, duration, and booking status",
+          "Join button appears only during the allowed window around the scheduled session",
+          "Past Sessions records completed, cancelled, and no-show sessions with status indicators",
+          "How to Schedule section explains the mentor-led booking workflow"
         ]
       },
       {
         name: "graduation",
-        label: "Graduation Certificate",
-        description: "Digital certificate issued on completing all curriculum requirements.",
+        label: "Graduation Readiness",
+        description: "Graduation page that either shows certificate details for graduated trainees or the not-yet-graduated path back to training.",
         group: "Certification",
-        purpose: "A shareable digital certificate confirming full curriculum completion, issued with a unique code and graduation date.",
+        purpose: "This is the formal completion checkpoint. Before graduation, it clearly directs trainees back to required training. After graduation, it becomes the certificate summary with verification code and completion record.",
         bullets: [
-          "Unique certificate code (e.g. CERT-BUKQOM-2026)",
-          "Graduation date and trainee full name",
-          "Sharable link and downloadable PDF",
-          "Verification page for employers and clients"
+          "Not-yet-graduated state explains that all programs must be completed first",
+          "Graduated state lists completed programs, lessons completed, award date, and certificate code",
+          "Verification URL and copy action are shown when a certificate code exists",
+          "Back-to-training action keeps incomplete trainees focused on the next requirement"
         ]
       },
       {
         name: "trainee-profile",
         label: "Trainee Profile",
-        description: "Your public trainee profile — mentors and admins can view your bio, specialities, and training history.",
+        description: "Editable trainee identity page covering personal information, profile completion, package access, specialties, goals, birth data, mentor, and training status.",
         group: "Settings",
-        purpose: "Manage how you appear to mentors and platform admins during your apprenticeship.",
+        purpose: "The profile page controls how a trainee appears to mentors and internal teams. It also exposes package limits, profile completion gaps, training progress, mentor details, and account metadata.",
         bullets: [
-          "Editable bio, display name, and profile photo",
-          "Visible specialties and astrological interests",
-          "Training history summary available to mentors"
-        ]
-      },
-      {
-        name: "trainee-notifications",
-        label: "Notifications Centre",
-        description: "Lesson drops, mentor messages, quiz results, and milestone alerts all delivered here.",
-        group: "Settings",
-        purpose: "Consolidated inbox so no training event is missed.",
-        bullets: [
-          "Lesson availability alerts when new content drops",
-          "Mentor message notifications",
-          "Badge and milestone earned alerts"
-        ]
-      },
-      {
-        name: "trainee-mentor-chat",
-        label: "Mentor Chat",
-        description: "Direct message thread with your assigned mentor — ask questions and receive feedback between live sessions.",
-        group: "Mentorship",
-        purpose: "Asynchronous support channel between formal scheduled sessions.",
-        bullets: [
-          "Message history with timestamps and read receipts",
-          "Attach chart screenshots or files for mentor review",
-          "Pinned messages for key instructions from mentor"
-        ]
-      },
-      {
-        name: "trainee-schedule",
-        label: "Training Schedule",
-        description: "Calendar view of upcoming lessons, quizzes, and scheduled mentor sessions for the next 30 days.",
-        group: "Training",
-        purpose: "Visual weekly planner for managing your apprenticeship workload.",
-        bullets: [
-          "Week-at-a-glance calendar with lesson blocks colour-coded by program",
-          "Click any block to jump directly to the lesson or session",
-          "Upcoming quiz deadlines highlighted in amber"
-        ]
-      },
-      {
-        name: "trainee-bookmarks",
-        label: "Bookmarked Lessons",
-        description: "A curated list of lessons you have bookmarked for reference during readings and revision.",
-        group: "Resources",
-        purpose: "Quick-access library of content you have flagged for return visits.",
-        bullets: [
-          "Star any lesson to add it here instantly",
-          "Grouped by program for easy retrieval",
-          "Search bookmarks by keyword"
-        ]
-      },
-      {
-        name: "trainee-badge-wall",
-        label: "Badge Wall",
-        description: "Every milestone badge you have earned — quiz streaks, lesson completions, on-time attendance, and special honours.",
-        group: "Progress",
-        purpose: "Gamified recognition system that motivates consistent training engagement.",
-        bullets: [
-          "Earned badges displayed with the date achieved",
-          "Locked future badges shown as silhouettes — see what is coming next",
-          "Share your badge wall link to social or community"
-        ]
-      },
-      {
-        name: "trainee-settings",
-        label: "Trainee Settings",
-        description: "Account and notification preferences specific to your trainee portal.",
-        group: "Settings",
-        purpose: "Customise your training experience — email digests, session reminders, and timezone.",
-        bullets: [
-          "Set your preferred timezone for session scheduling",
-          "Choose weekly vs. daily email digest frequency",
-          "Enable or disable mentor activity notifications"
-        ]
-      },
-      {
-        name: "lesson-detail",
-        label: "Lesson Detail",
-        description: "Full content view for a single training lesson. Displays the lesson video or article, supplementary materials, learning objectives, and a progress tracker. The quiz unlocks after the trainee marks the lesson as complete.",
-        group: "Curriculum",
-        purpose: "Provides a focused, distraction-free learning environment with all lesson materials in one place and a clear path to the assessment.",
-        bullets: [
-          "Video player or article body with estimated read or watch time displayed",
-          "Supplementary materials section: downloadable PDFs, reference links, and diagrams",
-          "Mark as Complete button that updates progress and unlocks the associated quiz"
-        ]
-      },
-      {
-        name: "quiz-result-detail",
-        label: "Quiz Result Detail",
-        description: "Result page shown after a trainee submits a quiz. Displays the score, pass or fail status, each question with the trainee's answer marked correct or incorrect, and the correct answer with explanation for missed questions.",
-        group: "Curriculum",
-        purpose: "Converts quiz mistakes into learning moments by immediately showing the correct answers with explanations rather than just a score.",
-        bullets: [
-          "Score summary: percentage correct, pass/fail badge, and attempts remaining if failed",
-          "Question-by-question review with the trainee's answer and correct answer side by side",
-          "Explanation panel for each missed question linking back to the relevant lesson section"
-        ]
-      },
-      {
-        name: "program-certificate",
-        label: "Program Certificate",
-        description: "Certificate of completion page shown when a trainee passes all lessons and quizzes in a training program. Displays a branded certificate with the trainee's name, program title, and completion date. Downloadable as PDF.",
-        group: "Graduation",
-        purpose: "Provides trainees with a formal, shareable record of their achievement that motivates completion and supports their professional credibility.",
-        bullets: [
-          "Branded certificate with trainee name, program title, completion date, and platform seal",
-          "Download as PDF button — formatted for print and digital sharing",
-          "Share to LinkedIn button — pre-fills the credential fields on LinkedIn Certifications"
-        ]
-      },
-      {
-        name: "mentor-profile-view",
-        label: "Mentor Profile View",
-        description: "Read-only profile page for the trainee's assigned mentor. Shows the mentor's bio, qualifications, current session availability, and a button to book the next mentor session within the training program.",
-        group: "Mentor",
-        purpose: "Helps trainees understand their mentor's background and approach, building confidence in the mentorship relationship from the start.",
-        bullets: [
-          "Mentor avatar, name, bio, and listed specialisations",
-          "Upcoming availability slots with Book a Session CTA",
-          "Shared session history between this mentor and trainee with session notes links"
-        ]
-      },
-      {
-        name: "lesson-resources",
-        label: "Lesson Resources",
-        description: "Supplementary resources page for a specific lesson. Lists all downloadable materials, external reference links, recommended reading, and media assets associated with the lesson, separate from the main lesson content view.",
-        group: "Curriculum",
-        purpose: "Gives trainees a dedicated space to access and organise lesson materials without needing to return to the full lesson view each time.",
-        bullets: [
-          "Downloadable assets list with file type icon, name, and size",
-          "External reference links with brief descriptions of what each resource covers",
-          "Add to bookmarks button per resource — saves to the trainee's personal bookmark collection"
-        ]
-      },
-      {
-        name: "peer-community",
-        label: "Trainee Peer Community",
-        description: "Discussion forum exclusive to current trainees. Organised into channels: general chat, lesson questions, quiz help, and graduation advice. Moderated by assigned mentors.",
-        group: "Community",
-        purpose: "Creates a peer support network where trainees at similar stages can help each other through difficult lessons without waiting for mentor availability.",
-        bullets: [
-          "Channel list with unread message indicators",
-          "Threaded discussions with mentor reply tags for mentor-originated content",
-          "Direct message capability for trainee-to-trainee private conversations"
-        ]
-      },
-      {
-        name: "session-recording-replay",
-        label: "Session Recording Replay",
-        description: "Playback page for a recorded mentor session the trainee can replay at any time. Shows the video recording, the session date, topics covered, and any notes shared by the mentor during the session.",
-        group: "Mentor",
-        purpose: "Extends the value of mentor sessions beyond the live call by allowing trainees to revisit key points at their own pace.",
-        bullets: [
-          "Video player with playback speed control and chapter markers tied to topic timestamps",
-          "Mentor session notes displayed alongside the video in a split-panel layout",
-          "Download notes as PDF button for offline reference"
-        ]
-      },
-      {
-        name: "training-glossary",
-        label: "Training Glossary",
-        description: "Searchable reference glossary of astrological and platform-specific terms used throughout the training curriculum. Each term has a definition, example usage, and links to lessons where it is first introduced.",
-        group: "Resources",
-        purpose: "Reduces lesson drop-off caused by unfamiliar terminology by giving trainees an always-accessible reference without breaking their learning flow.",
-        bullets: [
-          "Alphabetical index with instant search across all terms",
-          "Term definition card with an example sentence or chart context",
-          "Linked lesson badge — click to jump to the lesson where this term was first introduced"
-        ]
-      },
-      {
-        name: "lesson-bookmark-detail",
-        label: "Lesson Bookmark Detail",
-        description: "Detail view for a single bookmarked lesson or resource the trainee has saved. Shows the full bookmarked item, the trainee's personal note attached to the bookmark, and options to remove the bookmark or add it to a collection.",
-        group: "Resources",
-        purpose: "Allows trainees to build a personalised study reference library alongside the structured curriculum.",
-        bullets: [
-          "Full lesson or resource content preview within the bookmark view",
-          "Trainee note field — editable annotation the trainee added when bookmarking",
-          "Collection organiser — drag the bookmark into a named collection (e.g. Aspects, Houses, Planets)"
-        ]
-      },
-      {
-        name: "trainee-help",
-        label: "Trainee Help & Support",
-        description: "Help centre for trainees with FAQs covering quiz retake rules, mentor session booking, curriculum progression, certificate issuance, and subscription billing. Includes a contact form for escalation.",
-        group: "Settings",
-        purpose: "Provides trainees with self-service answers so they can unblock themselves quickly without waiting for mentor or admin response.",
-        bullets: [
-          "FAQ categories: Curriculum, Quizzes, Mentor Sessions, Certificates, Billing",
-          "Search within FAQs with instant filtering",
-          "Contact support form pre-filled with current lesson and program for faster triage"
+          "Profile completion bar identifies missing onboarding fields",
+          "Personal information editor manages name, bio, avatar, username, phone, timezone, goals, specialties, and birth data",
+          "Package notice explains which categories and specialties are available to this trainee",
+          "Training status and mentor cards summarize progress, graduation, mentor identity, and next navigation"
         ]
       },
     ],
