@@ -6314,6 +6314,60 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
         ]
       },
       {
+        name: "session-consent",
+        label: "Join Session — Recording Consent",
+        description: "The gate screen that appears the moment a diviner clicks \"Join Session\" from a booking. Before either party is placed into the video room, both diviner and client must pass this consent step — a centered card with a gold shield icon, a \"Session Recording Consent\" heading, and a plain-language explanation that the session will be recorded for their benefit and made available for later rewatch and optional share. A \"Session Details\" block restates exactly what is about to start — the service name, the duration, the base price (e.g. \"Solar Return Reading · 60min · $100.00\") and the per-minute overage rate (e.g. \"$0.50/min after 60 minutes\") so there are no surprises when the overage kicks in. A single amber \"📹 I Consent — Join Session\" button acknowledges consent and joins the VideoSDK room. The page header shows the service, the Diviner role pill, the client name, the scheduled date/time, and the booked duration.",
+        group: "Calendar",
+        subModule: "Live Session",
+        purpose: "Captures an auditable consent record before a reading ever starts — required for legal recording, satisfies two-party consent jurisdictions, and restates the price and overage rate one last time so the diviner and client both see exactly what will be billed.",
+        bullets: [
+          "Top bar restates booking context — service name, Diviner role pill, client display name, scheduled date/time, booked duration",
+          "Centered gold shield icon + \"Session Recording Consent\" heading — visual cue that this is a compliance step, not a regular loading screen",
+          "Consent copy names the client explicitly (\"This session with [Client] will be recorded for your benefit\") so the record tied to this session is unambiguous",
+          "\"Session Details\" block: service name · duration · base price · per-minute overage rate (\"$0.50/min after 60 minutes\") — no hidden overage surprises",
+          "Single primary CTA — \"📹 I Consent — Join Session\" — fires the consent event, then mounts the VideoSDK room component",
+          "Consent is persisted against the booking row so replay access and dispute handling always have a server-side \"agreed\" record",
+          "Both diviner and client pass this screen independently — the session timer does not start until the first party joins the room after consenting"
+        ]
+      },
+      {
+        name: "session-live",
+        label: "Live Session Room",
+        description: "The full live reading cockpit a diviner works from during a paid session. The top bar keeps the booking context visible — service, Diviner pill, client name, scheduled time, duration — plus a red \"● REC\" indicator and participant count badge so the diviner always knows the stream is being captured. The main stage shows the client's video tile (or an avatar + \"Camera off\" label when they have the camera disabled) with a small self-view PiP in the lower-right. A prominent session timer at the top-center counts up against the booked length (\"01:51 / 60:00\") and flips to overage tracking once the booked time is exhausted. The bottom toolbar houses mic, camera, screen-share, and captions toggles plus two primary actions — an amber \"✨ Open Service\" button that launches the full service tool (chart generator, tarot spread, etc.) in a new tab, and a red \"End Session\" button that terminates and settles the booking. The right-hand sidebar carries the diviner's live business panel: Base rate + Running Total with a live $ ticker (so overage billing is visible in real time), Client Info, a Session Notes textarea with auto-save, and a Chat channel for text messaging inside the session.",
+        group: "Calendar",
+        subModule: "Live Session",
+        purpose: "Gives the diviner a single workspace that carries the reading, the billing meter, private session notes, text chat, and one-click access to the underlying service tool — so they never have to leave the tab during a live reading and can always see exactly how much the client has run up.",
+        bullets: [
+          "\"● REC\" pill + participant count badge in the top bar — always visible so the diviner never forgets recording is on",
+          "Large session timer (\"01:51 / 60:00\") — counts up against booked duration, then flips to overage mode and ticks the Running Total at the per-minute rate",
+          "Running Total card (right sidebar) — live $ ticker showing Base + Overage combined; updates every minute once overage kicks in",
+          "Main stage — client video (or avatar + \"Camera off\" state) with a self-view PiP in the corner; powered by VideoSDK",
+          "Bottom toolbar: mic toggle, camera toggle, screen-share toggle, captions toggle — mirror a standard video conferencing UX",
+          "\"✨ Open Service\" button — launches the underlying service tool (natal chart, tarot spread, horary cast, etc.) in a new tab, pre-loaded with the client's intake data",
+          "\"End Session\" (red) — terminates the stream, stops the timer, stops recording, finalizes the billing total, and routes the diviner to the Session Complete page",
+          "Session Notes textarea — private, auto-saves after typing stops; stored on the booking row so it survives a refresh or reconnect",
+          "Chat panel — text fallback when audio drops or when the diviner needs to send a link/file; messages are captured in the session transcript",
+          "Client Info card — quick reference for client name, service being delivered, and key intake details without leaving the room"
+        ]
+      },
+      {
+        name: "session-complete",
+        label: "Session Complete — Summary",
+        description: "The final closing screen that appears the moment a diviner (or the client) clicks \"End Session\". A centered card with a gold check-circle icon and \"Session Complete\" heading confirms the session has wrapped. A summary block shows two numbers — the actual Duration the timer ran (e.g. \"02:54\"), and the final Total billed to the client (base + any per-minute overage, e.g. \"$100.00\"). Below the summary a note explains that the session recording will be emailed to both parties shortly and will also live inside their portal. A single amber \"Back to Dashboard\" CTA returns the diviner to their main dashboard. The booking row is settled at this point — the payout is queued, the recording is processed and uploaded, and the session transitions to `completed` status across the Bookings list, Calendar View, and the historical Sessions log.",
+        group: "Calendar",
+        subModule: "Live Session",
+        purpose: "Closes the loop cleanly — gives the diviner a final receipt (actual time + actual dollar total), confirms that the recording is being processed and shared, and moves the booking into settled state without any extra clicks.",
+        bullets: [
+          "Gold check-circle icon + \"Session Complete\" heading — immediate visual confirmation the session was successfully terminated and recorded",
+          "Duration field shows the real elapsed time (mm:ss) — may be shorter than booked (early end) or longer (overage)",
+          "Total field shows Base + Overage combined — matches the live Running Total from the session room exactly",
+          "Copy explicitly tells the diviner and client that the recording will be emailed and accessible in the portal — sets the expectation so no one asks \"where's the recording?\"",
+          "\"Back to Dashboard\" primary CTA — takes the diviner back to their main dashboard; the booking is already in `completed` state by the time this page renders",
+          "Server-side on End Session: recording is finalized and uploaded, booking status → completed, Stripe payout is queued with the overage reconciled, transcript + notes are stored on the booking row",
+          "The completed booking now appears with the \"Completed\" badge on the Bookings list, the Calendar View, and the historical Sessions log — with the recording URL and notes all accessible from the booking-detail drawer"
+        ]
+      },
+      {
         name: "service-catalog-astrology",
         label: "Astrology Service Catalog",
         description: "The Astrology section of the Service Catalog — a curated library of 12 ready-to-publish astrology reading formats that diviners can add to their offering with a single click. Each card shows a colour-coded thumbnail, the default session duration, a suggested starting price (\"from $X\"), a \"birth data\" flag when the reading requires a client's natal chart, and a two-line description of what the reading covers. A green \"Added to your services\" state appears on any service already published; all other cards expose a prominent gold \"+ Add Service\" button that opens the price modal. The section header shows the live count (\"12 available\") and the whole catalog is gated by the diviner's admin-assigned Service Package (shown in the page header as \"Package: Astrology + Tarot\").",
