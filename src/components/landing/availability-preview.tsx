@@ -42,6 +42,7 @@ interface TimeSlot {
   availabilityStartTime?: string;
   availabilityEndTime?: string;
   availabilityServiceId?: string | null;
+  serviceSlug?: string | null;
 }
 
 interface BusyEntry {
@@ -341,7 +342,14 @@ export function AvailabilityPreview({
                     )}
                     <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
                       {group.slots.map((slot) => {
-                        const slotPath = slot.availabilityServiceId == null ? "/book" : bookPath;
+                        // Link to the service the slot actually belongs to. If the slot isn't scoped
+                        // to any service, fall back to the generic /book flow. Only use the page's
+                        // default bookPath when we have no better info (legacy).
+                        const slotPath = slot.availabilityServiceId == null
+                          ? "/book"
+                          : slot.serviceSlug
+                            ? `/book/${slot.serviceSlug}`
+                            : bookPath;
                         return (
                           <Link
                             key={slot.start}

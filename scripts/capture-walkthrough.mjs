@@ -31,12 +31,39 @@ async function waitForStableView(page, ms = 2500) {
   await page.waitForTimeout(ms);
 }
 
+async function scrollToVisibleText(page, text, options = {}) {
+  const locator = page.getByText(text, { exact: options.exact ?? true }).last();
+  await locator.waitFor({ state: "visible", timeout: options.timeout ?? 15000 });
+  await locator.scrollIntoViewIfNeeded();
+  await page.waitForTimeout(options.waitMs ?? 1000);
+}
+
+async function selectTrainingAnalyticsTab(page, tabName) {
+  await page.getByRole("tab", { name: tabName }).click();
+  await waitForStableView(page, 6000);
+}
+
 async function resolveFirstTrainingEditHref(page, entity) {
   const config = {
     program: {
       api: "/api/admin/training/programs?pageSize=100",
       listKey: "programs",
       buildHref: (item) => `/admin/training/programs/${item.id}/edit`,
+      score: (item) => {
+        const text = `${item.name ?? ""} ${item.description ?? ""}`.toLowerCase();
+        let score = 0;
+        if (item.is_active) score += 10;
+        if (!text.includes("test")) score += 8;
+        if (!text.includes("sanket")) score += 6;
+        if (text.includes("foundation")) score += 5;
+        if (text.includes("astrology")) score += 5;
+        return score;
+      },
+    },
+    category: {
+      api: "/api/admin/training/categories?pageSize=100",
+      listKey: "categories",
+      buildHref: (item) => `/admin/training/categories/${item.id}/edit`,
       score: (item) => {
         const text = `${item.name ?? ""} ${item.description ?? ""}`.toLowerCase();
         let score = 0;
@@ -97,6 +124,54 @@ async function resolveFirstTrainingEditHref(page, entity) {
   return `${BASE}${config.buildHref(best)}`;
 }
 
+async function resolveFirstTraineeTrainingHref(page, entity) {
+  const result = await page.evaluate(async () => {
+    const res = await fetch("/api/trainee/training/programs", {
+      credentials: "include",
+    });
+    if (!res.ok) return { ok: false, programs: [] };
+    const json = await res.json();
+    return { ok: true, programs: json.programs ?? [] };
+  });
+
+  if (!result.ok || !result.programs.length) return null;
+
+  const sortedPrograms = [...result.programs].sort((a, b) => {
+    const aStarted = a.completed_lessons > 0 || a.progress_pct > 0 ? 1 : 0;
+    const bStarted = b.completed_lessons > 0 || b.progress_pct > 0 ? 1 : 0;
+    if (aStarted !== bStarted) return bStarted - aStarted;
+    return (a.priority ?? 0) - (b.priority ?? 0);
+  });
+
+  const program =
+    sortedPrograms.find((item) => Array.isArray(item.categories) && item.categories.length > 0) ??
+    sortedPrograms[0];
+  if (!program?.id) return null;
+
+  if (entity === "program") {
+    return `${BASE}/trainee/training/${program.id}`;
+  }
+
+  const categories = Array.isArray(program.categories) ? program.categories : [];
+  const category =
+    categories.find((item) => !item.is_locked && Array.isArray(item.lessons) && item.lessons.length > 0) ??
+    categories.find((item) => Array.isArray(item.lessons) && item.lessons.length > 0);
+  if (!category?.id) return `${BASE}/trainee/training/${program.id}`;
+
+  if (entity === "category") {
+    return `${BASE}/trainee/training/${program.id}/${category.id}`;
+  }
+
+  const lessons = Array.isArray(category.lessons) ? category.lessons : [];
+  const lesson =
+    lessons.find((item) => !item.is_locked && !item.completed) ??
+    lessons.find((item) => !item.is_locked) ??
+    lessons[0];
+  if (!lesson?.id) return `${BASE}/trainee/training/${program.id}/${category.id}`;
+
+  return `${BASE}/trainee/training/${program.id}/${category.id}/${lesson.id}`;
+}
+
 async function navigateForScreen(page, screen) {
   if (typeof screen.resolveUrl === "function") {
     const resolved = await screen.resolveUrl(page);
@@ -133,6 +208,12 @@ const roles = [
       { name: "mystery-school", url: "/admin/mystery-school", label: "Mystery School Admin" },
       { name: "audit", url: "/admin/activity-log", label: "Audit Trails" },
       { name: "training_lessons", url: "/admin/training", label: "Training Hub" },
+      {
+        name: "quiz-bank-admin",
+        url: "/admin/training",
+        label: "Quiz Bank",
+        afterNavigate: async (page) => scrollToVisibleText(page, "Quizzes"),
+      },
       { name: "training_program_new", url: "/admin/training/programs/new", label: "Create Training Program" },
       {
         name: "training-program-detail",
@@ -140,6 +221,11 @@ const roles = [
         resolveUrl: async (page) => resolveFirstTrainingEditHref(page, "program"),
       },
       { name: "training_category_new", url: "/admin/training/categories/new", label: "Create Training Category" },
+      {
+        name: "training-category-detail",
+        label: "Training Category Detail",
+        resolveUrl: async (page) => resolveFirstTrainingEditHref(page, "category"),
+      },
       { name: "training_lesson_new", url: "/admin/training/lessons/new", label: "Create Training Lesson" },
       {
         name: "training_lesson_edit",
@@ -152,7 +238,14 @@ const roles = [
         label: "Quiz Detail",
         resolveUrl: async (page) => resolveFirstTrainingEditHref(page, "quiz"),
       },
+      { name: "ai-quiz-generator", url: "/admin/training/quiz-generate", label: "AI Quiz Generator" },
       { name: "training_analytics", url: "/admin/training/analytics", label: "Training Analytics" },
+      {
+        name: "trainee-quiz-scores",
+        url: "/admin/training/analytics",
+        label: "Trainee Quiz Scores",
+        afterNavigate: async (page) => selectTrainingAnalyticsTab(page, "Users"),
+      },
       { name: "training_settings", url: "/admin/training/settings", label: "Training Settings" },
     ],
   },
@@ -225,16 +318,33 @@ const roles = [
   },
   {
     slug: "trainee",
-    email: "demo.astrologer@astrologypro.com",
-    password: "DemoAstro2026!",
+    email: "trainee4@test.astrologypro.com",
+    password: "TestUser123!",
     screens: [
       { name: "trainee-hub", url: "/trainee", label: "Trainee Dashboard" },
-      { name: "curriculum", url: "/trainee/curriculum", label: "Learning Path" },
+      { name: "training-center", url: "/trainee/training", label: "Training Center" },
+      {
+        name: "program-workspace",
+        label: "Program Workspace",
+        resolveUrl: async (page) => resolveFirstTraineeTrainingHref(page, "program"),
+      },
+      { name: "progress", url: "/trainee/progress", label: "Progress Tracker" },
+      { name: "quiz-history", url: "/trainee/quiz-history", label: "Quiz History" },
+      { name: "resources", url: "/trainee/resources", label: "Learning Resources" },
+      { name: "sessions", url: "/trainee/sessions", label: "Practice Sessions" },
+      { name: "graduation", url: "/trainee/training/graduation", label: "Graduation Readiness" },
+      { name: "trainee-profile", url: "/trainee/profile", label: "Trainee Profile" },
     ],
   },
 ];
 
 const roleFilter = process.env.WALKTHROUGH_ROLE?.trim();
+const screenFilter = new Set(
+  (process.env.WALKTHROUGH_SCREENS ?? "")
+    .split(",")
+    .map((screen) => screen.trim())
+    .filter(Boolean),
+);
 const rolesToCapture = roleFilter
   ? roles.filter((role) => role.slug === roleFilter)
   : roles;
@@ -274,13 +384,20 @@ async function captureRole(browser, role) {
     }
   }
 
-  for (const screen of role.screens) {
+  const screensToCapture = screenFilter.size
+    ? role.screens.filter((screen) => screenFilter.has(screen.name))
+    : role.screens;
+
+  for (const screen of screensToCapture) {
     try {
       console.log(`  Capturing ${screen.name}...`);
       const resolved = await navigateForScreen(page, screen);
       if (!resolved) {
         console.log(`  ↷ Skipped ${screen.name} (no capturable route/data available)`);
         continue;
+      }
+      if (typeof screen.afterNavigate === "function") {
+        await screen.afterNavigate(page);
       }
 
       const filePath = path.join(roleDir, `${screen.name}.png`);

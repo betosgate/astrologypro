@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import {
   CalendarDays,
+  Check,
   ChevronLeft,
   ChevronRight,
   Expand,
@@ -15,6 +16,7 @@ import {
   Orbit,
   Search,
   Settings2,
+  Share2,
   Shield,
   ShoppingBag,
   Sparkles,
@@ -32,6 +34,7 @@ import {
   ChevronDown,
   MessageSquare,
   BarChart3,
+  Target,
   type LucideIcon,
 } from "lucide-react";
 import { type Screen } from "@/lib/walkthrough-data";
@@ -48,6 +51,7 @@ const GROUP_ICONS: Record<string, LucideIcon> = {
   Advocacy: Zap,
   Astrology: Orbit,
   "Astrology Tools": Orbit,
+  Campaigns: Target,
   Commerce: ShoppingBag,
   Community: Users,
   Config: Settings2,
@@ -89,6 +93,7 @@ const GROUP_DESCRIPTIONS: Record<string, string> = {
   Advocacy: "Referral visibility, partner tools, and earnings tracking.",
   Astrology: "Administrative chart engines and specialized data views.",
   "Astrology Tools": "Natal, relationship, and transit tooling.",
+  Campaigns: "Trackable marketing campaigns with per-destination click attribution and analytics.",
   Commerce: "Orders, payouts, and financial visibility.",
   Community: "Shared rituals, gatherings, and member-facing spaces.",
   Config: "Platform settings, legal controls, and audit surfaces.",
@@ -123,6 +128,15 @@ const GROUP_DESCRIPTIONS: Record<string, string> = {
   "Mystery School": "Student management, decan oversight, graduation queue, and foundation curriculum configuration.",
 };
 
+// URL-safe slug for folder deep-links (e.g. "Finance & Billing" -> "finance-and-billing")
+function groupSlug(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/&/g, "and")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+}
+
 export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Props) {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
   const [activeGroup, setActiveGroup] = useState(screens[0]?.group || "Features");
@@ -131,6 +145,7 @@ export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Pro
   const [isDragging, setIsDragging] = useState(false);
   const [startPos, setStartPos] = useState({ x: 0, y: 0 });
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const [copiedGroup, setCopiedGroup] = useState<string | null>(null);
 
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set([screens[0]?.group || "Features"]));
   const [expandedSubModules, setExpandedSubModules] = useState<Set<string>>(new Set());
@@ -146,8 +161,43 @@ export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Pro
   const screenRefs = useRef<Map<string, HTMLElement>>(new Map());
   const containerRef = useRef<HTMLDivElement>(null);
 
+  const groups = useMemo(() => {
+    const grouped: Array<{
+      name: string;
+      subModules: Array<{ name: string; screens: Screen[] }>;
+      totalScreens: number;
+    }> = [];
+
+    for (const screen of screens) {
+      const groupName = screen.group || "Features";
+      const subModuleName = screen.subModule || "General";
+
+      let group = grouped.find((g) => g.name === groupName);
+      if (!group) {
+        group = { name: groupName, subModules: [], totalScreens: 0 };
+        grouped.push(group);
+      }
+
+      let subModule = group.subModules.find((sm) => sm.name === subModuleName);
+      if (!subModule) {
+        subModule = { name: subModuleName, screens: [] };
+        group.subModules.push(subModule);
+      }
+
+      subModule.screens.push(screen);
+      group.totalScreens++;
+    }
+
+    return grouped;
+  }, [screens]);
+
+  const orderedScreens = useMemo(
+    () => groups.flatMap((group) => group.subModules.flatMap((subModule) => subModule.screens)),
+    [groups],
+  );
+
   const open = openIndex !== null;
-  const current = openIndex !== null ? screens[openIndex] : null;
+  const current = openIndex !== null ? orderedScreens[openIndex] : null;
   const getScreenId = useCallback(
     (screen: Screen) => `${screen.name}-${screens.indexOf(screen)}`,
     [screens],
@@ -168,17 +218,17 @@ export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Pro
     setOpenIndex((value) => {
       if (value === null) return null;
       resetZoom();
-      return value > 0 ? value - 1 : screens.length - 1;
+      return value > 0 ? value - 1 : orderedScreens.length - 1;
     });
-  }, [screens.length, resetZoom]);
+  }, [orderedScreens.length, resetZoom]);
 
   const next = useCallback(() => {
     setOpenIndex((value) => {
       if (value === null) return null;
       resetZoom();
-      return value < screens.length - 1 ? value + 1 : 0;
+      return value < orderedScreens.length - 1 ? value + 1 : 0;
     });
-  }, [screens.length, resetZoom]);
+  }, [orderedScreens.length, resetZoom]);
 
   const handleZoom = (delta: number) => {
     setScale(prev => {
@@ -280,35 +330,45 @@ export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Pro
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const groups = useMemo(() => {
-    const grouped: Array<{
-      name: string;
-      subModules: Array<{ name: string; screens: Screen[] }>;
-      totalScreens: number;
-    }> = [];
+  // Deep-link support — if the URL has #section-<slug>, auto-scroll to and expand
+  // that folder on mount. Lets users share a direct link to any folder in the Explorer Index.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const rawHash = window.location.hash.replace(/^#/, "");
+    if (!rawHash) return;
 
-    for (const screen of screens) {
-      const groupName = screen.group || "Features";
-      const subModuleName = screen.subModule || "General";
+    const match = rawHash.match(/^section-(.+)$/);
+    const slug = match ? match[1] : rawHash;
+    const targetGroupName = screens
+      .map((s) => s.group || "Features")
+      .find((name) => groupSlug(name) === slug);
+    if (!targetGroupName) return;
 
-      let group = grouped.find((g) => g.name === groupName);
-      if (!group) {
-        group = { name: groupName, subModules: [], totalScreens: 0 };
-        grouped.push(group);
+    // Refs need a frame to populate after mount
+    const timer = window.setTimeout(() => {
+      setExpandedGroups((prev) => {
+        if (prev.has(targetGroupName)) return prev;
+        const next = new Set(prev);
+        next.add(targetGroupName);
+        return next;
+      });
+
+      isClickScrolling.current = true;
+      const element = sectionRefs.current.get(targetGroupName);
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth", block: "start" });
+        setActiveGroup(targetGroupName);
       }
+      if (scrollTimeout.current) clearTimeout(scrollTimeout.current);
+      scrollTimeout.current = setTimeout(() => {
+        isClickScrolling.current = false;
+      }, 900);
+    }, 200);
 
-      let subModule = group.subModules.find((sm) => sm.name === subModuleName);
-      if (!subModule) {
-        subModule = { name: subModuleName, screens: [] };
-        group.subModules.push(subModule);
-      }
-
-      subModule.screens.push(screen);
-      group.totalScreens++;
-    }
-
-    return grouped;
-  }, [screens]);
+    return () => window.clearTimeout(timer);
+    // Intentionally only on mount — subsequent hash changes are driven by scrollToGroup.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const toggleGroup = (groupName: string) => {
     setExpandedGroups(prev => {
@@ -350,6 +410,11 @@ export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Pro
       if (!element) return;
       element.scrollIntoView({ behavior: "smooth", block: "start" });
       setActiveGroup(groupName);
+      // Keep the URL hash in sync so the current folder is always shareable
+      if (typeof window !== "undefined") {
+        const hash = `section-${groupSlug(groupName)}`;
+        window.history.replaceState(null, "", `#${hash}`);
+      }
     });
 
     // Ensure expanded
@@ -360,6 +425,30 @@ export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Pro
       return next;
     });
   };
+
+  // Copy a deep-link to a specific folder/group so the user can share it.
+  // Opening the link scrolls to and expands that folder automatically.
+  const copyGroupLink = useCallback(async (groupName: string) => {
+    if (typeof window === "undefined") return;
+    const url = `${window.location.origin}${window.location.pathname}#section-${groupSlug(groupName)}`;
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch {
+      // Clipboard API can fail in insecure contexts — fall back to a textarea
+      const textarea = document.createElement("textarea");
+      textarea.value = url;
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      document.body.appendChild(textarea);
+      textarea.select();
+      try { document.execCommand("copy"); } catch { /* noop */ }
+      document.body.removeChild(textarea);
+    }
+    setCopiedGroup(groupName);
+    setTimeout(() => {
+      setCopiedGroup((prev) => (prev === groupName ? null : prev));
+    }, 1600);
+  }, []);
 
   const scrollToSubModule = (subModuleName: string, groupName: string) => {
     handleScrollClick(() => {
@@ -450,29 +539,55 @@ export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Pro
               const isActive = activeGroup === group.name;
               const isExpanded = expandedGroups.has(group.name);
 
+              const isCopied = copiedGroup === group.name;
+
               return (
                 <div key={group.name} className="flex flex-col">
-                  <button
-                    onClick={() => {
-                      toggleGroup(group.name);
-                      if (!isExpanded) scrollToGroup(group.name);
-                    }}
+                  <div
                     className={cn(
-                      "flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-xs font-semibold transition-all duration-200",
-                      isActive
-                        ? "text-amber-500"
-                        : "text-[#a5afca] hover:bg-white/5 hover:text-[#f5f0e8]"
+                      "group/row flex w-full items-center gap-1 rounded-xl pr-1 transition-all duration-200",
+                      isActive ? "" : "hover:bg-white/5"
                     )}
                   >
-                    <Icon className={cn("size-3.5 shrink-0", isActive ? "text-amber-500" : "opacity-40")} />
-                    <span className="flex-1 truncate">{group.name}</span>
-                    <ChevronRight
+                    <button
+                      onClick={() => {
+                        toggleGroup(group.name);
+                        if (!isExpanded) scrollToGroup(group.name);
+                      }}
                       className={cn(
-                        "size-3 opacity-30 transition-transform duration-200",
-                        isExpanded && "rotate-90 opacity-60"
+                        "flex min-w-0 flex-1 items-center gap-2.5 rounded-xl px-3 py-2 text-left text-xs font-semibold transition-colors duration-200",
+                        isActive
+                          ? "text-amber-500"
+                          : "text-[#a5afca] group-hover/row:text-[#f5f0e8]"
                       )}
-                    />
-                  </button>
+                    >
+                      <Icon className={cn("size-3.5 shrink-0", isActive ? "text-amber-500" : "opacity-40")} />
+                      <span className="flex-1 truncate">{group.name}</span>
+                      <ChevronRight
+                        className={cn(
+                          "size-3 opacity-30 transition-transform duration-200",
+                          isExpanded && "rotate-90 opacity-60"
+                        )}
+                      />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        copyGroupLink(group.name);
+                      }}
+                      title={isCopied ? "Link copied!" : `Share link to ${group.name}`}
+                      aria-label={isCopied ? "Link copied" : `Share link to ${group.name}`}
+                      className={cn(
+                        "flex size-7 shrink-0 items-center justify-center rounded-lg transition-all duration-200",
+                        isCopied
+                          ? "bg-amber-500/15 text-amber-500"
+                          : "text-[#8e9ab7] hover:bg-white/10 hover:text-amber-500"
+                      )}
+                    >
+                      {isCopied ? <Check className="size-3" /> : <Share2 className="size-3" />}
+                    </button>
+                  </div>
 
                   <div className={cn(
                     "overflow-hidden transition-all duration-300 ease-in-out",
@@ -566,7 +681,7 @@ export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Pro
                 }}
                 data-group={group.name}
                 className="mb-12 scroll-mt-24"
-                id={`section-${group.name.toLowerCase().replace(/\s+/g, "-")}`}
+                id={`section-${groupSlug(group.name)}`}
               >
                 <div className="mb-5 flex items-start gap-3">
                   <div className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl border border-amber-500/20 bg-amber-500/10">
@@ -610,7 +725,7 @@ export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Pro
 
                         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                           {sub.screens.map((screen) => {
-                            const globalIndex = screens.indexOf(screen);
+                            const globalIndex = orderedScreens.indexOf(screen);
                             const screenId = getScreenId(screen);
                             const isScreenActive = activeScreen === screenId;
 
@@ -723,7 +838,7 @@ export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Pro
           <div className="relative z-10 flex items-center justify-between px-4 py-3 sm:px-6">
             <div className="flex min-w-0 items-center gap-3">
               <span className="shrink-0 rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-0.5 text-xs font-medium text-amber-500">
-                {openIndex! + 1} / {screens.length}
+                {openIndex! + 1} / {orderedScreens.length}
               </span>
               <div className="min-w-0">
                 <p className="truncate text-sm font-medium text-white">{current.label}</p>
@@ -873,7 +988,7 @@ export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Pro
 
           <div className="relative z-10 px-4 pb-4 sm:px-6">
             <div className="flex gap-1.5 overflow-x-auto py-2">
-              {screens.map((screen, index) => (
+              {orderedScreens.map((screen, index) => (
                 <button
                   key={getScreenId(screen)}
                   onClick={() => setOpenIndex(index)}
