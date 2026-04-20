@@ -203,6 +203,20 @@ export default function CommunityPlanPage() {
     loadPlan();
   }, [loadPlan]);
 
+  // Toast + refresh when the user returns from Stripe conversion checkout.
+  useEffect(() => {
+    const conversion = searchParams.get("conversion");
+    if (conversion === "success") {
+      toast.success("Payment confirmed. Your plan has been upgraded.");
+      loadPlan();
+      router.replace(`/community/plan?tab=${activeTab}`, { scroll: false });
+    } else if (conversion === "cancelled") {
+      toast.info("Checkout cancelled. Your current plan is unchanged.");
+      router.replace(`/community/plan?tab=${activeTab}`, { scroll: false });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
   // ── Invoices state ──
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [invoicesLoading, setInvoicesLoading] = useState(false);
@@ -229,28 +243,135 @@ export default function CommunityPlanPage() {
     }
   }, [activeTab, loadInvoices]);
 
-  // ── Tier switch ──
+  // ── Tier switch (preview → confirm / checkout / blocked) ──
+  type TierSwitchDecision =
+    | "active_subscription_upgrade"
+    | "requires_recurring_checkout"
+    | "blocked_payment_state";
+
+  type TierSwitchPreview = {
+    decision: TierSwitchDecision;
+    subscription_status?: string;
+    reason?: string;
+    can_fix_via_billing_portal?: boolean;
+    current_tier: { id: string; name: string; price_cents: number } | null;
+    target_tier: { id: string; name: string; price_cents: number };
+    preview?: {
+      current_plan_price_cents: number;
+      target_plan_price_cents: number;
+      prorated_amount_due_cents: number;
+      next_renewal_amount_cents: number;
+      billing_period_start: string | null;
+      billing_period_end: string | null;
+      new_renewal_date: string | null;
+    };
+    currency: string;
+  };
+
   const [switchingTier, setSwitchingTier] = useState<PlanTier | null>(null);
   const [tierSwitchLoading, setTierSwitchLoading] = useState(false);
+  const [tierSwitchPreview, setTierSwitchPreview] =
+    useState<TierSwitchPreview | null>(null);
+  const [tierSwitchPreviewLoading, setTierSwitchPreviewLoading] =
+    useState(false);
 
-  async function handleTierSwitch() {
-    if (!switchingTier) return;
+  // Fetch preview whenever a new tier is selected
+  useEffect(() => {
+    if (!switchingTier) {
+      setTierSwitchPreview(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      setTierSwitchPreviewLoading(true);
+      setTierSwitchPreview(null);
+      try {
+        const res = await fetch(
+          "/api/community/plan/change-tier/preview",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ target_tier_id: switchingTier.id }),
+          }
+        );
+        const d = await res.json();
+        if (!res.ok) throw new Error(d.error ?? "Failed to load upgrade preview");
+        if (!cancelled) setTierSwitchPreview(d as TierSwitchPreview);
+      } catch (err: unknown) {
+        if (!cancelled) {
+          toast.error(
+            err instanceof Error ? err.message : "Failed to load upgrade preview"
+          );
+          setSwitchingTier(null);
+        }
+      } finally {
+        if (!cancelled) setTierSwitchPreviewLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [switchingTier]);
+
+  async function handleTierSwitchConfirm() {
+    if (!switchingTier || !tierSwitchPreview) return;
+
     setTierSwitchLoading(true);
     try {
-      const res = await fetch("/api/community/plan/change-tier", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tier_id: switchingTier.id }),
-      });
-      const d = await res.json();
-      if (!res.ok) throw new Error(d.error ?? "Failed to switch plan");
-      toast.success(`Switched to ${switchingTier.name} plan`);
-      setSwitchingTier(null);
-      await loadPlan();
+      if (tierSwitchPreview.decision === "active_subscription_upgrade") {
+        // Pay prorated difference + swap Stripe subscription item
+        const res = await fetch("/api/community/plan/change-tier/confirm", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ target_tier_id: switchingTier.id }),
+        });
+        const d = await res.json();
+        if (!res.ok) throw new Error(d.error ?? "Failed to switch plan");
+        toast.success(`Switched to ${switchingTier.name} plan`);
+        setSwitchingTier(null);
+        await loadPlan();
+      } else if (tierSwitchPreview.decision === "requires_recurring_checkout") {
+        // Start a new recurring Stripe Checkout — pm_tier_id is written by
+        // the webhook only after the checkout completes.
+        const res = await fetch(
+          "/api/community/plan/change-tier/checkout",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ target_tier_id: switchingTier.id }),
+          }
+        );
+        const d = await res.json();
+        if (!res.ok || !d.checkout_url)
+          throw new Error(d.error ?? "Failed to create checkout session");
+        window.location.href = d.checkout_url;
+      } else {
+        // Blocked — handled by the dedicated button below; shouldn't hit this
+        toast.error(
+          tierSwitchPreview.reason ??
+            "Your payment method needs attention before switching plans."
+        );
+      }
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Failed to switch plan");
     } finally {
       setTierSwitchLoading(false);
+    }
+  }
+
+  async function handleFixPaymentMethod() {
+    try {
+      const res = await fetch("/api/community/billing-portal", {
+        method: "POST",
+      });
+      const d = await res.json();
+      if (!res.ok || !d.url)
+        throw new Error(d.error ?? "Failed to open billing portal");
+      window.location.href = d.url;
+    } catch (err: unknown) {
+      toast.error(
+        err instanceof Error ? err.message : "Failed to open billing portal"
+      );
     }
   }
 
@@ -970,22 +1091,113 @@ export default function CommunityPlanPage() {
       {/* ── Tier switch confirmation dialog ── */}
       <Dialog
         open={!!switchingTier}
-        onOpenChange={(open) => !open && setSwitchingTier(null)}
+        onOpenChange={(open) => !open && !tierSwitchLoading && setSwitchingTier(null)}
       >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Switch to {switchingTier?.name}?</DialogTitle>
           </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            Your billing will be adjusted immediately with prorations. The new
-            rate will be{" "}
-            <span className="font-medium text-foreground">
-              {switchingTier ? formatMoney(switchingTier.base_price) : ""}
-              /month
-            </span>{" "}
-            (base price, up to {switchingTier?.included_members} members
-            included).
-          </p>
+
+          {tierSwitchPreviewLoading && (
+            <div className="flex items-center gap-2 py-6 text-sm text-muted-foreground">
+              <Loader2 className="size-4 animate-spin" />
+              Calculating upgrade details…
+            </div>
+          )}
+
+          {!tierSwitchPreviewLoading && tierSwitchPreview && (
+            <>
+              {/* Active subscription → prorated breakdown */}
+              {tierSwitchPreview.decision === "active_subscription_upgrade" &&
+                tierSwitchPreview.preview && (
+                  <div className="space-y-3 text-sm">
+                    <div className="rounded-md border bg-muted/30 p-3 space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">Current plan</span>
+                        <span className="font-medium">
+                          {tierSwitchPreview.current_tier?.name ?? "—"} ·{" "}
+                          {formatStripeCents(
+                            tierSwitchPreview.preview.current_plan_price_cents
+                          )}
+                          /mo
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">New plan</span>
+                        <span className="font-medium">
+                          {tierSwitchPreview.target_tier.name} ·{" "}
+                          {formatStripeCents(
+                            tierSwitchPreview.preview.target_plan_price_cents
+                          )}
+                          /mo
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between border-t pt-1.5">
+                        <span className="font-medium">Prorated amount due today</span>
+                        <span className="font-semibold text-foreground">
+                          {formatStripeCents(
+                            tierSwitchPreview.preview.prorated_amount_due_cents
+                          )}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <span>Next renewal</span>
+                        <span>
+                          {formatStripeCents(
+                            tierSwitchPreview.preview.next_renewal_amount_cents
+                          )}
+                          /mo
+                        </span>
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      You will pay the prorated difference today. Your new plan
+                      starts after payment succeeds. Your next renewal will
+                      charge the full target plan amount.
+                    </p>
+                  </div>
+                )}
+
+              {/* Requires checkout → recurring subscription conversion */}
+              {tierSwitchPreview.decision === "requires_recurring_checkout" && (
+                <div className="space-y-3 text-sm">
+                  <div className="rounded-md border bg-muted/30 p-3 space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">New plan</span>
+                      <span className="font-medium">
+                        {tierSwitchPreview.target_tier.name} ·{" "}
+                        {formatStripeCents(
+                          tierSwitchPreview.target_tier.price_cents
+                        )}
+                        /month
+                      </span>
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    This upgrade starts a recurring subscription. Your new plan
+                    starts after checkout is complete.
+                  </p>
+                </div>
+              )}
+
+              {/* Blocked payment state → fix payment method */}
+              {tierSwitchPreview.decision === "blocked_payment_state" && (
+                <div className="space-y-3 text-sm">
+                  <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-destructive-foreground">
+                    <p className="text-sm font-medium">
+                      Your current subscription is{" "}
+                      {tierSwitchPreview.subscription_status ?? "blocked"}.
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {tierSwitchPreview.reason ??
+                        "Please update your payment method before switching plans."}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
           <DialogFooter className="gap-2">
             <Button
               variant="outline"
@@ -994,12 +1206,30 @@ export default function CommunityPlanPage() {
             >
               Cancel
             </Button>
-            <Button onClick={handleTierSwitch} disabled={tierSwitchLoading}>
-              {tierSwitchLoading && (
-                <Loader2 className="mr-2 size-4 animate-spin" />
-              )}
-              Confirm Switch
-            </Button>
+            {tierSwitchPreview?.decision === "blocked_payment_state" ? (
+              <Button
+                onClick={handleFixPaymentMethod}
+                disabled={tierSwitchLoading}
+              >
+                Fix payment method
+              </Button>
+            ) : (
+              <Button
+                onClick={handleTierSwitchConfirm}
+                disabled={
+                  tierSwitchLoading ||
+                  tierSwitchPreviewLoading ||
+                  !tierSwitchPreview
+                }
+              >
+                {tierSwitchLoading && (
+                  <Loader2 className="mr-2 size-4 animate-spin" />
+                )}
+                {tierSwitchPreview?.decision === "requires_recurring_checkout"
+                  ? "Continue to checkout"
+                  : "Confirm & pay"}
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
