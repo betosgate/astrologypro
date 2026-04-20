@@ -13,17 +13,18 @@ const SLUG_RE = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const user = await getAdminUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  const { id } = await params;
   const admin = createAdminClient();
 
   const { data: template, error } = await admin
     .from("service_templates")
     .select("*")
-    .eq("id", params.id)
+    .eq("id", id)
     .maybeSingle();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -36,7 +37,7 @@ export async function GET(
       is_enabled, is_published,
       diviners ( id, display_name )
     `)
-    .eq("template_id", params.id);
+    .eq("template_id", id);
 
   const diviners = (divinerServices ?? []).map((ds) => ({
     ...(ds.diviners as { id: string; display_name: string }),
@@ -60,10 +61,12 @@ export async function GET(
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const user = await getAdminUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { id } = await params;
 
   let body: Record<string, unknown>;
   try {
@@ -78,7 +81,7 @@ export async function PATCH(
   const { data: existing, error: fetchErr } = await admin
     .from("service_templates")
     .select("*")
-    .eq("id", params.id)
+    .eq("id", id)
     .maybeSingle();
 
   if (fetchErr) return NextResponse.json({ error: fetchErr.message }, { status: 500 });
@@ -104,7 +107,7 @@ export async function PATCH(
         .from("service_templates")
         .select("id")
         .eq("slug", slug)
-        .neq("id", params.id)
+        .neq("id", id)
         .maybeSingle();
       if (slugConflict) errors.slug = "A template with this slug already exists";
       else slugChanged = true;
@@ -174,7 +177,7 @@ export async function PATCH(
   const { data: updated, error: updateErr } = await admin
     .from("service_templates")
     .update(payload)
-    .eq("id", params.id)
+    .eq("id", id)
     .select()
     .single();
 
@@ -197,11 +200,12 @@ export async function PATCH(
 
 export async function DELETE(
   _req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const user = await getAdminUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  const { id } = await params;
   const admin = createAdminClient();
 
   // Check for active diviner_services rows
@@ -211,7 +215,7 @@ export async function DELETE(
       id,
       diviners ( id, display_name )
     `)
-    .eq("template_id", params.id)
+    .eq("template_id", id)
     .eq("is_enabled", true);
 
   if (activeServices && activeServices.length > 0) {
@@ -230,7 +234,7 @@ export async function DELETE(
   const { error: deactivateErr } = await admin
     .from("service_templates")
     .update({ is_active: false, updated_by: user.id })
-    .eq("id", params.id);
+    .eq("id", id);
 
   if (deactivateErr) return NextResponse.json({ error: deactivateErr.message }, { status: 500 });
 

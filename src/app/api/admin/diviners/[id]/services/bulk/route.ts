@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const user = await getAdminUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -37,7 +37,7 @@ export async function POST(
   }
 
   const admin = createAdminClient();
-  const divinerId = params.id;
+  const { id: divinerId } = await params;
   const now = new Date().toISOString();
 
   const results: { template_id: string; success: boolean; error?: string }[] = [];

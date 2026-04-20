@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 export async function DELETE(
   _req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const user = await getAdminUser();
   if (!user) {
@@ -16,7 +16,7 @@ export async function DELETE(
     );
   }
 
-  const { id } = params;
+  const { id } = await params;
   if (!id) {
     return NextResponse.json(
       { type: "https://httpstatuses.com/422", title: "Validation Error", status: 422, detail: "id is required" },

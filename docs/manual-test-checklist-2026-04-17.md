@@ -481,17 +481,22 @@ This service is not enabled for your account.
 ### Steps
 
 1. Create a campaign with a service destination.
-2. Copy the generated share URL:
+2. **IMPORTANT:** New campaigns start in `draft` status. Draft campaigns are
+   considered inactive and `/r/cmp_...` will NOT route to the selected
+   service destination — it falls back to the diviner profile by design.
+   Activate the campaign first via the "Activate" control in the campaign
+   detail page (or `POST /api/dashboard/campaigns/[id]/activate`).
+3. Copy the generated share URL:
 
 ```text
 http://localhost:3000/r/cmp_XXXXXXXX
 ```
 
-3. Open the share URL in a logged-out/incognito browser.
+4. Open the share URL in a logged-out/incognito browser.
 
 ### Expected
 
-- URL redirects to the selected destination.
+- URL redirects to the selected destination *after activation*.
 - For service destination:
 
 ```text
@@ -504,12 +509,20 @@ http://localhost:3000/r/cmp_XXXXXXXX
 ref=cmp_XXXXXXXX
 ```
 
+- While the campaign is `draft`/`paused`/`expired`, the campaign URL display
+  in the dashboard shows an "inactive" warning and the Copy/Open buttons are
+  disabled. Share URLs should not be distributed until the campaign is
+  active.
+
 ### Pass / Fail
 
-- [ ] Pass - `/r/cmp_...` redirects to the correct destination.
+- [ ] Pass - `/r/cmp_...` redirects to the correct destination once the
+      campaign is active.
 - [ ] Pass - Click does not crash the app.
 - [ ] Pass - Click tracking is recorded if analytics tables are available.
-- [ ] Fail - Redirect goes to `/`.
+- [ ] Pass - Dashboard UI shows draft/inactive state when campaign is not
+      yet active (copy + open buttons disabled, warning shown).
+- [ ] Fail - Redirect goes to `/` while the campaign is active.
 - [ ] Fail - Redirect goes to wrong service.
 - [ ] Fail - Redirect exposes disabled service.
 

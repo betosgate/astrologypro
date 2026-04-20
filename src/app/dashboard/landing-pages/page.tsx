@@ -62,9 +62,24 @@ interface Summary {
   total_bookings_30d: number;
 }
 
-function StatusBadge({ status, moderationStatus }: { status: string | null; moderationStatus: string | null }) {
+function StatusBadge({
+  status,
+  moderationStatus,
+  hasLandingPage,
+  isPublished,
+}: {
+  status: string | null;
+  moderationStatus: string | null;
+  hasLandingPage: boolean;
+  isPublished: boolean;
+}) {
   if (moderationStatus === "flagged" || moderationStatus === "rejected") {
     return <Badge className="bg-red-500/15 text-red-400 border-red-500/20">Flagged</Badge>;
+  }
+  // When no custom builder row exists, the template-backed landing page is live
+  // whenever diviner_services.is_published is true.
+  if (!hasLandingPage && isPublished) {
+    return <Badge className="bg-emerald-500/15 text-emerald-400 border-emerald-500/20">Published</Badge>;
   }
   switch (status) {
     case "published":
@@ -146,7 +161,12 @@ function LandingPageCard({ entry, username, onRefresh }: { entry: LandingPageEnt
             </p>
           </div>
         </div>
-        <StatusBadge status={entry.landing_page_status} moderationStatus={entry.moderation_status} />
+        <StatusBadge
+          status={entry.landing_page_status}
+          moderationStatus={entry.moderation_status}
+          hasLandingPage={entry.has_landing_page}
+          isPublished={entry.is_published}
+        />
       </div>
 
       {/* Moderation warning */}
@@ -177,7 +197,11 @@ function LandingPageCard({ entry, username, onRefresh }: { entry: LandingPageEnt
       )}
 
       {!entry.has_landing_page && (
-        <p className="mt-3 text-xs text-silver/50">No landing page created yet</p>
+        <p className="mt-3 text-xs text-silver/50">
+          {entry.is_published
+            ? "Using the default template-backed landing page"
+            : "No landing page created yet"}
+        </p>
       )}
 
       {/* Actions */}

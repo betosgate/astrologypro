@@ -343,8 +343,12 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
               <CampaignUrlDisplay
                 url={campaign.share_url}
                 code={campaign.campaign_code ?? undefined}
-                label="Campaign URL"
+                label={
+                  campaign.status === "active" ? "Campaign URL" : "Campaign URL (inactive)"
+                }
                 showOpenButton
+                isInactive={campaign.status !== "active"}
+                inactiveReason={campaign.status ?? "Draft"}
               />
             )}
           </CardContent>

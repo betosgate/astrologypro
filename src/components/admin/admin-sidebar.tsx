@@ -97,6 +97,7 @@ const NAV_GROUPS = [
       { label: "Diviners", href: "/admin/diviners", icon: Star },
       { label: "Affiliates", href: "/admin/affiliates", icon: Users },
       { label: "Campaigns", href: "/admin/campaigns", icon: Megaphone },
+      { label: "Campaign Analytics", href: "/admin/campaigns/analytics", icon: BarChart3 },
       { label: "Roles", href: "/admin/roles", icon: Shield },
       { label: "Invitations", href: "/admin/invitations", icon: Mail },
       { label: "Social Advocacy", href: "/admin/social-advocacy", icon: Share2 },
@@ -208,6 +209,7 @@ const NAV_GROUPS = [
       { label: "Diviner Plans", href: "/admin/diviner-plans", icon: Layers },
       { label: "Service Templates", href: "/admin/service-templates", icon: LayoutGrid },
       { label: "Service Config", href: "/admin/service-config", icon: Settings2 },
+      { label: "Landing Page Analytics", href: "/admin/analytics/landing-pages", icon: BarChart3 },
     ],
   },
   {

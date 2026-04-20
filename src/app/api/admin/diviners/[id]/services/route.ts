@@ -5,7 +5,7 @@ import { writeAuditLog } from "@/lib/service-audit";
 
 export const dynamic = "force-dynamic";
 
-type RouteParams = { params: { id: string } };
+type RouteParams = { params: Promise<{ id: string }> };
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GET /api/admin/diviners/[id]/services
@@ -17,7 +17,7 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const admin = createAdminClient();
-  const divinerId = params.id;
+  const { id: divinerId } = await params;
 
   // 1. Fetch diviner
   const { data: diviner } = await admin
@@ -137,7 +137,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
   }
 
   const admin = createAdminClient();
-  const divinerId = params.id;
+  const { id: divinerId } = await params;
 
   // Validate diviner
   const { data: diviner } = await admin
