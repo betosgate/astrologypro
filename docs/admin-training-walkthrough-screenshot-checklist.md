@@ -13,13 +13,15 @@ Current target set:
 3. `training_program_new`
 4. `training-program-detail`
 5. `training_category_new`
-6. `training_lesson_new`
-7. `training_lesson_edit`
-8. `training_quiz_new`
-9. `quiz-detail-admin`
-10. `training_analytics`
-11. `trainee-quiz-scores`
-12. `training_settings`
+6. `training-category-detail`
+7. `training_lesson_new`
+8. `training_lesson_edit`
+9. `training_quiz_new`
+10. `quiz-detail-admin`
+11. `ai-quiz-generator`
+12. `training_analytics`
+13. `trainee-quiz-scores`
+14. `training_settings`
 
 Currently omitted:
 
@@ -88,7 +90,18 @@ Currently omitted:
 - Best state:
   - at least one real program available in the selector
 
-### 6. `training_lesson_new.png`
+### 6. `training-category-detail.png`
+- Route: first available `/admin/training/categories/:id/edit`
+- Show:
+  - edit page heading
+  - existing category title and description
+  - parent program selector
+  - priority, active status, and sequential lock controls
+  - internal training notes section if visible
+- Best state:
+  - a real category with meaningful seeded content
+
+### 7. `training_lesson_new.png`
 - Route: `/admin/training/lessons/new`
 - Show:
   - lesson title
@@ -99,7 +112,7 @@ Currently omitted:
 - Best state:
   - at least one real category available
 
-### 7. `training_lesson_edit.png`
+### 8. `training_lesson_edit.png`
 - Route: first available `/admin/training/lessons/:id/edit`
 - Show:
   - edit page heading
@@ -109,7 +122,7 @@ Currently omitted:
 - Best state:
   - a lesson that already has assets attached
 
-### 8. `training_quiz_new.png`
+### 9. `training_quiz_new.png`
 - Route: `/admin/training/quizzes/new`
 - Show:
   - lesson selector
@@ -119,7 +132,7 @@ Currently omitted:
 - Best state:
   - at least one lesson available
 
-### 9. `quiz-detail-admin.png`
+### 10. `quiz-detail-admin.png`
 - Route: first available `/admin/training/quizzes/:id/edit`
 - Show:
   - edit page heading
@@ -130,7 +143,20 @@ Currently omitted:
 - Best state:
   - an existing quiz with at least one question
 
-### 10. `training_analytics.png`
+### 11. `ai-quiz-generator.png`
+- Route: `/admin/training/quiz-generate`
+- Show:
+  - AI Quiz Generator heading
+  - PPTX upload control
+  - lesson assignment selector
+  - question count field
+  - Generate Questions action
+- Best state:
+  - lesson selector populated with real lessons
+- Avoid:
+  - generated-question review state unless intentionally documenting generated draft review
+
+### 12. `training_analytics.png`
 - Route: `/admin/training/analytics`
 - Show:
   - KPI cards at the top
@@ -139,7 +165,7 @@ Currently omitted:
 - Best state:
   - visible non-zero metrics
 
-### 11. `trainee-quiz-scores.png`
+### 13. `trainee-quiz-scores.png`
 - Route: `/admin/training/analytics`
 - Show:
   - Users tab selected
@@ -150,7 +176,7 @@ Currently omitted:
   - skeleton loading state
   - empty user table
 
-### 12. `training_settings.png`
+### 14. `training_settings.png`
 - Route: `/admin/training/settings`
 - Show:
   - training access roles section
@@ -177,6 +203,7 @@ The capture script can automate:
 
 - direct routes
 - first available edit route for program detail
+- first available edit route for category detail
 - first available edit route for lesson edit
 - first available edit route for quiz detail
 

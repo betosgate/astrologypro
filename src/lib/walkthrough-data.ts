@@ -4316,6 +4316,18 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
         ]
       },
       {
+        name: "quiz-bank-admin",
+        label: "Quiz Bank",
+        description: "Central admin list of lesson quizzes used across training programs. Admins can search quizzes, review linked lessons, check question counts, and open quiz editors from one operational table.",
+        group: "Training",
+        purpose: "Gives curriculum managers a single place to audit assessment coverage and maintain quiz quality across the training catalog.",
+        bullets: [
+          "Quiz table with title, linked lesson, question count, active status, and created date",
+          "Search and status filters shared with programs, categories, and lessons",
+          "Quick actions for opening existing quiz editors, launching AI generation, or creating a new quiz"
+        ]
+      },
+      {
         name: "training_program_new",
         label: "Create Training Program",
         description: "Top-level setup form for a new training program.",
@@ -4329,6 +4341,19 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
         ]
       },
       {
+        name: "training-program-detail",
+        label: "Training Program Detail",
+        description: "Edit an existing training program and maintain its audience, display order, active status, and internal notes.",
+        group: "Training",
+        purpose: "This page is the maintenance view for a live or staged program. Curriculum managers use it to update program metadata, role access, progression behavior, and notes while preserving the existing curriculum structure underneath it.",
+        bullets: [
+          "Program name, description, priority, and active status control how the program appears to trainees",
+          "Allowed-role checklist governs which learner roles can access the program",
+          "Sequential lock determines whether categories inside the program must be completed in order",
+          "Training notes provide internal context for curriculum decisions, edits, and follow-up tasks"
+        ]
+      },
+      {
         name: "training_category_new",
         label: "Create Training Category",
         description: "Author a category within a selected training program.",
@@ -4339,6 +4364,19 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Priority controls the category's position inside the program",
           "Sequential behavior determines whether lessons unlock in order",
           "Active status supports staging and controlled release"
+        ]
+      },
+      {
+        name: "training-category-detail",
+        label: "Training Category Detail",
+        description: "Edit an existing category and maintain its program placement, lesson sequencing rules, and internal notes.",
+        group: "Training",
+        purpose: "This page is the maintenance view for an existing curriculum section. It lets admins correct category metadata, move the category between programs, adjust lesson unlock behavior, and record operational notes without recreating the category.",
+        bullets: [
+          "Program selector controls where the category appears in the training hierarchy",
+          "Name, description, priority, and active status keep the category accurate after launch",
+          "Sequential lock determines whether lessons inside the category must be completed in order",
+          "Training notes provide an internal audit trail for curriculum decisions and follow-up work"
         ]
       },
       {
@@ -4381,6 +4419,32 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
         ]
       },
       {
+        name: "quiz-detail-admin",
+        label: "Quiz Detail",
+        description: "Detailed editor for a lesson quiz, including quiz metadata, question list, answer options, and remediation controls.",
+        group: "Training",
+        purpose: "This page is where admins maintain assessment quality after a quiz exists. It supports editing questions, answer mappings, explanations, ordering, and wrong-answer remediation so the assessment stays aligned with the lesson content.",
+        bullets: [
+          "Lesson selector and title field keep the quiz attached to the correct training checkpoint",
+          "Question editor supports option text, correct-answer mapping, priority, and explanations",
+          "Remediation controls can point learners back to a specific video timestamp and replay window",
+          "Question list lets admins edit or remove existing questions without rebuilding the quiz"
+        ]
+      },
+      {
+        name: "ai-quiz-generator",
+        label: "AI Quiz Generator",
+        description: "Generate a draft quiz from a PPTX training presentation, review the questions, then save it to a selected lesson.",
+        group: "Training",
+        purpose: "This screen accelerates quiz creation for slide-based training material. Admins upload a presentation, choose a target lesson and question count, review the generated multiple-choice questions, adjust answers or pass score, and save the quiz only after human review.",
+        bullets: [
+          "PPTX upload feeds the AI generation workflow for lesson-aligned quiz drafts",
+          "Lesson selector and question-count control keep generated questions scoped to the right module",
+          "Review panel lets admins edit questions, options, correct answers, and pass score before publishing",
+          "Save and discard actions preserve human approval instead of auto-publishing generated assessments"
+        ]
+      },
+      {
         name: "training_analytics",
         label: "Training Analytics",
         description: "Reporting dashboard for learner progress, completion, and quiz outcomes.",
@@ -4391,6 +4455,18 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Tabbed reports break down performance by users, programs, categories, lessons, and quizzes",
           "Search, filters, and sorting expose weak content and bottlenecks",
           "CSV export supports reporting outside the platform"
+        ]
+      },
+      {
+        name: "trainee-quiz-scores",
+        label: "Trainee Quiz Scores",
+        description: "Training analytics view that surfaces trainee progress, quiz pass rate, average attempts, lesson completion, and time spent across the training program.",
+        group: "Training",
+        purpose: "Helps admins identify trainees who are progressing smoothly, stalled, or repeatedly struggling with quiz checkpoints.",
+        bullets: [
+          "User table with training status, enrolled programs, lesson progress, quiz pass rate, and average attempts",
+          "Search and sort controls for finding trainees by name, completion rate, or quiz performance",
+          "CSV export for offline review of trainee progress and assessment outcomes"
         ]
       },
       {
@@ -5493,30 +5569,6 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
         ]
       },
       {
-        name: "quiz-bank-admin",
-        label: "Quiz Bank",
-        description: "Central admin list of lesson quizzes used across training programs. Admins can search quizzes, review linked lessons, check question counts, and open quiz editors from one operational table.",
-        group: "Training",
-        purpose: "Gives curriculum managers a single place to audit assessment coverage and maintain quiz quality across the training catalog.",
-        bullets: [
-          "Quiz table with title, linked lesson, question count, active status, and created date",
-          "Search and status filters shared with programs, categories, and lessons",
-          "Quick actions for opening existing quiz editors or creating a new quiz"
-        ]
-      },
-      {
-        name: "quiz-detail-admin",
-        label: "Quiz Detail",
-        description: "Detailed editor for a quiz, including rules, questions, and performance metrics.",
-        group: "Training",
-        purpose: "This page is where admins manage the quality and strictness of a training assessment after it has been created. It combines authoring controls with operational feedback so the team can improve quiz quality without losing sight of how learners are actually performing.",
-        bullets: [
-          "Edit the question set and maintain the intended assessment order",
-          "Configure passing score and maximum attempts for the lesson checkpoint",
-          "Review performance signals such as average score, pass rate, and missed questions"
-        ]
-      },
-      {
         name: "package-detail",
         label: "Service Package Detail",
         description: "Detailed view and editor for a single session package sold on the platform. Admins can adjust session count, price, expiry window, and which diviner types are eligible. Includes sales history and active subscriber count.",
@@ -5814,30 +5866,6 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Matrix grid with role rows and feature-area columns — colour-coded green/red per cell",
           "Inline toggle — click any cell to grant or revoke access with a confirmation modal",
           "Change history drawer showing who changed what permission and when"
-        ]
-      },
-      {
-        name: "training-program-detail",
-        label: "Training Program Detail",
-        description: "Detailed view of a training program, including structure, status, and learner impact.",
-        group: "Training",
-        purpose: "This page gives curriculum managers a full view of one program after it has been created. It is used to verify structure, maintain ordering, track whether the program is complete, and understand how many learners are affected by program-level changes.",
-        bullets: [
-          "Structured view of categories and lessons inside the selected program",
-          "Program metadata such as title, status, and estimated learning duration",
-          "Learner context showing how many trainees are enrolled in the program"
-        ]
-      },
-      {
-        name: "trainee-quiz-scores",
-        label: "Trainee Quiz Scores",
-        description: "Training analytics view that surfaces trainee progress, quiz pass rate, average attempts, lesson completion, and time spent across the training program.",
-        group: "Training",
-        purpose: "Helps admins identify trainees who are progressing smoothly, stalled, or repeatedly struggling with quiz checkpoints.",
-        bullets: [
-          "User table with training status, enrolled programs, lesson progress, quiz pass rate, and average attempts",
-          "Search and sort controls for finding trainees by name, completion rate, or quiz performance",
-          "CSV export for offline review of trainee progress and assessment outcomes"
         ]
       },
       // Certificate Issued Log is intentionally omitted for now.

@@ -60,6 +60,21 @@ async function resolveFirstTrainingEditHref(page, entity) {
         return score;
       },
     },
+    category: {
+      api: "/api/admin/training/categories?pageSize=100",
+      listKey: "categories",
+      buildHref: (item) => `/admin/training/categories/${item.id}/edit`,
+      score: (item) => {
+        const text = `${item.name ?? ""} ${item.description ?? ""}`.toLowerCase();
+        let score = 0;
+        if (item.is_active) score += 10;
+        if (!text.includes("test")) score += 8;
+        if (!text.includes("sanket")) score += 6;
+        if (text.includes("foundation")) score += 5;
+        if (text.includes("astrology")) score += 5;
+        return score;
+      },
+    },
     lesson: {
       api: "/api/admin/training/lessons?pageSize=100",
       listKey: "lessons",
@@ -206,6 +221,11 @@ const roles = [
         resolveUrl: async (page) => resolveFirstTrainingEditHref(page, "program"),
       },
       { name: "training_category_new", url: "/admin/training/categories/new", label: "Create Training Category" },
+      {
+        name: "training-category-detail",
+        label: "Training Category Detail",
+        resolveUrl: async (page) => resolveFirstTrainingEditHref(page, "category"),
+      },
       { name: "training_lesson_new", url: "/admin/training/lessons/new", label: "Create Training Lesson" },
       {
         name: "training_lesson_edit",
@@ -218,6 +238,7 @@ const roles = [
         label: "Quiz Detail",
         resolveUrl: async (page) => resolveFirstTrainingEditHref(page, "quiz"),
       },
+      { name: "ai-quiz-generator", url: "/admin/training/quiz-generate", label: "AI Quiz Generator" },
       { name: "training_analytics", url: "/admin/training/analytics", label: "Training Analytics" },
       {
         name: "trainee-quiz-scores",
