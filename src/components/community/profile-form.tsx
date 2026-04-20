@@ -23,6 +23,7 @@ import { Loader2, Save, ChevronDown, ChevronUp } from "lucide-react";
 import { toast } from "sonner";
 import { ProfileCompletionBar } from "@/components/ui/profile-completion-bar";
 import { calculateProfileCompletion } from "@/lib/profile-completion";
+import { BirthCityAutocomplete } from "@/components/community/birth-city-autocomplete";
 
 interface CommunityMember {
   id: string;
@@ -288,10 +289,10 @@ export function CommunityProfileForm({ member }: CommunityProfileFormProps) {
             </div>
             <div className="space-y-2">
               <Label>Birth City</Label>
-              <Input
+              <BirthCityAutocomplete
                 id="community-birth-city"
                 value={birthCity}
-                onChange={(e) => setBirthCity(e.target.value)}
+                onChange={(label) => setBirthCity(label)}
                 placeholder="e.g. New York, NY"
               />
             </div>
