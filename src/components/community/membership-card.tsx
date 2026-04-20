@@ -106,12 +106,7 @@ export function MembershipCard({ subscription, userEmail }: MembershipCardProps)
             <span className="text-base" aria-hidden="true">🔮</span>
             <h2 className="text-base font-semibold leading-tight">Your Membership</h2>
           </div>
-          <Badge
-            variant="outline"
-            className={`text-xs uppercase tracking-wide font-semibold ${statusClass}`}
-          >
-            {subscription.status}
-          </Badge>
+
         </div>
 
         <Separator />
