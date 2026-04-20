@@ -48,13 +48,16 @@ import {
   AlertTriangle,
   BarChart3,
   RefreshCw,
+  FilterX,
 } from "lucide-react";
 import Link from "next/link";
+import { cn } from "@/lib/utils";
 import { CampaignDestinationBadge } from "@/components/dashboard/campaign-destination-badge";
 import {
   AdminPagination,
   AdminTableSearch,
   AdminResetButton,
+  AdminDivinerAutocomplete,
   SortHeader,
   useAdminTableParams,
 } from "@/components/admin/admin-table-parts";
@@ -182,9 +185,7 @@ export default function AdminCampaignsPage() {
   useEffect(() => { loadCampaigns(); }, [loadCampaigns]);
 
   useEffect(() => {
-    fetch("/api/admin/diviners")
-      .then((r) => r.json())
-      .then((j) => setDiviners(j.diviners ?? []));
+    // No longer need to fetch all diviners here
   }, []);
 
   function handleSort(col: string) {
@@ -296,11 +297,6 @@ export default function AdminCampaignsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <AdminResetButton hasActiveFilters={hasActiveFilters} onReset={handleReset} />
-          <Button variant="outline" size="sm" onClick={() => loadCampaigns()} disabled={loading} className="gap-1.5">
-            <RefreshCw className={`h-4 w-4 ${loading && "animate-spin"}`} />
-            Refresh
-          </Button>
           <Button variant="outline" size="sm" asChild>
             <Link href="/admin/campaigns/analytics">
               <BarChart3 className="mr-2 size-4" />
@@ -426,17 +422,35 @@ export default function AdminCampaignsPage() {
             <SelectItem value="expired">Expired</SelectItem>
           </SelectContent>
         </Select>
-        <Select value={filterDiviner} onValueChange={(v) => { setFilterDiviner(v === "all" ? "" : v); pushParams({ page: "1" }); }}>
-          <SelectTrigger className="w-full sm:w-48">
-            <SelectValue placeholder="All diviners" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All diviners</SelectItem>
-            {diviners.map((d) => (
-              <SelectItem key={d.id} value={d.id}>{d.display_name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <AdminDivinerAutocomplete
+          defaultValue={filterDiviner}
+          onSelect={(id) => {
+            setFilterDiviner(id);
+            pushParams({ diviner_id: id, page: "1" });
+          }}
+          placeholder="All diviners"
+        />
+
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => loadCampaigns()}
+          disabled={loading}
+          className="gap-1.5 h-9"
+        >
+          <RefreshCw className={cn("size-3.5", loading && "animate-spin")} />
+          Reload
+        </Button>
+
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleReset}
+          className="gap-1.5 h-9"
+        >
+          <FilterX className="size-3.5" />
+          Reset
+        </Button>
       </div>
 
       {/* Table */}
