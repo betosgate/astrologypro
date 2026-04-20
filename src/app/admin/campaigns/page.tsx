@@ -5,7 +5,6 @@ import { toast } from "sonner";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -22,6 +21,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -41,9 +47,17 @@ import {
   Target,
   AlertTriangle,
   BarChart3,
+  RefreshCw,
 } from "lucide-react";
 import Link from "next/link";
 import { CampaignDestinationBadge } from "@/components/dashboard/campaign-destination-badge";
+import {
+  AdminPagination,
+  AdminTableSearch,
+  AdminResetButton,
+  SortHeader,
+  useAdminTableParams,
+} from "@/components/admin/admin-table-parts";
 
 interface Campaign {
   id: string;
@@ -91,12 +105,24 @@ function fmtCents(cents: number) {
 }
 
 export default function AdminCampaignsPage() {
+  const {
+    pushParams,
+    currentPage,
+    currentSort,
+    currentDir,
+    currentQ,
+    isPending,
+  } = useAdminTableParams({ sort: "start_date", dir: "desc" });
+
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [diviners, setDiviners] = useState<Diviner[]>([]);
   const [loading, setLoading] = useState(true);
+  const [total, setTotal] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
+
   const [filterStatus, setFilterStatus] = useState("");
   const [filterDiviner, setFilterDiviner] = useState("");
-  const [q, setQ] = useState("");
+
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -129,36 +155,31 @@ export default function AdminCampaignsPage() {
   const [editBudgetCap, setEditBudgetCap] = useState("");
 
   function resetForm() {
-    setFormName("");
-    setFormDesc("");
-    setFormStartDate("");
-    setFormEndDate("");
-    setFormCommType("percentage");
-    setFormCommValue("10");
-    setFormBudgetCap("");
-    setFormTargetProduct("");
-    setFormUtmSource("");
-    setFormUtmMedium("");
-    setFormUtmCampaign("");
+    setFormName(""); setFormDesc(""); setFormStartDate(""); setFormEndDate("");
+    setFormCommType("percentage"); setFormCommValue("10"); setFormBudgetCap("");
+    setFormTargetProduct(""); setFormUtmSource(""); setFormUtmMedium(""); setFormUtmCampaign("");
   }
 
   const loadCampaigns = useCallback(async () => {
     setLoading(true);
     const params = new URLSearchParams();
+    if (currentQ) params.set("q", currentQ);
     if (filterStatus) params.set("status", filterStatus);
     if (filterDiviner) params.set("diviner_id", filterDiviner);
-    if (q) params.set("q", q);
+    params.set("page", String(currentPage));
+    params.set("limit", String(pageSize));
+    params.set("sort_by", currentSort);
+    params.set("sort_dir", currentDir);
     const res = await fetch(`/api/admin/campaigns?${params}`);
     if (res.ok) {
       const json = await res.json();
       setCampaigns(json.data ?? []);
+      setTotal(json.total ?? 0);
     }
     setLoading(false);
-  }, [filterStatus, filterDiviner, q]);
+  }, [currentQ, filterStatus, filterDiviner, currentPage, pageSize, currentSort, currentDir]);
 
-  useEffect(() => {
-    loadCampaigns();
-  }, [loadCampaigns]);
+  useEffect(() => { loadCampaigns(); }, [loadCampaigns]);
 
   useEffect(() => {
     fetch("/api/admin/diviners")
@@ -166,28 +187,40 @@ export default function AdminCampaignsPage() {
       .then((j) => setDiviners(j.diviners ?? []));
   }, []);
 
-  async function handleCreate() {
-    if (!formName.trim() || !formStartDate) {
-      toast.error("Name and start date are required");
-      return;
+  function handleSort(col: string) {
+    if (currentSort === col) {
+      pushParams({ sortDir: currentDir === "asc" ? "desc" : "asc" });
+    } else {
+      pushParams({ sortBy: col, sortDir: "desc" });
     }
+  }
+
+  function handleReset() {
+    setFilterStatus("");
+    setFilterDiviner("");
+    pushParams({ q: "", sortBy: "start_date", sortDir: "desc", page: "1" });
+  }
+
+  const hasActiveFilters =
+    currentQ !== "" || filterStatus !== "" || filterDiviner !== "" ||
+    currentSort !== "start_date" || currentDir !== "desc";
+
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
+  async function handleCreate() {
+    if (!formName.trim() || !formStartDate) { toast.error("Name and start date are required"); return; }
     setSaving(true);
     const res = await fetch("/api/admin/campaigns", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        name: formName,
-        description: formDesc || undefined,
-        start_date: formStartDate,
-        end_date: formEndDate || undefined,
-        commission_type: formCommType,
+        name: formName, description: formDesc || undefined, start_date: formStartDate,
+        end_date: formEndDate || undefined, commission_type: formCommType,
         commission_value: parseFloat(formCommValue) || 0,
         budget_cap_cents: formBudgetCap ? parseInt(formBudgetCap, 10) * 100 : undefined,
         target_product_type: formTargetProduct || undefined,
-        utm_source: formUtmSource || undefined,
-        utm_medium: formUtmMedium || undefined,
+        utm_source: formUtmSource || undefined, utm_medium: formUtmMedium || undefined,
         utm_campaign: formUtmCampaign || undefined,
-        // diviner_id is null for platform-wide campaigns
       }),
     });
     if (res.ok) {
@@ -222,13 +255,9 @@ export default function AdminCampaignsPage() {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        name: editName,
-        description: editDesc,
-        status: editStatus,
-        start_date: editStartDate,
-        end_date: editEndDate || undefined,
-        commission_type: editCommType,
-        commission_value: parseFloat(editCommValue) || 0,
+        name: editName, description: editDesc, status: editStatus,
+        start_date: editStartDate, end_date: editEndDate || undefined,
+        commission_type: editCommType, commission_value: parseFloat(editCommValue) || 0,
         budget_cap_cents: editBudgetCap ? parseInt(editBudgetCap, 10) * 100 : null,
       }),
     });
@@ -257,15 +286,21 @@ export default function AdminCampaignsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="p-6 max-w-7xl mx-auto space-y-6">
+      {/* Header */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Campaigns</h1>
-          <p className="text-muted-foreground">
-            All affiliate campaigns across the platform.
+          <p className="text-sm text-muted-foreground mt-0.5">
+            {total} result{total !== 1 ? "s" : ""} · page {currentPage} of {totalPages}
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <AdminResetButton hasActiveFilters={hasActiveFilters} onReset={handleReset} />
+          <Button variant="outline" size="sm" onClick={() => loadCampaigns()} disabled={loading} className="gap-1.5">
+            <RefreshCw className={`h-4 w-4 ${loading && "animate-spin"}`} />
+            Refresh
+          </Button>
           <Button variant="outline" size="sm" asChild>
             <Link href="/admin/campaigns/analytics">
               <BarChart3 className="mr-2 size-4" />
@@ -273,82 +308,71 @@ export default function AdminCampaignsPage() {
             </Link>
           </Button>
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={resetForm}>
-              <Plus className="mr-2 size-4" />
-              Create Platform Campaign
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
-            <DialogHeader>
-              <DialogTitle>Create Platform-Wide Campaign</DialogTitle>
-              <DialogDescription>
-                Create a campaign visible to all diviners and their affiliates.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="mt-4 space-y-4">
-              <div className="space-y-2">
-                <Label>Campaign Name</Label>
-                <Input value={formName} onChange={(e) => setFormName(e.target.value)} placeholder="Summer Promo 2026" />
-              </div>
-              <div className="space-y-2">
-                <Label>Description (optional)</Label>
-                <Textarea value={formDesc} onChange={(e) => setFormDesc(e.target.value)} rows={2} />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Start Date</Label>
-                  <Input type="date" value={formStartDate} onChange={(e) => setFormStartDate(e.target.value)} />
-                </div>
-                <div className="space-y-2">
-                  <Label>End Date (optional)</Label>
-                  <Input type="date" value={formEndDate} onChange={(e) => setFormEndDate(e.target.value)} />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Commission Type</Label>
-                  <select className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm" value={formCommType} onChange={(e) => setFormCommType(e.target.value)}>
-                    <option value="percentage">Percentage</option>
-                    <option value="fixed">Fixed amount</option>
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  <Label>{formCommType === "percentage" ? "Commission %" : "Fixed ($)"}</Label>
-                  <Input type="number" min="0" value={formCommValue} onChange={(e) => setFormCommValue(e.target.value)} />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Budget Cap ($, optional)</Label>
-                <Input type="number" min="0" value={formBudgetCap} onChange={(e) => setFormBudgetCap(e.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <Label>Target Product</Label>
-                <select className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm" value={formTargetProduct} onChange={(e) => setFormTargetProduct(e.target.value)}>
-                  <option value="">All products</option>
-                  <option value="session">Sessions</option>
-                  <option value="package">Packages</option>
-                  <option value="subscription">Subscriptions</option>
-                </select>
-              </div>
-              <div className="space-y-2">
-                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">UTM Parameters</Label>
-                <div className="grid grid-cols-3 gap-2">
-                  <Input placeholder="utm_source" value={formUtmSource} onChange={(e) => setFormUtmSource(e.target.value)} />
-                  <Input placeholder="utm_medium" value={formUtmMedium} onChange={(e) => setFormUtmMedium(e.target.value)} />
-                  <Input placeholder="utm_campaign" value={formUtmCampaign} onChange={(e) => setFormUtmCampaign(e.target.value)} />
-                </div>
-              </div>
-              <Button onClick={handleCreate} disabled={saving} className="w-full">
-                {saving ? <><Loader2 className="mr-2 size-4 animate-spin" />Creating...</> : "Create Campaign"}
+            <DialogTrigger asChild>
+              <Button size="sm" onClick={resetForm}>
+                <Plus className="mr-2 size-4" />
+                Create Campaign
               </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+            </DialogTrigger>
+            <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+              <DialogHeader>
+                <DialogTitle>Create Platform-Wide Campaign</DialogTitle>
+                <DialogDescription>Create a campaign visible to all diviners and their affiliates.</DialogDescription>
+              </DialogHeader>
+              <div className="mt-4 space-y-4">
+                <div className="space-y-2">
+                  <Label>Campaign Name</Label>
+                  <Input value={formName} onChange={(e) => setFormName(e.target.value)} placeholder="Summer Promo 2026" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Description (optional)</Label>
+                  <Textarea value={formDesc} onChange={(e) => setFormDesc(e.target.value)} rows={2} />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Start Date</Label>
+                    <Input type="date" value={formStartDate} onChange={(e) => setFormStartDate(e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>End Date (optional)</Label>
+                    <Input type="date" value={formEndDate} onChange={(e) => setFormEndDate(e.target.value)} />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Commission Type</Label>
+                    <select className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm" value={formCommType} onChange={(e) => setFormCommType(e.target.value)}>
+                      <option value="percentage">Percentage</option>
+                      <option value="fixed">Fixed amount</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>{formCommType === "percentage" ? "Commission %" : "Fixed ($)"}</Label>
+                    <Input type="number" min="0" value={formCommValue} onChange={(e) => setFormCommValue(e.target.value)} />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Budget Cap ($, optional)</Label>
+                  <Input type="number" min="0" value={formBudgetCap} onChange={(e) => setFormBudgetCap(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">UTM Parameters</Label>
+                  <div className="grid grid-cols-3 gap-2">
+                    <Input placeholder="utm_source" value={formUtmSource} onChange={(e) => setFormUtmSource(e.target.value)} />
+                    <Input placeholder="utm_medium" value={formUtmMedium} onChange={(e) => setFormUtmMedium(e.target.value)} />
+                    <Input placeholder="utm_campaign" value={formUtmCampaign} onChange={(e) => setFormUtmCampaign(e.target.value)} />
+                  </div>
+                </div>
+                <Button onClick={handleCreate} disabled={saving} className="w-full">
+                  {saving ? <><Loader2 className="mr-2 size-4 animate-spin" />Creating...</> : "Create Campaign"}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 
-      {/* Summary */}
+      {/* Summary cards */}
       <div className="grid gap-4 sm:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -356,8 +380,8 @@ export default function AdminCampaignsPage() {
             <Megaphone className="size-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold">{campaigns.length}</p>
-            <p className="text-xs text-muted-foreground">{campaigns.filter((c) => c.status === "active").length} active</p>
+            <p className="text-2xl font-bold">{total}</p>
+            <p className="text-xs text-muted-foreground">{campaigns.filter((c) => c.status === "active").length} active on this page</p>
           </CardContent>
         </Card>
         <Card>
@@ -381,119 +405,160 @@ export default function AdminCampaignsPage() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-3">
-        <Input placeholder="Search by name..." className="h-9 w-56" value={q} onChange={(e) => setQ(e.target.value)} />
-        <select className="flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
-          <option value="">All statuses</option>
-          <option value="draft">Draft</option>
-          <option value="active">Active</option>
-          <option value="paused">Paused</option>
-          <option value="completed">Completed</option>
-          <option value="expired">Expired</option>
-        </select>
-        <select className="flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm" value={filterDiviner} onChange={(e) => setFilterDiviner(e.target.value)}>
-          <option value="">All diviners</option>
-          {diviners.map((d) => (
-            <option key={d.id} value={d.id}>{d.display_name}</option>
-          ))}
-        </select>
+      <div className="flex flex-wrap gap-3 items-center">
+        <div className="w-full sm:w-auto flex-1 min-w-[220px] max-w-sm">
+          <AdminTableSearch
+            defaultValue={currentQ}
+            onSearch={(val) => pushParams({ q: val })}
+            placeholder="Search by name..."
+          />
+        </div>
+        <Select value={filterStatus} onValueChange={(v) => { setFilterStatus(v === "all" ? "" : v); pushParams({ page: "1" }); }}>
+          <SelectTrigger className="w-full sm:w-40">
+            <SelectValue placeholder="All statuses" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All statuses</SelectItem>
+            <SelectItem value="draft">Draft</SelectItem>
+            <SelectItem value="active">Active</SelectItem>
+            <SelectItem value="paused">Paused</SelectItem>
+            <SelectItem value="completed">Completed</SelectItem>
+            <SelectItem value="expired">Expired</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={filterDiviner} onValueChange={(v) => { setFilterDiviner(v === "all" ? "" : v); pushParams({ page: "1" }); }}>
+          <SelectTrigger className="w-full sm:w-48">
+            <SelectValue placeholder="All diviners" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All diviners</SelectItem>
+            {diviners.map((d) => (
+              <SelectItem key={d.id} value={d.id}>{d.display_name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>All Campaigns</CardTitle>
-          <CardDescription>{campaigns.length} result{campaigns.length !== 1 ? "s" : ""}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="flex items-center justify-center py-10">
-              <Loader2 className="size-5 animate-spin text-muted-foreground" />
-            </div>
-          ) : campaigns.length === 0 ? (
-            <p className="py-8 text-center text-sm text-muted-foreground">No campaigns found.</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Diviner</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Destination</TableHead>
-                    <TableHead>Code</TableHead>
-                    <TableHead>Dates</TableHead>
-                    <TableHead>Commission</TableHead>
-                    <TableHead>Affiliates</TableHead>
-                    <TableHead>Conversions</TableHead>
-                    <TableHead>Spent / Budget</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {campaigns.map((c) => (
-                    <TableRow key={c.id}>
-                      <TableCell className="font-medium">
-                        {c.name}
-                        {c.auto_paused_at && (
-                          <div className="flex items-center gap-1 mt-0.5 text-[11px] text-amber-600">
-                            <AlertTriangle className="size-3" /> Auto-paused
-                          </div>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">{c.diviner_name}</TableCell>
-                      <TableCell>
-                        {c.auto_paused_at ? (
-                          <Badge variant="destructive" className="gap-1">
-                            <AlertTriangle className="size-2.5" />Auto-Paused
-                          </Badge>
-                        ) : (
-                          <Badge variant={STATUS_BADGE[c.status] ?? "outline"}>{c.status}</Badge>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <CampaignDestinationBadge destinationType={c.destination_type} />
-                      </TableCell>
-                      <TableCell>
-                        {c.campaign_code ? (
-                          <code className="font-mono text-[11px] text-muted-foreground">{c.campaign_code}</code>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">—</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-sm">
-                        {fmtDate(c.start_date)}
-                        {c.end_date ? ` - ${fmtDate(c.end_date)}` : ""}
-                      </TableCell>
-                      <TableCell>
-                        {c.commission_type === "percentage"
-                          ? `${c.commission_value}%`
-                          : `$${Number(c.commission_value).toFixed(2)}`}
-                      </TableCell>
-                      <TableCell>{c.affiliates_count}</TableCell>
-                      <TableCell>{c.conversions_count}</TableCell>
-                      <TableCell>
-                        {fmtCents(c.spent_cents || 0)}
-                        {c.budget_cap_cents ? <span className="text-xs text-muted-foreground"> / {fmtCents(c.budget_cap_cents)}</span> : null}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <Button variant="ghost" size="icon" className="size-8" title="Edit" onClick={() => openEdit(c)}>
-                            <Pencil className="size-3.5" />
-                          </Button>
-                          <Button variant="ghost" size="icon" className="size-8 text-destructive hover:text-destructive" title="Delete" onClick={() => handleDelete(c.id)}>
-                            <Trash2 className="size-3.5" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
+      <div className="rounded-lg border bg-card">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>
+                <SortHeader label="Name" column="name" currentSort={currentSort} currentDir={currentDir} onSort={handleSort} />
+              </TableHead>
+              <TableHead>Diviner</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Destination</TableHead>
+              <TableHead>Code</TableHead>
+              <TableHead>
+                <SortHeader label="Start Date" column="start_date" currentSort={currentSort} currentDir={currentDir} onSort={handleSort} />
+              </TableHead>
+              <TableHead>
+                <SortHeader label="End Date" column="end_date" currentSort={currentSort} currentDir={currentDir} onSort={handleSort} />
+              </TableHead>
+              <TableHead>
+                <SortHeader label="Commission" column="commission_value" currentSort={currentSort} currentDir={currentDir} onSort={handleSort} />
+              </TableHead>
+              <TableHead className="text-center">Affiliates</TableHead>
+              <TableHead className="text-center">Conversions</TableHead>
+              <TableHead className="text-right">Spent / Budget</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {loading ? (
+              Array.from({ length: pageSize }).map((_, i) => (
+                <TableRow key={i}>
+                  {Array.from({ length: 12 }).map((__, j) => (
+                    <TableCell key={j}>
+                      <div className="h-4 bg-muted animate-pulse rounded w-full" />
+                    </TableCell>
                   ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                </TableRow>
+              ))
+            ) : campaigns.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={12} className="text-center py-12 text-muted-foreground">
+                  No campaigns found.
+                </TableCell>
+              </TableRow>
+            ) : (
+              campaigns.map((c) => (
+                <TableRow key={c.id}>
+                  <TableCell className="font-medium">
+                    {c.name}
+                    {c.auto_paused_at && (
+                      <div className="flex items-center gap-1 mt-0.5 text-[11px] text-amber-600">
+                        <AlertTriangle className="size-3" /> Auto-paused
+                      </div>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground text-sm">{c.diviner_name}</TableCell>
+                  <TableCell>
+                    {c.auto_paused_at ? (
+                      <Badge variant="destructive" className="gap-1">
+                        <AlertTriangle className="size-2.5" />Auto-Paused
+                      </Badge>
+                    ) : (
+                      <Badge variant={STATUS_BADGE[c.status] ?? "outline"}>{c.status}</Badge>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <CampaignDestinationBadge destinationType={c.destination_type} />
+                  </TableCell>
+                  <TableCell>
+                    {c.campaign_code ? (
+                      <code className="font-mono text-[11px] text-muted-foreground">{c.campaign_code}</code>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-sm">{fmtDate(c.start_date)}</TableCell>
+                  <TableCell className="text-sm">{c.end_date ? fmtDate(c.end_date) : <span className="text-muted-foreground">—</span>}</TableCell>
+                  <TableCell>
+                    {c.commission_type === "percentage"
+                      ? `${c.commission_value}%`
+                      : `$${Number(c.commission_value).toFixed(2)}`}
+                  </TableCell>
+                  <TableCell className="text-center">{c.affiliates_count}</TableCell>
+                  <TableCell className="text-center">{c.conversions_count}</TableCell>
+                  <TableCell className="text-right text-sm">
+                    {fmtCents(c.spent_cents || 0)}
+                    {c.budget_cap_cents ? <span className="text-xs text-muted-foreground"> / {fmtCents(c.budget_cap_cents)}</span> : null}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      <Button variant="ghost" size="icon" className="size-8" title="Edit" onClick={() => openEdit(c)}>
+                        <Pencil className="size-3.5" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="size-8 text-destructive hover:text-destructive" title="Delete" onClick={() => handleDelete(c.id)}>
+                        <Trash2 className="size-3.5" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
+      {/* Pagination */}
+      {!loading && total > 0 && (
+        <AdminPagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          total={total}
+          pageSize={pageSize}
+          onPageChange={(p) => pushParams({ page: String(p) })}
+          onPageSizeChange={(s) => {
+            setPageSize(parseInt(s, 10));
+            pushParams({ page: "1" });
+          }}
+          isPending={isPending}
+        />
+      )}
 
       {/* Edit Dialog */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
