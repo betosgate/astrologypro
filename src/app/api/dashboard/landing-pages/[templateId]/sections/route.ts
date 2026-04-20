@@ -23,7 +23,7 @@ async function resolveDiviner() {
   const admin = createAdminClient();
   const { data: diviner } = await admin
     .from("diviners")
-    .select("id")
+    .select("id, username")
     .eq("user_id", user.id)
     .maybeSingle();
   return { user, diviner };
@@ -75,6 +75,14 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
 
   const availableSectionTypes = getAvailableSectionTypes(sections, dbConfig);
 
+  // Fetch the template slug so the client can build preview/live URLs
+  // without having to issue a second round-trip.
+  const { data: template } = await admin
+    .from("service_templates")
+    .select("slug")
+    .eq("id", templateId)
+    .maybeSingle();
+
   return NextResponse.json({
     landing_page: {
       id: page.id,
@@ -84,6 +92,12 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
       draft_version: page.draft_version,
       published_version: page.published_version,
       moderation_status: page.moderation_status,
+    },
+    diviner: {
+      username: diviner.username,
+    },
+    service_template: {
+      slug: template?.slug ?? null,
     },
     sections: sections.map((s) => ({
       id: s.id,

@@ -27,7 +27,7 @@ import { filterVisiblePublicServices, getServiceCategoryLabel } from "@/lib/publ
 import { buildServiceDetailSchemaGraph } from "@/lib/seo/schema-builders";
 import { applyRuntimePricesToServices } from "@/lib/runtime-service-pricing";
 import { canPubliclySellService } from "@/lib/payout-readiness";
-import { getDraftLandingPage } from "@/lib/landing-page-builder";
+import { getDraftLandingPage, getPublishedLandingPage } from "@/lib/landing-page-builder";
 import { SectionRenderer } from "@/components/landing/section-renderer";
 import { PreviewBanner } from "@/components/landing/preview-banner";
 
@@ -51,20 +51,31 @@ async function getDiviner(username: string) {
   return data;
 }
 
-async function getService(divinerId: string, slug: string) {
+async function getService(
+  divinerId: string,
+  slug: string,
+  opts: { allowUnpublished?: boolean } = {},
+) {
   const supabase = createAdminClient();
-  const { data } = await supabase
+  // In owner preview mode we need to see the service even if the diviner
+  // toggled `is_active` off or never finished activating it — the builder
+  // lets them edit and preview without the service being publicly live.
+  let query = supabase
     .from("services")
     .select("*, template_id")
     .eq("diviner_id", divinerId)
-    .eq("slug", slug)
-    .eq("is_active", true)
-    .maybeSingle();
-  if (!data || filterVisiblePublicServices([data]).length === 0) {
+    .eq("slug", slug);
+  if (!opts.allowUnpublished) {
+    query = query.eq("is_active", true);
+  }
+  const { data } = await query.maybeSingle();
+  if (!data) return null;
+  if (!opts.allowUnpublished && filterVisiblePublicServices([data]).length === 0) {
     return null;
   }
 
   // Task 05: enforce template access control — 404 if not enabled+published
+  // In owner preview mode, `is_published` is bypassed so drafts can render.
   if (data.template_id) {
     const { data: ds } = await supabase
       .from("diviner_services")
@@ -72,14 +83,30 @@ async function getService(divinerId: string, slug: string) {
       .eq("diviner_id", divinerId)
       .eq("template_id", data.template_id)
       .maybeSingle();
-    // Missing mapping or not enabled+published → treat as not found (don't reveal existence)
-    if (!ds || !ds.is_enabled || !ds.is_published) {
+    // Missing mapping or not enabled → treat as not found (don't reveal existence)
+    if (!ds || !ds.is_enabled) {
+      return null;
+    }
+    if (!opts.allowUnpublished && !ds.is_published) {
       return null;
     }
   }
 
   const [service] = await applyRuntimePricesToServices(supabase, [data]);
   return service ?? null;
+}
+
+async function isOwningDiviner(divinerId: string): Promise<boolean> {
+  const authClient = await createServerClient();
+  const { data: { user } } = await authClient.auth.getUser();
+  if (!user) return false;
+  const { data } = await createAdminClient()
+    .from("diviners")
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("id", divinerId)
+    .maybeSingle();
+  return !!data;
 }
 
 async function getTestimonials(divinerId: string, limit = 3) {
@@ -196,60 +223,98 @@ export default async function ServiceDetailPage({
   const diviner = await getDiviner(username);
   if (!diviner) notFound();
 
-  const service = await getService(diviner.id, slug);
+  // Preview mode: verify ownership first so we can bypass the `is_published`
+  // check when the logged-in diviner wants to see their own draft.
+  const wantsPreview = preview === "true";
+  const isOwner = wantsPreview ? await isOwningDiviner(diviner.id) : false;
+
+  const service = await getService(diviner.id, slug, { allowUnpublished: isOwner });
   if (!service) notFound();
 
   // ── Preview mode: render draft landing page sections if available ──────────
-  if (preview === "true" && service.template_id) {
-    const authClient = await createServerClient();
-    const { data: { user } } = await authClient.auth.getUser();
+  if (wantsPreview && isOwner && service.template_id) {
+    const draftPage = await getDraftLandingPage(
+      createAdminClient(),
+      diviner.id,
+      service.template_id,
+    );
 
-    // Only the owning diviner can preview draft content
-    const { data: divinerRow } = await createAdminClient()
-      .from("diviners")
-      .select("id")
-      .eq("user_id", user?.id ?? "")
-      .eq("id", diviner.id)
-      .maybeSingle();
+    if (draftPage) {
+      const refParam = ref ? `?ref=${encodeURIComponent(ref)}` : "";
+      const bookUrl = `/${username}/book/${service.slug}${refParam}`;
+      const bookingEnabled = canPubliclySellService(service, diviner);
+      const builderUrl = `/dashboard/landing-pages/${service.template_id}/builder`;
 
-    if (divinerRow) {
-      const draftPage = await getDraftLandingPage(
-        createAdminClient(),
-        diviner.id,
-        service.template_id,
+      return (
+        <>
+          <PreviewBanner templateId={service.template_id} builderUrl={builderUrl} />
+          <div className="min-h-screen bg-cosmos-950">
+            {draftPage.sections
+              .filter((s) => s.is_enabled)
+              .sort((a, b) => a.display_order - b.display_order)
+              .map((section) => (
+                <SectionRenderer
+                  key={section.id}
+                  section={section}
+                  context={{
+                    service,
+                    bookUrl,
+                    bookingEnabled,
+                    testimonials: [],
+                  }}
+                />
+              ))}
+          </div>
+        </>
       );
-
-      if (draftPage) {
-        const refParam = ref ? `?ref=${encodeURIComponent(ref)}` : "";
-        const bookUrl = `/${username}/book/${service.slug}${refParam}`;
-        const bookingEnabled = canPubliclySellService(service, diviner);
-        const builderUrl = `/dashboard/landing-pages/${service.template_id}/builder`;
-
-        return (
-          <>
-            <PreviewBanner templateId={service.template_id} builderUrl={builderUrl} />
-            <div className="min-h-screen bg-cosmos-950">
-              {draftPage.sections
-                .filter((s) => s.is_enabled)
-                .sort((a, b) => a.display_order - b.display_order)
-                .map((section) => (
-                  <SectionRenderer
-                    key={section.id}
-                    section={section}
-                    context={{
-                      service,
-                      bookUrl,
-                      bookingEnabled,
-                      testimonials: [],
-                    }}
-                  />
-                ))}
-            </div>
-          </>
-        );
-      }
     }
-    // If auth fails or no draft page, fall through to the default page
+    // If no draft page exists, fall through to the default page
+  }
+
+  // ── Published builder page: render the diviner's custom sections when the
+  //    landing page builder has a published version. The legacy template
+  //    below only kicks in as a fallback when no builder page exists, so new
+  //    builder pages fully replace the default rendering.
+  if (!wantsPreview && service.template_id) {
+    const publishedPage = await getPublishedLandingPage(
+      createAdminClient(),
+      diviner.id,
+      service.template_id,
+    );
+
+    if (publishedPage && publishedPage.sections.length > 0) {
+      const refParam = ref ? `?ref=${encodeURIComponent(ref)}` : "";
+      const bookUrl = `/${username}/book/${service.slug}${refParam}`;
+      const bookingEnabled = canPubliclySellService(service, diviner);
+      const testimonials = await getTestimonials(diviner.id, 6);
+
+      return (
+        <div className="min-h-screen bg-cosmos-950">
+          {publishedPage.sections
+            .sort((a, b) => a.display_order - b.display_order)
+            .map((section) => (
+              <SectionRenderer
+                key={section.id}
+                section={section}
+                context={{
+                  service,
+                  bookUrl,
+                  bookingEnabled,
+                  testimonials,
+                }}
+              />
+            ))}
+          <PageTracker
+            divinerId={diviner.id}
+            path={`/${username}/services/${slug}`}
+            username={diviner.username}
+            serviceTemplateId={service.template_id ?? undefined}
+            serviceSlug={service.slug}
+          />
+        </div>
+      );
+    }
+    // No published builder page — fall through to the legacy template below
   }
 
   const [testimonials, bookingCount] = await Promise.all([

@@ -286,6 +286,15 @@ export async function publishLandingPage(
     .eq("diviner_id", divinerId)
     .eq("template_id", serviceTemplateId)
     .eq("is_enabled", true);
+
+  // Step 4: belt-and-suspenders — ensure the legacy `services.is_active` flag
+  // is on so the public landing page route is reachable. The admin enable
+  // toggle normally handles this; this is a safety net for drift.
+  await supabase
+    .from("services")
+    .update({ is_active: true })
+    .eq("diviner_id", divinerId)
+    .eq("template_id", serviceTemplateId);
 }
 
 /**

@@ -361,6 +361,12 @@ export function ServiceAssignment({ divinerId }: Props) {
         </Select>
       </div>
 
+      {/* Legend: explains the two toggle columns */}
+      <div className="text-xs text-muted-foreground border border-dashed border-border/60 rounded-md px-3 py-2 flex flex-wrap gap-x-5 gap-y-1">
+        <span><strong className="text-foreground">Left toggle = Active</strong> — whether this diviner can offer this service at all.</span>
+        <span><strong className="text-foreground">Right toggle = Published</strong> — whether the landing page is visible to the public.</span>
+      </div>
+
       {loading ? (
         <div className="space-y-2">
           {Array.from({ length: 5 }).map((_, i) => (
@@ -569,13 +575,19 @@ function ServiceRow({ svc, onEnableToggle, onPublishToggle, onAssign }: ServiceR
   return (
     <div className={`flex items-start gap-3 px-3 py-3 text-sm ${!svc.is_enabled && isAssigned ? "opacity-50" : ""}`}>
       {/* Enable toggle */}
-      <div className="flex flex-col items-center pt-0.5 gap-1 min-w-[40px]">
+      <div className="flex flex-col items-center pt-0.5 gap-1 min-w-[64px]">
         {isAssigned ? (
-          <Switch
-            checked={svc.is_enabled}
-            onCheckedChange={(v) => onEnableToggle(svc, v)}
-            aria-label={`${svc.is_enabled ? "Disable" : "Enable"} ${svc.template_name}`}
-          />
+          <>
+            <Switch
+              checked={svc.is_enabled}
+              onCheckedChange={(v) => onEnableToggle(svc, v)}
+              aria-label={`${svc.is_enabled ? "Disable" : "Enable"} ${svc.template_name}`}
+              title={svc.is_enabled ? "Admin: deactivate this service" : "Admin: activate this service"}
+            />
+            <span className="text-[10px] uppercase tracking-wide text-muted-foreground leading-none">
+              {svc.is_enabled ? "Active" : "Inactive"}
+            </span>
+          </>
         ) : (
           <Button
             variant="outline"
@@ -631,13 +643,19 @@ function ServiceRow({ svc, onEnableToggle, onPublishToggle, onAssign }: ServiceR
       </div>
 
       {/* Publish toggle */}
-      <div className="flex flex-col items-center pt-0.5 min-w-[40px]">
+      <div className="flex flex-col items-center pt-0.5 gap-1 min-w-[72px]">
         {isAssigned && svc.is_enabled ? (
-          <Switch
-            checked={svc.is_published}
-            onCheckedChange={(v) => onPublishToggle(svc, v)}
-            aria-label={`${svc.is_published ? "Unpublish" : "Publish"} ${svc.template_name}`}
-          />
+          <>
+            <Switch
+              checked={svc.is_published}
+              onCheckedChange={(v) => onPublishToggle(svc, v)}
+              aria-label={`${svc.is_published ? "Unpublish" : "Publish"} ${svc.template_name}`}
+              title={svc.is_published ? "Unpublish this landing page" : "Publish this landing page"}
+            />
+            <span className="text-[10px] uppercase tracking-wide text-muted-foreground leading-none">
+              {svc.is_published ? "Published" : "Unpublished"}
+            </span>
+          </>
         ) : (
           <span className="text-muted-foreground text-xs">—</span>
         )}

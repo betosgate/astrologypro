@@ -1,12 +1,15 @@
 import Link from "next/link";
 import Image from "next/image";
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { Star, BadgeCheck, ArrowRight } from "lucide-react";
 import { MarketingHeader } from "@/components/marketing/header";
 import { MarketingFooter } from "@/components/marketing/footer";
 import { getDivinerAvatarUrl } from "@/lib/diviner-images";
 import { getReadingImageUrl } from "@/lib/service-images";
-import { ReadingLeadCapture } from "@/components/marketing/reading-lead-capture";
+import {
+  getReadingVisualConfig,
+  type ReadingVisualConfig,
+} from "@/lib/reading-visuals";
 import { ReadingLeadForm } from "@/components/marketing/reading-lead-form";
 import { ReadingStickyBar } from "@/components/marketing/reading-sticky-bar";
 
@@ -98,6 +101,285 @@ function getLocalImagePath(imageUrl?: string | null): string | null {
   }
 }
 
+const ORBIT_MARKER_POSITIONS = [
+  "left-1/2 top-2 -translate-x-1/2",
+  "right-2 top-1/2 -translate-y-1/2",
+  "bottom-2 left-1/2 -translate-x-1/2",
+  "left-2 top-1/2 -translate-y-1/2",
+] as const;
+
+function visualShellStyle(visual: ReadingVisualConfig, strength = 0.16): CSSProperties {
+  return {
+    borderColor: `${visual.accent}33`,
+    background:
+      `radial-gradient(circle at 58% 38%, ${visual.glow} 0%, transparent 42%), ` +
+      `linear-gradient(135deg, rgba(8,10,18,0.94) 0%, rgba(4,5,8,0.98) 62%, ${visual.secondary}${Math.round(strength * 255).toString(16).padStart(2, "0")} 100%)`,
+  };
+}
+
+function ReadingVisualCore({
+  visual,
+  serviceImage,
+  compact = false,
+  micro = false,
+}: {
+  visual: ReadingVisualConfig;
+  serviceImage: string | null;
+  compact?: boolean;
+  micro?: boolean;
+}) {
+  if (visual.kind === "tarot") {
+    const count = visual.cardCount ?? 3;
+    const gridClass = count >= 12 ? "grid-cols-4" : count >= 10 ? "grid-cols-5" : count >= 7 ? "grid-cols-4" : "grid-cols-3";
+    const cardHeight = micro ? "h-9" : compact ? "h-12" : count >= 10 ? "h-16" : "h-20";
+
+    return (
+      <div className="relative mx-auto w-full max-w-sm">
+        <div
+          className={`grid ${gridClass} gap-2`}
+          aria-hidden="true"
+        >
+          {Array.from({ length: count }).map((_, idx) => (
+            <div
+              key={idx}
+              className={`${cardHeight} rounded-md border bg-black/35 p-2 shadow-[0_10px_30px_rgba(0,0,0,0.25)]`}
+              style={{
+                borderColor: idx % 2 === 0 ? `${visual.accent}66` : `${visual.secondary}55`,
+                transform: idx % 3 === 1 ? "translateY(8px)" : undefined,
+              }}
+            >
+              <div
+                className="mb-2 h-px w-full"
+                style={{ backgroundColor: idx % 2 === 0 ? visual.accent : visual.secondary }}
+              />
+              <div className="flex h-full items-end justify-between gap-1">
+                <span className="text-[10px] font-semibold text-[#f5f0e8]/70">
+                  {String(idx + 1).padStart(2, "0")}
+                </span>
+                <span className="text-[10px] text-[#f5f0e8]/40">
+                  {visual.markers[idx % visual.markers.length]}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div
+          className="pointer-events-none absolute inset-x-6 top-1/2 h-px -translate-y-1/2"
+          style={{ background: `linear-gradient(90deg, transparent, ${visual.accent}, transparent)` }}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className={`relative mx-auto aspect-square w-full ${micro ? "max-w-[9rem]" : compact ? "max-w-[15rem]" : "max-w-[21rem]"}`}>
+      <div className="absolute inset-0 rounded-full border border-white/10" />
+      <div className="absolute inset-8 rounded-full border border-dashed border-white/15" />
+      <div
+        className="absolute inset-16 rounded-full border"
+        style={{ borderColor: `${visual.accent}55` }}
+      />
+      {visual.markers.map((marker, idx) => (
+        <span
+          key={marker}
+          className={`absolute ${ORBIT_MARKER_POSITIONS[idx]} rounded-full border bg-[#050608]/90 px-2 py-1 text-[10px] font-semibold text-[#f5f0e8]/75`}
+          style={{ borderColor: `${visual.accent}44` }}
+        >
+          {marker}
+        </span>
+      ))}
+      <div className="absolute inset-1/2 flex size-32 -translate-x-1/2 -translate-y-1/2 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-black/45">
+        {serviceImage && (
+          <Image
+            src={serviceImage}
+            alt=""
+            aria-hidden="true"
+            fill
+            sizes="8rem"
+            loading="eager"
+            className="object-cover opacity-40"
+          />
+        )}
+        <div className="relative flex items-center justify-center gap-1.5">
+          {(visual.planetImages ?? []).slice(0, 3).map((image, idx) => (
+            <Image
+              key={`${image}-${idx}`}
+              src={image}
+              alt=""
+              aria-hidden="true"
+              width={compact ? 34 : 42}
+              height={compact ? 34 : 42}
+              className="drop-shadow-[0_0_16px_rgba(241,211,122,0.35)]"
+            />
+          ))}
+        </div>
+      </div>
+      <div
+        className="absolute left-1/2 top-1/2 h-px w-[88%] -translate-x-1/2 -translate-y-1/2"
+        style={{ background: `linear-gradient(90deg, transparent, ${visual.secondary}, transparent)` }}
+      />
+      <div
+        className="absolute left-1/2 top-1/2 h-[88%] w-px -translate-x-1/2 -translate-y-1/2"
+        style={{ background: `linear-gradient(180deg, transparent, ${visual.accent}, transparent)` }}
+      />
+    </div>
+  );
+}
+
+function ReadingServiceArtwork({
+  visual,
+  serviceImage,
+  serviceLabel,
+  variant = "hero",
+}: {
+  visual: ReadingVisualConfig;
+  serviceImage: string | null;
+  serviceLabel: string;
+  variant?: "hero" | "feature";
+}) {
+  const isFeature = variant === "feature";
+
+  return (
+    <div
+      className={
+        isFeature
+          ? "relative min-h-[360px] overflow-hidden rounded-2xl border p-5"
+          : "relative min-h-[460px] w-full overflow-hidden rounded-2xl border p-6 shadow-[0_24px_80px_rgba(0,0,0,0.35)]"
+      }
+      style={visualShellStyle(visual, isFeature ? 0.18 : 0.14)}
+    >
+      {serviceImage && (
+        <Image
+          src={serviceImage}
+          alt=""
+          aria-hidden="true"
+          fill
+          sizes={isFeature ? "(max-width: 1024px) 100vw, 38vw" : "32rem"}
+          loading="eager"
+          className="object-cover opacity-25 saturate-125"
+        />
+      )}
+      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(4,5,8,0.2)_0%,rgba(4,5,8,0.86)_100%)]" />
+      <div className="relative flex min-h-[inherit] flex-col">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-[10px] font-semibold uppercase text-[#f5f0e8]/50">
+              {visual.kicker}
+            </p>
+            <p className="mt-1 max-w-52 text-lg font-bold leading-tight text-[#fff8ea]">
+              {visual.title}
+            </p>
+          </div>
+          <span
+            className="rounded-full border px-3 py-1 text-[10px] font-semibold uppercase text-[#f5f0e8]/70"
+            style={{ borderColor: `${visual.accent}44`, backgroundColor: `${visual.accent}12` }}
+          >
+            {visual.motif}
+          </span>
+        </div>
+
+        <div className="my-auto py-7">
+          <ReadingVisualCore visual={visual} serviceImage={serviceImage} compact={isFeature} />
+        </div>
+
+        <div>
+          <p className="text-xs font-semibold uppercase text-[#f5f0e8]/40">
+            {serviceLabel} visual focus
+          </p>
+          <div className="mt-3 grid gap-2 sm:grid-cols-3">
+            {visual.detailLabels.map((label) => (
+              <div
+                key={label}
+                className="rounded-lg border border-white/10 bg-black/25 px-3 py-2 text-xs font-medium text-[#f5f0e8]/75"
+              >
+                {label}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ReadingRelatedArtwork({
+  visual,
+  serviceImage,
+}: {
+  visual: ReadingVisualConfig;
+  serviceImage: string | null;
+}) {
+  return (
+    <div
+      className="relative h-36 overflow-hidden bg-[#0d1117]"
+      style={visualShellStyle(visual, 0.2)}
+    >
+      {serviceImage && (
+        <Image
+          src={serviceImage}
+          alt=""
+          aria-hidden="true"
+          fill
+          sizes="(max-width: 640px) 100vw, 33vw"
+          className="object-cover opacity-25 transition-transform duration-300 group-hover:scale-105"
+        />
+      )}
+      <div className="absolute inset-0 bg-gradient-to-t from-[#06080f] via-[#06080f]/20 to-transparent" />
+      <div className="absolute inset-0 flex items-center justify-center">
+        <ReadingVisualCore visual={visual} serviceImage={null} micro />
+      </div>
+    </div>
+  );
+}
+
+function ReadingMobileArtwork({
+  visual,
+  serviceImage,
+}: {
+  visual: ReadingVisualConfig;
+  serviceImage: string | null;
+}) {
+  return (
+    <div
+      className="relative overflow-hidden rounded-2xl border p-4 md:hidden"
+      style={visualShellStyle(visual, 0.2)}
+    >
+      {serviceImage && (
+        <Image
+          src={serviceImage}
+          alt=""
+          aria-hidden="true"
+          fill
+          sizes="100vw"
+          loading="eager"
+          className="object-cover opacity-20"
+        />
+      )}
+      <div className="relative grid min-h-40 grid-cols-[1fr_9rem] items-center gap-3">
+        <div>
+          <p className="text-[10px] font-semibold uppercase text-[#f5f0e8]/50">
+            {visual.kicker}
+          </p>
+          <p className="mt-2 text-lg font-bold leading-tight text-[#fff8ea]">
+            {visual.motif}
+          </p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {visual.detailLabels.slice(0, 2).map((label) => (
+              <span
+                key={label}
+                className="rounded-lg border border-white/10 bg-black/25 px-2.5 py-1.5 text-[10px] font-medium text-[#f5f0e8]/75"
+              >
+                {label}
+              </span>
+            ))}
+          </div>
+        </div>
+        <ReadingVisualCore visual={visual} serviceImage={null} micro />
+      </div>
+    </div>
+  );
+}
+
 function DivinerCard({
   diviner,
   serviceSlug,
@@ -185,7 +467,6 @@ export function ReadingPageTemplate(props: ReadingPageTemplateProps) {
     discoverLabel,
     divinerSectionTitle,
     divinerSectionSubtitle,
-    emailGuideSubject,
     faqItems,
     methodNotes = [],
     ctaTitle,
@@ -207,6 +488,7 @@ export function ReadingPageTemplate(props: ReadingPageTemplateProps) {
   const serviceLabel = heroTitleBefore.trim().replace(/:$/, "");
   const readingSlug = explicitServiceSlug ?? getReadingSlugFromHref(pageUrl);
   const serviceImage = getReadingImageUrl(readingSlug) ?? getLocalImagePath(heroImage);
+  const readingVisual = getReadingVisualConfig(readingSlug);
   const primaryCtaHref = diviners.length > 0 ? "#diviners" : discoverLink;
   const primaryCtaLabel = diviners.length > 0 ? `Find a ${readerLabel}` : discoverLabel;
   const sessionLabel = serviceType === "tarot" ? "tarot readers" : "readers";
@@ -242,7 +524,7 @@ export function ReadingPageTemplate(props: ReadingPageTemplateProps) {
       </div>
 
       <div className="relative z-10 flex flex-1 flex-col">
-        <MarketingHeader />
+        <MarketingHeader hideNavigation />
 
         <main className="flex-1">
           {/* JSON-LD: BreadcrumbList */}
@@ -345,6 +627,15 @@ export function ReadingPageTemplate(props: ReadingPageTemplateProps) {
                     {heroSubtitle}
                   </p>
 
+                  {!heroVisual && serviceImage && (
+                    <div className="mx-auto mt-8 max-w-sm md:hidden">
+                      <ReadingMobileArtwork
+                        visual={readingVisual}
+                        serviceImage={serviceImage}
+                      />
+                    </div>
+                  )}
+
                   {/* Stats row */}
                   {isImmersive ? (
                     <div className="mt-9 grid max-w-2xl overflow-hidden rounded-lg border border-white/[0.10] bg-[#080806]/70 text-left backdrop-blur sm:grid-cols-3">
@@ -391,7 +682,7 @@ export function ReadingPageTemplate(props: ReadingPageTemplateProps) {
                       href="#free-guide"
                       className="inline-flex h-12 items-center gap-2 rounded-lg border border-[#c9a84c]/25 px-6 text-sm font-semibold text-[#e2c97e] transition-colors hover:border-[#c9a84c]/45 hover:bg-[#c9a84c]/10"
                     >
-                      Get the Guide
+                      Share Details
                     </a>
                   </div>
 
@@ -400,12 +691,20 @@ export function ReadingPageTemplate(props: ReadingPageTemplateProps) {
                     <div className={isImmersive ? "mb-3 flex max-w-md items-center gap-3 md:max-w-sm" : "mb-3 flex items-center gap-3"}>
                       <div className="h-px flex-1 bg-white/10" aria-hidden="true" />
                       <span className="text-xs uppercase tracking-widest text-[#f5f0e8]/40">
-                        or get a free reading guide
+                        or add details before booking
                       </span>
                       <div className="h-px flex-1 bg-white/10" aria-hidden="true" />
                     </div>
                     <div className="mx-auto max-w-sm md:mx-0">
-                      <ReadingLeadCapture subject={emailGuideSubject} />
+                      <a
+                        href="#free-guide"
+                        className="inline-flex min-h-12 w-full items-center justify-center rounded-lg border border-[#c9a84c]/30 bg-[#c9a84c]/10 px-5 py-3 text-center text-sm font-semibold text-[#f1d37a] transition-colors hover:border-[#c9a84c]/50 hover:bg-[#c9a84c]/15"
+                      >
+                        Share DOB, Location, Timezone &amp; Context
+                      </a>
+                      <p className="mt-2 text-center text-xs leading-relaxed text-[#b8bcd0]/40 md:text-left">
+                        Saved privately with your lead before reader matching.
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -417,19 +716,11 @@ export function ReadingPageTemplate(props: ReadingPageTemplateProps) {
                   </div>
                 ) : serviceImage && (
                   <div className="hidden md:block">
-                    <div className="relative">
-                      <div className="absolute inset-0 rounded-2xl bg-[#c9a84c]/20 blur-2xl" />
-                      <Image
-                        src={serviceImage}
-                        alt=""
-                        aria-hidden="true"
-                        width={320}
-                        height={420}
-                        priority
-                        sizes="16rem"
-                        className="relative h-[420px] w-64 rounded-2xl border border-[#c9a84c]/20 object-cover shadow-[0_0_60px_rgba(201,168,76,0.15)]"
-                      />
-                    </div>
+                    <ReadingServiceArtwork
+                      visual={readingVisual}
+                      serviceImage={serviceImage}
+                      serviceLabel={serviceLabel}
+                    />
                   </div>
                 )}
               </div>
@@ -468,28 +759,12 @@ export function ReadingPageTemplate(props: ReadingPageTemplateProps) {
           {!hideServiceVisualCta && (
             <section className="px-4 py-14 sm:px-6 lg:px-8">
               <div className="mx-auto grid max-w-5xl items-center gap-10 lg:grid-cols-[0.9fr_1.1fr]">
-                <div className="relative min-h-[320px] overflow-hidden rounded-2xl border border-[#c9a84c]/10 bg-[#0d1117]/70">
-                  {serviceImage ? (
-                    <Image
-                      src={serviceImage}
-                      alt={`${serviceLabel} reading visual`}
-                      fill
-                      sizes="(max-width: 1024px) 100vw, 38vw"
-                      className="object-cover"
-                    />
-                  ) : (
-                    <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_35%,rgba(201,168,76,0.18)_0%,transparent_65%)]" />
-                  )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#06080f] via-[#06080f]/35 to-transparent" />
-                  <div className="absolute bottom-5 left-5 right-5">
-                    <p className="text-xs font-semibold uppercase tracking-widest text-[#c9a84c]/80">
-                      {serviceType === "tarot" ? "Spread Focus" : "Chart Focus"}
-                    </p>
-                    <p className="mt-1 max-w-sm text-xl font-bold text-[#f5f0e8]">
-                      {serviceLabel} Reading
-                    </p>
-                  </div>
-                </div>
+                <ReadingServiceArtwork
+                  visual={readingVisual}
+                  serviceImage={serviceImage}
+                  serviceLabel={serviceLabel}
+                  variant="feature"
+                />
 
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-widest text-[#c9a84c]/70">
@@ -661,16 +936,15 @@ export function ReadingPageTemplate(props: ReadingPageTemplateProps) {
                       </span>
                     </div>
                     <h2 className="text-xl font-bold text-[#f5f0e8]">
-                      Get a Free{" "}
-                      {serviceType === "astrology" ? "Astrology" : "Tarot"} Reading Guide
+                      Share Your Reading Details
                       <span className="ml-2 inline-block rounded-full bg-[#c9a84c]/15 px-2 py-0.5 text-xs font-semibold text-[#c9a84c]">
-                        Free
+                        Private
                       </span>
                     </h2>
                     <p className="mt-2 text-sm text-[#b8bcd0]/55">
                       {serviceType === "astrology"
-                        ? "Share your birth details and we'll send a personalised guide for your " + serviceLabel + " reading."
-                        : "Tell us your question and we'll match you with the right tarot reader for " + serviceLabel + "."}
+                        ? "Add your date of birth, birth location, timezone, and focus area so the right astrologer can prepare for your " + serviceLabel + "."
+                        : "Add your question, timezone, and optional birth context so the right tarot reader can prepare for your " + serviceLabel + "."}
                     </p>
                   </div>
 
@@ -906,7 +1180,9 @@ export function ReadingPageTemplate(props: ReadingPageTemplateProps) {
                 </p>
                 <div className="grid gap-4 sm:grid-cols-3">
                   {relatedReadings.map((r) => {
-                    const relatedImage = getReadingImageUrl(getReadingSlugFromHref(r.href));
+                    const relatedSlug = getReadingSlugFromHref(r.href);
+                    const relatedImage = getReadingImageUrl(relatedSlug);
+                    const relatedVisual = getReadingVisualConfig(relatedSlug);
 
                     return (
                       <Link
@@ -914,22 +1190,7 @@ export function ReadingPageTemplate(props: ReadingPageTemplateProps) {
                         href={r.href}
                         className="group overflow-hidden rounded-2xl border border-white/[0.07] bg-white/[0.02] transition-colors hover:border-[#c9a84c]/30 hover:bg-white/[0.04]"
                       >
-                        <div className="relative h-36 overflow-hidden bg-[#0d1117]">
-                          {relatedImage ? (
-                            <Image
-                              src={relatedImage}
-                              alt=""
-                              fill
-                              sizes="(max-width: 640px) 100vw, 33vw"
-                              className="object-cover opacity-85 transition-transform duration-300 group-hover:scale-105"
-                            />
-                          ) : (
-                            <div className="flex h-full items-center justify-center text-4xl" aria-hidden="true">
-                              {r.icon}
-                            </div>
-                          )}
-                          <div className="absolute inset-0 bg-gradient-to-t from-[#06080f] via-transparent to-transparent" />
-                        </div>
+                        <ReadingRelatedArtwork visual={relatedVisual} serviceImage={relatedImage} />
                         <div className="flex items-center gap-3 p-4">
                           <span className="text-2xl shrink-0" aria-hidden="true">{r.icon}</span>
                           <span className="text-sm font-semibold text-[#f5f0e8] transition-colors group-hover:text-[#c9a84c]">

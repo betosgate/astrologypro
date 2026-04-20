@@ -1,10 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAdminUser } from "@/lib/admin-auth";
+import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
-  const user = await getAdminUser();
+  // Geocoding is not sensitive — it's a server-side proxy to Geoapify so we
+  // don't leak the API key. Originally this was admin-gated, but the toolkit
+  // session view (src/app/admin/horoscope/session/[bookingId]) lets diviners
+  // fill in missing birth cities for their own bookings. Diviners are
+  // authenticated but NOT admins, so relax the check to "any authenticated
+  // user." The parent URL prefix (/api/admin/*) already rejects unauthenticated
+  // requests at the middleware layer (src/lib/supabase/middleware.ts).
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();

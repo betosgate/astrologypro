@@ -42,6 +42,16 @@ const nextConfig: NextConfig = {
     root: path.resolve(__dirname),
   },
 
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "*.supabase.co",
+        pathname: "/storage/v1/object/public/**",
+      },
+    ],
+  },
+
   // Ensure the Geist Bold TTF is bundled with the image-compositing Lambda.
   // readFileSync on a non-imported file is not auto-traced by Next.js bundler,
   // so without this the font file is absent at runtime on Vercel and text is blank.
