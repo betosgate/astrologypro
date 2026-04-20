@@ -148,7 +148,7 @@ export default async function JupiterReturnPage() {
       heroImage={getReadingOgImageUrl("jupiter-return")}
       heroTitleBefore="Your Jupiter Return:"
       heroTitleGradient="A Cycle of Abundance Begins"
-      heroSubtitle="Every ~12 years, Jupiter returns to its birth position — opening a new chapter of expansion, opportunity, and abundance. A Jupiter Return reading reveals exactly where that growth is directed in your unique chart and how to align with it."
+      heroSubtitle="Every ~12 years, Jupiter returns to its birth position — opening a new chapter of expansion, opportunity, and abundance. A Jupiter Return reading clarifies where that growth is directed in your unique chart and how to align with it."
       heroStats={[
         { value: "~Every 12 Years", label: "Jupiter Returns" },
         { value: "New 12-Year Chapter", label: "Begins at Each Return" },
@@ -157,7 +157,7 @@ export default async function JupiterReturnPage() {
       whatIsTitle="What Is a Jupiter Return?"
       whatIsParagraphs={[
         "Jupiter, the planet of growth, luck, wisdom, and abundance, completes its orbit around the Sun approximately every 12 years. When it returns to the same zodiac position it occupied at your birth, you experience a Jupiter Return — a personal renewal of your potential and a reset of your 12-year cycle of expansion.",
-        "Unlike Saturn's demanding energy, Jupiter brings gifts: expanded opportunities, renewed optimism, and a broader sense of what is possible. Each return opens a new chapter — in career, relationships, learning, and spiritual growth — and the house Jupiter occupies in your natal chart reveals exactly where that expansion is directed.",
+        "Unlike Saturn's demanding energy, Jupiter brings gifts: expanded opportunities, renewed optimism, and a broader sense of what is possible. Each return opens a new chapter — in career, relationships, learning, and spiritual growth — and the house Jupiter occupies in your natal chart clarifies where that expansion is directed.",
         "The depth of what you experience depends on alignment. An astrologer reads your Jupiter placement, the transiting return chart, and the aspects forming to other planets — giving you a precise map of where to invest your energy, which doors are genuinely opening, and how to avoid Jupiter's shadow of overreach, overcommitment, or scattered focus.",
       ]}
       revealsItems={[
@@ -183,6 +183,23 @@ export default async function JupiterReturnPage() {
       divinerSectionTitle="Find Your Jupiter Return Guide"
       divinerSectionSubtitle="These practitioners specialize in Jupiter Return readings"
       emailGuideSubject="your Jupiter return reading"
+      methodNotes={[
+        {
+          label: "Technique",
+          title: "A new 12-year Jupiter cycle",
+          desc: "Your astrologer reads natal Jupiter, the return chart, house activation, and any retrograde repeat hits to clarify where growth is opening.",
+        },
+        {
+          label: "Best For",
+          title: "Expansion with discernment",
+          desc: "Use it for education, publishing, travel, business growth, faith, mentorship, and opportunities that need a bigger vision without overreach.",
+        },
+        {
+          label: "Prepare",
+          title: "Name the doors already opening",
+          desc: "Bring the offers, ambitions, studies, trips, or risks you are considering so the reading can distinguish real growth from scattered optimism.",
+        },
+      ]}
       faqItems={[
         { q: "What is a Jupiter Return?", a: "A Jupiter Return occurs approximately every 12 years when Jupiter transits back to the zodiac sign and degree it occupied at the time of your birth. It marks the beginning of a new cycle of growth, expansion, and opportunity in your life." },
         { q: "How often does a Jupiter Return happen?", a: "Jupiter takes about 11.86 years to orbit the Sun, so you will experience a Jupiter Return roughly every 12 years — at ages 12, 24, 35–36, 47–48, 59–60, 71–72, and so on throughout your life." },
@@ -191,7 +208,7 @@ export default async function JupiterReturnPage() {
         { q: "What makes a Jupiter Return reading different from a general natal reading?", a: "A Jupiter Return reading focuses specifically on the current 12-year cycle being activated — the new chapter Jupiter is opening. The astrologer examines Jupiter's natal placement, the transiting return chart, and how it interacts with your current life circumstances." },
       ]}
       ctaTitle="Ready to harness your Jupiter Return?"
-      ctaBody="Work with a certified astrologer to understand exactly where Jupiter's abundance is flowing in your chart — and how to align your actions with this cosmic window."
+      ctaBody="Work with a certified astrologer to understand where Jupiter's abundance is flowing in your chart — and how to align your actions with this growth window."
       ctaButtonLabel="Browse All Astrologers"
       relatedReadings={[
         { title: "Saturn Return Reading", href: "/readings/saturn-return", icon: "🪐" },

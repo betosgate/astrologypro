@@ -33,7 +33,7 @@ export function ReadingStickyBar({ serviceLabel, startingPrice, discoverLink }: 
           {" · "}Starting from ${startingPrice}
         </p>
         <a
-          href="#diviners"
+          href={discoverLink}
           className="inline-flex items-center gap-1.5 rounded-lg bg-[#c9a84c] px-4 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-[#e2c97e]"
         >
           Book a Reading <ArrowRight className="size-3.5" aria-hidden="true" />

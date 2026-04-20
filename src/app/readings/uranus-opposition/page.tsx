@@ -173,6 +173,23 @@ export default async function UranusOppositionPage() {
       divinerSectionTitle="Find Your Uranus Opposition Astrologer"
       divinerSectionSubtitle="These practitioners specialize in mid-life transits and outer planet readings"
       emailGuideSubject="your Uranus opposition reading"
+      methodNotes={[
+        {
+          label: "Technique",
+          title: "Uranus opposite natal Uranus",
+          desc: "The astrologer studies the Uranus half-return alongside Saturn, Neptune, and natal house themes to locate the real pressure for change.",
+        },
+        {
+          label: "Best For",
+          title: "Midlife reinvention without chaos",
+          desc: "Use it when restlessness, career pivots, relationship shifts, or identity questions are asking for freedom without reactive damage.",
+        },
+        {
+          label: "Prepare",
+          title: "Name what feels too small now",
+          desc: "Bring the roles, routines, obligations, or relationships that feel constricting so your reader can separate authentic liberation from impulse.",
+        },
+      ]}
       faqItems={[
         { q: "How do I know if I'm in my Uranus Opposition?", a: "The Uranus Opposition typically peaks between ages 40 and 44, though the exact timing depends on your birth year and Uranus's position. If you're in that age range and experiencing unusual restlessness, a desire to break free from established patterns, sudden changes, or a strong inner push toward reinvention — you're likely in it. An astrologer can calculate the exact timing from your birth data." },
         { q: "Is the Uranus Opposition always disruptive?", a: "Not inevitably — but it is always significant. People who have already been living in alignment with their authentic nature often experience it as exciting expansion. People who have built lives heavily at odds with their core truth tend to experience more disruption. The more suppression, the more explosive the release tends to be." },
