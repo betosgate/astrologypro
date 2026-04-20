@@ -645,7 +645,6 @@ export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Pro
                                     src={`/walkthrough/screenshots/${roleSlug}/${screen.name}.png`}
                                     alt={`${roleTitle} - ${screen.label}`}
                                     fill
-                                    unoptimized
                                     className="object-cover object-top transition-transform duration-500 group-hover:scale-[1.03]"
                                     sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                                     loading={globalIndex < 6 ? "eager" : "lazy"}
@@ -780,7 +779,6 @@ export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Pro
                   src={`/walkthrough/screenshots/${roleSlug}/${current.name}.png`}
                   alt={`${roleTitle} - ${current.label}`}
                   fill
-                  unoptimized
                   className="object-contain"
                   sizes="100vw"
                   quality={95}
@@ -894,7 +892,6 @@ export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Pro
                     src={`/walkthrough/screenshots/${roleSlug}/${screen.name}.png`}
                     alt={screen.label}
                     fill
-                    unoptimized
                     className="object-cover object-top"
                     sizes="80px"
                     loading="lazy"

@@ -44,7 +44,6 @@ export function FeatureCard({ feature }: FeatureCardProps) {
                   src={`/walkthrough/screenshots/${src}.png`}
                   alt={`${feature.title} screenshot ${idx + 1}`}
                   fill
-                  unoptimized
                   className="object-cover object-top"
                   sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                 />

@@ -67,8 +67,12 @@ export const DEFAULT_FORM: TemplateFormData = {
   is_active: true,
 };
 
+// Radix Select does not accept an empty-string value, so use a sentinel for
+// "no trigger event" and translate to/from empty string at the boundary.
+const TRIGGER_EVENT_NONE = "__none__";
+
 const TRIGGER_EVENTS = [
-  { value: "", label: "None" },
+  { value: TRIGGER_EVENT_NONE, label: "None" },
   { value: "solar_return", label: "Solar Return" },
   { value: "jupiter_return", label: "Jupiter Return" },
   { value: "saturn_return", label: "Saturn Return" },
@@ -280,8 +284,13 @@ export function TemplateForm({ initialData, templateId, divinerCount = 0 }: Temp
           <div className="space-y-1.5">
             <Label>Trigger Event</Label>
             <Select
-              value={form.trigger_event}
-              onValueChange={(v) => setForm((f) => ({ ...f, trigger_event: v }))}
+              value={form.trigger_event || TRIGGER_EVENT_NONE}
+              onValueChange={(v) =>
+                setForm((f) => ({
+                  ...f,
+                  trigger_event: v === TRIGGER_EVENT_NONE ? "" : v,
+                }))
+              }
             >
               <SelectTrigger>
                 <SelectValue placeholder="None" />
@@ -406,14 +415,19 @@ export function TemplateForm({ initialData, templateId, divinerCount = 0 }: Temp
           <div className="space-y-1.5">
             <Label>Icon</Label>
             <Select
-              value={form.icon_name}
-              onValueChange={(v) => setForm((f) => ({ ...f, icon_name: v }))}
+              value={form.icon_name || TRIGGER_EVENT_NONE}
+              onValueChange={(v) =>
+                setForm((f) => ({
+                  ...f,
+                  icon_name: v === TRIGGER_EVENT_NONE ? "" : v,
+                }))
+              }
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select icon" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">None</SelectItem>
+                <SelectItem value={TRIGGER_EVENT_NONE}>None</SelectItem>
                 {ICON_OPTIONS.map((icon) => (
                   <SelectItem key={icon} value={icon}>{icon}</SelectItem>
                 ))}
