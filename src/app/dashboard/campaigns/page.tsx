@@ -130,6 +130,8 @@ interface CampaignRow {
   startDate: string | null;
   endDate: string | null;
   affiliates: number;
+  clicks: number;
+  uniqueClicks: number;
   conversions: number;
   revenue: number;
   commissionSpent: number;
@@ -413,6 +415,8 @@ function AnalyticsTabContent() {
                     <TableHead>Status</TableHead>
                     <TableHead>Dates</TableHead>
                     <TableHead>Affiliates</TableHead>
+                    <TableHead title="Total human clicks on the campaign's /r/ link">Clicks</TableHead>
+                    <TableHead title="Unique visitors in a 24h window">Unique</TableHead>
                     <TableHead>
                       <button
                         className="flex items-center gap-1 hover:text-foreground"
@@ -465,6 +469,8 @@ function AnalyticsTabContent() {
                         {fmtReportDate(camp.startDate)} - {fmtReportDate(camp.endDate)}
                       </TableCell>
                       <TableCell>{camp.affiliates}</TableCell>
+                      <TableCell className="font-medium">{camp.clicks.toLocaleString()}</TableCell>
+                      <TableCell className="text-muted-foreground">{camp.uniqueClicks.toLocaleString()}</TableCell>
                       <TableCell>{camp.conversions.toLocaleString()}</TableCell>
                       <TableCell className="font-medium">{fmtCurrency(camp.revenue)}</TableCell>
                       <TableCell>{fmtCurrency(camp.commissionSpent)}</TableCell>

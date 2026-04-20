@@ -18,14 +18,14 @@ export async function generateMetadata(): Promise<Metadata> {
         "Every two years, Mars returns to its natal position — beginning a new cycle of drive, ambition, and assertive energy. A Mars Return reading reveals the themes, battles, and momentum that will define your next chapter of action.",
       type: "website",
       url: `${APP_URL}/readings/mars-return`,
-      images: [{ url: "https://astrologypro.com/images/home/og-card.jpg", width: 1200, height: 630, alt: "Mars Return Readings" }],
+      images: [{ url: getReadingOgImageUrl("mars-return"), width: 1200, height: 630, alt: "Mars Return Readings" }],
     },
     twitter: {
       card: "summary_large_image",
       title: "Mars Return Readings | AstrologyPro",
       description:
         "Every two years, Mars returns to its natal position — beginning a new cycle of drive, ambition, and assertive energy. A Mars Return reading reveals the themes, battles, and momentum that will define your next chapter of action.",
-      images: ["https://astrologypro.com/images/home/og-card.jpg"],
+      images: [getReadingOgImageUrl("mars-return")],
     },
   };
 }

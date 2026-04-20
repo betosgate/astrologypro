@@ -119,6 +119,16 @@ export async function POST(
         continue;
       }
 
+      // Mirror is_enabled onto the legacy services.is_active gate so the
+      // public landing page route becomes reachable / hidden in sync.
+      if ("is_enabled" in patch) {
+        await admin
+          .from("services")
+          .update({ is_active: patch.is_enabled === true })
+          .eq("diviner_id", divinerId)
+          .eq("template_id", templateId);
+      }
+
       if (ds) {
         await writeAuditLog(admin, {
           diviner_id:          divinerId,

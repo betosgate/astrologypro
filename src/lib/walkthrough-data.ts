@@ -48,6 +48,7 @@ import {
   Activity,
   type LucideIcon,
   TrendingUp,
+  Shuffle,
 } from "lucide-react";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -176,6 +177,14 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
         cards: [
           { title: "Orders", description: "Consolidated platform sales log", href: "/admin/orders", icon: ShoppingBag, status: "live" },
           { title: "Payments", description: "Gateway tracking and payouts", href: "/admin/payments", icon: CreditCard, status: "live" },
+        ],
+      },
+      {
+        groupLabel: "Tools",
+        cards: [
+          { title: "Tarot Cards", description: "Master library of 78 archetypal symbols", href: "/admin/tarot/cards", icon: Layers, status: "live" },
+          { title: "Tarot Spreads", description: "Geometric layouts and position patterns", href: "/admin/tarot/spreads", icon: Shuffle, status: "live" },
+          { title: "Tarot Practice", description: "Interactive 3D reading simulator", href: "/admin/tarot/readings", icon: Sparkles, status: "live" },
         ],
       },
     ],
@@ -4459,17 +4468,170 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
 
       // Support
       { name: "sla_dashboard", label: "SLA Dashboard", description: "Monitoring system speed and ticket response times.", group: "Support" },
-      { 
-        name: "tarot_cards", 
-        label: "Tarot Cards", 
-        description: "Detailed meaning config for every card.", 
+
+      // -----------tarot suite---------//
+ {
+  name: "tarot_card_form",
+  label: "Add Tarot Card: Meaning, Image & Spread Assignment",
+  description: "The creation form for adding a new tarot card into the deck library with meanings, artwork, and spread availability.",
+  group: "Tools",
+  subModule: "Tarot Cards",
+  purpose: "This screen is used to create a new tarot card record for the Tarot deck. Admins define the card’s identity, arcana type, description, display order, upright meaning, reversed meaning, and visual artwork. The Related Spreads section connects the card to specific tarot layouts, deciding where this card can appear during Tarot Practice. Once the card is marked Active and saved, it becomes available for the selected spread simulations and future reading workflows.",
+  bullets: [
+    "🏷️ Card Identity — Enter the card name, arcana type, card number, and description so the system can classify the card correctly inside the deck.",
+    "📊 Display Priority — Set the card’s priority to control how it is ordered in the Tarot Cards list and related admin views.",
+    "🔮 Upright Meaning — Add the interpretation used when the card appears in its direct or upright position during a reading.",
+    "🔁 Reversed Meaning — Add the alternate interpretation used when the card appears reversed, blocked, delayed, or inverted.",
+    "🖼️ Card Image — Provide an external image URL or upload artwork so the card has a visual face inside Tarot Practice.",
+    "📐 Related Spreads — Select the tarot spreads where this card is allowed to appear. A card linked to a spread becomes part of that spread’s draw pool.",
+    "✅ Active Status — Keep the card Active when it is ready for use, or deactivate it to keep it stored without allowing it into practice readings.",
+    "💾 Create Card Action — Save the completed card so it becomes part of the managed tarot deck library."
+  ]
+},
+
+     {
+  name: "tarot_card_related_spreads_v1",
+  label: "Related Spreads: Control Where This Card Appears",
+  description: "The spread assignment section that decides which tarot layouts can use this card during practice readings.",
+  group: "Tools",
+  subModule: "Tarot Cards",
+  purpose: "This section links the tarot card to one or more spread layouts. When a spread is selected, this card becomes eligible to appear when that spread is used in Tarot Practice. If a spread is not selected, the card remains saved in the deck library but will not be included in that spread’s card pool. This gives admins control over which cards are available for simple, complex, relationship, Celtic Cross, astrological, or other specialized reading formats.",
+  bullets: [
+    "📌 Spread Eligibility — Check a spread to allow this card to appear when that spread is practiced.",
+    "🧩 Controlled Card Pools — Limit cards to specific spreads when certain cards should only support certain reading styles.",
+    "✨ Select All — Use Select All when the card should be available across every tarot spread in the system.",
+    "🚫 Unchecked Spreads — If a spread is left unchecked, this card will not be drawn in that spread’s practice session.",
+    "🔄 Practice Connection — Tarot Practice reads these spread assignments to know which active cards can be shuffled and revealed.",
+    "✅ Final Review — Before creating the card, confirm the intended spreads are selected and the card is marked Active."
+  ]
+},
+
+// ----------tarot cards list & management---------//
+{
+    "name": "tarot_cards_list",
+    "label": "Tarot Cards: Deck Library & Card Management",
+    "description": "The main admin screen for searching, reviewing, organizing, and maintaining tarot cards used across tarot features and guided readings.",
+    "group": "Tools",
+    "subModule": "Tarot Cards",
+    "purpose": "This screen gives admins a complete working view of the tarot card library. It is used to manage the full card deck by showing each card's name, arcana type, suit, priority, status, last updated date, and created date in one structured table. Admins can search for a specific card, filter by status, narrow results by created or updated date, refresh the current list, move through multiple pages, and add a new tarot card. This page helps keep the tarot system clean, organized, and ready for use in tarot readings, spreads, learning modules, and interpretation workflows.", 
+    "bullets": [
+      "🔍 Deck Search Workspace — Quickly locate any tarot card by using the card-name search field instead of manually scanning the full deck.",
+      "✅ Status-Based Review — Filter the deck by status to check which cards are currently active and which may need review or reactivation.",
+      "📅 Lifecycle Date Filtering — Use created and updated date filters to audit recently added cards or cards modified within a specific timeframe.",
+      "🃏 Full Card Inventory Table — Review the core management data for every tarot card in one structured list.",
+      "🏷️ Arcana Classification — Distinguish between Major Arcana and Minor Arcana cards for proper deck structure and interpretation grouping.",
+      "♣️ Suit Visibility — See suit assignment for Minor Arcana cards, such as Cups, Wands, Swords, or Disks, while Major Arcana cards remain suitless.",
+      "📊 Priority Management — Use the priority column to understand or maintain display order, system weight, or deck sequencing logic.",
+      "🟢 Status Badge Clarity — Instantly see whether a card is active and ready for use inside tarot experiences.",
+      "🕒 Maintenance Tracking — Review Updated On and Created On fields to monitor deck changes and content freshness.",
+      "🔄 Refresh Control — Reload the latest tarot card data when new cards are added or existing cards are updated.",
+      "➕ Add Card Action — Create a new tarot card record from the library screen when expanding or maintaining the tarot deck.",
+      "⚙️ Row-Level Actions — Use the action menu for per-card management such as editing, reviewing, activating, deactivating, or removing card records.",
+      "📄 Pagination Support — Navigate large tarot inventories through paged results and page-size controls for easier deck maintenance."
+    ]
+  },
+  {
+    "name": "tarot_cards_filters_v3",
+    "label": "Tarot Cards: Search, Status & Date Filters",
+    "description": "The filtering section used to narrow the tarot card library by name, status, created date, or updated date.",
+    "group": "Tools",
+    "subModule": "Tarot Cards",
+    "purpose": "This section helps admins quickly find the exact tarot card records they want to inspect or update. Instead of browsing the full library manually, admins can search by card name, filter by active status, and apply created or updated date ranges to isolate cards added or changed during a specific period. This makes deck review faster, more accurate, and easier to manage at scale. It is especially useful when maintaining a large library, auditing card readiness, or checking content updates before tarot modules go live.", 
+    "bullets": [
+      "🔍 Search By Card Name — Type a full or partial tarot card name to instantly narrow the result list.",
+      "✅ Search By Status — Filter cards by availability state, such as All or Active, to review system-ready records.",
+      "📅 Created Start Filter — Show cards created on or after a selected date.",
+      "📅 Created End Filter — Show cards created on or before a selected date.",
+      "🕒 Updated Start Filter — Show cards updated on or after a selected date.",
+      "🕒 Updated End Filter — Show cards updated on or before a selected date.",
+      "🧭 Faster Deck Review — Combine multiple filters to isolate a small and relevant subset of tarot cards.",
+      "🧹 Reset-Friendly Workflow — Clearing filters restores the full tarot card library view."
+    ]
+  },
+  {
+    "name": "tarot_cards_table_v1",
+    "label": "Tarot Cards: Card Inventory Table",
+    "description": "The central management table where each tarot card record is listed with its core library details.",
+    "group": "Tools",
+    "subModule": "Tarot Cards",
+    "purpose": "This table is the main review area of the tarot card library. Each row represents one tarot card and shows the key data needed to confirm whether the card is correctly categorized, prioritized, active, and recently maintained. The table supports selection, sorting, and row-level actions, allowing admins to work with both individual cards and larger card sets. It is designed to give a clear operational overview of the tarot deck and support ongoing library maintenance.", 
+    "bullets": [
+      "☑️ Row Selection — Select individual card rows for possible review or bulk workflows.",
+      "🃏 Name Column — Displays the tarot card title, such as The Fortune, The Tower, The Star, or The Sun.",
+      "🏷️ Arcana Column — Shows whether the card belongs to Major Arcana or Minor Arcana.",
+      "♣️ Suit Column — Displays the card suit for Minor Arcana cards when applicable.",
+      "📊 Priority Column — Shows the card's numeric order or ranking inside the tarot library.",
+      "🟢 Status Column — Indicates whether the card is currently active and available for use.",
+      "🕒 Updated On Column — Shows the latest timestamp when the card record was modified.",
+      "📅 Created On Column — Shows when the card record was first added to the system.",
+      "⚙️ Actions Column — Opens the per-card action menu for management tasks.",
+      "↕️ Sortable Headers — Column labels support sorting to help admins organize the table by important fields."
+    ]
+  },
+  // {
+  //   "name": "tarot_cards_pagination_v1",
+  //   "label": "Tarot Cards: Pagination & Page Size Controls",
+  //   "description": "The navigation area used to browse the tarot card library page by page.",
+  //   "group": "Tools",
+  //   "subModule": "Tarot Cards",
+  //   "purpose": "This section supports browsing through a larger tarot card library without loading everything into a single long list. It shows the currently visible record range, lets admins choose how many cards to show per page, and provides numbered page navigation. This improves readability and keeps the library manageable when the deck contains many records or custom card additions.", 
+  //   "bullets": [
+  //     "📄 Visible Range Indicator — Shows how many tarot cards are currently visible out of the total result count.",
+  //     "🔢 Page Size Selector — Allows admins to choose how many cards should appear per page.",
+  //     "➡️ Numbered Page Navigation — Move between result pages using page buttons and next or previous controls.",
+  //     "📚 Large Library Support — Keeps large tarot collections easy to browse and maintain."
+  //   ]
+  // },
+
+
+
+
+
+      // ------------tarot spreads---------//
+      {
+        name: "tarot_spreads",
+        label: "Tarot Spreads: Layout Master Directory",
+        description: "A centralized directory for managing the geometric patterns and interpretive maps used in readings.",
         group: "Tools",
-        purpose: "The data repository for the platform's Tarot engine meanings, attributes, and esoteric symbolism.",
+        subModule: "Tarot Spreads",
+        purpose: "This screen manages the 'Maps' of the tarot experience. While cards provide the symbols, Spreads provide the context. This directory allows admins to oversee every available reading layout, from simple 3-card snapshots to complex 12-card astrological cycles. It provides a high-level view of how many cards are required for each spread and their current activation status, ensuring the 'Consultation Library' is balanced and diverse.",
         bullets: [
-          "Individual card meaning and keyword mapping",
-          "Visual asset management for tarot decks",
-          "Esoteric correspondences (Astrology, Kabbalah)",
-          "Dynamic spread interpretation logic"
+          "🗺️ Layout Directory — A consolidated view of all available reading patterns in the system, sorted by name and status.",
+          "📐 Card Counts — Quickly identify the complexity of a spread by viewing exactly how many cards are required for that specific layout.",
+          "📊 Active Status — Control which spreads are available for use in the Practice simulator or public interfaces.",
+          "🖼️ Geometry Preview — Visual reference to help you identify the geometric shape of the layout at a glance.",
+          "🛠️ Spread Management — Entry point for creating new unique layouts or refining existing position patterns."
+        ]
+      },
+      {
+        name: "tarot_spread_form",
+        label: "Architecting the Spread: Positions & Context",
+        description: "Defining the positions, labels, and geometry of a specific tarot layout.",
+        group: "Tools",
+        subModule: "Tarot Spreads",
+        purpose: "This screen is where you architect the meaning of a reading. By naming each card position (e.g., 'Past', 'Obstacle', 'Outcome'), you create a narrative flow that guides the user. The spread form is designed to handle complex structural logic, allowing the admin to define exactly where cards sit and what 'question' that specific position is answering. This transforms a random draw into a coherent spiritual story.",
+        bullets: [
+          "🏷️ Position Labels — Assign specific context (Advice, Blockage, Foundation) to every card slot in the spread.",
+          "🧠 Narrative Logic — Build a story-path for the user by ordering the positions to follow a logical progression.",
+          "🛠️ Structural Requirements — Define the exact number of positions needed for the spread to function correctly in the reading engine.",
+          "👁️ Visual Identity — Upload a background or header image to set the mood and visual theme of the specific reading layout.",
+          "✅ Master Activation — Toggle the spread's availability once its 'Position Map' is fully defined and tested."
+        ]
+      },
+      {
+        name: "tarot_practice",
+        label: "Reading Practice: Interactive 3D Simulation",
+        description: "Experience the final application of the Tarot Suite through a live, interactive simulation.",
+        group: "Tools",
+        subModule: "Tarot Practice",
+        purpose: "This is the final destination and culmination of the Tarot Suite. It brings the 'Toolkit' (Cards) and the 'Map' (Spreads) together in a high-fidelity 3D environment. This simulator is designed to mimic a professional live consultation. It uses advanced randomization algorithms to shuffle the deck, and a responsive 3D engine to handle card reveals. It serves as both a testing ground for admins and a powerful interactive experience for those practicing the art of reading.",
+        bullets: [
+          "🔄 Real-Time 3D Shuffling — Experience a realistic 3D animation that randomizes the 78-card deck using the Fisher-Yates algorithm.",
+          "✨ Interactive 3D Reveal — Click individual face-down cards to watch them flip in a realistic 3D motion, revealing their archetypal imagery.",
+          "📖 Integrated Interpretation — Hover over any revealed card to see their meaning tailored to the spread position it occupies.",
+          "📐 Spread Selection — Toggle between different layouts to see how the same deck adapts to different geometric and interpretive maps.",
+          "🔄 Simulation Reset — Quickly reset the reading to practice different draw patterns and test new card combinations.",
+          "🧠 Full Engine Integration — Demonstrates how the Upright/Reversed logic and Display Priority come together in a live, functional session."
         ]
       },
       { name: "rituals_list", label: "Rituals", description: "Library of template spiritual practices.", group: "Tools" },
@@ -5970,7 +6132,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
         name: "calconn",
         label: "Calendar Connections",
         description: "Link your Google Calendar or Microsoft Outlook calendar to AstrologyPro so your real-world availability is always in sync and clients receive native calendar invites when they book a session. Connected calendars block off your busy times automatically, preventing double-bookings.",
-        group: "Schedule & Availability",
+        group: "Settings",
         purpose: "Keep your availability accurate by syncing your practice calendar with your personal calendar.",
         bullets: [
           "Google Calendar card — connect your Google account with one click via OAuth; shows last sync timestamp once linked",
@@ -5985,19 +6147,41 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
         ]
       },
       {
-        name: "booking-detail",
-        label: "Booking Detail View",
-        description: "The full record for a single client appointment — every piece of information about one booking in one screen. See payment status, intake form responses, session notes, and take actions like reschedule, cancel, or mark complete.",
-        group: "My Practice",
-        purpose: "When you need to manage a specific appointment — whether to confirm it, look up what the client submitted, or add notes after completing the session — this is the screen you use. It consolidates everything about one booking so you do not have to navigate between multiple pages.",
+        name: "booking-detail-upcoming",
+        label: "Booking Details — Upcoming / Pending",
+        description: "The Booking Details drawer that slides in from the right when a diviner clicks \"Details\" on any upcoming or pending booking row. The drawer header shows the current status pill (pending / awaiting_payment / confirmed / in_progress), followed by the Client block (name + email), Service name, Date & Time, and Duration. A primary amber \"Join Session\" button opens the live video room, and a secondary \"Open Service\" button deep-links to the matching session tool (chart studio, card spread, etc.). Below that, the Birth Data block surfaces the client's birth date, birth time, and birth city with a copy button — everything the diviner needs to start a reading. Two destructive actions follow: \"Reschedule\" (propose a new slot) and \"Cancel Booking\" (red, outlined). A Payment block shows the amount and current Stripe status (Paid / Unpaid / Free). The drawer closes with a \"Note to Client\" composer — a free-text box that sends a direct email to the booking's client.",
+        group: "Calendar",
+        purpose: "Gives diviners everything they need to run, move, or cancel a booking in a single right-hand drawer — without losing their place in the Bookings table. The combination of Join Session, Open Service, Birth Data copy, and the Note to Client composer covers the full pre-session prep loop for upcoming sessions.",
         bullets: [
-          "Booking summary — client name, service booked, date, time, duration, and total paid",
-          "Intake form responses — read the pre-session questionnaire the client completed when they booked",
-          "Payment details — gross charge, platform fee, your net amount, and Stripe payment ID",
-          "Session notes — write post-session notes that are either private (only you) or shared with the client",
-          "Join video room — when the session is about to start, a button appears to enter the live session room",
-          "Reschedule action — propose a new time to the client, triggering an email with the new slot",
-          "Cancel with reason — cancel the session and automatically notify the client with your reason"
+          "Drawer header: \"Booking Details\" title + close (×) affordance",
+          "Status pill (pending / awaiting_payment / confirmed / in_progress) at the top of the drawer",
+          "Client block: full name + email address",
+          "Service name + Date & Time + Duration laid out in a compact info grid",
+          "Primary CTA \"Join Session\" — opens the video room when the session is about to start",
+          "Secondary CTA \"Open Service\" — deep-links to the right session tool (chart studio, card spread, etc.)",
+          "Birth Data block: birth date + birth time + birth city with inline copy button",
+          "Reschedule action — opens the reschedule flow to propose a new slot",
+          "Cancel Booking action — red outlined button; cancels and notifies the client",
+          "Payment block: amount + status pill (Paid / Unpaid / Free)",
+          "Note to Client composer — free-text box + \"Send to Client\" button; sends an email to the booking's client email"
+        ]
+      },
+      {
+        name: "booking-detail-completed",
+        label: "Booking Details — Completed Session",
+        description: "The Booking Details drawer state for a session that has finished. Replaces the pre-session \"Join Session / Open Service / Reschedule / Cancel\" stack with post-session artefacts. The top \"Session Details\" block lists the meeting Provider (Chime) and Actual Duration (captured from the live room), plus the Meeting ID with a copy affordance. A Recording block streams the session recording inline with full HTML5 video controls — play/pause, scrub, volume, fullscreen, and download — and is backed by \"Download Recording\" and \"Copy Client Share Link\" buttons. Next comes a Transcript block (placeholder \"No transcript saved — full transcript persistence coming soon\"), then a completed pill followed by the same Client + Service + Date & Time + Duration info block from the upcoming state. Finally, a Linked Order block shows the matching order's amount, status pill (awaiting_intake / paid / refunded), and a \"View all orders →\" link.",
+        group: "Calendar",
+        purpose: "Turns the Bookings drawer into a full post-session review panel — everything a diviner needs to share the recording with the client, reconcile the linked order, or pull the meeting ID into a support ticket is right there in the same drawer that ran the live session.",
+        bullets: [
+          "Session Details block: Provider (Chime), Actual Duration (live-room captured), Meeting ID (copyable)",
+          "Recording block with an inline HTML5 video player — play / pause / scrub / volume / fullscreen",
+          "\"Download Recording\" button — pulls the .mp4 (or provider-native) recording file",
+          "\"Copy Client Share Link\" button — one-click share URL the diviner can email to the client",
+          "Transcript block — placeholder \"No transcript saved — full transcript persistence coming soon\"",
+          "Completed status pill displayed above the Client block",
+          "Client + Service + Date & Time + Duration info block — matches the upcoming drawer layout",
+          "Linked Order block: amount in USD + status pill + order ID preview + \"View all orders →\" deep link",
+          "Post-session actions (Note to Client, Reschedule, Cancel) are suppressed once the session is completed"
         ]
       },
       {
@@ -6033,19 +6217,78 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
         ]
       },
       {
-        name: "blocked-dates",
-        label: "Availability — Blocked Dates",
-        description: "Mark specific calendar dates as unavailable so clients cannot book you during those periods. Useful for holidays, personal time, travel, or any block of days when you will not be offering sessions.",
-        group: "Schedule & Availability",
-        purpose: "Your weekly availability schedule handles recurring hours, but there will always be specific dates you need to block off — a vacation, a family event, a health day, or a retreat. This tool lets you block individual dates or multi-day ranges without changing your regular weekly schedule. Clients will simply see those days as unavailable when they try to book.",
+        name: "bookings-list",
+        label: "Bookings — Session List",
+        description: "The Bookings page (Calendar → Bookings in the sidebar) — the diviner's master log of every session booked with them. Page header reads \"Bookings / Manage your client sessions and appointments.\" followed by a row of five KPI stat cards: Sessions this week, Hours booked, Upcoming sessions, Total clients, and Total revenue. Below the stats, an Upcoming / Past toggle switches between future and historical bookings, and a secondary status filter row (All / Pending / Awaiting Payment / Confirmed / In Progress / Completed / Cancelled / No Show) narrows the list further. A search bar on the right accepts client name, service, or date. The \"Upcoming Bookings\" table that follows shows every booking with Date & Time, Client (name + email), Service, Duration, Payment (amount + Paid/Unpaid/Free chip), Status pill, and an Actions column with Open Service (where applicable) and Details buttons — clicking Details opens the right-side Booking Details drawer.",
+        group: "Calendar",
+        purpose: "Gives diviners a complete, queryable history of every session on their calendar in a single page — the headline KPIs show how busy and how profitable the period is at a glance, and the combined Upcoming/Past toggle + status chip filters + search make it trivial to jump to any specific booking and open its full detail drawer.",
         bullets: [
-          "Date range picker — select a single date or a multi-day range to block off at once",
-          "Reason field — add a private note explaining why you are blocking this time (only visible to you)",
-          "All blocked dates listed — see every date or range you have blocked, sorted chronologically",
-          "Remove a block — restore availability by deleting a date block before it arrives",
-          "Conflict warning — if a block overlaps with an existing confirmed booking, you are alerted before saving",
-          "Calendar preview — see how the blocked dates appear from the client's booking view",
-          "Recurring blocks — optionally mark an annual recurring block (e.g. every Christmas week)"
+          "Page header: \"Bookings\" title + subtitle \"Manage your client sessions and appointments.\"",
+          "Five KPI stat cards: Sessions this week / Hours booked / Upcoming sessions / Total clients / Total revenue",
+          "Upcoming / Past segmented toggle — amber-highlighted active segment flips the table between future and historical bookings",
+          "Status filter chips: All / Pending / Awaiting Payment / Confirmed / In Progress / Completed / Cancelled / No Show",
+          "Search input — matches on client name, service, or date",
+          "Upcoming Bookings table with a total-results count pill in the header (e.g. \"12 results\")",
+          "Table columns: Date & Time, Client (name + email), Service, Duration, Payment (amount + chip), Status pill, Actions",
+          "Payment chip variants: green \"Free\" / green \"Paid\" / amber \"Unpaid\" — surfaces Stripe state at a glance",
+          "Status pill variants: pending / completed / confirmed / cancelled / no_show — colour-coded by state",
+          "Actions column: \"Open Service\" deep-link (where a template maps) + \"Details\" to open the side drawer"
+        ]
+      },
+      {
+        name: "calendar-view",
+        label: "Calendar View",
+        description: "The Calendar View page (`/dashboard/calendar`, reached from Calendar → Calendar View in the sidebar). Page header reads \"Availability / Set your weekly schedule, block days off, and add special hours.\" Two header CTAs — \"Calendar Connections\" and \"Manage Weekly Schedule\" — jump to the Google/Outlook sync page and the Availability Schedule List respectively. A prominent purple \"Your Booking Link\" card displays the diviner's public URL (e.g. `https://astrologypro.com/test-diviner-1`) with an open-in-new-tab icon and a \"Copy Link\" button — the subline reads \"Share this link with clients to let them book a session with you.\" Below the link card is the actual calendar: month navigation (‹ April 2026 ›), a Day / Week / Month segmented toggle (Month active by default), and three action buttons — \"× Block Day Off\", \"+ Add Special Hours\", and the primary amber \"+ Create Manual Booking\" CTA. A colour legend (green Available / amber Booked / red Blocked) sits above the grid. The month grid itself shows the seven weekday columns (Sun–Sat) with each day cell containing its date number and small coloured dots that preview that day's availability state; today's date is highlighted in an amber circle.",
+        group: "Calendar",
+        purpose: "Gives diviners a visual map of their schedule plus direct access to the three most common schedule changes — block a day off, add special hours, or manually create a booking — without leaving the calendar. The always-visible booking link at the top keeps share-your-URL one click away.",
+        bullets: [
+          "Page header: \"Availability\" title + subtitle \"Set your weekly schedule, block days off, and add special hours.\"",
+          "Header CTAs: Calendar Connections + Manage Weekly Schedule shortcuts",
+          "Your Booking Link card — purple gradient panel showing `https://astrologypro.com/{username}` with open-in-new-tab icon and \"Copy Link\" button",
+          "Month navigation: previous / next arrows + current month/year label (e.g. \"April 2026\")",
+          "Day / Week / Month segmented toggle — amber-highlighted active view",
+          "\"× Block Day Off\" action button — opens the Block Day Off side drawer with a date picker",
+          "\"+ Add Special Hours\" action button — opens the override flow to add one-off hours outside the regular schedule",
+          "\"+ Create Manual Booking\" primary amber CTA — opens the Create Manual Booking modal",
+          "Colour legend: green Available / amber Booked / red Blocked — matches the dots on each day cell",
+          "Month grid: seven weekday columns (Sun–Sat), days from prior/next month dimmed, today highlighted in amber",
+          "Each day cell shows small coloured availability dots derived from availability_slots and availability_overrides",
+          "Click a day to drill into its day view; click a booking block to open the Booking Details drawer"
+        ]
+      },
+      {
+        name: "calendar-manual-booking-modal",
+        label: "Create Manual Booking Modal",
+        description: "The modal that opens when a diviner clicks \"+ Create Manual Booking\" on the Calendar View page. Lets the diviner drop a booking on the calendar without a client payment flow — either as a personal reminder, with an existing client, or with a brand new client added on the fly. Top of the modal offers two toggles side-by-side: \"Personal Reminder / Only for Me\" and \"Add New Client Manually\". Below that, a \"Search Existing Client\" field with a magnifying-glass icon autocompletes on client name or email. A \"Service (optional)\" dropdown defaults to \"No service\" so a reminder slot does not need a linked service. The left column holds the Timezone selector (IANA zones, defaulting to the diviner's locale). The right column holds Session Date (dd/mm/yyyy), Start Time, and End Time — pickers default to the current hour. A \"Notes & Instructions (Internal)\" rich-text editor captures a private note for the diviner. A \"Client Notification\" row at the bottom carries a bell icon and the toggle \"Send a confirmation email to the client now\". Footer buttons: Cancel (dismiss) and a primary \"+ Confirm Booking\" that validates required fields and writes the booking with `metadata.is_manual = true`.",
+        group: "Calendar",
+        purpose: "Lets diviners block time for themselves, log walk-in sessions, or honour off-platform arrangements without forcing the client through a public booking flow — while still keeping the record in the same bookings table so the session shows up in Calendar View, Bookings, and Finance reports.",
+        bullets: [
+          "Modal header: \"Create Manual Booking\" title + close (×) affordance",
+          "Top toggle row: \"Personal Reminder / Only for Me\" + \"Add New Client Manually\" — switching modes reshapes the form",
+          "Search Existing Client field — autocompletes on name or email (hidden when reminder mode is on)",
+          "Service (optional) dropdown — defaults to \"No service\" so the slot does not require a linked service",
+          "Timezone dropdown — IANA timezones, defaults to the diviner's locale",
+          "Session Date picker + Start Time + End Time pickers — default to the current hour",
+          "Notes & Instructions (Internal) rich-text editor — bold, italic, H2/H3, bullet/numbered lists, blockquote, undo/redo",
+          "Client Notification toggle — \"Send a confirmation email to the client now\"; default off",
+          "Footer buttons: Cancel (dismiss without saving) + primary \"+ Confirm Booking\" (persists the booking)",
+          "Manual bookings are written with `metadata.is_manual = true` so they appear alongside public bookings on the Bookings list and Calendar View"
+        ]
+      },
+      {
+        name: "calendar-block-day-drawer",
+        label: "Block Day Off — Drawer",
+        description: "The right-hand drawer that slides in when a diviner clicks \"× Block Day Off\" on the Calendar View page. A minimal one-field drawer designed for a single action — mark a specific date as unavailable so no client can book that day. Drawer header reads \"Block Day Off\" with a close (×) affordance in the top-right. A single \"Date\" field with a dd/mm/yyyy native picker is the only input. Below sits a primary amber \"Block Day\" button that writes an `availability_override` row with `is_available = false` for the chosen date. Once saved, that day is immediately rendered with the red \"Blocked\" dot on the calendar grid and becomes unbookable on the public profile.",
+        group: "Calendar",
+        purpose: "One-click way to handle a vacation day, sick day, or personal appointment without editing the recurring weekly schedule — the diviner picks a date and saves, and the entire day disappears from the public booking page.",
+        bullets: [
+          "Drawer header: \"Block Day Off\" title + close (×) affordance",
+          "Single Date input with dd/mm/yyyy native picker — only required field in the drawer",
+          "Primary amber \"Block Day\" button — persists an availability_override row with `is_available = false`",
+          "Blocked day appears immediately on the calendar grid with the red \"Blocked\" legend colour",
+          "Public booking page hides the blocked date from client-facing slot pickers",
+          "Unblocking — blocked dates can be cleared later from the Availability override list",
+          "Partial-day blocking is handled separately via \"+ Add Special Hours\" — this drawer is whole-day only"
         ]
       },
       {
@@ -6353,27 +6596,51 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
         ]
       },
       {
-        name: "service-create-form",
-        label: "Create New Service",
-        description: "Step-by-step form for adding a new reading or session service to the diviner's offering. Captures service name, type (video, phone, chat), duration options, price per duration tier, and a description shown on the public profile.",
+        name: "service-catalog-astrology",
+        label: "Astrology Service Catalog",
+        description: "The Astrology section of the Service Catalog — a curated library of 12 ready-to-publish astrology reading formats that diviners can add to their offering with a single click. Each card shows a colour-coded thumbnail, the default session duration, a suggested starting price (\"from $X\"), a \"birth data\" flag when the reading requires a client's natal chart, and a two-line description of what the reading covers. A green \"Added to your services\" state appears on any service already published; all other cards expose a prominent gold \"+ Add Service\" button that opens the price modal. The section header shows the live count (\"12 available\") and the whole catalog is gated by the diviner's admin-assigned Service Package (shown in the page header as \"Package: Astrology + Tarot\").",
         group: "Services",
-        purpose: "Empowers diviners to expand their offering without admin assistance by walking through all required fields in a structured wizard.",
+        purpose: "Lets diviners publish a professional reading menu in minutes — without writing descriptions, picking durations, or guessing at price — by working from a vetted library of the most common astrology formats. Package gating ensures diviners only see the reading types they are licensed to offer.",
         bullets: [
-          "Service type selector: Video Call, Phone Call, Chat, or In-Person",
-          "Duration and price matrix — add multiple duration tiers (30 min, 60 min, 90 min) each with their own price",
-          "Public description editor with character counter and live profile preview"
+          "Page header surfaces the active Service Package (e.g. \"Astrology + Tarot\") so diviners always know which categories are unlocked for them",
+          "12 astrology templates out of the box: Nativity Birth Chart (90 min, from $175), Solar Return (60 min, from $125), Weekly Transits (30 min, from $65), Monthly Transits + Lunar Return (45 min, from $95), Romantic Relationships (60 min, from $125), Friendship Relationships (60 min, from $125), Business Relationship (60 min, from $125), Predictive Event / Horary (45 min, from $95), Jupiter Return (45 min, from $95), Saturn Return (60 min, from $125), Mars Return (45 min, from $95), Uranus Opposition (60 min, from $125)",
+          "Every card shows: coloured thumbnail, duration, suggested starting price (\"from $X\"), a birth-data badge when the chart is required, and a short description",
+          "\"+ Add Service\" button opens a compact modal to set your price — defaults to the suggested price, fully editable, with a \"Use default\" link to snap back",
+          "Already-published templates show the green \"Added to your services\" state — preventing duplicates and making your current menu obvious at a glance",
+          "Left sidebar navigation — Services sits alongside the full diviner dashboard: Overview, Calendar, Orders, Clients, Check-Ins, Sessions, Landing Pages, Media Gallery, My Rituals, Mundane Astrology, Subscriptions, Intake Builder, Discounts, Gift Certificates, Marketing, Insights, Testimonials",
+          "After adding, a toast prompts the diviner to set availability — because a service without a linked availability window is invisible on the public booking page"
         ]
       },
       {
-        name: "service-edit-form",
-        label: "Edit Service",
-        description: "Edit form for an existing service. Pre-populated with all current settings. Diviners can update price, description, availability toggle, and duration options. Changes take effect on the next booking attempt.",
+        name: "service-catalog-tarot",
+        label: "Tarot Toolkit Catalog",
+        description: "The Tarot Toolkit section of the Service Catalog — 7 ready-to-publish tarot reading formats ranging from quick 3-card question spreads to the classic 10-card Celtic Cross and a 12-card Astrological Spread. Each card shows the spread thumbnail, duration (20–75 min), suggested \"from\" price, a description of the spread layout and what question it answers, and an \"+ Add Service\" button. Cards already added to the diviner's profile show the green \"Added to your services\" state. The 12 Card Astrological Spread is the only tarot template that requires client birth data (flagged with an amber \"birth data\" badge).",
         group: "Services",
-        purpose: "Allows diviners to keep service details accurate as their practice evolves without creating a duplicate service.",
+        purpose: "Gives tarot readers (and hybrid astrology-tarot diviners) a vetted library of the most common reading formats so they can publish a full tarot menu without writing spread descriptions or picking durations by hand.",
         bullets: [
-          "All fields pre-populated with current service data for quick editing",
-          "Active / Paused toggle — pausing hides the service from the public profile without deleting it",
-          "Price change warning: existing confirmed bookings are unaffected, only future bookings use the new price"
+          "7 tarot templates: 3 Card Basic Question Spread (20 min, from $35), 5 Card Complex Question Spread (30 min, from $55), 7 Card 6 Month Forward Review (45 min, from $75), 7 Card Horseshoe Spread / Major Read (45 min, from $75), 10 Card Relationship Spread (60 min, from $95), 10 Card Celtic Cross / Major Read (60 min, from $95), 12 Card Astrological Spread / Major Read (75 min, from $125)",
+          "\"Major Read\" label identifies the deeper, longer-session spreads (horseshoe, celtic cross, astrological) at a glance",
+          "Duration range spans short 20-minute readings up to 75-minute deep dives — so diviners can offer a price-tiered menu without manual configuration",
+          "Suggested prices range from $35 for a 3-card up to $125 for the 12-card astrological spread — aligned with typical market rates",
+          "Birth-data flag on the 12 Card Astrological Spread — signals to both the diviner and the client that this spread integrates the natal chart",
+          "\"Added to your services\" treatment matches the astrology cards — a consistent visual language across the whole catalog",
+          "Section header shows a count pill (\"7 available\") so the diviner sees exactly how many tarot formats the platform ships with"
+        ]
+      },
+      {
+        name: "service-add-modal",
+        label: "Add Service — Price Modal",
+        description: "The \"Add Service\" modal that pops up when a diviner clicks \"+ Add Service\" on any template card in the Astrology or Tarot catalog. A preview chip at the top restates exactly what is being added — the coloured thumbnail, the service name, the duration pill, a category tag (Astrology / Tarot), and an amber \"Requires birth data\" badge where applicable — followed by the full template description so the diviner can confirm the selection without leaving the modal. A single input field, \"Your Price (USD)\", captures the diviner's price and is pre-filled with the platform's suggested amount. A helper line reads \"Suggested: $X\" and a one-click \"Use default\" link snaps the input back to the recommended price at any time. Cancel closes the modal without saving; \"+ Add Service\" publishes the service to the diviner's profile, closes the modal, and fires a success toast that links directly to the Availability page so the new service can be made bookable immediately.",
+        group: "Services",
+        purpose: "Gives diviners complete pricing control on every service — without forcing them to rewrite durations, descriptions, or category metadata. The suggested price anchors new diviners to realistic market rates while the \"Use default\" link and \"you can update it anytime\" reassurance remove the pressure of getting it perfect on the first try.",
+        bullets: [
+          "Modal header: \"Add Service\" title + subtitle \"Set your price for {service name}. You can update it anytime.\"",
+          "Preview chip reflects the exact template being added: thumbnail, duration, category tag, optional \"Requires birth data\" badge, full description",
+          "Price input labelled \"Your Price (USD)\" with a \"$\" prefix, numeric keypad, and 0.01 step — defaults to the platform's suggested price on open",
+          "Helper text \"Suggested: $X\" plus a \"Use default\" link that restores the suggested price in one click",
+          "Footer: \"Cancel\" button (dismiss) + primary \"+ Add Service\" button (publish)",
+          "On success: modal closes, catalog card switches to the green \"Added to your services\" state, and a success toast prompts the diviner to \"Set Availability\" on the new service",
+          "Validation: price must be 0 or greater — the \"+ Add Service\" button is disabled while the input is empty or invalid"
         ]
       },
       {
@@ -6581,15 +6848,19 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
         ]
       },
       {
-        name: "service-bundle-create",
-        label: "Create Service Bundle",
-        description: "Form for creating a multi-session bundle that clients can purchase at a discounted rate. Diviners set the number of sessions, eligible service types, bundle price, and expiry window from the date of purchase.",
+        name: "service-active-list",
+        label: "Your Active Services",
+        description: "A live table at the bottom of the Services page showing every service the diviner has published to their public profile. Each row displays the service thumbnail, category label (Astrology or Tarot), duration, the diviner's configured price, a Status column (Active / Paused) alongside an \"Availability Set\" indicator confirming the service is linked to at least one availability template, and an Actions column for quick visibility and removal. The left edge of every row exposes up/down arrows so the diviner can reorder how services appear to clients on their public booking page. A summary line above the table reads \"N services on your profile — use ↕ arrows to reorder how they appear to clients.\"",
         group: "Services",
-        purpose: "Increases client retention by incentivising commitment to multiple sessions upfront through a structured discount offer.",
+        purpose: "Replaces a full edit modal with fast, inline management — reorder, pause, or remove a service in one click without leaving the catalog view. The \"Availability Set\" status answers the number-one question for a live profile: \"will clients actually be able to book this?\"",
         bullets: [
-          "Session count selector and eligible service types multi-select",
-          "Bundle price field with automatic per-session savings calculation shown to the diviner",
-          "Expiry window selector: 30, 60, 90, or 180 days from purchase date"
+          "Service column — thumbnail + display name + category label (Tarot / Astrology) so diviners recognise each row instantly",
+          "Duration column — the session length locked in at the time of adding (20 / 45 / 60 / 90 minutes, etc.)",
+          "Price column — the diviner's current price in USD, e.g. \"$35.00 · $175.00 · $100.00\"",
+          "Status column pairs two badges: green \"Active\" (service is live on the public profile) + green \"Availability Set\" (at least one matching availability template exists); a missing availability link surfaces as an amber warning banner above the list",
+          "Actions column — eye icon toggles the service active/paused without deleting it; trash icon removes the service from the diviner's profile (does not affect past bookings)",
+          "Reorder arrows on the left edge — up/down controls let the diviner change the order services appear on their public profile, persisted via the services sort_order column",
+          "Header line \"3 services on your profile — use ↕ arrows to reorder how they appear to clients\" reinforces the drag-free reorder pattern and gives an at-a-glance menu size"
         ]
       },
       {
@@ -6741,20 +7012,40 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
         ]
       },
       {
-        name: "availability-schedule",
-        label: "Availability (Weekly Schedule)",
-        description: "Define the recurring weekly windows when clients are allowed to book sessions with you. This screen manages your base availability schedule — the repeating pattern of open hours across each day of the week. It is separate from the Calendar View (which shows booked sessions against your availability) and from Blocked Dates (which overrides specific days). Click '+ New Schedule' to create a named schedule with days of the week and time ranges. Multiple schedules can exist — for example, a standard week schedule and a summer schedule — and you activate whichever applies.",
-        group: "Schedule & Availability",
-        purpose: "Set the foundation of your booking calendar by defining which days and hours each week you accept client sessions.",
+        name: "availability-list",
+        label: "Availability — Schedule List",
+        description: "The Availability page, reached from Calendar → Availability in the left sidebar. This is where diviners define the windows when clients can book sessions with them. Each availability schedule is shown as its own card with the schedule title at the top, an \"Active\" pill indicating whether it is live, the date range the schedule covers, and a row of weekday chips with the active weekdays highlighted in amber. Below the chips, a compact detail block shows the linked Service, the daily Time window, the session Duration, and the Timezone. A short description preview sits below the details, followed by an Active toggle and inline edit (pencil) and delete (trash) actions. A \"+ New Schedule\" button in the top right opens the creation modal.",
+        group: "Calendar",
+        purpose: "Gives diviners a single page to see every recurring availability schedule they have published — and exactly which service, days, hours, and timezone each one covers — so they can reorder, pause, or delete a schedule without leaving the page. Schedules defined here directly drive which slots appear on the public booking page.",
         bullets: [
-          "Schedule list — all saved availability schedules with their name and active/inactive status",
-          "New Schedule button — creates a new named schedule with day and time range configuration",
-          "Day toggles — enable or disable individual days of the week for the schedule",
-          "Time range picker — set start and end times for each enabled day (e.g. Mon–Fri 9am–6pm)",
-          "Multiple schedules — create separate schedules for different seasons or service types and switch between them",
-          "Active indicator — the currently live schedule driving your booking calendar is marked as active",
-          "Connection to Calendar — changes here reflect immediately in the teal availability overlay on the Calendar View page",
-          "Connection to Booking Page — your public booking page only shows slots within the active schedule's windows"
+          "Page header: \"Availability\" title + subtitle \"Define the windows when clients can book sessions with you.\" + \"+ New Schedule\" CTA",
+          "Schedule cards laid out in a responsive grid — each card represents one saved availability window",
+          "Card header: schedule title + green \"Active\" pill + start/end date range (e.g. \"Apr 17 – Jun 30, 2026\")",
+          "Weekday chip row — all seven days shown; enabled weekdays are highlighted in amber, disabled days appear muted",
+          "Detail block lists: Service (linked service name or \"No specific service\"), Time (start–end), Duration (minutes), Timezone (IANA label)",
+          "Description preview — first two lines of the schedule's rich-text notes, truncated with an ellipsis",
+          "Inline controls: Active toggle (pause without deleting), pencil icon (open edit modal), red trash icon (delete schedule)",
+          "Empty state appears when no schedules exist — prompts the diviner to create their first schedule",
+          "Schedules created here drive the slots shown on the diviner's public booking page and the availability overlay on Calendar View"
+        ]
+      },
+      {
+        name: "availability-new-modal",
+        label: "New Availability Schedule Modal",
+        description: "The \"New Availability Schedule\" modal that opens when a diviner clicks \"+ New Schedule\" on the Availability page. Captures every field needed to publish a recurring booking window — service, title, date range, weekdays, daily hours, session duration, timezone, rich-text notes, and active state — in a single scrollable form. The modal is dismissable via an X in the top-right, a Cancel button at the bottom, or by pressing Escape. The primary \"Create Schedule\" button validates the form and persists the new schedule to the availability list on submit.",
+        group: "Calendar",
+        purpose: "Lets diviners create a fully-configured availability schedule — optionally linked to a specific service — in one pass, without juggling multiple pages. The optional service link is the bridge that turns a published service into a bookable product on the public profile.",
+        bullets: [
+          "Service dropdown — optional link to a specific published service; defaults to \"No specific service\" with a helper line explaining the schedule will apply broadly if left blank",
+          "Title input — a human-readable label for the schedule (e.g. \"Spring Sessions\") shown on the list card and in admin views",
+          "Start Date (required) + End Date (optional, defaults to 2 years out) — dd/mm/yyyy native date pickers",
+          "Available Weekdays chip row — toggle Sun / Mon / Tue / Wed / Thu / Fri / Sat on or off; amber = on, muted = off",
+          "Start Time + End Time — native time pickers controlling the daily window (e.g. 09:00 AM – 05:00 PM)",
+          "Session Duration dropdown — discrete options (e.g. 30 / 45 / 60 / 90 / 120 minutes) used to slice the window into bookable slots",
+          "Timezone dropdown — IANA timezone list; determines how the start/end times are interpreted for booking clients",
+          "Notes / Instructions rich-text editor — optional client-facing copy with bold, italic, H2/H3 headings, bullet and numbered lists, blockquote, and undo/redo",
+          "\"Active — visible to clients\" toggle — enable now, or create the schedule hidden and activate later",
+          "Footer buttons: Cancel (dismiss without saving) + \"Create Schedule\" (validates required fields and publishes)"
         ]
       },
     ],

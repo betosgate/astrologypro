@@ -1,0 +1,35 @@
+<svg width="281" height="121" viewBox="0 0 281 121" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="marsGlow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(170 54) rotate(90) scale(98 132)">
+      <stop stop-color="#ff6b5f" stop-opacity="0.52"/>
+      <stop offset="0.42" stop-color="#d44a3d" stop-opacity="0.2"/>
+      <stop offset="1" stop-color="#050608" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="marsLine" x1="44" y1="95" x2="235" y2="22" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#f1d37a" stop-opacity="0.18"/>
+      <stop offset="0.55" stop-color="#ff6b5f"/>
+      <stop offset="1" stop-color="#f1d37a" stop-opacity="0.7"/>
+    </linearGradient>
+    <filter id="marsBlur" x="-30" y="-30" width="341" height="181" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="14"/>
+    </filter>
+  </defs>
+  <rect width="281" height="121" rx="18" fill="#050608"/>
+  <rect width="281" height="121" rx="18" fill="url(#marsGlow)"/>
+  <path d="M28 89C73 51 118 39 164 54C201 66 222 48 250 19" stroke="url(#marsLine)" stroke-width="1.4"/>
+  <path d="M57 93C94 66 122 60 151 72C181 84 206 70 235 42" stroke="#ff6b5f" stroke-opacity="0.28" stroke-width="1"/>
+  <circle cx="146" cy="62" r="28" stroke="#ff6b5f" stroke-opacity="0.35"/>
+  <circle cx="146" cy="62" r="43" stroke="#f1d37a" stroke-opacity="0.14"/>
+  <circle cx="146" cy="62" r="58" stroke="#ffffff" stroke-opacity="0.07"/>
+  <g filter="url(#marsBlur)">
+    <circle cx="171" cy="50" r="38" fill="#ff6b5f" fill-opacity="0.3"/>
+  </g>
+  <circle cx="146" cy="62" r="17" fill="#0b0d12" stroke="#ff6b5f" stroke-opacity="0.65"/>
+  <circle cx="146" cy="62" r="7" fill="#ff6b5f"/>
+  <path d="M160 48L193 15" stroke="#f1d37a" stroke-width="4" stroke-linecap="round"/>
+  <path d="M174 14H194V34" stroke="#f1d37a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="62" cy="36" r="2" fill="#f1d37a"/>
+  <circle cx="91" cy="28" r="1.4" fill="#ff6b5f"/>
+  <circle cx="223" cy="86" r="2.2" fill="#f1d37a" fill-opacity="0.78"/>
+  <circle cx="247" cy="67" r="1.5" fill="#ffffff" fill-opacity="0.55"/>
+</svg>

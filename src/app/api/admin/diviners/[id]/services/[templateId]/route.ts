@@ -139,6 +139,18 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
 
   if (updateErr) return NextResponse.json({ error: updateErr.message }, { status: 500 });
 
+  // Keep the legacy `services.is_active` flag in lockstep with the admin's
+  // enable/disable toggle so the public landing page (/{username}/services/{slug})
+  // becomes reachable when admin enables a service, and hidden when disabled.
+  // Without this sync the admin toggle has no effect on the public page.
+  if ("is_enabled" in patch) {
+    await admin
+      .from("services")
+      .update({ is_active: patch.is_enabled === true })
+      .eq("diviner_id", divinerId)
+      .eq("template_id", templateId);
+  }
+
   // Audit log
   if (action) {
     await writeAuditLog(admin, {
