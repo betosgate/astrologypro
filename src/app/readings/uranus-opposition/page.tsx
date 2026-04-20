@@ -18,14 +18,14 @@ export async function generateMetadata(): Promise<Metadata> {
         "Around age 42, Uranus reaches the point exactly opposite its natal position — triggering the astrological mid-life awakening. A Uranus Opposition reading helps you navigate this profound turning point with awareness and intention.",
       type: "website",
       url: `${APP_URL}/readings/uranus-opposition`,
-      images: [{ url: "https://astrologypro.com/images/home/og-card.jpg", width: 1200, height: 630, alt: "Uranus Opposition Readings" }],
+      images: [{ url: getReadingOgImageUrl("uranus-opposition"), width: 1200, height: 630, alt: "Uranus Opposition Readings" }],
     },
     twitter: {
       card: "summary_large_image",
       title: "Uranus Opposition Readings | AstrologyPro",
       description:
         "Around age 42, Uranus reaches the point exactly opposite its natal position — triggering the astrological mid-life awakening. A Uranus Opposition reading helps you navigate this profound turning point with awareness and intention.",
-      images: ["https://astrologypro.com/images/home/og-card.jpg"],
+      images: [getReadingOgImageUrl("uranus-opposition")],
     },
   };
 }

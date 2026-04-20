@@ -18,8 +18,8 @@ const SERVICE_SLUG_TO_IMAGE: Record<string, string> = {
   "business-relationships": "business-relationships",
   "predictive-event-horary": "horary",
   horary: "horary",
-  "mars-return": "astrology-freelance",
-  "uranus-opposition": "astrology-freelance",
+  "mars-return": "mars-return.svg",
+  "uranus-opposition": "uranus-opposition.svg",
   "astrology-freelance": "astrology-freelance",
   "3-card-basic-question-spread": "3-card-basic",
   "3-card-basic": "3-card-basic",
@@ -38,9 +38,14 @@ const SERVICE_SLUG_TO_IMAGE: Record<string, string> = {
   "tarot-freelance": "tarot-freelance",
 };
 
+function getServiceImagePath(imageKey: string): string {
+  const extension = /\.[a-z0-9]+$/i.test(imageKey) ? "" : ".png";
+  return `/images/services/${imageKey}${extension}`;
+}
+
 export function getServiceImageUrl(slug: string): string | null {
   const imageKey = SERVICE_SLUG_TO_IMAGE[slug];
-  return imageKey ? `/images/services/${imageKey}.png` : null;
+  return imageKey ? getServiceImagePath(imageKey) : null;
 }
 
 /**
@@ -58,8 +63,8 @@ const READING_SLUG_TO_IMAGE: Record<string, string> = {
   "friendship-relationships": "friendship-relationships",
   "business-relationship": "business-relationships",
   "predictive-event-horary": "horary",
-  "mars-return": "astrology-freelance",
-  "uranus-opposition": "astrology-freelance",
+  "mars-return": "mars-return.svg",
+  "uranus-opposition": "uranus-opposition.svg",
   "3-card-basic-question-spread": "3-card-basic",
   "5-card-complex-question-spread": "5-card-complex",
   "7-card-6-month-forward-review": "7-card-forecast",
@@ -78,11 +83,11 @@ const DEFAULT_OG = `${APP_BASE}/images/home/og-card.jpg`;
  */
 export function getReadingOgImageUrl(readingSlug: string): string {
   const imageKey = READING_SLUG_TO_IMAGE[readingSlug];
-  if (imageKey) return `${APP_BASE}/images/services/${imageKey}.png`;
+  if (imageKey) return `${APP_BASE}${getServiceImagePath(imageKey)}`;
   return DEFAULT_OG;
 }
 
 export function getReadingImageUrl(readingSlug: string): string | null {
   const imageKey = READING_SLUG_TO_IMAGE[readingSlug];
-  return imageKey ? `/images/services/${imageKey}.png` : null;
+  return imageKey ? getServiceImagePath(imageKey) : null;
 }
