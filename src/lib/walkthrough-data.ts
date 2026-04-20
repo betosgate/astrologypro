@@ -48,6 +48,7 @@ import {
   Activity,
   type LucideIcon,
   TrendingUp,
+  Shuffle,
 } from "lucide-react";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -176,6 +177,14 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
         cards: [
           { title: "Orders", description: "Consolidated platform sales log", href: "/admin/orders", icon: ShoppingBag, status: "live" },
           { title: "Payments", description: "Gateway tracking and payouts", href: "/admin/payments", icon: CreditCard, status: "live" },
+        ],
+      },
+      {
+        groupLabel: "Tools",
+        cards: [
+          { title: "Tarot Cards", description: "Master library of 78 archetypal symbols", href: "/admin/tarot/cards", icon: Layers, status: "live" },
+          { title: "Tarot Spreads", description: "Geometric layouts and position patterns", href: "/admin/tarot/spreads", icon: Shuffle, status: "live" },
+          { title: "Tarot Practice", description: "Interactive 3D reading simulator", href: "/admin/tarot/readings", icon: Sparkles, status: "live" },
         ],
       },
     ],
@@ -4358,17 +4367,170 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
 
       // Support
       { name: "sla_dashboard", label: "SLA Dashboard", description: "Monitoring system speed and ticket response times.", group: "Support" },
-      { 
-        name: "tarot_cards", 
-        label: "Tarot Cards", 
-        description: "Detailed meaning config for every card.", 
+
+      // -----------tarot suite---------//
+ {
+  name: "tarot_card_form",
+  label: "Add Tarot Card: Meaning, Image & Spread Assignment",
+  description: "The creation form for adding a new tarot card into the deck library with meanings, artwork, and spread availability.",
+  group: "Tools",
+  subModule: "Tarot Cards",
+  purpose: "This screen is used to create a new tarot card record for the Tarot deck. Admins define the card’s identity, arcana type, description, display order, upright meaning, reversed meaning, and visual artwork. The Related Spreads section connects the card to specific tarot layouts, deciding where this card can appear during Tarot Practice. Once the card is marked Active and saved, it becomes available for the selected spread simulations and future reading workflows.",
+  bullets: [
+    "🏷️ Card Identity — Enter the card name, arcana type, card number, and description so the system can classify the card correctly inside the deck.",
+    "📊 Display Priority — Set the card’s priority to control how it is ordered in the Tarot Cards list and related admin views.",
+    "🔮 Upright Meaning — Add the interpretation used when the card appears in its direct or upright position during a reading.",
+    "🔁 Reversed Meaning — Add the alternate interpretation used when the card appears reversed, blocked, delayed, or inverted.",
+    "🖼️ Card Image — Provide an external image URL or upload artwork so the card has a visual face inside Tarot Practice.",
+    "📐 Related Spreads — Select the tarot spreads where this card is allowed to appear. A card linked to a spread becomes part of that spread’s draw pool.",
+    "✅ Active Status — Keep the card Active when it is ready for use, or deactivate it to keep it stored without allowing it into practice readings.",
+    "💾 Create Card Action — Save the completed card so it becomes part of the managed tarot deck library."
+  ]
+},
+
+     {
+  name: "tarot_card_related_spreads_v1",
+  label: "Related Spreads: Control Where This Card Appears",
+  description: "The spread assignment section that decides which tarot layouts can use this card during practice readings.",
+  group: "Tools",
+  subModule: "Tarot Cards",
+  purpose: "This section links the tarot card to one or more spread layouts. When a spread is selected, this card becomes eligible to appear when that spread is used in Tarot Practice. If a spread is not selected, the card remains saved in the deck library but will not be included in that spread’s card pool. This gives admins control over which cards are available for simple, complex, relationship, Celtic Cross, astrological, or other specialized reading formats.",
+  bullets: [
+    "📌 Spread Eligibility — Check a spread to allow this card to appear when that spread is practiced.",
+    "🧩 Controlled Card Pools — Limit cards to specific spreads when certain cards should only support certain reading styles.",
+    "✨ Select All — Use Select All when the card should be available across every tarot spread in the system.",
+    "🚫 Unchecked Spreads — If a spread is left unchecked, this card will not be drawn in that spread’s practice session.",
+    "🔄 Practice Connection — Tarot Practice reads these spread assignments to know which active cards can be shuffled and revealed.",
+    "✅ Final Review — Before creating the card, confirm the intended spreads are selected and the card is marked Active."
+  ]
+},
+
+// ----------tarot cards list & management---------//
+{
+    "name": "tarot_cards_list",
+    "label": "Tarot Cards: Deck Library & Card Management",
+    "description": "The main admin screen for searching, reviewing, organizing, and maintaining tarot cards used across tarot features and guided readings.",
+    "group": "Tools",
+    "subModule": "Tarot Cards",
+    "purpose": "This screen gives admins a complete working view of the tarot card library. It is used to manage the full card deck by showing each card's name, arcana type, suit, priority, status, last updated date, and created date in one structured table. Admins can search for a specific card, filter by status, narrow results by created or updated date, refresh the current list, move through multiple pages, and add a new tarot card. This page helps keep the tarot system clean, organized, and ready for use in tarot readings, spreads, learning modules, and interpretation workflows.", 
+    "bullets": [
+      "🔍 Deck Search Workspace — Quickly locate any tarot card by using the card-name search field instead of manually scanning the full deck.",
+      "✅ Status-Based Review — Filter the deck by status to check which cards are currently active and which may need review or reactivation.",
+      "📅 Lifecycle Date Filtering — Use created and updated date filters to audit recently added cards or cards modified within a specific timeframe.",
+      "🃏 Full Card Inventory Table — Review the core management data for every tarot card in one structured list.",
+      "🏷️ Arcana Classification — Distinguish between Major Arcana and Minor Arcana cards for proper deck structure and interpretation grouping.",
+      "♣️ Suit Visibility — See suit assignment for Minor Arcana cards, such as Cups, Wands, Swords, or Disks, while Major Arcana cards remain suitless.",
+      "📊 Priority Management — Use the priority column to understand or maintain display order, system weight, or deck sequencing logic.",
+      "🟢 Status Badge Clarity — Instantly see whether a card is active and ready for use inside tarot experiences.",
+      "🕒 Maintenance Tracking — Review Updated On and Created On fields to monitor deck changes and content freshness.",
+      "🔄 Refresh Control — Reload the latest tarot card data when new cards are added or existing cards are updated.",
+      "➕ Add Card Action — Create a new tarot card record from the library screen when expanding or maintaining the tarot deck.",
+      "⚙️ Row-Level Actions — Use the action menu for per-card management such as editing, reviewing, activating, deactivating, or removing card records.",
+      "📄 Pagination Support — Navigate large tarot inventories through paged results and page-size controls for easier deck maintenance."
+    ]
+  },
+  {
+    "name": "tarot_cards_filters_v3",
+    "label": "Tarot Cards: Search, Status & Date Filters",
+    "description": "The filtering section used to narrow the tarot card library by name, status, created date, or updated date.",
+    "group": "Tools",
+    "subModule": "Tarot Cards",
+    "purpose": "This section helps admins quickly find the exact tarot card records they want to inspect or update. Instead of browsing the full library manually, admins can search by card name, filter by active status, and apply created or updated date ranges to isolate cards added or changed during a specific period. This makes deck review faster, more accurate, and easier to manage at scale. It is especially useful when maintaining a large library, auditing card readiness, or checking content updates before tarot modules go live.", 
+    "bullets": [
+      "🔍 Search By Card Name — Type a full or partial tarot card name to instantly narrow the result list.",
+      "✅ Search By Status — Filter cards by availability state, such as All or Active, to review system-ready records.",
+      "📅 Created Start Filter — Show cards created on or after a selected date.",
+      "📅 Created End Filter — Show cards created on or before a selected date.",
+      "🕒 Updated Start Filter — Show cards updated on or after a selected date.",
+      "🕒 Updated End Filter — Show cards updated on or before a selected date.",
+      "🧭 Faster Deck Review — Combine multiple filters to isolate a small and relevant subset of tarot cards.",
+      "🧹 Reset-Friendly Workflow — Clearing filters restores the full tarot card library view."
+    ]
+  },
+  {
+    "name": "tarot_cards_table_v1",
+    "label": "Tarot Cards: Card Inventory Table",
+    "description": "The central management table where each tarot card record is listed with its core library details.",
+    "group": "Tools",
+    "subModule": "Tarot Cards",
+    "purpose": "This table is the main review area of the tarot card library. Each row represents one tarot card and shows the key data needed to confirm whether the card is correctly categorized, prioritized, active, and recently maintained. The table supports selection, sorting, and row-level actions, allowing admins to work with both individual cards and larger card sets. It is designed to give a clear operational overview of the tarot deck and support ongoing library maintenance.", 
+    "bullets": [
+      "☑️ Row Selection — Select individual card rows for possible review or bulk workflows.",
+      "🃏 Name Column — Displays the tarot card title, such as The Fortune, The Tower, The Star, or The Sun.",
+      "🏷️ Arcana Column — Shows whether the card belongs to Major Arcana or Minor Arcana.",
+      "♣️ Suit Column — Displays the card suit for Minor Arcana cards when applicable.",
+      "📊 Priority Column — Shows the card's numeric order or ranking inside the tarot library.",
+      "🟢 Status Column — Indicates whether the card is currently active and available for use.",
+      "🕒 Updated On Column — Shows the latest timestamp when the card record was modified.",
+      "📅 Created On Column — Shows when the card record was first added to the system.",
+      "⚙️ Actions Column — Opens the per-card action menu for management tasks.",
+      "↕️ Sortable Headers — Column labels support sorting to help admins organize the table by important fields."
+    ]
+  },
+  {
+    "name": "tarot_cards_pagination_v1",
+    "label": "Tarot Cards: Pagination & Page Size Controls",
+    "description": "The navigation area used to browse the tarot card library page by page.",
+    "group": "Tools",
+    "subModule": "Tarot Cards",
+    "purpose": "This section supports browsing through a larger tarot card library without loading everything into a single long list. It shows the currently visible record range, lets admins choose how many cards to show per page, and provides numbered page navigation. This improves readability and keeps the library manageable when the deck contains many records or custom card additions.", 
+    "bullets": [
+      "📄 Visible Range Indicator — Shows how many tarot cards are currently visible out of the total result count.",
+      "🔢 Page Size Selector — Allows admins to choose how many cards should appear per page.",
+      "➡️ Numbered Page Navigation — Move between result pages using page buttons and next or previous controls.",
+      "📚 Large Library Support — Keeps large tarot collections easy to browse and maintain."
+    ]
+  },
+
+
+
+
+
+      // ------------tarot spreads---------//
+      {
+        name: "tarot_spreads",
+        label: "Tarot Spreads: Layout Master Directory",
+        description: "A centralized directory for managing the geometric patterns and interpretive maps used in readings.",
         group: "Tools",
-        purpose: "The data repository for the platform's Tarot engine meanings, attributes, and esoteric symbolism.",
+        subModule: "Tarot Spreads",
+        purpose: "This screen manages the 'Maps' of the tarot experience. While cards provide the symbols, Spreads provide the context. This directory allows admins to oversee every available reading layout, from simple 3-card snapshots to complex 12-card astrological cycles. It provides a high-level view of how many cards are required for each spread and their current activation status, ensuring the 'Consultation Library' is balanced and diverse.",
         bullets: [
-          "Individual card meaning and keyword mapping",
-          "Visual asset management for tarot decks",
-          "Esoteric correspondences (Astrology, Kabbalah)",
-          "Dynamic spread interpretation logic"
+          "🗺️ Layout Directory — A consolidated view of all available reading patterns in the system, sorted by name and status.",
+          "📐 Card Counts — Quickly identify the complexity of a spread by viewing exactly how many cards are required for that specific layout.",
+          "📊 Active Status — Control which spreads are available for use in the Practice simulator or public interfaces.",
+          "🖼️ Geometry Preview — Visual reference to help you identify the geometric shape of the layout at a glance.",
+          "🛠️ Spread Management — Entry point for creating new unique layouts or refining existing position patterns."
+        ]
+      },
+      {
+        name: "tarot_spread_form",
+        label: "Architecting the Spread: Positions & Context",
+        description: "Defining the positions, labels, and geometry of a specific tarot layout.",
+        group: "Tools",
+        subModule: "Tarot Spreads",
+        purpose: "This screen is where you architect the meaning of a reading. By naming each card position (e.g., 'Past', 'Obstacle', 'Outcome'), you create a narrative flow that guides the user. The spread form is designed to handle complex structural logic, allowing the admin to define exactly where cards sit and what 'question' that specific position is answering. This transforms a random draw into a coherent spiritual story.",
+        bullets: [
+          "🏷️ Position Labels — Assign specific context (Advice, Blockage, Foundation) to every card slot in the spread.",
+          "🧠 Narrative Logic — Build a story-path for the user by ordering the positions to follow a logical progression.",
+          "🛠️ Structural Requirements — Define the exact number of positions needed for the spread to function correctly in the reading engine.",
+          "👁️ Visual Identity — Upload a background or header image to set the mood and visual theme of the specific reading layout.",
+          "✅ Master Activation — Toggle the spread's availability once its 'Position Map' is fully defined and tested."
+        ]
+      },
+      {
+        name: "tarot_practice",
+        label: "Reading Practice: Interactive 3D Simulation",
+        description: "Experience the final application of the Tarot Suite through a live, interactive simulation.",
+        group: "Tools",
+        subModule: "Tarot Practice",
+        purpose: "This is the final destination and culmination of the Tarot Suite. It brings the 'Toolkit' (Cards) and the 'Map' (Spreads) together in a high-fidelity 3D environment. This simulator is designed to mimic a professional live consultation. It uses advanced randomization algorithms to shuffle the deck, and a responsive 3D engine to handle card reveals. It serves as both a testing ground for admins and a powerful interactive experience for those practicing the art of reading.",
+        bullets: [
+          "🔄 Real-Time 3D Shuffling — Experience a realistic 3D animation that randomizes the 78-card deck using the Fisher-Yates algorithm.",
+          "✨ Interactive 3D Reveal — Click individual face-down cards to watch them flip in a realistic 3D motion, revealing their archetypal imagery.",
+          "📖 Integrated Interpretation — Hover over any revealed card to see their meaning tailored to the spread position it occupies.",
+          "📐 Spread Selection — Toggle between different layouts to see how the same deck adapts to different geometric and interpretive maps.",
+          "🔄 Simulation Reset — Quickly reset the reading to practice different draw patterns and test new card combinations.",
+          "🧠 Full Engine Integration — Demonstrates how the Upright/Reversed logic and Display Priority come together in a live, functional session."
         ]
       },
       { name: "rituals_list", label: "Rituals", description: "Library of template spiritual practices.", group: "Tools" },
