@@ -24,6 +24,7 @@ import {
   ArrowRight,
   RefreshCw,
 } from "lucide-react";
+import { AffiliateMarketingKit } from "@/components/affiliate/marketing-kit";
 
 function formatCents(cents: number): string {
   return new Intl.NumberFormat("en-US", {
@@ -164,6 +165,9 @@ export default async function AffiliateDashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Marketing kit — reading landing pages */}
+      <AffiliateMarketingKit affiliateId={affiliate.id} />
 
       {/* Top performing links */}
       <Card>

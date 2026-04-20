@@ -1,7 +1,108 @@
-import { getMonthName, convertTo12HourFormat } from "./utils";
+import { getMonthName, convertTo12HourFormat, resolveCityLabel } from "./utils";
+
+const DEFAULT_HORARY_EXCLUDED_DATES = "May 2026";
+
+function buildHoraryExcludedDates(excludedDates?: string) {
+  const allDates = [DEFAULT_HORARY_EXCLUDED_DATES, excludedDates]
+    .filter(Boolean)
+    .flatMap((value) => String(value).split(","))
+    .map((value) => value.trim())
+    .filter(Boolean);
+
+  return Array.from(new Set(allDates)).join(", ");
+}
+
+function buildHoraryChartPrompt(data: any, excludedDates?: string) {
+  const city = resolveCityLabel(data.city ?? data.birthplace);
+  const question = data.question ?? "";
+  const natalChartData = data.horary_chart_data ?? data;
+  const resolvedExcludedDates = buildHoraryExcludedDates(excludedDates);
+
+  const system = `give response only in json format as a whole , nothing else answer as astrologer not AI BOT user data index related to astrology as data under that aspect and under that interpretation . Provide a deeply personalized response as if you are speaking directly to your astrology client in a one-on-one session. Use the language and tone of a trusted Western astrologer offering tailored guidance based on the client’s unique chart. Always interpret the chart using the Placidus house system as the default house_type. Avoid using generic phrases or repeated sentence structures. Each sentence should feel intentionally crafted and distinct, offering fresh insight without duplicating wording from similar interpretations.`;
+
+  const user = `I was born on ${getMonthName(data.month)} ${data.day}, ${data.year} time ${data.hour}:${data.min ?? 0}, in ${city} ,'lat:${data.lat},lon:${data.lon},tzone:${data.tzone}'. ${question}. I'm providing you with my birth chart data in a separate JSON object. You MUST use this data to generate a personalized astrological analysis in the following JSON format:{data:{summary:{recommendation_on_date_and_timeline:[{timeline_title:timeline_data}],answer:[{title:data}],recommendation:[{title:data}]},astrological_aspect:{aspect:[{title:data}],planet:[{title:data}],house:[{title:data}]}}}
+
+example format to follow :
+{
+ "data": {
+ "astrological_aspect": {
+ "aspect": [
+ {
+ "title": "Mars Trine Jupiter (Transit to Natal)",
+ "data": "Between January 10th and February 15th, 2025, transiting Mars in Sagittarius forms a trine aspect to your natal Jupiter in the 12th house. This harmonious alignment amplifies your ambition, optimism, and drive to pursue your goals, particularly those related to spirituality, intuition, or humanitarian causes. It supports taking decisive action and expanding your vision, bringing opportunities for growth and success in these areas."
+ },
+ {
+ "title": "Venus Sextile Neptune (Transit to Natal)",
+ "data": "During the same period, transiting Venus in Pisces forms a sextile aspect to your natal Neptune in the 12th house. This harmonious connection enhances your creativity, intuition, and compassion. It supports collaboration, artistic expression, and connecting with your dreams and ideals. This alignment also strengthens your spiritual connection and fosters a sense of harmony and idealism in your endeavors."
+ }
+ ],
+ "planet": [
+ {
+ "title": "Transiting Mars",
+ "data": "Between January 10th and February 15th, 2025, Mars transits through Sagittarius and forms a harmonious trine to your natal Jupiter in the 12th house. This amplifies your ambition, drive, and optimism, particularly in areas related to spirituality, intuition, and humanitarian pursuits. It supports taking decisive action and expanding your vision, bringing opportunities for growth and success."
+ },
+ {
+ "title": "Transiting Venus",
+ "data": "During this same period, Venus transits through Pisces and forms a supportive sextile to your natal Neptune in the 12th house. This enhances your creativity, intuition, and compassion, supporting artistic expression, collaboration, and connecting with your dreams and ideals. It also strengthens your spiritual connection and fosters a sense of harmony and idealism."
+ }
+ ],
+ "house": [
+ {
+ "title": "12th House (Transit Activation)",
+ "data": "Between January 10th and February 15th, 2025, your 12th house of spirituality, imagination, and hidden realms is activated by the transits of Mars and Venus. Mars trine natal Jupiter enhances your intuition, drive, and optimism in pursuing spiritual or humanitarian goals. Venus sextile natal Neptune strengthens your creativity, compassion, and connection to your dreams and ideals."
+ }
+ ]
+ },
+ "summary": {
+ "answer": [
+ {
+ "title": "Optimal Time for Starting a Business",
+ "data": "Based on your birth chart data, the optimal time to start a business with your Taurus partner is between January 10th and February 15th, 2025. During this period, Mars trines your natal Jupiter and Venus sextiles your natal Neptune, both occurring in your 12th house. This alignment supports ambitious endeavors, collaborative efforts, and creative inspiration, increasing the likelihood of a successful launch."
+ }
+ ],
+ "recommendation": [
+ {
+ "title": "Focus on 12th House Themes",
+ "data": "Given the emphasis on your 12th house during the period between January 10th and February 15th, 2025, consider incorporating themes related to spirituality, intuition, creativity, and compassion into your business endeavors. This could involve ventures with a humanitarian focus, artistic expression, or utilizing your intuition and imagination for innovative solutions."
+ }
+ ],
+ "recommendation_on_date_and_timeline": [
+ {
+ "timeline_title": "Between January 10th and February 15th, 2025",
+ "timeline_data": "This period is particularly auspicious for launching your business due to the following transits and their impact on your natal chart: 1. Mars trine Jupiter: Transit Mars in Sagittarius will trine your natal Jupiter in the 12th house. This alignment enhances your optimism, expands your vision, and supports taking decisive action towards your entrepreneurial goals. It can bring opportunities for growth and success through spiritual practices, intuition, or ventures with a humanitarian focus. 2. Venus sextile Neptune: Transit Venus in Pisces will sextile your natal Neptune in the 12th house. This harmonious aspect enhances your creativity, intuition, and compassion. It supports collaboration, artistic expression, and connecting with your dreams and ideals in your business pursuits. This alignment also strengthens your spiritual connection and fosters a sense of harmony and idealism in your endeavors."
+ }
+ ]
+ }
+ }
+}
+I need you to strictly adhere to these rules:
+
+1.Personalized Interpretations ONLY: Absolutely NO generic explanations of planets, aspects, or houses. Every interpretation in the data fields must be derived from and specific to MY birth chart data and reasoning with timeline_data you suggested. No general info expected.
+
+2.FUTURE Justified Timelines: The timeline_data must identify a favorable future date range that begins strictly after 04/16/2026. Within this recommended time period, you MUST also pinpoint multiple specific, highly auspicious dates for taking action. You must structure this recommendation by first presenting the single "Top Choice Date," followed by a list of "Other Favorable Dates." For both the overall date range and each specific date, you MUST provide a detailed astrological justification, explaining exactly which transits to MY birth chart make these times significant.
+3.Data Richness: Each data field needs at least three full sentences of detailed, personalized interpretation.
+4.Accurate Titles: Use concise labels for each title (e.g., 'Sun Conjunct Moon', 'Mars in Aries').
+5.Complete Data: Ensure ALL objects have both title and data fields.
+Rule 2 is the most important instruction. Add the following rules:
+6. Date Formatting: In all "data" and "timeline_data" fields, you MUST wrap every specific date or date range with an HTML span tag using the class "timedata". For example, "<span class="timedata">October 20th, 2025</span>" or "<span class="timedata">November 1-15, 2025</span>". This formatting is mandatory.
+7. Excluded Dates: You MUST AVOID recommending the following dates or date ranges entirely: ${resolvedExcludedDates}. All of your suggested timelines must fall outside of these exclusion periods.
+
+8. Flexible Timeline Search: If a user-provided date range contains no potent astrological windows (especially due to excluded dates), or if a significantly more powerful alignment exists just outside it, you are permitted to suggest an alternative. This alternative must be within 30 days of the requested range's start or end, and you must never suggest a past date. When doing so, you must explicitly note that you are going beyond the requested range and provide a compelling astrological justification for why the alternative date is a superior choice.
+
+9. Response Order: The full date recommendation must appear first in the response. Inside data, return "summary" before "astrological_aspect". Inside summary, return "recommendation_on_date_and_timeline" before "answer" and "recommendation". In timeline_data, begin with the date range first, then the Top Choice Date, then Other Favorable Dates, before any further interpretation.
+
+Finally, ensure all dates mentioned throughout the response are consistent with one another.`;
+
+  return {
+    key: "horary_chart_question",
+    system,
+    user,
+    json: natalChartData,
+  };
+}
 
 export function buildAiPrompts(data: any, tab: string, areaOfInquiry?: string, excludedDates?: string) {
-  const prompts: { key: string; system: string; user: string; json: unknown[] }[] = [];
+  const prompts: { key: string; system: string; user: string; json: unknown }[] = [];
 
   if (tab === "western_horoscope_v2" || tab === "solar_return_v2" || ["jupiter_return_v2", "saturn_return_v2", "mars_return_v2", "uranus_return_v2"].includes(tab)) {
     prompts.push({
@@ -45,9 +146,14 @@ export function buildAiPrompts(data: any, tab: string, areaOfInquiry?: string, e
   if (tab === "solar_return_v2") {
     prompts.push({
       key: "solar_return_details",
-      system: "give response only in json format as a whole , nothing else asnwer as astrolger not AI BOT user data index related to astrolgy as data under that aspect and under that interpretation",
-      user: "Generate solar return details based on given json with minimum 3 sentences on each interpretation with a number as index of details in as much detail as possible, only interpretation in json index in lowest level of indexes please and don't miss a single detail. Response should not start with string 'json' ever but in proper json format in an array with objects {\"title\":\"...\",\"interpretation\":\"...\"}",
-      json: [{ details: data.solar_return_details, planets: data.solar_return_planets, cusps: data.solar_return_cusps, aspects: data.solar_return_aspects }],
+      system: "give response only in json format as a whole , nothing else asnwer as astrolger not AI BOT user data index related to astrolgy as data under that aspect and under that interpretation . Provide a deeply personalized response as if you are speaking directly to your astrology client in a one-on-one session. Use the language and tone of a trusted Western astrologer offering tailored guidance based on the client’s unique chart. Always interpret the chart using the Placidus house system as the default house_type. Avoid using generic phrases or repeated sentence structures. Each sentence should feel intentionally crafted and distinct, offering fresh insight without duplicating wording from similar interpretations.",
+      user: "Generate western chart details only on solar_return_details based on given json with minimum 3 sentences on each interpretation as interpretation  with a numnber as index named index  of  solar_return_details in as much as detail possible , only interpretation in json index in lowest level of indexes  please and don't miss a single solar_return_details there are many please be careful and response should not start with string 'json'  ever but in proper json format and with in  an array of object format should be [\n{\n\"houses\":\n\"interpretation\"\n\n},\n{\n\"ascendant\":\n\"interpretation\"\n\n},\n{\n\"midheaven\":\n\"interpretation\":\n}\n\n,\n{\n\"vertex\":\n\"interpretation\":\n}\n\n] ",
+      json: {
+        houses: data.solar_return_cusps?.houses ?? data.solar_return_cusps ?? data.houses ?? [],
+        ascendant: data.solar_return_cusps?.ascendant ?? data.ascendant ?? null,
+        midheaven: data.solar_return_cusps?.midheaven ?? data.midheaven ?? null,
+        vertex: data.solar_return_cusps?.vertex ?? data.vertex ?? null,
+      },
     });
   }
 
@@ -115,33 +221,66 @@ export function buildAiPrompts(data: any, tab: string, areaOfInquiry?: string, e
     const p2 = data.person2_birth ?? {};
     const personaCity = typeof data.persona_city === "object" ? data.persona_city.label : (data.persona_city ?? "");
     const partnerCity = typeof data.partner_city === "object" ? data.partner_city.label : (data.partner_city ?? "");
-    const context = tab === "romantic_forecast_report_tropical_v2" ? "love" : tab === "friendship_report_tropical_v2" ? "friendship" : "business partnership";
     const relationshipContext = tab === "romantic_forecast_report_tropical_v2" ? "love relationship partner" : tab === "friendship_report_tropical_v2" ? "friendship partner" : "business relationship partner";
-    const sys = "give response only in json format as a whole , nothing else asnwer as astrolger not AI BOT user data index related to astrolgy as data under that aspect and under that interpretation inportant aspects of assessing the potential for a To conduct a detailed synastry chart analysis, you will need precise birth data from both parties, including the exact birth time, date, and location, to accurately calculate their astrological charts. Start by examining the aspects between each person's personal planets (Sun, Moon, Venus, Mars) and the other's outer planets (Jupiter, Saturn, Uranus, Neptune, Pluto) to uncover dynamics of attraction, compatibility, and potential friction points. Assess the house overlays by noting where each individual's planets land in the other's astrological houses, which sheds light on the influence they exert over various life areas of their partner. Analyze the interactions between each person's Ascendant (self-expression) and Descendant (partnership qualities) to gauge core compatibility and relational dynamics. Additionally, explore the North and South Nodes to delve into themes of karmic connections or shared life purposes. Utilizing advanced astrology software or reliable online resources can facilitate this complex analysis, while reference books from respected astrologers can provide deeper interpretive frameworks. For a nuanced understanding, especially in complicated synastry situations, consulting with a professional astrologer is advisable.";
+    const sys = "give response only in json format as a whole , nothing else asnwer as astrolger not AI BOT user data index related to astrolgy as data under that aspect and under that interpretation inportant aspects of assessing the potential for a To conduct a detailed synastry chart analysis, you will need precise birth data from both parties, including the exact birth time, date, and location, to accurately calculate their astrological charts. Start by examining the aspects between each person's personal planets (Sun, Moon, Venus, Mars) and the other's outer planets (Jupiter, Saturn, Uranus, Neptune, Pluto) to uncover dynamics of attraction, compatibility, and potential friction points. Assess the house overlays by noting where each individual's planets land in the other's astrological houses, which sheds light on the influence they exert over various life areas of their partner. Analyze the interactions between each person's Ascendant (self-expression) and Descendant (partnership qualities) to gauge core compatibility and relational dynamics. Additionally, explore the North and South Nodes to delve into themes of karmic connections or shared life purposes. Utilizing advanced astrology software or reliable online resources can facilitate this talk-through, highlighting both strengths and weaknesses for the partnership. Professional consultations can further enrich the understanding as complex configurations often have multiple layers. For a nuanced understanding, especially in complicated synastry situations, consulting with a professional astrologer is advisable.";
 
-    const b1Str = `I was born on ${getMonthName(p1.month)} ${p1.day}, ${p1.year},  ${p1.hour}:${String(p1.min ?? 0).padStart(2, "0")} in  ${personaCity}  'lat:${p1.lat},lon:${p1.lon},tzone:${p1.tzone}'.`;
-    const b2Str = `my ${relationshipContext} was born on  ${getMonthName(p2.month)} ${p2.day}, ${p2.year} ${p2.hour}:${String(p2.min ?? 0).padStart(2, "0")} at ${partnerCity}   'lat:${p2.lat},lon:${p2.lon},tzone:${p2.tzone}'`;
+    const b1Str = `I was born on ${getMonthName(p1.month)} ${p1.day}, ${p1.year}, ${p1.hour}:${String(p1.min ?? 0).padStart(2, "0")} in ${personaCity} 'lat:${p1.lat},lon:${p1.lon},tzone:${p1.tzone}'.`;
+    const b2Str = `my ${relationshipContext} was born on ${getMonthName(p2.month)} ${p2.day}, ${p2.year} ${p2.hour}:${String(p2.min ?? 0).padStart(2, "0")} at ${partnerCity} 'lat:${p2.lat},lon:${p2.lon},tzone:${p2.tzone}'`;
     const suffix = ` in {data:[{title:data}]}  exact this format where each data must be atleast 3 sentences with astrological logic with relevance to my question only for each aspect , planet and house on relevant blocks and why you are saying these add an astrologica reason like aspect (with type), house position of planet on each title and data  with astrological data relevant to my data , each title will be heading and data will be context in detail for the title make sure you calculate before response astro analysis must accurate should not change with same data.summery will be mostly generic and recomendtion equal mix of generic and astrological data dont repet that what you have already mentioned in other indexes these could be shorter make sure number content / data on Astrological_aspect is always much more than summery and recomendation to add more here is my birth chart data in json format , try to reffer and mention in your response  `;
 
     const synJson = [data.synastry ?? data];
+    const compositeJson = {
+      first: data.natal_chart_data?.planets ?? [],
+      second: data.natal_chart_data_p2?.planets ?? [],
+      composite: data.composite ?? {},
+    };
     const selfPartnerJson = [{ mydetails: { ...p1 }, fiend_details: { ...p2 } }];
+    const compositeSystem = tab === "romantic_forecast_report_tropical_v2"
+      ? `give response only in json format as a whole , nothing else asnwer as astrolger not AI BOT user data index related to astrolgy as data under that aspect and under that interpretation inportant aspects of assessing the potential for a To conduct a For a composite chart analysis, which synthesizes both individuals' charts into a single chart representing the relationship, you'll employ the midpoint method to merge the planetary positions from each chart, creating a new set of placements that reflect the relationship as a unit. Focus on analyzing the composite Sun, Moon, and Ascendant to decode the core identity, emotional nature, and outward expression of the relationship. The positions and aspects of the composite Sun and Moon are particularly telling, revealing the relationship's purpose and underlying emotional themes. Moreover, investigate the house placements of planets within the composite chart to discern how each planet influences specific areas of the relationship, highlighting both strengths and challenges. This analysis helps uncover how the relationship functions collectively, providing insights into its dynamics and potential areas for growth or difficulty. Utilizing astrology software tailored for composite chart calculations can streamline this process, while insights from astrology literature and professional consultations can further enrich the understanding of the chart's implications.. Provide a deeply personalized response as if you are speaking directly to your astrology client in a one-on-one session. Use the language and tone of a trusted Western astrologer offering tailored guidance based on the client’s unique chart. Always interpret the chart using the Placidus house system as the default house_type. Avoid using generic phrases or repeated sentence structures. Each sentence should feel intentionally crafted and distinct, offering fresh insight without duplicating wording from similar interpretations.`
+      : sys;
+    const compositeUser = tab === "romantic_forecast_report_tropical_v2"
+      ? `${b1Str} ${b2Str} I have added birth chart details of mine and my ${relationshipContext} both now calculate our composite chart of this partnership  in {data:[{title:data}]}  exact this format where each data must be atleast 3 sentences with astrological logic with relevance to my question only for each aspect , planet and house on relevant blocks and why you are saying these add an astrologica reason like aspect (with type), house position of planet on each title and data  with astrological data relevant to my data , each title will be heading and data will be context in detail for the title make sure you calculate before response astro analysis must accurate should not change with same data.summery will be mostly generic and recomendtion equal mix of generic and astrological data dont repet that what you have already mentioned in other indexes these could be shorter make sure number content / data on Astrological_aspect is always much more than summery and recomendation to add more here is my birth chart data in json format , try to reffer and mention in your response  `
+      : `${b1Str} ${b2Str} I have added birth chart details of mine and my ${relationshipContext} both now calculate our composite chart of this partnership${suffix}`;
 
     prompts.push({ key: "synastry_horoscope", system: sys, user: `${b1Str} ${b2Str} I have added birth chart details of mine and my ${relationshipContext} both now calculate our synastry chart of this partnership${suffix}`, json: synJson });
-    prompts.push({ key: "composite_horoscope", system: sys, user: `${b1Str} ${b2Str} I have added birth chart details of mine and my ${relationshipContext} both now calculate our composite chart of this partnership${suffix}`, json: synJson });
+    prompts.push({ key: "composite_horoscope", system: compositeSystem, user: compositeUser, json: compositeJson });
     const isBusinessTab = tab === "business_partner_v2";
+    const romanticDavisonSystem = `give response only in json format as a whole , nothing else asnwer as astrolger not AI BOT user data index related to astrolgy as data under that aspect and under that interpretation inportant aspects of assessing the potential for For generating a compatibility score or summary in relationship astrology, you'd synthesize the insights gathered from analyzing planetary aspects, house placements, and elemental compositions to craft a comprehensive overview of the relationship's harmony and potential challenges.**Overall Compatibility Summary**: This summary integrates the findings from different astrological factors, including the aspects between personal and outer planets, the interplay of planets across each other's houses, and the balance of elements (fire, earth, air, water) between both charts. By examining how these factors interact, you can identify the overall tone of the relationship—whether it's predominantly harmonious, challenging, or a mix of both. For instance, harmonious aspects (like trines and sextiles) and complementary elements (such as earth with water, or air with fire) suggest ease and natural compatibility. In contrast, challenging aspects (like squares and oppositions) and clashing elements might indicate areas where the partners may frequently encounter difficulties or need to put in more effort to maintain balance.**Relationship Strengths and Weaknesses**: Delve into specific areas of support and friction by highlighting which aspects and house placements contribute positively to the relationship and which present obstacles. Strengths might be seen in supportive Venus and Mars aspects that enhance romantic and sexual compatibility, or in harmonious Mercury aspects that foster good communication. Weaknesses could be identified in difficult aspects involving Saturn which might indicate blockages or restrictions, or challenging aspects to Neptune which could lead to misunderstandings or disillusionment.By combining these insights, the compatibility score or summary provides a nuanced view of the relationship's potential, pointing out both the strong foundations upon which it can build and the challenging areas that may require conscious effort or compromise to navigate successfully. This holistic view aids partners in understanding their relationship more deeply and offers practical advice on areas to cherish or improve.. Provide a deeply personalized response as if you are speaking directly to your astrology client in a one-on-one session. Use the language and tone of a trusted Western astrologer offering tailored guidance based on the client’s unique chart. Always interpret the chart using the Placidus house system as the default house_type. Avoid using generic phrases or repeated sentence structures. Each sentence should feel intentionally crafted and distinct, offering fresh insight without duplicating wording from similar interpretations.`;
+    const friendshipDavisonSystem = `give response only in json format as a whole , nothing else asnwer as astrolger not AI BOT user data index related to astrolgy as data under that aspect and under that interpretation inportant aspects of assessing the potential for a To conduct a For The Time and Location Midpoint in the Davison Relationship Chart represents a composite focal point that bridges both time and space, offering a dynamic snapshot of the relationship's unfolding journey. This midpoint reflects the collective essence of the relationship—its purpose, key themes, and significant moments in the context of both temporal and geographical influences. Astrologically, it reveals periods of the relationship's growth, challenges, and turning points by showing how the relationship interacts with planetary placements and aspects in the sky at specific moments. The aspects formed to the Time and Location Midpoint, whether harmonious or challenging, offer insights into the evolving emotional tone, intellectual exchanges, and potential shifts in the relationship. For example, a conjunction to the Sun or Moon may indicate pivotal phases where personal growth, emotional bonding, or a sense of destiny is felt, while squares or oppositions to outer planets like Saturn or Pluto can mark times of crisis, transformation, or deep restructuring. The location of the midpoint also ties the relationship to specific geographical energies, subtly influencing where the most significant growth or challenges may unfold geographically. This midpoint can thus provide a rich, time-sensitive layer to the relationship's astrological story, revealing underlying currents that may not be immediately obvious through traditional synastry or composite charts alone.. Provide a deeply personalized response as if you are speaking directly to your astrology client in a one-on-one session. Use the language and tone of a trusted Western astrologer offering tailored guidance based on the client’s unique chart. Always interpret the chart using the Placidus house system as the default house_type. Avoid using generic phrases or repeated sentence structures. Each sentence should feel intentionally crafted and distinct, offering fresh insight without duplicating wording from similar interpretations.`;
     const davisonSystem = isBusinessTab ? `give response only in json format as a whole , nothing else asnwer as astrolger not AI BOT user data index related to astrolgy as data under that aspect and under that interpretation inportant aspects of assessing the potential for a To conduct a For The Time and Location Midpoint in the The Davison Relationship Chart is an astrological tool that calculates the midpoint between two individuals' natal charts, providing insights into the combined energy and journey of a partnership as a separate entity, distinct from the individuals themselves. This chart, created by averaging the longitudes of the planets, the Sun, and the Moon of both partners, reflects the 'relationship soul' — the unique qualities and life trajectory of the partnership over time. From an astrological perspective, the Midpoint in the Davison chart can indicate crucial moments in the partnership's evolution, such as pivotal transits or progressions that activate significant aspects of the partnership's core dynamics. For example, a Saturn-Pluto midpoint in the chart could suggest transformational or intense periods of growth or crisis, where the relationship is tested and undergoes deep, often karmic changes. A Venus-Jupiter midpoint might indicate periods of expansion, creativity, or abundance, marking times when the partnership feels particularly lucky or harmonious. The overall aspect pattern, planetary placements, and house positions in the Davison chart reveal the key themes, challenges, and milestones of the relationship's timeline, often highlighting periods when the relationship is called to evolve or face external tests. By examining these midpoints, you can understand the deeper, time-bound narrative that shapes the course of the partnership.. Provide a deeply personalized response as if you are speaking directly to your astrology client in a one-on-one session. Use the language and tone of a trusted Western astrologer offering tailored guidance based on the client’s unique chart. Always interpret the chart using the Placidus house system as the default house_type. Avoid using generic phrases or repeated sentence structures. Each sentence should feel intentionally crafted and distinct, offering fresh insight without duplicating wording from similar interpretations.
 
 The user has provided a specific "Area of Inquiry": "${areaOfInquiry || "career"}". Make this the central theme of your interpretation. While you should ground the reading in this context, also incorporate other relevant insights from the chart that support or add nuance to this primary focus. Conclude the response by explicitly summarizing how the various astrological insights tie back to the client’s stated area of inquiry.` : sys;
 
-    const davisonUser = isBusinessTab ? `${b1Str} ${b2Str} I have added birth chart details of mine and my ${relationshipContext} both now calculate our davison relation ship chart of this partnership in {data:[{title:data}]}  exact this format where each data must be atleast 5 sentences with astrological logic with relevance to my question only for each aspect , planet and house on relevant blocks and why you are saying these add an astrologica reason like aspect (with type), house position of planet on each title and data  with astrological data relevant to my data , each title will be heading and data will be context in detail for the title make sure you calculate before response astro analysis must accurate should not change with same data.summery will be mostly generic and recomendtion equal mix of generic and astrological data dont repet that what you have already mentioned in other indexes these could be shorter make sure number content / data on Astrological_aspect is always much more than summery and recomendation to add more here is my birth chart data in json format , try to reffer and mention in your response  ` : `${b1Str.replace("I was born on", `I was born on `)} ${b2Str.replace(`my ${relationshipContext} was born on  `, `my ${relationshipContext} was born on  `)} I have added birth chart details of mine and my ${relationshipContext} both now calculate Aspect and Conjunction of this partnership${suffix.replace("atleast 3 sentences", "atleast 5 sentences")}`;
+    const davisonUser = isBusinessTab
+      ? `${b1Str} ${b2Str} I have added birth chart details of mine and my ${relationshipContext} both now calculate our davison relation ship chart of this partnership in {data:[{title:data}]}  exact this format where each data must be atleast 5 sentences with astrological logic with relevance to my question only for each aspect , planet and house on relevant blocks and why you are saying these add an astrologica reason like aspect (with type), house position of planet on each title and data  with astrological data relevant to my data , each title will be heading and data will be context in detail for the title make sure you calculate before response astro analysis must accurate should not change with same data.summery will be mostly generic and recomendtion equal mix of generic and astrological data dont repet that what you have already mentioned in other indexes these could be shorter make sure number content / data on Astrological_aspect is always much more than summery and recomendation to add more here is my birth chart data in json format , try to reffer and mention in your response  `
+      : tab === "romantic_forecast_report_tropical_v2"
+        ? `${b1Str} ${b2Str} I have added birth chart details of mine and my ${relationshipContext} both now calculate compatibility score or summery of this partnership  in {data:[{title:data}]}  exact this format where each data must be atleast 3 sentences with astrological logic with relevance to my question only for each aspect , planet and house on relevant blocks and why you are saying these add an astrologica reason like aspect (with type), house position of planet on each title and data  with astrological data relevant to my data , each title will be heading and data will be context in detail for the title make sure you calculate before response astro analysis must accurate should not change with same data.summery will be mostly generic and recomendtion equal mix of generic and astrological data dont repet that what you have already mentioned in other indexes these could be shorter make sure number content / data on Astrological_aspect is always much more than summery and recomendation to add more here is my birth chart data in json format , try to reffer and mention in your response  `
+        : tab === "friendship_report_tropical_v2"
+          ? `${b1Str} ${b2Str} I have added birth chart details of mine and my ${relationshipContext} both now calculate our davison relation ship chart of this partnership  in {data:[{title:data}]}  exact this format where each data must be atleast 5 sentences with astrological logic with relevance to my question only for each aspect , planet and house on relevant blocks and why you are saying these add an astrologica reason like aspect (with type), house position of planet on each title and data  with astrological data relevant to my data , each title will be heading and data will be context in detail for the title make sure you calculate before response astro analysis must accurate should not change with same data.summery will be mostly generic and recomendtion equal mix of generic and astrological data dont repet that what you have already mentioned in other indexes these could be shorter make sure number content / data on Astrological_aspect is always much more than summery and recomendation to add more here is my birth chart data in json format , try to reffer and mention in your response `
+        : `${b1Str.replace("I was born on", `I was born on `)} ${b2Str.replace(`my ${relationshipContext} was born on  `, `my ${relationshipContext} was born on  `)} I have added birth chart details of mine and my ${relationshipContext} both now calculate Aspect and Conjunction of this partnership${suffix.replace("atleast 3 sentences", "atleast 5 sentences")}`;
+    const davisonJson = isBusinessTab
+      ? { mydetails: data.natal_chart_data, fiend_details: data.natal_chart_data_p2 }
+      : tab === "romantic_forecast_report_tropical_v2"
+        ? { mydetails: data.natal_chart_data ?? {}, fiend_details: data.natal_chart_data_p2 ?? {} }
+        : tab === "friendship_report_tropical_v2"
+          ? { mydetails: data.natal_chart_data ?? {}, fiend_details: data.natal_chart_data_p2 ?? {} }
+        : selfPartnerJson;
 
     prompts.push({ 
       key: "davison_relationship", 
-      system: davisonSystem, 
+      system: tab === "romantic_forecast_report_tropical_v2" ? romanticDavisonSystem : tab === "friendship_report_tropical_v2" ? friendshipDavisonSystem : davisonSystem, 
       user: davisonUser, 
-      json: (isBusinessTab ? { mydetails: data.natal_chart_data, fiend_details: data.natal_chart_data_p2 } : selfPartnerJson) as unknown[]
+      json: davisonJson
     });
-    prompts.push({ key: "major_aspects_and_connections", system: sys, user: `${b1Str} ${b2Str} I have added birth chart details of mine and my ${relationshipContext} both now calculate our davison relation ship chart of this partnership${suffix}`, json: selfPartnerJson });
+    const businessMajorAspectsSystem = `give response only in json format as a whole , nothing else asnwer as astrolger not AI BOT user data index related to astrolgy as data under that aspect and under that interpretation inportant aspects of assessing the potential for a To conduct a For  major aspects between planets in a business or partnership chart offer deep insight into the dynamics, strengths, and challenges of the relationship. Mercury aspects are crucial for communication and decision-making, with harmonious aspects (such as conjunctions, trines, and sextiles) fostering clear, efficient exchange of ideas, while challenging aspects (such as squares or oppositions) may indicate misunderstandings or difficulty in aligning strategies. Mars aspects reflect the energy, drive, and ambition within the partnership—strong, supportive aspects indicate mutual motivation and determination, whereas hard aspects can reveal power struggles, competitive dynamics, or conflict over leadership roles. Jupiter and Saturn aspects provide a balance between growth and stability: Jupiter aspects highlight opportunities for expansion, optimism, and shared vision, whereas Saturn aspects suggest a need for discipline, commitment, and a focus on long-term, structured goals. Outer planet aspects are especially important for transformational shifts. Uranus aspects bring innovation and the potential for sudden changes, inspiring a fresh approach to business but possibly creating unpredictability. Neptune aspects emphasize shared ideals and visionary pursuits, though they can also indicate a tendency toward idealization or confusion if boundaries are not clearly defined. Lastly, Pluto aspects delve into deep transformative processes, often signifying power dynamics, ambition, or the potential for profound growth, but also challenging the partnership to confront hidden fears or unconscious desires. Together, these aspects form a complex web of influences that shape how partners communicate, collaborate, and evolve together over time.. Provide a deeply personalized response as if you are speaking directly to your astrology client in a one-on-one session. Use the language and tone of a trusted Western astrologer offering tailored guidance based on the client’s unique chart. Always interpret the chart using the Placidus house system as the default house_type. Avoid using generic phrases or repeated sentence structures. Each sentence should feel intentionally crafted and distinct, offering fresh insight without duplicating wording from similar interpretations.`;
+    const businessMajorAspectsUser = `${b1Str} ${b2Str} I have added birth chart details of mine and business relationship partner both now calculate Aspect and Conjunction of this partnership  in {data:[{title:data}]}  exact this format where each data must be atleast 5 sentences with astrological logic with relevance to my question only for each aspect , planet and house on relevant blocks and why you are saying these add an astrologica reason like aspect (with type), house position of planet on each title and data  with astrological data relevant to my data , each title will be heading and data will be context in detail for the title make sure you calculate before response astro analysis must accurate should not change with same data.summery will be mostly generic and recomendtion equal mix of generic and astrological data dont repet that what you have already mentioned in other indexes these could be shorter make sure number content / data on Astrological_aspect is always much more than summery and recomendation to add more here is my birth chart data in json format , try to reffer and mention in your response `;
+    const businessMajorAspectsJson = { mydetails: data.natal_chart_data ?? {}, fiend_details: data.natal_chart_data_p2 ?? {} };
+    prompts.push({
+      key: "major_aspects_and_connections",
+      system: tab === "business_partner_v2" ? businessMajorAspectsSystem : sys,
+      user: tab === "business_partner_v2" ? businessMajorAspectsUser : `${b1Str} ${b2Str} I have added birth chart details of mine and my ${relationshipContext} both now calculate our davison relation ship chart of this partnership${suffix}`,
+      json: tab === "business_partner_v2" ? businessMajorAspectsJson : selfPartnerJson
+    });
     prompts.push({ key: "compatibility_score_or_summary", system: sys, user: `${b1Str} ${b2Str} I have added birth chart details of mine and my ${relationshipContext} both now calculate compatibility score or summery of this partnership${suffix}`, json: selfPartnerJson });
 
     const elementalSystem = `give response only in json format as a whole , nothing else asnwer as astrolger not AI BOT user data index related to astrolgy as data under that aspect and under that interpretation inportant aspects of assessing the potential for In relationship astrology, Elemental Balance between two individuals' charts reveals the harmony or imbalance of the four classical elements—Fire, Earth, Air, and Water—and how these elements manifest in their emotional, intellectual, and practical interactions. Fire signs (Aries, Leo, Sagittarius) bring passion, energy, and enthusiasm, while Earth signs (Taurus, Virgo, Capricorn) offer groundedness, stability, and a practical approach. Air signs (Gemini, Libra, Aquarius) emphasize communication, intellectual connection, and adaptability, whereas Water signs (Cancer, Scorpio, Pisces) are sensitive, intuitive, and emotionally deep. A balanced elemental composition fosters a natural flow between the two individuals, with each element complementing the others. However, if one element is overly dominant or lacking, it can create friction or unmet needs within the friendship, such as emotional disconnect (lack of Water) or intellectual tension (lack of Air). Modalities of the signs—Cardinal, Fixed, and Mutable—further refine how each person approaches challenges and shared experiences. Cardinal signs (Aries, Cancer, Libra, Capricorn) are initiators, eager to start new projects and lead the way. Fixed signs (Taurus, Leo, Scorpio, Aquarius) are steady, determined, and focused on maintaining consistency and follow-through. Mutable signs (Gemini, Virgo, Sagittarius, Pisces) are adaptable and flexible, capable of adjusting to changing circumstances. The interaction of modalities between friends can reveal how they handle conflict, cooperation, and change: Cardinal signs might push for action, Fixed signs will seek stability, and Mutable signs will provide flexibility. A balanced mix of these modalities can foster a dynamic, harmonious relationship, where each person’s approach is respected and valued.. Provide a deeply personalized response as if you are speaking directly to your astrology client in a one-on-one session. Use the language and tone of a trusted Western astrologer offering tailored guidance based on the client’s unique chart. Always interpret the chart using the Placidus house system as the default house_type. Avoid using generic phrases or repeated sentence structures. Each sentence should feel intentionally crafted and distinct, offering fresh insight without duplicating wording from similar interpretations.
@@ -159,7 +298,10 @@ The user has provided a specific "Area of Inquiry": "${areaOfInquiry || "friends
 
     prompts.push({ key: "timing_and_transits", system: sys, user: `${b1Str} ${b2Str} I have added birth chart details of mine and my ${relationshipContext} both now calculate our synastry chart of this partnership in {data:[{title:data}]}  exact this format where each data must be atleast 3 sentences with astrological logic with relevance to my question ("${areaOfInquiry || "friendship"}") only for each aspect , planet and house on relevant blocks and why you are saying these add an astrologica reason like aspect (with type), house position of planet on each title and data  with astrological data relevant to my data , each title will be heading and data will be context in detail for the title make sure you calculate before response astro analysis must accurate should not change with same data.summery will be mostly generic and recomendtion equal mix of generic and astrological data dont repet that what you have already mentioned in other indexes these could be shorter make sure number content / data on Astrological_aspect is always much more than summery and recomendation to add more here is my birth chart data in json format , try to reffer and mention in your response  `, json: timingJson });
     if (tab === "business_partner_v2") {
-      prompts.push({ key: "professional_alignment_and_goals", system: sys, user: `${b1Str} ${b2Str} I have added birth chart details of mine and my ${relationshipContext} both now calculate professional alignment and goals of this partnership${suffix}`, json: selfPartnerJson });
+      const professionalAlignmentSystem = `give response only in json format as a whole , nothing else asnwer as astrolger not AI BOT user data index related to astrolgy as data under that aspect and under that interpretation important aspects of assessing the potential for In relationship astrology, In the context of professional alignment and goals within a partnership, the interplay between Chiron and the Lunar Nodes reveals significant areas for mutual growth and development. Chiron, often referred to as the 'wounded healer,' highlights where vulnerabilities and past wounds can become sources of strength and healing through collaborative efforts. When aspects between Chiron and the Nodes are prominent, they suggest that both partners may experience transformative learning opportunities, particularly in navigating challenges that require emotional depth and understanding. This dynamic encourages the individuals to embrace their vulnerabilities, fostering resilience and deeper connections in their professional journey. Additionally, incorporating asteroid influences such as Pallas, Juno, and Vesta enriches this analysis. Pallas aspects suggest a shared wisdom and strategic approach to problem-solving, enhancing the partnership’s ability to tackle challenges with foresight and creativity. Juno’s influence underscores a commitment to each other's professional paths and shared objectives, promoting a sense of loyalty and dedication to mutual aspirations. Meanwhile, Vesta’s presence emphasizes the dedication both partners bring to their joint endeavors, fostering a focused commitment to long-term goals. Together, these astrological factors paint a comprehensive picture of a partnership rooted in growth, strategic collaboration, and enduring commitment, where challenges become stepping stones toward professional fulfillment.. Provide a deeply personalized response as if you are speaking directly to your astrology client in a one-on-one session. Use the language and tone of a trusted Western astrologer offering tailored guidance based on the client’s unique chart. Always interpret the chart using the Placidus house system as the default house_type. Avoid using generic phrases or repeated sentence structures. Each sentence should feel intentionally crafted and distinct, offering fresh insight without duplicating wording from similar interpretations.`;
+      const professionalAlignmentUser = `${b1Str} ${b2Str} I have added birth chart details of mine and my ${relationshipContext} both now calculate Professional Alignment and Goals of this partnership  in {data:[{title:data}]}  exact this format where each data must be atleast 5 sentences with astrological logic with relevance to my question only for each aspect , planet and house on relevant blocks and why you are saying these add an astrologica reason like aspect (with type), house position of planet on each title and data  with astrological data relevant to my data , each title will be heading and data will be context in detail for the title make sure you calculate before response astro analysis must accurate should not change with same data.summery will be mostly generic and recomendtion equal mix of generic and astrological data dont repet that what you have already mentioned in other indexes these could be shorter make sure number content / data on Astrological_aspect is always much more than summery and recomendation to add more here is my birth chart data in json format , try to reffer and mention in your response `;
+      const professionalAlignmentJson = { mydetails: data.natal_chart_data ?? {}, fiend_details: data.natal_chart_data_p2 ?? {} };
+      prompts.push({ key: "professional_alignment_and_goals", system: professionalAlignmentSystem, user: professionalAlignmentUser, json: professionalAlignmentJson });
     } else if (tab === "friendship_report_tropical_v2") {
       const karmicSystem = `give response only in json format as a whole , nothing else asnwer as astrolger not AI BOT user data index related to astrolgy as data under that aspect and under that interpretation important aspects of assessing the potential for In relationship astrology, karmic and supportive indicators in a friendship can be seen through the relationship between Chiron (the Wounded Healer) and the Lunar Nodes (North and South Nodes of the Moon), as they reveal how the individuals contribute to each other’s healing and growth. A prominent Chiron aspect, such as Chiron conjunct one of the Nodes or forming harmonious aspects to personal planets, suggests that the friends may share deep emotional wounds and offer each other a space for mutual healing. These friendships often involve learning important life lessons about vulnerability, compassion, and forgiveness, as both individuals help each other confront and transcend old pain. The Lunar Nodes indicate the soul’s evolutionary path, so when they connect with personal planets in the natal charts of friends, it can create a sense of destiny or a deeper understanding between them, as if they have met to support one another on their life’s journey. Additionally, aspects to significant asteroids like Pallas, Vesta, and Ceres further define the unique ways in which each friend provides support. For instance, Pallas might indicate shared intellectual pursuits or wisdom-based support, Vesta could show where one friend is particularly devoted to helping the other with focus or dedication, and Ceres points to where nurturing and care are exchanged, especially in times of emotional need. These astrological markers suggest a relationship not just of fun or companionship, but of deep emotional connection and mutual growth, where each person plays a role in the other's healing and soul development.. Provide a deeply personalized response as if you are speaking directly to your astrology client in a one-on-one session. Use the language and tone of a trusted Western astrologer offering tailored guidance based on the client’s unique chart. Always interpret the chart using the Placidus house system as the default house_type. Avoid using generic phrases or repeated sentence structures. Each sentence should feel intentionally crafted and distinct, offering fresh insight without duplicating wording from similar interpretations.
 
@@ -172,83 +314,7 @@ The user has provided a specific "Area of Inquiry": "${areaOfInquiry || "marriag
   }
 
   if (tab === "horary_chart_v2") {
-    const currentDate = new Date().toLocaleDateString("en-US", { month: "2-digit", day: "2-digit", year: "numeric" });
-    const b = data;
-    const city = data.city ?? "";
-    const question = data.question ?? "";
-    const natalChartData = data.horary_chart_data ?? data;
-
-    const sys = `give response only in json format as a whole , nothing else answer as astrologer not AI BOT user data index related to astrology as data under that aspect and under that interpretation . Provide a deeply personalized response as if you are speaking directly to your astrology client in a one-on-one session. Use the language and tone of a trusted Western astrologer offering tailored guidance based on the client’s unique chart. Always interpret the chart using the Placidus house system as the default house_type. Avoid using generic phrases or repeated sentence structures. Each sentence should feel intentionally crafted and distinct, offering fresh insight without duplicating wording from similar interpretations.
-
-The user has provided a specific "Area of Inquiry": "${areaOfInquiry || "general"}". Make this the central theme of your interpretation. While you should ground the reading in this context, also incorporate other relevant insights from the chart that support or add nuance to this primary focus. Conclude the response by explicitly summarizing how the various astrological insights tie back to the client’s stated area of inquiry.`;
-
-    const user = `I was born on ${getMonthName(b.month)} ${b.day}, ${b.year} time ${b.hour}:${String(b.min ?? 0).padStart(2, "0")}, in ${city} ,'lat:${b.lat},lon:${b.lon},tzone:${b.tzone}'. ${question}. I'm providing you with my birth chart data in a separate JSON object. You MUST use this data to generate a personalized astrological analysis in the following JSON format:{data:{astrological_aspect:{aspect:[{title:data}],planet:[{title:data}],house:[{title:data}]},summary:{answer:[{title:data}],recommendation:[{title:data}],recommendation_on_date_and_timeline:[{timeline_title:timeline_data}]}}}
-
-example format to follow :
-{
- "data": {
- "astrological_aspect": {
- "aspect": [
- {
- "title": "Mars Trine Jupiter (Transit to Natal)",
- "data": "Between <span class=\"timedata\">January 10th and February 15th, 2025</span>, transiting Mars in Sagittarius forms a trine aspect to your natal Jupiter in the 12th house. This harmonious alignment amplifies your ambition, optimism, and drive to pursue your goals, particularly those related to spirituality, intuition, or humanitarian causes. It supports taking decisive action and expanding your vision, bringing opportunities for growth and success in these areas."
- }
- ],
- "planet": [
- {
- "title": "Transiting Mars",
- "data": "Between <span class=\"timedata\">January 10th and February 15th, 2025</span>, Mars transits through Sagittarius and forms a harmonious trine to your natal Jupiter in the 12th house."
- }
- ],
- "house": [
- {
- "title": "12th House (Transit Activation)",
- "data": "Between <span class=\"timedata\">January 10th and February 15th, 2025</span>, your 12th house is activated."
- }
- ]
- },
- "summary": {
- "answer": [
- {
- "title": "Optimal Time",
- "data": "Based on your birth chart data, the optimal time is between <span class=\"timedata\">January 10th and February 15th, 2025</span>."
- }
- ],
- "recommendation": [
- {
- "title": "Focus on 12th House Themes",
- "data": "Given the emphasis on your 12th house, consider incorporating themes related to spirituality."
- }
- ],
- "recommendation_on_date_and_timeline": [
- {
- "timeline_title": "Between <span class=\"timedata\">January 10th and February 15th, 2025</span>",
- "timeline_data": "This period is particularly auspicious."
- }
- ]
- }
- }
-}
-I need you to strictly adhere to these rules:
-
-1.Personalized Interpretations ONLY: Absolutely NO generic explanations of planets, aspects, or houses. Every interpretation in the data fields must be derived from and specific to MY birth chart data and reasoning with timeline_data you suggested. No general info expected.
-
-2.FUTURE Justified Timelines: The timeline_data must identify a favorable future date range that begins strictly after ${currentDate}. Within this recommended time period, you MUST also pinpoint multiple specific, highly auspicious dates for taking action. You must structure this recommendation by first presenting the single "Top Choice Date," followed by a list of "Other Favorable Dates." For both the overall date range and each specific date, you MUST provide a detailed astrological justification, explaining exactly which transits to MY birth chart make these times significant.
-3.Data Richness: Each data field needs at least three full sentences of detailed, personalized interpretation.
-4.Accurate Titles: Use concise labels for each title (e.g., 'Sun Conjunct Moon', 'Mars in Aries').
-5.Complete Data: Ensure ALL objects have both title and data fields.
-6. Date Formatting: In all "data" and "timeline_data" fields, you MUST wrap every specific date or date range with an HTML span tag using the class "timedata". This formatting is mandatory.
-${excludedDates ? `7. Excluded Dates: You MUST AVOID recommending the following dates or date ranges entirely: ${excludedDates}. All of your suggested timelines must fall outside of these exclusion periods.` : ""}
-8. Flexible Timeline Search: If a user-provided date range contains no potent astrological windows (especially due to excluded dates), or if a significantly more powerful alignment exists just outside it, you are permitted to suggest an alternative. This alternative must be within 30 days of the requested range's start or end, and you must never suggest a past date. When doing so, you must explicitly note that you are going beyond the requested range and provide a compelling astrological justification for why the alternative date is a superior choice.
-
-7.Response should not start with string 'json' ever and must be valid json format.`;
-
-    prompts.push({
-      key: "horary_chart_question",
-      system: sys,
-      user: user,
-      json: [natalChartData],
-    });
+    prompts.push(buildHoraryChartPrompt(data, excludedDates));
   }
 
   const returnTabMap: Record<string, string> = { "jupiter_return_v2": "jupiter_return_v2", "saturn_return_v2": "saturn_return_v2", "mars_return_v2": "mars_return_v2", "uranus_return_v2": "uranus_return_v2" };

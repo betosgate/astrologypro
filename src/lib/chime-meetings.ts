@@ -127,7 +127,7 @@ export async function startChimeRecording(
             MuxType: "AudioWithCompositedVideo",
           },
           Video: {
-            State: "Enabled",
+            State: "Disabled",
             MuxType: "VideoOnly",
           },
           Content: {
@@ -168,7 +168,6 @@ export async function startChimeRecording(
  */
 export async function startChimeConcatenation(
   capturePipelineArn: string,
-  meetingId: string,
   bookingId: string
 ): Promise<void> {
   if (!RECORDING_BUCKET || !capturePipelineArn) return;
@@ -184,6 +183,8 @@ export async function startChimeConcatenation(
             MediaPipelineArn: capturePipelineArn,
             ChimeSdkMeetingConfiguration: {
               ArtifactsConfiguration: {
+                // Must match capture pipeline config:
+                // Audio+CompositedVideo enabled, Video/Content disabled
                 Audio: { State: "Enabled" },
                 Video: { State: "Disabled" },
                 Content: { State: "Disabled" },
@@ -200,8 +201,8 @@ export async function startChimeConcatenation(
         {
           Type: "S3Bucket",
           S3BucketSinkConfiguration: {
-            // Named by meetingId so retrieval is straightforward
-            Destination: `arn:aws:s3:::${RECORDING_BUCKET}/recordings/${bookingId}/final/${meetingId}.mp4`,
+            // Destination must be a folder prefix — AWS names the output file
+            Destination: `arn:aws:s3:::${RECORDING_BUCKET}/recordings/${bookingId}/final/`,
           },
         },
       ],
@@ -222,9 +223,15 @@ export async function listChimeAttendees(
   }));
 }
 
-export async function stopChimeRecording(pipelineId: string): Promise<void> {
-  if (!pipelineId) return;
+/**
+ * Gracefully stops a Chime media capture pipeline.
+ * Accepts either a pipeline ID or a full ARN — extracts the ID from the ARN
+ * if needed (format: arn:aws:chime::ACCOUNT:media-pipeline/PIPELINE_ID).
+ */
+export async function stopChimeRecording(pipelineIdOrArn: string): Promise<void> {
+  if (!pipelineIdOrArn) return;
 
+  const pipelineId = extractPipelineId(pipelineIdOrArn);
   const client = getChimeMediaPipelinesClient();
   await client.send(
     new DeleteMediaCapturePipelineCommand({
@@ -233,10 +240,21 @@ export async function stopChimeRecording(pipelineId: string): Promise<void> {
   );
 }
 
-/** Resolve AWS account ID from STS for ARN construction */
+/** Extract pipeline ID from an ARN, or return as-is if already an ID. */
+function extractPipelineId(pipelineIdOrArn: string): string {
+  // ARN format: arn:aws:chime::ACCOUNT:media-pipeline/PIPELINE_ID
+  const arnMatch = pipelineIdOrArn.match(/media-pipeline\/(.+)$/);
+  return arnMatch ? arnMatch[1] : pipelineIdOrArn;
+}
+
+/** Resolve AWS account ID from STS for ARN construction (cached after first call) */
+let _cachedAccountId: string | null = null;
 async function getAccountId(): Promise<string> {
-  // Use env var if set (avoids an STS call per request)
+  // Use env var if set (avoids an STS call entirely)
   if (process.env.AWS_ACCOUNT_ID) return process.env.AWS_ACCOUNT_ID;
+
+  // Return cached value on subsequent calls
+  if (_cachedAccountId) return _cachedAccountId;
 
   const { STSClient, GetCallerIdentityCommand } = await import(
     "@aws-sdk/client-sts"
@@ -245,5 +263,6 @@ async function getAccountId(): Promise<string> {
     region: process.env.AWS_CHIME_REGION ?? process.env.AWS_REGION ?? "us-east-1",
   });
   const identity = await sts.send(new GetCallerIdentityCommand({}));
-  return identity.Account ?? "";
+  _cachedAccountId = identity.Account ?? "";
+  return _cachedAccountId;
 }

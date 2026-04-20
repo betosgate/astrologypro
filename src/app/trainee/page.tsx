@@ -12,6 +12,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { TrainingDebugControls } from "@/components/trainee/training-debug-controls";
 import {
   BookOpen,
   Calendar,
@@ -25,6 +26,8 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { RoleUpgradeBanners } from "@/components/dashboard/role-upgrade-banners";
+import { TabbieAppointmentCard } from "@/components/trainee/tabbie-appointment-card";
+import { computeTraineeTabbieDashboardState } from "@/lib/trainee-tabbie-appointments";
 
 const TABBY_USERNAME = process.env.NEXT_PUBLIC_TABBY_USERNAME ?? "tabby";
 
@@ -239,6 +242,7 @@ export default async function TraineeDashboardPage() {
     recentCompletionsResult,
     quizStatsResult,
     timeSpentResult,
+    tabbieState,
   ] = await Promise.all([
     // Mentor
     trainee.mentor_diviner_id
@@ -276,6 +280,9 @@ export default async function TraineeDashboardPage() {
       .from("lesson_progress")
       .select("time_spent_seconds")
       .eq("user_id", user.id),
+
+    // Tabbie post-training appointment block state
+    computeTraineeTabbieDashboardState(trainee.id, user.id).catch(() => null),
   ]);
 
   const mentorName = mentorResult.data
@@ -397,13 +404,18 @@ export default async function TraineeDashboardPage() {
           </h1>
           <p className="text-muted-foreground">Welcome back, {trainee.name}</p>
         </div>
-        <Badge
-          variant={
-            trainee.training_status === "active" ? "default" : "secondary"
-          }
-        >
-          {trainee.training_status}
-        </Badge>
+        <div className="flex items-center gap-3">
+          {user.email === "trainee1@test.astrologypro.com" && (
+            <TrainingDebugControls />
+          )}
+          <Badge
+            variant={
+              trainee.training_status === "active" ? "default" : "secondary"
+            }
+          >
+            {trainee.training_status}
+          </Badge>
+        </div>
       </div>
 
       {/* ── Cross-sell banners ────────────────────────────────────────────── */}
@@ -412,6 +424,9 @@ export default async function TraineeDashboardPage() {
         isTrainee={true}
         isPerennialMandalism={isPerennialMandalism}
       />
+
+      {/* ── Tabbie post-training appointment block ─────────────────────────── */}
+      {tabbieState && <TabbieAppointmentCard state={tabbieState} />}
 
       {/* ── Graduation CTA ──────────────────────────────────────────────────── */}
       {trainee.training_status === "graduated" && (

@@ -1,10 +1,10 @@
 /**
- * Upload a training file to /api/admin/training/upload with real-time
- * progress tracking via XMLHttpRequest.
- *
- * `fetch()` does not expose upload progress events, so we fall back to
- * XHR which fires `progress` events on `xhr.upload`.
- */
+* Upload a training file to /api/admin/training/upload with real-time
+* progress tracking via XMLHttpRequest.
+*
+* `fetch()` does not expose upload progress events, so we fall back to
+* XHR which fires `progress` events on `xhr.upload`.
+*/
 
 export interface UploadVideoResult {
   url: string;

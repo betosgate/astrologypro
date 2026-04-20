@@ -200,7 +200,7 @@
 }
 
 .interp-gradient-default {
-    background: linear-gradient(166deg, #f0a023 0%, #f8d647 100%) !important;
+    background: linear-gradient(166deg, rgb(240, 160, 35) 0%, rgb(248, 214, 71) 100%) !important;
     color: #000000 !important;
 }
 
@@ -275,4 +275,77 @@
     width: 15px;
     height: 15px;
     stroke: #e11d48; /* Crimson / Red-600 */
+}
+
+/* ── Planet-Specific Interpretation Gradients ───────────────────────── */
+
+/* Sun: Gold/Yellow */
+.planet-interp-sun {
+    background: linear-gradient(166deg, rgb(240, 160, 35) 0%, rgb(248, 214, 71) 100%) !important;
+    color: #000000 !important;
+}
+
+/* Moon */
+.planet-interp-moon {
+    background: linear-gradient(166deg, #8c8c8c 0%, #C0C0C0 100%) !important;
+    color: #000000 !important;
+}
+
+/* Mercury */
+.planet-interp-mercury {
+    background: linear-gradient(166deg, #FFFF00 0%, #FFD700 100%) !important;
+    color: #000000 !important;
+}
+
+/* Venus */
+.planet-interp-venus {
+    background: linear-gradient(166deg, #00FF00 0%, #32CD32 100%) !important;
+    color: #000000 !important;
+}
+
+/* Mars */
+.planet-interp-mars {
+    background: linear-gradient(166deg, #FF0000 0%, #B22222 100%) !important;
+    color: #ffffff !important;
+}
+
+/* Jupiter */
+.planet-interp-jupiter {
+    background: linear-gradient(166deg, #0000FF 0%, #1E90FF 100%) !important;
+    color: #ffffff !important;
+}
+
+/* Saturn */
+.planet-interp-saturn {
+    background: linear-gradient(166deg, #000000 0%, #4B4B4B 100%) !important;
+    color: #ffffff !important;
+}
+
+/* Uranus */
+.planet-interp-uranus {
+    background: linear-gradient(166deg, #00FFFF 0%, #008B8B 100%) !important;
+    color: #000000 !important;
+}
+
+/* Neptune */
+.planet-interp-neptune {
+    background: linear-gradient(166deg, #00008B 0%, #4169E1 100%) !important;
+    color: #ffffff !important;
+}
+
+/* Pluto */
+.planet-interp-pluto {
+    background: linear-gradient(166deg, rgb(240, 160, 35) 0%, rgb(248, 214, 71) 100%) !important;
+    color: #000000 !important;
+}
+
+/* Other sections */
+.section-karmic-indicators {
+    background: linear-gradient(166deg, rgb(240, 160, 35) 0%, rgb(248, 214, 71) 100%) !important;
+    color: #000000 !important;
+}
+
+.section-timing-transits {
+    background: linear-gradient(166deg, rgb(240, 160, 35) 0%, rgb(248, 214, 71) 100%) !important;
+    color: #000000 !important;
 }

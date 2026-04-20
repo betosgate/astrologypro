@@ -779,11 +779,17 @@ function OnboardingContent() {
       await supabase.from("diviner_services").delete().eq("diviner_id", divinerId);
 
       if (selectedServices.length > 0) {
+        const now = new Date().toISOString();
         await supabase.from("diviner_services").insert(
           selectedServices.map((s) => ({
             diviner_id: divinerId,
             template_id: s.template_id,
             price: s.price,
+            is_enabled: true,
+            enabled_at: now,
+            is_published: true,         // auto-publish — diviner explicitly chose this service
+            publish_status: "published",
+            published_at: now,
           }))
         );
 
@@ -799,6 +805,7 @@ function OnboardingContent() {
             const sel = selectedServices.find((s) => s.template_id === t.id)!;
             return {
               diviner_id: divinerId,
+              template_id: t.id,       // link to service_templates row
               category: t.category,
               name: t.name,
               slug: t.slug,

@@ -6,6 +6,7 @@ import {
   createChimeMeeting,
   getChimeMeeting,
   listChimeAttendees,
+  startChimeRecording,
 } from "@/lib/chime-meetings";
 
 export const dynamic = "force-dynamic";
@@ -32,7 +33,7 @@ export async function POST(request: NextRequest) {
     if (clientToken) {
       const { data, error } = await admin
         .from("bookings")
-        .select("id, chime_meeting_id, diviner_id, client_id, booking_token, diviners(display_name), clients(full_name, id)")
+        .select("id, chime_meeting_id, chime_pipeline_id, diviner_id, client_id, booking_token, diviners(display_name), clients(full_name, id)")
         .eq("id", bookingId)
         .eq("booking_token", clientToken)
         .single();
@@ -60,7 +61,7 @@ export async function POST(request: NextRequest) {
 
       const { data, error: bookingError } = await admin
         .from("bookings")
-        .select("id, chime_meeting_id, diviner_id, client_id, diviners(display_name), clients(full_name, id)")
+        .select("id, chime_meeting_id, chime_pipeline_id, diviner_id, client_id, diviners(display_name), clients(full_name, id)")
         .eq("id", bookingId)
         .single();
 
@@ -120,47 +121,80 @@ export async function POST(request: NextRequest) {
       meeting = await getChimeMeeting(activeMeetingId);
     }
 
-    const attendee = await createChimeAttendee(activeMeetingId, externalUserId);
+    // ── Run attendee creation + other setup in parallel ──────────────────────
+    // These are independent AWS/DB calls — no need to wait sequentially.
+    const attendeePromise = createChimeAttendee(activeMeetingId, externalUserId);
 
-    // Fetch + set session_started_at (column added via migration — graceful fallback if missing)
-    let sessionStartedAt: string = new Date().toISOString();
-    try {
-      const { data: sessionRow } = await admin
+    // Recording: start when diviner joins and no pipeline exists yet
+    const recordingPromise =
+      role === "diviner" && !booking.chime_pipeline_id
+        ? startChimeRecording(activeMeetingId, `recordings/${bookingId}`).catch(
+            (err: unknown) => {
+              const name = (err as { name?: string }).name ?? "Error";
+              const msg = err instanceof Error ? err.message : String(err);
+              console.error(`[join-meeting] Failed to start recording: ${name}: ${msg}`);
+              return null;
+            }
+          )
+        : Promise.resolve(null);
+
+    // Session start time
+    const sessionTimePromise = admin
+      .from("bookings")
+      .select("session_started_at")
+      .eq("id", bookingId)
+      .single()
+      .then(({ data: sessionRow }) => sessionRow?.session_started_at ?? null)
+      .catch(() => null);
+
+    // Diviner presence check (client only)
+    const presencePromise =
+      role === "client"
+        ? listChimeAttendees(activeMeetingId!).catch(() => [])
+        : Promise.resolve([]);
+
+    // Await all in parallel
+    const [attendee, recording, existingStartedAt, attendeeList] =
+      await Promise.all([
+        attendeePromise,
+        recordingPromise,
+        sessionTimePromise,
+        presencePromise,
+      ]);
+
+    // Persist recording pipeline ARN
+    if (recording?.pipelineArn) {
+      console.log(
+        `[join-meeting] Recording pipeline started: id=${recording.pipelineId} arn=${recording.pipelineArn}`
+      );
+      admin
         .from("bookings")
-        .select("session_started_at")
+        .update({ chime_pipeline_id: recording.pipelineArn })
         .eq("id", bookingId)
-        .single();
-
-      if (sessionRow?.session_started_at) {
-        sessionStartedAt = sessionRow.session_started_at;
-      } else {
-        // First join — persist the start time
-        await admin
-          .from("bookings")
-          .update({ session_started_at: sessionStartedAt })
-          .eq("id", bookingId)
-          .is("session_started_at", null);
-      }
-    } catch {
-      // Column not yet migrated — timer starts fresh; run migration to persist across reloads
+        .then(() => {})
+        .catch(() => {});
     }
 
-    // Check if a diviner attendee is already in the Chime meeting.
-    // This lets the client skip the waiting room immediately instead of
-    // relying on the presence callback replaying (which can be unreliable).
-    let divinerPresent = role === "diviner"; // diviner is always "present" to themselves
+    // Session start time — persist if first join
+    let sessionStartedAt: string = existingStartedAt ?? new Date().toISOString();
+    if (!existingStartedAt) {
+      admin
+        .from("bookings")
+        .update({ session_started_at: sessionStartedAt })
+        .eq("id", bookingId)
+        .is("session_started_at", null)
+        .then(() => {})
+        .catch(() => {});
+    }
+
+    // Diviner presence
+    let divinerPresent = role === "diviner";
     if (role === "client") {
-      try {
-        const existingAttendees = await listChimeAttendees(activeMeetingId!);
-        divinerPresent = existingAttendees.some(
-          (a) =>
-            a.externalUserId.startsWith("diviner-") &&
-            a.attendeeId !== attendee.attendeeId
-        );
-      } catch {
-        // If the AWS call fails, fall back to false — client will see the
-        // waiting room but the SDK presence callback will still clear it.
-      }
+      divinerPresent = (attendeeList as { externalUserId: string; attendeeId: string }[]).some(
+        (a) =>
+          a.externalUserId.startsWith("diviner-") &&
+          a.attendeeId !== attendee.attendeeId
+      );
     }
 
     // Build participant names

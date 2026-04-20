@@ -67,18 +67,49 @@ type SortDir = "asc" | "desc";
 
 const STATUS_OPTIONS = [
   { value: "all", label: "All Statuses" },
+  { value: "paid", label: "Paid" },
   { value: "completed", label: "Completed" },
   { value: "pending", label: "Pending" },
+  { value: "pending_payment", label: "Pending Payment" },
+  { value: "processing", label: "Processing" },
+  { value: "awaiting_intake", label: "Awaiting Intake" },
+  { value: "in_progress", label: "In Progress" },
+  { value: "scheduled", label: "Scheduled" },
+  { value: "delivered", label: "Delivered" },
   { value: "refunded", label: "Refunded" },
   { value: "cancelled", label: "Cancelled" },
 ];
 
+/** Human-readable labels for order statuses */
+function statusLabel(s: string): string {
+  switch (s) {
+    case "pending_payment": return "Pending Payment";
+    case "awaiting_intake": return "Awaiting Intake";
+    case "intake_submitted": return "Intake Submitted";
+    case "in_progress": return "In Progress";
+    case "processing": return "Processing";
+    default: return s.replace(/_/g, " ");
+  }
+}
+
 function statusVariant(s: string): "default" | "secondary" | "destructive" | "outline" {
   switch (s) {
-    case "completed": return "default";
-    case "pending": return "secondary";
-    case "refunded": return "destructive";
-    case "cancelled": return "outline";
+    case "completed":
+    case "delivered":
+      return "default";
+    case "paid":
+    case "scheduled":
+    case "in_progress":
+    case "intake_submitted":
+      return "default";
+    case "pending":
+    case "pending_payment":
+    case "processing":
+    case "awaiting_intake":
+      return "secondary";
+    case "refunded":
+    case "cancelled":
+      return "destructive";
     default: return "secondary";
   }
 }
@@ -391,7 +422,7 @@ export default function DivinerOrdersPage() {
                     </TableCell>
                     <TableCell>
                       <Badge variant={statusVariant(order.status)} className="capitalize">
-                        {order.status}
+                        {statusLabel(order.status)}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">

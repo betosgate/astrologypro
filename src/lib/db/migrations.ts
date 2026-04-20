@@ -27,6 +27,15 @@ import { MIGRATION_SQL as MIG_20260413000126 } from "@/data/migrations/202604130
 import { MIGRATION_SQL as MIG_20260414000002 } from "@/data/migrations/20260414000002_booking_session_started_at";
 import { MIGRATION_SQL as MIG_20260414000026 } from "@/data/migrations/20260414000026_chime_sip_rule_id";
 import { MIGRATION_SQL as MIG_20260415000001 } from "@/data/migrations/20260415000001_chime_pipeline_id";
+import { MIGRATION_SQL as MIG_20260416000001 } from "@/data/migrations/20260416000001_phone_call_notifications";
+import { MIGRATION_SQL as MIG_20260416000002 } from "@/data/migrations/20260416000002_phone_sessions_status_expand";
+import { MIGRATION_SQL as MIG_20260416000003 } from "@/data/migrations/20260416000003_add_chat_transcript";
+import { MIGRATION_SQL as MIG_20260416000006 } from "@/data/migrations/MIG_20260416000006_push_subscriptions";
+import { MIGRATION_SQL as MIG_20260416000005 } from "@/data/migrations/20260416000005_simultaneous_ring";
+import { MIGRATION_SQL as MIG_20260416000004 } from "@/data/migrations/20260416000004_tarot_dynamic_system";
+import { MIGRATION_SQL as MIG_20260416000007 } from "@/data/migrations/20260416000007_drop_tarot_spread_cards";
+import { MIGRATION_SQL as MIG_20260418000001 } from "@/data/migrations/20260418000001_service_toolkit_session";
+import { MIGRATION_SQL as MIG_20260419000001 } from "@/data/migrations/20260419000001_social_accounts";
 
 /**
  * Allowlisted migrations that the admin migration runner can execute.
@@ -283,6 +292,78 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Adds chime_pipeline_id text column to bookings. Stores the Media Capture Pipeline ARN created when a Chime session starts. Required to trigger the concatenation pipeline on session end, which merges all segment files into a single named MP4 under recordings/{bookingId}/final/{meetingId}.mp4.",
     sortKey: "20260415000001",
     sql: MIG_20260415000001,
+  },
+  "20260416000001_phone_call_notifications": {
+    id: "20260416000001_phone_call_notifications",
+    title: "Phone call notifications table",
+    description:
+      "Creates phone_call_notifications table — stores inbound call notifications from the SMA Lambda. The diviner's browser widget polls this table to show incoming calls. Rows transition: ringing → accepted | declined | expired. RLS enabled with diviner-select, diviner-update, and service-role-all policies.",
+    sortKey: "20260416000001",
+    sql: MIG_20260416000001,
+  },
+  "20260416000002_phone_sessions_status_expand": {
+    id: "20260416000002_phone_sessions_status_expand",
+    title: "Expand phone_sessions status constraint",
+    description:
+      "Adds 'accepted' and 'declined' to the phone_sessions.status CHECK constraint. Required by the Chime accept/decline routes which set these values when a diviner answers or rejects an inbound call.",
+    sortKey: "20260416000002",
+    sql: MIG_20260416000002,
+  },
+  "20260416000003_add_chat_transcript": {
+    id: "20260416000003_add_chat_transcript",
+    title: "Add chat_transcript to bookings",
+    description:
+      "Adds chat_transcript JSONB column to bookings. Stores the full array of chat messages exchanged during a video session. Each entry: {from, text, time}. Populated by end-meeting and end-session APIs when the diviner ends the call.",
+    sortKey: "20260416000003",
+    sql: MIG_20260416000003,
+  },
+  "MIG_20260416000006_push_subscriptions": {
+    id: "MIG_20260416000006_push_subscriptions",
+    title: "Push subscriptions (Web Push for call notifications)",
+    description:
+      "Creates push_subscriptions table for storing Web Push subscriptions per diviner. Supports multiple subscriptions per diviner (phone + desktop browsers). Cleaned up automatically when expired. RLS enabled with diviner-managed own-row policies and service-role-all for server-side push sending.",
+    sortKey: "MIG_20260416000006",
+    sql: MIG_20260416000006,
+  },
+  "20260416000005_simultaneous_ring": {
+    id: "20260416000005_simultaneous_ring",
+    title: "Simultaneous Ring (outbound transaction tracking)",
+    description:
+      "Adds chime_outbound_transaction_id to phone_sessions. Tracks the outbound PSTN call to the diviner's personal phone during simultaneous ring — needed to cancel the outbound call if the diviner answers from the dashboard instead.",
+    sortKey: "20260416000005",
+    sql: MIG_20260416000005,
+  },
+  "20260416000004_tarot_dynamic_system": {
+    id: "20260416000004_tarot_dynamic_system",
+    title: "Tarot dynamic system (columns + junction table)",
+    description:
+      "Adds description, priority, card_image_url, related_spread_ids columns to tarot_cards. Adds image_url to tarot_spreads. Creates tarot_spread_cards junction table for many-to-many card-to-spread linking with RLS policies.",
+    sortKey: "20260416000004",
+    sql: MIG_20260416000004,
+  },
+  "20260416000007_drop_tarot_spread_cards": {
+    id: "20260416000007_drop_tarot_spread_cards",
+    title: "Drop unused tarot_spread_cards junction table",
+    description:
+      "Drops the tarot_spread_cards junction table. Card-to-spread relationship now uses the related_spread_ids UUID[] array column on tarot_cards instead.",
+    sortKey: "20260416000007",
+    sql: MIG_20260416000007,
+  },
+  "20260418000001_service_toolkit_session": {
+    id: "20260418000001_service_toolkit_session",
+    title: "Service toolkit session (Open Service feature)",
+    description:
+      "Additive migration for the 'Open Service' feature. Adds two nullable columns to bookings: partner_birth_data (JSONB — optional partner birth info for the 3 two-person astrology services) and toolkit_session_opened_at (TIMESTAMPTZ — first-open telemetry). Also adds a partial B-tree index on (partner_birth_data IS NOT NULL) for 'how many two-person bookings have partner data?' reporting. No backfill, no RLS changes, no drops. Rollback = drop both columns.",
+    sortKey: "20260418000001",
+    sql: MIG_20260418000001,
+  },
+  "20260419000001_social_accounts": {
+    id: "20260419000001_social_accounts",
+    title: "Social accounts + OAuth state (native social posting, replaces Ayrshare)",
+    description:
+      "Creates social_accounts (per-owner OAuth connections to Twitter/Facebook/Instagram/LinkedIn/TikTok/YouTube — tokens AES-256-GCM encrypted at rest, key in SOCIAL_TOKEN_ENCRYPTION_KEY env var) and social_oauth_states (short-lived CSRF + PKCE verifier store for the OAuth redirect loop). One active connection per (owner_type, owner_id, platform) enforced by partial unique index. RLS enabled on both tables — no public/authenticated policies, all access goes through server routes with service-role client. Only Twitter is enabled in lib/social/platform-registry.ts at launch; other platforms scaffolded but return 'platform not yet enabled'. Additive only — no drops, no backfill. Rollback = drop both tables.",
+    sortKey: "20260419000001",
+    sql: MIG_20260419000001,
   },
 };
 

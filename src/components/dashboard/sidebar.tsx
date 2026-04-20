@@ -28,16 +28,19 @@ import {
   Receipt,
   CreditCard,
   Wallet,
+  Phone,
   Video,
   MonitorPlay,
   Library,
   Image,
   Flame,
+  LayoutTemplate,
   LifeBuoy,
   Globe,
   Rss,
   Target,
   Trophy,
+  Share2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -89,10 +92,12 @@ const navItems: NavItem[] = [
     children: [
       { label: "Live", href: "/dashboard/live", icon: Radio },
       { label: "Video Sessions", href: "/dashboard/video", icon: MonitorPlay },
+      { label: "Phone Calls", href: "/dashboard/phone-calls", icon: Phone },
       { label: "Session Library", href: "/dashboard/library", icon: Library },
     ],
   },
   { label: "Services", href: "/dashboard/services", icon: Sparkles },
+  { label: "Landing Pages", href: "/dashboard/landing-pages", icon: LayoutTemplate },
   { label: "Media Gallery", href: "/dashboard/media", icon: Image },
   { label: "My Rituals", href: "/dashboard/rituals", icon: Flame },
   { label: "Mundane Astrology", href: "/dashboard/mundane", icon: Globe },
@@ -106,6 +111,7 @@ const navItems: NavItem[] = [
     icon: Megaphone,
     children: [
       { label: "Marketing Hub", href: "/dashboard/marketing", icon: Megaphone },
+      { label: "Social Connections", href: "/dashboard/social-connections", icon: Share2 },
       { label: "Campaigns", href: "/dashboard/campaigns", icon: Target },
       { label: "Affiliates", href: "/dashboard/affiliates", icon: Users2 },
       { label: "Giveaways", href: "/dashboard/giveaways", icon: Trophy },

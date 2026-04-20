@@ -20,9 +20,33 @@ import {
   getServiceLandingTemplate,
 } from "@/lib/service-landings";
 
+export const revalidate = 3600;
+
 interface PageProps {
   params: Promise<{ slug: string }>;
 }
+
+const READING_PAGE_MAP: Record<string, string> = {
+  "nativity-birth-chart": "/readings/nativity-birth-chart",
+  "solar-return": "/readings/solar-return",
+  "weekly-transits": "/readings/weekly-transits",
+  "monthly-transits-lunar-return": "/readings/monthly-transits-lunar-return",
+  "romantic-relationships": "/readings/romantic-relationships",
+  "friendship-relationships": "/readings/friendship-relationships",
+  "business-relationship": "/readings/business-relationship",
+  "predictive-event-horary": "/readings/predictive-event-horary",
+  "jupiter-return": "/readings/jupiter-return",
+  "saturn-return": "/readings/saturn-return",
+  "mars-return": "/readings/mars-return",
+  "uranus-opposition": "/readings/uranus-opposition",
+  "3-card-basic-question-spread": "/readings/3-card-basic-question-spread",
+  "5-card-complex-question-spread": "/readings/5-card-complex-question-spread",
+  "7-card-6-month-forward-review": "/readings/7-card-6-month-forward-review",
+  "7-card-horseshoe-spread-major-read": "/readings/7-card-horseshoe-spread-major-read",
+  "10-card-relationship-spread": "/readings/10-card-relationship-spread",
+  "10-card-celtic-cross-major-read": "/readings/10-card-celtic-cross-major-read",
+  "12-card-astrological-spread-major-read": "/readings/12-card-astrological-spread-major-read",
+};
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
@@ -42,6 +66,20 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
         `Choose a diviner for ${template.name} on AstrologyPro.`,
       url: `${APP_URL}/services/${slug}`,
       type: "website",
+      images: [
+        {
+          url: getServiceImageUrl(slug) ? `${APP_URL}${getServiceImageUrl(slug)}` : `${APP_URL}/images/home/og-card.jpg`,
+          width: 1200,
+          height: 630,
+          alt: template.name,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${template.name} | AstrologyPro`,
+      description: template.description ?? `Choose a diviner for ${template.name} on AstrologyPro.`,
+      images: [getServiceImageUrl(slug) ? `${APP_URL}${getServiceImageUrl(slug)}` : `${APP_URL}/images/home/og-card.jpg`],
     },
   };
 }
@@ -55,8 +93,8 @@ function RatingStars({ averageRating }: { averageRating: number | null }) {
           key={index}
           className={`size-3.5 ${
             index < fullStars
-              ? "fill-amber-400 text-amber-400"
-              : "fill-transparent text-slate-600"
+              ? "fill-[#c9a84c] text-[#c9a84c]"
+              : "fill-transparent text-white/10"
           }`}
         />
       ))}
@@ -74,108 +112,145 @@ export default async function ServiceOnlyLandingPage({ params }: PageProps) {
   if (!template) notFound();
 
   const serviceImage = getServiceImageUrl(template.slug);
+  const readingPageUrl = READING_PAGE_MAP[template.slug] ?? null;
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.12),_transparent_35%),linear-gradient(180deg,_#0f172a_0%,_#111827_100%)] text-white">
-      <div className="mx-auto max-w-6xl px-4 py-16">
-        <div className="grid gap-10 lg:grid-cols-[1.25fr,0.75fr]">
-          <div>
-            <Link
-              href="/services"
-              className="text-sm font-medium text-sky-200/80 hover:text-sky-200"
-            >
-              All Services
-            </Link>
-            <div className="mt-5 inline-flex items-center rounded-full border border-sky-300/20 bg-sky-300/10 px-3 py-1 text-xs uppercase tracking-[0.18em] text-sky-100/80">
-              {getServiceCategoryLabel(template.category)}
-            </div>
-            <h1 className="mt-5 text-4xl font-semibold tracking-tight md:text-5xl">
-              {template.name}
-            </h1>
-            <p className="mt-5 max-w-3xl text-base leading-7 text-slate-300 md:text-lg">
-              {template.description}
-            </p>
+    <div className="min-h-screen bg-[#06080f] text-white">
+      {/* Fixed radial gradient overlay */}
+      <div className="pointer-events-none fixed inset-0 z-0">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_30%_10%,rgba(201,120,28,0.15)_0%,transparent_55%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_70%_85%,rgba(201,168,76,0.09)_0%,transparent_55%)]" />
+      </div>
 
-            <div className="mt-8 grid gap-4 sm:grid-cols-3">
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                <div className="text-xs uppercase tracking-[0.18em] text-slate-400">
-                  Starting Price
-                </div>
-                <div className="mt-2 text-2xl font-semibold text-amber-300">
-                  {formatCurrency(Number(template.base_price))}
-                </div>
+      <div className="relative z-10 mx-auto max-w-6xl px-4 py-16">
+        {/* Hero section */}
+        <div className="relative overflow-hidden">
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_60%,rgba(201,168,76,0.07)_0%,transparent_60%)]" />
+          <div className="relative grid gap-10 lg:grid-cols-[1.25fr,0.75fr]">
+            <div>
+              <Link
+                href="/services"
+                className="text-sm font-medium text-[#c9a84c]/70 hover:text-[#c9a84c] transition-colors"
+              >
+                All Services
+              </Link>
+              <div className="mt-5 inline-flex items-center rounded-full border border-[#c9a84c]/20 bg-[#c9a84c]/5 px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-[#c9a84c]">
+                {getServiceCategoryLabel(template.category)}
               </div>
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                <div className="text-xs uppercase tracking-[0.18em] text-slate-400">
-                  Session Length
+              <h1 className="mt-5 text-4xl font-bold tracking-tight text-[#f5f0e8] md:text-5xl">
+                {template.name}
+              </h1>
+              <p className="mt-5 max-w-3xl text-base leading-7 text-[#b8bcd0]/75 md:text-lg">
+                {template.description}
+              </p>
+
+              <div className="mt-8 grid gap-4 sm:grid-cols-3">
+                <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-4">
+                  <div className="text-xs uppercase tracking-[0.18em] text-[#b8bcd0]/50">
+                    Starting Price
+                  </div>
+                  <div className="mt-2 text-2xl font-semibold text-[#c9a84c]">
+                    {formatCurrency(Number(template.base_price))}
+                  </div>
                 </div>
-                <div className="mt-2 flex items-center gap-2 text-2xl font-semibold text-white">
-                  <Clock className="size-5 text-sky-300" />
-                  {template.duration_minutes} min
+                <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-4">
+                  <div className="text-xs uppercase tracking-[0.18em] text-[#b8bcd0]/50">
+                    Session Length
+                  </div>
+                  <div className="mt-2 flex items-center gap-2 text-2xl font-semibold text-white">
+                    <Clock className="size-5 text-[#c9a84c]" />
+                    {template.duration_minutes} min
+                  </div>
                 </div>
-              </div>
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                <div className="text-xs uppercase tracking-[0.18em] text-slate-400">
-                  Booking Model
-                </div>
-                <div className="mt-2 flex items-center gap-2 text-lg font-semibold text-white">
-                  <Calendar className="size-5 text-sky-300" />
-                  Choose by availability or profile
+                <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-4">
+                  <div className="text-xs uppercase tracking-[0.18em] text-[#b8bcd0]/50">
+                    Booking Model
+                  </div>
+                  <div className="mt-2 flex items-center gap-2 text-lg font-semibold text-white">
+                    <Calendar className="size-5 text-[#c9a84c]" />
+                    Choose by availability or profile
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          <div className="overflow-hidden rounded-3xl border border-white/10 bg-white/5">
-            {serviceImage ? (
-              <div className="relative h-full min-h-[280px] w-full">
-                <Image
-                  src={serviceImage}
-                  alt={template.name}
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 1024px) 100vw, 33vw"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/30 to-transparent" />
-              </div>
-            ) : (
-              <div className="flex h-full min-h-[280px] items-center justify-center p-10 text-slate-400">
-                <UserRound className="size-10" />
-              </div>
-            )}
+            <div className="overflow-hidden rounded-3xl border border-white/[0.07] bg-white/[0.02]">
+              {serviceImage ? (
+                <div className="relative h-full min-h-[280px] w-full">
+                  <Image
+                    src={serviceImage}
+                    alt={template.name}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 1024px) 100vw, 33vw"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/30 to-transparent" />
+                </div>
+              ) : (
+                <div className="flex h-full min-h-[280px] items-center justify-center p-10 text-[#b8bcd0]/40">
+                  <UserRound className="size-10" />
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
+        {/* Cross-link to /readings/ guide banner */}
+        {readingPageUrl && (
+          <div className="mt-8 rounded-2xl border border-[#c9a84c]/20 bg-[#c9a84c]/5 p-4 flex items-center justify-between gap-4">
+            <p className="text-sm text-[#b8bcd0]/70">
+              <span className="font-semibold text-[#f5f0e8]">
+                Learn more about {template.name}
+              </span>{" "}
+              — read the complete educational guide for this service.
+            </p>
+            <Link
+              href={readingPageUrl}
+              className="shrink-0 inline-flex items-center gap-1.5 text-sm font-semibold text-[#c9a84c] hover:text-[#e2c97e] transition-colors"
+            >
+              Read the Guide <ArrowRight className="size-3.5" />
+            </Link>
+          </div>
+        )}
+
         <div className="mt-14 grid gap-8 lg:grid-cols-[0.72fr,1fr]">
           <aside className="space-y-4">
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
-              <h2 className="text-lg font-semibold text-white">
+            <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-5">
+              <h2 className="text-lg font-semibold text-[#f5f0e8]">
                 How to Choose
               </h2>
-              <ul className="mt-4 space-y-3 text-sm leading-6 text-slate-300">
+              <ul className="mt-4 space-y-3 text-sm leading-6 text-[#b8bcd0]/70">
                 <li>
-                  Use <span className="font-medium text-white">View Availability</span> if you
-                  want the fastest route to booking this service.
+                  Use{" "}
+                  <span className="font-medium text-[#f5f0e8]">
+                    View Availability
+                  </span>{" "}
+                  if you want the fastest route to booking this service.
                 </li>
                 <li>
-                  Use <span className="font-medium text-white">View Profile</span> if you want to
-                  compare style, specialties, and background first.
+                  Use{" "}
+                  <span className="font-medium text-[#f5f0e8]">
+                    View Profile
+                  </span>{" "}
+                  if you want to compare style, specialties, and background
+                  first.
                 </li>
                 <li>
-                  Every card below stays locked to this service, so you will not
-                  lose the service context when you proceed.
+                  Every card below stays locked to this service, so you will
+                  not lose the service context when you proceed.
                 </li>
               </ul>
             </div>
 
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
-              <h2 className="text-lg font-semibold text-white">
-                Service Coverage
+            <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-5">
+              <h2 className="text-lg font-semibold text-[#f5f0e8]">
+                About This Listing
               </h2>
-              <p className="mt-3 text-sm leading-6 text-slate-300">
-                This page is the broad service entry point. Diviner-specific
-                pages stay on branded direct-conversion routes, while this page
-                exists to help customers compare available practitioners.
+              <p className="mt-3 text-sm leading-6 text-[#b8bcd0]/70">
+                This page shows all available practitioners who offer this
+                service — sorted by availability and certification. Visit
+                individual practitioner profiles for detailed bios, portfolios,
+                and booking availability.
               </p>
             </div>
           </aside>
@@ -183,14 +258,15 @@ export default async function ServiceOnlyLandingPage({ params }: PageProps) {
           <section className="space-y-5">
             <div className="flex items-end justify-between gap-4">
               <div>
-                <h2 className="text-2xl font-semibold text-white">
+                <h2 className="text-2xl font-semibold text-[#f5f0e8]">
                   Available Diviners
                 </h2>
-                <p className="mt-1 text-sm text-slate-300">
-                  Sorted to prioritize bookable diviners with active availability.
+                <p className="mt-1 text-sm text-[#b8bcd0]/60">
+                  Sorted to prioritize bookable diviners with active
+                  availability.
                 </p>
               </div>
-              <div className="text-sm text-slate-400">
+              <div className="text-sm text-[#b8bcd0]/50">
                 {diviners.length} diviner{diviners.length === 1 ? "" : "s"}
               </div>
             </div>
@@ -199,7 +275,7 @@ export default async function ServiceOnlyLandingPage({ params }: PageProps) {
               {diviners.map((diviner) => (
                 <article
                   key={diviner.divinerId}
-                  className="rounded-2xl border border-white/10 bg-white/5 p-5"
+                  className="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-5 hover:border-[#c9a84c]/20 transition-all"
                 >
                   <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
                     <div className="flex gap-4">
@@ -212,7 +288,7 @@ export default async function ServiceOnlyLandingPage({ params }: PageProps) {
                       />
                       <div className="space-y-2">
                         <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="text-xl font-semibold text-white">
+                          <h3 className="text-xl font-semibold text-[#f5f0e8]">
                             {diviner.displayName}
                           </h3>
                           {diviner.isCertified && (
@@ -222,16 +298,18 @@ export default async function ServiceOnlyLandingPage({ params }: PageProps) {
                             </span>
                           )}
                           {diviner.availabilityConfigured && (
-                            <span className="inline-flex items-center gap-1 rounded-full border border-sky-400/20 bg-sky-400/10 px-2.5 py-1 text-xs text-sky-200">
+                            <span className="inline-flex items-center gap-1 rounded-full border border-[#c9a84c]/20 bg-[#c9a84c]/10 px-2.5 py-1 text-xs text-[#c9a84c]/80">
                               <Calendar className="size-3" />
                               Availability active
                             </span>
                           )}
                         </div>
                         {diviner.tagline && (
-                          <p className="text-sm text-slate-300">{diviner.tagline}</p>
+                          <p className="text-sm text-[#b8bcd0]/60">
+                            {diviner.tagline}
+                          </p>
                         )}
-                        <div className="flex flex-wrap items-center gap-3 text-sm text-slate-400">
+                        <div className="flex flex-wrap items-center gap-3 text-sm text-[#b8bcd0]/50">
                           <span>{formatCurrency(diviner.price)}</span>
                           <span>{diviner.durationMinutes} min</span>
                           <span>{diviner.completedSessions} sessions</span>
@@ -247,7 +325,7 @@ export default async function ServiceOnlyLandingPage({ params }: PageProps) {
                             {diviner.specialties.slice(0, 4).map((specialty) => (
                               <span
                                 key={specialty}
-                                className="rounded-full border border-white/10 px-2.5 py-1 text-xs text-slate-300"
+                                className="rounded-full border border-white/[0.07] px-2.5 py-1 text-xs text-[#b8bcd0]/60"
                               >
                                 {specialty}
                               </span>
@@ -260,21 +338,21 @@ export default async function ServiceOnlyLandingPage({ params }: PageProps) {
                     <div className="flex shrink-0 flex-col gap-2 md:w-[220px]">
                       <Link
                         href={`/${diviner.username}/book/${template.slug}`}
-                        className="inline-flex items-center justify-center gap-2 rounded-xl bg-sky-400/15 px-4 py-2.5 text-sm font-medium text-sky-100 transition-colors hover:bg-sky-400/20"
+                        className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#c9a84c] px-4 py-2.5 text-sm font-medium text-black transition-colors hover:bg-[#e2c97e]"
                       >
                         View Availability
                         <Calendar className="size-4" />
                       </Link>
                       <Link
                         href={`/${diviner.username}`}
-                        className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-white/5"
+                        className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/[0.07] px-4 py-2.5 text-sm font-medium text-[#f5f0e8] transition-colors hover:bg-white/[0.04]"
                       >
                         View Profile
                         <ArrowRight className="size-4" />
                       </Link>
                       <Link
                         href={`/${diviner.username}/services/${template.slug}`}
-                        className="inline-flex items-center justify-center gap-2 rounded-xl border border-amber-400/20 bg-amber-400/10 px-4 py-2.5 text-sm font-medium text-amber-100 transition-colors hover:bg-amber-400/15"
+                        className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#c9a84c]/20 bg-[#c9a84c]/5 px-4 py-2.5 text-sm font-medium text-[#c9a84c] transition-colors hover:bg-[#c9a84c]/10"
                       >
                         Diviner-Specific Page
                         <ArrowRight className="size-4" />
@@ -285,7 +363,7 @@ export default async function ServiceOnlyLandingPage({ params }: PageProps) {
               ))}
 
               {diviners.length === 0 && (
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-8 text-center text-slate-300">
+                <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-8 text-center text-[#b8bcd0]/50">
                   No active diviners are currently bookable for this service.
                 </div>
               )}

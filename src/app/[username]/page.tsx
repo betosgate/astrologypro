@@ -68,15 +68,33 @@ async function getDiviner(username: string) {
 async function getServices(divinerId: string) {
   const supabase = createAdminClient();
 
-  const { data: services } = await supabase
-    .from("services")
-    .select("*")
-    .eq("diviner_id", divinerId)
-    .eq("is_active", true)
-    .order("is_featured", { ascending: false })
-    .order("sort_order", { ascending: true });
+  const [{ data: services }, { data: availabilityTemplates }] = await Promise.all([
+    supabase
+      .from("services")
+      .select("*")
+      .eq("diviner_id", divinerId)
+      .eq("is_active", true)
+      .order("is_featured", { ascending: false })
+      .order("sort_order", { ascending: true }),
+    supabase
+      .from("availability_templates")
+      .select("service_id")
+      .or(`owner_id.eq.${divinerId},diviner_id.eq.${divinerId}`)
+      .eq("is_active", true),
+  ]);
 
-  return applyRuntimePricesToServices(supabase, services ?? []);
+  // Build set of service IDs that have dedicated availability
+  const serviceIdsWithAvailability = new Set<string>();
+  for (const t of availabilityTemplates ?? []) {
+    if (t.service_id) serviceIdsWithAvailability.add(t.service_id);
+  }
+
+  // Only show services that have a dedicated availability template
+  const bookableServices = (services ?? []).filter(
+    (s) => serviceIdsWithAvailability.has(s.id)
+  );
+
+  return applyRuntimePricesToServices(supabase, bookableServices);
 }
 
 async function getTestimonials(divinerId: string) {
@@ -705,6 +723,7 @@ export default async function DivinerPage({ params, searchParams }: PageProps) {
                   bookPath={bookingPreview.bookPath}
                   durationMinutes={bookingPreview.durationMinutes}
                   serviceName={bookingPreview.serviceName}
+                  allSlots
                 />
               </div>
 

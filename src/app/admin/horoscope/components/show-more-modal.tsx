@@ -73,10 +73,29 @@ export function ShowMoreModal({ title, content, loading, open, onClose, aspectTi
     if (!open) setShowFullImage(false);
   }, [open]);
 
+  useEffect(() => {
+    if (!open) return;
+    
+    // Prevent the inner result container from scrolling while modal is open
+    const scrollContainer = document.querySelector(".result-scroll-container") as HTMLElement | null;
+    if (scrollContainer) {
+      const originalOverflow = scrollContainer.style.overflowY;
+      scrollContainer.style.overflowY = "hidden";
+      return () => {
+        scrollContainer.style.overflowY = originalOverflow;
+      };
+    }
+  }, [open]);
+
   return (
     <>
       <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-        <DialogContent className="sm:max-w-4xl max-h-[85vh] p-0 overflow-hidden flex flex-col bg-slate-950 border-white/10" showCloseButton={false}>
+        <DialogContent
+          className="sm:max-w-4xl max-h-[85vh] p-0 overflow-hidden flex flex-col bg-slate-950 border-white/10"
+          showCloseButton={false}
+          onOpenAutoFocus={(event) => event.preventDefault()}
+          onCloseAutoFocus={(event) => event.preventDefault()}
+        >
           <button
             onClick={onClose}
             className="absolute top-4 right-4 z-50 size-9 flex items-center justify-center rounded-full bg-slate-900/90 border border-amber-500/40 text-amber-500 hover:bg-slate-800 hover:border-amber-500 hover:text-amber-400 transition-all active:scale-90 shadow-[0_0_20px_rgba(245,158,11,0.15)] group"
@@ -108,11 +127,11 @@ export function ShowMoreModal({ title, content, loading, open, onClose, aspectTi
                              <div className="bg-white px-8 py-3.5 rounded-lg shadow-xl border border-black/5 text-center" style={{ width: "-webkit-fill-available" }}>
                                <SmartHeading title={planet} textSize="text-[20px]" iconSize="size-6" className="text-black" />
                              </div>
-                             <div className={cn("w-full rounded-xl border border-black/10 pt-6 pb-2 px-8 space-y-4 shadow-2xl text-black", planetBgClass || getPlanetInterpClass(planet))}>
+                             <div className={cn("w-full rounded-xl border border-black/10 pt-6 pb-2 px-8 space-y-4 shadow-2xl", planetBgClass || getPlanetInterpClass(planet))}>
                                 <ul className="space-y-4 list-none">
                                   {items.map((item, idx) => (
                                     <li key={idx} className="text-[18px] leading-relaxed flex gap-4 font-normal">
-                                      <span className="flex-shrink-0 text-black font-bold text-[20px] leading-[28px]">&bull;</span>
+                                      <span className="flex-shrink-0 font-bold text-[20px] leading-[28px]">&bull;</span>
                                       <span>{item}</span>
                                     </li>
                                   ))}
@@ -130,7 +149,7 @@ export function ShowMoreModal({ title, content, loading, open, onClose, aspectTi
                                  {entryTitle}
                                </h4>
                              </div>
-                             <div className={cn("rounded-xl border border-black/10 pt-6 pb-2 px-8 shadow-2xl relative overflow-hidden text-black text-[19px] leading-[28px] font-normal", entryBg || "bg-[#f0a023]")}>
+                             <div className={cn("rounded-xl border border-black/10 pt-6 pb-2 px-8 shadow-2xl relative overflow-hidden text-[19px] leading-[28px] font-normal", entryBg || "interp-gradient-default")}>
                                 {entryContent}
                              </div>
                           </div>
@@ -143,7 +162,7 @@ export function ShowMoreModal({ title, content, loading, open, onClose, aspectTi
                              {isAspect ? (aspectTitle ?? title) : title.replace(/_/g, " ")}
                            </h2>
                         </div>
-                        <div className={cn("rounded-xl border border-black/10 pt-6 pb-4 px-8 shadow-3xl text-black text-[19px] leading-[28px] font-normal relative overflow-hidden", bgClass || "bg-[#f0a023]")}>
+                        <div className={cn("rounded-xl border border-black/10 pt-6 pb-4 px-8 shadow-3xl text-[19px] leading-[28px] font-normal relative overflow-hidden", bgClass || "interp-gradient-default")}>
                           {content}
                         </div>
                       </div>

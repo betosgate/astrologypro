@@ -95,9 +95,9 @@ export async function getSystemConfigValue(
     .eq("type", "SYSTEM_CONFIG")
     .eq("key_name", keyName)
     .eq("status", "active")
-    .maybeSingle();
+    .limit(1);
 
-  if (!error && data?.key_value) return data.key_value;
+  if (!error && data && data.length > 0) return data[0].key_value;
 
   // Env var fallback
   return process.env[keyName] ?? null;

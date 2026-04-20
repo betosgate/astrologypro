@@ -28,6 +28,8 @@ interface AvailabilityPreviewProps {
   bookPath: string;
   durationMinutes: number;
   serviceName?: string;
+  /** When true, show availability from all templates regardless of serviceId */
+  allSlots?: boolean;
 }
 
 interface TimeSlot {
@@ -76,6 +78,7 @@ export function AvailabilityPreview({
   bookPath,
   durationMinutes,
   serviceName,
+  allSlots,
 }: AvailabilityPreviewProps) {
   const [currentMonth, setCurrentMonth] = useState(() => {
     const now = new Date();
@@ -93,7 +96,11 @@ export function AvailabilityPreview({
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const serviceQuery = serviceId ? `&serviceId=${serviceId}` : "";
+  const serviceQuery = allSlots
+    ? "&allSlots=1"
+    : serviceId
+      ? `&serviceId=${serviceId}`
+      : "";
 
   // Fetch which dates have availability this month
   useEffect(() => {
@@ -291,39 +298,64 @@ export function AvailabilityPreview({
           ) : activeTab === "available" ? (
             timeSlots.length > 0 ? (
             <>
-              {timeSlots[0]?.availabilityTitle && (
-                <div className="mb-3 rounded-lg border border-[#c9a84c]/20 bg-[#c9a84c]/8 px-3 py-2 text-left">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-[#c9a84c]">
-                    {timeSlots[0].availabilityTitle}
-                  </p>
-                  <p className="mt-1 text-xs text-[#b8bcd0]/70">
-                    {timeSlots[0].availabilityStartTime} - {timeSlots[0].availabilityEndTime}
-                    {timeSlots[0].availabilityTimezone ? ` • ${timeSlots[0].availabilityTimezone.replace(/_/g, " ")}` : ""}
-                  </p>
-                  {timeSlots[0].availabilityDescription && (
-                    <div
-                      className="mt-1 text-xs text-[#b8bcd0]/60 prose prose-sm prose-invert max-w-none [&_a]:text-amber-400 [&_a]:underline [&_a]:break-all [&_p]:my-1"
-                      dangerouslySetInnerHTML={{ __html: decodeHtmlEntities(timeSlots[0].availabilityDescription) }}
-                    />
-                  )}
-                </div>
-              )}
+              {(() => {
+                // Group slots by availability template
+                const groups: { id: string; title: string; startTime?: string; endTime?: string; timezone?: string; description?: string | null; serviceId?: string | null; slots: TimeSlot[] }[] = [];
+                for (const slot of timeSlots) {
+                  const groupId = slot.availabilityId ?? "__unscoped__";
+                  let group = groups.find((g) => g.id === groupId);
+                  if (!group) {
+                    group = {
+                      id: groupId,
+                      title: slot.availabilityTitle ?? "",
+                      startTime: slot.availabilityStartTime,
+                      endTime: slot.availabilityEndTime,
+                      timezone: slot.availabilityTimezone,
+                      description: slot.availabilityDescription,
+                      serviceId: slot.availabilityServiceId,
+                      slots: [],
+                    };
+                    groups.push(group);
+                  }
+                  group.slots.push(slot);
+                }
 
-              <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-                {timeSlots.map((slot) => {
-                  // Unscoped slots (no service linked) go to the generic /book path
-                  const slotPath = slot.availabilityServiceId == null ? "/book" : bookPath;
-                  return (
-                    <Link
-                      key={slot.start}
-                      href={`/${username}${slotPath}?date=${selectedDate}&time=${encodeURIComponent(slot.start)}`}
-                      className="rounded-lg border border-white/8 bg-white/5 px-2 py-2 text-center text-xs font-medium text-[#f5f0e8] transition-all hover:border-[#c9a84c]/30 hover:bg-[#c9a84c]/10 hover:text-[#c9a84c]"
-                    >
-                      {formatSlotTime(slot.start)}
-                    </Link>
-                  );
-                })}
-              </div>
+                return groups.map((group) => (
+                  <div key={group.id} className="mb-4 last:mb-0">
+                    {group.title && (
+                      <div className="mb-3 rounded-lg border border-[#c9a84c]/20 bg-[#c9a84c]/8 px-3 py-2 text-left">
+                        <p className="text-xs font-semibold uppercase tracking-wider text-[#c9a84c]">
+                          {group.title}
+                        </p>
+                        <p className="mt-1 text-xs text-[#b8bcd0]/70">
+                          {group.startTime} - {group.endTime}
+                          {group.timezone ? ` • ${group.timezone.replace(/_/g, " ")}` : ""}
+                        </p>
+                        {group.description && (
+                          <div
+                            className="mt-1 text-xs text-[#b8bcd0]/60 prose prose-sm prose-invert max-w-none [&_a]:text-amber-400 [&_a]:underline [&_a]:break-all [&_p]:my-1"
+                            dangerouslySetInnerHTML={{ __html: decodeHtmlEntities(group.description) }}
+                          />
+                        )}
+                      </div>
+                    )}
+                    <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                      {group.slots.map((slot) => {
+                        const slotPath = slot.availabilityServiceId == null ? "/book" : bookPath;
+                        return (
+                          <Link
+                            key={slot.start}
+                            href={`/${username}${slotPath}?date=${selectedDate}&time=${encodeURIComponent(slot.start)}`}
+                            className="rounded-lg border border-white/8 bg-white/5 px-2 py-2 text-center text-xs font-medium text-[#f5f0e8] transition-all hover:border-[#c9a84c]/30 hover:bg-[#c9a84c]/10 hover:text-[#c9a84c]"
+                          >
+                            {formatSlotTime(slot.start)}
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ));
+              })()}
             </>
             ) : (
             <p className="py-2 text-center text-xs text-[#b8bcd0]/40">No slots available this day</p>
@@ -372,7 +404,7 @@ export function AvailabilityPreview({
           href={`/${username}${bookPath}`}
           className="inline-flex items-center gap-1.5 text-xs font-medium text-[#c9a84c]/70 transition-colors hover:text-[#c9a84c]"
         >
-          See All {serviceName ?? "Available"} Times & Book
+          {allSlots ? "See All Available Times & Book" : `See All ${serviceName ?? "Available"} Times & Book`}
           <ArrowRight className="size-3" />
         </Link>
       </div>

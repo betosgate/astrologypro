@@ -1,6 +1,16 @@
 import { ASPECT_TYPE_WORDS, MONTH_NAMES } from "./constants";
 import type { BirthInput } from "./types";
 
+export function resolveCityLabel(city: unknown): string {
+  if (!city) return "";
+  if (typeof city === "string") return city;
+  if (typeof city === "object") {
+    const maybeCity = city as { label?: string; name?: string; city?: string };
+    return maybeCity.label ?? maybeCity.name ?? maybeCity.city ?? "";
+  }
+  return "";
+}
+
 export function orderPlanetEntries<T extends { name?: string | null }>(items: T[], categories: string[]): T[] {
   const ordered: T[] = [];
   const matched = new Set<T>();
@@ -84,6 +94,13 @@ export function getRelationshipBgClass(itemTitle: string, tabSlug?: string, sect
   if (!isRel) return "interp-gradient-default";
 
   const lower = itemTitle.toLowerCase();
+
+  // For aspect-style titles like "Mars Sextile Mercury", use the leading planet.
+  if (ASPECT_TYPE_WORDS.some((word) => lower.includes(word.toLowerCase()))) {
+    const { p1 } = parseAspectTitle(itemTitle);
+    const primaryClass = getPlanetInterpClass(p1);
+    if (primaryClass !== "interp-gradient-default") return primaryClass;
+  }
 
   // 1. Planet-specific detection (Highest Priority)
   if (lower.includes("sun")) return "planet-interp-sun";

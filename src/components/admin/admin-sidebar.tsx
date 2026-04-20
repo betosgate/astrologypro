@@ -77,6 +77,7 @@ import {
   Rocket,
   Layers3,
   Timer,
+  CalendarCheck,
 } from "lucide-react";
 
 // ─── Nav structure ─────────────────────────────────────────────────────────────
@@ -197,12 +198,15 @@ const NAV_GROUPS = [
       { label: "Settings", href: "/admin/training/settings", icon: Settings2 },
       // { label: "Class Config", href: "/admin/class-config", icon: LayoutDashboard },
       { label: "Certificate Config", href: "/admin/certificate-config", icon: GraduationCap },
+      { label: "Tabbie Appt Config", href: "/admin/tabbie-appointment", icon: CalendarCheck },
+      { label: "Tabbie Appt Monitor", href: "/admin/trainee-tabbie-appointments", icon: CalendarCheck },
     ],
   },
   {
     label: "Plans",
     items: [
       { label: "Diviner Plans", href: "/admin/diviner-plans", icon: Layers },
+      { label: "Service Templates", href: "/admin/service-templates", icon: LayoutGrid },
       { label: "Service Config", href: "/admin/service-config", icon: Settings2 },
     ],
   },
@@ -243,6 +247,7 @@ const NAV_GROUPS = [
     items: [
       { label: "Tarot Spreads", href: "/admin/tarot/spreads", icon: Shuffle },
       { label: "Tarot Cards", href: "/admin/tarot/cards", icon: LayoutGrid },
+      { label: "Tarot Practice", href: "/admin/tarot/readings", icon: Sparkles },
       { label: "Rituals", href: "/admin/rituals", icon: Flame },
     ],
   },
@@ -275,6 +280,7 @@ const NAV_GROUPS = [
     label: "Config",
     items: [
       { label: "Platform Settings", href: "/admin/platform-settings", icon: Settings2 },
+      { label: "Social Connections", href: "/admin/social-connections", icon: Share2 },
       { label: "API Keys", href: "/admin/astrology-keys", icon: Key },
       { label: "Astro System Settings", href: "/admin/astro-system-settings", icon: Key },
       { label: "Calendar Config", href: "/admin/calendar-config", icon: CalendarDays },

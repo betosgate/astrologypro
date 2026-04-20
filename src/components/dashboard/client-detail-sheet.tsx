@@ -30,6 +30,7 @@ interface SessionWithNotes {
   total_amount: number | null;
   duration_minutes: number;
   session_notes: string | null;
+  client_session_notes: string | null;
   services: { name: string }[] | null;
 }
 
@@ -64,7 +65,7 @@ export function ClientDetailSheet({
         supabase
           .from("bookings")
           .select(
-            "id, scheduled_at, status, total_amount, duration_minutes, session_notes, services(name)"
+            "id, scheduled_at, status, total_amount, duration_minutes, session_notes, client_session_notes, services(name)"
           )
           .eq("client_id", clientId)
           .eq("diviner_id", divinerId)
@@ -110,13 +111,14 @@ export function ClientDetailSheet({
 
   // Filter session notes by search term
   const sessionsWithNotes = sessions.filter(
-    (s) => s.session_notes && s.session_notes.trim().length > 0
+    (s) => (s.session_notes && s.session_notes.trim().length > 0) || (s.client_session_notes && s.client_session_notes.trim().length > 0)
   );
 
   const filteredSessionNotes = notesSearch
     ? sessionsWithNotes.filter(
         (s) =>
           (s.session_notes?.toLowerCase().includes(notesSearch.toLowerCase())) ||
+          (s.client_session_notes?.toLowerCase().includes(notesSearch.toLowerCase())) ||
           ((Array.isArray(s.services) ? s.services[0]?.name : (s.services as any)?.name) ?? "")
             .toLowerCase()
             .includes(notesSearch.toLowerCase())
@@ -267,9 +269,22 @@ export function ClientDetailSheet({
                             {Array.isArray(session.services) ? session.services[0]?.name : (session.services as any)?.name ?? "Session"}
                           </p>
                         </div>
-                        <p className="font-serif text-sm leading-relaxed text-muted-foreground whitespace-pre-wrap">
-                          {session.session_notes}
-                        </p>
+                        {session.session_notes && (
+                          <div>
+                            <p className="text-[10px] font-medium text-muted-foreground/60 uppercase tracking-wider mb-0.5">Your Notes</p>
+                            <p className="font-serif text-sm leading-relaxed text-muted-foreground whitespace-pre-wrap">
+                              {session.session_notes}
+                            </p>
+                          </div>
+                        )}
+                        {session.client_session_notes && (
+                          <div>
+                            <p className="text-[10px] font-medium text-muted-foreground/60 uppercase tracking-wider mb-0.5">Client&apos;s Notes</p>
+                            <p className="font-serif text-sm leading-relaxed text-muted-foreground whitespace-pre-wrap">
+                              {session.client_session_notes}
+                            </p>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>

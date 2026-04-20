@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { formatCurrency, formatDateTime } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
@@ -14,9 +14,10 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { ClipboardList, Loader2, RotateCcw, CheckCircle2, NotebookPen, CreditCard, RefreshCw, CalendarClock, XCircle, Send, Receipt, Video, Clock, Share2, Download, FileText, Copy } from "lucide-react";
+import { ClipboardList, Loader2, RotateCcw, CheckCircle2, NotebookPen, CreditCard, RefreshCw, CalendarClock, XCircle, Send, Receipt, Video, Clock, Share2, Download, FileText, Copy, Sparkles, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
+import { SegmentVideoPlayer } from "@/components/dashboard/segment-video-player";
 
 const statusColors: Record<string, string> = {
   pending: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20",
@@ -45,6 +46,7 @@ interface BookingDetailProps {
     notes: string | null;
     booking_notes?: string | null;
     session_notes?: string | null;
+    client_session_notes?: string | null;
     client_name: string;
     client_email: string;
     client_id?: string | null;
@@ -65,6 +67,11 @@ interface BookingDetailProps {
     base_price?: number | null;
   };
   linkedOrder?: LinkedOrder | null;
+  /**
+   * Server-computed "Open Service" link. NULL when the booking's service
+   * is unmapped (button is hidden). Only set when viewer is a diviner/admin.
+   */
+  sessionLink?: string | null;
 }
 
 // Format an ISO string into the value expected by <input type="datetime-local">
@@ -84,7 +91,109 @@ interface SessionDetails {
   overage_amount: number | null;
 }
 
-export function BookingDetailSheet({ booking, linkedOrder }: BookingDetailProps) {
+/**
+ * Self-contained recording player. Auto-loads segments from S3 on mount
+ * and plays them seamlessly as one video via SegmentVideoPlayer.
+ */
+function RecordingSection({
+  bookingId,
+  recordingUrl,
+  shareId,
+  syncingRecording,
+  onSync,
+}: {
+  bookingId: string;
+  recordingUrl: string | null;
+  shareId: string | null;
+  syncingRecording: boolean;
+  onSync: () => void;
+}) {
+  const [segments, setSegments] = useState<{ key: string; size: number; url: string }[] | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Auto-load segments when component mounts
+  const loadSegments = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/bookings/${bookingId}/recording-segments`);
+      const data = await res.json();
+      if (data.segments?.length > 0) {
+        setSegments(data.segments);
+      } else {
+        setError("No recording segments found in S3");
+      }
+    } catch {
+      setError("Failed to load recording");
+    } finally {
+      setLoading(false);
+    }
+  }, [bookingId]);
+
+  useEffect(() => {
+    loadSegments();
+  }, [loadSegments]);
+
+  return (
+    <div className="rounded-lg border border-border bg-muted/20 p-3 space-y-3">
+      <div className="flex items-center gap-1.5">
+        <Video className="size-3.5 text-muted-foreground" />
+        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Recording</p>
+      </div>
+
+      {loading ? (
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="size-5 animate-spin text-muted-foreground" />
+          <span className="ml-2 text-sm text-muted-foreground">Loading recording…</span>
+        </div>
+      ) : segments && segments.length > 0 ? (
+        <>
+          <SegmentVideoPlayer segments={segments} />
+          {recordingUrl && (
+            <a href={recordingUrl} download target="_blank" rel="noopener noreferrer">
+              <Button size="sm" variant="outline" className="w-full gap-2">
+                <Download className="size-3.5" />Download Recording
+              </Button>
+            </a>
+          )}
+          {shareId && (
+            <Button size="sm" variant="ghost" className="w-full gap-2 text-xs text-muted-foreground"
+              onClick={() => {
+                navigator.clipboard.writeText(`${window.location.origin}/session/${shareId}/recording`);
+                toast.success("Share link copied");
+              }}>
+              <Share2 className="size-3.5" />Copy Client Share Link
+            </Button>
+          )}
+        </>
+      ) : error ? (
+        <div className="space-y-2">
+          <p className="text-sm text-muted-foreground">{error}</p>
+          <Button size="sm" variant="outline" className="w-full gap-2" onClick={loadSegments}>
+            <RefreshCw className="size-3.5" />Retry
+          </Button>
+          {!recordingUrl && (
+            <Button size="sm" variant="outline" className="w-full gap-2" disabled={syncingRecording} onClick={onSync}>
+              {syncingRecording ? <Loader2 className="size-3.5 animate-spin" /> : <RefreshCw className="size-3.5" />}
+              {syncingRecording ? "Syncing…" : "Sync Recording from S3"}
+            </Button>
+          )}
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <p className="text-sm text-muted-foreground">No recording available yet.</p>
+          <Button size="sm" variant="outline" className="w-full gap-2" disabled={syncingRecording} onClick={onSync}>
+            {syncingRecording ? <Loader2 className="size-3.5 animate-spin" /> : <RefreshCw className="size-3.5" />}
+            {syncingRecording ? "Syncing…" : "Sync Recording from S3"}
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function BookingDetailSheet({ booking, linkedOrder, sessionLink }: BookingDetailProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [sessionDetails, setSessionDetails] = useState<SessionDetails | null>(null);
@@ -130,7 +239,7 @@ export function BookingDetailSheet({ booking, linkedOrder }: BookingDetailProps)
       const res = await fetch("/api/bookings/session-notes", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ bookingId: booking.id, sessionNotes }),
+        body: JSON.stringify({ bookingId: booking.id, sessionNotes, role: "diviner" }),
       });
       if (!res.ok) {
         const data = await res.json();
@@ -346,7 +455,11 @@ export function BookingDetailSheet({ booking, linkedOrder }: BookingDetailProps)
         toast.error(data.message ?? "No recording files found in S3 yet");
         return;
       }
-      toast.success("Recording synced — reloading details");
+      if (data.segmentCount > 1) {
+        toast.success(`Synced — ${data.segmentCount} segments found. Use "Play Full Recording" for complete playback.`);
+      } else {
+        toast.success("Recording synced — reloading details");
+      }
       setSessionDetails(null); // force refetch
     } catch {
       toast.error("Failed to sync recording");
@@ -413,47 +526,13 @@ export function BookingDetailSheet({ booking, linkedOrder }: BookingDetailProps)
                   </div>
                 </div>
 
-                <div className="rounded-lg border border-border bg-muted/20 p-3 space-y-3">
-                  <div className="flex items-center gap-1.5">
-                    <Video className="size-3.5 text-muted-foreground" />
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Recording</p>
-                  </div>
-                  {sessionDetails.recording_url ? (
-                    <>
-                      <div className="rounded-lg overflow-hidden border border-border bg-black" style={{ aspectRatio: "16/9" }}>
-                        <video src={sessionDetails.recording_url} controls preload="metadata" className="w-full h-full" />
-                      </div>
-                      <a href={sessionDetails.recording_url} download target="_blank" rel="noopener noreferrer">
-                        <Button size="sm" variant="outline" className="w-full gap-2">
-                          <Download className="size-3.5" />Download Recording
-                        </Button>
-                      </a>
-                      {sessionDetails.recording_share_id && (
-                        <Button size="sm" variant="ghost" className="w-full gap-2 text-xs text-muted-foreground"
-                          onClick={() => {
-                            navigator.clipboard.writeText(`${window.location.origin}/session/${sessionDetails!.recording_share_id}/recording`);
-                            toast.success("Share link copied");
-                          }}>
-                          <Share2 className="size-3.5" />Copy Client Share Link
-                        </Button>
-                      )}
-                    </>
-                  ) : (
-                    <div className="space-y-2">
-                      <p className="text-sm text-muted-foreground">No recording available yet. Recordings are processed after the session ends.</p>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="w-full gap-2"
-                        disabled={syncingRecording}
-                        onClick={handleSyncRecording}
-                      >
-                        {syncingRecording ? <Loader2 className="size-3.5 animate-spin" /> : <RefreshCw className="size-3.5" />}
-                        {syncingRecording ? "Syncing…" : "Sync Recording from S3"}
-                      </Button>
-                    </div>
-                  )}
-                </div>
+                <RecordingSection
+                  bookingId={booking.id}
+                  recordingUrl={sessionDetails.recording_url}
+                  shareId={sessionDetails.recording_share_id}
+                  syncingRecording={syncingRecording}
+                  onSync={handleSyncRecording}
+                />
 
                 <div className="rounded-lg border border-border bg-muted/20 p-3 space-y-2">
                   <div className="flex items-center gap-1.5">
@@ -510,6 +589,17 @@ export function BookingDetailSheet({ booking, linkedOrder }: BookingDetailProps)
             >
               <Video className="mr-2 size-4" />
               Join Session
+            </Button>
+          )}
+
+          {/* ── Open Service (toolkit) — diviner-only, hidden when unmapped ─ */}
+          {sessionLink && (
+            <Button asChild variant="secondary" className="w-full">
+              <Link href={sessionLink}>
+                <Sparkles className="mr-2 size-4" />
+                Open Service
+                <ExternalLink className="ml-2 size-3 opacity-70" />
+              </Link>
             </Button>
           )}
 
@@ -777,6 +867,20 @@ export function BookingDetailSheet({ booking, linkedOrder }: BookingDetailProps)
             </div>
           )}
 
+
+          {/* ── Client's Session Notes (read-only for diviner) ────────── */}
+          {booking.client_session_notes && (
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1.5">
+                <NotebookPen className="size-3.5" />
+                Client&apos;s Notes
+                <span className="text-xs font-normal text-muted-foreground">(from client)</span>
+              </Label>
+              <div className="rounded-lg bg-muted/30 p-3">
+                <p className="text-sm whitespace-pre-wrap text-muted-foreground">{booking.client_session_notes}</p>
+              </div>
+            </div>
+          )}
 
           {/* ── Note to Client ────────────────────────────────────────── */}
           {booking.status !== "canceled" && (

@@ -4,24 +4,24 @@ const SUPABASE_URL = "https://wyluvclvtvwptsvvtgkv.supabase.co";
 const SERVICE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind5bHV2Y2x2dHZ3cHRzdnZ0Z2t2Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NDk4MjU0OSwiZXhwIjoyMDkwNTU4NTQ5fQ.FFO4z0U0HUnRxioHGZbwh6cOU0Ex_9vZ6rNhotwB_AM";
 const db = createClient(SUPABASE_URL, SERVICE_KEY);
 
-// All Unsplash astrology/cosmos images — guaranteed to load
+// All Unsplash astrology/cosmos images — validated 200 OK
 const IMGS = {
-  galaxy:     "https://images.unsplash.com/photo-1462331940025-496dfbfc7564?w=900&q=80",
-  milkyway:   "https://images.unsplash.com/photo-1519681393784-d120267933ba?w=900&q=80",
-  moon:       "https://images.unsplash.com/photo-1614728263952-84ea256f9d6a?w=900&q=80",
-  crescent:   "https://images.unsplash.com/photo-1516339901601-2b4ab77c2fe5?w=900&q=80",
-  aurora:     "https://images.unsplash.com/photo-1506318137071-a8e063b4bec0?w=900&q=80",
-  stars:      "https://images.unsplash.com/photo-1513836279014-a89f7a76ae86?w=900&q=80",
-  tarot:      "https://images.unsplash.com/photo-1548248823-ce0054e17b0e?w=900&q=80",
-  crystals:   "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=900&q=80",
-  crystal_ball: "https://images.unsplash.com/photo-1535463731090-e3a4a9b7f98a?w=900&q=80",
-  zodiac:     "https://images.unsplash.com/photo-1532968961801-01c7ad8dc63d?w=900&q=80",
-  eclipse:    "https://images.unsplash.com/photo-1486325212027-8081e485255e?w=900&q=80",
-  cosmos:     "https://images.unsplash.com/photo-1607988795691-3d0147b43231?w=900&q=80",
-  planets:    "https://images.unsplash.com/photo-1614314107768-6018061b5b72?w=900&q=80",
-  telescope:  "https://images.unsplash.com/photo-1454789548928-9efd52dc4031?w=900&q=80",
-  candles:    "https://images.unsplash.com/photo-1607478900766-efe13248b125?w=900&q=80",
-  notebook:   "https://images.unsplash.com/photo-1517842645767-c639042777db?w=900&q=80",
+  galaxy:       "https://images.unsplash.com/photo-1462331940025-496dfbfc7564?w=900&q=80",
+  milkyway:     "https://images.unsplash.com/photo-1519681393784-d120267933ba?w=900&q=80",
+  moon:         "https://images.unsplash.com/photo-1522030299830-16b8d3d049fe?w=900&q=80",
+  crescent:     "https://images.unsplash.com/photo-1523821741446-edb2b68bb7a0?w=900&q=80",
+  aurora:       "https://images.unsplash.com/photo-1506318137071-a8e063b4bec0?w=900&q=80",
+  stars:        "https://images.unsplash.com/photo-1513836279014-a89f7a76ae86?w=900&q=80",
+  tarot:        "https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?w=900&q=80",
+  crystals:     "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=900&q=80",
+  crystal_ball: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=900&q=80",
+  zodiac:       "https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=900&q=80",
+  eclipse:      "https://images.unsplash.com/photo-1486325212027-8081e485255e?w=900&q=80",
+  cosmos:       "https://images.unsplash.com/photo-1607988795691-3d0147b43231?w=900&q=80",
+  planets:      "https://images.unsplash.com/photo-1614314107768-6018061b5b72?w=900&q=80",
+  telescope:    "https://images.unsplash.com/photo-1454789548928-9efd52dc4031?w=900&q=80",
+  candles:      "https://images.unsplash.com/photo-1607478900766-efe13248b125?w=900&q=80",
+  notebook:     "https://images.unsplash.com/photo-1517842645767-c639042777db?w=900&q=80",
 };
 
 const ALL_IMGS = Object.values(IMGS);

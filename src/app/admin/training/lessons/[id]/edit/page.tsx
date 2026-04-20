@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { LocalSearchAutocomplete } from "@/components/ui/local-search-autocomplete";
 import { useRouter, useParams } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -24,6 +25,9 @@ import {
   getDurationMinsFromFile,
   getDurationMinsFromUrl,
 } from "@/lib/training/video-duration";
+import { FileText, X, Eye, Download, FilePlus } from "lucide-react";
+import { PdfPreviewModal } from "@/components/trainee/pdf-preview-modal";
+import { cn } from "@/lib/utils";
 
 // ---- types for sub-resource sections ----
 
@@ -126,6 +130,7 @@ export default function EditLessonPage() {
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [categoryLabel, setCategoryLabel] = useState("");
   const [categoryLessons, setCategoryLessons] = useState<LessonOption[]>([]);
   const [videoMode, setVideoMode] = useState<VideoMode>("youtube");
   const [uploadPercent, setUploadPercent] = useState<number | null>(null);
@@ -139,6 +144,8 @@ export default function EditLessonPage() {
   const [pdfUploadStatus, setPdfUploadStatus] = useState<string | null>(null);
   const [uploadedPdfFileName, setUploadedPdfFileName] = useState<string | null>(null);
   const pdfFileInputRef = useRef<HTMLInputElement>(null);
+  const [pdfUrls, setPdfUrls] = useState<string[]>([]);
+  const [pdfPreview, setPdfPreview] = useState<{ url: string; title: string } | null>(null);
 
   const [form, setForm] = useState({
     title: "",
@@ -204,7 +211,8 @@ export default function EditLessonPage() {
       try {
         const [lessonRes, catsRes] = await Promise.all([
           fetch(`/api/admin/training/lessons/${id}`),
-          fetch("/api/admin/training/categories"),
+          // pageSize=1000 ensures all categories are loaded, not just the first 10
+          fetch("/api/admin/training/categories?pageSize=1000"),
         ]);
 
         if (!lessonRes.ok) {
@@ -221,11 +229,31 @@ export default function EditLessonPage() {
         const l = lessonData.lesson;
         setVideoMode(detectVideoMode(l.video_url));
         setPdfMode(detectPdfMode(l.pdf_url));
+
+        // Parse pdf_url for multi-PDF support
+        let initialPdfUrls: string[] = [];
+        let formPdfUrl = "";
+        if (l.pdf_url) {
+          if (l.pdf_url.startsWith("[")) {
+            try {
+              initialPdfUrls = JSON.parse(l.pdf_url);
+            } catch {
+              // Fallback for strings that happen to start with [ but aren't JSON
+              initialPdfUrls = [l.pdf_url];
+              formPdfUrl = l.pdf_url;
+            }
+          } else {
+            initialPdfUrls = [l.pdf_url];
+            formPdfUrl = l.pdf_url;
+          }
+        }
+        setPdfUrls(initialPdfUrls);
+
         setForm({
           title: l.title ?? "",
           description: l.description ?? "",
           video_url: l.video_url ?? "",
-          pdf_url: l.pdf_url ?? "",
+          pdf_url: formPdfUrl,
           content: l.content ?? "",
           duration_mins: l.duration_mins != null ? String(l.duration_mins) : "",
           category_id: l.category_id ?? "",
@@ -233,6 +261,9 @@ export default function EditLessonPage() {
           previous_lesson_id: l.previous_lesson_id ?? "",
           is_active: l.is_active ?? true,
         });
+        // Set the category label for the autocomplete
+        const currentCat = (catsData.categories ?? []).find((c: Category) => c.id === l.category_id);
+        if (currentCat) setCategoryLabel(currentCat.name);
 
         // Load sibling lessons for the "previous lesson" dropdown (exclude self)
         if (l.category_id) {
@@ -577,7 +608,7 @@ export default function EditLessonPage() {
               .sort((a: LessonOption, b: LessonOption) => a.priority - b.priority);
             setCategoryLessons(sorted);
           })
-          .catch(() => {});
+          .catch(() => { });
       }
     }
   }
@@ -606,10 +637,12 @@ export default function EditLessonPage() {
 
   function handlePdfModeChange(mode: PdfMode) {
     setPdfMode(mode);
-    setForm((prev) => ({ ...prev, pdf_url: "" }));
     setUploadedPdfFileName(null);
     setPdfUploadStatus(null);
     setPdfUploadPercent(null);
+    if (mode === "url") {
+      setForm((prev) => ({ ...prev, pdf_url: "" }));
+    }
     if (pdfFileInputRef.current) {
       pdfFileInputRef.current.value = "";
     }
@@ -660,40 +693,45 @@ export default function EditLessonPage() {
   }
 
   async function handlePdfFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
 
     const MAX_MB = 50;
-    if (file.size > MAX_MB * 1024 * 1024) {
-      toast.error(`PDF must be under ${MAX_MB} MB.`);
-      e.target.value = "";
-      return;
+    const allowedType = "application/pdf";
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      if (file.size > MAX_MB * 1024 * 1024) {
+        toast.error(`${file.name} is over ${MAX_MB} MB.`);
+        continue;
+      }
+      if (file.type !== allowedType) {
+        toast.error(`${file.name} is not a PDF.`);
+        continue;
+      }
+
+      setPdfUploadPercent(0);
+      setPdfUploadStatus(`Uploading ${file.name}…`);
+      try {
+        const { url } = await uploadTrainingPdf({
+          file,
+          onProgress: (percent) => setPdfUploadPercent(percent),
+          onStatus: setPdfUploadStatus,
+        });
+        setPdfUrls((prev) => [...prev, url]);
+        toast.success(`${file.name} uploaded.`);
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : `Upload failed for ${file.name}`);
+      }
     }
 
-    if (file.type !== "application/pdf") {
-      toast.error("Only PDF files are allowed.");
-      e.target.value = "";
-      return;
-    }
+    setPdfUploadPercent(null);
+    setPdfUploadStatus(null);
+    if (e.target) e.target.value = "";
+  }
 
-    setPdfUploadPercent(0);
-    setPdfUploadStatus("Preparing upload…");
-    try {
-      const { url } = await uploadTrainingPdf({
-        file,
-        onProgress: (percent) => setPdfUploadPercent(percent),
-        onStatus: setPdfUploadStatus,
-      });
-      setForm((prev) => ({ ...prev, pdf_url: url }));
-      setUploadedPdfFileName(file.name);
-      toast.success("PDF uploaded.");
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Upload failed. Please try again.");
-      e.target.value = "";
-    } finally {
-      setPdfUploadPercent(null);
-      setPdfUploadStatus(null);
-    }
+  function removePdf(index: number) {
+    setPdfUrls((prev) => prev.filter((_, i) => i !== index));
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -716,7 +754,9 @@ export default function EditLessonPage() {
           title: form.title.trim(),
           description: form.description.trim() || null,
           video_url: form.video_url.trim() || null,
-          pdf_url: form.pdf_url.trim() || null,
+          pdf_url: pdfMode === "url"
+            ? (form.pdf_url.trim() || null)
+            : (pdfUrls.length > 0 ? JSON.stringify(pdfUrls) : null),
           content: form.content.trim() || null,
           duration_mins: form.duration_mins ? parseInt(form.duration_mins, 10) : null,
           category_id: form.category_id,
@@ -783,6 +823,15 @@ export default function EditLessonPage() {
         onConfirm={handleConfirmAction}
       />
 
+      {pdfPreview && (
+        <PdfPreviewModal
+          url={pdfPreview.url}
+          title={pdfPreview.title}
+          open={true}
+          onClose={() => setPdfPreview(null)}
+        />
+      )}
+
       <div className="flex items-center gap-3">
         <Button asChild variant="ghost" size="sm">
           <Link href="/admin/training">← Back</Link>
@@ -816,27 +865,36 @@ export default function EditLessonPage() {
 
             {/* Category */}
             <div className="space-y-1.5">
-              <label className="text-sm font-medium" htmlFor="category_id">
+              <label className="text-sm font-medium">
                 Category <span className="text-red-500">*</span>
               </label>
-              <select
-                id="category_id"
-                name="category_id"
-                value={form.category_id}
-                onChange={handleChange}
-                required
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                {categories.length === 0 ? (
-                  <option value="">No categories available</option>
-                ) : (
-                  categories.map((cat) => (
-                    <option key={cat.id} value={cat.id}>
-                      {cat.name}
-                    </option>
-                  ))
-                )}
-              </select>
+              <LocalSearchAutocomplete
+                placeholder={categories.length === 0 ? "Loading categories…" : "Search category…"}
+                options={categories.map((c) => ({ id: c.id, label: c.name }))}
+                defaultValue={categoryLabel}
+                onSelect={(val) => {
+                  const matched = categories.find((c) => c.name === val);
+                  if (matched) {
+                    setForm((prev) => ({ ...prev, category_id: matched.id, previous_lesson_id: "" }));
+                    setCategoryLabel(matched.name);
+                    // Reload siblings for new category, excluding self
+                    fetch(`/api/admin/training/lessons?category_id=${matched.id}`)
+                      .then((r) => r.json())
+                      .then((data) => {
+                        const sorted = (data.lessons ?? [])
+                          .filter((s: LessonOption) => s.id !== id)
+                          .sort((a: LessonOption, b: LessonOption) => a.priority - b.priority);
+                        setCategoryLessons(sorted);
+                      })
+                      .catch(() => { });
+                  } else {
+                    setCategoryLabel(val);
+                  }
+                }}
+              />
+              {!form.category_id && categoryLabel && (
+                <p className="text-xs text-amber-500">Please select a valid category from the list.</p>
+              )}
             </div>
 
             {/* Previous Lesson */}
@@ -888,11 +946,10 @@ export default function EditLessonPage() {
                     key={mode}
                     type="button"
                     onClick={() => handleVideoModeChange(mode)}
-                    className={`flex-1 px-3 py-1.5 transition-colors ${
-                      videoMode === mode
-                        ? "bg-primary text-primary-foreground font-medium"
-                        : "bg-background text-muted-foreground hover:bg-muted"
-                    }`}
+                    className={`flex-1 px-3 py-1.5 transition-colors ${videoMode === mode
+                      ? "bg-primary text-primary-foreground font-medium"
+                      : "bg-background text-muted-foreground hover:bg-muted"
+                      }`}
                   >
                     {mode === "youtube" ? "YouTube" : mode === "url" ? "Direct URL" : "Upload"}
                   </button>
@@ -921,30 +978,30 @@ export default function EditLessonPage() {
 
               {videoMode === "url" && (
                 <div className="space-y-2">
-                <input
-                  type="url"
-                  value={form.video_url}
-                  onChange={(e) =>
-                    setForm((prev) => ({ ...prev, video_url: e.target.value }))
-                  }
-                  onBlur={(e) => void handleMainVideoUrlBlur(e.target.value)}
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
-                  placeholder="https://example.com/video.mp4"
-                />
-                {/* Video preview for direct URL */}
-                {form.video_url && /\.(mp4|webm|ogg|mov)(\?|$)/i.test(form.video_url) && (
-                  <div className="rounded-lg border overflow-hidden bg-black">
-                    <video
-                      src={form.video_url}
-                      controls
-                      controlsList="nodownload"
-                      className="w-full max-h-[300px]"
-                      preload="metadata"
-                    >
-                      Your browser does not support the video tag.
-                    </video>
-                  </div>
-                )}
+                  <input
+                    type="url"
+                    value={form.video_url}
+                    onChange={(e) =>
+                      setForm((prev) => ({ ...prev, video_url: e.target.value }))
+                    }
+                    onBlur={(e) => void handleMainVideoUrlBlur(e.target.value)}
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                    placeholder="https://example.com/video.mp4"
+                  />
+                  {/* Video preview for direct URL */}
+                  {form.video_url && /\.(mp4|webm|ogg|mov)(\?|$)/i.test(form.video_url) && (
+                    <div className="rounded-lg border overflow-hidden bg-black">
+                      <video
+                        src={form.video_url}
+                        controls
+                        controlsList="nodownload"
+                        className="w-full max-h-[300px]"
+                        preload="metadata"
+                      >
+                        Your browser does not support the video tag.
+                      </video>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1006,11 +1063,10 @@ export default function EditLessonPage() {
                     key={mode}
                     type="button"
                     onClick={() => handlePdfModeChange(mode)}
-                    className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition ${
-                      pdfMode === mode
-                        ? "bg-primary text-primary-foreground shadow-sm"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
+                    className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition ${pdfMode === mode
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                      }`}
                   >
                     {mode === "url" ? "PDF URL" : "Upload PDF"}
                   </button>
@@ -1030,15 +1086,73 @@ export default function EditLessonPage() {
               )}
 
               {pdfMode === "upload" && (
-                <div className="space-y-2">
-                  <input
-                    ref={pdfFileInputRef}
-                    type="file"
-                    accept="application/pdf"
-                    onChange={handlePdfFileChange}
-                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm file:mr-3 file:rounded file:border-0 file:bg-primary file:px-3 file:py-1 file:text-xs file:font-medium file:text-primary-foreground"
-                    disabled={pdfUploadPercent !== null}
-                  />
+                <div className="space-y-4">
+                  <div className="flex flex-wrap gap-3">
+                    {pdfUrls.map((url, idx) => {
+                      const fileName = url.split("/").pop()?.split("-").slice(1).join("-") || "document.pdf";
+                      return (
+                        <div key={idx} className="group relative flex flex-col items-center gap-2 rounded-lg border bg-card p-3 w-32 shadow-sm transition-all hover:border-primary/50">
+                          <div
+                            className="flex size-12 items-center justify-center rounded-lg bg-red-500/10 text-red-500 cursor-pointer hover:bg-red-500/20"
+                            onClick={() => setPdfPreview({ url, title: fileName })}
+                          >
+                            <FileText size={24} />
+                          </div>
+                          <p className="text-[10px] text-center font-medium line-clamp-2 w-full px-1">
+                            {fileName}
+                          </p>
+
+                          {/* Remove button */}
+                          <button
+                            type="button"
+                            onClick={() => removePdf(idx)}
+                            className="absolute -top-1.5 -right-1.5 size-5 flex items-center justify-center rounded-full bg-destructive text-destructive-foreground shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <X size={12} />
+                          </button>
+
+                          {/* Action overlay */}
+                          <div className="absolute inset-0 bg-background/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 rounded-lg pointer-events-none group-hover:pointer-events-auto">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="size-7 rounded-full bg-background/80"
+                              onClick={() => setPdfPreview({ url, title: fileName })}
+                            >
+                              <Eye size={14} />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="size-7 rounded-full bg-background/80"
+                              asChild
+                            >
+                              <a href={url} download target="_blank" rel="noopener noreferrer">
+                                <Download size={14} />
+                              </a>
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    <label className="flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-muted-foreground/20 bg-muted/30 p-3 w-32 cursor-pointer hover:bg-muted/50 transition-colors">
+                      <div className="flex size-12 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                        <FilePlus size={24} />
+                      </div>
+                      <p className="text-[10px] font-medium text-muted-foreground">Add PDF</p>
+                      <input
+                        ref={pdfFileInputRef}
+                        type="file"
+                        accept="application/pdf"
+                        multiple
+                        onChange={handlePdfFileChange}
+                        className="hidden"
+                        disabled={pdfUploadPercent !== null}
+                      />
+                    </label>
+                  </div>
+
                   {pdfUploadPercent !== null && (
                     <div className="space-y-1">
                       <Progress value={pdfUploadPercent} className="h-2" />
@@ -1047,18 +1161,13 @@ export default function EditLessonPage() {
                       </p>
                     </div>
                   )}
-                  {uploadedPdfFileName && pdfUploadPercent === null && (
-                    <p className="text-xs text-green-600">
-                      Uploaded: {uploadedPdfFileName}
-                    </p>
-                  )}
                   <p className="text-xs text-muted-foreground">
-                    PDF only · max 50 MB
+                    PDF only · max 50 MB per file
                   </p>
                 </div>
               )}
 
-              {form.pdf_url && (
+              {pdfMode === "url" && form.pdf_url && (
                 <p className="text-xs text-muted-foreground break-all">
                   Resource: {form.pdf_url}
                 </p>
@@ -1515,11 +1624,10 @@ export default function EditLessonPage() {
                       {q.options.map((opt, i) => (
                         <li
                           key={i}
-                          className={`text-xs px-2 py-1 rounded ${
-                            i === q.correct_answer
-                              ? "bg-green-100 text-green-800 font-medium"
-                              : "text-muted-foreground"
-                          }`}
+                          className={`text-xs px-2 py-1 rounded ${i === q.correct_answer
+                            ? "bg-green-100 text-green-800 font-medium"
+                            : "text-muted-foreground"
+                            }`}
                         >
                           {OPTION_LABELS[i] ?? i}. {opt}
                           {i === q.correct_answer && " ✓"}

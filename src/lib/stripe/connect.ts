@@ -119,5 +119,7 @@ export async function getConnectAccountStatus(accountId: string) {
     chargesEnabled: account.charges_enabled,
     payoutsEnabled: account.payouts_enabled,
     detailsSubmitted: account.details_submitted,
+    payoutSchedule: account.settings?.payouts?.schedule ?? null,
+    payoutsDisabledReason: account.requirements?.disabled_reason ?? null,
   };
 }

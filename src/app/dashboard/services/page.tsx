@@ -36,6 +36,7 @@ export default async function ServicesPage() {
     .from("services")
     .select("id, name, category, duration_minutes, base_price, is_active, is_featured")
     .eq("diviner_id", diviner.id)
+    .eq("is_active", true)
     .in("category", resolvedPackage.allowedCategories)
     .order("sort_order", { ascending: true })
     .order("created_at", { ascending: false });

@@ -12,6 +12,7 @@ import { getServicePurchaseConfig } from "@/lib/service-purchase";
 import { applyRuntimePricesToServices } from "@/lib/runtime-service-pricing";
 import { isDivinerPayoutReadyForPaidServices } from "@/lib/payout-readiness";
 import { calculateMoneySplit } from "@/lib/money-split";
+import { getSessionLinkForBooking } from "@/lib/service-toolkit-mapping";
 import {
   sendBookingConfirmation,
   sendBookingAccessInstructions,
@@ -137,13 +138,14 @@ export async function POST(request: NextRequest) {
       display_name: string;
       video_provider?: string;
       username?: string;
+      chime_phone_number?: string | null;
     } | null = null;
     let divinerError: { message?: string } | null = null;
 
     async function fetchDivinerById(id: string) {
       let result = await adminSupabase
         .from("diviners")
-        .select("id, user_id, stripe_account_id, charges_enabled, payouts_enabled, display_name, video_provider, username")
+        .select("id, user_id, stripe_account_id, charges_enabled, payouts_enabled, display_name, video_provider, username, chime_phone_number")
         .eq("id", id)
         .eq("is_active", true)
         .single();
@@ -151,7 +153,7 @@ export async function POST(request: NextRequest) {
       if (result.error || !result.data) {
         result = await supabase
           .from("diviners")
-          .select("id, user_id, stripe_account_id, charges_enabled, payouts_enabled, display_name, video_provider, username")
+          .select("id, user_id, stripe_account_id, charges_enabled, payouts_enabled, display_name, video_provider, username, chime_phone_number")
           .eq("id", id)
           .eq("is_active", true)
           .single();
@@ -163,7 +165,7 @@ export async function POST(request: NextRequest) {
     async function fetchDivinerByUsername(username: string) {
       let result = await adminSupabase
         .from("diviners")
-        .select("id, user_id, stripe_account_id, charges_enabled, payouts_enabled, display_name, video_provider, username")
+        .select("id, user_id, stripe_account_id, charges_enabled, payouts_enabled, display_name, video_provider, username, chime_phone_number")
         .eq("username", username)
         .eq("is_active", true)
         .single();
@@ -171,7 +173,7 @@ export async function POST(request: NextRequest) {
       if (result.error || !result.data) {
         result = await supabase
           .from("diviners")
-          .select("id, user_id, stripe_account_id, charges_enabled, payouts_enabled, display_name, video_provider, username")
+          .select("id, user_id, stripe_account_id, charges_enabled, payouts_enabled, display_name, video_provider, username, chime_phone_number")
           .eq("username", username)
           .eq("is_active", true)
           .single();
@@ -600,9 +602,11 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    // Booking wizard collects all intake data pre-checkout (name, email, phone,
+    // birth data, notes), so post-payment intake is never needed for bookings.
     const initialOrderStatus = shouldCharge
       ? "pending_payment"
-      : getOrderStatusForService(service, true);
+      : getOrderStatusForService(service, true, { intakeCompleted: true });
     const orderId = await ensureOrderForBooking(adminSupabase as any, {
       bookingId: booking.id,
       clientId: client.id,
@@ -671,11 +675,18 @@ export async function POST(request: NextRequest) {
       // Push Google Calendar event immediately for paid bookings so it works
       // without needing the Stripe webhook (webhook will update if needed).
       const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://astrologypro.com";
+      const paidSessionLink = diviner?.username
+        ? `${appUrl}/${diviner.username}/session/${booking.id}?token=${booking.booking_token}`
+        : `${appUrl}/booking/${booking.booking_token}`;
       try {
         const calEventDescription = buildCalendarDescription(
           availabilityTemplateDescription,
           appUrl,
           booking.booking_token,
+          {
+            sessionLink: paidSessionLink,
+            phoneNumber: diviner?.chime_phone_number,
+          },
         );
         const calAttendeesPaid: Array<{ email: string; name?: string }> = [];
         const spEmailPaid = questionnaireData.secondPersonEmail as string | undefined;
@@ -764,6 +775,7 @@ export async function POST(request: NextRequest) {
         // Point booker to their portal bookings page (not a raw session link)
         sessionLink: portalBookingsUrl,
         duration: service.duration_minutes,
+        phoneNumber: diviner.chime_phone_number ?? undefined,
       };
 
       const emailPromises: Promise<unknown>[] = [
@@ -812,6 +824,12 @@ export async function POST(request: NextRequest) {
           const divinerEmail = divinerAuth?.user?.email;
           if (!divinerEmail) return;
 
+          const toolkitPath = getSessionLinkForBooking({
+            bookingId: booking.id,
+            templateSlug: service.slug ?? null,
+            category: service.category ?? null,
+          });
+
           await sendDivinerNewBookingNotification({
             divinerEmail,
             divinerName: diviner.display_name,
@@ -829,6 +847,7 @@ export async function POST(request: NextRequest) {
                   lifeArea: questionnaireData.lifeArea as string | undefined,
                 }
               : undefined,
+            sessionUrl: toolkitPath ? `${appUrl}${toolkitPath}` : null,
           });
         })()
       );
@@ -852,6 +871,10 @@ export async function POST(request: NextRequest) {
           availabilityTemplateDescription,
           appUrl,
           booking.booking_token,
+          {
+            sessionLink: portalBookingsUrl,
+            phoneNumber: diviner?.chime_phone_number,
+          },
         );
         // Gather additional attendees for calendar event
         const calAttendees: Array<{ email: string; name?: string }> = [];

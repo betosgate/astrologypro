@@ -235,6 +235,32 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Performance metrics and review moderation"
         ]
       },
+      {
+        name: "admin_assign_chime_phone",
+        label: "Assign Chime Phone Number to Diviner",
+        description: "From the diviner detail page under Phone & Calling, the admin assigns a Chime phone number so clients can call the diviner directly. Once assigned, the number shows as Active with SMA routing confirmation, and the admin can toggle inbound calls on or off.",
+        group: "People",
+        purpose: "This is the first step to enable phone readings for a diviner. Without an assigned Chime number, no inbound calls can reach them. The SMA link status confirms the number is correctly wired to the telephony pipeline so calls route through AWS Chime.",
+        bullets: [
+          "Chime Phone Number: the assigned E.164 number displayed with Active/Inactive status badge",
+          "SMA link status: confirms the number is linked to the SIP Media Application and inbound calls will route correctly",
+          "Release Number button: unassigns the number from this diviner and returns it to the available pool",
+          "Inbound Calls toggle: master switch to enable or disable whether callers can reach this diviner via phone"
+        ]
+      },
+      {
+        name: "admin_answer_mode_config",
+        label: "Answer Mode & Mobile Number",
+        description: "Admin selects how the diviner receives incoming calls — Browser Widget (web only), Mobile Phone (personal phone only), or Both (simultaneous ring). When mobile is included, the diviner's personal phone number must be entered in E.164 format.",
+        group: "People",
+        purpose: "Simultaneous ring ('Both') ensures diviners never miss a call — their personal mobile phone rings at the same time as the browser widget on their dashboard, so they can answer from wherever they are.",
+        bullets: [
+          "Answer mode radio buttons: 'Browser Widget', 'Mobile Phone', or 'Both' — controls how the diviner's phone rings when a client calls",
+          "Diviner Mobile Number field: E.164 format phone number used for CallAndBridge when mobile answer mode is active",
+          "Save Settings: updates the diviner profile immediately — the next incoming call uses the new answer mode",
+          "Voicemails section below: shows count of any voicemails left by callers when the diviner didn't answer"
+        ]
+      },
       { name: "affiliates_v2", label: "Affiliates", description: "Tracking of platform growth partners.", group: "People" },
       // { name: "campaigns", label: "Marketing Campaigns", description: "Governance of promotional initiatives.", group: "People" },
       { 
@@ -401,7 +427,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
      
      
       { 
-        name: "horoscope_nativity_processing_v2", 
+        name: "horoscope_nativity_processing_v3", 
         label: "Nativity: Generating Your Reading", 
         description: "Your core astrological architecture is being synthesized.", 
         group: "Horoscope Toolkit",
@@ -416,7 +442,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
         ]
       },
       { 
-        name: "horoscope_nativity_result_planets_v1", 
+        name: "horoscope_nativity_result_planets_v4", 
         label: "Nativity: Planet Information Table", 
         description: "The raw foundation of your entire birth chart — every planet, sign, house, and degree.", 
         group: "Horoscope Toolkit",
@@ -432,69 +458,27 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "🔁 Retro Column — 'Yes' means the planet is in retrograde (appears to move backward). Saturn Retro = delayed career success but eventual strength. Neptune Retro = deep intuition and spiritual confusion. Node Retro = strong karmic life path and destiny-driven experiences."
         ]
       },
-      {
-        name: "horoscope_nativity_result_interpret_v1",
-        label: "Nativity: AI Interpretation — Sun, Moon & Mercury",
-        description: "How the AI converts your raw chart data into personal life readings.",
-        group: "Horoscope Toolkit",
-        subModule: "Nativity Birth Chart",
-        purpose: "This screen transforms raw astronomical data into personal meaning. For each planet, the AI uses a formula: Planet + Sign + House + Degree + Speed = Your Reading. The Sun block reveals your core identity and life direction. The Moon block explains your emotional nature and subconscious patterns. The Mercury block breaks down your thinking style and communication strengths. Each colored block shows the planet's sign and house badge in the top-right corner — click 'Show More' to unlock the full deep-dive interpretation.",
-        bullets: [
-          "🌞 Sun (e.g. Libra · House 6) — Your core identity and life purpose. Libra in House 6 means you thrive in structured, balanced work environments and succeed through teamwork, diplomacy, and collaboration.",
-          "🌙 Moon (e.g. Aries · House 12) — Your emotional world and inner patterns. Aries in House 12 means you feel things deeply and boldly, but process emotions internally and privately — often handling challenges alone.",
-          "🧠 Mercury (e.g. Virgo · House 6) — Your thinking style and communication. Virgo in House 6 means you have a sharp analytical mind with strong attention to detail — excellent for technical work, analysis, and problem-solving.",
-          "⚡ Speed Indicator — A fast-moving planet (like Moon at 13.20) has an active, daily influence on your life. A slow planet means deeper, long-term impact.",
-          "🔁 Retrograde Flag — If a planet shows 'Retro', its energy turns inward. Mercury Retro = overthinking. Saturn Retro = delayed but eventual success.",
-          "📖 Click 'Show More' — Opens the full deep-dive modal with house placement details, degree precision, speed analysis, and actionable career/life advice."
-        ]
-      },
-      {
-  name: "horoscope_nativity_interpret_deep_v1",
-  label: "Nativity: Deep Sun Insights",
-  description: "A clear, structured breakdown of your Sun placement, explaining your identity, work style, and life direction.",
-  group: "Horoscope Toolkit",
-  subModule: "Nativity Birth Chart",
-  purpose: "This panel opens when the user clicks 'Show More' on the Sun section. It provides a deeper but easy-to-understand explanation of how the Sun’s sign, house, degree, speed, and motion influence personality, daily life, and career. Instead of complex astrology terms, it explains each factor step-by-step so users can clearly understand how their core identity works in real life.",
-  bullets: [
-    "🏠 House Placement — Explains which area of life (work, relationships, career, etc.) your core identity is focused on.",
-    "♎ Zodiac Sign Meaning — Describes your natural personality traits, behavior style, and how you express yourself.",
-    "📐 Degree Insight — Shows how strongly your Sun expresses its sign qualities and whether it represents a new beginning or mature energy.",
-    "⚡ Speed Influence — Explains whether your actions and decisions are fast, steady, or slow, and how you approach life pace.",
-    "🔁 Motion (Direct/Retrograde) — Clarifies whether your energy is expressed outwardly or more internally.",
-    "💼 Practical Life Impact — Provides real-world meaning for your work style, habits, and how you succeed in daily life."
-  ]
-},
-    {
-  name: "horoscope_nativity_interpret_visual_v1",
-  label: "Nativity: Visual Personality Guide (Sun in Libra)",
-  description: "A simple visual explanation of how your Sun and zodiac sign combine to shape your core personality.",
-  group: "Horoscope Toolkit",
-  subModule: "Nativity Birth Chart",
-  purpose: "This visual panel helps users quickly understand the meaning of their Sun placement by showing three layers in one diagram. The left section explains the natural qualities of the Sun, such as identity, confidence, purpose, and self-expression. The right section explains the qualities of the zodiac sign, such as Libra’s balance, fairness, diplomacy, charm, and relationship focus. The center section shows the blended traits created when the Sun expresses itself through Libra, helping users understand how their core identity behaves in real life. It is designed to make astrology easy, visual, and immediately understandable even for users with no prior astrology knowledge.",
-  bullets: [
-    "☀️ Left Section — Shows the core qualities of the Sun, including identity, vitality, confidence, purpose, willpower, leadership, and self-expression.",
-    "♎ Right Section — Shows the traits of the zodiac sign, such as Libra’s harmony, fairness, diplomacy, sociability, peace-making, charm, and relationship orientation.",
-    "✨ Center Blend — Explains the combined personality created by Sun in Libra, such as balance, cooperation, equality, justice, partnership, tact, refinement, and peaceful social intelligence.",
-    "🧠 Easy Interpretation — Helps astrologers and users quickly understand how the planet’s natural energy changes when expressed through a specific zodiac sign.",
-    "🎨 Visual Learning Tool — Useful as a clear reference for chart explanation, client sharing, personal reflection, or educational astrology content."
-  ]
-},
-   {
-  name: "horoscope_nativity_result_interpret_v2",
-  label: "Nativity: Venus, Mars & Decan Insights",
-  description: "Explains your love style, motivation, action patterns, and the deeper decan layer linked to a planet.",
-  group: "Horoscope Toolkit",
-  subModule: "Nativity Birth Chart",
-  purpose: "This section presents deeper interpretations for Venus and Mars, helping users understand how they relate, attract, desire, act, and pursue goals. Venus explains love, beauty, charm, pleasure, values, and relationship style. Mars explains drive, ambition, courage, assertiveness, conflict style, and the way a person takes action in daily life and career. Some planets also show a small triangle icon, which indicates that a Decan interpretation is available. The decan is a more detailed astrological layer that divides each zodiac sign into three 10-degree sections, adding nuance to the planet’s expression. This helps astrologers and users understand not only the sign and house of a planet, but also the subtler tone, style, and secondary influence shaping that placement.",
-  bullets: [
-    "💛 Venus Reading — Explains attraction style, relationship needs, beauty preferences, charm, pleasure, creativity, and how love energy is expressed.",
-    "🔥 Mars Reading — Shows motivation, ambition, courage, action style, work drive, assertiveness, and how the user goes after goals or handles conflict.",
-    "🔺 Triangle Icon (Decan) — Indicates that an extra interpretive layer is available for that planet through the Decan system.",
-    "📐 What a Decan Means — Each zodiac sign is divided into 3 decans of 10 degrees each, and the planet’s exact degree decides which decan it belongs to.",
+  {
+  "name": "horoscope_nativity_result_interpret_v3",
+  "label": "Nativity: AI Interpretation — Moon, Mercury, Venus & Sun",
+  "description": "How the AI converts your raw chart data into personal life readings, including Venus meaning and Decan refinement.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Nativity Birth Chart",
+  "purpose": "This screen transforms raw astronomical data into personal meaning. For each planet, the AI uses a formula: Planet + Sign + House + Degree + Speed = Your Reading. The Sun block reveals your core identity and life direction. The Moon block explains your emotional nature and subconscious patterns. The Mercury block breaks down your thinking style and communication strengths. The Venus block explains love, beauty, charm, pleasure, values, creativity, attraction style, and relationship expression. Some planets also show a small triangle icon, which means a Decan interpretation is available. A decan is a deeper astrological layer that divides each zodiac sign into three 10-degree sections, adding nuance to the planet's expression. This helps astrologers and users understand not only the sign and house of a planet, but also the subtler tone, style, and secondary influence shaping that placement. Each colored block shows the planet's sign and house badge in the top-right corner — click 'Show More' to unlock the full deep-dive interpretation.",
+  "bullets": [
+    "🌙 Moon (e.g. Aries · House 12) — Your emotional world and inner patterns. Aries in House 12 means you feel things deeply and boldly, but process emotions internally and privately — often handling challenges alone.",
+    "🧠 Mercury (e.g. Virgo · House 6) — Your thinking style and communication. Virgo in House 6 means you have a sharp analytical mind with strong attention to detail — excellent for technical work, analysis, and problem-solving.",
+    "♀ Venus (e.g. Leo · House 5) — Your love style, attraction pattern, creativity, beauty, pleasure, and values. Venus in Leo in House 5 means you express affection warmly and dramatically — often bringing romance, artistic talent, confidence, joy, and magnetic self-expression into your life.",
+    "🌞 Sun (e.g. Libra · House 6) — Your core identity and life purpose. Libra in House 6 means you thrive in structured, balanced work environments and succeed through teamwork, diplomacy, and collaboration.",
+    "📐 What a Decan Means — Each zodiac sign is divided into 3 decans of 10 degrees each, and the planet's exact degree decides which decan it belongs to.",
     "🧠 Why Decans Matter — Decans refine the reading by adding a second tone to the planet, helping astrologers explain why two people with the same sign placement can still feel different.",
-    "🎨 Visual Planet Cards — Each planet appears in its own colored block so users can quickly identify, read, and compare different personal energies."
+    "🔺 Decan Indicator — A small triangle icon beside a planet means an extra decan-based interpretation is available for that placement.",
+    "⚡ Speed Indicator — A fast-moving planet (like Moon at 13.20) has an active, daily influence on your life. A slow planet means deeper, long-term impact.",
+    "🔁 Retrograde Flag — If a planet shows 'Retro', its energy turns inward. Mercury Retro = overthinking. Saturn Retro = delayed but eventual success.",
+    "📖 Click 'Show More' — Opens the full deep-dive modal with house placement details, degree precision, speed analysis, Venus/Mars-style personal expression meaning where relevant, decan refinement, and actionable career/life advice."
   ]
 },
+
   {
   name: "horoscope_nativity_decan_detail_v1",
   label: "Nativity: Decan Wisdom (Mercury)",
@@ -511,9 +495,42 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
     "📚 Advanced Layer — Helps astrologers understand subtle differences between similar placements by adding a refined, symbolic, and historical perspective."
   ]
 },
+      {
+  name: "horoscope_nativity_interpret_deep_v3",
+  label: "Nativity: Deep Sun Insights",
+  description: "A clear, structured breakdown of your Sun placement, explaining your identity, work style, and life direction.",
+  group: "Horoscope Toolkit",
+  subModule: "Nativity Birth Chart",
+  purpose: "This panel opens when the user clicks 'Show More' on the Sun section. It provides a deeper but easy-to-understand explanation of how the Sun’s sign, house, degree, speed, and motion influence personality, daily life, and career. Instead of complex astrology terms, it explains each factor step-by-step so users can clearly understand how their core identity works in real life.",
+  bullets: [
+    "🏠 House Placement — Explains which area of life (work, relationships, career, etc.) your core identity is focused on.",
+    "♎ Zodiac Sign Meaning — Describes your natural personality traits, behavior style, and how you express yourself.",
+    "📐 Degree Insight — Shows how strongly your Sun expresses its sign qualities and whether it represents a new beginning or mature energy.",
+    "⚡ Speed Influence — Explains whether your actions and decisions are fast, steady, or slow, and how you approach life pace.",
+    "🔁 Motion (Direct/Retrograde) — Clarifies whether your energy is expressed outwardly or more internally.",
+    "💼 Practical Life Impact — Provides real-world meaning for your work style, habits, and how you succeed in daily life."
+  ]
+},
+    {
+  name: "horoscope_nativity_interpret_visual_v3",
+  label: "Nativity: Visual Personality Guide (Sun in Libra)",
+  description: "A simple visual explanation of how your Sun and zodiac sign combine to shape your core personality.",
+  group: "Horoscope Toolkit",
+  subModule: "Nativity Birth Chart",
+  purpose: "This visual panel helps users quickly understand the meaning of their Sun placement by showing three layers in one diagram. The left section explains the natural qualities of the Sun, such as identity, confidence, purpose, and self-expression. The right section explains the qualities of the zodiac sign, such as Libra’s balance, fairness, diplomacy, charm, and relationship focus. The center section shows the blended traits created when the Sun expresses itself through Libra, helping users understand how their core identity behaves in real life. It is designed to make astrology easy, visual, and immediately understandable even for users with no prior astrology knowledge.",
+  bullets: [
+    "☀️ Left Section — Shows the core qualities of the Sun, including identity, vitality, confidence, purpose, willpower, leadership, and self-expression.",
+    "♎ Right Section — Shows the traits of the zodiac sign, such as Libra’s harmony, fairness, diplomacy, sociability, peace-making, charm, and relationship orientation.",
+    "✨ Center Blend — Explains the combined personality created by Sun in Libra, such as balance, cooperation, equality, justice, partnership, tact, refinement, and peaceful social intelligence.",
+    "🧠 Easy Interpretation — Helps astrologers and users quickly understand how the planet’s natural energy changes when expressed through a specific zodiac sign.",
+    "🎨 Visual Learning Tool — Useful as a clear reference for chart explanation, client sharing, personal reflection, or educational astrology content."
+  ]
+},
+
+
     
      {
-  name: "horoscope_nativity_result_houses_v1",
+  name: "horoscope_nativity_result_houses_v3",
   label: "Nativity: House Information",
   description: "A clear breakdown of all 12 houses, their signs, degrees, and planet placements.",
   group: "Horoscope Toolkit",
@@ -530,7 +547,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
   ]
 },
  {
-  name: "horoscope_nativity_house_interpret_v2",
+  name: "horoscope_nativity_house_interpret_v3",
   label: "Nativity: House Interpretations",
   description: "Easy-to-understand interpretations of each house, showing how different life areas are shaped in the birth chart.",
   group: "Horoscope Toolkit",
@@ -544,7 +561,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
     "📖 Expandable Reading — Supports deeper interpretation through 'Show More' sections for users who want a fuller explanation of each house."
   ]
 },{
-  name: "horoscope_nativity_house_visual_v3",
+  name: "horoscope_nativity_house_visual_v4",
   label: "Nativity: House Visual Guide (Aries in 1st House)",
   description: "A visual explanation of how a zodiac sign and house combine to shape personality and life expression.",
   group: "Horoscope Toolkit",
@@ -590,7 +607,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
   ]
 },
     {
-  name: "horoscope_nativity_result_aspects_v1",
+  name: "horoscope_nativity_result_aspects_v3",
   label: "Nativity: Aspect Dynamics",
   description: "A detailed table showing how planets interact with each other in the birth chart.",
   group: "Horoscope Toolkit",
@@ -644,7 +661,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
   ]
 },
       {
-  name: "horoscope_nativity_interpret_angles_v2",
+  name: "horoscope_nativity_interpret_angles_v3",
   label: "Nativity: Angles & Points",
   description: "A clear reading of the Ascendant, Midheaven, and Vertex, showing personality style, career direction, and important turning points.",
   group: "Horoscope Toolkit",
@@ -706,7 +723,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
 },
 
   {
-  "name": "horoscope_solar_setup",
+  "name": "horoscope_solar_setup_V3",
   "label": "Solar Return: Annual Chart Setup",
   "description": "Your yearly solar return chart is being prepared from your birth details and selected return year.",
   "group": "Horoscope Toolkit",
@@ -723,7 +740,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
 
 
     {
-  "name": "horoscope_solar_synthesis_v1",
+  "name": "horoscope_solar_synthesis_v3",
   "label": "Solar Return: Yearly Themes & Planet Table",
   "description": "Your annual solar return chart is translated into a structured planetary table for quick interpretation.",
   "group": "Horoscope Toolkit",
@@ -742,7 +759,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
 },
     
 {
-  "name": "horoscope_solar_processing",
+  "name": "horoscope_solar_processing_v3",
   "label": "Solar Return: Generating Your Yearly Reading",
   "description": "Your annual solar return chart and planet interpretations are being prepared.",
   "group": "Horoscope Toolkit",
@@ -783,53 +800,53 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
 },
 
 {
-  "name": "horoscope_solar_planet_interpretations",
-  "label": "Solar Return: Planet-by-Planet Interpretations",
-  "description": "Detailed yearly meanings for each planetary placement in the Solar Return chart.",
+  "name": "horoscope_nativity_house_interpretations_v3",
+  "label": "Nativity: House Interpretations",
+  "description": "AI-generated house-by-house meanings that explain how each house cusp sign shapes a specific area of life.",
   "group": "Horoscope Toolkit",
   "subModule": "Solar Return",
-  "purpose": "This section is generated after the user provides date of birth, time of birth, and place of birth, along with the selected solar return year and location. The system calculates the exact Solar Return moment and builds the yearly chart. It then analyzes each planet individually by combining its zodiac sign and house placement to generate clear, easy-to-read interpretations. Each block explains how that specific planet will influence the user's behavior, emotions, decisions, relationships, work, and personal growth throughout the year. This format allows astrologers to quickly read each planetary influence separately while also helping general users understand the meaning in a simple and structured way.",
+  "purpose": "This section is generated after the user enters date of birth, time of birth, and place of birth, and the system calculates the natal chart. The platform first determines the Ascendant, then calculates all 12 house cusps and identifies which zodiac sign rules each house. After that, the AI converts each house-sign combination into readable interpretations. In this screen, each card explains one house at a time, such as the Ascendant influence, 2nd house values and finances, or 3rd house communication style. The purpose of this screen is to help users and astrologers understand how different life areas are shaped by the signs placed on each house cusp.",
   "bullets": [
-    "☀ How It Is Generated — Uses birth details to calculate the Solar Return chart and determine each planet’s sign and house placement for the year.",
-    "🪐 Planet-by-Planet Breakdown — Each section focuses on one planet (Sun, Moon, Mars, etc.) and explains its specific yearly influence.",
-    "♈ Sign Influence — Shows how the zodiac sign shapes the expression of the planet (e.g., Libra adds balance, Aquarius adds innovation, Cancer adds emotion).",
-    "🏠 House Influence — Explains the life area where the planet’s energy will be most active (e.g., 1st house = self, 6th = work/health, 11th = friendships).",
-    "🔗 Combined Interpretation — Merges planet + sign + house into a meaningful yearly prediction for real-life understanding.",
-    "💬 Simple Explanation Style — Written in easy language so both astrologers and normal users can quickly understand the message.",
-    "📖 Expandable Content (Show More) — Provides a short summary first, with an option to expand and read deeper insights.",
-    "🎯 Life Impact Insight — Helps identify where energy will be focused, such as identity (Sun), emotions (Moon), action (Mars), communication (Mercury), and relationships (Venus).",
-    "⚖️ Balanced Guidance — Highlights both positive opportunities and possible challenges for each planetary placement.",
-    "🔄 Yearly Theme Building — When all planets are read together, they form the complete story of the Solar Return year.",
-    "✨ Why This Section Is Useful — Allows astrologers to quickly interpret each planetary influence without manually analyzing the full chart.",
-    "🚀 Practical Use — Useful for yearly predictions, client consultations, self-awareness, and planning important life decisions."
+    "🏠 House Interpretation Generation — The system calculates all 12 natal houses from DOB, TOB, and POB, then reads the zodiac sign placed on each house cusp.",
+    "⬆ Ascendant / 1st House Meaning — The first card often explains the Ascendant sign, showing personality style, outward behavior, self-image, health habits, and the way the person approaches life.",
+    "💰 2nd House Meaning — This card explains money, values, possessions, self-worth, resources, and the practical way the person builds security.",
+    "🗣 3rd House Meaning — This card explains communication style, learning pattern, curiosity, siblings, local environment, and how the person expresses ideas.",
+    "♍ Example of Virgo Rising Meaning — If the Solar or Natal Ascendant is in Virgo, the reading may focus on order, routine, detail, discipline, discernment, and practical self-management.",
+    "♎ Example of Libra on 2nd House Meaning — If Libra rules the 2nd house, the reading may focus on balance in finances, harmony in values, partnership in earning, and fairness in resource management.",
+    "♏ Example of Scorpio on 3rd House Meaning — If Scorpio rules the 3rd house, the reading may focus on intense communication, deep thinking, uncovering truth, strategic speech, and transformative conversations.",
+    "🧠 Why This Screen Is Useful — It breaks the chart into life areas so the user can understand one topic at a time instead of reading the whole chart at once.",
+    "📖 Card-by-Card Reading Style — Each block gives a short interpretation of one house so the user can quickly understand what that life area means.",
+    "🔍 What The User Understands From This Screen — The user can clearly see how identity, money, communication, and other life themes are shaped by the signs on their house cusps.",
+    "✨ Astrologer-Friendly Value — This screen helps astrologers quickly explain house rulership themes in simple language without needing to interpret every cusp manually.",
+    "🚀 Practical Use — Useful for personality readings, life-area analysis, money and value insight, communication understanding, and explaining how the natal chart organizes daily life."
   ]
 },
 
 {
-  "name": "horoscope_solar_deep_analysis_v1",
+  "name": "horoscope_solar_deep_analysis_v3",
   "label": "Solar Return: Deep Astrological Analysis",
-  "description": "In-depth interpretation of planetary placements with visual and psychological insights.",
+  "description": "In-depth interpretation of key Solar Return points such as Ascendant, Midheaven, and Vertex, with practical yearly meaning.",
   "group": "Horoscope Toolkit",
   "subModule": "Solar Return",
-  "purpose": "This section is generated after the Solar Return chart is calculated using the user's date of birth, time of birth, place of birth, and selected return year and location. The system analyzes each planet's placement by combining three key factors: the planet itself, the zodiac sign it is in, and the house it occupies. It then produces a deep, easy-to-understand interpretation explaining how that specific combination will influence the user's personality, behavior, decisions, and life direction during the year. This section is especially useful for astrologers because it translates technical chart data into meaningful psychological and practical insights, while also supporting visual understanding through symbolic image representation.",
+  "purpose": "This section is generated after the Solar Return chart is calculated using the user's date of birth, time of birth, place of birth, and selected return year and location. The system analyzes important chart points such as the Ascendant, Midheaven, and Vertex by combining the point itself, the zodiac sign it falls in, and its role in the Solar Return year. It then produces a deep, easy-to-understand interpretation explaining how these placements influence the user's personal direction, career focus, public image, encounters, and life themes during the year. This section is especially useful for astrologers because it translates technical Solar Return chart data into meaningful psychological, practical, and predictive insights.",
   "bullets": [
-    "☀ Planet + Sign + House Synthesis — Combines the planet (what energy), sign (how it behaves), and house (where it acts) to create a complete yearly interpretation.",
-    "🧠 Psychological Interpretation — Explains how the placement influences mindset, emotions, personality traits, and behavioral patterns during the year.",
-    "🎯 Life Focus Explanation — Highlights the main areas of life affected, such as identity, relationships, career, communication, or personal growth.",
-    "💬 Easy-to-Understand Narrative — Converts complex astrological data into simple, readable text so both astrologers and general users can understand it clearly.",
-    "🪐 Example Insight — 'Sun in Libra in 1st House' shows a year focused on self-identity, social charm, balance, and how others perceive you.",
-    "🖼 Visual Representation — Displays a symbolic diagram that breaks down the meaning of the sign, house, and their combined influence for faster understanding.",
-    "♈ Sign Meaning Layer — Explains the qualities of the zodiac sign (e.g., Libra = balance, harmony, relationships, diplomacy).",
-    "🏠 House Meaning Layer — Explains the life area (e.g., 1st House = self, personality, appearance, first impressions).",
-    "🔗 Combined Meaning — Shows how sign and house energies merge (e.g., Libra traits expressed through personal identity and self-image).",
-    "✨ Why This Section Is Important — Helps astrologers quickly interpret yearly influences without manually combining multiple chart factors.",
-    "📊 Practical Use — Useful for client readings, yearly forecasting, personality insights, and identifying key opportunities and challenges.",
-    "🚀 Outcome — Provides a clear understanding of how each planetary placement shapes the overall theme and experience of the solar return year."
+    "⬆ Ascendant Interpretation — The Solar Return Ascendant shows the personal tone of the year, including self-image, behavior, approach to life, health focus, and the way the user presents themselves during the year.",
+    "♍ Example Ascendant Meaning — Virgo Ascendant in the Solar Return suggests a year of self-improvement, practicality, discipline, detail-awareness, health focus, and refining routines for better results.",
+    "🏆 Midheaven Interpretation — The Solar Return Midheaven shows career direction, public image, status, ambition, visible achievements, and the professional tone of the year.",
+    "♊ Example Midheaven Meaning — Gemini on the Midheaven suggests a year where communication, networking, flexibility, learning, speaking, writing, and multitasking become important for career progress.",
+    "✨ Vertex Interpretation — The Solar Return Vertex highlights meaningful encounters, important opportunities, fated turning points, and connections that may strongly influence the year.",
+    "♐ Example Vertex Meaning — Sagittarius on the Vertex suggests growth through learning, travel, exploration, belief expansion, and opportunities that widen the user's perspective and purpose.",
+    "🧠 Psychological Interpretation — Explains how these key chart points influence mindset, motivation, confidence, behavior, and life direction during the Solar Return year.",
+    "🎯 Life Focus Explanation — Highlights the main yearly themes such as self-development, career growth, public recognition, destiny encounters, learning, or broader personal expansion.",
+    "💬 Easy-to-Understand Narrative — Converts technical Solar Return data into simple and readable text so both astrologers and general users can understand it clearly.",
+    "🔗 Point + Sign Meaning — Combines the chart point itself with the zodiac sign quality to explain both what area is activated and how that energy behaves during the year.",
+    "✨ Why This Section Is Important — Helps astrologers quickly interpret yearly direction through the most important Solar Return angles and special points without manually combining multiple factors.",
+    "🚀 Practical Use — Useful for yearly forecasting, client readings, career guidance, self-development insights, and identifying the strongest themes and opportunities of the Solar Return year."
   ]
 },
 
 {
-  "name": "horoscope_solar_aspects_v1",
+  "name": "horoscope_solar_aspects_v3",
   "label": "Solar Return: Planetary Aspects Analysis",
   "description": "Relationship dynamics between Solar Return planets and natal planets for yearly influence.",
   "group": "Horoscope Toolkit",
@@ -897,7 +914,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
 },
 
 {
-  "name": "horoscope_solar_planet_information",
+  "name": "horoscope_solar_planet_information_v3",
   "label": "Solar Return: Planet Information",
   "description": "Detailed planetary positions and technical data for the solar return chart.",
   "group": "Horoscope Toolkit",
@@ -920,30 +937,60 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
 },
 
 {
-  "name": "horoscope_solar_planet_cards",
+  "name": "horoscope_solar_planet_cards_v3",
   "label": "Solar Return: Planet Interpretation Cards",
-  "description": "Readable interpretation cards for each planet with sign, house, degree, speed, retrograde status, and optional decan marker.",
+  "description": "Readable interpretation cards for each Solar Return planet with sign, house, degree, speed, retrograde status, and optional decan marker.",
   "group": "Horoscope Toolkit",
   "subModule": "Solar Return",
-  "purpose": "This section is generated after the user enters date of birth, time of birth, and place of birth, then selects the Solar Return year and location. The system calculates the Solar Return chart and creates a separate interpretation card for each planet. Each card explains the planet's yearly meaning using its sign, house, full degree, normalized degree, and speed. It gives astrologers and users an easy way to read planet-by-planet yearly guidance in a visual card format. If a special symbol such as a triangle appears near the planet name, it can represent an additional astrological layer such as the decan, which gives more refined meaning to that planet's placement.",
+  "purpose": "This section is generated after the user enters date of birth, time of birth, and place of birth, then selects the Solar Return year and return location. The system calculates the Solar Return chart and creates a separate interpretation card for each important planet. Each card turns raw chart values into readable yearly meaning by combining the planet, zodiac sign, house placement, full degree, normalized degree, speed, and retrograde status. In this screen, cards such as Moon, Mercury, Venus, and Sun help explain emotional tone, thinking style, relationships, creativity, identity, and life focus for the year ahead. Some planets may also show a small triangle icon, which indicates that a Decan interpretation is available. The decan adds a finer layer of meaning by showing which 10-degree section of the sign the planet falls in, helping astrologers read the placement with more nuance and precision.",
   "bullets": [
     "☀ Planet Card Generation — Creates one interpretation card for each Solar Return planet using the calculated yearly chart data.",
-    "🪐 Planet Name Header — Shows the planet being interpreted, such as Sun, Moon, or Mercury.",
-    "♈ Sign + House Tag — Displays the zodiac sign and house placement, such as Libra - House 6 or Aries - House 1.",
-    "📐 Degree-Based Meaning — Uses full degree and norm degree to refine the interpretation and explain how mature, early, or specialized the placement is.",
-    "⚡ Speed Meaning — Uses planetary speed to describe whether the energy is steady, fast-moving, slow, reflective, or intensified.",
-    "🔁 Retrograde Layer — Can include retrograde status to explain whether the planet's influence is more inward, delayed, karmic, or reflective.",
-    "🔺 Decan Indicator — The triangle-like symbol can be stored as a decan marker, showing the decan or sub-division of the zodiac sign for deeper interpretation.",
-    "🧠 Why Decan Is Useful — Decan adds a finer interpretive layer inside the zodiac sign, helping astrologers understand the planet's more specific tone, style, and expression.",
-    "💬 Easy Reading Format — The card turns technical chart values into simple readable yearly guidance for both astrologers and general users.",
-    "📖 Expandable Content — The Show More action can reveal a longer version of the interpretation with advanced astrological detail.",
-    "✨ Visual Interpretation Support — Card layout, icons, sign labels, and optional decan symbols help astrologers scan the yearly chart more quickly.",
-    "🚀 Practical Use — Useful for yearly forecasts, client readings, planet-by-planet analysis, and advanced astrology UI presentation."
+    "🪐 Planet Header Meaning — Shows the planet being interpreted, such as Moon, Mercury, Venus, or Sun, so the user knows which yearly influence is being explained.",
+    "🌙 Moon Card Meaning — Explains emotional responses, inner habits, subconscious needs, instinctive reactions, and how feelings may operate during the Solar Return year.",
+    "🧠 Mercury Card Meaning — Explains thinking style, communication habits, planning ability, learning pattern, analysis, and the way the user processes information during the year.",
+    "♀ Venus Card Meaning — Explains relationships, attraction, beauty, affection, pleasure, social charm, creativity, artistic flow, and personal values during the year.",
+    "🌞 Sun Card Meaning — Explains core identity, confidence, purpose, visibility, self-expression, and the main life direction emphasized in the Solar Return year.",
+    "♈ Sign + House Layer — Each card combines the zodiac sign and house placement, such as Aries in House 12 or Virgo in House 6, to show both how the energy behaves and where it becomes active.",
+    "📐 Degree-Based Meaning — Uses the exact degree and normalized degree to refine the interpretation, showing whether the placement feels early, mature, transitional, or more specialized in tone.",
+    "⚡ Speed Indicator — Uses planetary speed to describe whether the energy acts quickly, actively, steadily, slowly, reflectively, or with increased intensity during the year.",
+    "🔁 Retrograde Layer — Includes retrograde status to explain whether the planet's influence becomes more inward, delayed, karmic, private, or self-reflective.",
+    "🔺 Decan Indicator — A small triangle-like icon near the planet means a decan-based interpretation is available for that placement.",
+    "📐 What A Decan Means — Each zodiac sign is divided into 3 decans of 10 degrees each, and the planet's exact degree decides which decan it belongs to.",
+    "🧠 Why Decans Matter — Decans refine the reading by adding a second tone to the planet, helping astrologers explain why two people with the same sign placement can still experience that sign differently.",
+    "💬 Easy Reading Format — The card turns technical Solar Return values into simple readable yearly guidance for both astrologers and general users.",
+    "📖 Expandable Content — The Show More action can reveal a longer interpretation with deeper house meaning, degree precision, speed analysis, retrograde explanation, and decan refinement.",
+    "✨ Visual Interpretation Support — Card layout, planet icons, colored sections, sign labels, and optional decan symbols help astrologers scan the yearly chart more quickly.",
+    "🚀 Practical Use — Useful for yearly forecasts, client readings, planet-by-planet analysis, relationship and creativity insight, identity guidance, and advanced astrology UI presentation."
   ]
 },
 
 {
-  "name": "horoscope_solar_planet_insights",
+  "name": "horoscope_nativity_mercury_decan_image_v3",
+  "label": "Nativity: Mercury Decans in Virgo",
+  "description": "A deeper visual interpretation screen showing Mercury's decan meaning inside Virgo through symbolic imagery and extended text analysis.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Nativity Birth Chart",
+  "purpose": "This screen appears when a planet has a decan marker and the user opens the deeper decan interpretation. In this example, the screen explains Mercury in Virgo through its decan layer. The system first calculates the user's natal chart from date of birth, time of birth, and place of birth, then finds Mercury's exact zodiac degree. Based on that degree, it identifies which 10-degree section of Virgo Mercury belongs to. Here, Mercury is shown in the third decan of Virgo, which adds a Venus influence to Mercury's usual Virgo expression. The purpose of this screen is to help astrologers and users understand the finer style, tone, symbolism, and hidden nuance of Mercury's placement beyond only sign and house.",
+  "bullets": [
+    "☿ Mercury Decan Meaning — This screen explains the deeper sub-layer of Mercury's placement inside Virgo, showing how Mercury behaves in a more refined and specialized way.",
+    "📐 How It Is Generated — The system uses date of birth, time of birth, and place of birth to calculate the natal chart, then checks Mercury's exact degree inside Virgo to identify its decan.",
+    "🔺 Why This Screen Opens — It appears when a decan interpretation is available and the user opens the deeper decan view from the planet card or decan indicator.",
+    "🧩 What a Decan Means — Each zodiac sign is divided into 3 decans of 10 degrees each, and the exact degree of the planet decides which decan it belongs to.",
+    "🌿 Virgo Base Meaning — Virgo gives Mercury qualities such as analysis, precision, logic, organization, detail-awareness, method, and practical intelligence.",
+    "💚 Third Decan of Virgo Meaning — The third decan of Virgo adds Venus influence, blending Mercury's intellect with refinement, beauty, value-building, harmony, and cultivated skill.",
+    "🎨 Venus Influence In This Decan — This can make Mercury in Virgo more graceful in expression, more polished in thinking, more artistic in problem-solving, and more focused on refinement, craft, and material value.",
+    "🃏 Tarot Layer Meaning — The image connects this decan with the Ten of Disks, showing themes of long-term achievement, stability, resources, wealth, and the result of careful effort over time.",
+    "💰 Mundane Force Meaning — The screen highlights wealth or abundance as a symbolic theme, suggesting value built through discipline, skill, careful planning, and practical mastery.",
+    "🏛 Mythic / Greek Daemon Layer — The symbolic figure such as Ploutos adds a mythic meaning of prosperity, resource growth, and abundance arising from sustained intelligent effort.",
+    "🖼 Image Representation Purpose — The visual card and symbolic artwork help the astrologer quickly understand the decan through color, tarot, mythology, and archetypal meaning rather than text alone.",
+    "🧠 Why This Screen Is Useful — It explains why two people with Mercury in Virgo can still think, speak, and process information differently depending on the exact decan.",
+    "💬 What The User Understands From This Screen — The user can understand Mercury's deeper tone in communication, learning, analysis, refinement, material thinking, and how intelligence is expressed with extra nuance.",
+    "🚀 Practical Use — Useful for advanced natal interpretation, refined Mercury analysis, communication style insight, decan-based astrology reading, and symbolic teaching for deeper chart understanding."
+  ]
+},
+
+{
+  "name": "horoscope_solar_planet_insights_v3",
   "label": "Solar Return: Planet Insights",
   "description": "Structured insight points for each planet in the Solar Return chart, with visual support for fast astrological reading.",
   "group": "Horoscope Toolkit",
@@ -965,7 +1012,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
   ]
 },
 {
-  "name": "horoscope_solar_house_information",
+  "name": "horoscope_solar_house_information_v3",
   "label": "Solar Return: House Information",
   "description": "Structured table showing house-wise sign placements, degrees, and planetary distribution for the solar year.",
   "group": "Horoscope Toolkit",
@@ -986,7 +1033,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
 },
 
 {
-  "name": "horoscope_solar_house_insights",
+  "name": "horoscope_solar_house_insights_v3",
   "label": "Solar Return: House Insights",
   "description": "Detailed interpretation of each house in the Solar Return chart with visual house distribution.",
   "group": "Horoscope Toolkit",
@@ -1008,7 +1055,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
 },
 
 {
-  "name": "horoscope_solar_house_deep_analysis",
+  "name": "horoscope_solar_house_deep_analysis_v3",
   "label": "Solar Return: Deep House Analysis",
   "description": "Expanded house interpretation shown in a modal after the user clicks Show More.",
   "group": "Horoscope Toolkit",
@@ -1076,7 +1123,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
 },
 
     {
-  name: "horoscope_nativity_result_aspects_v1",
+  name: "horoscope_nativity_result_aspects_v4",
   label: "Solar Return: Aspect Dynamics",
   description: "A detailed table showing how planets interact with each other in the birth chart.",
   group: "Horoscope Toolkit",
@@ -1095,6 +1142,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
     "🔍 Advanced Use — Useful for personality analysis, emotional patterns, relationship interpretation, career tendencies, and professional chart verification."
   ]
 },
+
 
 
     {
@@ -1132,7 +1180,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
   ]
 },
       {
-  name: "horoscope_nativity_interpret_angles_v2",
+  name: "horoscope_nativity_interpret_angles_v4",
   label: "Solar Return: Angles & Points",
   description: "A clear reading of the Ascendant, Midheaven, and Vertex, showing personality style, career direction, and important turning points.",
   group: "Horoscope Toolkit",
@@ -1183,7 +1231,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
   ]
 },
    {
-  "name": "horoscope_weekly_chart",
+  "name": "horoscope_weekly_chart_v3",
   "label": "Weekly Transits: Weekly Chart View",
   "description": "A weekly transit chart generated from the user's date of birth, time of birth, and place of birth, showing how current planetary movements interact with the natal chart.",
   "group": "Horoscope Toolkit",
@@ -1205,7 +1253,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
 
 
  {
-  "name": "horoscope_weekly_relation",
+  "name": "horoscope_weekly_relation_v3",
   "label": "Weekly Transits: Transit Relation Table",
   "description": "A structured weekly table showing how transit planets form aspects with natal planets on specific dates.",
   "group": "Horoscope Toolkit",
@@ -1225,7 +1273,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
   ]
 },
 {
-  "name": "horoscope_weekly_transit_interpretations",
+  "name": "horoscope_weekly_transit_interpretations_v3",
   "label": "Weekly Transits: Transit Interpretations",
   "description": "Short weekly interpretation cards showing how current transit planets affect natal planets on specific dates.",
   "group": "Horoscope Toolkit",
@@ -1247,7 +1295,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
   ]
 },
     {
-  "name": "horoscope_weekly_planet_deep_analysis",
+  "name": "horoscope_weekly_planet_deep_analysis_v3",
   "label": "Weekly Transits: Deep Planet Analysis",
   "description": "A deeper weekly reading of key natal planets, showing how their sign, house, speed, and current transit activation shape the week's experiences.",
   "group": "Horoscope Toolkit",
@@ -1270,7 +1318,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
 },
 
 {
-  "name": "horoscope_weekly_transit_cards",
+  "name": "horoscope_weekly_transit_cards_v3",
   "label": "Weekly Transits: Transit Event Cards",
   "description": "Short weekly transit cards that explain how moving planets affect natal planets on specific dates during the selected week.",
   "group": "Horoscope Toolkit",
@@ -1313,7 +1361,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
 },
 
 {
-  "name": "horoscope_monthly_chart",
+  "name": "horoscope_monthly_chart_v3",
   "label": "Monthly Transits + Lunar Return: Chart View",
   "description": "A combined monthly transit and lunar return chart generated from the user's birth details, showing how monthly planetary movement interacts with the natal chart.",
   "group": "Horoscope Toolkit",
@@ -1335,7 +1383,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
   ]
 },
       {
-  "name": "horoscope_monthly_relation",
+  "name": "horoscope_monthly_relation_v3",
   "label": "Monthly Transits: Future Transit Relation Table",
   "description": "A monthly transit table showing how future moving planets form aspects with natal planets and key natal points on specific dates.",
   "group": "Horoscope Toolkit",
@@ -1360,7 +1408,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
 },
 
 {
-  "name": "horoscope_monthly_transit_interpretations",
+  "name": "horoscope_monthly_transit_interpretations_v3",
   "label": "Monthly Transits: Transit Interpretation Cards",
   "description": "Readable monthly transit cards showing how future moving planets activate natal planets on important dates.",
   "group": "Horoscope Toolkit",
@@ -1383,7 +1431,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
 },
 
 {
-  "name": "horoscope_monthly_transit_deep_analysis",
+  "name": "horoscope_monthly_transit_deep_analysis_v3",
   "label": "Monthly Transits: Deep Astrological Analysis",
   "description": "A detailed monthly interpretation screen for a specific future transit event, opened after the user clicks Show More.",
   "group": "Horoscope Toolkit",
@@ -1406,142 +1454,2681 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
 },
 
 {
-  "name": "horoscope_monthly_transit_cards",
+  "name": "horoscope_monthly_transit_cards_v3",
   "label": "Monthly Transits: Transit Event Cards",
-  "description": "Short monthly transit cards showing how future moving planets activate natal planets on important dates during the selected month.",
+  "description": "Readable monthly transit cards showing important transit-to-natal events on specific dates, with practical interpretation for the selected month.",
   "group": "Horoscope Toolkit",
   "subModule": "Monthly Transits",
-  "purpose": "This section is generated after the user enters date of birth, time of birth, and place of birth, and the system creates the natal birth chart as the base reference. Then it calculates the future transit positions for the selected month and compares those moving planets with the natal planets and important natal points. When a strong or meaningful monthly aspect is found, the platform creates a separate transit event card for that date. Each card explains the transit planet, the natal planet being activated, the aspect type, the exact monthly date, and the practical meaning of that influence. This helps astrologers quickly understand which monthly events are most important, which energies are supportive or challenging, and how the user's emotions, creativity, confidence, relationships, motivation, and personal growth may be influenced during the month.",
+  "purpose": "This section is generated after the user enters date of birth, time of birth, and place of birth, and the system creates the natal birth chart as the base reference. The platform then calculates the future transit positions for the selected month and compares those moving planets with natal planets and important natal points. When a strong or meaningful transit becomes exact on a specific day, the system creates a separate event card for that date. In this screen, cards such as Mars square natal Saturn and Jupiter sextile natal Mercury show the transit planet, aspect type, natal planet being activated, and the exact calendar date. The purpose of this section is to help astrologers and users quickly understand which monthly dates bring challenge, growth, communication support, pressure, discipline, opportunity, or strategic development.",
   "bullets": [
-    "📅 Date-Based Monthly Event — Each card is linked to a specific date in the selected month when the transit becomes exact or strongest.",
-    "🪐 Transit Planet Focus — Shows the moving planet creating the monthly influence, such as Venus, Jupiter, Mars, Mercury, Saturn, or Uranus.",
-    "🌌 Natal Planet Activation — Shows which natal planet is being triggered, such as the Sun, Moon, Mars, Mercury, Venus, Pluto, or Ascendant.",
-    "🔗 Aspect Meaning — Explains the relationship between the transit planet and natal planet, such as Trine, Square, Opposition, Conjunction, or Sextile.",
-    "💬 Short Interpretation Card — Gives a brief and readable monthly explanation so astrologers can scan the main transit message quickly.",
-    "⚖️ Support vs Challenge Insight — Helps identify whether the transit brings harmony, ease, pressure, emotional intensity, optimism, maturity, or transformation.",
-    "🎯 Real-Life Monthly Meaning — Connects the transit to practical experiences such as relationships, confidence, creativity, communication, conflict management, emotional healing, and personal development.",
-    "📖 Show More Support — Each monthly transit card can open a deeper analysis screen for astrologers who want a fuller explanation of that specific transit event.",
+    "📅 Exact Date Event Cards — Each card is tied to a specific date in the selected month when the transit becomes exact or most influential, such as May 17, 2026.",
+    "🪐 Transit Planet Focus — Shows the moving planet creating the temporary monthly influence, such as Mars or Jupiter.",
+    "🌌 Natal Planet Activation — Shows which natal planet is being triggered, such as Saturn or Mercury, so the user can understand which part of the birth chart is being affected.",
+    "🔗 Aspect Type Meaning — Explains the relationship between the transit planet and natal planet, such as Square for tension, pressure, and adjustment, or Sextile for support, opportunity, and constructive progress.",
+    "⚔️ Challenging Transit Example — A card like Mars square natal Saturn highlights pressure, obstacles, discipline, frustration, delayed progress, and the need for patience, structure, and persistence.",
+    "✨ Supportive Transit Example — A card like Jupiter sextile natal Mercury highlights learning, communication growth, strategic thinking, networking, opportunity, teaching, and clearer mental flow.",
+    "💬 Readable Monthly Guidance — Each card converts technical transit data into a practical and easy-to-understand message so the user can quickly grasp the meaning of the date.",
+    "🎯 Real-Life Interpretation — The cards connect the transit to practical life themes such as career effort, professional development, communication skill, decision-making, strategy, growth, or delays.",
+    "⚖️ Support vs Challenge Insight — Helps astrologers quickly identify whether the monthly event brings tension, discipline, expansion, ease, opportunity, or mental clarity.",
+    "📖 Show More Support — Each monthly transit card can open a deeper explanation screen for users or astrologers who want a fuller analysis of that specific event.",
     "📍 Birth Data Based Generation — The cards are based on the user's date of birth, time of birth, and place of birth because accurate natal chart calculation is required before monthly transit comparison can happen.",
-    "🔄 Monthly Transit Comparison Engine — The system compares future monthly moving planets against natal planets and natal points to detect the strongest short-term activations.",
-    "🧠 Astrologer-Friendly Use — This format helps astrologers quickly identify the meaning of each major monthly transit without manually interpreting every aspect from the relation table.",
-    "🚀 Practical Use — Useful for monthly forecasting, client guidance, planning important dates, understanding emotional or relationship shifts, and identifying the strongest transit messages of the month."
+    "🔄 Monthly Transit Comparison Engine — The system compares future monthly moving planets against natal planets and key natal points to detect the strongest short-term activations.",
+    "🧠 Astrologer-Friendly Use — This format helps astrologers scan the month quickly and explain why a particular day is more difficult, more productive, or more supportive than others.",
+    "🚀 Practical Use — Useful for monthly forecasting, planning important dates, career timing, communication timing, professional decision-making, and understanding the strongest transit messages of the month."
   ]
 },
 
-      // ---------------Romantic: Synastry Setup---------------//
-      { 
-        name: "horoscope_romantic_setup", 
-        label: "Romantic: Synastry Setup", 
-        description: "Dual-chart relationship mapping.", 
-        group: "Horoscope Toolkit",
-        subModule: "Romantic Relationships",
-        purpose: "Calculates the dynamic interaction between two individuals to assess long-term compatibility and attraction.",
-        bullets: [
-          "Partner birth data entry with GMT preservation",
-          "Synastry vs Composite calculation methods",
-          "Attraction vs Stability metrics",
-          "AI compatibility score generation across 5 dimensions"
-        ]
-      },
-      { 
-        name: "horoscope_romantic_result_synthesis", 
-        label: "Romantic: Synastry Synthesis", 
-        description: "Dual-provider compatibility mapping.", 
-        group: "Horoscope Toolkit",
-        subModule: "Romantic Relationships",
-        purpose: "Visualizes the complex interaction between two natal charts, highlighting points of attraction, tension, and long-term viability.",
-        bullets: [
-          "Interactive dual-wheel synastry overlay",
-          "Aspect-to-aspect comparison table for the pair",
-          "Compatibility scoring across Love, Sex, and Long-term values",
-          "AI narrative on the karmic purpose of the relationship"
-        ]
-      },
-      { 
-        name: "horoscope_friendship_setup", 
-        label: "Friendship: Social Dynamics", 
-        description: "Platonic relationship analysis.", 
-        group: "Horoscope Toolkit",
-        subModule: "Friendship Relationships",
-        purpose: "Tailors the relationship engine to focus on social compatibility, communication, and shared interests.",
-        bullets: [
-          "Group dynamic modeling",
-          "Mercury-alignment focus for communication",
-          "Shared hobby/Jupiter-expansion indicators",
-          "Conflict-resolution 'Shadow Work' insights"
-        ]
-      },
-      { 
-        name: "horoscope_friendship_result", 
-        label: "Friendship: Social Synthesis", 
-        description: "Platonic bond analytics.", 
-        group: "Horoscope Toolkit",
-        subModule: "Friendship Relationships",
-        purpose: "Analyzes the intellectual and social chemistry between two individuals to foster deeper communication and shared growth.",
-        bullets: [
-          "Communication style (Mercury) compatibility profiling",
-          "Shared social interests and Jupiter alignment mapping",
-          "Boundaries and Saturn influence assessments",
-          "Team dynamic AI summaries for collaborative success"
-        ]
-      },
-      { 
-        name: "horoscope_business_setup", 
-        label: "Business: Professional Synergy", 
-        description: "Strategic partnership analysis.", 
-        group: "Horoscope Toolkit",
-        subModule: "Business Relationships",
-        purpose: "Analyzes two charts for professional effectiveness, financial synergy, and power dynamics.",
-        bullets: [
-          "Wealth-alignment indicators (2nd & 8th houses)",
-          "Authority/Saturn-boundary assessments",
-          "Project-completion velocity scores",
-          "Optimal meeting-time recommendations for the pair"
-        ]
-      },
-      { 
-        name: "horoscope_business_result", 
-        label: "Business: Professional Synergy", 
-        description: "Strategic alliance analytics.", 
-        group: "Horoscope Toolkit",
-        subModule: "Business Relationships",
-        purpose: "Evaluates the productive and financial potential of a partnership, focusing on authority and wealth-building.",
-        bullets: [
-          "Financial house (2nd/8th) interaction metrics",
-          "Authority and discipline (Saturn) compatibility",
-          "Wealth creation velocity and risk assessments",
-          "Best strategic timing for contract signing or launches"
-        ]
-      },
-      { 
-        name: "horoscope_horary_setup", 
-        label: "Horary: Momentary Answers", 
-        description: "The astrology of questions.", 
-        group: "Horoscope Toolkit",
-        subModule: "Predictive Event (Horary)",
-        purpose: "A specialized predictive tool that analyzes the chart of the exact moment a question is asked and understood.",
-        bullets: [
-          "Automatic 'Question Timestamp' capture",
-          "Cusp-of-querent vs Cusp-of-quesited logic",
-          "Strict horary validity checks (Too early/Too late)",
-          "Clear 'Yes/No' indicators with technical rationale"
-        ]
-      },
-      { 
-        name: "horoscope_horary_result", 
-        label: "Horary: Momentary Synthesis", 
-        description: "Decoding the divine answer.", 
-        group: "Horoscope Toolkit",
-        subModule: "Predictive Event (Horary)",
-        purpose: "Provides the technical and AI-derived answer to a specific question based on the astrological moment.",
-        bullets: [
-          "Momentum-based 'Yes/No' decision matrix",
-          "Critical house-ruler aspect tracking",
-          "Traditional dignity and receptivity scores",
-          "Technical rationale for every predictive judgment"
-        ]
-      },
+// ---------------Romantic: Synastry Setup---------------//
+      
+//       {
+//   "name": "horoscope_synastry_setup",
+//   "label": "Romantic: Synastry Setup",
+//   "description": "Enter both partners' birth details to generate the romantic synastry chart and relationship compatibility reading.",
+//   "group": "Horoscope Toolkit",
+//   "subModule": "Romantic Synastry",
+//   "purpose": "This section is the entry point for the Romantic Synastry module. It is generated using the birth details of two people, including date of birth, time of birth, and place of birth for each partner. The system first creates both natal charts separately, then compares the planetary positions, houses, and chart angles between the two people. This creates the synastry chart, which helps astrologers understand how one person's energy interacts with the other person's emotional nature, communication style, attraction pattern, values, intimacy, and long-term compatibility. The purpose of this chart is to study relationship chemistry, emotional bonding, romantic harmony, tension points, karmic links, communication flow, and the areas where the couple naturally supports or challenges each other.",
+//   "bullets": [
+//     "💕 Two-Person Birth Data Input — The system uses date of birth, time of birth, and place of birth for both partners to calculate two separate natal charts.",
+//     "🌌 Dual Natal Chart Creation — Each partner's birth chart is created first so their individual planets, signs, houses, and angles can be studied accurately.",
+//     "🔗 Synastry Comparison Engine — The platform then compares Person 1 and Person 2 chart data to find planetary overlays, cross-chart aspects, and compatibility patterns.",
+//     "🪐 Relationship Dynamics Mapping — The chart shows how one partner's planets affect the other partner's planets, houses, Ascendant, Descendant, and emotional responses.",
+//     "💬 Communication Compatibility — Helps astrologers understand how the couple may talk, think, listen, misunderstand, or mentally support each other.",
+//     "❤️ Romantic Attraction Insight — Reveals emotional bonding, love style, affection patterns, intimacy potential, and physical or magnetic attraction between the partners.",
+//     "⚖ Harmony and Tension Detection — Shows supportive aspects such as trines and sextiles, as well as difficult dynamics such as squares, oppositions, or emotional friction points.",
+//     "🏠 House Overlay Meaning — Explains which life areas are activated in each partner by the other person, such as love, marriage, home, sexuality, career, or spiritual growth.",
+//     "🔮 Karmic and Soul Connection Clues — Can highlight deeper relationship themes through strong Saturn, Node, Pluto, Moon, Venus, or angle connections.",
+//     "📊 Astrologer-Friendly Chart View — Displays both individual charts and synastry wheels so astrologers can visually compare the relationship structure more easily.",
+//     "🧠 What We Understand From This Chart — It helps identify compatibility strengths, emotional needs, attraction patterns, conflict zones, commitment potential, and the deeper purpose of the relationship.",
+//     "🚀 Practical Use — Useful for romantic compatibility readings, couple counseling, marriage analysis, relationship guidance, soulmate analysis, and understanding long-term partnership dynamics."
+//   ]
+// },
 
+// ---------------Romantic Relationships---------------//
+
+{
+  "name": "horoscope_romantic_relationships_setup",
+  "label": "Romantic Relationships: Entry & Generation Setup",
+  "description": "Enter both partners' birth details to generate the full romantic compatibility reading step by step.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Romantic Relationships",
+  "purpose": "This is the first screen of the Romantic Relationships module. The user must enter date of birth, time of birth, and place of birth for both Person 1 and Person 2. These details are required because the system uses them to calculate two accurate natal charts. After the required fields are filled correctly, the Generate Reading button becomes active. Once the user clicks Generate Reading, the platform starts building the relationship reading screen by screen. It compares both charts and then generates compatibility summary, synastry interpretations, deep synastry analysis, composite relationship insights, Davison relationship insights, elemental balance, timing and transits, and karmic or soulmate indicators. This setup screen is important because if birth time or birth place is wrong, houses, angles, compatibility patterns, and relationship analysis may change.",
+  "bullets": [
+    "📅 Step 1 — Enter Both Birth Dates: The user enters date of birth for both partners so the system can create the two natal chart foundations.",
+    "🕒 Step 2 — Enter Both Birth Times: The user enters exact time of birth for both partners because Ascendant, houses, and relationship overlays depend on correct timing.",
+    "📍 Step 3 — Enter Both Birth Places: The user enters place of birth for both partners so the engine can use the correct coordinates and timezone for accurate chart generation.",
+    "📝 Step 4 — Area of Inquiry (Optional): The user can add a focus topic such as love, marriage, trust, communication, long-term future, or emotional connection.",
+    "✅ Step 5 — Generate Reading Activation: After both partners' required birth details are completed correctly, the Generate Reading button becomes active.",
+    "💕 Step 6 — Compatibility Summary: The system gives a simple first overview of the relationship through Sun, Moon, Venus, and Mars compatibility so the user can quickly understand the basic connection.",
+    "🔗 Step 7 — Synastry Interpretations: The platform compares both natal charts directly and shows how one partner's planets interact with the other partner's planets in love, emotion, and communication.",
+    "🧠 Step 8 — Deep Synastry Analysis: Important synastry aspects can open in deeper view so the astrologer can understand the emotional and psychological meaning more clearly.",
+    "🌌 Step 9 — Composite Relationship Reading: The system creates the composite chart to show the energy of the relationship itself as one shared entity.",
+    "❤️ Step 10 — Davison Relationship Reading: The platform creates the Davison chart to explain how the relationship lives and develops in real life as a shared partnership.",
+    "🌍 Step 11 — Elemental Balance: The system compares Fire, Earth, Air, and Water between both partners to show passion, stability, communication, and emotional depth in the relationship.",
+    "⏳ Step 12 — Timing & Transits: The reading highlights relationship timing, active connection periods, and important emotional or romantic phases between the two people.",
+    "🔮 Step 13 — Karmic & Soulmate Indicators: The system identifies deep karmic, soulmate, growth, and destiny-style patterns that make the relationship feel especially meaningful.",
+    "📖 Step 14 — Show More Deep Readings: Important cards can open into deeper explanation screens so the user can understand the relationship in more detail without confusion."
+  ]
+},
+     {
+  "name": "horoscope_synastry_setup_v3",
+  "label": "Romantic: Synastry Setup",
+  "description": "Enter both partners' birth details to generate the romantic synastry chart and relationship compatibility reading.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Romantic Relationships",
+  "purpose": "This section is the entry point for the Romantic Synastry module. It is generated using the birth details of two people, including date of birth, time of birth, and place of birth for each partner. The system first creates both natal charts separately, then compares the planetary positions, houses, and chart angles between the two people. This creates the synastry chart, which helps astrologers understand how one person's energy interacts with the other person's emotional nature, communication style, attraction pattern, values, intimacy, and long-term compatibility. The purpose of this chart is to study relationship chemistry, emotional bonding, romantic harmony, tension points, karmic links, communication flow, and the areas where the couple naturally supports or challenges each other.",
+  "bullets": [
+    "💕 Two-Person Birth Data Input — The system uses date of birth, time of birth, and place of birth for both partners to calculate two separate natal charts.",
+    "🌌 Dual Natal Chart Creation — Each partner's birth chart is created first so their individual planets, signs, houses, and angles can be studied accurately.",
+    "🔗 Synastry Comparison Engine — The platform then compares Person 1 and Person 2 chart data to find planetary overlays, cross-chart aspects, and compatibility patterns.",
+    "🪐 Relationship Dynamics Mapping — The chart shows how one partner's planets affect the other partner's planets, houses, Ascendant, Descendant, and emotional responses.",
+    "💬 Communication Compatibility — Helps astrologers understand how the couple may talk, think, listen, misunderstand, or mentally support each other.",
+    "❤️ Romantic Attraction Insight — Reveals emotional bonding, love style, affection patterns, intimacy potential, and physical or magnetic attraction between the partners.",
+    "⚖ Harmony and Tension Detection — Shows supportive aspects such as trines and sextiles, as well as difficult dynamics such as squares, oppositions, or emotional friction points.",
+    "🏠 House Overlay Meaning — Explains which life areas are activated in each partner by the other person, such as love, marriage, home, sexuality, career, or spiritual growth.",
+    "🔮 Karmic and Soul Connection Clues — Can highlight deeper relationship themes through strong Saturn, Node, Pluto, Moon, Venus, or angle connections.",
+    "📊 Astrologer-Friendly Chart View — Displays both individual charts and synastry wheels so astrologers can visually compare the relationship structure more easily.",
+    "🧠 What We Understand From This Chart — It helps identify compatibility strengths, emotional needs, attraction patterns, conflict zones, commitment potential, and the deeper purpose of the relationship.",
+    "🚀 Practical Use — Useful for romantic compatibility readings, couple counseling, marriage analysis, relationship guidance, soulmate analysis, and understanding long-term partnership dynamics."
+  ]
+},
+     {
+  "name": "horoscope_synastry_interpretations_v4",
+  "label": "Romantic: Synastry Interpretations",
+  "description": "Readable relationship interpretation cards showing how one partner's planets connect with the other partner's planets.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Romantic Relationships",
+  "purpose": "This section is generated after the birth details of both partners are entered, including date of birth, time of birth, and place of birth for each person. The system first creates two separate natal charts, then compares the planets, signs, houses, and angles between both charts. When an important synastry aspect is found, such as Sun conjunct Sun or Sun trine Moon, the platform creates an interpretation card for that relationship pattern. Each card explains the aspect between the two partners, what kind of emotional or romantic dynamic it creates, and how that connection may be experienced in real life. This helps astrologers understand compatibility, attraction, harmony, shared values, communication flow, emotional support, and possible tension in the relationship.",
+  "bullets": [
+    "💕 Couple Birth Data Based Generation — Uses date of birth, time of birth, and place of birth for both partners to calculate two accurate natal charts before compatibility comparison begins.",
+    "🌌 Two-Chart Comparison — The system compares Person 1 and Person 2 planetary positions to detect important synastry aspects between both charts.",
+    "🔗 Aspect Meaning — Each card explains the relationship between two planets, such as conjunction, trine, sextile, square, or opposition, and what that means for the couple.",
+    "☀ Planet-to-Planet Compatibility — Shows how one partner's core identity, emotions, affection, communication, and desire patterns connect with the other partner's chart.",
+    "❤️ Romantic and Emotional Insight — Helps reveal emotional bonding, mutual understanding, attraction potential, comfort, care, and relationship chemistry.",
+    "💬 Relationship Communication Meaning — Explains how the aspect may influence understanding, emotional expression, mental connection, and the way the couple interacts.",
+    "⚖ Harmony and Challenge Detection — Highlights whether the connection is naturally supportive, emotionally easy, inspiring, intense, or more challenging to manage.",
+    "📖 Show More Support — Each synastry card can include a Show More action so astrologers can open a deeper explanation of that specific compatibility aspect.",
+    "🧠 Practical Relationship Guidance — Helps astrologers explain how the aspect may influence love, trust, emotional support, shared values, conflict handling, and long-term bonding.",
+    "📊 Easy Card Format — Converts complex synastry comparison into short readable cards so astrologers can quickly scan the strongest relationship dynamics.",
+    "🔮 What We Understand From This Section — It helps identify where the couple naturally connects, where they may emotionally support each other, and where deeper adjustment may be needed.",
+    "🚀 Practical Use — Useful for romantic compatibility readings, couple guidance, marriage analysis, soulmate interpretation, and understanding relationship strengths and challenges."
+  ]
+},
+
+{
+  "name": "horoscope_synastry_deep_analysis",
+  "label": "Romantic: Deep Synastry Analysis",
+  "description": "A detailed compatibility reading for one specific synastry aspect, with expanded relationship insight and picture representation.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Romantic Relationships",
+  "purpose": "This section is generated after the system creates natal charts for both partners using each person's date of birth, time of birth, and place of birth. The synastry engine then compares both charts and detects important relationship aspects between the partners' planets. When the user clicks Show More on a synastry interpretation card, this deep analysis screen opens and gives a fuller explanation of that one compatibility aspect. In this example, Sun conjunct Sun shows how both partners share similar identity patterns, values, and life expression. This section helps astrologers understand the deeper emotional, psychological, romantic, and practical meaning of a specific relationship connection, while also using a visual picture representation to make the shared planetary energy easier to understand.",
+  "bullets": [
+    "💕 Couple Birth Data Based Generation — Uses date of birth, time of birth, and place of birth for both partners to calculate two natal charts before deep compatibility analysis begins.",
+    "🌌 Synastry Aspect Detection — The system compares both charts and selects one important aspect, such as Sun conjunction Sun, for expanded interpretation.",
+    "🔗 Deep Aspect Meaning — Explains in detail how the selected aspect works in the relationship and what kind of bond, harmony, attraction, or challenge it creates.",
+    "☀ Planet-to-Planet Relationship Insight — Shows how one partner's planet connects with the other partner's planet and how their core energies blend together.",
+    "❤️ Romantic Compatibility Depth — Helps astrologers understand emotional closeness, mutual support, attraction pattern, relationship tone, and shared life direction.",
+    "🧠 Psychological Relationship Reading — Explains the deeper mindset, emotional resonance, shared values, and personal growth pattern created by the aspect.",
+    "⚖ Harmony and Adjustment Insight — Shows where the aspect creates natural ease, understanding, shared purpose, or where conscious balance may still be needed.",
+    "📖 Show More Deep Reading Purpose — This modal appears after clicking Show More so the astrologer can study one important synastry aspect in greater detail.",
+    "🖼 Picture Representation — Includes a visual symbolic panel that combines the meaning of both planets and the aspect between them for faster astrological understanding.",
+    "🔮 What We Understand From This Screen — It helps reveal the deeper purpose of a specific relationship aspect, including compatibility strength, emotional bonding, shared values, and the lesson of the connection.",
+    "💬 Astrologer-Friendly Use — Converts complex synastry comparison into a fuller, more meaningful explanation that is easier to use in couple readings and relationship guidance.",
+    "🚀 Practical Use — Useful for romantic compatibility analysis, soulmate readings, marriage guidance, couple counseling, and deep relationship interpretation."
+  ]
+},
+
+{
+  "name": "horoscope_synastry_interpretations_v1",
+  "label": "Romantic: Synastry Interpretations",
+  "description": "Relationship interpretation cards that explain each synastry aspect in a fresh, non-repetitive, and emotionally meaningful way.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Romantic Relationships",
+  "purpose": "This section is generated after the system creates natal charts for both partners using each person's date of birth, time of birth, and place of birth. The synastry engine compares the planets, signs, houses, and chart angles of both people and identifies important compatibility aspects between them. Each result is shown as a separate interpretation card. The purpose of this section is not only to explain compatibility, but also to make each relationship insight feel unique and engaging. Instead of repeating the same sentence structure for every card, the content should change according to the aspect type, the two planets involved, and the emotional or romantic meaning of that connection. This keeps the reading more natural, more personal, and less boring for the user while still being useful for astrologers.",
+  "bullets": [
+    "💕 Couple Birth Data Based Generation — Uses date of birth, time of birth, and place of birth for both partners to calculate two accurate natal charts before synastry comparison begins.",
+    "🌌 Aspect-Based Relationship Matching — The system compares both charts and detects important synastry links such as Moon sextile Moon, Mars conjunct Mercury, or Venus conjunct Mars.",
+    "🔗 Unique Interpretation Per Aspect — Each card should be written differently based on the exact planets and aspect involved, so the reading does not feel copied or repetitive.",
+    "☀ Planet Meaning Variation — The content changes according to the planets involved, such as Moon for emotions, Mercury for communication, Mars for passion and action, and Venus for love and attraction.",
+    "⚖ Aspect Tone Variation — The wording also changes by aspect type, such as conjunction for intensity, sextile for support, trine for ease, square for tension, and opposition for polarity.",
+    "❤️ Relationship Experience Focus — Each card explains how that aspect may appear in real life, such as emotional comfort, playful attraction, mental stimulation, romantic chemistry, or conflict potential.",
+    "💬 Natural Reading Style — The text should feel smooth and human, not robotic, so users remain interested while reading multiple compatibility cards.",
+    "🧠 Non-Repetitive Narrative Design — Sentence openings, interpretation flow, and emotional tone should vary from card to card to keep the synastry reading fresh and engaging.",
+    "📖 Show More Support — Each synastry card can include a Show More option that opens a deeper explanation of the aspect without repeating the same summary language.",
+    "📊 Astrologer-Friendly Clarity — Even though the wording changes, the interpretation must still clearly explain compatibility strength, emotional meaning, attraction pattern, and practical relationship dynamics.",
+    "🔮 What We Understand From This Section — It helps identify where the couple connects naturally, where they excite or challenge each other, and how each specific aspect contributes to the relationship story.",
+    "🚀 Practical Use — Useful for romantic compatibility readings, couple guidance, soulmate analysis, marriage insight, and giving users a more engaging synastry experience."
+  ]
+},
+
+{
+  "name": "horoscope_synastry_deep_analysis_v1",
+  "label": "Romantic: Deep Synastry Analysis",
+  "description": "A detailed relationship reading for one important synastry aspect, with an expanded explanation and picture representation for easier understanding.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Romantic Relationships",
+  "purpose": "This section appears when the user opens the deeper view of a specific synastry aspect after entering both partners' date of birth, time of birth, and place of birth. The system first creates two natal charts, then compares the planetary positions between both partners and detects major relationship aspects. When the user clicks Show More on an aspect card, this deep analysis screen opens and explains that one connection in greater depth. In this example, Venus conjunction Mars shows strong romantic attraction, chemistry, passion, and mutual desire. The purpose of this screen is to help astrologers understand the deeper emotional, romantic, physical, and psychological meaning of the aspect, while the picture representation gives a fast visual summary of how both planetary energies blend together in the relationship.",
+  "bullets": [
+    "💕 Couple Birth Data Based Generation — Uses date of birth, time of birth, and place of birth for both partners to generate two natal charts before deep synastry interpretation begins.",
+    "🌌 Deep Aspect Focus — This screen explains one specific relationship aspect in detail, such as Venus conjunction Mars, after it is selected from the synastry interpretation list.",
+    "🔗 Aspect Meaning — Shows how the two planets connect and what kind of romantic, emotional, or psychological pattern they create between the partners.",
+    "♀ Venus Meaning In Relationship — Venus represents love, affection, closeness, attraction style, charm, beauty, pleasure, and the way a person expresses care and emotional warmth.",
+    "♂ Mars Meaning In Relationship — Mars represents passion, physical drive, desire, pursuit, action, excitement, intensity, courage, and the way energy is expressed in attraction.",
+    "❤️ Venus Conjunction Mars Meaning — This aspect often shows strong chemistry, romantic magnetism, physical attraction, active affection, and a relationship that feels alive, expressive, and emotionally charged.",
+    "⚖ Relationship Guidance — The reading can also show that strong attraction needs balance, so passion does not overpower empathy, patience, or emotional understanding.",
+    "🧠 Deep Compatibility Understanding — Helps astrologers explain not only attraction, but also how desire, affection, emotional style, and relationship energy work together in real life.",
+    "🖼 Picture Representation Purpose — The image is used to visually combine Venus qualities, Mars qualities, and the shared blended zone in the center so the astrologer can understand the aspect faster.",
+    "🎨 Left Side Meaning — The left visual area represents Venus traits such as tenderness, love, harmony, closeness, appreciation, attraction, beauty, and relational softness.",
+    "🔥 Right Side Meaning — The right visual area represents Mars traits such as drive, initiative, pursuit, courage, passion, assertion, intensity, and energetic desire.",
+    "✨ Center Blend Meaning — The center area represents the merged meaning of Venus and Mars together, showing the shared relationship themes created by the conjunction, such as chemistry, magnetism, expression, connection, intensity, longing, and active romance.",
+    "📖 Show More Deep Reading Purpose — This screen is designed to expand a short compatibility card into a fuller explanation that feels more meaningful and less surface-level.",
+    "🔮 What We Understand From This Screen — It helps astrologers understand whether the couple shares romantic attraction, emotional warmth, mutual desire, playful chemistry, or a highly energized bond that can grow through conscious balance.",
+    "🚀 Practical Use — Useful for romantic compatibility readings, couple counseling, attraction analysis, marriage insight, and explaining strong love-and-passion connections in a clear way."
+  ]
+},
+
+{
+  "name": "horoscope_composite_interpretations_v1",
+  "label": "Romantic: Composite Interpretations",
+  "description": "Relationship interpretation cards that explain the shared energy of the couple through the composite chart.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Romantic Relationships",
+  "purpose": "This section is generated after the system receives date of birth, time of birth, and place of birth for both partners and creates both natal charts. Then the platform calculates the composite chart, which is the combined relationship chart showing the energy of the relationship itself rather than only Person 1 or Person 2 separately. From this composite chart, the system detects important composite aspects such as Sun conjunction Sun or Moon trine Moon and presents them as readable interpretation cards. Each card explains what that shared aspect means for the relationship, how the couple functions together emotionally and practically, and what kind of bond, harmony, challenge, or growth pattern is created. This helps astrologers understand the deeper identity of the relationship itself, including emotional flow, shared purpose, compatibility tone, and how the partnership behaves as one combined unit.",
+  "bullets": [
+    "💕 Couple Birth Data Based Generation — Uses date of birth, time of birth, and place of birth for both partners to calculate two natal charts before creating the composite relationship chart.",
+    "🌌 Composite Chart Creation — The system combines both partners' chart data into one shared relationship chart that represents the partnership as a single energetic entity.",
+    "🔗 Composite Aspect Detection — Important aspects inside the composite chart are identified, such as conjunctions, trines, sextiles, squares, and oppositions.",
+    "☀ Shared Relationship Identity — Aspects such as Sun conjunction Sun help explain the main identity, purpose, direction, and style of the relationship itself.",
+    "🌙 Emotional Bond Meaning — Aspects such as Moon trine Moon help explain emotional compatibility, comfort level, mutual support, and the emotional climate of the partnership.",
+    "❤️ Relationship Energy Focus — Each card explains how the shared chart reflects harmony, closeness, attraction, support, challenge, or growth within the relationship.",
+    "💬 Easy Card Interpretation — The technical composite chart is converted into short readable cards so astrologers can quickly understand the meaning without reading raw chart data only.",
+    "⚖ Harmony and Challenge Insight — Helps astrologers see whether the relationship naturally flows with ease, needs emotional adjustment, or carries strong areas of tension and development.",
+    "📖 Show More Support — Each composite card can include a Show More action so the astrologer or user can open a deeper explanation of that shared relationship aspect.",
+    "🧠 What We Understand From This Section — It shows how the relationship behaves as a whole, how both partners function together, and what the shared emotional and practical dynamics look like.",
+    "🔮 Why This Section Is Useful — It helps astrologers move beyond simple partner-to-partner comparison and understand the actual personality and purpose of the relationship itself.",
+    "🚀 Practical Use — Useful for couple compatibility readings, marriage analysis, long-term partnership understanding, relationship counseling, and studying the shared life path of the couple."
+  ]
+},
+{
+  "name": "horoscope_composite_deep_analysis_v1",
+  "label": "Romantic: Deep Composite Analysis",
+  "description": "A detailed composite relationship reading for one important shared aspect, with expanded explanation and picture representation.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Romantic Relationships",
+  "purpose": "This section is generated after the system receives date of birth, time of birth, and place of birth for both partners and creates both natal charts. Then it builds the composite chart, which represents the relationship itself as one shared chart. From that composite chart, the system identifies important aspects and creates interpretation cards. When the user clicks Show More, this deep analysis screen opens and explains one composite aspect in greater detail. In this example, Moon trine Moon shows emotional ease, mutual understanding, comfort, and supportive emotional flow inside the relationship. This screen helps astrologers understand the deeper emotional structure of the partnership, the way both people feel safe together, and how the relationship naturally supports emotional bonding and inner stability.",
+  "bullets": [
+    "💕 Couple Birth Data Based Generation — Uses date of birth, time of birth, and place of birth for both partners to calculate two natal charts before creating the composite chart.",
+    "🌌 Composite Chart Focus — This screen explains one specific aspect from the composite chart, which represents the shared energy of the relationship itself.",
+    "🔗 Deep Aspect Meaning — Gives a fuller explanation of one important shared aspect, such as Moon trine Moon, and how it shapes the emotional tone of the relationship.",
+    "🌙 Moon Meaning In Composite Relationship — The Moon represents emotions, comfort, inner needs, instinctive reactions, emotional bonding, care, and the feeling of safety within the partnership.",
+    "△ Trine Meaning In Composite Reading — A trine shows natural ease, supportive flow, harmony, emotional compatibility, and a relationship pattern that works smoothly without much forcing.",
+    "❤️ Moon Trine Moon Meaning — This aspect often shows emotional understanding, mutual care, natural empathy, peaceful emotional exchange, and a relationship where both partners can feel heard and supported.",
+    "🧠 Emotional Compatibility Insight — Helps astrologers understand how the relationship handles feelings, nurtures closeness, and creates emotional reassurance between both people.",
+    "⚖ Relationship Support Meaning — Shows that the relationship may have a gentle emotional rhythm, easier conflict recovery, and a strong base for trust, comfort, and emotional cooperation.",
+    "🖼 Picture Representation Purpose — The image visually explains the aspect by showing Moon energy on both sides and the trine quality in the center, helping astrologers understand the aspect faster.",
+    "🌙 Left Side Meaning — The left visual side represents one Moon expression, including emotional sensitivity, reflection, comfort, nourishment, rhythm, and personal feeling patterns.",
+    "🌙 Right Side Meaning — The right visual side represents the other Moon expression, including intuition, receptivity, memory, vulnerability, care, empathy, and emotional response style.",
+    "✨ Center Blend Meaning — The center area represents the shared result of the trine, such as harmony, trust, balance, support, understanding, comfort, connection, and emotional integration.",
+    "📖 Show More Deep Reading Purpose — This screen expands a short composite interpretation card into a deeper emotional and relational explanation.",
+    "🔮 What We Understand From This Screen — It helps astrologers see whether the relationship has emotional ease, nurturing energy, mutual reassurance, and a naturally supportive emotional foundation.",
+    "🚀 Practical Use — Useful for couple compatibility readings, marriage analysis, emotional bond assessment, relationship counseling, and understanding the emotional heart of the partnership."
+  ]
+},
+
+{
+  "name": "horoscope_davison_relationship_v1",
+  "label": "Romantic: Davison Relationship Summary",
+  "description": "A readable Davison relationship summary showing core compatibility themes through shared Sun and Moon dynamics.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Romantic Relationships",
+  "purpose": "This section is generated after the system receives date of birth, time of birth, and place of birth for both partners and calculates the Davison relationship chart. The Davison chart is created from the midpoint in time and space between the two birth charts, and it represents the relationship as a real shared entity. This screen gives a simplified relationship summary by focusing on major compatibility themes such as Sun compatibility and Moon compatibility inside the Davison chart. Its purpose is to help astrologers quickly understand how the relationship functions at its core, especially in identity, partnership style, emotional connection, and shared daily dynamics. It acts as an easy relationship overview before moving into deeper Davison aspect and house analysis.",
+  "bullets": [
+    "💕 Couple Birth Data Based Generation — Uses date of birth, time of birth, and place of birth for both partners to calculate the Davison relationship chart from the midpoint of both birth patterns.",
+    "🌌 Davison Relationship Meaning — The Davison chart shows the relationship itself as a shared chart, helping astrologers understand how the partnership lives, develops, and behaves as one combined unit.",
+    "☀ Sun Compatibility Meaning — Sun compatibility explains the shared identity of the relationship, including common values, purpose, direction, expression, and how the couple functions together in visible life.",
+    "🌙 Moon Compatibility Meaning — Moon compatibility explains the emotional atmosphere of the relationship, including comfort needs, emotional reactions, support style, bonding pattern, and inner security.",
+    "❤️ Relationship Summary Purpose — This screen provides a first-level understanding of the Davison relationship through major emotional and identity-based compatibility themes.",
+    "⚖ Harmony and Adjustment Insight — Helps astrologers see where the relationship naturally flows with support and where more awareness or communication may be needed.",
+    "💬 Easy Summary Card Format — Converts Davison compatibility into short readable cards so astrologers and users can quickly understand the relationship tone.",
+    "📖 Show More Support — Each summary card can include a Show More action so deeper explanation can be opened without making the main screen too dense.",
+    "🧠 What We Understand From This Screen — It helps reveal how the couple connects through shared purpose, emotional rhythm, relationship tone, and basic partnership dynamics.",
+    "🔮 Why This Section Is Useful — It offers a clear and accessible overview of the Davison relationship before deeper interpretation of aspects, houses, and advanced relationship structures.",
+    "📊 Astrologer-Friendly Value — Useful as a quick relationship summary that helps the astrologer identify the strongest core themes of the partnership.",
+    "🚀 Practical Use — Useful for romantic compatibility readings, relationship overview, marriage analysis, couple guidance, and introducing the Davison chart in a simple way."
+  ]
+},
+
+{
+  "name": "horoscope_davison_interpretations_v1",
+  "label": "Romantic: Davison Major Aspects & Connections",
+  "description": "Readable interpretation cards showing the most important aspects in the Davison relationship chart.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Romantic Relationships",
+  "purpose": "This section is generated after the system receives date of birth, time of birth, and place of birth for both partners and calculates the Davison relationship chart. Unlike synastry, which compares one partner's chart to the other, the Davison chart creates a shared relationship chart based on the midpoint in time and space between both births. This chart represents the lived relationship as its own entity. The purpose of this screen is to highlight the major aspects and connections inside that Davison chart, such as Sun conjunct Venus or Moon trine Jupiter, and explain what those patterns mean for love, bonding, shared purpose, emotional climate, affection, growth, and long-term partnership development.",
+  "bullets": [
+    "💕 Couple Birth Data Based Generation — Uses date of birth, time of birth, and place of birth for both partners to calculate the Davison relationship chart from the midpoint of the two birth patterns.",
+    "🌌 Davison Chart Meaning — The Davison chart represents the relationship itself as a real shared chart, showing how the partnership lives, grows, and functions as one combined experience.",
+    "🔗 Major Aspect Detection — The system identifies the strongest aspects in the Davison chart, such as conjunctions, trines, sextiles, squares, and oppositions, then presents them as readable cards.",
+    "☀ Sun Conjunct Venus Meaning — This type of aspect often shows warmth, affection, shared appreciation, romantic harmony, attraction, and a relationship that naturally values closeness and partnership.",
+    "🌙 Moon Trine Jupiter Meaning — This type of aspect often shows emotional generosity, comfort, mutual encouragement, emotional growth, and a nurturing atmosphere within the relationship.",
+    "🏠 House Placement Importance — The interpretation may also mention the house position of the aspect, such as the 7th house for partnership or the 4th house for home and emotional security, to show where the relationship energy is most active.",
+    "❤️ Shared Relationship Purpose — These cards help explain what the relationship is built around, such as love, emotional support, commitment, optimism, creativity, or mutual development.",
+    "💬 Easy Card Interpretation — Converts technical Davison chart aspects into short readable cards so astrologers can quickly understand the main relationship patterns.",
+    "⚖ Harmony and Growth Insight — Helps astrologers see which parts of the relationship flow naturally, where there is emotional support, and where the couple may find shared growth and long-term strength.",
+    "📖 Show More Support — Each Davison aspect card can include a Show More action so the astrologer or user can open a deeper explanation of that specific shared aspect.",
+    "🧠 What We Understand From This Screen — It helps reveal the emotional tone, romantic potential, supportive patterns, and key themes that define how the relationship operates as a whole.",
+    "🚀 Practical Use — Useful for romantic compatibility readings, relationship counseling, marriage analysis, long-term partnership guidance, and understanding the shared energetic structure of the couple."
+  ]
+},
+{
+  "name": "horoscope_compatibility_summary_v1",
+  "label": "Romantic: Compatibility Score / Summary",
+  "description": "A quick relationship summary that explains the couple's core compatibility through Sun, Moon, Venus, and Mars dynamics.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Romantic Relationships",
+  "purpose": "This section is generated after the system receives date of birth, time of birth, and place of birth for both partners and creates both natal charts. It then compares the most important personal relationship indicators between the two people, especially Sun, Moon, Venus, and Mars. The purpose of this screen is to give a fast but meaningful overview of the relationship before deeper synastry, composite, or Davison analysis. It helps astrologers understand how the couple connects through identity, emotional style, love nature, attraction pattern, and action dynamics, while also showing where harmony is strong and where conscious adjustment may be needed.",
+  "bullets": [
+    "☀ Sun Sign Compatibility — Explains how both partners connect through identity, shared values, personality style, life direction, and overall relationship tone. It helps show whether the couple naturally understands each other's core nature.",
+    "🌙 Moon Sign Dynamics — Explains the emotional side of compatibility, including comfort needs, emotional reactions, nurturing style, and inner security. It helps astrologers understand how the couple feels together on a deeper emotional level.",
+    "♀♂ Venus and Mars Interactions — Explains love, attraction, romance, desire, passion, and the way both partners express affection and action in the relationship. It helps show chemistry, emotional magnetism, and how love and desire flow between them.",
+    "⚖ Compatibility Strength and Tension — Each section highlights both supportive qualities and possible friction points, so the reading feels balanced and realistic rather than overly positive.",
+    "💬 Easy Summary Card Format — The technical comparison is turned into short readable cards so astrologers and users can quickly understand the main relationship pattern.",
+    "📖 Show More Support — Each summary card can open a deeper explanation so the user can move from quick insight into a more complete relationship reading.",
+    "🧠 What We Understand From This Screen — It gives a first-level view of the couple's emotional bond, romantic chemistry, communication tone, and overall compatibility foundation.",
+    "🚀 Practical Use — Useful for romantic compatibility readings, first-level couple analysis, quick partner matching, and preparing for deeper relationship interpretation."
+  ]
+},
+
+{
+  "name": "horoscope_elemental_balance_v1",
+  "label": "Romantic: Elemental Balance",
+  "description": "A relationship reading that compares elemental balance between both partners to show natural harmony, missing energies, and emotional style in the connection.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Romantic Relationships",
+  "purpose": "This section is generated after the system receives date of birth, time of birth, and place of birth for both partners and creates both natal charts. It then studies the elemental distribution in each chart by measuring how strongly Fire, Earth, Air, and Water are expressed through the partners' planets and major placements. The purpose of this screen is to help astrologers understand the natural energetic chemistry of the relationship. It shows whether the couple is more emotional, practical, intellectual, or passionate, where the relationship feels balanced, and where one or both partners may be missing an important element. This screen is useful because elemental balance often explains why two people communicate easily, feel emotionally supported, struggle with spontaneity, or experience differences in emotional depth, passion, or stability.",
+  "bullets": [
+    "🌍 What Elemental Balance Means — Elemental balance is the comparison of Fire, Earth, Air, and Water energies in both partners' charts to understand how their natural temperaments combine inside the relationship.",
+    "🔥 Fire Element Meaning — Fire represents passion, enthusiasm, courage, spontaneity, inspiration, excitement, action, and the drive to express energy directly.",
+    "🏔 Earth Element Meaning — Earth represents stability, practicality, reliability, groundedness, patience, routine, material awareness, and the ability to build lasting structure.",
+    "🌬 Air Element Meaning — Air represents communication, ideas, curiosity, social flow, intellectual connection, objectivity, adaptability, and mental exchange.",
+    "🌊 Water Element Meaning — Water represents emotions, intuition, sensitivity, empathy, bonding, emotional depth, inner response, and the need for emotional closeness.",
+    "💕 How It Is Generated — The system uses date of birth, time of birth, and place of birth for both partners to calculate both natal charts, then measures the elemental emphasis across important placements in each chart.",
+    "📊 Why This Screen Is Used — It helps astrologers quickly understand the natural chemistry of the relationship by showing which elemental energies are strong, weak, balanced, or missing between the two people.",
+    "🧠 What We Understand From This Reading — It explains whether the relationship is more mental, emotional, practical, or passionate, and shows how the partners naturally exchange energy with one another.",
+    "⚖ Elemental Balance Section Meaning — The main Elemental Balance card gives an overall summary of how the couple's elemental energies blend together and what that means for the relationship as a whole.",
+    "🔥 Fire Element Section Meaning — This card explains how much shared passion, motivation, spontaneity, confidence, and adventurous energy exists between the two partners, or whether this energy is missing and needs conscious development.",
+    "🌊 Water Element Section Meaning — This card explains how much emotional depth, empathy, intuition, and emotional support exists between the two partners, or whether emotional expression feels uneven or difficult.",
+    "🏔 Earth and 🌬 Air Value In Relationship — Earth helps the relationship stay stable and workable, while Air helps the relationship stay communicative, social, and mentally connected. Together they often show how ideas can become practical reality.",
+    "📖 Show More Purpose — Each elemental card can open a deeper explanation so the astrologer or user can study one elemental theme more fully without making the summary screen too heavy.",
+    "🔮 Practical Relationship Insight — Strong Air may show easy communication, strong Earth may show stability, strong Water may show emotional bonding, and strong Fire may show chemistry and excitement. Missing elements often reveal what the relationship must consciously develop.",
+    "🚀 Practical Use — Useful for romantic compatibility readings, friendship and partner analysis, emotional matching, relationship counseling, and explaining why a relationship feels strong, steady, intense, intellectual, or emotionally uneven."
+  ]
+},
+
+{
+  "name": "horoscope_relationship_timing_transits",
+  "label": "Romantic: Timing & Transits",
+  "description": "A relationship timing screen that shows how active transits and inter-chart contacts influence the couple's connection, emotional flow, and growth periods.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Romantic Relationships",
+  "purpose": "This section is generated after the system receives date of birth, time of birth, and place of birth for both partners and creates both natal charts. The platform then compares important planetary contacts between the two people and highlights active relationship dynamics through aspect-based timing indicators. The purpose of this screen is to help astrologers understand when certain romantic, emotional, mental, or supportive energies become more noticeable in the relationship. It shows how one partner's planet in a specific sign connects with the other partner's planet in another sign, what type of aspect is formed, and what that means for the relationship at a practical and emotional level. This screen is useful because it adds timing awareness to compatibility, showing where harmony, tension, growth, attraction, or emotional challenge may become especially active.",
+  "bullets": [
+    "💕 Couple Birth Data Based Generation — Uses date of birth, time of birth, and place of birth for both partners to calculate two natal charts before relationship timing analysis begins.",
+    "🪐 Inter-Chart Timing Detection — The system compares active relationship contacts between both charts and identifies important aspect patterns that influence how the relationship develops and responds over time.",
+    "🔗 Aspect-Based Timing Meaning — Each card explains a specific contact such as conjunction, trine, sextile, square, or opposition and shows how that aspect shapes relationship timing and experience.",
+    "♈ Sign-Based Relationship Tone — The screen also includes the zodiac signs involved, such as Libra, Aries, Aquarius, Leo, or Pisces, to show how each planet expresses its energy inside the connection.",
+    "☀ Sun and Mercury Connection Meaning — A contact such as Sun conjunct Mercury can show strong communication, shared understanding, mental harmony, and easier conflict resolution through conversation.",
+    "🌙 Moon-to-Moon Timing Meaning — A contact such as Moon opposite Moon helps reveal emotional differences, instinctive reactions, tension in feeling styles, and opportunities for growth through understanding each other's needs.",
+    "♀ Venus and ♃ Jupiter Harmony Meaning — A contact such as Venus trine Jupiter often shows warmth, joy, generosity, affection, shared pleasure, and an uplifting emotional or romantic atmosphere.",
+    "⏳ Why This Screen Is Used — It helps astrologers understand not only whether the couple is compatible, but also which relationship themes become especially active, easy, intense, or important over time.",
+    "💬 Easy Card Interpretation — The technical relationship timing data is converted into short readable cards so astrologers and users can quickly understand the meaning of each active connection.",
+    "⚖ Harmony and Tension Insight — This screen helps identify where the relationship naturally flows with support and warmth, and where emotional adjustment, patience, or conscious communication may be needed.",
+    "📖 Show More Support — Each timing card can include a Show More action so the astrologer or user can open a deeper explanation of that specific relationship aspect.",
+    "🧠 What We Understand From This Screen — It helps reveal mental connection, emotional timing, romantic ease, growth opportunities, and changing relationship dynamics through active planetary contacts.",
+    "🔮 Astrologer-Friendly Value — Useful for understanding when communication improves, when emotional tension may rise, when love feels more expressive, and when the relationship is supported by growth-oriented energy.",
+    "🚀 Practical Use — Useful for romantic compatibility readings, relationship timing analysis, couple guidance, emotional pattern study, and identifying important phases in the partnership."
+  ]
+},
+
+{
+  "name": "horoscope_karmic_soulmate_indicators_v1",
+  "label": "Romantic: Karmic & Soulmate Indicators",
+  "description": "A relationship reading that highlights karmic ties, soulmate-style bonds, and important spiritual lessons between both partners through major inter-chart aspects.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Romantic Relationships",
+  "purpose": "This section is generated after the system receives date of birth, time of birth, and place of birth for both partners and creates two natal charts. The platform then compares the planets, signs, houses, and important relationship contacts between both charts to identify aspects that often feel karmic, fated, deeply magnetic, emotionally significant, or spiritually instructive. The purpose of this screen is to help astrologers understand whether the relationship carries strong attraction, emotional pull, growth lessons, soulmate-style familiarity, or important commitment themes. It is useful because some aspects do not only show compatibility, but also reveal why the relationship feels meaningful, transformative, healing, challenging, or hard to ignore.",
+  "bullets": [
+    "💕 Couple Birth Data Based Generation — Uses date of birth, time of birth, and place of birth for both partners to create two accurate natal charts before karmic comparison begins.",
+    "🌌 Karmic Relationship Detection — The system compares both charts to identify meaningful aspects that may indicate soulmate attraction, karmic connection, emotional familiarity, growth lessons, or long-term significance.",
+    "🔗 Aspect Meaning — Each card explains one specific inter-chart aspect, such as conjunction, trine, sextile, square, or opposition, and what that contact means for the relationship bond.",
+    "☀ Sun Conjunct Venus Meaning — This type of connection often shows affection, appreciation, attraction, beauty, warmth, and a relationship that feels naturally pleasant, loving, and emotionally inviting.",
+    "🌙 Moon Trine Mars Meaning — This type of connection often shows emotional responsiveness, active support, instinctive chemistry, natural encouragement, and a bond where feelings and action can work together smoothly.",
+    "♀ Venus Square Saturn Meaning — This type of connection can show karmic lessons around love, trust, patience, fear of rejection, emotional restraint, commitment pressure, or the need to build stability slowly over time.",
+    "❤️ Soulmate and Karmic Theme Insight — This screen helps reveal whether the relationship feels easy and destined, emotionally charged and growth-oriented, or deeply meaningful because of the lessons it brings.",
+    "⚖ Harmony and Lesson Balance — Some indicators show affection, support, and closeness, while others show challenge, maturity, and the emotional work needed to make the relationship stronger.",
+    "💬 Easy Card Interpretation — The technical chart comparison is turned into short readable cards so astrologers and users can quickly understand the emotional and spiritual meaning of the connection.",
+    "📖 Show More Support — Each karmic indicator card can include a Show More action so deeper explanation can be opened without overloading the main summary screen.",
+    "🧠 What We Understand From This Screen — It helps astrologers identify attraction patterns, emotional support, karmic lessons, trust themes, growth pressure, and the deeper reason the relationship may feel special or unforgettable.",
+    "🔮 Why This Section Is Useful — It moves beyond simple compatibility and explains whether the relationship carries emotional destiny, healing value, long-term teaching, or deep spiritual significance.",
+    "🚀 Practical Use — Useful for soulmate readings, karmic relationship analysis, romantic compatibility sessions, couple counseling, commitment insight, and understanding why a relationship feels deeply important."
+  ]
+},
+      // ---------------Friendship Relationships---------------//
+
+      {
+  "name": "horoscope_friendship_relationships_setup",
+  "label": "Friendship Relationships: Entry & Generation Setup",
+  "description": "Enter both friends' birth details to generate the full friendship compatibility reading step by step.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Friendship Relationships",
+  "purpose": "This is the first screen of the Friendship Relationships module. The user must enter date of birth, time of birth, and place of birth for both Person 1 and Person 2. These details are required because the system uses them to calculate two accurate natal charts. After all required birth fields are filled correctly, the Generate Reading button becomes active. Once the user clicks Generate Reading, the platform begins building the friendship reading screen by screen. It compares both charts and then generates friendship compatibility summary, synastry interpretations, deep friendship analysis, composite friendship insights, Davison friendship insights, elemental balance, timing and transits, and karmic or soul-bond indicators. This setup screen is important because if birth time or birth place is incorrect, houses, angles, chart overlays, emotional patterns, and friendship compatibility results may change.",
+  "bullets": [
+    "📅 Step 1 — Enter Both Dates of Birth: The user enters date of birth for both friends so the system can create the two natal chart foundations.",
+    "🕒 Step 2 — Enter Both Times of Birth: The user enters exact time of birth for both friends because Ascendant, houses, angles, and chart overlays depend on correct timing.",
+    "📍 Step 3 — Enter Both Places of Birth: The user enters place of birth for both friends so the engine can use correct coordinates and timezone for accurate chart calculation.",
+    "📝 Step 4 — Area of Inquiry (Optional): The user may add a focus topic such as trust, support, communication, long-term friendship, teamwork, emotional bonding, or conflict understanding.",
+    "✅ Step 5 — Generate Reading Activation: After both friends' required birth details are completed correctly, the Generate Reading button becomes enabled.",
+    "🤝 Step 6 — Friendship Compatibility Summary: The system gives a simple first overview of the friendship through Sun, Moon, Venus, and Mars compatibility so the user can quickly understand the basic connection.",
+    "🔗 Step 7 — Friendship Synastry Interpretations: The platform compares both natal charts directly and shows how one friend's planets interact with the other friend's planets in friendship, communication, support, and emotional understanding.",
+    "🧠 Step 8 — Deep Friendship Analysis: Important friendship aspects can open in deeper view so the astrologer can understand the emotional and psychological meaning more clearly.",
+    "🌌 Step 9 — Composite Friendship Reading: The system creates the composite chart to show the energy of the friendship itself as one shared bond.",
+    "🪐 Step 10 — Davison Friendship Reading: The platform creates the Davison chart to explain how the friendship lives, grows, and develops in real life as a shared relationship.",
+    "🌍 Step 11 — Elemental Balance & Interaction: The system compares Fire, Earth, Air, and Water, along with modal interaction, to show communication style, emotional depth, stability, spontaneity, and natural chemistry in the friendship.",
+    "⏳ Step 12 — Timing & Transits: The reading highlights active friendship connection periods, emotional timing, communication flow, and important phases between both people.",
+    "🔮 Step 13 — Karmic & Soul-Bond Indicators: The system identifies deeper healing, karmic, soul-growth, and meaningful life-pattern connections that make the friendship feel especially important.",
+    "📖 Step 14 — Show More Deep Readings: Important cards can open into deeper explanation screens so the user can understand each friendship pattern more clearly and without confusion."
+  ]
+},
+    {
+  "name": "horoscope_friendship_setup_v1",
+  "label": "Friendship: Compatibility Chart Setup",
+  "description": "Enter both friends' birth details to generate the friendship compatibility charts and relationship reading.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Friendship Relationships",
+  "purpose": "This section is used to generate friendship compatibility charts between two people. The system takes date of birth, time of birth, and place of birth for both Person 1 and Person 2, then creates two separate natal charts. After that, it compares both charts to understand how the friendship works through personality, emotions, communication style, trust, loyalty, shared interests, support patterns, and possible tension points. The chart helps astrologers understand whether the friendship is naturally easy, mentally stimulating, emotionally supportive, practically stable, or more challenging. It is useful because friendships are not judged only by attraction, but also by mutual understanding, emotional safety, shared values, and the ability to grow together over time.",
+  "bullets": [
+    "🤝 Two-Person Birth Data Input — The system uses date of birth, time of birth, and place of birth for both friends to calculate two accurate natal charts.",
+    "🌌 Individual Chart Creation — Each person's chart is created first so their planets, signs, houses, and chart angles can be studied separately before comparison.",
+    "🔗 Friendship Compatibility Comparison — The platform then compares Person 1 and Person 2 charts to identify how their energies interact in friendship.",
+    "🪐 What The Chart Shows — It shows the personality style, emotional nature, communication pattern, support system, trust potential, and shared friendship dynamic between the two people.",
+    "💬 Communication Meaning — Helps astrologers understand how the two friends talk, think, share ideas, solve misunderstandings, and mentally connect with one another.",
+    "🌙 Emotional Friendship Meaning — Shows whether the friendship feels emotionally safe, understanding, caring, protective, supportive, or sometimes emotionally distant.",
+    "⚖ Harmony and Tension Detection — Reveals where the friendship flows naturally and where there may be conflict, misunderstanding, different expectations, or growth lessons.",
+    "🏠 House Overlay Insight — Shows which life areas each person activates in the other, such as learning, fun, daily life, emotional support, teamwork, social connection, or long-term trust.",
+    "🌍 Shared Interest and Support Pattern — Helps explain whether the friendship is more intellectual, emotional, adventurous, creative, practical, or spiritually supportive.",
+    "📊 Why This Chart Is Used — It is used to understand compatibility in friendship, mutual encouragement, emotional bonding, loyalty, shared values, and long-term friendship potential.",
+    "🧠 What We Understand From This Chart — It helps identify friendship strengths, easy connection points, possible tension zones, emotional support style, and how both people help each other grow.",
+    "🚀 Practical Use — Useful for friendship compatibility readings, best-friend analysis, trust and support readings, social compatibility insight, and understanding the deeper purpose of a friendship."
+  ]
+},
+    {
+  "name": "horoscope_friendship_synastry_interpretations",
+  "label": "Friendship: Synastry Interpretations",
+  "description": "Readable friendship interpretation cards showing how one person's planets connect with the other person's planets.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Friendship Relationships",
+  "purpose": "This section is generated after the system receives date of birth, time of birth, and place of birth for both friends and creates two natal charts. It then compares both charts through synastry, which means it studies how one person's planets, signs, houses, and chart angles interact with the other person's chart. The purpose of this screen is to explain the most important friendship connections in a simple card format. These cards help astrologers understand why the friendship feels easy, emotionally supportive, mentally stimulating, motivating, or sometimes challenging. It is especially useful for showing how two people understand each other, communicate, solve problems, build trust, and support each other's growth over time.",
+  "bullets": [
+    "🤝 Friendship Birth Data Based Generation — Uses date of birth, time of birth, and place of birth for both people to create two accurate natal charts before friendship comparison begins.",
+    "🌌 Synastry Comparison Meaning — The system compares Person 1 and Person 2 chart placements to detect important planet-to-planet friendship aspects such as conjunctions, trines, sextiles, squares, and oppositions.",
+    "☀ Sun Conjunction Sun Meaning — This kind of connection often shows shared values, similar life outlook, natural understanding, mutual respect, and a friendship built on common perspective and cooperation.",
+    "🌙 Moon Trine Moon Meaning — This kind of connection often shows emotional compatibility, intuitive support, comfort, shared understanding, and a friendship where both people can feel emotionally safe and understood.",
+    "♂ Conjunction Mercury Meaning — A connection like Mars conjunct Mercury can show lively discussion, energizing conversation, direct expression, mental stimulation, and a friendship that stays active through ideas and debate.",
+    "💬 Why This Screen Is Used — It helps astrologers quickly understand the main friendship dynamics by turning technical synastry aspects into readable interpretation cards.",
+    "🧠 What We Understand From These Cards — The cards help reveal shared thinking style, emotional support pattern, communication flow, mutual encouragement, and where the friendship feels easy or needs adjustment.",
+    "⚖ Harmony and Challenge Insight — Supportive aspects may show trust, comfort, teamwork, and easy connection, while more intense aspects may show debate, friction, or growth through difference.",
+    "🏠 Deeper Friendship Meaning — Even when the card focuses on planets, the full interpretation can also reflect house overlays and show which life areas the friendship activates, such as learning, teamwork, fun, emotional support, or practical help.",
+    "📖 Show More Purpose — Each card can include a Show More action so the user or astrologer can open a deeper explanation of that specific friendship aspect without crowding the main screen.",
+    "📊 Easy Card Format — The technical friendship chart comparison is presented in short readable cards so users can understand the meaning quickly and without confusion.",
+    "🚀 Practical Use — Useful for friendship compatibility readings, best-friend analysis, trust and support readings, teamwork compatibility, and understanding the deeper strength and purpose of a friendship."
+  ]
+},
+
+{
+  "name": "horoscope_friendship_deep_analysis",
+  "label": "Friendship: Deep Synastry Analysis",
+  "description": "A detailed friendship reading for one important synastry aspect, with expanded meaning, significance, and picture representation.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Friendship Relationships",
+  "purpose": "This section is generated after the system receives date of birth, time of birth, and place of birth for both friends and creates two natal charts. The platform then compares both charts through synastry and identifies important friendship aspects. When the user clicks Show More on a friendship synastry card, this deep analysis screen opens and explains one selected aspect in much greater detail. In this example, Moon trine Moon shows emotional ease, intuitive support, mutual comfort, and a friendship that naturally understands feelings without too much effort. The purpose of this screen is to help astrologers understand the deeper emotional structure of the friendship, the significance of the selected aspect, and the way both people support each other through trust, emotional safety, shared understanding, and long-term bonding.",
+  "bullets": [
+    "🤝 Friendship Birth Data Based Generation — Uses date of birth, time of birth, and place of birth for both people to calculate two accurate natal charts before deep friendship analysis begins.",
+    "🌌 Deep Aspect Focus — This screen explains one specific friendship synastry aspect in detail after it is selected from the main synastry interpretation cards.",
+    "🌙 Moon Meaning In Friendship — The Moon represents emotions, comfort, trust, instinctive reactions, care, emotional safety, and the natural feeling tone between two friends.",
+    "△ Trine Meaning In Friendship — A trine shows ease, natural flow, support, harmony, understanding, and a connection that works smoothly without much resistance.",
+    "❤️ Moon Trine Moon Meaning — This aspect often shows emotional understanding, easy support, shared comfort, mutual empathy, and a friendship where both people feel accepted and emotionally safe.",
+    "🧠 Deep Emotional Insight — Helps astrologers understand how the friendship handles feelings, sensitivity, reassurance, emotional expression, and supportive presence during difficult times.",
+    "📖 Significance And Impact Section — This part explains why the selected aspect matters in real friendship life, showing how it influences loyalty, trust, emotional resilience, encouragement, and long-term closeness.",
+    "⚖ Friendship Strength Meaning — The aspect can show where the friendship feels naturally balanced, nurturing, and emotionally dependable, while also highlighting how both people strengthen one another.",
+    "🖼 Picture Representation Purpose — The image visually combines the Moon qualities of both friends and the trine energy in the center so the astrologer can understand the aspect faster and more clearly.",
+    "🌙 Left Side Picture Meaning — The left side represents one person's Moon qualities, such as mood, reflection, belonging, comfort, sensitivity, imagination, and personal emotional rhythm.",
+    "🌙 Right Side Picture Meaning — The right side represents the other person's Moon qualities, such as cycles, intuition, receptivity, memory, vulnerability, empathy, and emotional care style.",
+    "✨ Center Blend Meaning — The center area represents the shared result of the trine, such as harmony, support, trust, balance, ease, comfort, connection, understanding, and emotional solidarity.",
+    "💬 Why This Screen Is Used — It gives a clearer and deeper explanation than the short summary card, helping the astrologer explain not only what the aspect is, but why it matters in the friendship.",
+    "🔮 What We Understand From This Screen — It helps reveal whether the friendship has emotional ease, deep trust, intuitive support, mutual encouragement, and a naturally protective emotional foundation.",
+    "🚀 Practical Use — Useful for friendship compatibility readings, best-friend analysis, emotional support readings, trust and bonding insight, and understanding the deeper emotional purpose of a friendship."
+  ]
+},
+
+{
+  "name": "horoscope_friendship_composite_interpretations",
+  "label": "Friendship: Composite Horoscope",
+  "description": "A shared friendship chart reading that explains the combined energy of the friendship through important composite placements.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Friendship Relationships",
+  "purpose": "This section is generated after the system receives date of birth, time of birth, and place of birth for both friends and creates two natal charts. The platform then builds the composite chart, which represents the friendship itself as one shared relationship chart instead of reading each person separately. The purpose of this screen is to explain major composite placements, such as the Sun in Libra in the 3rd house or the Moon in Virgo in the 2nd house, so astrologers can understand the core identity, emotional tone, communication style, shared values, and practical foundation of the friendship. This is useful because it shows how the friendship behaves as a whole, what holds it together, and which life themes become central in the connection.",
+  "bullets": [
+    "🤝 Friendship Birth Data Based Generation — Uses date of birth, time of birth, and place of birth for both friends to calculate two natal charts before creating the composite friendship chart.",
+    "🌌 Composite Chart Meaning — The composite chart represents the friendship itself as one shared energetic pattern, showing how the bond functions as a combined unit.",
+    "☀ Sun Placement Meaning — The composite Sun shows the main identity, purpose, and visible tone of the friendship, including what the friendship is centered around and how it expresses itself.",
+    "♎ Sun in Libra Meaning — This placement often shows a friendship built on balance, fairness, cooperation, mutual respect, and a natural wish to keep the connection peaceful and supportive.",
+    "🏠 3rd House Meaning — The 3rd house highlights communication, sharing ideas, learning, conversation, mental exchange, and day-to-day interaction, showing that talking and understanding each other are central to the friendship.",
+    "☀ Sun in Libra in the 3rd House — This combination suggests that the friendship grows through dialogue, shared interests, thoughtful communication, and mutual intellectual connection.",
+    "🌙 Moon Placement Meaning — The composite Moon shows the emotional atmosphere of the friendship, including comfort, trust, support, instinctive bonding, and the emotional needs of the connection.",
+    "♍ Moon in Virgo Meaning — This placement often shows a practical, dependable, helpful, and detail-aware emotional tone, where care is expressed through support, consistency, and usefulness.",
+    "🏠 2nd House Meaning — The 2nd house highlights shared values, security, stability, trust, dependability, and the sense of building something steady together.",
+    "🌙 Moon in Virgo in the 2nd House — This combination suggests that the friendship feels emotionally secure when both people are reliable, supportive, grounded, and aligned in values or practical priorities.",
+    "🧠 Why This Screen Is Used — It helps astrologers understand the friendship as a whole, not just person-to-person interactions, by showing the shared character and emotional structure of the bond.",
+    "💬 Easy Interpretation Format — The composite placements are shown in readable cards so users and astrologers can quickly understand the core meaning of the friendship without reading raw chart data.",
+    "📖 Show More Support — Each composite placement card can include a Show More action so deeper explanation can be opened for clearer friendship guidance.",
+    "🔮 What We Understand From This Screen — It helps reveal what the friendship is built on, how the two people communicate, what creates emotional safety, and why the bond feels mentally, emotionally, or practically strong.",
+    "🚀 Practical Use — Useful for friendship compatibility readings, best-friend analysis, trust and support readings, social bond interpretation, and understanding the shared purpose of a friendship."
+  ]
+},
+
+{
+  "name": "horoscope_friendship_davison_relationship",
+  "label": "Friendship: Davison Relationship",
+  "description": "A shared friendship reading that explains the Davison chart through major sign and house placements.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Friendship Relationships",
+  "purpose": "This section is generated after the system receives date of birth, time of birth, and place of birth for both friends and calculates the Davison relationship chart. The Davison chart is created from the midpoint in time and space between the two birth charts, and it represents the friendship as a real shared entity. The purpose of this screen is to explain important Davison placements, such as the Sun in Libra in the 9th house or the Moon in Aquarius in the 1st house, so astrologers can understand the shared identity, emotional atmosphere, growth path, and lived expression of the friendship. This screen is useful because it shows how the friendship functions in real life, what kind of experiences strengthen the bond, and which themes become central in the connection over time.",
+  "bullets": [
+    "🤝 Friendship Birth Data Based Generation — Uses date of birth, time of birth, and place of birth for both friends to calculate two natal charts before creating the Davison friendship chart.",
+    "🌌 Davison Chart Meaning — The Davison chart represents the friendship itself as a shared lived relationship, showing how the bond develops, expresses itself, and grows over time.",
+    "☀ Sun Placement Meaning — The Sun in the Davison chart shows the core identity, purpose, direction, and visible tone of the friendship.",
+    "♎ Sun in Libra Meaning — This placement often shows a friendship built on balance, fairness, cooperation, respect, diplomacy, and mutual understanding.",
+    "🏠 Sun in the 9th House Meaning — This placement highlights learning, travel, higher knowledge, philosophy, belief systems, exploration, and broadening perspectives together.",
+    "☀ Sun in Libra in the 9th House — This combination suggests a friendship that grows through shared ideas, meaningful conversation, learning, travel, discovery, and a desire to understand life from a wider point of view.",
+    "🌙 Moon Placement Meaning — The Moon in the Davison chart shows the emotional tone of the friendship, including comfort, trust, instinctive bonding, and emotional expression.",
+    "♒ Moon in Aquarius Meaning — This placement often shows emotional independence, openness to individuality, unconventional thinking, friendship through ideas, and respect for personal freedom.",
+    "🏠 Moon in the 1st House Meaning — This placement shows that emotional expression is very visible in the friendship and becomes a direct part of how the bond presents itself and feels in daily interaction.",
+    "🌙 Moon in Aquarius in the 1st House — This combination suggests a friendship where both people feel comfortable being themselves, value individuality, support each other's uniqueness, and connect through honesty, openness, and shared social awareness.",
+    "🧠 Why This Screen Is Used — It helps astrologers understand the friendship as a real shared relationship, not only as person-to-person comparison, by showing the bond's identity and emotional life as one living chart.",
+    "💬 Easy Interpretation Format — The Davison placements are shown in readable cards so users and astrologers can quickly understand the main meaning without reading raw chart calculations.",
+    "📖 Show More Support — Each Davison placement card can include a Show More action so deeper explanation can be opened for clearer friendship guidance.",
+    "🔮 What We Understand From This Screen — It helps reveal what the friendship is built around, how it feels emotionally, how it shows itself in real life, and what experiences help the bond grow stronger.",
+    "🚀 Practical Use — Useful for friendship compatibility readings, best-friend analysis, trust and support readings, shared growth interpretation, and understanding the long-term purpose of a friendship."
+  ]
+},
+
+{
+  "name": "horoscope_friendship_major_aspects",
+  "label": "Friendship: Major Aspects & Connections",
+  "description": "A friendship aspect screen that highlights the strongest planet-to-planet connections between both friends and explains how those energies shape the bond.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Friendship Relationships",
+  "purpose": "This section is generated after the system receives date of birth, time of birth, and place of birth for both friends and creates two natal charts. The platform then compares both charts through synastry and identifies the strongest cross-chart aspects between the two people. These major aspects and connections help astrologers understand the main energetic patterns in the friendship, such as warmth, support, admiration, emotional ease, optimism, frustration, or growth through challenge. The purpose of this screen is to turn those important aspect connections into readable friendship cards so the user can understand why the friendship feels natural, helpful, energizing, demanding, or deeply meaningful.",
+  "bullets": [
+    "🤝 Friendship Birth Data Based Generation — Uses date of birth, time of birth, and place of birth for both people to create two accurate natal charts before friendship aspect comparison begins.",
+    "🌌 Synastry Aspect Detection — The system compares both charts and finds the strongest inter-chart aspects, such as conjunctions, trines, sextiles, squares, and oppositions, between important friendship planets.",
+    "☀ Sun Conjunct Venus Meaning — This type of friendship connection often shows warmth, appreciation, admiration, social ease, shared enjoyment, kindness, and a bond that feels pleasant and welcoming.",
+    "🌙 Moon Trine Jupiter Meaning — This type of connection often shows emotional support, encouragement, generosity, optimism, comfort, and a friendship that helps both people feel valued and uplifted.",
+    "♂ Mars Square Saturn Meaning — This type of connection can show friction between action and caution, enthusiasm and restraint, speed and patience, but it can also create growth through learning balance and maturity.",
+    "💬 Why This Screen Is Used — It helps astrologers quickly see the most important friendship dynamics without having to read every smaller aspect in the full comparison chart.",
+    "🧠 What We Understand From These Cards — The cards help reveal admiration, emotional support, shared motivation, optimism, challenge points, loyalty patterns, and how both friends influence each other's growth.",
+    "⚖ Harmony and Challenge Insight — Supportive aspects may show trust, encouragement, and easy connection, while challenging aspects may show differences in pace, expression, expectations, or problem-solving style.",
+    "🏠 Deeper Friendship Meaning — Even when the card focuses on planets and signs, the full interpretation may also reflect house influence and show which life areas the friendship activates, such as teamwork, fun, learning, stability, or emotional help.",
+    "📖 Show More Purpose — Each major friendship aspect card can include a Show More action so the astrologer or user can open a deeper explanation of that specific connection without crowding the summary screen.",
+    "📊 Easy Friendship Card Format — The technical friendship synastry comparison is converted into short readable cards so users can understand the strongest connections clearly and without confusion.",
+    "🚀 Practical Use — Useful for friendship compatibility readings, best-friend analysis, trust and support readings, teamwork compatibility, conflict understanding, and explaining the strongest strengths and lessons of a friendship."
+  ]
+},
+{
+  "name": "horoscope_friendship_deep_analysis_v1",
+  "label": "Friendship: Deep Synastry Analysis",
+  "description": "A detailed friendship reading for one selected synastry aspect, with expanded meaning, significance, and visual interpretation support.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Friendship Relationships",
+  "purpose": "This screen opens when the user clicks Show More on an important friendship synastry aspect. The system first uses date of birth, time of birth, and place of birth for both friends to generate two natal charts. It then compares both charts and identifies key friendship aspects. When one aspect is selected, this deep analysis view explains that single connection in much greater detail. In this example, Moon trine Moon shows emotional harmony, intuitive understanding, and a supportive bond between the two friends. The purpose of this screen is to help astrologers understand not only what the aspect means, but also why it matters, how it affects the friendship in real life, and what the visual picture representation is trying to show.",
+  "bullets": [
+    "🤝 How It Is Generated — The system uses both friends' date of birth, time of birth, and place of birth to calculate two natal charts, then compares them through synastry and selects one important aspect for deeper explanation.",
+    "🌙 Main Title Meaning — The selected aspect name, such as Moon trine Moon, appears at the top to show exactly which friendship connection is being analyzed in depth.",
+    "📖 Main Interpretation Block — This first large text block explains the full emotional and relational meaning of the selected aspect in natural language so the astrologer can understand the friendship dynamic clearly.",
+    "🌙 Moon Meaning In Friendship — The Moon represents feelings, emotional comfort, instinctive reactions, support style, trust, and the deeper emotional tone between two friends.",
+    "△ Trine Meaning In Friendship — A trine is a harmonious aspect that shows ease, natural understanding, smooth energy flow, mutual support, and a connection that works without too much force.",
+    "❤️ Moon Trine Moon Meaning — This aspect often shows emotional compatibility, natural empathy, easy reassurance, emotional safety, and a friendship where both people feel understood and supported.",
+    "⭐ Significance And Impact Block — This second content section explains why the aspect is important in real friendship life, showing how it influences trust, loyalty, emotional resilience, shared comfort, and long-term bond strength.",
+    "🧠 Why This Block Is Useful — It moves beyond simple meaning and helps astrologers explain the practical emotional effect of the aspect, such as how the friends handle feelings, support each other, and grow together.",
+    "🖼 Picture Representation Block — This section uses a symbolic image to visually explain the aspect, making the friendship dynamic easier to understand at a glance.",
+    "🌙 Left Visual Side Meaning — The left side of the picture represents one friend's Moon qualities, such as mood, belonging, reflection, serenity, imagination, attachment, and emotional rhythm.",
+    "🌙 Right Visual Side Meaning — The right side of the picture represents the other friend's Moon qualities, such as cycles, intuition, sensitivity, memory, vulnerability, empathy, care, and emotional response style.",
+    "✨ Center Visual Meaning — The center area represents the shared result of the trine, such as harmony, balance, support, union, understanding, trust, comfort, and emotional integration between both friends.",
+    "🎯 Why This Screen Is Used — It is used when the astrologer or user wants deeper understanding of one specific friendship aspect instead of only reading a short summary card.",
+    "🔮 What We Understand From This Screen — It helps reveal why the friendship feels emotionally easy, how both friends support each other, what creates trust, and why the bond may feel naturally secure and uplifting.",
+    "🚀 Practical Use — Useful for friendship compatibility readings, emotional support analysis, best-friend interpretation, trust and bonding insight, and explaining the deeper meaning of one important friendship aspect."
+  ]
+},
+
+{
+  "name": "horoscope_friendship_composite_interpretations_1",
+  "label": "Friendship: Composite Horoscope",
+  "description": "A shared friendship chart reading that explains the combined identity, emotional tone, and active energy of the friendship through major composite placements.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Friendship Relationships",
+  "purpose": "This section is generated after the system receives date of birth, time of birth, and place of birth for both friends and creates two natal charts. It then builds the composite chart, which represents the friendship itself as one shared chart instead of reading each person separately. This screen explains important composite placements such as Sun in Libra in the 3rd house, Moon in Virgo in the 2nd house, and Mars in Virgo in the 2nd house. The purpose of this screen is to help astrologers understand what the friendship is built around, how the friendship feels emotionally, how the two people communicate, and how they act together in practical life. It is useful because it shows the friendship as a single living bond with its own identity, emotional needs, and shared motivation.",
+  "bullets": [
+    "🤝 How It Is Generated — Uses date of birth, time of birth, and place of birth for both friends to calculate two natal charts, then combines them into one composite friendship chart.",
+    "🌌 Why This Chart Is Used — It is used to understand the friendship itself as a shared entity, not only as two separate people comparing charts.",
+    "☀ Sun Placement Block — This block explains the main identity, purpose, visible tone, and central focus of the friendship.",
+    "♎ Sun in Libra Meaning — Shows a friendship built on balance, fairness, harmony, diplomacy, mutual respect, and cooperative interaction.",
+    "🏠 Sun in the 3rd House Meaning — Shows that communication, conversation, idea-sharing, learning, daily connection, and mental exchange are central to the friendship.",
+    "☀ Sun in Libra in the 3rd House — Suggests a friendship that grows through dialogue, shared interests, understanding, and thoughtful communication.",
+    "🌙 Moon Placement Block — This block explains the emotional atmosphere of the friendship, including comfort, trust, support style, and emotional bonding.",
+    "♍ Moon in Virgo Meaning — Shows practical care, reliability, detail-awareness, useful support, emotional steadiness, and a grounded way of showing concern.",
+    "🏠 Moon in the 2nd House Meaning — Highlights shared values, stability, loyalty, dependability, trust, and the need to build a secure friendship foundation.",
+    "🌙 Moon in Virgo in the 2nd House — Suggests that the friendship feels emotionally safe when both people are reliable, helpful, consistent, and aligned in values.",
+    "♂ Mars Placement Block — This block explains the action style, shared drive, problem-solving energy, initiative, and productive force inside the friendship.",
+    "♍ Mars in Virgo Meaning — Shows disciplined effort, practical action, careful planning, helpful teamwork, and productive energy used in a thoughtful way.",
+    "🏠 Mars in the 2nd House Meaning — Shows that the friendship puts effort into security, shared goals, practical achievements, trust-building, and stable results.",
+    "♂ Mars in Virgo in the 2nd House — Suggests that both friends may work hard together, focus on useful goals, and build the friendship through consistency, effort, and practical support.",
+    "💬 Show More Purpose — Each block includes a Show More action so the astrologer or user can open a deeper explanation of that specific composite placement.",
+    "🧠 What We Understand From This Screen — It helps reveal what the friendship is built on, how emotional security is created, how communication works, and how both friends take action together.",
+    "🔮 Overall Friendship Meaning — This screen shows whether the friendship is mainly based on communication, stability, trust, teamwork, practical support, shared values, or long-term dependability.",
+    "🚀 Practical Use — Useful for friendship compatibility readings, best-friend analysis, trust and support readings, teamwork understanding, and explaining the shared purpose of a friendship."
+  ]
+},
+
+{
+  "name": "horoscope_friendship_deep_analysis_1",
+  "label": "Friendship: Deep Astrological Analysis",
+  "description": "A detailed friendship reading that opens from a major synastry aspect and explains its deeper meaning, impact, and visual symbolism.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Friendship Relationships",
+  "purpose": "This screen is generated after the system receives date of birth, time of birth, and place of birth for both friends and creates two natal charts. The platform then compares both charts through synastry and identifies the strongest friendship aspects. When the user clicks Show More on an important friendship aspect, this deep analysis screen opens and explains that one connection in greater detail. In this example, Sun conjunction Sun shows strong similarity in identity, values, outlook, and mutual understanding. The purpose of this screen is to help astrologers understand the deeper meaning of the selected aspect, why it matters in the friendship, how it affects the bond in real life, and what the picture representation is showing symbolically.",
+  "bullets": [
+    "🤝 How It Is Generated — The system uses both friends' date of birth, time of birth, and place of birth to calculate two natal charts, then compares them through synastry and selects one important aspect for deeper explanation.",
+    "☀ Main Title Meaning — The title at the top shows the exact aspect being analyzed, such as Sun Conjunction Sun, so the astrologer knows which friendship connection is in focus.",
+    "📖 Main Interpretation Block — This first large text block explains the full meaning of the selected aspect in friendship terms, showing how the two people connect through identity, outlook, values, and mutual understanding.",
+    "☀ Sun Meaning In Friendship — The Sun represents identity, self-expression, confidence, values, direction, and the visible personality energy each friend brings into the bond.",
+    "☌ Conjunction Meaning In Friendship — A conjunction shows two energies joining strongly together, creating intensity, similarity, shared focus, and a bond that feels direct and noticeable.",
+    "❤️ Sun Conjunction Sun Meaning — This aspect often shows shared values, similar life approach, natural understanding, mutual respect, and a friendship built on common goals, outlook, and personal resonance.",
+    "⭐ Why This Aspect Matters — It can become a strong foundation for friendship because both people often understand each other's style, priorities, and way of moving through life without too much explanation.",
+    "🖼 Picture Representation Block — This section uses a symbolic image to visually explain the selected friendship aspect, making the deeper meaning easier to understand at a glance.",
+    "☀ Left Visual Side Meaning — The left side represents one friend's Sun qualities, such as self-expression, purpose, confidence, leadership, individuality, creativity, clarity, and personal power.",
+    "☀ Right Visual Side Meaning — The right side represents the other friend's Sun qualities, such as self-awareness, initiative, motivation, influence, strength, enthusiasm, and identity expression.",
+    "✨ Center Visual Meaning — The center area represents the shared conjunction energy, showing what both Suns create together, such as recognition, honesty, self-awareness, courage, focus, confidence, dignity, and mutual support.",
+    "🎯 Why This Screen Is Used — It is used to move beyond a short summary card and give astrologers a deeper understanding of how one important aspect shapes the friendship.",
+    "🧠 What We Understand From This Screen — It helps reveal why the friendship feels naturally aligned, how both friends support each other's identity, and why the bond may feel strong, respectful, and long-lasting.",
+    "🔮 Deeper Friendship Value — This screen shows whether the friendship is supported by shared life direction, mutual admiration, easy understanding, and a naturally cooperative way of interacting.",
+    "🚀 Practical Use — Useful for friendship compatibility readings, best-friend analysis, personality alignment insight, trust and respect readings, and understanding the deeper purpose of one major friendship aspect."
+  ]
+},
+{
+  "name": "horoscope_friendship_davison_relationship_v1",
+  "label": "Friendship: Davison Relationship",
+  "description": "A Davison friendship reading that explains how the bond lives, grows, and expresses itself through shared sign and house placements.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Friendship Relationships",
+  "purpose": "This section is generated after the system receives date of birth, time of birth, and place of birth for both friends and calculates the Davison relationship chart. The Davison chart is created from the midpoint in time and space between both birth charts, and it represents the friendship as a real shared relationship with its own identity, emotional climate, and growth pattern. This screen explains important Davison placements such as the Sun in Libra in the 9th house and the Moon in Aquarius in the 1st house. Its purpose is to help astrologers understand how the friendship behaves in lived experience, what kind of journey the two people share, how they emotionally relate to one another, and what themes naturally become central in the friendship over time.",
+  "bullets": [
+    "🤝 How It Is Generated — The system uses both friends' date of birth, time of birth, and place of birth to calculate two natal charts, then creates the Davison chart using the midpoint of time and space between them.",
+    "🌌 Why The Davison Chart Is Used — It is used to understand the friendship as a living shared relationship, not only as a comparison between two separate charts.",
+    "☀ Sun Placement Block — This block explains the main identity, purpose, direction, and visible life path of the friendship.",
+    "♎ Sun in Libra Meaning — This placement shows that the friendship is naturally centered on fairness, cooperation, mutual respect, peaceful interaction, and balanced exchange.",
+    "🏠 Sun in the 9th House Meaning — This placement highlights exploration, learning, philosophy, travel, broader thinking, higher knowledge, and the wish to grow through shared experiences.",
+    "☀ Sun in Libra in the 9th House — This combination suggests a friendship that becomes stronger through thoughtful discussion, new ideas, shared adventures, learning together, and widening each other's worldview.",
+    "🌙 Moon Placement Block — This block explains the emotional atmosphere of the friendship, including how the bond feels, how emotions are expressed, and how comfort is created between both people.",
+    "♒ Moon in Aquarius Meaning — This placement shows emotional independence, originality, social awareness, openness to difference, and a friendship that respects individuality.",
+    "🏠 Moon in the 1st House Meaning — This placement makes the emotional tone of the friendship very visible, immediate, and central to how the relationship presents itself in everyday life.",
+    "🌙 Moon in Aquarius in the 1st House — This combination suggests a friendship where both people feel free to be themselves, value authenticity, support personal growth, and connect through openness, uniqueness, and mutual acceptance.",
+    "🧭 What This Screen Helps Us Understand — It shows what the friendship is built around, how it grows, what emotional style it carries, and why certain shared experiences make the bond stronger.",
+    "💬 Why The Data Feels Different Here — Unlike simple compatibility cards, this screen explains the friendship through the Davison relationship chart, so it focuses more on the life of the bond itself rather than only person-to-person interaction.",
+    "📖 Show More Purpose — Each placement card can include a Show More action so deeper meaning of that specific Davison placement can be opened without overloading the main screen.",
+    "🔮 Practical Friendship Meaning — This screen can reveal whether the friendship is built on shared learning, emotional freedom, mutual support, social awareness, travel, ideas, or long-term personal development together.",
+    "🚀 Practical Use — Useful for friendship compatibility readings, best-friend analysis, long-term bond interpretation, shared growth readings, and understanding the deeper journey and emotional tone of a friendship."
+  ]
+},
+{
+  "name": "horoscope_friendship_davison_deep_analysis_v1",
+  "label": "Friendship: Deep Davison Analysis",
+  "description": "A deeper friendship reading for one important Davison placement, with expanded interpretation and picture representation.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Friendship Relationships",
+  "purpose": "This screen opens when the user clicks Show More on an important Davison friendship placement. The system first uses date of birth, time of birth, and place of birth for both friends to generate two natal charts. Then it creates the Davison chart using the midpoint in time and space between both births. From that shared Davison chart, it selects one meaningful placement for deeper explanation. In this example, Sun in Libra in the 9th house shows a friendship built around fairness, shared learning, wider perspective, and meaningful exploration. The purpose of this screen is to help astrologers understand how one specific Davison placement shapes the friendship's long-term growth, shared values, intellectual connection, and real-life journey together.",
+  "bullets": [
+    "🤝 How It Is Generated — The system uses both friends' date of birth, time of birth, and place of birth to create two natal charts, then calculates the Davison chart as the shared friendship chart.",
+    "🌌 Why This Screen Is Used — It gives a deeper explanation of one selected Davison placement so the astrologer can understand the friendship beyond a short summary card.",
+    "☀ Main Placement Title — The title at the top shows the exact placement being analyzed, such as Sun in Libra in the 9th House, so the focus of the reading is immediately clear.",
+    "📖 Main Interpretation Block — This first large text section explains the deeper meaning of the placement in natural language, showing how the friendship behaves, grows, and expresses itself through that shared energy.",
+    "☀ Sun Meaning In Davison Friendship — The Sun represents the central identity of the friendship, its purpose, visible tone, shared direction, and the main life force holding the bond together.",
+    "♎ Libra Meaning In Friendship — Libra brings harmony, fairness, balance, respect, cooperation, diplomacy, and a desire to keep the friendship thoughtful and mutually supportive.",
+    "🏠 9th House Meaning In Friendship — The 9th house represents exploration, higher learning, belief systems, travel, wisdom, philosophy, new experiences, and growth through wider understanding.",
+    "☀ Sun in Libra in the 9th House Meaning — This combination suggests a friendship that grows through conversation, shared curiosity, open-minded learning, meaningful ideas, travel, culture, and expanding each other's perspective.",
+    "🧠 Deeper Friendship Purpose — This placement often shows that the friendship is not only social, but also educational, inspiring, and growth-oriented, helping both people understand life in a broader way.",
+    "🖼 Picture Representation Purpose — The image is used to visually break the placement into three layers so the astrologer can quickly understand sign meaning, house meaning, and the combined result.",
+    "♎ Left Visual Block Meaning — The left side explains Libra qualities such as harmony, tact, justice, fairness, diplomacy, elegance, cooperation, partnership, and social grace.",
+    "🏠 Right Visual Block Meaning — The right side explains 9th house themes such as journeys, principles, ethics, learning, worldview, religion, study, wisdom, development, and expanded awareness.",
+    "✨ Center Blend Meaning — The center area combines Libra and 9th house energy, showing the friendship's shared themes such as higher learning, cultural exchange, philosophy, exploration, broad-mindedness, knowledge, and mutual growth.",
+    "🎯 What We Understand From This Screen — It helps reveal why the friendship may feel mentally enriching, balanced, meaningful, and strongly connected through ideas, values, travel, or shared discovery.",
+    "💬 Why It Matters In Real Life — This placement can show a friendship that becomes stronger through honest discussion, shared beliefs, learning experiences, and helping each other see life more clearly and fairly.",
+    "🚀 Practical Use — Useful for friendship compatibility readings, long-term bond analysis, shared growth interpretation, travel or learning partnership insight, and understanding the deeper mission of a friendship."
+  ]
+},
+{
+  "name": "horoscope_friendship_major_aspects_v1",
+  "label": "Friendship: Major Aspects & Connections",
+  "description": "A focused friendship compatibility screen that highlights the strongest planet-to-planet connections between both friends and explains how each one shapes the bond.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Friendship Relationships",
+  "purpose": "This section is generated after the system receives date of birth, time of birth, and place of birth for both friends and creates two natal charts. It then compares the two charts through synastry and selects the most important cross-chart aspects for friendship analysis. These aspect cards show how one friend's planets interact with the other friend's planets, revealing the strongest patterns of support, warmth, communication, growth, tension, and mutual influence inside the friendship. The purpose of this screen is to help astrologers quickly identify the major energetic links that define how the friendship feels, how both people respond to each other, and where the connection becomes especially harmonious, emotionally supportive, or growth-producing.",
+  "bullets": [
+    "🤝 How It Is Generated — The system uses both friends' date of birth, time of birth, and place of birth to calculate two natal charts, then compares them to detect the strongest synastry aspects between their planets.",
+    "🌌 Why This Screen Is Used — It is used to show the most important friendship connections first, so the astrologer can quickly understand the strongest patterns in the relationship without reading every minor aspect.",
+    "☀ Sun in Libra Conjunct Venus in Libra Block — This block explains a warm and pleasant friendship connection built on appreciation, kindness, social ease, charm, mutual admiration, and enjoyment of each other's company.",
+    "❤️ Meaning Of Sun Conjunct Venus In Friendship — This aspect often shows affection, friendly attraction, appreciation of each other's personality, easy bonding, shared taste, and a friendship that feels welcoming and enjoyable.",
+    "🌙 Moon in Taurus Trine Jupiter in Virgo Block — This block explains emotional support, reliability, generosity, calm encouragement, and a friendship where both people can feel nurtured, valued, and emotionally steady.",
+    "💛 Meaning Of Moon Trine Jupiter In Friendship — This aspect often shows emotional warmth, trust, optimism, support in difficult times, and a friendship that naturally helps both people grow with reassurance and goodwill.",
+    "♂ Mars in Leo Square Saturn in Taurus Block — This block explains a more challenging friendship pattern where action, enthusiasm, and speed may clash with caution, structure, patience, or slower decision-making.",
+    "⚖ Meaning Of Mars Square Saturn In Friendship — This aspect can show frustration, delays, stubbornness, or mismatched pace, but it can also help the friendship grow stronger by teaching balance, maturity, patience, and responsibility.",
+    "🎨 Color Meaning Of The Cards — Supportive or warm aspects may appear in lighter or brighter tones, while more emotionally neutral or challenging aspects may use different colors to help astrologers quickly read the overall energy.",
+    "💬 Why The Text Is Split Into Cards — Each card explains one major aspect separately so the user can understand the friendship one connection at a time instead of reading one long confusing paragraph.",
+    "📖 Show More Purpose — Each card includes a Show More option so the astrologer or user can open deeper explanation of that exact friendship aspect without making the main screen too crowded.",
+    "🧠 What We Understand From This Screen — It helps reveal which parts of the friendship create warmth, emotional safety, shared joy, encouragement, friction, personal growth, and long-term bonding.",
+    "🔮 Practical Friendship Meaning — This screen can show whether the friendship is socially easy, emotionally supportive, growth-oriented, challenging in useful ways, or built through both harmony and effort.",
+    "🚀 Practical Use — Useful for friendship compatibility readings, best-friend analysis, teamwork understanding, emotional support insight, conflict pattern study, and explaining the strongest strengths and lessons in a friendship."
+  ]
+},
+
+{
+  "name": "horoscope_friendship_compatibility_summary_1V",
+  "label": "Friendship: Compatibility Score / Summary",
+  "description": "A simple friendship summary that explains the core connection through Sun, Moon, Venus, and Mars compatibility in an easy-to-read card format.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Friendship Relationships",
+  "purpose": "This section is generated after the system receives date of birth, time of birth, and place of birth for both friends and creates two natal charts. It then compares the most important personal placements between both people, especially Sun, Moon, Venus, and Mars. The purpose of this screen is to give a quick but meaningful overview of the friendship before moving into deeper synastry, composite, or Davison analysis. It helps astrologers understand how the friendship connects through identity, emotional style, social comfort, affection pattern, motivation, and shared action. This screen is useful because it gives a first clear picture of where the friendship feels natural, where both people emotionally support each other, and where adjustment may be needed.",
+  "bullets": [
+    "🤝 How It Is Generated — The system uses date of birth, time of birth, and place of birth for both friends to calculate two natal charts, then compares key placements between them to create the friendship summary.",
+    "☀ Sun Sign Compatibility Block — This block explains how the two friends connect through core identity, values, personality style, social behavior, and general life approach.",
+    "♎ Sun in Libra Compatibility Meaning — This type of connection often shows harmony, mutual respect, diplomacy, fairness, cooperation, and a friendship that grows through balance and shared understanding.",
+    "🌙 Moon Sign Dynamics Block — This block explains the emotional side of the friendship, including comfort, trust, emotional reactions, support style, and the way both people handle feelings together.",
+    "♉ Taurus Moon and ♍ Virgo Moon Meaning — This combination often shows practical emotional support, reliability, grounded care, and a friendship where comfort is expressed through steadiness, usefulness, and consistency.",
+    "♀ Venus and ♂ Mars Interactions Block — This block explains affection style, social charm, shared enjoyment, action pattern, motivation, and how the friendship expresses warmth, enthusiasm, and collaboration.",
+    "♏ Venus in Scorpio with ♎ Venus in Libra Meaning — This combination can show a friendship that mixes emotional depth with social grace, creating both intensity and friendliness in the connection.",
+    "♂ Mars in Virgo with ♂ Mars in Leo Meaning — This pairing can show a mix of practical action and creative energy, where one friend prefers useful effort and the other brings confidence, excitement, and bold expression.",
+    "⚖ Why This Screen Is Used — It gives a quick overview of the friendship so astrologers can understand the basic connection before reading more advanced friendship analysis screens.",
+    "💬 Easy Card Format — The summary is divided into separate cards so the user can understand identity compatibility, emotional dynamics, and interaction style one layer at a time.",
+    "📖 Show More Purpose — Each card can include a Show More action so deeper explanation of that friendship layer can be opened without making the summary screen too crowded.",
+    "🧠 What We Understand From This Screen — It helps reveal whether the friendship is based on shared values, emotional steadiness, mutual respect, social ease, practical support, or mixed but workable personality styles.",
+    "🔮 Friendship Meaning In Real Life — This screen can show why two friends feel naturally connected, how they emotionally help each other, and how their different styles can either strengthen the friendship or create small friction points.",
+    "🚀 Practical Use — Useful for friendship compatibility readings, best-friend analysis, trust and support insight, social bond overview, and introducing the deeper friendship astrology reading in a clear way."
+  ]
+},
+
+
+{
+  "name":  "horoscope_friendship_composite_interpretations_v1",
+  "label": "Friendship: Elemental Balance",
+  "description": "A friendship analysis screen that compares elemental energy and interaction style between both friends.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Friendship Relationships",
+  "purpose": "This section is generated after the system receives date of birth, time of birth, and place of birth for both friends and creates two natal charts. The platform then studies the elemental distribution and modal qualities in both charts to understand how the friendship works at a natural energy level. The purpose of this screen is to help astrologers understand whether the friendship is more mental, emotional, practical, or action-driven, and how both people naturally respond to one another. It also explains how the elements and modalities combine to create harmony, support, challenge, movement, stability, or emotional difference inside the friendship.",
+  "bullets": [
+    "🤝 How It Is Generated — The system uses date of birth, time of birth, and place of birth for both friends to calculate two natal charts, then compares the elemental and modal balance between them.",
+    "🌍 Why This Screen Is Used — It is used to understand the basic energetic chemistry of the friendship before going into deeper aspect-based or house-based analysis.",
+    "🔥 Fire Element Meaning — Fire represents enthusiasm, action, courage, spontaneity, excitement, motivation, and the energy that keeps a friendship active and lively.",
+    "🏔 Earth Element Meaning — Earth represents stability, reliability, practicality, patience, consistency, and the ability to build trust and dependability in friendship.",
+    "🌬 Air Element Meaning — Air represents communication, ideas, curiosity, social connection, intellectual exchange, adaptability, and easy mental interaction.",
+    "🌊 Water Element Meaning — Water represents emotions, intuition, empathy, sensitivity, inner bonding, emotional understanding, and protective friendship energy.",
+    "🌍 Elemental Balance Block — This block explains the overall balance of Fire, Earth, Air, and Water between both friends and shows the main natural chemistry of the bond.",
+    "🌬 Strong Air Influence Meaning — A strong Air influence often shows a friendship built on communication, ideas, humor, learning, and intellectual connection.",
+    "🌊 Air And Water Blend Meaning — When one chart has stronger Air and the other has stronger Water, the friendship may combine thought and feeling, creating both conversation and emotional depth.",
+    "🔥 Lack Of Fire Meaning — A weaker Fire presence can suggest the friendship may need more spontaneity, excitement, courage, or shared adventure to stay energized and active.",
+    "🧭 Modalities And Interaction Block — This block explains how Cardinal, Fixed, and Mutable energies shape the way both friends act, respond, and move through the friendship.",
+    "▶ Cardinal Meaning — Cardinal energy shows initiative, action, leadership, and the tendency to begin things, make plans, and move the friendship forward.",
+    "⏺ Fixed Meaning — Fixed energy shows stability, loyalty, persistence, emotional depth, consistency, and the ability to hold the friendship together over time.",
+    "🔄 Mutable Meaning — Mutable energy shows flexibility, adaptability, openness, adjustment, and the ability to keep the friendship flowing through change.",
+    "⚖ Cardinal And Fixed Blend Meaning — When one friend brings more Cardinal energy and the other brings more Fixed energy, the friendship may balance action with stability, movement with consistency, and initiative with endurance.",
+    "💬 Show More Purpose — Each block can include a Show More action so the astrologer or user can open a deeper explanation of that elemental or modal theme.",
+    "🧠 What We Understand From This Screen — It helps reveal whether the friendship is mainly intellectual, emotional, practical, spontaneous, stable, or mixed in style, and how both people naturally support or challenge each other.",
+    "🔮 Practical Friendship Meaning — This screen can explain why a friendship feels easy to talk through, emotionally rich, practically dependable, or in need of more energy and flexibility.",
+    "🚀 Practical Use — Useful for friendship compatibility readings, best-friend analysis, emotional and mental chemistry insight, trust and support readings, and understanding the natural energetic structure of a friendship."
+  ]
+},
+
+{
+  "name": "horoscope_friendship_timing_transits_v1",
+  "label": "Friendship: Timing & Transits",
+  "description": "A friendship timing screen that highlights active planet-to-planet connections and shows when certain friendship energies become more noticeable, supportive, or challenging.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Friendship Relationships",
+  "purpose": "This section is generated after the system receives date of birth, time of birth, and place of birth for both friends and creates two natal charts. The platform then compares both charts and highlights important active connections that shape the timing, tone, and development of the friendship. These cards explain how major inter-chart aspects such as Sun conjunction Sun, Moon sextile Moon, or Mars conjunction Mercury influence the bond in practical life. The purpose of this screen is to help astrologers understand which friendship themes are especially active, such as shared understanding, emotional support, communication flow, cooperation, or mental stimulation. It is useful because it shows how the friendship energy moves and becomes expressed through important relationship contacts rather than only through static compatibility meanings.",
+  "bullets": [
+    "🤝 How It Is Generated — The system uses date of birth, time of birth, and place of birth for both friends to calculate two natal charts, then compares the charts to identify key active friendship connections.",
+    "⏳ Why This Screen Is Used — It is used to show how important friendship energies become expressed through active aspect links, helping astrologers understand timing, interaction style, and relationship flow.",
+    "☀ Sun Conjunction Sun Block — This block explains a strong shared identity connection, showing common values, similar outlook, mutual respect, cooperation, and a friendship built on natural understanding.",
+    "🌙 Moon Sextile Moon Block — This block explains emotional compatibility with flexibility, support, comfort, and a friendship where both people can emotionally respond to each other in a helpful and balanced way.",
+    "♂ Mars Conjunction Mercury Block — This block explains energized communication, shared curiosity, fast conversation, lively idea exchange, debate, initiative, and a friendship that stays mentally active.",
+    "🔗 Meaning Of Conjunction In Friendship — A conjunction shows strong direct blending of two energies, making the connection more immediate, obvious, and powerful in how the friendship is experienced.",
+    "✨ Meaning Of Sextile In Friendship — A sextile shows supportive, cooperative, and opportunity-based energy, where both people can work well together if they actively use the connection.",
+    "💬 Communication And Timing Value — This screen is especially useful for understanding when the friendship is mentally aligned, emotionally responsive, socially cooperative, or energized through shared action and ideas.",
+    "⚖ Harmony And Growth Insight — Some timing cards show easy support and cooperation, while others show dynamic energy that encourages action, discussion, or development within the friendship.",
+    "📖 Show More Purpose — Each card includes a Show More option so the astrologer or user can open a deeper explanation of that specific friendship connection without overloading the main screen.",
+    "🧠 What We Understand From This Screen — It helps reveal when the friendship feels most aligned, emotionally supportive, mentally stimulating, or mutually active through specific planetary contacts.",
+    "🔮 Practical Friendship Meaning — This screen can show why two friends feel naturally in sync at certain times, why emotional understanding becomes easier, or why communication becomes especially strong and motivating.",
+    "🚀 Practical Use — Useful for friendship compatibility readings, best-friend analysis, active connection timing, communication pattern study, emotional support insight, and understanding the evolving energy of a friendship."
+  ]
+},
+
+{
+  "name": "horoscope_friendship_karmic_soulmate_indicators",
+  "label": "Friendship: Karmic & Soulmate Indicators",
+  "description": "A deeper friendship analysis screen that highlights karmic ties, healing bonds, and soul-growth connections between two friends.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Friendship Relationships",
+  "purpose": "This section is generated after the system receives date of birth, time of birth, and place of birth for both friends and creates two natal charts. The platform then compares both charts and looks for special karmic and soul-growth indicators, especially connections involving Chiron, the North Node, the South Node, and important personal planets such as the Sun. The purpose of this screen is to help astrologers understand whether the friendship carries a deeper meaning beyond ordinary compatibility. It shows whether the bond may feel fated, healing, familiar, spiritually significant, or connected to growth lessons that both people help each other work through.",
+  "bullets": [
+    "🤝 How It Is Generated — The system uses both friends' date of birth, time of birth, and place of birth to calculate two natal charts, then compares them to detect karmic and soul-growth connections.",
+    "🌌 Why This Screen Is Used — It is used to identify deeper friendship patterns that may feel destined, healing, emotionally important, or connected to personal growth and life lessons.",
+    "🩹 Chiron And Lunar Nodes Connection Block — This block explains healing-based karmic ties between one friend's Chiron and the other friend's North or South Node, showing how the friendship may support emotional healing and growth.",
+    "🩹 Chiron Meaning In Friendship — Chiron represents wounds, healing, vulnerability, wisdom gained through pain, and the ability to help another person grow through compassion and understanding.",
+    "☊ North Node Meaning In Friendship — The North Node represents future growth, soul direction, learning, destiny, and the qualities a person is meant to develop in this life.",
+    "☋ South Node Meaning In Friendship — The South Node represents familiarity, past patterns, comfort zones, karmic memory, and the feeling that a connection is already known or deeply familiar.",
+    "✨ Chiron Trine North Node Meaning — This type of connection can show a supportive healing bond where one friend naturally helps the other move toward growth, recovery, confidence, and emotional development.",
+    "☀ Personal Planets And Lunar Nodes Block — This block explains karmic ties between personal planets, such as the Sun, and the other friend's Lunar Nodes, showing destiny, familiarity, and meaningful life influence.",
+    "☀ Sun Conjunct South Node Meaning — This connection can suggest a past-life style familiarity, a strong sense of recognition, and a friendship that quickly feels natural, known, or emotionally important.",
+    "❤️ Why These Connections Matter — These indicators often show that the friendship is not only enjoyable or supportive, but also carries deeper lessons, healing value, or a sense of meaningful timing in both lives.",
+    "💬 Show More Purpose — Each karmic indicator card includes a Show More option so the astrologer or user can open a deeper explanation of that specific soul-growth connection.",
+    "🧠 What We Understand From This Screen — It helps reveal whether the friendship supports healing, personal growth, emotional acceptance, soul lessons, forgiveness, trust, and deeper mutual understanding.",
+    "🔮 Friendship Meaning In Real Life — This screen can explain why a friend feels unforgettable, why the bond feels instantly familiar, why healing happens through the connection, or why the friendship becomes an important turning point.",
+    "🚀 Practical Use — Useful for friendship compatibility readings, soul-bond analysis, karmic friendship interpretation, healing relationship guidance, and understanding the deeper spiritual purpose of a friendship."
+  ]
+},
+
+      // ---------------Business Relationships--------------//
+
+      {
+  "name": "horoscope_business_relationships_entry_setup",
+  "label": "Business Relationships: Entry & Generation Setup",
+  "description": "Enter both persons' birth details to generate the full business relationship reading and result screens in sequence.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Business Relationships",
+  "purpose": "This is the first screen of the Business Relationships module. The user must enter date of birth, time of birth, and place of birth for both Person 1 and Person 2. These three birth details are required because the system uses them to calculate two accurate natal charts. After all required fields are filled correctly, the Generate Reading button becomes active. Once the user clicks Generate Reading, the platform starts building the business relationship reading based on both charts and displays the results screen by screen. The generated response depends on DOB, TOB, and POB for both people, because those details affect planetary positions, houses, angles, chart overlays, aspects, elemental balance, timing patterns, and partnership analysis. This setup screen is important because if birth time or birth place is wrong, the business compatibility reading may also change.",
+  "bullets": [
+    "📅 Step 1 — Enter Date of Birth: The user enters the birth date for both persons so the system can calculate the planetary positions for each natal chart.",
+    "🕒 Step 2 — Enter Time of Birth: The user enters the exact birth time for both persons because Ascendant, house cusps, chart angles, and deeper business compatibility calculations depend on correct timing.",
+    "📍 Step 3 — Enter Place of Birth: The user enters the birth place for both persons so the system can use the correct geographic coordinates and timezone for accurate chart creation.",
+    "📝 Step 4 — Area of Inquiry (Optional): The user may enter a focus such as partnership, leadership, communication, trust, strategy, finance, teamwork, or long-term business growth.",
+    "✅ Step 5 — Generate Reading Activation: After both persons' required birth details are completed correctly, the Generate Reading button becomes enabled.",
+    "📊 Result Screen 1 — Compatibility Score / Summary: The system shows a first overview of the business relationship through Sun compatibility, Moon dynamics, and core partnership tone so the user can quickly understand the basic alignment.",
+    "🔗 Result Screen 2 — Synastry Horoscope: The platform compares both natal charts directly and explains how one person's planets interact with the other person's planets in communication, leadership, decision-making, cooperation, and business strategy.",
+    "🌌 Result Screen 3 — Composite Horoscope: The system creates the composite chart to explain the business relationship itself as one shared partnership with its own identity, emotional climate, and practical working structure.",
+    "🪐 Result Screen 4 — Davison Relationship: The platform creates the Davison chart to explain how the business connection lives and develops in real life through shared purpose, growth pattern, and working direction.",
+    "🌍 Result Screen 5 — Elemental Balance: The system compares Fire, Earth, Air, and Water between both charts to explain communication style, practical grounding, ambition, emotional intelligence, and natural working chemistry.",
+    "⏳ Result Screen 6 — Timing, Major Aspects, and Professional Alignment: The reading highlights important aspect connections, active working patterns, strategic collaboration, growth lessons, karmic or developmental themes, and deeper professional alignment between both people."
+  ]
+},
+     {
+  "name": "horoscope_business_relationships_setup",
+  "label": "Business Relationships: Compatibility Chart Setup",
+  "description": "Enter both persons' birth details to generate the business relationship charts and professional compatibility reading.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Business Relationships",
+  "purpose": "This section is used to generate business relationship charts between two people. The system takes date of birth, time of birth, and place of birth for both Person 1 and Person 2, then creates two separate natal charts. After that, it compares both charts to understand how the professional relationship works through leadership style, communication pattern, trust level, decision-making ability, teamwork, responsibility, business strengths, and possible friction points. The chart helps astrologers understand whether the business relationship is naturally cooperative, strategically strong, mentally aligned, financially practical, stable for partnership, or more challenging in professional settings. It is useful because business compatibility depends not only on personality, but also on timing, responsibility, shared goals, communication style, authority balance, and the ability to build success together.",
+  "bullets": [
+    "💼 Two-Person Birth Data Input — The system uses date of birth, time of birth, and place of birth for both people to calculate two accurate natal charts.",
+    "🌌 Individual Chart Creation — Each person's chart is created first so their planets, signs, houses, and chart angles can be studied separately before professional comparison begins.",
+    "🔗 Business Compatibility Comparison — The platform then compares Person 1 and Person 2 charts to identify how their energies interact in work, business, leadership, communication, and long-term partnership.",
+    "📊 What The Chart Shows — It shows professional temperament, decision style, communication flow, teamwork pattern, responsibility level, trust potential, conflict areas, and business growth dynamics between the two people.",
+    "🧠 Leadership And Authority Meaning — Helps astrologers understand who naturally leads, who supports structure, how authority is handled, and whether the partnership works better as equal collaboration or role-based cooperation.",
+    "💬 Communication And Strategy Meaning — Shows how the two people discuss ideas, solve problems, make plans, negotiate, and manage pressure in a professional environment.",
+    "🏆 Strength And Weakness Detection — Reveals where the business relationship flows naturally, where trust is strong, where ambition matches well, and where misunderstandings or power struggles may appear.",
+    "🏠 House Overlay Insight — Shows which life and work areas each person activates in the other, such as money, career, contracts, management, networking, planning, or public reputation.",
+    "⏳ Timing And Growth Potential — Helps explain whether the business relationship is suitable for long-term work, expansion, shared goals, and sustainable results over time.",
+    "📈 Why This Chart Is Used — It is used to understand compatibility in business, partnership strength, communication in work, trust in decisions, leadership balance, and long-term success potential.",
+    "🔍 What We Understand From This Chart — It helps identify business strengths, teamwork quality, leadership compatibility, possible conflict zones, financial practicality, and how both people can grow professionally together.",
+    "🚀 Practical Use — Useful for business partnership readings, co-founder compatibility, manager and employee dynamics, client relationship insight, professional teamwork analysis, and understanding the deeper purpose of a business connection."
+  ]
+},
+   {
+  "name": "horoscope_business_synastry_interpretations",
+  "label": "Business Relationships: Synastry Interpretations",
+  "description": "Professional compatibility cards showing how one person's planets connect with the other person's planets in a business relationship.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Business Relationships",
+  "purpose": "This section is generated after the system receives date of birth, time of birth, and place of birth for both people and creates two natal charts. The platform then compares both charts through synastry, which means it studies how one person's planets, signs, houses, and chart angles interact with the other person's chart. The purpose of this screen is to explain the strongest business compatibility aspects in a clear card format. In this example, aspects such as Sun conjunction Sun and Sun trine Moon show how shared values, leadership style, emotional understanding, and cooperation can support a professional relationship. This screen helps astrologers understand whether two people can work together smoothly, align on goals, communicate well, respect each other's working style, and manage pressure in a productive way.",
+  "bullets": [
+    "💼 How It Is Generated — The system uses date of birth, time of birth, and place of birth for both people to calculate two accurate natal charts, then compares them through synastry to identify important professional compatibility aspects.",
+    "🌌 Why This Screen Is Used — It is used to explain the strongest person-to-person business dynamics, showing how the two people align in goals, communication, work style, emotional understanding, and cooperation.",
+    "☀ Sun Conjunction Sun Block — This block explains a strong alignment in identity, purpose, values, leadership tone, and professional direction between the two people.",
+    "♎ Sun in Libra Conjunction Sun in Libra Meaning — This type of connection often shows shared professional values, fairness, diplomacy, balanced judgment, partnership thinking, and the ability to collaborate with mutual respect.",
+    "🤝 Business Value Of Sun Conjunction Sun — This aspect can help both people work toward common goals, understand each other's priorities, and build a business relationship based on harmony, shared vision, and cooperation.",
+    "☀ Sun Trine Moon Block — This block explains supportive flow between one person's conscious goals and the other person's emotional responses, instincts, and working comfort.",
+    "🌙 Meaning Of Sun Trine Moon In Business — This aspect often shows mutual understanding, emotional intelligence in collaboration, easier trust, supportive communication, and a natural ability to handle business pressure together.",
+    "🧠 Professional Relationship Insight — The cards help astrologers understand whether one person naturally supports the other's leadership, whether emotional reactions fit well with decision-making style, and whether teamwork feels smooth or forced.",
+    "💬 Easy Card Format — Each major synastry connection is shown in a separate readable card so users can understand one business dynamic at a time without confusion.",
+    "⚖ Harmony And Challenge Value — This screen helps reveal where the professional relationship feels naturally aligned, where cooperation comes easily, and where deeper adjustment may still be needed in business settings.",
+    "📖 Show More Purpose — Each business synastry card can include a Show More action so the astrologer or user can open a deeper explanation of that specific professional aspect.",
+    "🔮 What We Understand From This Screen — It helps reveal shared goals, leadership compatibility, emotional support in work, collaboration style, respect level, and the overall strength of the business connection.",
+    "🚀 Practical Use — Useful for co-founder compatibility, business partnership readings, client and advisor matching, manager and employee dynamics, strategic collaboration insight, and understanding the deeper structure of a professional relationship."
+  ]
+},
+
+{
+  "name": "horoscope_business_synastry_interpretations",
+  "label": "Business Relationships: Synastry Interpretations",
+  "description": "Professional compatibility cards showing how one person's planets connect with the other person's planets in a business relationship.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Business Relationships",
+  "purpose": "This section is generated after the system receives date of birth, time of birth, and place of birth for both people and creates two natal charts. The platform then compares both charts through synastry, which means it studies how one person's planets, signs, houses, and chart angles interact with the other person's chart. The purpose of this screen is to explain the strongest business compatibility aspects in a clear card format. In this example, aspects such as Sun conjunction Sun and Sun trine Moon show how shared values, leadership style, emotional understanding, and cooperation can support a professional relationship. This screen helps astrologers understand whether two people can work together smoothly, align on goals, communicate well, respect each other's working style, and manage pressure in a productive way.",
+  "bullets": [
+    "💼 How It Is Generated — The system uses date of birth, time of birth, and place of birth for both people to calculate two accurate natal charts, then compares them through synastry to identify important professional compatibility aspects.",
+    "🌌 Why This Screen Is Used — It is used to explain the strongest person-to-person business dynamics, showing how the two people align in goals, communication, work style, emotional understanding, and cooperation.",
+    "☀ Sun Conjunction Sun Block — This block explains a strong alignment in identity, purpose, values, leadership tone, and professional direction between the two people.",
+    "♎ Sun in Libra Conjunction Sun in Libra Meaning — This type of connection often shows shared professional values, fairness, diplomacy, balanced judgment, partnership thinking, and the ability to collaborate with mutual respect.",
+    "🤝 Business Value Of Sun Conjunction Sun — This aspect can help both people work toward common goals, understand each other's priorities, and build a business relationship based on harmony, shared vision, and cooperation.",
+    "☀ Sun Trine Moon Block — This block explains supportive flow between one person's conscious goals and the other person's emotional responses, instincts, and working comfort.",
+    "🌙 Meaning Of Sun Trine Moon In Business — This aspect often shows mutual understanding, emotional intelligence in collaboration, easier trust, supportive communication, and a natural ability to handle business pressure together.",
+    "🧠 Professional Relationship Insight — The cards help astrologers understand whether one person naturally supports the other's leadership, whether emotional reactions fit well with decision-making style, and whether teamwork feels smooth or forced.",
+    "💬 Easy Card Format — Each major synastry connection is shown in a separate readable card so users can understand one business dynamic at a time without confusion.",
+    "⚖ Harmony And Challenge Value — This screen helps reveal where the professional relationship feels naturally aligned, where cooperation comes easily, and where deeper adjustment may still be needed in business settings.",
+    "📖 Show More Purpose — Each business synastry card can include a Show More action so the astrologer or user can open a deeper explanation of that specific professional aspect.",
+    "🔮 What We Understand From This Screen — It helps reveal shared goals, leadership compatibility, emotional support in work, collaboration style, respect level, and the overall strength of the business connection.",
+    "🚀 Practical Use — Useful for co-founder compatibility, business partnership readings, client and advisor matching, manager and employee dynamics, strategic collaboration insight, and understanding the deeper structure of a professional relationship."
+  ]
+},
+
+{
+  "name": "horoscope_business_composite_interpretations",
+  "label": "Business Relationships: Composite Horoscope",
+  "description": "A shared business chart reading that explains the combined identity, emotional tone, and practical working structure of the partnership through major composite placements.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Business Relationships",
+  "purpose": "This section is generated after the system receives date of birth, time of birth, and place of birth for both people and creates two natal charts. It then builds the composite chart, which represents the business relationship itself as one shared chart instead of reading each person separately. The purpose of this screen is to explain important composite placements, such as the Sun in Libra in the 3rd house and the Moon in Virgo in the 2nd house, so astrologers can understand how the professional relationship works as a combined unit. It shows the partnership's core identity, communication style, emotional working tone, financial attitude, operational discipline, and the practical foundation that supports business success.",
+  "bullets": [
+    "💼 How It Is Generated — The system uses date of birth, time of birth, and place of birth for both people to calculate two natal charts, then combines them into one composite business relationship chart.",
+    "🌌 Why This Chart Is Used — It is used to understand the business partnership itself as one shared entity, not only as a comparison between two separate people.",
+    "☀ Sun Placement Block — This block explains the main identity, purpose, visibility, and strategic direction of the business relationship.",
+    "♎ Sun in Libra Meaning — This placement shows a business partnership built on balance, fairness, diplomacy, cooperation, negotiation, and the ability to work through mutual agreement.",
+    "🏠 Sun in the 3rd House Meaning — This placement highlights communication, planning, discussion, coordination, idea-sharing, messaging, and day-to-day business exchange as central strengths of the partnership.",
+    "☀ Sun in Libra in the 3rd House — This combination suggests a professional relationship that succeeds through clear discussion, thoughtful strategy, mutual listening, and well-balanced communication in business matters.",
+    "🌙 Moon Placement Block — This block explains the emotional and operational tone of the partnership, including how the relationship handles practical needs, security, and internal stability.",
+    "♍ Moon in Virgo Meaning — This placement shows a practical, detail-focused, disciplined, and service-oriented approach, where care is expressed through efficiency, reliability, and attention to quality.",
+    "🏠 Moon in the 2nd House Meaning — This placement highlights money, shared resources, financial security, assets, values, and the need to create a stable material base for the business relationship.",
+    "🌙 Moon in Virgo in the 2nd House — This combination suggests that the partnership feels strongest when finances are handled carefully, responsibilities are organized well, and both people work with consistency, precision, and measurable value.",
+    "📊 What This Screen Shows In Business Terms — It shows whether the partnership is centered on negotiation, communication, resource management, financial stability, disciplined operations, and shared practical values.",
+    "⚖ Partnership Strength Meaning — Strong composite placements like these often indicate that the business relationship can succeed through balanced leadership, organized workflow, and dependable decision-making.",
+    "💬 Show More Purpose — Each placement card includes a Show More option so the astrologer or user can open a deeper explanation of that specific composite business placement.",
+    "🧠 What We Understand From This Screen — It helps reveal how the partnership presents itself, how it thinks and communicates, how it manages resources, and what kind of professional environment the relationship naturally creates.",
+    "🚀 Practical Use — Useful for business partnership readings, co-founder compatibility analysis, professional collaboration insight, management dynamics, financial trust assessment, and understanding the shared purpose of a business connection."
+  ]
+},
+{
+  "name": "horoscope_business_composite_deep_analysis",
+  "label": "Business Relationships: Deep Composite Analysis",
+  "description": "A detailed business partnership reading for one important composite placement, with expanded interpretation and picture representation.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Business Relationships",
+  "purpose": "This screen opens when the user clicks Show More on an important composite business placement. The system first uses date of birth, time of birth, and place of birth for both people to generate two natal charts. It then creates the composite chart, which represents the business relationship itself as one shared professional entity. From that composite chart, one meaningful placement is selected for deeper explanation. In this example, Moon in Virgo in the 2nd house shows a business partnership that is practical, careful, detail-focused, and strongly concerned with financial order, shared resources, and long-term material stability. The purpose of this screen is to help astrologers understand how one specific composite placement shapes the partnership's working style, money handling, value system, emotional discipline, and capacity for building secure results together.",
+  "bullets": [
+    "💼 How It Is Generated — The system uses both persons' date of birth, time of birth, and place of birth to calculate two natal charts, then combines them into one composite business relationship chart and selects one key placement for deeper interpretation.",
+    "🌌 Why This Screen Is Used — It gives a more complete explanation of one important composite placement so the astrologer can understand the deeper structure of the business partnership beyond the short summary card.",
+    "🌙 Main Placement Title — The title at the top shows the exact composite placement being analyzed, such as Moon in Virgo in the 2nd House, so the focus of the reading is immediately clear.",
+    "📖 Main Interpretation Block — This first large text section explains the full business meaning of the selected placement in natural language, showing how the partnership behaves in real operations, value management, and long-term planning.",
+    "🌙 Moon Meaning In Business Composite — The Moon represents the emotional and operational climate of the partnership, including trust, comfort level, instinctive responses, internal stability, and how the business relationship feels from the inside.",
+    "♍ Virgo Meaning In Business — Virgo brings precision, practicality, analysis, method, organization, efficiency, accountability, and careful attention to details that affect performance and reliability.",
+    "🏠 2nd House Meaning In Business — The 2nd house represents money, assets, financial security, shared resources, material value, earnings, ownership, sustainability, and what the partnership is trying to build and protect.",
+    "🌙 Moon in Virgo in the 2nd House Meaning — This combination suggests a business relationship that becomes strongest when finances are organized carefully, responsibilities are handled methodically, and shared resources are managed with discipline, accuracy, and practical awareness.",
+    "📈 Financial And Resource Focus — This placement often shows a partnership that naturally pays close attention to budgeting, value creation, operational stability, asset management, and measurable results.",
+    "🤝 Shared Value System — It can indicate that both people feel more secure when the business is structured well, expectations are clear, and money matters are handled with realism, consistency, and mutual responsibility.",
+    "🖼 Picture Representation Purpose — The image visually breaks the placement into three layers so the astrologer can quickly understand the sign meaning, house meaning, and the combined business result of the placement.",
+    "♍ Left Visual Block Meaning — The left side explains Virgo qualities such as practicality, duty, efficiency, order, reliability, carefulness, service, precision, responsibility, and workmanship.",
+    "🏠 Right Visual Block Meaning — The right side explains 2nd house themes such as property, ownership, pay, capital, holdings, budget, value, assets, surplus, and financial assurance.",
+    "✨ Center Blend Meaning — The center area combines Virgo and 2nd house energy, showing shared themes such as income, resources, stability, savings, security, investments, tangible assets, financial prosperity, and disciplined material growth.",
+    "🧠 What We Understand From This Screen — It helps reveal whether the partnership is naturally suited for careful planning, sustainable financial growth, organized resource management, and building trust through practical results.",
+    "🔮 Why It Matters In Real Business Life — This placement can explain why the partnership may succeed through precision, budgeting, consistency, and shared respect for stability rather than impulsive or risky decision-making.",
+    "🚀 Practical Use — Useful for business partnership readings, co-founder financial compatibility analysis, resource management insight, operational stability assessment, and understanding the long-term material strength of a professional relationship."
+  ]
+},
+{
+  "name": "horoscope_business_davison_relationship",
+  "label": "Business Relationships: Davison Relationship",
+  "description": "A Davison business relationship reading that explains how the partnership functions as a real shared entity through important sign and house placements.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Business Relationships",
+  "purpose": "This section is generated after the system receives date of birth, time of birth, and place of birth for both people and calculates the Davison relationship chart. The Davison chart is created from the midpoint in time and space between both birth charts, and it represents the business relationship itself as a real shared partnership. In this screen, the Sun and Moon are interpreted through their Davison chart placements to show the core identity, direction, emotional climate, creativity, innovation style, and long-term growth pattern of the professional connection. This is useful because it helps astrologers understand not just how two individuals compare, but how the business relationship actually lives, works, develops, and expresses itself in real-world partnership.",
+  "bullets": [
+    "💼 How It Is Generated — The system uses date of birth, time of birth, and place of birth for both people to create two natal charts, then calculates the Davison chart using the midpoint of time and space between them.",
+    "🌌 Why The Davison Chart Is Used — It is used to understand the business partnership as one real shared relationship, rather than only comparing two separate personalities.",
+    "☀ Sun In The Davison Chart Block — This block explains the main identity, visible direction, purpose, leadership tone, and overall mission of the business relationship.",
+    "♎ Sun in Libra Meaning — This placement shows a business partnership built on fairness, diplomacy, negotiation, balanced decision-making, cooperation, and professional mutual respect.",
+    "🏠 Sun in the 9th House Meaning — This placement highlights growth through learning, expansion, long-range vision, higher knowledge, travel, international thinking, philosophy, ethics, and wider market perspective.",
+    "☀ Sun in Libra in the 9th House — This combination suggests a business relationship that grows through shared vision, strategic expansion, broad thinking, ethical partnership, new ideas, and the ability to work together toward larger goals.",
+    "🌙 Moon In The Davison Chart Block — This block explains the emotional and internal working atmosphere of the partnership, including how the relationship feels from the inside and how it handles inspiration, morale, and emotional flow.",
+    "♒ Moon in Aquarius Meaning — This placement shows innovation, independence, unconventional thinking, originality, objectivity, future-minded vision, and emotional detachment that can support bold business ideas.",
+    "🏠 Moon in the 5th House Meaning — This placement highlights creativity, experimentation, innovation, enterprise, self-expression, risk-taking, and the ability to bring fresh ideas into visible projects.",
+    "🌙 Moon in Aquarius in the 5th House — This combination suggests a business partnership that thrives through original ideas, creative ventures, progressive thinking, innovation-driven work, and the freedom to build something unique together.",
+    "🧠 What This Screen Explains In Business Terms — It shows what the partnership is fundamentally built around, how it grows, what inspires it emotionally, and how shared vision turns into real professional direction.",
+    "⚖ Strategic And Emotional Balance — The Sun placement shows the business purpose and external direction, while the Moon placement shows the internal tone, creative spirit, and emotional way the partnership responds to change and opportunity.",
+    "💬 Show More Purpose — Each Davison placement card includes a Show More option so the astrologer or user can open a deeper explanation of that specific business relationship placement.",
+    "🔮 What We Understand From This Screen — It helps reveal whether the business bond is growth-oriented, ethically aligned, intellectually expansive, creative, innovative, future-focused, and capable of building something meaningful together.",
+    "🚀 Practical Use — Useful for business partnership readings, co-founder compatibility analysis, shared vision assessment, strategic collaboration insight, innovation-based partnership reading, and understanding the long-term purpose of a professional relationship."
+  ]
+},
+
+{
+  "name": "horoscope_business_major_aspects",
+  "label": "Business Relationships: Major Aspects & Connections",
+  "description": "A focused business compatibility screen that highlights the strongest planet-to-planet connections between both people and explains how each one affects the professional relationship.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Business Relationships",
+  "purpose": "This section is generated after the system receives date of birth, time of birth, and place of birth for both people and creates two natal charts. The platform then compares both charts through synastry and selects the most important cross-chart aspects for business analysis. These major aspect cards explain how one person's planets interact with the other person's planets in a professional setting, revealing the strongest patterns of communication, strategy, execution, innovation, conflict handling, shared goals, and long-term working dynamics. The purpose of this screen is to help astrologers quickly identify the main strengths and tension points in the business relationship, so users can understand where cooperation comes naturally and where more structure, patience, or role clarity may be needed.",
+  "bullets": [
+    "💼 How It Is Generated — The system uses date of birth, time of birth, and place of birth for both people to calculate two natal charts, then compares them to find the strongest synastry aspects that influence the business relationship.",
+    "🌌 Why This Screen Is Used — It is used to show the most important professional aspect links first, so the astrologer can quickly understand the main business strengths, opportunities, and challenge patterns between both people.",
+    "☀ Sun Conjunction Mercury Block — This block explains a strong connection between leadership identity and communication, showing how ideas, planning, messaging, and strategic thinking work between the two people.",
+    "🧠 Meaning Of Sun Conjunction Mercury In Business — This aspect often shows strong idea exchange, persuasive communication, shared planning ability, mental alignment, faster decision support, and the ability to turn discussion into strategy.",
+    "♎ Libra Influence In This Aspect — With Libra emphasis, this connection often supports diplomacy, balanced thinking, negotiation, collaboration, and reaching agreements through respectful discussion.",
+    "📈 Professional Value Of Sun Conjunction Mercury — This aspect can be very useful for meetings, planning, strategy, branding, advisory work, partnerships, and business situations where communication quality directly affects success.",
+    "♂ Mars Square Uranus Block — This block explains a more intense and unstable connection between action, urgency, disruption, freedom, and sudden change in the business dynamic.",
+    "⚡ Meaning Of Mars Square Uranus In Business — This aspect can show innovation, bold action, creative disruption, and fast problem-solving, but it can also bring impulsive decisions, instability, clashes in pace, or conflict over control and independence.",
+    "🏗 Operational Tension Meaning — This type of aspect may create pressure around leadership roles, work rhythm, responsibility boundaries, implementation style, and how quickly change should happen inside the partnership.",
+    "⚖ Growth Through Challenge — Even though Mars square Uranus can feel difficult, it may also push the partnership toward innovation, faster adaptation, fresh thinking, and more flexible business problem-solving if handled carefully.",
+    "💬 Why The Data Is Shown In Cards — Each major aspect is presented as a separate card so users can understand one business dynamic at a time instead of reading one long mixed explanation.",
+    "📖 Show More Purpose — Each card includes a Show More option so the astrologer or user can open a deeper explanation of that exact business aspect without overloading the main screen.",
+    "🧠 What We Understand From This Screen — It helps reveal where the business relationship is strongest in communication, strategy, cooperation, and shared thinking, and where it may face friction in action, freedom, timing, or structure.",
+    "🚀 Practical Use — Useful for business partnership readings, co-founder compatibility, manager and employee dynamics, strategic collaboration insight, communication assessment, and understanding the main strengths and risks in a professional relationship."
+  ]
+},
+
+{
+  "name": "horoscope_business_compatibility_summary",
+  "label": "Business Relationships: Compatibility Score / Summary",
+  "description": "A quick professional compatibility summary that explains the business connection through core Sun and Moon sign dynamics.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Business Relationships",
+  "purpose": "This section is generated after the system receives date of birth, time of birth, and place of birth for both people and creates two natal charts. It then compares key professional compatibility indicators, especially Sun sign compatibility and Moon sign dynamics, to produce a clear first-level business relationship summary. The purpose of this screen is to help astrologers and users quickly understand how the two people align in leadership style, decision-making values, emotional working rhythm, stress response, and practical cooperation before moving into deeper synastry, composite, or Davison business analysis.",
+  "bullets": [
+    "💼 How It Is Generated — The system uses date of birth, time of birth, and place of birth for both people to calculate two natal charts, then compares major placements that are most important for professional compatibility.",
+    "☀ Sun Sign Compatibility Block — This block explains how both people connect through core identity, leadership style, business values, decision-making approach, and overall partnership direction.",
+    "♎ Sun in Libra with ♎ Sun in Libra Meaning — This combination often shows diplomacy, fairness, balanced judgment, collaboration, and a strong desire to build a business relationship through mutual respect and cooperative planning.",
+    "⚖ Business Strength Of Sun Compatibility — This placement can support negotiation, client handling, partnership management, and shared strategic thinking, but it may also create delays if both people avoid conflict or hesitate in decision-making.",
+    "🌙 Moon Sign Dynamics Block — This block explains the emotional working style of the partnership, including stress response, comfort needs, practical support, and the way both people emotionally handle pressure in business situations.",
+    "♉ Moon in Taurus with ♍ Moon in Virgo Meaning — This combination often shows a grounded, practical, and dependable professional bond where stability, order, reliability, and useful support become important strengths.",
+    "🧠 Emotional Working Value — Taurus Moon can bring steadiness and calm, while Virgo Moon adds detail-awareness and analytical care, making the partnership stronger in operations, consistency, and practical management.",
+    "🔄 Challenge Inside Moon Dynamics — Even with strong practical compatibility, differences may arise because Taurus prefers steady pace and comfort, while Virgo prefers adjustment, refinement, and constant improvement.",
+    "📊 Why This Screen Is Used — It gives a fast but meaningful overview of business compatibility before the user moves into more detailed relationship charts and deeper professional analysis.",
+    "💬 Easy Summary Card Format — The information is shown in separate cards so users can understand leadership compatibility and emotional working dynamics one layer at a time.",
+    "📖 Show More Purpose — Each summary card can include a Show More action so deeper explanation can be opened without making the main screen too heavy.",
+    "🔮 What We Understand From This Screen — It helps reveal whether the business relationship is naturally cooperative, emotionally steady, practically supportive, and strategically aligned, or whether adjustment may be needed in decision-making and stress handling.",
+    "🚀 Practical Use — Useful for business partnership readings, co-founder compatibility, manager and employee analysis, professional collaboration insight, and giving users a simple first understanding of the business connection."
+  ]
+},
+
+{
+  "name": "horoscope_business_elemental_balance",
+  "label": "Business Relationships: Elemental Balance",
+  "description": "A business compatibility screen that explains elemental balance and working interaction style between both people.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Business Relationships",
+  "purpose": "This section is generated after the system receives date of birth, time of birth, and place of birth for both people and creates two natal charts. The platform then studies the elemental distribution and interaction pattern in both charts to understand how the business relationship functions at a natural energy level. The purpose of this screen is to help astrologers understand whether the partnership is more intellectual, practical, strategic, emotional, or action-driven, and how both people naturally respond to pressure, planning, communication, innovation, and execution in business. It is useful because elemental balance often explains why a professional partnership feels mentally aligned, practically strong, highly motivated, emotionally disconnected, or in need of better stability and teamwork.",
+  "bullets": [
+    "💼 How It Is Generated — The system uses date of birth, time of birth, and place of birth for both people to calculate two natal charts, then compares the elemental emphasis across both charts for business compatibility.",
+    "🌍 Why This Screen Is Used — It is used to understand the natural business chemistry of the partnership before going into deeper aspect-based or advanced relationship analysis.",
+    "🔥 Fire Element Meaning — Fire represents drive, ambition, action, confidence, initiative, boldness, risk-taking, enthusiasm, and the energy that pushes a business partnership forward.",
+    "🏔 Earth Element Meaning — Earth represents practicality, stability, discipline, consistency, structure, financial realism, reliability, and the ability to turn plans into tangible business results.",
+    "🌬 Air Element Meaning — Air represents communication, ideas, strategy, planning, intellectual exchange, networking, flexibility, and collaborative thinking in business.",
+    "🌊 Water Element Meaning — Water represents intuition, emotional intelligence, empathy, sensitivity, trust, inner understanding, and the emotional tone of professional interaction.",
+    "🌍 Elemental Balance Block — This block explains the overall balance of elements across both charts and shows the main natural working chemistry of the business relationship.",
+    "🌬 Strong Air Influence Meaning — A strong Air influence often shows a partnership built on communication, idea generation, planning, adaptability, discussion, networking, and intellectual collaboration.",
+    "🌊 Lack Of Water Meaning — A weaker Water presence may suggest difficulty in emotional understanding, empathy, sensitivity, or reading the unspoken emotional tone inside the partnership.",
+    "🔥 Fire Element Block — This block explains how much ambition, energy, passion, courage, and sustained motivation exist between both partners in business.",
+    "🔥 Balanced Fire Meaning — When Fire is present in a balanced way, the partnership may have healthy drive, enthusiasm, and confidence to move goals forward, take initiative, and act with momentum.",
+    "🔥 Fire Imbalance Risk — If Fire is active but not well supported, the relationship may show bursts of motivation followed by stress, impatience, burnout, or uneven energy management.",
+    "🏔 Earth Element Block — This block explains how much groundedness, order, financial realism, resource management, practical follow-through, and operational stability are present in the partnership.",
+    "🏔 Low Earth Meaning — When Earth is underrepresented, the business relationship may have strong ideas but struggle with execution, structure, consistency, budgeting, or long-term material planning.",
+    "⚖ Element Interaction Meaning — This screen also helps show how one person's elemental strengths may complement or challenge the other's, such as Air supporting strategy while Earth supports execution, or Fire pushing action while Water supports trust and emotional balance.",
+    "💬 Show More Purpose — Each elemental section can include a Show More action so the astrologer or user can open a deeper explanation of that specific business energy pattern.",
+    "🧠 What We Understand From This Screen — It helps reveal whether the partnership is mentally aligned, practically strong, emotionally aware, action-driven, or imbalanced in a way that affects business success.",
+    "🔮 Business Meaning In Real Life — This screen can explain why two people work well in planning but struggle in emotional understanding, why motivation is strong but consistency is weak, or why practical grounding must be consciously developed.",
+    "🚀 Practical Use — Useful for business partnership readings, co-founder compatibility, management dynamics, strategy-and-execution balance analysis, financial stability insight, and understanding the deeper energetic structure of a professional relationship."
+  ]
+},
+
+{
+  "name": "horoscope_business_timing_transits",
+  "label": "Business Relationships: Timing & Transits",
+  "description": "A professional relationship timing screen that highlights active business connections, shared momentum, emotional coordination, and communication flow between both charts.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Business Relationships",
+  "purpose": "This section is generated after the system receives date of birth, time of birth, and place of birth for both people and creates two natal charts. The platform then compares the charts and highlights key active business connections that show how the partnership functions in timing, decision-making, emotional coordination, and shared action. In this screen, aspect cards such as Sun conjunction Sun, Moon sextile Moon, and Mars conjunction Mercury explain where the business relationship gains clarity, cooperation, mutual understanding, strategic strength, and practical momentum. The purpose of this screen is to help astrologers understand when the professional connection feels naturally aligned, where teamwork flows easily, and how both people support each other in communication, planning, execution, and business growth.",
+  "bullets": [
+    "💼 How It Is Generated — The system uses date of birth, time of birth, and place of birth for both people to calculate two natal charts, then compares them to identify the strongest active connections that influence the business relationship.",
+    "⏳ Why This Screen Is Used — It is used to show how important professional dynamics become expressed through major aspect links, helping astrologers understand timing, collaboration style, and business flow between both people.",
+    "☀ Sun Conjunction Sun Block — This block explains a strong alignment in identity, values, professional purpose, and long-term vision, showing that both people naturally understand each other's direction and business priorities.",
+    "♎ Sun in Libra Conjunction Sun in Libra Meaning — This connection often shows diplomacy, shared balance, fairness, partnership-minded thinking, and smoother cooperation in negotiations, planning, and professional decision-making.",
+    "🌙 Moon Sextile Moon Block — This block explains emotional compatibility in the working relationship, showing supportive understanding, mutual encouragement, adaptable cooperation, and a healthy emotional exchange under pressure.",
+    "♈ Aries Moon and ♒ Aquarius Moon Sextile Meaning — This pairing can support a forward-thinking business bond where action, innovation, emotional independence, and mutual motivation work together in a productive way.",
+    "♂ Mars Conjunction Mercury Block — This block explains energized communication, active discussion, faster decision-making, strategic debate, initiative, and a business relationship that moves through ideas into action quickly.",
+    "🧠 Meaning Of Mars Conjunction Mercury In Business — This aspect often shows strong problem-solving ability, persuasive communication, quick response, decisive thinking, and the ability to turn conversation into planning and execution.",
+    "⚖ Harmony And Productivity Insight — The cards help reveal where the professional relationship feels aligned, emotionally cooperative, mentally active, and capable of solving business challenges through teamwork.",
+    "📊 What This Screen Shows In Business Terms — It highlights shared leadership rhythm, emotional coordination, communication quality, and active partnership energy that directly affect meetings, planning, strategy, and results.",
+    "💬 Why The Data Is Shown In Cards — Each business timing connection is shown in a separate card so the user can understand one professional dynamic at a time instead of reading one long mixed explanation.",
+    "📖 Show More Purpose — Each card includes a Show More option so the astrologer or user can open a deeper explanation of that specific business aspect without making the main screen too crowded.",
+    "🔮 What We Understand From This Screen — It helps reveal when the business relationship is strongest in cooperation, communication, emotional support, and shared strategic movement, and where the partnership can work most effectively together.",
+    "🚀 Practical Use — Useful for business partnership readings, co-founder compatibility, management dynamics, communication assessment, strategic collaboration insight, and understanding the active working flow of a professional relationship."
+  ]
+},
+
+{
+  "name": "horoscope_business_professional_alignment",
+  "label": "Business Relationships: Professional Alignment & Goals",
+  "description": "A business relationship screen that highlights deeper professional purpose, strategic alignment, healing lessons, and long-term growth patterns between both people.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Business Relationships",
+  "purpose": "This section is generated after the system receives date of birth, time of birth, and place of birth for both people and creates two natal charts. The platform then compares advanced business relationship indicators, especially Chiron, Lunar Nodes, Mercury, Pluto, and strategic asteroid-style themes such as Pallas, to understand how the partnership supports growth, learning, strategy, healing, and professional purpose. The purpose of this screen is to help astrologers understand whether the business relationship is only practical, or whether it also carries deeper development themes such as mutual healing, strategic intelligence, shared destiny, and long-term goal alignment. It is useful because strong professional partnerships are not built only on skills, but also on how two people support each other's growth, solve challenges together, and develop a meaningful shared direction.",
+  "bullets": [
+    "💼 How It Is Generated — The system uses date of birth, time of birth, and place of birth for both people to calculate two natal charts, then compares advanced relationship indicators that affect strategy, growth, shared purpose, and professional evolution.",
+    "🎯 Why This Screen Is Used — It is used to explain the deeper level of a business relationship, especially where the partnership supports healing, long-term development, strategic thinking, and shared professional direction.",
+    "🩹 Chiron And Lunar Nodes Interplay Block — This block explains how Chiron connections and Lunar Node links shape the partnership through healing, learning, vulnerability, karma, and meaningful long-term growth.",
+    "🩹 Chiron Meaning In Business — Chiron represents wounds, growth through difficulty, wisdom gained through challenge, and the ability to turn vulnerable areas into deeper strength and maturity.",
+    "☊ North Node Meaning In Professional Partnership — The North Node represents future growth, direction, destiny, learning, and the qualities the partnership is meant to develop over time.",
+    "☋ South Node Meaning In Professional Partnership — The South Node represents familiarity, past patterns, existing strengths, comfort zones, and lessons the partnership may bring from older experience into the present.",
+    "✨ Chiron And Nodes Meaning In Business — When Chiron interacts strongly with the Lunar Nodes, the partnership may become a major growth relationship where both people help each other face weaknesses, build resilience, and move toward more mature professional purpose.",
+    "🧠 Professional Healing And Growth Value — This kind of connection can show that the relationship teaches empathy, self-awareness, emotional intelligence, and stronger collaboration through real challenges rather than only easy success.",
+    "🛡 Pallas Aspects And Strategic Collaboration Block — This block explains how intelligence, pattern recognition, problem-solving skill, strategic planning, and practical wisdom operate inside the partnership.",
+    "🦉 Pallas Meaning In Business — Pallas is linked with strategy, insight, design thinking, systems understanding, and the ability to solve complex professional problems with clarity and skill.",
+    "📈 Strategic Collaboration Meaning — Strong Pallas-style connections can show that both people think well together, plan effectively, see patterns quickly, and create practical solutions for business growth and challenge management.",
+    "☿ Mercury And Strategic Thinking Value — Mercury-based aspects in this kind of screen help explain communication skill, analysis, negotiation, planning quality, and the speed at which both people can align on ideas and execution.",
+    "⚖ Why These Blocks Matter Together — Chiron and Nodes explain deeper professional growth and karmic learning, while Pallas and strategic links explain how the partnership can actually function intelligently and solve real business problems together.",
+    "💬 Show More Purpose — Each block includes a Show More option so the astrologer or user can open a deeper explanation of that specific professional alignment theme without overloading the main screen.",
+    "🧠 What We Understand From This Screen — It helps reveal whether the partnership supports mutual growth, strategic intelligence, healing through challenge, long-term alignment, and meaningful professional evolution.",
+    "🔮 Business Meaning In Real Life — This screen can explain why a partnership feels deeply important, why the two people learn so much from each other, why strategy feels strong, or why certain professional challenges actually strengthen the shared mission.",
+    "🚀 Practical Use — Useful for business partnership readings, co-founder compatibility, strategic collaboration insight, leadership growth analysis, karmic business connection readings, and understanding the deeper purpose and direction of a professional relationship."
+  ]
+},
+      // -----------Predictive Event (Horary)--------------//
+      {
+  "name": "horoscope_predictive_event_entry_setup",
+  "label": "Predictive Event (Horary): Entry & Generation Setup",
+  "description": "Enter birth details and your question to generate the full predictive event reading and result screens in sequence.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Predictive Event (Horary)",
+  "purpose": "This is the first screen of the Predictive Event (Horary) module. The user must enter date of birth, time of birth, and place of birth. These birth details are required because the system uses them to calculate the natal reference chart accurately. The user must also enter a clear question, because horary-style predictive guidance depends on the subject or event being asked about. After all required fields are filled correctly, the Generate Reading button becomes active. Once the user clicks Generate Reading, the platform starts building the predictive event reading based on the user's DOB, TOB, POB, and question, then displays the results screen by screen. The generated response depends on these details because they affect planetary positions, houses, angles, transit-to-natal contacts, activated life areas, timing recommendations, and the final guidance. This setup screen is important because if birth time, birth place, or the question is wrong or incomplete, the predictive reading may also change.",
+  "bullets": [
+    "📅 Step 1 — Enter Date of Birth: The user enters the birth date so the system can calculate the natal planetary positions.",
+    "🕒 Step 2 — Enter Time of Birth: The user enters the exact birth time because Ascendant, house cusps, chart angles, and timing-sensitive predictive calculations depend on correct timing.",
+    "📍 Step 3 — Enter Place of Birth: The user enters the birth place so the system can use the correct geographic coordinates and timezone for accurate chart creation.",
+    "❓ Step 4 — Enter Your Question: The user enters the specific question or event focus, such as career, relationship, decision timing, opportunity, or another life concern, so the predictive reading has a clear subject.",
+    "✅ Step 5 — Generate Reading Activation: After the required birth details and question are completed correctly, the Generate Reading button becomes enabled.",
+    "📊 Result Screen 1 — Chart View: The system generates the predictive chart view so the user can see the wheel chart, aspect structure, and overall astrological pattern behind the reading.",
+    "📅 Result Screen 2 — Recommendation on Date and Timeline: The platform highlights the most favorable period, top choice date, and other supportive dates for the user's question or goal.",
+    "🔗 Result Screen 3 — Aspect Guidance: The reading shows the most important transit-to-natal aspects so the user can understand which planetary connections are supporting the recommended timing.",
+    "🪐 Result Screen 4 — Planetary Timing Blocks: The platform explains the role of important transiting planets, such as Jupiter, Mars, or Venus, and how each one contributes to the event timing.",
+    "🏠 Result Screen 5 — House Activation: The system shows which natal houses are activated during the recommended period so the user can understand which life areas are most affected.",
+    "🧠 Result Screen 6 — Summary and Recommendations: The reading combines the strongest timing window, key transits, active houses, and practical guidance into a final clear recommendation for action."
+  ]
+},
+    {
+  "name": "horoscope_predictive_event_horary_chart",
+  "label": "Predictive Event (Horary): Chart View",
+  "description": "A horary-style predictive chart generated from the user's birth details to help understand the event-focused reading in a clear visual form.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Predictive Event (Horary)",
+  "purpose": "This screen is shown after the user enters date of birth, time of birth, and place of birth, and the system generates the Predictive Event (Horary) response. The chart view helps the user and astrologer visually understand the planetary structure being used for the event-based reading. It displays the main Western wheel chart and its aspect view so the relationship between planets, signs, houses, and angular patterns can be read more clearly. The purpose of this chart is to make the prediction easier to understand by showing where the important energies are placed, which houses are active, how planets connect with each other, and what patterns may influence the event or question being studied.",
+  "bullets": [
+    "📅 Input-Based Generation — The system uses the user's date of birth, time of birth, and place of birth to calculate the chart that supports the Predictive Event reading.",
+    "🕒 Why Exact Birth Time Matters — Time of birth is important because house cusps, Ascendant, Midheaven, and angle-sensitive placements change with time and affect the predictive reading.",
+    "📍 Why Place of Birth Matters — Place of birth is used for correct coordinates and timezone so the chart is calculated accurately.",
+    "🌌 Chart Creation Process — After the required birth details are entered, the system calculates planetary positions, zodiac signs, houses, and aspect lines, then displays them in wheel-chart format.",
+    "🪐 Left Wheel Chart Meaning — The left chart shows the zodiac wheel with houses, planets, angles, and placements, helping astrologers see where each energy is positioned.",
+    "📐 Right Aspect Chart Meaning — The right chart emphasizes planetary relationships and aspect geometry, making it easier to study supportive, tense, or highly active connections.",
+    "🏠 House Meaning In The Chart — The 12 houses show which life areas are activated in the event reading, such as communication, work, relationships, career, money, or inner concerns.",
+    "♈ Zodiac Sign Meaning — Each sign shows the style or tone through which a planet is expressing itself in the chart.",
+    "🔗 Aspect Line Meaning — The lines inside the chart show how planets are interacting through conjunctions, trines, sextiles, squares, oppositions, and other aspect patterns.",
+    "🎯 What The User Understands From This Chart — The chart helps show which themes are strongest, where the pressure or support is located, and which parts of life or decision-making are most influenced in the predictive reading.",
+    "📊 Why This Chart Is Useful — It gives a visual foundation for the written prediction, so the user can understand that the result is based on actual chart structure and not only on text interpretation.",
+    "🧠 Astrologer-Friendly Use — Astrologers can use this screen to quickly identify dominant houses, active planets, strong aspects, and overall chart emphasis for the event analysis.",
+    "✨ Predictive Reading Support — This chart supports the event forecast by showing the underlying astrological pattern behind the generated response.",
+    "🚀 Practical Use — Useful for event timing insight, question-based analysis, understanding active chart energies, and giving the user a clearer view of how the predictive result is formed."
+  ]
+},
+  {
+  "name": "horoscope_predictive_event_recommendation_timeline",
+  "label": "Predictive Event (Horary): Recommendation on Date and Timeline",
+  "description": "A guided timeline screen that highlights the most supportive dates and periods for taking action based on the generated predictive chart.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Predictive Event (Horary)",
+  "purpose": "This section is generated after the user enters date of birth, time of birth, and place of birth, and the system completes the Predictive Event reading. The platform studies the chart and identifies the most supportive period for the user's question, goal, or planned action. Instead of only giving one prediction, this screen translates the chart into a practical timeline by showing the best dates, other helpful dates, and the reasons those dates are stronger. It helps the user understand when to begin, when to act, and which windows are more favorable for progress, opportunity, communication, networking, or career movement.",
+  "bullets": [
+    "📅 Timeline Window Meaning — This section shows a recommended time range, such as between one month and another, to indicate when the overall energy is more supportive for the user's goal or event.",
+    "⭐ Top Choice Date — The strongest recommended date is highlighted first so the user can quickly identify the most favorable moment for action.",
+    "🗓 Additional Favorable Dates — The screen can also list other supportive dates that are good alternatives if the main recommended day is not possible.",
+    "🔭 How It Is Generated — The system uses the user's date of birth, time of birth, and place of birth to create the predictive chart, then studies planetary timing, supportive aspects, and active chart periods to identify stronger dates.",
+    "🪐 Transit Support Meaning — The recommended dates are chosen because important moving planets form helpful connections to key natal placements, increasing support for the event or decision.",
+    "🏠 Life Area Focus — The dates are explained in relation to the area of life being activated, such as career, communication, leadership, networking, opportunity, or visibility.",
+    "📈 Why One Date Is Better Than Another — The screen explains why a certain date is stronger, for example because it improves confidence, communication, attraction of opportunities, or strategic thinking.",
+    "💬 Easy User Understanding — This screen turns technical astrological timing into a clear practical recommendation so the user does not need to interpret raw chart data alone.",
+    "🎯 Action Guidance Purpose — It helps the user decide when to launch, speak, apply, meet, negotiate, present, or begin something important.",
+    "🧠 What The User Understands From This Screen — The user can clearly see the best period, best day, backup days, and the main reason those dates are astrologically supportive.",
+    "✨ Why This Screen Is Useful — It makes the predictive reading more practical by giving not only meaning, but also timing guidance that can be used in real decisions.",
+    "🚀 Practical Use — Useful for choosing favorable dates for career steps, business action, communication, important meetings, applications, launches, and other event-based decisions."
+  ]
+},
+
+{
+  "name": "horoscope_predictive_event_aspects",
+  "label": "Predictive Event (Horary): Aspect Guidance",
+  "description": "A focused aspect screen showing the most supportive transit-to-natal connections behind the recommended dates and event timing.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Predictive Event (Horary)",
+  "purpose": "This section is generated after the user enters date of birth, time of birth, and place of birth, and the system completes the Predictive Event reading. The platform then studies the important transit-to-natal aspects active around the recommended dates and displays them as separate cards. Each block explains which moving planet is interacting with which natal planet, what kind of aspect is formed, on which date it becomes important, and what kind of opportunity, support, or momentum it brings. The purpose of this screen is to help the user understand why certain dates are recommended and what astrological force is making that time more favorable for action.",
+  "bullets": [
+    "📅 How It Is Generated — The system uses the user's date of birth, time of birth, and place of birth to calculate the natal chart, then checks current and upcoming planetary transits to find strong supportive event-timing aspects.",
+    "🪐 Transit to Natal Meaning — Each card compares a moving planet in the sky with a natal planet in the birth chart to show how present timing is activating the user's personal chart.",
+    "🔗 Aspect Block Purpose — Every block explains one specific transit aspect so the user can understand why that date is important and what kind of influence is active.",
+    "♃ Jupiter Trine Venus Block — This block shows a supportive transit that can increase attraction, confidence, creativity, growth, opportunity, and positive visibility, especially for goals linked with expression, leadership, or favorable outcomes.",
+    "♂ Mars Sextile Mercury Block — This block shows a productive transit that can strengthen communication, fast thinking, strategy, planning, execution, and practical decision-making.",
+    "♀ Venus Sextile Jupiter Block — This block shows a harmonious transit that can improve networking, goodwill, support, optimism, relationship flow, and expansion through pleasant opportunities.",
+    "📆 Date Meaning — The date shown in each card marks the time when that transit becomes especially strong or useful for taking action.",
+    "🏠 House Meaning In The Reading — The interpretation may mention natal houses, such as the 5th or 6th house, to show which life area is being activated by the transit.",
+    "✨ Why These Aspects Matter — Supportive aspects such as trines and sextiles are often used to recommend better dates because they usually indicate smoother energy flow, easier progress, and more constructive outcomes.",
+    "💬 Easy Card Format — This screen turns technical aspect calculations into short readable guidance so the user can quickly understand which dates are strongest and why.",
+    "🎯 What The User Understands From This Screen — The user can clearly see which transit supports creativity, which helps communication and work, and which improves connection, visibility, or expansion.",
+    "📊 Why This Screen Is Useful — It gives a practical astrological reason behind the timeline recommendation, so the user understands that the best dates are based on real chart activation.",
+    "🧠 Astrologer-Friendly Use — Astrologers can use this screen to quickly explain the logic behind recommended dates without having to read all raw transit calculations separately.",
+    "🚀 Practical Use — Useful for choosing the best days for career action, communication, meetings, launches, decisions, planning, networking, and other event-based steps."
+  ]
+},
+
+{
+  "name": "horoscope_predictive_event_planets",
+  "label": "Predictive Event (Horary): Planetary Timing Blocks",
+  "description": "A focused timing screen that explains how specific transiting planets are supporting the recommended event period and what each planetary influence means.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Predictive Event (Horary)",
+  "purpose": "This section is generated after the user enters date of birth, time of birth, and place of birth, and the system completes the Predictive Event reading. The platform studies the important transiting planets that are active during the recommended time window and displays them as separate planetary guidance blocks. Each block explains which planet is currently active, the time period or exact date when its influence is strongest, which natal placement it is affecting, and what kind of support it brings to the user's event, goal, or decision. The purpose of this screen is to help the user understand the timing in a simpler way by showing one active planet at a time instead of only showing raw aspect calculations.",
+  "bullets": [
+    "🪐 Planet Block Meaning — Each block focuses on one transiting planet and explains how that planet is influencing the user's natal chart during the predictive period.",
+    "📅 Date or Time Window Meaning — Some blocks show an exact date, while others show a wider date range, depending on how long the planetary influence remains active and useful.",
+    "♃ Transiting Jupiter Block — This block explains a growth-oriented influence that supports expansion, confidence, visibility, opportunities, success, and positive development.",
+    "♃ Jupiter Meaning In This Screen — Jupiter is shown when the timing supports progress, attraction of opportunities, optimism, wider reach, or beneficial outcomes connected with the user's goal.",
+    "♂ Transiting Mars Block — This block explains an action-oriented influence that supports movement, initiative, execution, courage, productivity, and decisive effort.",
+    "♂ Mars Meaning In This Screen — Mars is shown when the timing helps with communication action, problem-solving, execution speed, practical momentum, and taking direct steps forward.",
+    "♀ Transiting Venus Block — This block explains a harmonious influence that supports connection, goodwill, collaboration, attraction, networking, and smoother relationship flow.",
+    "♀ Venus Meaning In This Screen — Venus is shown when the timing improves cooperation, support from others, social ease, pleasant outcomes, or alignment with personal values and goals.",
+    "🔗 Transit to Natal Meaning — Each planetary block is based on how the moving planet is forming a connection to an important natal planet in the birth chart.",
+    "🏠 House Activation Meaning — The interpretation may mention natal houses to show which area of life is being activated, such as creativity, work, communication, leadership, networking, or public action.",
+    "✨ Why These Blocks Are Useful — These blocks help the user understand not just the best date, but also which planet is creating the support and what type of energy is available at that time.",
+    "💬 Easy User Understanding — This screen simplifies the predictive reading by separating the timing into clear planetary guidance blocks instead of showing everything as one long explanation.",
+    "🧠 What The User Understands From This Screen — The user can see which planet supports growth, which helps action, and which improves connection or opportunity during the recommended timeline.",
+    "🚀 Practical Use — Useful for understanding when to act, when to communicate, when to network, when to expand plans, and which planetary timing is most supportive for the event being considered."
+  ]
+},
+
+{
+  "name": "horoscope_predictive_event_house_activation",
+  "label": "Predictive Event (Horary): House Activation",
+  "description": "A focused timing screen that explains which natal houses are activated during the recommended period and what those activations mean for the user's event or decision.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Predictive Event (Horary)",
+  "purpose": "This section is generated after the user enters date of birth, time of birth, and place of birth, and the system completes the Predictive Event reading. The platform studies the important transit-to-natal influences and then shows which natal houses are being activated during the recommended timeline. The purpose of this screen is to help the user understand not only which dates are supportive, but also which areas of life are receiving the strongest energy. In this example, the 5th house and 6th house are highlighted because specific transits are activating creativity, self-expression, networking, work, planning, and daily execution. This makes the predictive reading easier to understand in practical life terms.",
+  "bullets": [
+    "🏠 House Activation Meaning — This screen explains which natal houses become active during the recommended event period and what those houses represent in the user's life.",
+    "📅 Time Window Meaning — Each house block may show a date range or a specific day to indicate when that house is being strongly activated by transits.",
+    "🌟 5th House Activation Block — This block explains a period when the 5th house becomes active, highlighting creativity, self-expression, attraction, visibility, confidence, artistic effort, and opportunity through personal flair.",
+    "♃ Jupiter And ♀ Venus Support In The 5th House — When supportive transits activate the 5th house, they may increase charm, optimism, attraction of opportunities, networking strength, creative confidence, and personal magnetism.",
+    "💼 Practical Meaning Of 5th House Activation — This kind of activation can be favorable for leadership, creative work, visibility, public expression, relationship-based opportunities, and projects that need inspiration or confidence.",
+    "🛠 6th House Activation Block — This block explains a period or day when the 6th house becomes active, highlighting work, routines, problem-solving, organization, planning, service, productivity, and execution.",
+    "♂ Mars And ☿ Mercury Support In The 6th House — When supportive transits activate the 6th house, they may improve communication in work settings, strategic thinking, planning ability, practical action, and attention to detail.",
+    "📈 Practical Meaning Of 6th House Activation — This kind of activation can be favorable for getting tasks done, solving work problems, managing responsibilities, improving workflow, and taking clear practical steps toward goals.",
+    "🔭 How It Is Generated — The system uses the user's date of birth, time of birth, and place of birth to calculate the natal chart, then studies which transits are activating specific natal houses during the selected predictive period.",
+    "🧠 Why This Screen Is Useful — It helps the user understand where the astrological energy is landing in real life, so the recommendation feels practical instead of abstract.",
+    "💬 Easy User Understanding — Instead of only naming planets and aspects, this screen explains the event timing through life areas that the user can recognize more easily, such as creativity, work, routine, goals, and opportunity.",
+    "🎯 What The User Understands From This Screen — The user can clearly see which life area is strongest during the recommended period and why a certain date is better for visibility, action, communication, or career-related movement.",
+    "📊 Why House Activation Matters — Even when the same transit looks positive, the house it activates changes the meaning. This screen helps explain whether the support is more creative, practical, relational, financial, or work-focused.",
+    "🚀 Practical Use — Useful for choosing the right time for launches, communication, creative work, job action, planning, execution, and event-based decisions connected to the most activated life area."
+  ]
+},
+
+{
+  "name": "horoscope_predictive_event_summary",
+  "label": "Predictive Event (Horary): Summary",
+  "description": "A final summary screen that brings the most favorable period, key transits, and activated life areas into one clear recommendation.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Predictive Event (Horary)",
+  "purpose": "This section is generated after the user enters date of birth, time of birth, and place of birth, and the system completes the Predictive Event reading. The platform studies the natal chart, checks the strongest transits, identifies the most activated houses, and then combines that information into one final recommendation. The purpose of this screen is to give the user a simple, clear answer about the best period for action. Instead of showing many separate technical details, it summarizes the most important timing window, the strongest supporting transits, and the main life areas being activated, so the user can understand the final result easily.",
+  "bullets": [
+    "📅 Final Recommended Time Window — This block shows the most supportive overall period for the user's goal, event, or decision.",
+    "⭐ Main Opportunity Summary — It highlights why this period is important by combining the strongest supportive astrological factors into one clear message.",
+    "🪐 Key Transit Summary — The screen brings together the most helpful transit influences, such as Jupiter support, Mars support, or other strong aspects active during the period.",
+    "🏠 House Activation Summary — It explains which natal houses are most active during that time, such as the 5th house for creativity and visibility or the 6th house for work, planning, and execution.",
+    "🎯 Practical Meaning — The summary converts chart language into real-life advice, such as when to focus on career growth, communication, strategy, networking, or launching something important.",
+    "🔭 How It Is Generated — The system uses the user's date of birth, time of birth, and place of birth to calculate the natal chart, then studies transits, aspects, and house activation to find the strongest timing window.",
+    "💬 Easy User Understanding — This screen is designed to be simple and direct, so the user can understand the final recommendation without reading every technical block separately.",
+    "🧠 What The User Understands From This Screen — The user can quickly see the best period, why that period is strong, and which life themes are being supported the most.",
+    "📊 Why This Screen Is Useful — It acts as the final conclusion of the predictive reading, combining chart meaning, timing, and practical advice into one short summary.",
+    "🚀 Practical Use — Useful for choosing the best period for career advancement, communication, planning, launches, meetings, applications, and other important event-based actions."
+  ]
+},
+
+{
+  "name": "horoscope_predictive_event_recommendations",
+  "label": "Predictive Event (Horary): Recommendations",
+  "description": "A practical guidance screen that turns the predictive timing analysis into a clear action recommendation for the user.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Predictive Event (Horary)",
+  "purpose": "This section is generated after the user enters date of birth, time of birth, and place of birth, and the system completes the Predictive Event reading. After analyzing the natal chart, supportive transits, active houses, and recommended time window, the platform converts that astrological timing into a practical recommendation. The purpose of this screen is to tell the user what kind of action is best supported during the favorable period. In this example, the reading recommends focusing on creative and strategic initiatives because the activated houses and transit support indicate stronger potential for visibility, planning, communication, and opportunity. This makes the forecast easier to use in real life because the user receives not only timing, but also clear direction.",
+  "bullets": [
+    "📅 Recommended Time Window Meaning — This block highlights the period when the chart shows the strongest support for the user's goal or planned action.",
+    "🎯 Main Recommendation Meaning — The screen explains what the user should focus on during that period, such as creative work, strategic planning, communication, leadership, or professional growth.",
+    "🏠 House-Based Recommendation — The advice is based on which natal houses are activated, so the recommendation matches the life areas receiving the strongest energy.",
+    "🪐 Transit Support Meaning — The recommendation is shaped by the strongest helpful transits, showing what type of opportunity or action is most supported during that timeline.",
+    "🎨 Creative Initiative Meaning — If the 5th house or other expressive placements are active, the system may recommend creative projects, visibility, leadership, self-expression, or innovation.",
+    "🧠 Strategic Initiative Meaning — If work and planning houses are active, the system may recommend strategy, communication, execution, professional planning, or structured problem-solving.",
+    "🔭 How It Is Generated — The system uses the user's date of birth, time of birth, and place of birth to build the natal chart, then studies transits, aspects, and house activation to generate practical advice.",
+    "💬 Easy User Understanding — This screen turns technical chart analysis into a clear recommendation so the user can understand what to do, not only what is happening astrologically.",
+    "📈 Why This Screen Is Useful — It connects prediction with action, helping the user use the favorable timing in a practical and confident way.",
+    "🧠 What The User Understands From This Screen — The user can clearly see the best type of action to take during the recommended period and why that action is astrologically supported.",
+    "✨ Action Guidance Purpose — This screen helps the user translate astrology into decision-making by showing where to place effort for better results.",
+    "🚀 Practical Use — Useful for planning career steps, launching ideas, starting creative work, making strategic decisions, improving communication, and using favorable timing more effectively."
+  ]
+},
+      // ------------------Jupiter Return------------------//
+
+      {
+  "name": "horoscope_jupiter_return_entry_setup",
+  "label": "Jupiter Return: Entry & Generation Setup",
+  "description": "Enter birth details to generate the full Jupiter Return reading and result screens in sequence.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Jupiter Return",
+  "purpose": "This is the first screen of the Jupiter Return module. The user must enter date of birth, time of birth, and place of birth. These three birth details are required because the system uses them to calculate the natal chart accurately and identify the exact natal position of Jupiter. After all required birth fields are filled correctly, the Generate Reading button becomes active. Once the user clicks Generate Reading, the platform calculates the next exact Jupiter Return date and builds the full Jupiter Return reading screen by screen. The generated response depends on DOB, TOB, and POB because those details affect natal Jupiter's sign, degree, house placement, chart angles, house cusps, return chart structure, aspects, growth themes, and all deeper interpretations. This setup screen is important because if birth time or birth place is incorrect, the Jupiter Return analysis, timing, and life-area interpretation may also change.",
+  "bullets": [
+    "📅 Step 1 — Enter Date of Birth: The user enters the birth date so the system can calculate the natal planetary positions and locate natal Jupiter correctly.",
+    "🕒 Step 2 — Enter Time of Birth: The user enters the exact birth time because Ascendant, house cusps, chart angles, and Jupiter's natal house placement depend on correct timing.",
+    "📍 Step 3 — Enter Place of Birth: The user enters the birth place so the system can use the correct geographic coordinates and timezone for accurate natal and return chart calculation.",
+    "📝 Step 4 — Area of Inquiry (Optional): The user may enter a focus such as career growth, life direction, relationships, finances, learning, expansion, or spiritual development.",
+    "✅ Step 5 — Generate Reading Activation: After the required birth details are completed correctly, the Generate Reading button becomes enabled.",
+    "📊 Result Screen 1 — Chart View: The system generates the Jupiter Return wheel charts so the user can visually see the return chart structure, planetary placements, and overall aspect pattern.",
+    "📋 Result Screen 2 — Return Data & Positions: The platform shows the birth reference, natal Jupiter placement, next Jupiter Return date, house system, and key planetary positions in the return chart.",
+    "🌟 Result Screen 3 — Upcoming Jupiter Return Analysis: The reading explains the general meaning of the new 12-year cycle across life areas such as career, relationships, growth, health, family, social life, and spirituality.",
+    "🪐 Result Screen 4 — Planet Information & Planet Cards: The system shows detailed planetary data and then generates readable interpretation cards for important return planets such as Moon, Mercury, Venus, Sun, Jupiter, and others.",
+    "🔺 Result Screen 5 — Decan Interpretation Modal: If a triangle decan symbol is present on a planet card, the user can open a deeper decan-based image or text interpretation for that placement.",
+    "🏠 Result Screen 6 — House Information & House Cards: The platform shows the return house table, house distribution view, and individual house interpretation cards explaining how each life area is shaped during the cycle.",
+    "✨ Result Screen 7 — Dharma, Karma, and Key Points: The reading highlights fulfillment themes, karmic lessons, and important points such as Ascendant, Midheaven, Vertex, and Lilith for deeper cycle understanding.",
+    "🔗 Result Screen 8 — Aspects, Aspect Cards, and Deep Aspect Analysis: The system shows the technical aspect table, readable aspect summary cards, and deeper aspect modals with symbolic picture representation for major return aspects."
+  ]
+},
+     {
+  "name": "horoscope_jupiter_return_chart_view",
+  "label": "Jupiter Return: Chart View",
+  "description": "Visual wheel charts that show the full Jupiter Return pattern and its planetary aspect structure.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Jupiter Return",
+  "purpose": "This screen is generated after the user enters date of birth, time of birth, and place of birth. The system first calculates the natal chart, identifies natal Jupiter, then finds the next time transiting Jupiter returns to the same zodiac degree and sign as natal Jupiter. After that, it builds the Jupiter Return chart and displays it in wheel format. The left chart shows the main Western wheel with planets, signs, houses, and angles. The right chart highlights the aspect geometry and overall pattern of planetary relationships in the return chart. The purpose of this screen is to help astrologers and users visually understand the full Jupiter Return cycle, including where expansion, opportunity, growth, learning, networks, and long-term development are emphasized.",
+  "bullets": [
+    "♃ Jupiter Return Basis — The chart is created when transiting Jupiter returns to the same zodiac position it held at birth, beginning a new 12-year growth cycle.",
+    "📅 How It Is Generated — Uses DOB, TOB, and POB to calculate the natal chart, natal Jupiter position, and the exact upcoming Jupiter Return chart.",
+    "🪐 Left Wheel Chart Meaning — Shows the complete Jupiter Return chart with planets, signs, houses, and angles for full interpretation.",
+    "📐 Right Aspect Chart Meaning — Shows the planetary relationship pattern through aspect lines, making supportive and challenging configurations easier to read.",
+    "🏠 House Activation Value — Helps reveal which life areas are emphasized during this Jupiter cycle, such as career, community, finance, learning, or relationships.",
+    "✨ Why This Screen Is Useful — Gives a visual foundation for the return reading before the user goes into tables, planet details, and interpretation blocks.",
+    "🚀 Practical Use — Useful for cycle forecasting, opportunity mapping, growth themes, and understanding the overall energetic pattern of the next Jupiter period."
+  ]
+},
+{
+  "name": "horoscope_jupiter_return_positions",
+  "label": "Jupiter Return: Return Data & Positions",
+  "description": "A technical summary of the Jupiter Return chart, including birth reference, return date, and major planetary placements.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Jupiter Return",
+  "purpose": "This screen is generated after the system calculates the user's Jupiter Return from date of birth, time of birth, and place of birth. It presents the core chart data needed for interpretation, including birth details, house system, natal Jupiter position, next Jupiter Return date, and the sign-house placements of key planets and points in the return chart. The purpose of this screen is to give astrologers a quick technical overview of the cycle before moving into narrative analysis. It helps users see exactly where Jupiter is returning, which houses are activated, and which planets are retrograde or strategically important in the new cycle.",
+  "bullets": [
+    "📅 Birth Reference Row — Shows the user's date of birth, place of birth, and time of birth used to calculate the natal chart and return chart.",
+    "🏛 House System — Shows which house system is used for the return interpretation, such as Whole Sign.",
+    "♃ Jupiter At Birth — Shows natal Jupiter's original sign, degree, and house, which is the anchor for calculating the return.",
+    "🔄 Next Jupiter Return Date — Shows the exact future date when Jupiter returns to its natal position and the new cycle begins.",
+    "📍 Positions Section — Lists the major placements of Ascendant, Jupiter, Moon, Sun, Mercury, Venus, Mars, Saturn, Uranus, Neptune, Pluto, Nodes, and other key points in the return chart.",
+    "🔁 Retrograde Visibility — Helps astrologers identify which return placements are retrograde, adding a reflective or delayed tone to that part of the cycle.",
+    "🧠 Why This Screen Is Useful — Gives a precise technical map of the return chart so interpretation can be built on clearly visible positions.",
+    "🚀 Practical Use — Useful for astrologers, advanced users, technical chart checking, and preparing the deeper Jupiter Return reading."
+  ]
+},
+
+
+{
+  "name": "horoscope_jupiter_return_analys_v1",
+  "label": "Jupiter Return: Upcoming Cycle Analysis",
+  "description": "A life-area reading of the upcoming Jupiter Return, explaining how the new 12-year cycle may affect growth, career, relationships, health, family, and spiritual direction.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Jupiter Return",
+  "purpose": "This section is generated after the Jupiter Return chart is calculated from the user's DOB, TOB, and POB. The system analyzes Jupiter's sign and house placement, along with major aspects to other return and natal factors, and translates the result into life-area guidance. This screen explains how the new Jupiter cycle may influence general growth, career opportunities, relationships, personal development, health patterns, family matters, social expansion, and spiritual evolution. The purpose is to turn technical chart placements into a readable roadmap for the coming years.",
+  "bullets": [
+    "🌟 General Theme — Explains the overall tone of the new Jupiter cycle, such as expansion, visibility, learning, leadership, networks, or broader life growth.",
+    "💼 Career Section — Shows how the return may affect professional development, promotion, opportunity, recognition, collaboration, or long-range goals.",
+    "❤️ Relationship Section — Explains how social circles, important contacts, partnership dynamics, and meaningful new people may enter the cycle.",
+    "🌱 Personal Growth Section — Shows where the user is being pushed to expand beliefs, confidence, knowledge, or life direction.",
+    "🩺 Health Section — Highlights health awareness, emotional balance, routines, and where caution or healing may be needed.",
+    "🏠 Family Section — Explains how home life, roots, emotional foundations, or family transformation may play a role in the cycle.",
+    "🤝 Social Section — Shows the role of community, friendships, groups, networking, and collaborative opportunity.",
+    "🔮 Spiritual Section — Explains deeper inner growth, intuition, philosophy, and the soul-level meaning of the cycle.",
+    "✨ Why This Screen Is Useful — Gives a broad but practical interpretation of the return, organized by life area instead of only technical astrology."
+  ]
+},
+
+{
+  "name": "horoscope_jupiter_return_planet_information",
+  "label": "Jupiter Return: Planet Information",
+  "description": "A detailed planetary data table showing sign, degree, house, speed, retrograde status, and normalized position for the Jupiter Return chart.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Jupiter Return",
+  "purpose": "This screen is generated after the Jupiter Return chart is calculated using the user's DOB, TOB, and POB. It presents the technical placement data for each important return planet and point. The table helps astrologers verify where each body falls by sign and house, how fast it is moving, whether it is retrograde, and how the placement is refined by degree. The purpose of this screen is to support precise interpretation and create the basis for the later narrative planet cards.",
+  "bullets": [
+    "🪐 Planet Column — Shows the planetary body or point being interpreted, such as Moon, Mercury, Venus, Sun, Jupiter, Saturn, Uranus, Neptune, Pluto, Node, or Chiron.",
+    "♈ Sign Column — Shows the zodiac sign where that return placement is located.",
+    "📐 Full Degree Column — Shows the exact zodiac longitude of the placement in the return chart.",
+    "🏠 House Column — Shows which return house the placement occupies, revealing where that energy acts most strongly in life.",
+    "📏 Norm Degree Column — Shows the degree inside the sign itself, helping refine early, middle, or late placement meaning.",
+    "⚡ Speed Column — Shows how quickly the planet is moving, which helps interpret whether the energy is active, slow, steady, or highly emphasized.",
+    "🔁 Retro Column — Shows whether the placement is retrograde, indicating a more inward, revisiting, delayed, or reflective expression.",
+    "🧠 Why This Table Is Useful — Gives astrologers a clean technical reference before moving into interpretive cards and deeper analysis.",
+    "🚀 Practical Use — Useful for accurate chart reading, technical validation, advanced astrology work, and building deeper Jupiter Return interpretations."
+  ]
+},
+{
+  "name": "horoscope_jupiter_return_planet_cards",
+  "label": "Jupiter Return: Planet Interpretation Cards",
+  "description": "Readable Jupiter Return interpretation cards for each planet, combining sign, house, degree, speed, retrograde status, and optional decan marker.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Jupiter Return",
+  "purpose": "This section is generated after the Jupiter Return chart is calculated using the user's date of birth, time of birth, and place of birth. The system creates a separate interpretation card for each important return placement and translates raw chart values into practical meaning. Each card combines the planet, zodiac sign, house, full degree, normalized degree, speed, and retrograde status into an easy-to-read explanation. Some cards also show a small triangle symbol, which means a decan-based interpretation is available. The purpose of this screen is to let users understand the Jupiter Return one placement at a time without needing to read the full chart at once.",
+  "bullets": [
+    "🌙 Moon Card Meaning — Explains the emotional tone of the cycle, instinctive responses, public feeling, and where emotional focus is strongest.",
+    "🧠 Mercury Card Meaning — Explains thinking style, communication, planning, analysis, and how ideas are expressed during the cycle.",
+    "♀ Venus Card Meaning — Explains relationships, attraction, values, beauty, harmony, and social or creative flow in the return.",
+    "🌞 Sun Card Meaning — Explains identity, visibility, confidence, purpose, and the central life direction of the Jupiter cycle.",
+    "♈ Sign + House Synthesis — Each card combines sign and house to explain both how the energy behaves and where it acts.",
+    "📐 Degree Meaning — Uses exact degree and normalized degree to refine the tone of the interpretation.",
+    "⚡ Speed Meaning — Uses planetary speed to show whether the influence is swift, intense, steady, or slow-building.",
+    "🔁 Retrograde Layer — Adds inward, reflective, karmic, or revisiting themes when a return placement is retrograde.",
+    "🔺 Decan Indicator — A small triangle near the planet name means a deeper decan interpretation can be opened for that placement.",
+    "📖 Show More Purpose — The Show More action opens a deeper modal with extra meaning, symbolism, and refined interpretation.",
+    "✨ Why This Screen Is Useful — Makes the return easy to read planet by planet for both astrologers and general users."
+  ]
+},
+
+{
+  "name": "horoscope_jupiter_return_decan_modal",
+  "label": "Jupiter Return: Planet Decan Interpretation",
+  "description": "A deeper symbolic interpretation screen that explains a planet's decan meaning through imagery, tarot-style association, and mythic symbolism.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Jupiter Return",
+  "purpose": "This screen appears when the user clicks the triangle symbol on a Jupiter Return planet card, indicating that a decan interpretation is available. The system first calculates the return chart from DOB, TOB, and POB, then checks the exact degree of the selected planet and determines which 10-degree decan of the zodiac sign it belongs to. In this example, the Moon is shown in Cancer with a decan-specific interpretation. The purpose of this screen is to give a more refined layer of meaning beyond sign and house by using decan symbolism, visual imagery, tarot-style correspondences, mundane themes, and mythic associations.",
+  "bullets": [
+    "🔺 Decan Trigger Meaning — This modal opens only when the selected return planet has a decan marker available.",
+    "📐 What a Decan Means — Each zodiac sign is divided into 3 decans of 10 degrees each, and the exact degree decides which decan the planet belongs to.",
+    "🌙 Planet Decan Focus — The screen explains how the selected planet, such as the Moon, expresses itself in a more nuanced way inside that decan.",
+    "♋ Sign Base Meaning — The base sign gives the main emotional or psychological tone, while the decan adds a secondary influence that refines it.",
+    "🃏 Tarot Layer — The modal may connect the decan to a tarot-style card image to symbolize the deeper psychological or spiritual meaning of the placement.",
+    "🏛 Mundane Force Theme — A concept such as luxury, wealth, endurance, or refinement may be used to explain the real-world style of the decan.",
+    "🏺 Greek Daemon / Mythic Layer — Mythic figures add archetypal meaning and make the decan easier to understand symbolically.",
+    "🖼 Image Representation Purpose — The image helps users grasp the decan visually through symbolism rather than only text.",
+    "🧠 Why This Screen Is Useful — It explains why two people with the same planet in the same sign can still express it differently depending on exact degree.",
+    "📖 Text Toggle Purpose — The modal can allow users to switch between image and text mode for a clearer learning experience.",
+    "🚀 Practical Use — Useful for advanced Jupiter Return reading, refined planet interpretation, symbolic teaching, and deep astrological analysis."
+  ]
+},
+{
+  "name": "horoscope_jupiter_return_deep_planet_analysis",
+  "label": "Jupiter Return: Deep Astrological Analysis",
+  "description": "A deeper interpretation screen for one selected Jupiter Return planet, with expanded meaning and picture representation.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Jupiter Return",
+  "purpose": "This screen opens when the user clicks Show More on a Jupiter Return planet card. The system first uses date of birth, time of birth, and place of birth to calculate the natal chart and the upcoming Jupiter Return chart. Then it selects one return placement for deeper interpretation. In this example, the Sun in Libra in the 1st house is expanded into a fuller reading. The purpose of this screen is to explain how one specific return planet shapes identity, confidence, expression, motivation, and yearly direction, while the picture representation helps astrologers and users understand the symbolic blend of the planet and sign more quickly.",
+  "bullets": [
+    "☀ Selected Planet Focus — This screen analyzes one Jupiter Return planet in detail, such as the Sun, after the user opens the deeper view.",
+    "📍 Planet + Sign + House Meaning — The reading combines the planet itself, the zodiac sign, and the return house to explain both the style and life area of the influence.",
+    "📐 Degree Interpretation — The exact degree refines the reading by showing how the placement expresses itself with extra detail and maturity.",
+    "⚡ Speed Interpretation — The planet's speed is used to explain whether the yearly influence feels steady, active, intensified, or slow-building.",
+    "🔁 Retrograde Interpretation — If the planet is retrograde, the reading can explain inward processing, reflection, revision, or delayed outward expression.",
+    "♎ Sun in Libra Meaning — Shows a year focused on balance, charm, fairness, diplomacy, relationship awareness, and graceful self-expression.",
+    "🏠 Sun in the 1st House Meaning — Shows a year where identity, personal presence, self-development, confidence, and the way others see you become central themes.",
+    "🖼 Picture Representation Purpose — The image visually combines Sun symbolism, Libra qualities, and the merged meaning in the center so the interpretation becomes faster to grasp.",
+    "🎯 Why This Screen Is Useful — It moves beyond the short card summary and gives a fuller psychological and practical reading of one important return placement.",
+    "🚀 Practical Use — Useful for year-ahead identity guidance, client readings, personality focus, and understanding the strongest planet themes inside the Jupiter Return cycle."
+  ]
+},
+
+{
+  "name": "horoscope_jupiter_return_house_information",
+  "label": "Jupiter Return: House Information",
+  "description": "A technical house-cusp table showing the sign and degree of all 12 houses in the Jupiter Return chart.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Jupiter Return",
+  "purpose": "This screen is generated after the Jupiter Return chart is calculated from the user's date of birth, time of birth, and place of birth. It lists all 12 return houses, the zodiac sign on each house cusp, and the exact cusp degree. The purpose of this screen is to give astrologers a clean structural map of the Jupiter Return chart before the house meanings are expanded into narrative interpretation. It shows which signs rule which life areas during the return cycle and where the main themes of the year are organized.",
+  "bullets": [
+    "🏠 House Column — Shows each return house from House 1 to House 12.",
+    "♈ Sign Column — Shows the zodiac sign ruling each house cusp in the Jupiter Return chart.",
+    "📐 Degree Column — Shows the exact zodiac degree for each house cusp, refining interpretation and chart accuracy.",
+    "⬆ 1st House / Ascendant Value — Reveals the personal tone, attitude, self-presentation, and yearly approach to life.",
+    "💰 2nd House Value — Shows how money, resources, self-worth, and material priorities are framed in the return cycle.",
+    "🗣 3rd House Value — Shows communication, learning, close environment, and mental activity themes.",
+    "🏆 10th House Value — Shows career, public image, goals, recognition, and professional direction in the cycle.",
+    "🧠 Why This Table Is Useful — It helps astrologers see the full house structure before reading the detailed house cards.",
+    "📊 Technical Reading Support — Useful for verifying cusp signs and building accurate house-based interpretation.",
+    "🚀 Practical Use — Useful for advanced chart reading, house analysis, client work, and understanding how the Jupiter Return organizes life themes."
+  ]
+},
+{
+  "name": "horoscope_jupiter_return_house_cards",
+  "label": "Jupiter Return: House Interpretation Cards",
+  "description": "Readable house-by-house cards showing how each return house cusp sign shapes specific life areas during the Jupiter Return cycle.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Jupiter Return",
+  "purpose": "This section is generated after the Jupiter Return chart is calculated and the system identifies the sign placed on each return house cusp. The platform then creates short interpretation cards for the houses, explaining what each life area means and how the ruling sign colors that part of the cycle. The screenshot shows the visual house-distribution map plus readable house cards, such as House 1, House 2, House 3, House 4, and House 5. The purpose of this screen is to help users understand the year house by house instead of reading the entire chart at once.",
+  "bullets": [
+    "📊 House Distribution Map — The top visual layout shows where planets fall across the 12 houses, helping astrologers see concentration and house emphasis quickly.",
+    "🏠 House 1 Card — Explains identity, self-image, first impression, personal approach, and how the user enters the new cycle.",
+    "💰 House 2 Card — Explains values, money, possessions, self-worth, and how resources are handled during the return year.",
+    "♍ Example House 1 Meaning — Virgo rising in the return can show a practical, analytical, disciplined, and improvement-focused yearly approach.",
+    "♎ Example House 2 Meaning — Libra on the 2nd house can show financial balance, partnership value, aesthetics, and fairness in resource use.",
+    "📖 Show More Purpose — Each house card can open a deeper modal with fuller interpretation for that specific house.",
+    "✨ Why This Screen Is Useful — It breaks the Jupiter Return into life-area cards so the user can understand the cycle in a simple, organized way."
+  ]
+},
+
+{
+  "name": "horoscope_jupiter_return_dharma_karma",
+  "label": "Jupiter Return: Dharma & Karma",
+  "description": "A focused screen that explains growth path, higher purpose, karmic lessons, and major tension patterns inside the Jupiter Return cycle.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Jupiter Return",
+  "purpose": "This section is generated after the Jupiter Return chart is calculated and the system evaluates purpose-oriented and karmic placements, including Jupiter, the Nodes, Saturn, Pluto, the Moon, and major aspects between them. It separates the reading into Dharma and Karma so users can understand both the path of expansion and the lessons that must be faced. The purpose of this screen is to show where fulfillment, leadership, social contribution, responsibility, emotional release, and maturity are most strongly emphasized in the return cycle.",
+  "bullets": [
+    "✨ Dharma Section — Explains the path of growth, fulfillment, opportunity, and the qualities the user is encouraged to develop during the cycle.",
+    "♃ Jupiter-Based Purpose — Shows how Jupiter placement and supportive aspects reveal expansion, optimism, leadership, and beneficial social or creative development.",
+    "☊ Node Support — The North Node can highlight the direction of growth, purpose, and personal evolution during the return.",
+    "🪨 Karma Section — Explains karmic lessons, pressure points, limitations, emotional burdens, and the maturity work required in the cycle.",
+    "♄ Saturn Lesson Meaning — Saturn often shows responsibility, discipline, delay, structure, and necessary life lessons tied to effort and realism.",
+    "♇ Pluto / Moon Tension Meaning — Deeper aspects can show emotional intensity, authority issues, family pressure, or transformation through challenge.",
+    "⚖ Expansion vs Discipline — The screen helps show where optimism must be balanced with effort, realism, and practical responsibility.",
+    "📖 Show More Purpose — Each Dharma or Karma block can open a deeper explanation for astrologers who want a fuller reading.",
+    "🧠 Why This Screen Is Useful — It helps the user see not only what is opening up in the cycle, but also what must be worked through for lasting growth.",
+    "🚀 Practical Use — Useful for purpose reading, karmic insight, growth planning, and understanding the deeper spiritual and practical lesson of the Jupiter Return."
+  ]
+},
+{
+  "name": "horoscope_jupiter_return_aspects_table",
+  "label": "Jupiter Return: Aspects Table",
+  "description": "A technical aspect table showing planetary relationships, orb closeness, degree differences, and exactness indicators in the Jupiter Return chart.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Jupiter Return",
+  "purpose": "This screen is generated after the Jupiter Return chart is calculated and the system compares planets and points to find major aspects. It presents a structured table showing the aspected planet, the aspecting planet, orb, degree difference, exact degrees, and aspect type. It also includes a proximity color legend so astrologers can quickly see whether an aspect is extremely exact, just past, just before, or farther from exactness. The purpose of this screen is to give a precise technical overview of the most important aspect relationships shaping the return cycle.",
+  "bullets": [
+    "🔭 Aspect Proximity Indicator — The color key shows how close each aspect is to exact, helping astrologers judge strength and immediacy quickly.",
+    "🪐 Aspected Planet Column — Shows the planet or point receiving the aspect.",
+    "☀ Aspecting Planet Column — Shows the planet creating the aspect relationship.",
+    "📏 Orb Column — Shows how far the aspect is from exactness, which strongly affects intensity.",
+    "📐 Diff Column — Shows the degree separation difference used to verify the aspect relationship.",
+    "🎯 Aspect Type Column — Shows whether the relationship is a conjunction, sextile, square, trine, opposition, and so on.",
+    "🏛 Point Inclusion — The table may include special points such as the Midheaven or other important chart markers, not only planets.",
+    "🧠 Why This Table Is Useful — It gives astrologers a fast technical scan of the strongest return dynamics before moving into narrative aspect cards.",
+    "⚖ Exactness Value — Very close aspects usually have stronger and more immediate influence in the return year.",
+    "🚀 Practical Use — Useful for advanced chart work, precise aspect analysis, client explanation, and identifying the dominant energetic patterns of the cycle."
+  ]
+},
+{
+  "name": "horoscope_jupiter_return_aspect_cards",
+  "label": "Jupiter Return: Aspect Interpretation Cards",
+  "description": "Readable aspect cards that explain the main return aspects in simple language, including practical meaning and orb influence.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Jupiter Return",
+  "purpose": "This section is generated after the system calculates the major Jupiter Return aspects and selects the strongest or most meaningful ones for interpretation. Each aspect is turned into a separate readable card, such as Sun sextile Mars or Sun conjunction Mercury. The cards explain the aspect type, the two planets involved, and the practical meaning of that energy during the return cycle. The purpose of this screen is to help users understand the most important aspect themes without needing to read the full technical table.",
+  "bullets": [
+    "☀ Sun Sextile Mars Card — Explains flowing action, confidence, initiative, vitality, productivity, and the ability to act with energy and purpose.",
+    "☀ Sun Conjunction Mercury Card — Explains strong mental focus, communication ability, self-expression, strategy, and the merging of identity with ideas.",
+    "📏 Orb Meaning — The card may mention how close the orb is, helping show whether the aspect is especially strong or more moderate.",
+    "🔗 Aspect Type Meaning — Each card explains the style of the aspect, such as sextile for opportunity and productive flow or conjunction for concentrated emphasis.",
+    "💬 Easy Reading Format — Converts technical aspect data into short readable guidance for quick understanding.",
+    "🎯 Real-Life Meaning — Connects the aspect to practical themes such as confidence, speaking, decisions, leadership, motivation, and problem-solving.",
+    "📖 Show More Purpose — Each card can open a deeper modal with fuller interpretation and visual symbolism.",
+    "✨ Why This Screen Is Useful — It gives a user-friendly summary of the strongest aspects shaping the return year."
+  ]
+},
+{
+  "name": "horoscope_jupiter_return_deep_aspect_analysis",
+  "label": "Jupiter Return: Deep Aspect Analysis",
+  "description": "A detailed interpretation screen for one selected Jupiter Return aspect, with expanded text and picture representation.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Jupiter Return",
+  "purpose": "This screen opens when the user clicks Show More on a Jupiter Return aspect card. The system selects one important aspect and explains it in much greater depth. In this example, Sun sextile Mars is expanded into a fuller psychological and practical reading. The purpose of this screen is to show how one exact aspect influences energy, action, confidence, leadership, resourcefulness, and life direction during the return cycle, while the picture representation gives a faster symbolic understanding of the blended planetary forces.",
+  "bullets": [
+    "🔗 Selected Aspect Focus — This screen explains one key aspect in depth, such as Sun sextile Mars.",
+    "☀ Sun Meaning Layer — The Sun represents identity, purpose, confidence, vitality, visibility, and conscious direction.",
+    "♂ Mars Meaning Layer — Mars represents drive, action, courage, desire, momentum, conflict style, and initiative.",
+    "✨ Sextile Meaning Layer — A sextile shows support, opportunity, constructive movement, and productive cooperation between two energies.",
+    "📏 Close Orb Meaning — A very close orb increases the power, immediacy, and practical usefulness of the aspect in the return cycle.",
+    "📖 Expanded Interpretation — The long text explains how the aspect may appear in leadership, problem-solving, confidence, motivation, and action under pressure.",
+    "🖼 Picture Representation Purpose — The image visually breaks the aspect into Sun qualities, Mars qualities, and the combined supportive field in the center.",
+    "🌞 Left Visual Field — Shows the Sun-side traits such as confidence, purpose, identity, radiance, focus, and self-expression.",
+    "♂ Right Visual Field — Shows the Mars-side traits such as drive, bravery, heat, combativeness, passion, strength, and action.",
+    "🤝 Center Blend Meaning — Shows the merged aspect qualities such as synergy, empowerment, resourcefulness, momentum, proactive energy, and harmonious action.",
+    "🎯 Why This Screen Is Useful — It helps astrologers and users move beyond the short aspect summary into deeper life meaning and symbolic understanding.",
+    "🚀 Practical Use — Useful for deep client readings, leadership and motivation analysis, action timing, and advanced Jupiter Return aspect interpretation."
+  ]
+},
+{
+  "name": "horoscope_jupiter_return_additional_aspect_cards",
+  "label": "Jupiter Return: Additional Aspect Interpretation Cards",
+  "description": "Readable Jupiter Return aspect cards that explain major supportive and challenging aspect patterns with practical yearly meaning.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Jupiter Return",
+  "purpose": "This section is generated after the system calculates the Jupiter Return chart from the user's date of birth, time of birth, and place of birth, then compares the return planets and points to identify the strongest aspect patterns. The platform converts each important aspect into a separate readable card so the user can understand the main message quickly. In this screen, aspects such as Jupiter sextile Venus and Jupiter square Saturn explain how growth, abundance, responsibility, discipline, values, opportunities, and long-term effort interact during the Jupiter Return cycle. The purpose of this screen is to help astrologers and users understand where expansion flows easily and where maturity, patience, and structural effort are required.",
+  "bullets": [
+    "♃ Jupiter Sextile Venus Card — Explains a supportive connection between growth, abundance, attraction, values, harmony, relationships, and opportunities for pleasant expansion.",
+    "💛 Meaning of Jupiter Sextile Venus — This aspect often shows easier luck, social grace, material support, generosity, creative flow, and the ability to attract helpful people or beneficial conditions.",
+    "♃ Jupiter Square Saturn Card — Explains tension between expansion and limitation, optimism and realism, opportunity and duty, or desire for growth versus the need for structure.",
+    "🪨 Meaning of Jupiter Square Saturn — This aspect often shows a lesson in balancing ambition with patience, faith with discipline, and possibility with practical responsibility.",
+    "📏 Orb Interpretation — Each card uses the orb value to explain how strongly the aspect is felt and how exact or active it is in the Jupiter Return chart.",
+    "⚖ Support vs Pressure Insight — Helps show which aspects bring natural ease and which require conscious effort, maturity, and strategic handling.",
+    "💬 Easy Reading Format — Converts technical aspect relationships into practical yearly guidance for both astrologers and general users.",
+    "📖 Show More Purpose — Each aspect card can open a deeper analysis screen with expanded interpretation and symbolic picture representation.",
+    "🧠 Why This Screen Is Useful — It helps users understand the most important return aspects without reading the full technical aspect table.",
+    "🚀 Practical Use — Useful for yearly forecasting, abundance timing, growth planning, responsibility awareness, client readings, and identifying major supportive or challenging aspect themes in the Jupiter Return cycle."
+  ]
+},
+
+{
+  "name": "horoscope_jupiter_return_jupiter_square_saturn_modal",
+  "label": "Jupiter Return: Deep Aspect Analysis — Jupiter Square Saturn",
+  "description": "A detailed modal interpretation of Jupiter square Saturn, with expanded meaning and symbolic picture representation.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Jupiter Return",
+  "purpose": "This screen opens when the user clicks Show More on the Jupiter square Saturn aspect card inside the Jupiter Return reading. The system first calculates the Jupiter Return chart from the user's DOB, TOB, and POB, then identifies Jupiter square Saturn as one of the meaningful aspects of the cycle. The modal gives a deeper explanation of how the desire for expansion, optimism, and opportunity represented by Jupiter interacts with the discipline, pressure, and structural demands represented by Saturn. The purpose of this screen is to help astrologers and users understand the psychological, practical, and symbolic meaning of this tension, while the picture representation visually breaks down Jupiter traits, Saturn traits, and the square's central challenge.",
+  "bullets": [
+    "♃ Jupiter Meaning Layer — Jupiter represents growth, expansion, confidence, optimism, opportunity, learning, vision, abundance, and the desire to move beyond current limits.",
+    "♄ Saturn Meaning Layer — Saturn represents discipline, duty, structure, responsibility, patience, boundaries, realism, long-term effort, and earned stability.",
+    "□ Square Meaning Layer — A square is a tension aspect that creates friction, pressure, challenge, and the need for adjustment, integration, or conscious effort.",
+    "📏 Orb Strength Meaning — The orb helps show how strongly the aspect is active in the return cycle, with a tighter orb indicating stronger immediate influence.",
+    "🧠 Psychological Interpretation — Explains the inner conflict between wanting to expand quickly and needing to proceed carefully, realistically, and with greater maturity.",
+    "🎯 Practical Life Interpretation — Shows how this aspect may appear through delays, work pressure, responsibility, overextension, hesitation, or the need to build a stronger foundation before growth can stabilize.",
+    "🖼 Picture Representation Purpose — The visual layout helps users understand Jupiter on one side, Saturn on the other, and the center square field as the point of tension and lesson.",
+    "♃ Left Visual Field — Shows Jupiter qualities such as optimism, abundance, philosophy, opportunity, travel, expansion, inspiration, and generosity.",
+    "♄ Right Visual Field — Shows Saturn qualities such as discipline, boundaries, perseverance, endurance, accountability, authority, practicality, and structure.",
+    "□ Center Conflict Field — Shows the square's tension themes such as delays, restriction, misalignment, missed opportunities, practical challenges, burden, hesitation, and imbalance.",
+    "✨ Growth Through Pressure — This aspect often becomes a source of strength when the user learns to balance ambition with discipline and hope with realism.",
+    "📖 Why This Screen Is Useful — It gives much deeper meaning than the short aspect card and helps astrologers explain the aspect as a life lesson rather than only a difficulty.",
+    "🚀 Practical Use — Useful for yearly challenge analysis, growth-through-discipline insight, advanced client readings, and understanding why this Jupiter cycle may demand patience before expansion becomes stable."
+  ]
+},
+
+{
+  "name": "horoscope_jupiter_return_angles_points",
+  "label": "Jupiter Return: Ascendant, Midheaven & Vertex",
+  "description": "A focused interpretation screen for the Jupiter Return Ascendant, Midheaven, and Vertex, showing personal tone, career direction, and pivotal encounter themes.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Jupiter Return",
+  "purpose": "This section is generated after the Jupiter Return chart is calculated from the user's date of birth, time of birth, and place of birth. The system identifies important chart points such as the Ascendant, Midheaven, and Vertex, then calculates their exact degrees and zodiac signs inside the Jupiter Return chart. The purpose of this screen is to help astrologers and users understand the personal tone of the cycle, the public or career direction of the year, and the meaningful encounters or turning points that may arise. It translates exact angular and point data into clear yearly interpretation.",
+  "bullets": [
+    "⬆ Ascendant Degree Meaning — Shows the exact degree of the return Ascendant and explains the user's personal style, approach to life, first impression, and the overall tone of the Jupiter Return cycle.",
+    "♍ Ascendant in Virgo Example — Virgo rising in the return can show a year centered on precision, analysis, order, refinement, practical self-management, and careful observation.",
+    "🏆 Midheaven Degree Meaning — Shows the exact degree of the Midheaven and explains career direction, public image, ambition, professional visibility, and how the user moves toward achievement.",
+    "♊ Midheaven in Gemini Example — Gemini on the Midheaven can show a year of communication, adaptability, learning, speaking, writing, networking, versatility, and intellectually active career development.",
+    "✨ Vertex Degree Meaning — Shows the exact degree of the Vertex and explains important encounters, meaningful turning points, fate-like openings, and people or situations that may strongly influence the cycle.",
+    "♈ Vertex in Aries Example — Aries on the Vertex can show bold encounters, action-driven turning points, leadership tests, initiative, courage, and pivotal moments that require independence and self-assertion.",
+    "📐 Exact Degree Refinement — The interpretation uses the precise degree values to refine how the angular points are expressed and how strongly they may be felt.",
+    "🧠 Why These Points Matter — The Ascendant, Midheaven, and Vertex are major directional points that help explain the personal, public, and fated tone of the return cycle.",
+    "💬 Easy Reading Format — Converts technical angular and point data into simple practical guidance so users can understand the message clearly.",
+    "🚀 Practical Use — Useful for yearly identity guidance, career forecasting, public-path interpretation, encounter timing, and understanding the strongest directional points of the Jupiter Return."
+  ]
+},
+{
+  "name": "horoscope_jupiter_return_lilith_information",
+  "label": "Jupiter Return: Lilith Interpretation",
+  "description": "A focused Lilith screen showing sign, degree, house, speed, retrograde status, and the deeper interpretive meaning of Lilith in the Jupiter Return chart.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Jupiter Return",
+  "purpose": "This section is generated after the Jupiter Return chart is calculated using the user's date of birth, time of birth, and place of birth. The system identifies Lilith's exact sign, degree, house, speed, and retrograde status in the return chart, then translates that placement into a readable interpretation. The purpose of this screen is to help astrologers and users understand the raw, shadow, instinctive, and uncompromising themes that may become active during the Jupiter Return cycle. In this example, Lilith in Leo in the 11th house highlights issues of recognition, authenticity, group belonging, self-expression, and the desire to be seen without losing individuality.",
+  "bullets": [
+    "⚫ Lilith Placement Data — Shows Lilith's sign, full degree, house, normalized degree, speed, and retrograde status for accurate technical interpretation.",
+    "♌ Lilith in Leo Meaning — Lilith in Leo often emphasizes pride, visibility, recognition, creative self-expression, dignity, passion, and the need to be seen as unique and authentic.",
+    "🏠 Lilith in the 11th House Meaning — The 11th house links Lilith to groups, friendships, social networks, communities, future goals, collective belonging, and one's role inside wider circles.",
+    "✨ Combined Meaning — Lilith in Leo in the 11th house can show a powerful wish to shine inside communities while also revealing sensitivity around being ignored, overshadowed, or not fully appreciated by the group.",
+    "📐 Degree Meaning — The exact degree refines the intensity and tone of the placement, helping astrologers read the placement with more precision.",
+    "⚡ Speed Meaning — Lilith's speed can help describe whether the influence feels more active, subtle, or gradually unfolding in the return cycle.",
+    "🔁 Retrograde Status — If Lilith were retrograde, it could add inward shadow processing, but in this example the direct motion emphasizes a more outward expression.",
+    "🧠 Shadow and Authenticity Theme — This screen helps explain where the user may confront issues of approval, individuality, creative truth, and the courage to belong without conforming.",
+    "💬 Easy Reading Format — Converts technical Lilith data into a direct readable interpretation that users can understand without deep technical astrology knowledge.",
+    "🚀 Practical Use — Useful for shadow work insight, group-dynamics analysis, self-expression themes, authenticity guidance, and advanced Jupiter Return interpretation."
+  ]
+},
+      // ------------------Saturn Return------------------//
+      {
+  "name": "horoscope_saturn_return_entry_setup",
+  "label": "Saturn Return: Entry & Generation Setup",
+  "description": "Enter birth details to generate the full Saturn Return reading and result screens in sequence.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Saturn Return",
+  "purpose": "This is the first screen of the Saturn Return module. The user must enter date of birth, time of birth, and place of birth. These three birth details are required because the system uses them to calculate the natal chart accurately and identify the exact natal position of Saturn. After all required birth fields are filled correctly, the Generate Reading button becomes active. Once the user clicks Generate Reading, the platform calculates the next exact Saturn Return date and builds the full Saturn Return reading screen by screen. The generated response depends on DOB, TOB, and POB because those details affect natal Saturn's sign, degree, house placement, chart angles, house cusps, return chart structure, aspects, karmic themes, maturity lessons, and all deeper interpretations. This setup screen is important because if birth time or birth place is incorrect, the Saturn Return analysis, timing, and life-area interpretation may also change.",
+  "bullets": [
+    "📅 Step 1 — Enter Date of Birth: The user enters the birth date so the system can calculate the natal planetary positions and locate natal Saturn correctly.",
+    "🕒 Step 2 — Enter Time of Birth: The user enters the exact birth time because Ascendant, house cusps, chart angles, and Saturn's natal house placement depend on correct timing.",
+    "📍 Step 3 — Enter Place of Birth: The user enters the birth place so the system can use the correct geographic coordinates and timezone for accurate natal and return chart calculation.",
+    "📝 Step 4 — Area of Inquiry (Optional): The user may enter a focus such as career pressure, life lessons, relationships, responsibility, finances, maturity, restructuring, or spiritual growth.",
+    "✅ Step 5 — Generate Reading Activation: After the required birth details are completed correctly, the Generate Reading button becomes enabled.",
+    "📊 Result Screen 1 — Chart View: The system generates the Saturn Return wheel charts so the user can visually see the return chart structure, planetary placements, and overall aspect pattern.",
+    "📋 Result Screen 2 — Return Data & Positions: The platform shows the birth reference, natal Saturn placement, next Saturn Return date, house system, and key planetary positions in the return chart.",
+    "🌟 Result Screen 3 — Upcoming Saturn Return Analysis: The reading explains the general meaning of the new Saturn cycle across life areas such as career, relationships, personal growth, health, family, social life, and spirituality.",
+    "🪐 Result Screen 4 — Planet Information & Planet Cards: The system shows detailed planetary data and then generates readable interpretation cards for important return planets such as Moon, Mercury, Venus, Sun, Saturn, and others.",
+    "🔺 Result Screen 5 — Decan Interpretation Modal: If a triangle decan symbol is present on a planet card, the user can open a deeper decan-based image or text interpretation for that placement.",
+    "🏠 Result Screen 6 — House Information & House Cards: The platform shows the return house table, house distribution view, and individual house interpretation cards explaining how each life area is shaped during the cycle.",
+    "✨ Result Screen 7 — Dharma, Karma, and Key Points: The reading highlights fulfillment themes, karmic lessons, and important points such as Ascendant, Midheaven, Vertex, and Lilith for deeper cycle understanding.",
+    "🔗 Result Screen 8 — Aspects, Aspect Cards, and Deep Aspect Analysis: The system shows the technical aspect table, readable aspect summary cards, and deeper aspect modals with symbolic picture representation for major return aspects."
+  ]
+},
+     {
+  "name": "horoscope_saturn_return_chart",
+  "label": "Saturn Return: Chart View",
+  "description": "Visual wheel charts showing the full Saturn Return pattern and planetary aspect structure.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Saturn Return",
+  "purpose": "This screen is generated after the user enters date of birth, time of birth, and place of birth. The system first calculates the natal chart, identifies natal Saturn, then finds the next time transiting Saturn returns to the same zodiac degree and sign as natal Saturn. After that, it builds the Saturn Return chart and displays it in wheel format. The left wheel shows the full Western chart with signs, houses, planets, and angles. The right wheel highlights the aspect geometry so astrologers can quickly see the relationship pattern between planets. The purpose of this screen is to help users understand the structure of the Saturn Return cycle visually before moving into deeper interpretation about maturity, responsibility, karmic lessons, and long-term life restructuring.",
+  "bullets": [
+    "🪐 Saturn Return Basis — The chart is created when transiting Saturn returns to its natal sign and degree, marking a major maturity cycle and life restructuring phase.",
+    "📅 Birth Data Based Generation — Uses DOB, TOB, and POB to calculate the natal chart, natal Saturn position, and the exact upcoming Saturn Return chart.",
+    "🌌 Left Wheel Chart Meaning — Shows the full Saturn Return chart with planets, signs, houses, and angles for complete return-cycle interpretation.",
+    "📐 Right Aspect Chart Meaning — Shows planetary aspect geometry so supportive, tense, and transformational patterns can be understood more quickly.",
+    "🏠 House Activation Value — Helps reveal which life areas are most strongly emphasized during the Saturn Return cycle, such as money, career, relationships, duty, or inner growth.",
+    "🧠 Why This Screen Is Useful — Gives a visual foundation for the Saturn Return reading before the user moves into tables, positions, and narrative interpretation.",
+    "🚀 Practical Use — Useful for cycle forecasting, maturity milestones, life restructuring analysis, and understanding the overall energetic structure of the Saturn Return."
+  ]
+},
+{
+  "name": "horoscope_saturn_return_positions",
+  "label": "Saturn Return: Return Data & Positions",
+  "description": "A technical summary of the Saturn Return chart, including birth reference, return date, and major planetary placements.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Saturn Return",
+  "purpose": "This screen is generated after the system calculates the user's Saturn Return from date of birth, time of birth, and place of birth. It presents the core technical data needed for interpretation, including birth details, house system, natal Saturn position, next Saturn Return date, and the sign-house placements of key planets and points in the return chart. The purpose of this screen is to give astrologers a quick structural overview of the Saturn Return before moving into narrative analysis. It helps users see exactly where Saturn is returning, which houses are activated, and which planets are retrograde or especially important in the new cycle of maturity and responsibility.",
+  "bullets": [
+    "📅 Birth Reference Row — Shows the user's date of birth, place of birth, and time of birth used to calculate the natal and Saturn Return charts.",
+    "🏛 House System — Shows which house system is used for the return interpretation, such as Whole Sign.",
+    "♄ Saturn At Birth — Shows natal Saturn's original sign, degree, and house, which becomes the anchor point for calculating the Saturn Return.",
+    "🔄 Next Saturn Return Date — Shows the exact future date when Saturn returns to its natal position and the new Saturn cycle begins.",
+    "📍 Positions Section — Lists the major placements of Ascendant, Saturn, Moon, Sun, Mercury, Venus, Mars, Jupiter, Uranus, Neptune, Pluto, Nodes, and other important return points.",
+    "🔁 Retrograde Visibility — Helps astrologers identify which return placements are retrograde, adding a reflective, delayed, karmic, or inner-processing tone to that part of the cycle.",
+    "🧠 Why This Screen Is Useful — Gives a precise technical map of the Saturn Return chart so deeper interpretation can be built on clearly visible placements.",
+    "🚀 Practical Use — Useful for astrologers, advanced users, technical chart checking, and preparing the deeper Saturn Return reading."
+  ]
+},
+{
+  "name": "horoscope_saturn_return_analysis_v1",
+  "label": "Saturn Return: Upcoming Cycle Analysis",
+  "description": "A life-area reading of the upcoming Saturn Return, explaining how the new cycle may affect growth, career, relationships, health, family, and spiritual direction.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Saturn Return",
+  "purpose": "This section is generated after the Saturn Return chart is calculated from the user's DOB, TOB, and POB. The system analyzes Saturn's sign and house placement, along with major aspects to other return and natal factors, and translates the result into life-area guidance. This screen explains how the new Saturn cycle may influence general life direction, career responsibilities, relationships, personal growth, health patterns, family matters, social restructuring, and spiritual maturity. The purpose is to turn technical Saturn Return placements into a readable roadmap for the years surrounding this major maturity threshold.",
+  "bullets": [
+    "🪨 General Theme — Explains the overall tone of the Saturn Return, such as responsibility, reevaluation, restructuring, maturity, realism, and long-term foundation building.",
+    "💼 Career Section — Shows how the return may affect professional ambition, recognition, pressure, responsibility, leadership, financial stability, and structural career decisions.",
+    "❤️ Relationship Section — Explains how the cycle may reshape social connections, friendship quality, communication maturity, and relationship boundaries.",
+    "🌱 Personal Growth Section — Shows where the user is being challenged to develop self-discipline, responsibility, stronger identity, and emotional maturity.",
+    "🩺 Health Section — Highlights routines, stress management, physical discipline, balance, and where extra caution or healing attention may be required.",
+    "🏠 Family Section — Explains how home life, family roles, emotional obligations, and inner foundations may become part of the Saturn lesson.",
+    "🤝 Social Section — Shows how the user's social circle may be tested, refined, matured, or restructured during the return.",
+    "🔮 Spiritual Section — Explains deeper inner growth, belief re-evaluation, and the development of grounded wisdom through life experience.",
+    "✨ Why This Screen Is Useful — Gives a broad but practical interpretation of the Saturn Return, organized by life area instead of only technical astrology."
+  ]
+},
+
+{
+  "name": "horoscope_saturn_return_planet_information",
+  "label": "Saturn Return: Planet Information",
+  "description": "A detailed planetary data table showing sign, degree, house, speed, retrograde status, and normalized position for the Saturn Return chart.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Saturn Return",
+  "purpose": "This screen is generated after the Saturn Return chart is calculated using the user's DOB, TOB, and POB. It presents the technical placement data for each important return planet and point. The table helps astrologers verify where each body falls by sign and house, how fast it is moving, whether it is retrograde, and how the placement is refined by degree. The purpose of this screen is to support precise interpretation and create the basis for the later narrative planet cards.",
+  "bullets": [
+    "🪐 Planet Column — Shows the planetary body or point being interpreted, such as Moon, Mercury, Venus, Sun, Mars, Jupiter, Saturn, Uranus, Neptune, Pluto, Node, Chiron, or Part of Fortune.",
+    "♈ Sign Column — Shows the zodiac sign where that return placement is located.",
+    "📐 Full Degree Column — Shows the exact zodiac longitude of the placement in the Saturn Return chart.",
+    "🏠 House Column — Shows which return house the placement occupies, revealing where that energy acts most strongly in life.",
+    "📏 Norm Degree Column — Shows the degree inside the sign itself, helping refine whether the placement is early, middle, or late in expression.",
+    "⚡ Speed Column — Shows how quickly the planet is moving, helping interpret whether the energy is active, slow, steady, or highly emphasized.",
+    "🔁 Retro Column — Shows whether the placement is retrograde, indicating a more inward, revisiting, reflective, or karmic expression.",
+    "🧠 Why This Table Is Useful — Gives astrologers a clean technical reference before moving into interpretive cards and deeper analysis.",
+    "🚀 Practical Use — Useful for accurate chart reading, technical validation, advanced astrology work, and building deeper Saturn Return interpretations."
+  ]
+},
+
+{
+  "name": "horoscope_saturn_return_planet_cards",
+  "label": "Saturn Return: Planet Interpretation Cards",
+  "description": "Readable Saturn Return interpretation cards for each planet, combining sign, house, degree, speed, retrograde status, and optional decan marker.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Saturn Return",
+  "purpose": "This section is generated after the Saturn Return chart is calculated using the user's date of birth, time of birth, and place of birth. The system creates a separate interpretation card for each important return placement and translates raw chart values into practical meaning. Each card combines the planet, zodiac sign, house, full degree, normalized degree, speed, and retrograde status into an easy-to-read explanation. Some cards also show a small triangle symbol, which means a decan-based interpretation is available. The purpose of this screen is to let users understand the Saturn Return one placement at a time without needing to read the full chart at once.",
+  "bullets": [
+    "🌙 Moon Card Meaning — Explains the emotional tone of the cycle, instinctive responses, social or personal belonging, and where emotional fulfillment is strongest.",
+    "🧠 Mercury Card Meaning — Explains thinking style, communication pattern, planning ability, ambition expression, and how ideas are communicated during the Saturn Return.",
+    "♀ Venus Card Meaning — Explains relationships, attraction, values, social charm, pleasure, and how connection and affection are expressed in the cycle.",
+    "🌞 Sun Card Meaning — Explains identity, confidence, self-expression, public direction, and the main life purpose emphasized during the Saturn Return.",
+    "♈ Sign + House Synthesis — Each card combines sign and house to explain both how the energy behaves and where it acts most strongly.",
+    "📐 Degree Meaning — Uses exact degree and normalized degree to refine the tone and maturity of the interpretation.",
+    "⚡ Speed Meaning — Uses planetary speed to show whether the influence is swift, intense, steady, or slow-building.",
+    "🔁 Retrograde Layer — Adds inward, reflective, karmic, or revisiting themes when a return placement is retrograde.",
+    "🔺 Decan Indicator — A small triangle near the planet name means a deeper decan interpretation can be opened for that placement.",
+    "📖 Show More Purpose — The Show More action opens a deeper modal with expanded meaning, symbolism, and refined interpretation.",
+    "✨ Why This Screen Is Useful — Makes the Saturn Return easy to read planet by planet for both astrologers and general users."
+  ]
+},
+
+{
+  "name": "horoscope_saturn_return_decan_modal",
+  "label": "Saturn Return: Planet Decan Interpretation",
+  "description": "A deeper symbolic interpretation screen that explains a planet's decan meaning through imagery, tarot-style association, and mythic symbolism.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Saturn Return",
+  "purpose": "This screen appears when the user clicks the triangle symbol on a Saturn Return planet card, indicating that a decan interpretation is available. The system first calculates the Saturn Return chart from DOB, TOB, and POB, then checks the exact degree of the selected planet and determines which 10-degree decan of the zodiac sign it belongs to. In this example, the Moon is shown in Taurus with a decan-specific interpretation. The purpose of this screen is to give a more refined layer of meaning beyond sign and house by using decan symbolism, visual imagery, tarot-style correspondences, mundane themes, and mythic associations.",
+  "bullets": [
+    "🔺 Decan Trigger Meaning — This modal opens only when the selected return planet has a decan marker available.",
+    "📐 What a Decan Means — Each zodiac sign is divided into 3 decans of 10 degrees each, and the exact degree decides which decan the planet belongs to.",
+    "🌙 Planet Decan Focus — The screen explains how the selected planet, such as the Moon, expresses itself in a more nuanced way inside that decan.",
+    "♉ Sign Base Meaning — The base sign gives the main emotional or psychological tone, while the decan adds a secondary influence that refines it.",
+    "🃏 Tarot Layer — The modal may connect the decan to a tarot-style card image to symbolize the deeper psychological or spiritual meaning of the placement.",
+    "🏛 Mundane Force Theme — A concept such as success, luxury, wealth, endurance, or fulfillment may be used to explain the real-world style of the decan.",
+    "🏺 Greek or Mythic Figure Layer — Mythic figures add archetypal meaning and make the decan easier to understand symbolically.",
+    "🖼 Image Representation Purpose — The image helps users grasp the decan visually through symbolism rather than only text.",
+    "🧠 Why This Screen Is Useful — It explains why two people with the same planet in the same sign can still express it differently depending on exact degree.",
+    "📖 Text Toggle Purpose — The modal can allow users to switch between image and text mode for a clearer learning experience.",
+    "🚀 Practical Use — Useful for advanced Saturn Return reading, refined planet interpretation, symbolic teaching, and deep astrological analysis."
+  ]
+},
+
+{
+  "name": "horoscope_saturn_return_house_information",
+  "label": "Saturn Return: House Information",
+  "description": "A technical house-cusp table showing the sign and degree of all 12 houses in the Saturn Return chart.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Saturn Return",
+  "purpose": "This screen is generated after the Saturn Return chart is calculated from the user's date of birth, time of birth, and place of birth. It lists all 12 return houses, the zodiac sign on each house cusp, and the exact cusp degree. The purpose of this screen is to give astrologers a clear structural map of the Saturn Return chart before the house meanings are expanded into narrative interpretation. It shows which signs rule which life areas during the return cycle and where the main themes of responsibility, restructuring, and growth are organized.",
+  "bullets": [
+    "🏠 House Column — Shows each return house from House 1 to House 12.",
+    "♈ Sign Column — Shows the zodiac sign ruling each house cusp in the Saturn Return chart.",
+    "📐 Degree Column — Shows the exact zodiac degree for each house cusp, refining interpretation and chart precision.",
+    "⬆ 1st House / Ascendant Value — Reveals the personal tone, attitude, self-presentation, and yearly approach to life.",
+    "💰 2nd House Value — Shows how money, values, self-worth, and material security are structured in the return cycle.",
+    "🗣 3rd House Value — Shows communication, learning, nearby environment, and daily mental pattern themes.",
+    "🏆 10th House Value — Shows career, public image, ambition, authority, and long-term professional direction.",
+    "🧠 Why This Table Is Useful — It helps astrologers see the full house structure before reading the detailed house cards.",
+    "📊 Technical Reading Support — Useful for verifying cusp signs and building accurate house-based interpretation.",
+    "🚀 Practical Use — Useful for advanced chart reading, house analysis, client work, and understanding how the Saturn Return organizes life themes."
+  ]
+},
+{
+  "name": "horoscope_saturn_return_house_cards_part_1",
+  "label": "Saturn Return: House Interpretation Cards — Part 1",
+  "description": "Readable house-by-house cards showing how the early houses of the Saturn Return chart shape personal identity, values, and communication.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Saturn Return",
+  "purpose": "This section is generated after the Saturn Return chart is calculated and the system identifies the sign placed on each return house cusp. The platform then creates short interpretation cards for the houses, explaining what each life area means and how the ruling sign colors that part of the Saturn Return cycle. This first screen includes the visual house-distribution map and the first set of house cards, including House 1 and House 2. The purpose is to help users understand the cycle in life-area form instead of reading the whole chart all at once.",
+  "bullets": [
+    "📊 House Distribution Map — The top visual layout shows where planets fall across the 12 houses, helping astrologers see concentration and life-area emphasis quickly.",
+    "🏠 House 1 Card — Explains identity, self-image, first impression, emotional approach, and how the user enters the Saturn Return cycle.",
+    "♋ Cancer Rising Example — Cancer on the Ascendant can show a year of stronger sensitivity, nurturing instincts, family connection, emotional self-protection, and seeking security.",
+    "💰 House 2 Card — Explains values, money, possessions, self-worth, and how material security is handled during the Saturn Return.",
+    "♌ Leo on the 2nd House Example — Leo on the 2nd house can show strong pride in values, desire for recognition through what one creates or owns, generosity, and lessons around worth and display.",
+    "📖 Show More Purpose — Each house card can open a deeper modal with fuller interpretation for that specific house.",
+    "✨ Why This Screen Is Useful — It breaks the Saturn Return into early life-area cards so the user can understand the cycle in a structured and simple way."
+  ]
+},
+
+{
+  "name": "horoscope_saturn_return_house_cards_part_2",
+  "label": "Saturn Return: House Interpretation Cards — Part 2",
+  "description": "Readable house-by-house cards showing how the next houses of the Saturn Return chart shape communication, home life, creativity, and emotional development.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Saturn Return",
+  "purpose": "This section continues the Saturn Return house interpretation sequence after the house cusps are calculated from the user's DOB, TOB, and POB. The system converts each house-sign combination into readable cards so the user can understand the life areas affected by the Saturn Return. This screen focuses on House 3, House 4, and House 5, showing how learning, home, family, creativity, romance, and self-expression are colored during the return cycle.",
+  "bullets": [
+    "🗣 House 3 Card — Explains communication, learning, writing, problem-solving, mental style, siblings, and nearby environment.",
+    "♍ Virgo on the 3rd House Example — Virgo ruling the 3rd house can show analytical thinking, precision, careful speech, strong observation, and a methodical learning style.",
+    "🏡 House 4 Card — Explains home, roots, family, emotional security, private life, and the inner foundation of the Saturn Return cycle.",
+    "♎ Libra on the 4th House Example — Libra on the 4th house can show the need for peace, fairness, beauty, partnership, and balance within the home and family dynamic.",
+    "🎨 House 5 Card — Explains creativity, self-expression, romance, joy, passion, children, and the desire to bring something meaningful into life.",
+    "♏ Scorpio on the 5th House Example — Scorpio in the 5th house can show intense creative drive, deep emotional connections, transformative romance, and a powerful urge to express hidden depths.",
+    "📖 Show More Purpose — Each house card can open a deeper interpretation modal for fuller astrologer-level insight.",
+    "✨ Why This Screen Is Useful — It helps users understand the Saturn Return through specific life themes instead of only technical chart data."
+  ]
+},
+
+{
+  "name": "horoscope_saturn_return_dharma_karma",
+  "label": "Saturn Return: Dharma & Karma",
+  "description": "A focused screen that explains growth path, higher purpose, karmic lessons, and maturity challenges inside the Saturn Return cycle.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Saturn Return",
+  "purpose": "This section is generated after the Saturn Return chart is calculated and the system evaluates purpose-oriented and karmic placements, including Saturn, Jupiter, the Nodes, Neptune, and important aspects between them. It separates the reading into Dharma and Karma so users can understand both the path of fulfillment and the major lessons that must be faced. The purpose of this screen is to show where service, spiritual understanding, self-worth, financial responsibility, belief restructuring, and grounded maturity are most emphasized in the Saturn Return cycle.",
+  "bullets": [
+    "✨ Dharma Section — Explains the path of growth, meaning, fulfillment, and the qualities the user is encouraged to develop during the Saturn Return.",
+    "♃ Jupiter-Based Purpose — Shows how Jupiter placement and supportive aspects reveal opportunity through service, learning, routine improvement, and broader philosophical understanding.",
+    "🧠 Mercury Support — Helpful Mercury aspects can show that communication, confidence, clarity, and learning are key tools for moving toward one's purpose.",
+    "🔮 Neptune Link — Supportive Neptune themes can show spiritual insight, intuitive growth, and deeper understanding of purpose through inner awareness.",
+    "🪨 Karma Section — Explains karmic lessons, pressure points, emotional burdens, financial or self-worth challenges, and the maturity work required in the cycle.",
+    "♄ Saturn Lesson Meaning — Saturn often shows responsibility, structure, boundaries, hardship, and the life lessons that shape lasting inner strength.",
+    "☋ South Node Meaning — The South Node can point to old tendencies, familiar patterns, spiritual escape habits, or beliefs that must be released for growth.",
+    "⚖ Reality vs Idealism — The screen helps show where dreams and spiritual ideals must be grounded in practical action, responsibility, and stronger values.",
+    "📖 Show More Purpose — Each Dharma or Karma block can open a deeper explanation for astrologers who want a fuller reading.",
+    "🧠 Why This Screen Is Useful — It helps the user see not only what is opening up in the Saturn cycle, but also what must be faced, disciplined, and transformed for real maturity."
+  ]
+},
+
+{
+  "name": "horoscope_saturn_return_aspects_table",
+  "label": "Saturn Return: Aspects Table",
+  "description": "A technical aspect table showing planetary relationships, orb closeness, degree differences, and exactness indicators in the Saturn Return chart.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Saturn Return",
+  "purpose": "This screen is generated after the Saturn Return chart is calculated and the system compares planets and points to find major aspects. It presents a structured table showing the aspected planet, the aspecting planet, orb, degree difference, exact degrees, and aspect type. It also includes a proximity color legend so astrologers can quickly see whether an aspect is extremely exact, just past, just before, or farther from exactness. The purpose of this screen is to give a precise technical overview of the most important aspect relationships shaping the Saturn Return cycle.",
+  "bullets": [
+    "🔭 Aspect Proximity Indicator — The color key shows how close each aspect is to exact, helping astrologers judge strength and immediacy quickly.",
+    "🪐 Aspected Planet Column — Shows the planet or point receiving the aspect.",
+    "☀ Aspecting Planet Column — Shows the planet creating the aspect relationship.",
+    "📏 Orb Column — Shows how far the aspect is from exactness, which strongly affects its intensity.",
+    "📐 Diff Column — Shows the degree separation difference used to verify the aspect relationship.",
+    "🎯 Aspect Type Column — Shows whether the relationship is a trine, sextile, square, conjunction, opposition, and so on.",
+    "🏛 Point Inclusion — The table may include special points such as the Ascendant, not only planets.",
+    "🧠 Why This Table Is Useful — It gives astrologers a fast technical scan of the strongest Saturn Return dynamics before moving into readable aspect cards.",
+    "⚖ Exactness Value — Very close aspects usually have stronger and more immediate influence in the Saturn Return cycle.",
+    "🚀 Practical Use — Useful for advanced chart work, precise aspect analysis, client explanation, and identifying the dominant energetic patterns of the Saturn Return."
+  ]
+},
+
+{
+  "name": "horoscope_saturn_return_aspect_cards",
+  "label": "Saturn Return: Aspect Interpretation Cards",
+  "description": "Readable aspect cards that explain the main Saturn Return aspects in simple language, including practical meaning and orb influence.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Saturn Return",
+  "purpose": "This section is generated after the system calculates the major Saturn Return aspects and selects the strongest or most meaningful ones for interpretation. Each aspect is turned into a separate readable card, such as Sun trine Pluto or Moon sextile Mars. The cards explain the aspect type, the two planets involved, and the practical meaning of that energy during the Saturn Return cycle. The purpose of this screen is to help users understand the strongest aspect themes without needing to read the full technical table.",
+  "bullets": [
+    "☀ Sun Trine Pluto Card — Explains transformation, regeneration, depth, hidden power, strong influence, inner strength, and the ability to create meaningful change.",
+    "🌙 Moon Sextile Mars Card — Explains supportive emotional action, courage, resilience, instinctive confidence, balanced assertion, and constructive use of feelings.",
+    "📏 Orb Meaning — The card may mention how close the orb is, helping show whether the aspect is especially strong or more moderate.",
+    "🔗 Aspect Type Meaning — Each card explains the style of the aspect, such as trine for natural flow and empowerment or sextile for opportunity and supportive action.",
+    "💬 Easy Reading Format — Converts technical aspect data into short readable guidance for quick understanding.",
+    "🎯 Real-Life Meaning — Connects the aspect to practical themes such as confidence, emotional strength, transformation, leadership, motivation, and resilience.",
+    "📖 Show More Purpose — Each card can open a deeper modal with fuller interpretation and visual symbolism.",
+    "✨ Why This Screen Is Useful — It gives a user-friendly summary of the strongest aspects shaping the Saturn Return cycle."
+  ]
+},
+{
+  "name": "horoscope_saturn_return_deep_aspect_analysis",
+  "label": "Saturn Return: Deep Aspect Analysis",
+  "description": "A detailed interpretation screen for one selected Saturn Return aspect, with expanded text and picture representation.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Saturn Return",
+  "purpose": "This screen opens when the user clicks Show More on a Saturn Return aspect card. The system selects one important aspect and explains it in much greater depth. In this example, Sun trine Pluto is expanded into a fuller psychological and practical reading. The purpose of this screen is to show how one exact aspect influences identity, power, resilience, transformation, leadership, and inner intensity during the Saturn Return cycle, while the picture representation gives a faster symbolic understanding of the blended planetary forces.",
+  "bullets": [
+    "🔗 Selected Aspect Focus — This screen explains one key aspect in depth, such as Sun trine Pluto.",
+    "☀ Sun Meaning Layer — The Sun represents identity, purpose, confidence, vitality, visibility, and conscious self-expression.",
+    "♇ Pluto Meaning Layer — Pluto represents transformation, depth, hidden truth, power, shadow work, regeneration, and profound inner change.",
+    "△ Trine Meaning Layer — A trine shows ease, harmony, natural flow, empowerment, and constructive support between two energies.",
+    "📏 Orb Meaning — The orb helps show how strongly the aspect is active in the Saturn Return cycle, with tighter orbs usually feeling stronger.",
+    "🧠 Psychological Interpretation — Explains how the user may experience inner power, courage to face deeper truths, and the capacity to transform from within.",
+    "🎯 Practical Life Interpretation — Shows how this aspect may appear through leadership, self-mastery, resilience, deep influence, strong presence, and powerful life change.",
+    "🖼 Picture Representation Purpose — The image visually breaks the aspect into Sun qualities, Pluto qualities, and the merged transformative field in the center.",
+    "🌞 Left Visual Field — Shows the Sun-side traits such as identity, radiance, purpose, vitality, confidence, and self-expression.",
+    "♇ Right Visual Field — Shows the Pluto-side traits such as secrecy, rebirth, shadow, mastery, obsession, transformation, and inner depth.",
+    "🤝 Center Blend Meaning — Shows the merged aspect qualities such as reform, resilience, charisma, strategic power, magnetism, emotional depth, and transformative influence.",
+    "✨ Why This Screen Is Useful — It helps astrologers and users move beyond the short aspect summary into deeper symbolic and life-level interpretation.",
+    "🚀 Practical Use — Useful for deep client readings, transformation analysis, leadership and shadow-work insight, and advanced Saturn Return aspect interpretation."
+  ]
+},
+
+{
+  "name": "horoscope_saturn_return_additional_aspect_cards",
+  "label": "Saturn Return: Additional Aspect Interpretation Cards",
+  "description": "Readable Saturn Return aspect cards showing important challenging and supportive aspect patterns with practical meaning.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Saturn Return",
+  "purpose": "This section is generated after the system calculates the Saturn Return chart from the user's date of birth, time of birth, and place of birth, then compares the return planets and points to identify the strongest aspect patterns. The platform converts each important aspect into a separate readable card so the user can understand the main message quickly. In this screen, aspects such as Saturn opposition Neptune and Uranus trine Ascendant explain how realism, responsibility, dreams, awakening, originality, personal identity, and life-direction shifts interact during the Saturn Return cycle. The purpose of this screen is to help astrologers and users understand where the cycle creates tension, where it brings liberation, and how those patterns may affect maturity, clarity, self-expression, and adaptation.",
+  "bullets": [
+    "♄ Saturn Opposition Neptune Card — Explains tension between structure and imagination, realism and idealism, duty and escape, practical limits and spiritual longing.",
+    "🌊 Meaning of Saturn Opposition Neptune — This aspect often shows confusion, disillusionment, blurred boundaries, spiritual testing, and the need to ground dreams into practical reality.",
+    "⚡ Uranus Trine Ascendant Card — Explains supportive change, originality, self-renewal, personal freedom, and the ability to adapt to new circumstances with confidence.",
+    "✨ Meaning of Uranus Trine Ascendant — This aspect often shows innovation, authenticity, independence, and a natural ease with personal reinvention and unconventional self-expression.",
+    "📏 Orb Interpretation — Each card can include orb meaning to show how exact, active, and influential the aspect is inside the Saturn Return chart.",
+    "⚖️ Support vs Challenge Insight — Helps users quickly identify which aspects require discipline and grounding, and which ones open the way for freedom, progress, and new identity expression.",
+    "💬 Easy Reading Format — Converts technical aspect data into short readable guidance for both astrologers and general users.",
+    "📖 Show More Purpose — Each aspect card can open a deeper analysis modal with expanded interpretation and symbolic picture representation.",
+    "🧠 Why This Screen Is Useful — It helps users understand the strongest Saturn Return dynamics without reading the full technical aspect table.",
+    "🚀 Practical Use — Useful for maturity-cycle guidance, reality-versus-dream analysis, identity development, client readings, and understanding the most important aspect themes in the Saturn Return."
+  ]
+},
+{
+  "name": "horoscope_saturn_return_deep_aspect_analysis_additional",
+  "label": "Saturn Return: Deep Aspect Analysis — Saturn Opposition Neptune",
+  "description": "A detailed modal interpretation of Saturn opposition Neptune, with expanded meaning and symbolic picture representation.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Saturn Return",
+  "purpose": "This screen opens when the user clicks Show More on the Saturn opposition Neptune aspect card inside the Saturn Return reading. The system first calculates the Saturn Return chart from the user's DOB, TOB, and POB, then identifies Saturn opposition Neptune as one of the meaningful aspects of the cycle. The modal gives a deeper explanation of how reality, duty, and structure represented by Saturn interact with imagination, spirituality, intuition, and dissolution represented by Neptune. The purpose of this screen is to help astrologers and users understand the psychological, practical, and symbolic meaning of this opposition, while the picture representation visually breaks down Saturn traits, Neptune traits, and the central polarity of confusion versus clarity.",
+  "bullets": [
+    "♄ Saturn Meaning Layer — Saturn represents discipline, structure, responsibility, caution, maturity, boundaries, realism, and the need to build lasting foundations.",
+    "♆ Neptune Meaning Layer — Neptune represents dreams, imagination, intuition, spirituality, compassion, illusion, sensitivity, and subtle emotional or psychic awareness.",
+    "☍ Opposition Meaning Layer — An opposition creates polarity, tension, projection, inner conflict, and the need to balance two forces that pull in opposite directions.",
+    "📏 Orb Strength Meaning — The orb helps show how strongly the aspect is active in the Saturn Return cycle, with closer orbs usually feeling more central and influential.",
+    "🧠 Psychological Interpretation — Explains how the user may struggle between practical reality and idealistic vision, or between emotional sensitivity and the need for clear boundaries.",
+    "🎯 Practical Life Interpretation — Shows how this aspect may appear through confusion, disillusionment, uncertainty, spiritual searching, boundary issues, and the need to make dreams workable.",
+    "🖼 Picture Representation Purpose — The visual layout helps users understand Saturn on one side, Neptune on the other, and the center opposition field as the point of tension and integration.",
+    "♄ Left Visual Field — Shows Saturn-side traits such as discipline, duty, structure, practicality, loyalty, stability, patience, and groundedness.",
+    "♆ Right Visual Field — Shows Neptune-side traits such as sensitivity, intuition, compassion, fluidity, transcendence, empathy, creativity, and mysticism.",
+    "☍ Center Conflict Field — Shows the opposition themes such as illusion, dream, confusion, uncertainty, escapism, misalignment, absorption, fantasy, and the challenge of integration.",
+    "✨ Growth Through Integration — This aspect becomes a source of maturity when the user learns how to honor inspiration without losing reality, and how to stay grounded without closing off imagination.",
+    "📖 Why This Screen Is Useful — It gives much deeper meaning than the short aspect card and helps astrologers explain the aspect as a life lesson in clarity, resilience, and spiritual realism.",
+    "🚀 Practical Use — Useful for shadow-work insight, spiritual grounding, emotional-boundary guidance, advanced client readings, and understanding one of the most subtle Saturn Return aspect lessons."
+  ]
+},
+
+{
+  "name": "horoscope_saturn_return_angles_points_additional_v1",
+  "label": "Saturn Return: Ascendant, Midheaven & Vertex",
+  "description": "A focused interpretation screen for the Saturn Return Ascendant, Midheaven, and Vertex, showing personal tone, career direction, and pivotal encounter themes.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Saturn Return",
+  "purpose": "This section is generated after the Saturn Return chart is calculated from the user's date of birth, time of birth, and place of birth. The system identifies important chart points such as the Ascendant, Midheaven, and Vertex, then calculates their exact degrees and zodiac signs inside the Saturn Return chart. The purpose of this screen is to help astrologers and users understand the personal tone of the cycle, the public or career direction of the year, and the meaningful encounters or turning points that may arise. It translates exact angular and point data into clear yearly interpretation.",
+  "bullets": [
+    "⬆ Ascendant Degree Meaning — Shows the exact degree of the return Ascendant and explains the user's personal style, demeanor, instinctive response, and the overall tone of the Saturn Return cycle.",
+    "♋ Ascendant in Cancer Example — Cancer rising in the return can show greater sensitivity, empathy, protectiveness, intuition, emotional receptivity, and the need to create safety and belonging.",
+    "🏆 Midheaven Degree Meaning — Shows the exact degree of the Midheaven and explains career direction, ambition, public image, authority path, and visible achievement themes.",
+    "♈ Midheaven in Aries Example — Aries on the Midheaven can show bold career moves, leadership drive, independence, initiative, and a push toward direct action in public life.",
+    "✨ Vertex Degree Meaning — Shows the exact degree of the Vertex and explains meaningful encounters, fated turning points, and deep transformational relationships or experiences.",
+    "♏ Vertex in Scorpio Example — Scorpio on the Vertex can show intense meetings, life-changing connections, deep emotional truth, transformation, and encounters that awaken personal power.",
+    "📐 Exact Degree Refinement — The interpretation uses precise degree values to refine how the angular points are expressed and how strongly they may be felt.",
+    "🧠 Why These Points Matter — The Ascendant, Midheaven, and Vertex are major directional points that help explain the personal, public, and fated tone of the Saturn Return cycle.",
+    "💬 Easy Reading Format — Converts technical angular and point data into simple practical guidance so users can understand the message clearly.",
+    "🚀 Practical Use — Useful for yearly identity guidance, career forecasting, public-path interpretation, encounter timing, and understanding the strongest directional points of the Saturn Return."
+  ]
+},
+
+{
+  "name": "horoscope_saturn_return_lilith_information_additional",
+  "label": "Saturn Return: Lilith Interpretation",
+  "description": "A focused Lilith screen showing sign, degree, house, speed, retrograde status, and the deeper interpretive meaning of Lilith in the Saturn Return chart.",
+  "group": "Horoscope Toolkit",
+  "subModule": "Saturn Return",
+  "purpose": "This section is generated after the Saturn Return chart is calculated using the user's date of birth, time of birth, and place of birth. The system identifies Lilith's exact sign, degree, house, speed, and retrograde status in the return chart, then translates that placement into a readable interpretation. The purpose of this screen is to help astrologers and users understand the raw, shadow, instinctive, rebellious, and uncompromising themes that may become active during the Saturn Return cycle. In this example, Lilith in Libra in the 4th house highlights themes of fairness, shadow dynamics in relationships, home-life tension, emotional independence, and the refusal to fit into roles that feel false or restrictive.",
+  "bullets": [
+    "⚫ Lilith Placement Data — Shows Lilith's sign, full degree, house, normalized degree, speed, and retrograde status for accurate technical interpretation.",
+    "♎ Lilith in Libra Meaning — Lilith in Libra often emphasizes shadow themes around fairness, justice, balance, approval, partnership, relational tension, and hidden dissatisfaction beneath outward harmony.",
+    "🏠 Lilith in the 4th House Meaning — The 4th house links Lilith to home, roots, emotional security, family conditioning, private life, and deep inner belonging patterns.",
+    "✨ Combined Meaning — Lilith in Libra in the 4th house can show hidden tension around peace within the family, imbalance in home relationships, or a desire to rebel against emotional roles that feel unfair or restrictive.",
+    "📐 Degree Meaning — The exact degree refines the intensity and tone of the placement, helping astrologers read Lilith with more accuracy.",
+    "⚡ Speed Meaning — Lilith's speed can help describe whether the influence feels more active, subtle, or gradually unfolding in the Saturn Return cycle.",
+    "🔁 Retrograde Status — In this example Lilith is direct, which emphasizes a more outward expression of the shadow theme rather than a fully internalized one.",
+    "🧠 Shadow and Authenticity Theme — This screen helps explain where the user may confront hidden resentment, suppressed emotional truth, relational imbalance, or the need for deeper authenticity at home and within close bonds.",
+    "💬 Easy Reading Format — Converts technical Lilith data into a direct readable interpretation that users can understand without advanced astrology knowledge.",
+    "🚀 Practical Use — Useful for shadow-work insight, family-pattern analysis, home and belonging themes, emotional-boundary guidance, and advanced Saturn Return interpretation."
+  ]
+},
+// ------------------Mars Return------------------//
+     
+  {
+    "name": "horoscope_mars_return_entry_setup",
+    "label": "Mars Return: Entry & Generation Setup",
+    "description": "Enter birth details to generate the full Mars Return reading and result screens in sequence.",
+    "group": "Horoscope Toolkit",
+    "subModule": "Mars Return",
+    "purpose": "This is the first screen of the Mars Return module. The user must enter date of birth, time of birth, and place of birth. These three birth details are required because the system uses them to calculate the natal chart accurately and identify the exact natal position of Mars. After all required birth fields are filled correctly, the Generate Reading button becomes active. Once the user clicks Generate Reading, the platform calculates the next exact Mars Return date and builds the full Mars Return reading screen by screen. The generated response depends on DOB, TOB, and POB because those details affect natal Mars sign, degree, house placement, chart angles, house cusps, return chart structure, aspects, drive patterns, conflict themes, motivation cycles, and all deeper interpretations. This setup screen is important because if birth time or birth place is incorrect, the Mars Return timing, life-area activation, and interpretation may also change.",
+    "bullets": [
+      "📅 Step 1 — Enter Date of Birth: The user enters the birth date so the system can calculate natal planetary positions and locate natal Mars correctly.",
+      "🕒 Step 2 — Enter Time of Birth: The user enters the exact birth time because Ascendant, house cusps, chart angles, and natal Mars house placement depend on correct timing.",
+      "📍 Step 3 — Enter Place of Birth: The user enters the birth place so the system can use the correct geographic coordinates and timezone for accurate natal and return chart calculation.",
+      "📝 Step 4 — Area of Inquiry (Optional): The user may enter a focus such as ambition, conflict, confidence, relationships, career momentum, health drive, discipline, or personal courage.",
+      "✅ Step 5 — Generate Reading Activation: After the required birth details are completed correctly, the Generate Reading button becomes enabled.",
+      "📊 Result Screen 1 — Chart View: The system generates the Mars Return wheel charts so the user can visually see the return chart structure, planetary placements, and overall aspect pattern.",
+      "📋 Result Screen 2 — Return Data & Positions: The platform shows the birth reference, natal Mars placement, next Mars Return date, house system, and key planetary positions in the return chart.",
+      "🔥 Result Screen 3 — Upcoming Mars Return Analysis: The reading explains the general meaning of the new Mars cycle across life areas such as career, relationships, personal growth, health, family, social life, and spiritual direction.",
+      "🪐 Result Screen 4 — Planet Information & Planet Cards: The system shows detailed planetary data and then generates readable interpretation cards for important return planets such as Moon, Mercury, Venus, Sun, Mars, and others.",
+      "🔺 Result Screen 5 — Decan Interpretation Modal: If a triangle decan symbol is present on a planet card, the user can open a deeper decan-based image or text interpretation for that placement.",
+      "🏠 Result Screen 6 — House Information & House Cards: The platform shows the return house table, house distribution view, and individual house interpretation cards explaining how each life area is shaped during the cycle.",
+      "✨ Result Screen 7 — Dharma, Karma, and Key Points: The reading highlights fulfillment themes, karmic lessons, and important points such as Ascendant, Midheaven, Vertex, and Lilith for deeper cycle understanding.",
+      "🔗 Result Screen 8 — Aspects, Aspect Cards, and Deep Aspect Analysis: The system shows the technical aspect table, readable aspect summary cards, and deeper aspect modals with symbolic picture representation for major return aspects."
+    ]
+  },
+  {
+    "name": "horoscope_mars_return_chart_v4",
+    "label": "Mars Return: Chart View",
+    "description": "Visual wheel charts showing the full Mars Return pattern and planetary aspect structure.",
+    "group": "Horoscope Toolkit",
+    "subModule": "Mars Return",
+    "purpose": "This screen is generated after the user enters date of birth, time of birth, and place of birth. The system first calculates the natal chart, identifies natal Mars, then finds the next time transiting Mars returns to the same zodiac degree and sign as natal Mars. After that, it builds the Mars Return chart and displays it in wheel format. The left wheel shows the full Western chart with signs, houses, planets, and angles. The right wheel highlights the aspect geometry so astrologers can quickly see the relationship pattern between planets. The purpose of this screen is to help users understand the structure of the new Mars cycle visually before moving into deeper interpretation about energy, ambition, assertion, conflict, and action planning.",
+    "bullets": [
+      "♂ Mars Return Basis — The chart is created when transiting Mars returns to its natal sign and degree, marking a fresh cycle of action, drive, courage, and personal assertion.",
+      "📅 Birth Data Based Generation — Uses DOB, TOB, and POB to calculate the natal chart, natal Mars position, and the exact upcoming Mars Return chart.",
+      "🌌 Left Wheel Chart Meaning — Shows the full Mars Return chart with planets, signs, houses, and angles for complete return-cycle interpretation.",
+      "📐 Right Aspect Chart Meaning — Shows planetary aspect geometry so supportive, tense, and high-energy patterns can be understood more quickly.",
+      "🏠 House Activation Value — Helps reveal which life areas are most strongly energized during the Mars Return cycle, such as work, relationships, confidence, conflict, health, or hidden effort.",
+      "🔥 Why Mars Return Matters — Mars Return shows where energy rises, where motivation resets, and where the user may need strategic self-control or bold action.",
+      "🧠 Why This Screen Is Useful — Gives a visual foundation for the Mars Return reading before the user moves into tables, positions, and narrative interpretation.",
+      "🚀 Practical Use — Useful for action forecasting, motivation analysis, conflict awareness, productivity planning, and understanding the overall energetic structure of the Mars Return."
+    ]
+  },
+  {
+    "name": "horoscope_mars_return_positions",
+    "label": "Mars Return: Return Data & Positions",
+    "description": "A technical summary of the Mars Return chart, including birth reference, return date, and major planetary placements.",
+    "group": "Horoscope Toolkit",
+    "subModule": "Mars Return",
+    "purpose": "This screen is generated after the system calculates the user's Mars Return from date of birth, time of birth, and place of birth. It presents the core technical data needed for interpretation, including birth details, house system, natal Mars position, next Mars Return date, and the sign-house placements of key planets and points in the return chart. The purpose of this screen is to give astrologers a quick structural overview of the Mars Return before moving into narrative analysis. It helps users see exactly where Mars is returning, which houses are activated, and which planets are especially important in the new cycle of effort, ambition, and personal drive.",
+    "bullets": [
+      "📅 Birth Reference Row — Shows the user's date of birth, place of birth, and time of birth used to calculate the natal and Mars Return charts.",
+      "🏛 House System — Shows which house system is used for the return interpretation, such as Whole Sign.",
+      "♂ Mars At Birth — Shows natal Mars' original sign, degree, and house, which becomes the anchor point for calculating the Mars Return.",
+      "🔄 Next Mars Return Date — Shows the exact future date when Mars returns to its natal position and the new Mars cycle begins.",
+      "📍 Positions Section — Lists the major placements of Ascendant, Mars, Moon, Sun, Mercury, Venus, Jupiter, Saturn, Uranus, Neptune, Pluto, Nodes, Chiron, and other important return points.",
+      "🏠 Sign + House Meaning — Each placement shows not only the zodiac sign but also the life area where that force becomes active in the return cycle.",
+      "🧠 Why This Screen Is Useful — Gives a precise technical map of the Mars Return chart so deeper interpretation can be built on clearly visible placements.",
+      "🚀 Practical Use — Useful for astrologers, advanced users, technical chart checking, and preparing the deeper Mars Return reading."
+    ]
+  },
+  {
+    "name": "horoscope_mars_return_analysis_v1",
+    "label": "Mars Return: Upcoming Cycle Analysis",
+    "description": "A life-area reading of the upcoming Mars Return, explaining how the new cycle may affect drive, career, relationships, health, family, social energy, and spiritual direction.",
+    "group": "Horoscope Toolkit",
+    "subModule": "Mars Return",
+    "purpose": "This section is generated after the Mars Return chart is calculated from the user's DOB, TOB, and POB. The system analyzes Mars' sign and house placement, along with major aspects to other return and natal factors, and translates the result into life-area guidance. This screen explains how the new Mars cycle may influence general momentum, career action, relationship tension or passion, personal growth, health habits, family dynamics, social activity, and spiritual or inner-strength themes. The purpose is to turn technical Mars Return placements into a readable roadmap for the years surrounding this action cycle.",
+    "bullets": [
+      "🔥 General Theme — Explains the overall tone of the Mars Return, such as rising courage, inner tension, hidden effort, bold reinvention, or more private strategic movement.",
+      "💼 Career Section — Shows how the cycle may affect ambition, initiative, workplace action, behind-the-scenes effort, leadership style, and practical advancement.",
+      "❤️ Relationship Section — Explains how drive, passion, conflict style, emotional reactions, and relationship boundaries may become more visible or tested.",
+      "🌱 Personal Growth Section — Shows where the user is being pushed to develop confidence, courage, independence, and stronger personal direction.",
+      "🩺 Health Section — Highlights vitality, stress, recovery, routines, burnout risk, physical energy, and the need for better self-management.",
+      "🏠 Family Section — Explains how the cycle may activate private emotions, family tension, hidden frustration, or the need for more patience and direct communication.",
+      "🤝 Social Section — Shows how friendships, group activity, community involvement, and social priorities may shift under new Mars energy.",
+      "🔮 Spiritual Section — Explains inner awakening, subconscious motivation, retreat energy, intuitive courage, and the urge to confront deeper emotional patterns.",
+      "✨ Why This Screen Is Useful — Gives a broad but practical interpretation of the Mars Return, organized by life area instead of only technical astrology."
+    ]
+  },
+  {
+    "name": "horoscope_mars_return_planet_information",
+    "label": "Mars Return: Planet Information",
+    "description": "A detailed planetary data table showing sign, degree, house, speed, retrograde status, and normalized position for the Mars Return chart.",
+    "group": "Horoscope Toolkit",
+    "subModule": "Mars Return",
+    "purpose": "This screen is generated after the Mars Return chart is calculated using the user's DOB, TOB, and POB. It presents the technical placement data for each important return planet and point. The table helps astrologers verify where each body falls by sign and house, how fast it is moving, whether it is retrograde, and how the placement is refined by degree. The purpose of this screen is to support precise interpretation and create the basis for the later narrative planet cards.",
+    "bullets": [
+      "🪐 Planet Column — Shows the planetary body or point being interpreted, such as Moon, Mercury, Venus, Sun, Mars, Jupiter, Saturn, Uranus, Neptune, Pluto, Node, Chiron, or Lilith.",
+      "♈ Sign Column — Shows the zodiac sign where that return placement is located.",
+      "📐 Full Degree Column — Shows the exact zodiac longitude of the placement in the Mars Return chart.",
+      "🏠 House Column — Shows which return house the placement occupies, revealing where that energy acts most strongly in life.",
+      "📏 Norm Degree Column — Shows the degree inside the sign itself, helping refine whether the placement is early, middle, or late in expression.",
+      "⚡ Speed Column — Shows how quickly the planet is moving, helping interpret whether the energy is active, slow, steady, or highly emphasized.",
+      "🔁 Retro Column — Shows whether the placement is retrograde, indicating a more inward, revisiting, delayed, or reflective expression.",
+      "🧠 Why This Table Is Useful — Gives astrologers a clean technical reference before moving into interpretive cards and deeper analysis.",
+      "🚀 Practical Use — Useful for accurate chart reading, technical validation, advanced astrology work, and building deeper Mars Return interpretations."
+    ]
+  },
+  {
+    "name": "horoscope_mars_return_planet_cards",
+    "label": "Mars Return: Planet Interpretation Cards",
+    "description": "Readable Mars Return interpretation cards for each planet, combining sign, house, degree, speed, retrograde status, and optional decan marker.",
+    "group": "Horoscope Toolkit",
+    "subModule": "Mars Return",
+    "purpose": "This section is generated after the Mars Return chart is calculated using the user's date of birth, time of birth, and place of birth. The system creates a separate interpretation card for each important return placement and translates raw chart values into practical meaning. Each card combines the planet, zodiac sign, house, full degree, normalized degree, speed, and retrograde status into an easy-to-read explanation. Some cards also show a small triangle symbol, which means a decan-based interpretation is available. The purpose of this screen is to let users understand the Mars Return one placement at a time without needing to read the full chart at once.",
+    "bullets": [
+      "🌙 Moon Card Meaning — Explains the emotional tone of the cycle, instinctive reactions, relationship sensitivity, mood shifts, and where emotional balance is tested or strengthened.",
+      "🧠 Mercury Card Meaning — Explains thinking style, communication pattern, quick decisions, confidence in speech, and how ideas are expressed during the Mars Return.",
+      "♀ Venus Card Meaning — Explains attraction, relationship style, personal values, charm, social magnetism, and how pleasure or desire is expressed in the cycle.",
+      "🌞 Sun Card Meaning — Explains identity, confidence, self-expression, personal courage, leadership, and the main life direction emphasized during the Mars Return.",
+      "♂ Mars Card Meaning — Explains the core theme of the cycle: action, assertion, physical drive, willpower, conflict style, and where energy demands release.",
+      "♈ Sign + House Synthesis — Each card combines sign and house to explain both how the energy behaves and where it acts most strongly.",
+      "📐 Degree Meaning — Uses exact degree and normalized degree to refine the tone and maturity of the interpretation.",
+      "⚡ Speed Meaning — Uses planetary speed to show whether the influence is swift, intense, steady, or slow-building.",
+      "🔁 Retrograde Layer — Adds inward, reflective, reviewing, or delayed themes when a return placement is retrograde.",
+      "🔺 Decan Indicator — A small triangle near the planet name means a deeper decan interpretation can be opened for that placement.",
+      "📖 Show More Purpose — The Show More action opens a deeper modal with expanded meaning, symbolism, and refined interpretation.",
+      "✨ Why This Screen Is Useful — Makes the Mars Return easy to read planet by planet for both astrologers and general users."
+    ]
+  },
+  {
+    "name": "horoscope_mars_return_decan_modal",
+    "label": "Mars Return: Planet Decan Interpretation",
+    "description": "A deeper symbolic interpretation screen that explains a planet's decan meaning through imagery, tarot-style association, and mythic symbolism.",
+    "group": "Horoscope Toolkit",
+    "subModule": "Mars Return",
+    "purpose": "This screen appears when the user clicks the triangle symbol on a Mars Return planet card, indicating that a decan interpretation is available. The system first calculates the Mars Return chart from DOB, TOB, and POB, then checks the exact degree of the selected planet and determines which 10-degree decan of the zodiac sign it belongs to. In the example shown, the Sun is placed in Aries and linked to a specific Aries decan image and text layer. The purpose of this screen is to give a more refined layer of meaning beyond sign and house by using decan symbolism, visual imagery, tarot-style correspondences, mundane themes, and mythic associations.",
+    "bullets": [
+      "🔺 Decan Trigger Meaning — This modal opens only when the selected return planet has a decan marker available.",
+      "📐 What a Decan Means — Each zodiac sign is divided into 3 decans of 10 degrees each, and the exact degree decides which decan the planet belongs to.",
+      "🌞 Planet Decan Focus — The screen explains how the selected planet, such as the Sun, expresses itself in a more nuanced way inside that decan.",
+      "♈ Sign Base Meaning — The base sign gives the main psychological and energetic tone, while the decan adds a secondary influence that refines it.",
+      "🃏 Tarot Layer — The modal may connect the decan to a tarot-style card image to symbolize the deeper psychological or spiritual meaning of the placement.",
+      "🏛 Mundane Force Theme — A concept such as virtue, courage, visibility, fulfillment, power, or leadership may be used to explain the real-world style of the decan.",
+      "🏺 Greek or Mythic Figure Layer — Mythic figures add archetypal meaning and make the decan easier to understand symbolically.",
+      "🖼 Image Representation Purpose — The image helps users grasp the decan visually through symbolism rather than only text.",
+      "🧠 Why This Screen Is Useful — It explains why two people with the same planet in the same sign can still express it differently depending on exact degree.",
+      "📖 Text Toggle Purpose — The modal can allow users to switch between image and text mode for a clearer learning experience.",
+      "🚀 Practical Use — Useful for advanced Mars Return reading, refined planet interpretation, symbolic teaching, and deep astrological analysis."
+    ]
+  },
+  {
+    "name": "horoscope_mars_return_house_information",
+    "label": "Mars Return: House Information",
+    "description": "A technical house-cusp table showing the sign and degree of all 12 houses in the Mars Return chart.",
+    "group": "Horoscope Toolkit",
+    "subModule": "Mars Return",
+    "purpose": "This screen is generated after the Mars Return chart is calculated from the user's date of birth, time of birth, and place of birth. It lists all 12 return houses, the zodiac sign on each house cusp, and the exact cusp degree. The purpose of this screen is to give astrologers a clear structural map of the Mars Return chart before the house meanings are expanded into narrative interpretation. It shows which signs rule which life areas during the Mars cycle and where the main themes of effort, pressure, courage, relationships, work, and action are organized.",
+    "bullets": [
+      "🏠 House Column — Shows each return house from House 1 to House 12.",
+      "♈ Sign Column — Shows the zodiac sign ruling each house cusp in the Mars Return chart.",
+      "📐 Degree Column — Shows the exact zodiac degree for each house cusp, refining interpretation and chart precision.",
+      "⬆ 1st House / Ascendant Value — Reveals the personal tone, instinctive style, self-presentation, and overall approach to the Mars Return cycle.",
+      "💰 2nd House Value — Shows how money, values, self-worth, and material drive are energized in the cycle.",
+      "🗣 3rd House Value — Shows communication, learning, decisions, nearby environment, and daily mental effort themes.",
+      "🏆 10th House Value — Shows career, public image, ambition, authority, and long-term professional direction.",
+      "🧠 Why This Table Is Useful — It helps astrologers see the full house structure before reading the detailed house cards.",
+      "📊 Technical Reading Support — Useful for verifying cusp signs and building accurate house-based interpretation.",
+      "🚀 Practical Use — Useful for advanced chart reading, house analysis, client work, and understanding how the Mars Return organizes life themes."
+    ]
+  },
+  {
+    "name": "horoscope_mars_return_house_cards_part_1",
+    "label": "Mars Return: House Interpretation Cards — Part 1",
+    "description": "Readable house-by-house cards showing how the early houses of the Mars Return chart shape identity, values, communication, home, and creativity.",
+    "group": "Horoscope Toolkit",
+    "subModule": "Mars Return",
+    "purpose": "This section is generated after the Mars Return chart is calculated and the system identifies the sign placed on each return house cusp. The platform then creates short interpretation cards for the houses, explaining what each life area means and how the ruling sign colors that part of the Mars Return cycle. This screen includes the visual house-distribution map and the first set of house cards, such as House 1 through House 5. The purpose is to help users understand the cycle in life-area form instead of reading the whole chart all at once.",
+    "bullets": [
+      "📊 House Distribution Map — The top visual layout shows where planets fall across the 12 houses, helping astrologers see concentration and life-area emphasis quickly.",
+      "🏠 House 1 Card — Explains identity, self-image, first impression, personal style, and how the user enters the Mars Return cycle.",
+      "♓ Pisces on the Ascendant Example — Pisces rising can show stronger intuition, sensitivity, compassion, emotional openness, and a softer outer style during the cycle.",
+      "💰 House 2 Card — Explains values, money, possessions, self-worth, and how material security is handled during the Mars Return.",
+      "♈ Aries on the 2nd House Example — Aries on the 2nd house can show bold earning instincts, quicker financial moves, strong desire for independence, and lessons about impulsive spending or value assertion.",
+      "🗣 House 3 Card — Explains communication, learning, writing, practical thinking, siblings, and daily mental rhythm.",
+      "♉ Taurus in the 3rd House Example — Taurus ruling the 3rd house can show steady speech, practical learning, patient thinking, and preference for grounded information.",
+      "🏡 House 4 Card — Explains home, roots, family, private life, and the emotional foundation of the Mars Return cycle.",
+      "♊ Gemini on the 4th House Example — Gemini on the 4th house can show a lively home atmosphere, stronger mental activity at home, family discussion, and changeable domestic themes.",
+      "🎨 House 5 Card — Explains creativity, romance, joy, self-expression, personal passion, and how the user seeks pleasure and inspiration.",
+      "♋ Cancer in the 5th House Example — Cancer on the 5th house can show emotionally rich creativity, protective love, strong attachment in romance, and artistic expression rooted in feeling.",
+      "📖 Show More Purpose — Each house card can open a deeper modal with fuller interpretation for that specific house.",
+      "✨ Why This Screen Is Useful — It breaks the Mars Return into early life-area cards so the user can understand the cycle in a structured and simple way."
+    ]
+  },
+  {
+    "name": "horoscope_mars_return_house_cards_part_2",
+    "label": "Mars Return: House Interpretation Cards — Part 2",
+    "description": "Readable house-by-house cards showing how the later houses of the Mars Return chart shape work, relationships, career, purpose, and inner growth.",
+    "group": "Horoscope Toolkit",
+    "subModule": "Mars Return",
+    "purpose": "This section continues the Mars Return house interpretation sequence after the house cusps are calculated from the user's DOB, TOB, and POB. The system converts each house-sign combination into readable cards so the user can understand the life areas affected by the Mars Return. This screen focuses on the later houses, especially House 6 through House 12, showing how work, relationships, transformation, belief, career, social contribution, and solitude are colored during the cycle.",
+    "bullets": [
+      "🛠 House 6 Card — Explains work, routine, service, daily discipline, health habits, and practical responsibilities.",
+      "♌ Leo on the 6th House Example — Leo ruling the 6th house can show pride in work, need for recognition through service, creative output in routine tasks, and leadership in practical settings.",
+      "🤝 House 7 Card — Explains partnerships, commitment, open rivals, negotiations, and the role of others in the cycle.",
+      "♍ Virgo on the 7th House Example — Virgo on the 7th house can show careful relationship analysis, practical partnership needs, service themes, and stronger attention to balance and improvement in one-to-one bonds.",
+      "🔄 House 8 Card — Explains shared resources, trust, crisis, transformation, deep emotional merging, and power exchange.",
+      "♎ Libra on the 8th House Example — Libra in the 8th house can show fairness concerns in shared matters, strong need for balance in intimacy, and negotiations around dependency or emotional exchange.",
+      "🌍 House 9 Card — Explains travel, belief, learning, philosophy, long-range vision, and higher understanding.",
+      "♏ Scorpio on the 9th House Example — Scorpio in the 9th house can show intense beliefs, transformative learning, strong intuition, and deep searching for truth.",
+      "🏆 House 10 Card — Explains career, public role, authority, ambition, and visible life direction.",
+      "♐ Sagittarius on the 10th House Example — Sagittarius on the 10th house can show bold public direction, growth through teaching or vision, and career expansion through broader perspective.",
+      "👥 House 11 Card — Explains community, goals, networks, group support, and future plans.",
+      "♑ Capricorn on the 11th House Example — Capricorn in the 11th house can show disciplined long-term goals, serious friendships, strategic alliances, and achievement through structure.",
+      "🌙 House 12 Card — Explains retreat, subconscious patterns, hidden effort, endings, spiritual reflection, and inner healing.",
+      "♒ Aquarius on the 12th House Example — Aquarius in the 12th house can show unconventional inner life, detached healing patterns, hidden insight, and spiritual growth through originality and perspective shifts.",
+      "📖 Show More Purpose — Each house card can open a deeper interpretation modal for fuller astrologer-level insight.",
+      "✨ Why This Screen Is Useful — It helps users understand how the Mars Return affects later life areas that often hold career, social, karmic, and spiritual meaning."
+    ]
+  },
+  {
+    "name": "horoscope_mars_return_dharma_karma",
+    "label": "Mars Return: Dharma & Karma",
+    "description": "A focused screen that explains growth path, higher purpose, karmic lessons, and action-based maturity themes inside the Mars Return cycle.",
+    "group": "Horoscope Toolkit",
+    "subModule": "Mars Return",
+    "purpose": "This section is generated after the Mars Return chart is calculated and the system evaluates purpose-oriented and karmic placements, including the Sun, Jupiter, Saturn, Neptune, Mars, Moon, and important aspects between them. It separates the reading into Dharma and Karma so users can understand both the path of fulfillment and the major lessons that must be faced. The purpose of this screen is to show where courage, self-assertion, service, emotional balance, public direction, discipline, and spiritual growth are most emphasized in the Mars Return cycle.",
+    "bullets": [
+      "✨ Dharma Section — Explains the path of growth, meaning, fulfillment, and the qualities the user is encouraged to develop during the Mars Return.",
+      "🌞 Sun-Based Purpose — Shows how identity, initiative, courage, and self-direction open the path of growth during the cycle.",
+      "♃ Jupiter-Based Expansion — Supportive Jupiter themes can show growth through wisdom, faith, hidden support, learning, and broader perspective.",
+      "🔮 Neptune Link — Helpful Neptune themes can show spiritual insight, inner imagination, dream awareness, and growth through compassion or surrender.",
+      "🪨 Karma Section — Explains karmic lessons, pressure points, emotional burdens, hidden frustration, health discipline, relationship imbalance, and the action lessons that must be faced.",
+      "♄ Saturn Lesson Meaning — Saturn often shows responsibility, structure, work discipline, limits, consequences, and the effort required to mature through action.",
+      "🌙 Moon Tension Meaning — Challenging Moon aspects can point to emotional reactivity, relationship patterns, mood-driven conflict, or the need for better emotional regulation.",
+      "⚖ Balance of Action and Surrender — The screen helps show where direct effort is needed and where restraint, patience, or self-awareness is equally important.",
+      "📖 Show More Purpose — Each Dharma or Karma block can open a deeper explanation for astrologers who want a fuller reading.",
+      "🧠 Why This Screen Is Useful — It helps the user see not only what is opening up in the Mars cycle, but also what must be managed, healed, and strengthened for wise action."
+    ]
+  },
+  {
+    "name": "horoscope_mars_return_aspects_table",
+    "label": "Mars Return: Aspects Table",
+    "description": "A technical aspect table showing planetary relationships, orb closeness, degree differences, and exactness indicators in the Mars Return chart.",
+    "group": "Horoscope Toolkit",
+    "subModule": "Mars Return",
+    "purpose": "This screen is generated after the Mars Return chart is calculated and the system compares planets and points to find major aspects. It presents a structured table showing the aspected planet, the aspecting planet, orb, degree difference, exact degrees, and aspect type. It also includes a proximity color legend so astrologers can quickly see whether an aspect is extremely exact, just past, just before, or farther from exactness. The purpose of this screen is to give a precise technical overview of the most important aspect relationships shaping the Mars Return cycle.",
+    "bullets": [
+      "🔭 Aspect Proximity Indicator — The color key shows how close each aspect is to exact, helping astrologers judge strength and immediacy quickly.",
+      "🪐 Aspected Planet Column — Shows the planet or point receiving the aspect.",
+      "☀ Aspecting Planet Column — Shows the planet creating the aspect relationship.",
+      "📏 Orb Column — Shows how far the aspect is from exactness, which strongly affects its intensity.",
+      "📐 Diff Column — Shows the degree separation difference used to verify the aspect relationship.",
+      "🎯 Aspect Type Column — Shows whether the relationship is a conjunction, sextile, trine, square, opposition, and so on.",
+      "🏛 Point Inclusion — The table may include special points such as the Ascendant or Midheaven, not only planets.",
+      "🧠 Why This Table Is Useful — It gives astrologers a fast technical scan of the strongest Mars Return dynamics before moving into readable aspect cards.",
+      "⚖ Exactness Value — Very close aspects usually have stronger and more immediate influence in the Mars Return cycle.",
+      "🚀 Practical Use — Useful for advanced chart work, precise aspect analysis, client explanation, and identifying the dominant energetic patterns of the Mars Return."
+    ]
+  },
+  {
+    "name": "horoscope_mars_return_aspect_cards",
+    "label": "Mars Return: Aspect Interpretation Cards",
+    "description": "Readable aspect cards that explain the main Mars Return aspects in simple language, including practical meaning and orb influence.",
+    "group": "Horoscope Toolkit",
+    "subModule": "Mars Return",
+    "purpose": "This section is generated after the system calculates the major Mars Return aspects and selects the strongest or most meaningful ones for interpretation. Each aspect is turned into a separate readable card, such as Sun conjunction Mercury or Sun sextile Jupiter. The cards explain the aspect type, the two planets involved, and the practical meaning of that energy during the Mars Return cycle. The purpose of this screen is to help users understand the strongest aspect themes without needing to read the full technical table.",
+    "bullets": [
+      "☀ Sun Conjunction Mercury Card — Explains strong alignment between identity and communication, quick thinking, self-expression, confidence in ideas, and the risk of over-identifying with personal opinions.",
+      "☀ Sun Sextile Jupiter Card — Explains natural optimism, growth, confidence, encouragement, wider opportunity, and a more hopeful approach to action and visibility.",
+      "📏 Orb Meaning — The card may mention how close the orb is, helping show whether the aspect is especially strong or more moderate.",
+      "🔗 Aspect Type Meaning — Each card explains the style of the aspect, such as conjunction for blending and intensity or sextile for supportive opportunity.",
+      "💬 Easy Reading Format — Converts technical aspect data into short readable guidance for quick understanding.",
+      "🎯 Real-Life Meaning — Connects the aspect to practical themes such as communication, leadership, confidence, learning, momentum, growth, and self-belief.",
+      "📖 Show More Purpose — Each card can open a deeper modal with fuller interpretation and visual symbolism.",
+      "✨ Why This Screen Is Useful — It gives a user-friendly summary of the strongest aspects shaping the Mars Return cycle."
+    ]
+  },
+  {
+    "name": "horoscope_mars_return_deep_aspect_analysis",
+    "label": "Mars Return: Deep Aspect Analysis",
+    "description": "A detailed interpretation screen for one selected Mars Return aspect, with expanded text and picture representation.",
+    "group": "Horoscope Toolkit",
+    "subModule": "Mars Return",
+    "purpose": "This screen opens when the user clicks Show More on a Mars Return aspect card. The system selects one important aspect and explains it in much greater depth. In the example shown, Sun conjunction Mercury is expanded into a fuller psychological and practical reading. The purpose of this screen is to show how one exact aspect influences identity, communication style, mental speed, confidence, persuasion, focus, and self-expression during the Mars Return cycle, while the picture representation gives a faster symbolic understanding of the blended planetary forces.",
+    "bullets": [
+      "🔗 Selected Aspect Focus — This screen explains one key aspect in depth, such as Sun conjunction Mercury.",
+      "☀ Sun Meaning Layer — The Sun represents identity, purpose, confidence, vitality, visibility, and conscious self-expression.",
+      "☿ Mercury Meaning Layer — Mercury represents thought, communication, learning, logic, writing, speech, analysis, and mental processing.",
+      "☌ Conjunction Meaning Layer — A conjunction shows blending, intensity, direct fusion, and a strong combined expression of the two energies.",
+      "📏 Orb Meaning — The orb helps show how strongly the aspect is active in the Mars Return cycle, with tighter orbs usually feeling stronger.",
+      "🧠 Psychological Interpretation — Explains how the user may experience sharper thinking, quicker self-expression, stronger personal opinions, and a more mentally driven sense of identity.",
+      "🎯 Practical Life Interpretation — Shows how this aspect may appear through speaking up, leadership in communication, strong planning, persuasive expression, faster decision-making, and clear idea ownership.",
+      "🖼 Picture Representation Purpose — The image visually breaks the aspect into Sun qualities, Mercury qualities, and the merged field in the center.",
+      "🌞 Left Visual Field — Shows the Sun-side traits such as ego, purpose, identity, confidence, self-expression, authority, and vitality.",
+      "☿ Right Visual Field — Shows the Mercury-side traits such as logic, thought, ideas, writing, perception, analysis, curiosity, and communication.",
+      "🤝 Center Blend Meaning — Shows the merged aspect qualities such as mental clarity, persuasive speech, articulate identity, quick decision-making, focused expression, and confidence in ideas.",
+      "✨ Why This Screen Is Useful — It helps astrologers and users move beyond the short aspect summary into deeper symbolic and life-level interpretation.",
+      "🚀 Practical Use — Useful for deep client readings, communication analysis, confidence and identity work, and advanced Mars Return aspect interpretation."
+    ]
+  },
+  {
+    "name": "horoscope_mars_return_angles_points",
+    "label": "Mars Return: Ascendant, Midheaven & Vertex",
+    "description": "A focused interpretation screen for the Mars Return Ascendant, Midheaven, and Vertex, showing personal tone, career direction, and pivotal encounter themes.",
+    "group": "Horoscope Toolkit",
+    "subModule": "Mars Return",
+    "purpose": "This section is generated after the Mars Return chart is calculated from the user's date of birth, time of birth, and place of birth. The system identifies important chart points such as the Ascendant, Midheaven, and Vertex, then calculates their exact degrees and zodiac signs inside the Mars Return chart. The purpose of this screen is to help astrologers and users understand the personal tone of the cycle, the public or career direction of the period, and the meaningful encounters or turning points that may arise. It translates exact angular and point data into clear interpretation.",
+    "bullets": [
+      "⬆ Ascendant Degree Meaning — Shows the exact degree of the return Ascendant and explains the user's personal style, instinctive response, outer behavior, and the overall tone of the Mars Return cycle.",
+      "♓ Ascendant in Pisces Example — Pisces rising in the return can show greater intuition, empathy, sensitivity, imagination, and a softer but spiritually aware approach to life.",
+      "🏆 Midheaven Degree Meaning — Shows the exact degree of the Midheaven and explains career direction, ambition, public image, authority path, and visible achievement themes.",
+      "♐ Midheaven in Sagittarius Example — Sagittarius on the Midheaven can show growth through learning, travel, teaching, broad vision, optimism, and a more adventurous public path.",
+      "✨ Vertex Degree Meaning — Shows the exact degree of the Vertex and explains meaningful encounters, fated turning points, and deep transformational relationships or experiences.",
+      "♍ Vertex in Virgo Example — Virgo on the Vertex can show important turning points through service, health, work improvement, practical duty, skill refinement, and useful relationships.",
+      "📐 Exact Degree Refinement — The interpretation uses precise degree values to refine how the angular points are expressed and how strongly they may be felt.",
+      "🧠 Why These Points Matter — The Ascendant, Midheaven, and Vertex are major directional points that help explain the personal, public, and fated tone of the Mars Return cycle.",
+      "💬 Easy Reading Format — Converts technical angular and point data into simple practical guidance so users can understand the message clearly.",
+      "🚀 Practical Use — Useful for yearly identity guidance, career forecasting, public-path interpretation, encounter timing, and understanding the strongest directional points of the Mars Return."
+    ]
+  },
+  {
+    "name": "horoscope_mars_return_lilith_information",
+    "label": "Mars Return: Lilith Interpretation",
+    "description": "A focused Lilith screen showing sign, degree, house, speed, retrograde status, and the deeper interpretive meaning of Lilith in the Mars Return chart.",
+    "group": "Horoscope Toolkit",
+    "subModule": "Mars Return",
+    "purpose": "This section is generated after the Mars Return chart is calculated using the user's date of birth, time of birth, and place of birth. The system identifies Lilith's exact sign, degree, house, speed, and retrograde status in the return chart, then translates that placement into a readable interpretation. The purpose of this screen is to help astrologers and users understand the raw, shadow, instinctive, rebellious, and uncompromising themes that may become active during the Mars Return cycle. In the example shown, Lilith in Capricorn in the 10th house highlights themes of ambition, authority tension, public pressure, recognition hunger, and the urge to define one's own path in career and success.",
+    "bullets": [
+      "⚫ Lilith Placement Data — Shows Lilith's sign, full degree, house, normalized degree, speed, and retrograde status for accurate technical interpretation.",
+      "♑ Lilith in Capricorn Meaning — Lilith in Capricorn often emphasizes shadow themes around control, authority, achievement, ambition, social rules, status pressure, and resistance to limitation.",
+      "🏠 Lilith in the 10th House Meaning — The 10th house links Lilith to career, public image, recognition, leadership, reputation, and the user's relationship with authority structures.",
+      "✨ Combined Meaning — Lilith in Capricorn in the 10th house can show intense ambition, discomfort with control, fear of restriction, strong desire for success, and rebellion against career expectations that feel false or oppressive.",
+      "📐 Degree Meaning — The exact degree refines the intensity and tone of the placement, helping astrologers read Lilith with more accuracy.",
+      "⚡ Speed Meaning — Lilith's speed can help describe whether the influence feels more active, subtle, or gradually unfolding in the Mars Return cycle.",
+      "🔁 Retrograde Status — A direct Lilith emphasizes a more outward expression of the shadow theme, while retrograde would indicate a more inward or internalized struggle.",
+      "🧠 Shadow and Authenticity Theme — This screen helps explain where the user may confront suppressed ambition, hidden resentment, power tension, public pressure, or the need for deeper authenticity in career direction.",
+      "💬 Easy Reading Format — Converts technical Lilith data into a direct readable interpretation that users can understand without advanced astrology knowledge.",
+      "🚀 Practical Use — Useful for shadow-work insight, career-pattern analysis, authority tension guidance, public-image reading, and advanced Mars Return interpretation."
+    ]
+  },
+  
+
+      // ------------------Uranus Opposition------------------//
+   
+  {
+    "name": "horoscope_uranus_opposition_entry_setup",
+    "label": "Uranus Opposition: Entry & Generation Setup",
+    "description": "Enter birth details to generate the full Uranus Opposition reading and result screens in sequence.",
+    "group": "Horoscope Toolkit",
+    "subModule": "Uranus Opposition",
+    "purpose": "This is the first screen of the Uranus Opposition module. The user must enter date of birth, time of birth, and place of birth. These three birth details are required because the system uses them to calculate the natal chart accurately and identify the exact natal position of Uranus. After all required birth fields are filled correctly, the Generate Reading button becomes active. Once the user clicks Generate Reading, the platform calculates the upcoming Uranus Opposition period and builds the full Uranus Opposition reading screen by screen. The generated response depends on DOB, TOB, and POB because those details affect natal Uranus sign, degree, house placement, chart angles, house cusps, opposition timing window, return-style chart structure, aspects, liberation themes, life-direction shifts, and all deeper interpretations. This setup screen is important because if birth time or birth place is incorrect, the Uranus Opposition timing, activated life areas, and interpretation may also change.",
+    "bullets": [
+      "📅 Step 1 — Enter Date of Birth: The user enters the birth date so the system can calculate natal planetary positions and locate natal Uranus correctly.",
+      "🕒 Step 2 — Enter Time of Birth: The user enters the exact birth time because Ascendant, house cusps, chart angles, and natal Uranus house placement depend on correct timing.",
+      "📍 Step 3 — Enter Place of Birth: The user enters the birth place so the system can use the correct geographic coordinates and timezone for accurate natal and opposition-cycle chart calculation.",
+      "📝 Step 4 — Area of Inquiry (Optional): The user may enter a focus such as freedom, career change, identity shift, relationships, purpose, reinvention, spiritual awakening, or mid-life transition.",
+      "✅ Step 5 — Generate Reading Activation: After the required birth details are completed correctly, the Generate Reading button becomes enabled.",
+      "📊 Result Screen 1 — Chart View: The system generates the Uranus Opposition wheel charts so the user can visually see the chart structure, planetary placements, and overall aspect pattern.",
+      "📋 Result Screen 2 — Opposition Data & Positions: The platform shows the birth reference, natal Uranus placement, next Uranus Opposition time window, house system, and key planetary positions in the generated chart.",
+      "⚡ Result Screen 3 — Upcoming Uranus Opposition Analysis: The reading explains the general meaning of the Uranus Opposition across life areas such as career, relationships, personal growth, health, family, social life, and spirituality.",
+      "🪐 Result Screen 4 — Planet Information & Planet Cards: The system shows detailed planetary data and then generates readable interpretation cards for important planets such as Moon, Mercury, Venus, Sun, Uranus, and others.",
+      "🔺 Result Screen 5 — Decan Interpretation Modal: If a triangle decan symbol is present on a planet card, the user can open a deeper decan-based image or text interpretation for that placement.",
+      "🏠 Result Screen 6 — House Information & House Cards: The platform shows the house table, house distribution view, and individual house interpretation cards explaining how each life area is reshaped during the Uranus Opposition.",
+      "✨ Result Screen 7 — Dharma, Karma, and Key Themes: The reading highlights purpose themes, karmic lessons, and liberation patterns for deeper awakening-cycle understanding.",
+      "🔗 Result Screen 8 — Aspects, Aspect Cards, and Deep Aspect Analysis: The system shows the technical aspect table, readable aspect summary cards, and deeper aspect modals with symbolic picture representation for major Uranus Opposition aspects."
+    ]
+  },
+  {
+    "name": "horoscope_uranus_opposition_chart",
+    "label": "Uranus Opposition: Chart View",
+    "description": "Visual wheel charts showing the Uranus Opposition pattern and planetary aspect structure.",
+    "group": "Horoscope Toolkit",
+    "subModule": "Uranus Opposition",
+    "purpose": "This screen is generated after the user enters date of birth, time of birth, and place of birth. The system first calculates the natal chart, identifies natal Uranus, then maps the Uranus Opposition period when transiting Uranus reaches the opposite polarity from natal Uranus. After that, it builds the chart and displays it in wheel format. The left wheel shows the full Western chart with signs, houses, planets, and angles. The right wheel highlights the aspect geometry so astrologers can quickly see the pattern of tension, awakening, and breakthrough. The purpose of this screen is to help users understand the structure of the Uranus Opposition visually before moving into deeper interpretation about change, freedom, disruption, reinvention, and life redirection.",
+    "bullets": [
+      "⚡ Uranus Opposition Basis — The chart is built around the life phase when Uranus opposes natal Uranus, often linked with awakening, disruption, independence, and major turning points.",
+      "📅 Birth Data Based Generation — Uses DOB, TOB, and POB to calculate the natal chart, natal Uranus position, and the exact Uranus Opposition timing window.",
+      "🌌 Left Wheel Chart Meaning — Shows the full chart with planets, signs, houses, and angles for complete opposition-cycle interpretation.",
+      "📐 Right Aspect Chart Meaning — Shows planetary aspect geometry so supportive, tense, and breakthrough patterns can be understood more quickly.",
+      "🏠 House Activation Value — Helps reveal which life areas are most strongly reshaped during the Uranus Opposition, such as work, relationships, identity, purpose, freedom, or emotional habits.",
+      "⚡ Why This Screen Is Useful — Gives a visual foundation for the Uranus Opposition reading before the user moves into tables, positions, and narrative interpretation.",
+      "🚀 Practical Use — Useful for awakening-cycle forecasting, life-change analysis, freedom themes, reinvention planning, and understanding the overall energetic structure of the Uranus Opposition."
+    ]
+  },
+  {
+    "name": "horoscope_uranus_opposition_positions",
+    "label": "Uranus Opposition: Opposition Data & Positions",
+    "description": "A technical summary of the Uranus Opposition chart, including birth reference, opposition period, and major planetary placements.",
+    "group": "Horoscope Toolkit",
+    "subModule": "Uranus Opposition",
+    "purpose": "This screen is generated after the system calculates the user's Uranus Opposition from date of birth, time of birth, and place of birth. It presents the core technical data needed for interpretation, including birth details, house system, natal Uranus position, next Uranus Opposition period, and the sign-house placements of key planets and points in the generated chart. The purpose of this screen is to give astrologers a quick structural overview of the Uranus Opposition before moving into narrative analysis. It helps users see exactly where Uranus is being opposed, which houses are activated, and which planets are especially important in this cycle of awakening and change.",
+    "bullets": [
+      "📅 Birth Reference Row — Shows the user's date of birth, place of birth, and time of birth used to calculate the natal and Uranus Opposition charts.",
+      "🏛 House System — Shows which house system is used for the interpretation, such as Whole Sign.",
+      "⚡ Uranus At Birth — Shows natal Uranus' original sign, degree, and house, which becomes the anchor point for calculating the opposition cycle.",
+      "🔄 Next Uranus Opposition Period — Shows the future time window when transiting Uranus opposes natal Uranus and the major awakening cycle becomes active.",
+      "📍 Positions Section — Lists the major placements of Ascendant, Uranus, Moon, Sun, Mercury, Venus, Mars, Jupiter, Saturn, Neptune, Pluto, Nodes, and other important points.",
+      "🏠 Sign + House Meaning — Each placement shows not only the zodiac sign but also the life area where that force becomes active in the cycle.",
+      "🧠 Why This Screen Is Useful — Gives a precise technical map of the Uranus Opposition chart so deeper interpretation can be built on clearly visible placements.",
+      "🚀 Practical Use — Useful for astrologers, advanced users, technical chart checking, and preparing the deeper Uranus Opposition reading."
+    ]
+  },
+  {
+    "name": "horoscope_uranus_opposition_analysis_v1",
+    "label": "Uranus Opposition: Upcoming Cycle Analysis",
+    "description": "A life-area reading of the upcoming Uranus Opposition, explaining how the cycle may affect identity, career, relationships, family, health, social life, and spiritual direction.",
+    "group": "Horoscope Toolkit",
+    "subModule": "Uranus Opposition",
+    "purpose": "This section is generated after the Uranus Opposition chart is calculated from the user's DOB, TOB, and POB. The system analyzes Uranus' sign and house placement, along with major aspects to other chart factors, and translates the result into life-area guidance. This screen explains how the Uranus Opposition may influence general life direction, career shifts, relationship reevaluation, personal awakening, health routines, family changes, social reinvention, and spiritual expansion. The purpose is to turn technical Uranus Opposition placements into a readable roadmap for the years surrounding this major liberation threshold.",
+    "bullets": [
+      "⚡ General Theme — Explains the overall tone of the Uranus Opposition, such as awakening, disruption, freedom, change, reinvention, and release from old limits.",
+      "💼 Career Section — Shows how the cycle may affect professional direction, desire for independence, unconventional work paths, public identity, and career disruption or innovation.",
+      "❤️ Relationship Section — Explains how the cycle may reshape commitment patterns, closeness, autonomy, communication, and relationship expectations.",
+      "🌱 Personal Growth Section — Shows where the user is being challenged to break old patterns, question beliefs, and redefine personal identity.",
+      "🩺 Health Section — Highlights lifestyle change, nervous-system pressure, routine disruption, healing through new methods, and the need for balance and adaptability.",
+      "🏠 Family Section — Explains how home life, family roles, roots, and private emotional foundations may go through sudden shifts or new understanding.",
+      "🤝 Social Section — Shows how communities, friendships, group belonging, and social identity may be restructured during the cycle.",
+      "🔮 Spiritual Section — Explains spiritual awakening, expanded awareness, questioning rigid beliefs, and freedom through deeper insight.",
+      "✨ Why This Screen Is Useful — Gives a broad but practical interpretation of the Uranus Opposition, organized by life area instead of only technical astrology."
+    ]
+  },
+  {
+    "name": "horoscope_uranus_opposition_planet_information",
+    "label": "Uranus Opposition: Planet Information",
+    "description": "A detailed planetary data table showing sign, degree, house, speed, retrograde status, and normalized position for the Uranus Opposition chart.",
+    "group": "Horoscope Toolkit",
+    "subModule": "Uranus Opposition",
+    "purpose": "This screen is generated after the Uranus Opposition chart is calculated using the user's DOB, TOB, and POB. It presents the technical placement data for each important planet and point. The table helps astrologers verify where each body falls by sign and house, how fast it is moving, whether it is retrograde, and how the placement is refined by degree. The purpose of this screen is to support precise interpretation and create the basis for the later narrative planet cards.",
+    "bullets": [
+      "🪐 Planet Column — Shows the planetary body or point being interpreted, such as Moon, Mercury, Venus, Sun, Mars, Jupiter, Saturn, Uranus, Neptune, Pluto, Node, Chiron, or Part of Fortune.",
+      "♈ Sign Column — Shows the zodiac sign where that placement is located.",
+      "📐 Full Degree Column — Shows the exact zodiac longitude of the placement in the Uranus Opposition chart.",
+      "🏠 House Column — Shows which house the placement occupies, revealing where that energy acts most strongly in life.",
+      "📏 Norm Degree Column — Shows the degree inside the sign itself, helping refine whether the placement is early, middle, or late in expression.",
+      "⚡ Speed Column — Shows how quickly the planet is moving, helping interpret whether the energy is active, slow, steady, or highly emphasized.",
+      "🔁 Retro Column — Shows whether the placement is retrograde, indicating a more inward, reflective, delayed, or revisiting expression.",
+      "🧠 Why This Table Is Useful — Gives astrologers a clean technical reference before moving into interpretive cards and deeper analysis.",
+      "🚀 Practical Use — Useful for accurate chart reading, technical validation, advanced astrology work, and building deeper Uranus Opposition interpretations."
+    ]
+  },
+  {
+    "name": "horoscope_uranus_opposition_planet_cards",
+    "label": "Uranus Opposition: Planet Interpretation Cards",
+    "description": "Readable Uranus Opposition interpretation cards for each planet, combining sign, house, degree, speed, retrograde status, and optional decan marker.",
+    "group": "Horoscope Toolkit",
+    "subModule": "Uranus Opposition",
+    "purpose": "This section is generated after the Uranus Opposition chart is calculated using the user's date of birth, time of birth, and place of birth. The system creates a separate interpretation card for each important placement and translates raw chart values into practical meaning. Each card combines the planet, zodiac sign, house, full degree, normalized degree, speed, and retrograde status into an easy-to-read explanation. Some cards also show a small triangle symbol, which means a decan-based interpretation is available. The purpose of this screen is to let users understand the Uranus Opposition one placement at a time without needing to read the full chart at once.",
+    "bullets": [
+      "🌙 Moon Card Meaning — Explains the emotional tone of the cycle, instinctive responses, security needs, mood intensity, and where emotional change is strongest.",
+      "🧠 Mercury Card Meaning — Explains thinking style, communication pattern, intuition, relationship dialogue, and how ideas are expressed during the Uranus Opposition.",
+      "♀ Venus Card Meaning — Explains values, attraction, pleasure, beauty, relationships, belief-based desire, and how connection is reshaped in the cycle.",
+      "🌞 Sun Card Meaning — Explains identity, confidence, self-expression, partnership focus, and the main life purpose emphasized during the Uranus Opposition.",
+      "⚡ Uranus Card Meaning — Explains the core theme of the cycle: liberation, disruption, awakening, freedom, unpredictability, and authentic self-renewal.",
+      "♈ Sign + House Synthesis — Each card combines sign and house to explain both how the energy behaves and where it acts most strongly.",
+      "📐 Degree Meaning — Uses exact degree and normalized degree to refine the tone and maturity of the interpretation.",
+      "⚡ Speed Meaning — Uses planetary speed to show whether the influence is swift, intense, steady, or slow-building.",
+      "🔁 Retrograde Layer — Adds inward, reflective, revisiting, or delayed themes when a placement is retrograde.",
+      "🔺 Decan Indicator — A small triangle near the planet name means a deeper decan interpretation can be opened for that placement.",
+      "📖 Show More Purpose — The Show More action opens a deeper modal with expanded meaning, symbolism, and refined interpretation.",
+      "✨ Why This Screen Is Useful — Makes the Uranus Opposition easy to read planet by planet for both astrologers and general users."
+    ]
+  },
+  {
+    "name": "horoscope_uranus_opposition_decan_modal",
+    "label": "Uranus Opposition: Planet Decan Interpretation",
+    "description": "A deeper symbolic interpretation screen that explains a planet's decan meaning through imagery, tarot-style association, and mythic symbolism.",
+    "group": "Horoscope Toolkit",
+    "subModule": "Uranus Opposition",
+    "purpose": "This screen appears when the user clicks the triangle symbol on a Uranus Opposition planet card, indicating that a decan interpretation is available. The system first calculates the chart from DOB, TOB, and POB, then checks the exact degree of the selected planet and determines which 10-degree decan of the zodiac sign it belongs to. In the example shown, the Sun is placed in Aries and linked to a specific Aries decan image and text layer. The purpose of this screen is to give a more refined layer of meaning beyond sign and house by using decan symbolism, visual imagery, tarot-style correspondences, mundane themes, and mythic associations.",
+    "bullets": [
+      "🔺 Decan Trigger Meaning — This modal opens only when the selected placement has a decan marker available.",
+      "📐 What a Decan Means — Each zodiac sign is divided into 3 decans of 10 degrees each, and the exact degree decides which decan the planet belongs to.",
+      "🌞 Planet Decan Focus — The screen explains how the selected planet, such as the Sun, expresses itself in a more nuanced way inside that decan.",
+      "♈ Sign Base Meaning — The base sign gives the main psychological and energetic tone, while the decan adds a secondary influence that refines it.",
+      "🃏 Tarot Layer — The modal may connect the decan to a tarot-style card image to symbolize the deeper psychological or spiritual meaning of the placement.",
+      "🏛 Mundane Force Theme — A concept such as virtue, courage, recognition, aspiration, growth, or moral power may be used to explain the real-world style of the decan.",
+      "🏺 Greek or Mythic Figure Layer — Mythic figures add archetypal meaning and make the decan easier to understand symbolically.",
+      "🖼 Image Representation Purpose — The image helps users grasp the decan visually through symbolism rather than only text.",
+      "🧠 Why This Screen Is Useful — It explains why two people with the same planet in the same sign can still express it differently depending on exact degree.",
+      "📖 Text Toggle Purpose — The modal can allow users to switch between image and text mode for a clearer learning experience.",
+      "🚀 Practical Use — Useful for advanced Uranus Opposition reading, refined planet interpretation, symbolic teaching, and deep astrological analysis."
+    ]
+  },
+  {
+    "name": "horoscope_uranus_opposition_house_information",
+    "label": "Uranus Opposition: House Information",
+    "description": "A technical house-cusp table showing the sign and degree of all 12 houses in the Uranus Opposition chart.",
+    "group": "Horoscope Toolkit",
+    "subModule": "Uranus Opposition",
+    "purpose": "This screen is generated after the Uranus Opposition chart is calculated from the user's date of birth, time of birth, and place of birth. It lists all 12 houses, the zodiac sign on each house cusp, and the exact cusp degree. The purpose of this screen is to give astrologers a clear structural map of the Uranus Opposition chart before the house meanings are expanded into narrative interpretation. It shows which signs rule which life areas during the awakening cycle and where the main themes of reinvention, relationship change, work shifts, purpose, and freedom are organized.",
+    "bullets": [
+      "🏠 House Column — Shows each house from House 1 to House 12.",
+      "♈ Sign Column — Shows the zodiac sign ruling each house cusp in the Uranus Opposition chart.",
+      "📐 Degree Column — Shows the exact zodiac degree for each house cusp, refining interpretation and chart precision.",
+      "⬆ 1st House / Ascendant Value — Reveals the personal tone, instinctive style, self-presentation, and overall approach to the Uranus Opposition cycle.",
+      "💰 2nd House Value — Shows how money, values, self-worth, and material stability are affected during the cycle.",
+      "🗣 3rd House Value — Shows communication, learning, decision-making, nearby environment, and daily mental activity themes.",
+      "🏆 10th House Value — Shows career, public image, ambition, authority, and visible life direction.",
+      "🧠 Why This Table Is Useful — It helps astrologers see the full house structure before reading the detailed house cards.",
+      "📊 Technical Reading Support — Useful for verifying cusp signs and building accurate house-based interpretation.",
+      "🚀 Practical Use — Useful for advanced chart reading, house analysis, client work, and understanding how the Uranus Opposition organizes life themes."
+    ]
+  },
+  {
+    "name": "horoscope_uranus_opposition_house_cards_part_1",
+    "label": "Uranus Opposition: House Interpretation Cards — Part 1",
+    "description": "Readable house-by-house cards showing how the early houses of the Uranus Opposition chart shape identity, values, communication, home, and creativity.",
+    "group": "Horoscope Toolkit",
+    "subModule": "Uranus Opposition",
+    "purpose": "This section is generated after the Uranus Opposition chart is calculated and the system identifies the sign placed on each house cusp. The platform then creates short interpretation cards for the houses, explaining what each life area means and how the ruling sign colors that part of the Uranus Opposition cycle. This screen includes the visual house-distribution map and the first set of house cards, such as House 1 through House 5. The purpose is to help users understand the cycle in life-area form instead of reading the whole chart all at once.",
+    "bullets": [
+      "📊 House Distribution Map — The top visual layout shows where planets fall across the 12 houses, helping astrologers see concentration and life-area emphasis quickly.",
+      "🏠 House 1 Card — Explains identity, self-image, first impression, personal style, and how the user enters the Uranus Opposition cycle.",
+      "♍ Virgo Rising Example — Virgo rising can show careful self-observation, detail-focus, practical analysis, and stronger attention to health, wellness, and improvement.",
+      "💰 House 2 Card — Explains values, money, possessions, self-worth, and how material security is handled during the cycle.",
+    "📖 Show More Purpose — Each house card can open a deeper modal with fuller interpretation for that specific house.",
+      "✨ Why This Screen Is Useful — It breaks the Uranus Opposition into early life-area cards so the user can understand the cycle in a structured and simple way."
+    ]
+  },
+  
+  {
+    "name": "horoscope_uranus_opposition_dharma_karma",
+    "label": "Uranus Opposition: Dharma & Karma",
+    "description": "A focused screen that explains growth path, higher purpose, karmic lessons, and awakening themes inside the Uranus Opposition cycle.",
+    "group": "Horoscope Toolkit",
+    "subModule": "Uranus Opposition",
+    "purpose": "This section is generated after the Uranus Opposition chart is calculated and the system evaluates purpose-oriented and karmic placements, including Venus, Sun, Jupiter, Saturn, Uranus, Neptune, Nodes, and important aspects between them. It separates the reading into Dharma and Karma so users can understand both the path of fulfillment and the major lessons that must be faced. The purpose of this screen is to show where purpose, freedom, belief expansion, relational growth, responsibility, aspiration, and karmic release are most emphasized in the Uranus Opposition cycle.",
+    "bullets": [
+      "✨ Dharma Section — Explains the path of growth, meaning, fulfillment, and the qualities the user is encouraged to develop during the Uranus Opposition.",
+      "♀ Venus-Based Purpose — Shows how values, beauty, relationship wisdom, learning, and meaningful experience can guide the path of purpose.",
+      "☀ Sun + Jupiter Support — Helpful Sun-Jupiter themes can show confidence, expansion, belief growth, travel, knowledge, generosity, and alignment with a larger vision.",
+      "⚡ Uranian Opportunity — Supportive Uranus links can show growth through unconventional paths, innovation, authenticity, and openness to new experience.",
+      "🪨 Karma Section — Explains karmic lessons, pressure points, old habits, duty patterns, aspiration conflicts, and the discipline required to move forward with clarity.",
+      "♄ Saturn Lesson Meaning — Saturn often shows responsibility, long-term realism, maturity, limits, and the work needed to stabilize freedom.",
+      "☋ South Node Meaning — The South Node can point to old tendencies, sacrifice patterns, over-service, confusion, or habits that must be released for healthier growth.",
+      "⚖ Freedom vs Structure — The screen helps show where liberation must be balanced with responsibility, discipline, and clearer life direction.",
+      "📖 Show More Purpose — Each Dharma or Karma block can open a deeper explanation for astrologers who want a fuller reading.",
+      "🧠 Why This Screen Is Useful — It helps the user see not only what is opening up in the Uranus cycle, but also what must be released, disciplined, and understood for true awakening."
+    ]
+  },
+  {
+    "name": "horoscope_uranus_opposition_aspects_table",
+    "label": "Uranus Opposition: Aspects Table",
+    "description": "A technical aspect table showing planetary relationships, orb closeness, degree differences, and exactness indicators in the Uranus Opposition chart.",
+    "group": "Horoscope Toolkit",
+    "subModule": "Uranus Opposition",
+    "purpose": "This screen is generated after the Uranus Opposition chart is calculated and the system compares planets and points to find major aspects. It presents a structured table showing the aspected planet, the aspecting planet, orb, degree difference, exact degrees, and aspect type. It also includes a proximity color legend so astrologers can quickly see whether an aspect is extremely exact, just past, just before, or farther from exactness. The purpose of this screen is to give a precise technical overview of the most important aspect relationships shaping the Uranus Opposition cycle.",
+    "bullets": [
+      "🔭 Aspect Proximity Indicator — The color key shows how close each aspect is to exact, helping astrologers judge strength and immediacy quickly.",
+      "🪐 Aspected Planet Column — Shows the planet or point receiving the aspect.",
+      "☀ Aspecting Planet Column — Shows the planet creating the aspect relationship.",
+      "📏 Orb Column — Shows how far the aspect is from exactness, which strongly affects its intensity.",
+      "📐 Diff Column — Shows the degree separation difference used to verify the aspect relationship.",
+      "🎯 Aspect Type Column — Shows whether the relationship is a trine, sextile, square, conjunction, opposition, and so on.",
+      "🏛 Point Inclusion — The table may include special points such as the Midheaven, not only planets.",
+      "🧠 Why This Table Is Useful — It gives astrologers a fast technical scan of the strongest Uranus Opposition dynamics before moving into readable aspect cards.",
+      "⚖ Exactness Value — Very close aspects usually have stronger and more immediate influence in the Uranus Opposition cycle.",
+      "🚀 Practical Use — Useful for advanced chart work, precise aspect analysis, client explanation, and identifying the dominant energetic patterns of the Uranus Opposition."
+    ]
+  },
+  {
+    "name": "horoscope_uranus_opposition_aspect_cards",
+    "label": "Uranus Opposition: Aspect Interpretation Cards",
+    "description": "Readable aspect cards that explain the main Uranus Opposition aspects in simple language, including practical meaning and orb influence.",
+    "group": "Horoscope Toolkit",
+    "subModule": "Uranus Opposition",
+    "purpose": "This section is generated after the system calculates the major Uranus Opposition aspects and selects the strongest or most meaningful ones for interpretation. Each aspect is turned into a separate readable card, such as Sun trine Jupiter, Sun trine Saturn, Venus square Saturn, or Venus sextile Uranus. The cards explain the aspect type, the two planets involved, and the practical meaning of that energy during the Uranus Opposition cycle. The purpose of this screen is to help users understand the strongest aspect themes without needing to read the full technical table.",
+    "bullets": [
+      "☀ Sun Trine Jupiter Card — Explains optimism, growth, opportunity, broader vision, confidence, and supportive expansion during the awakening cycle.",
+      "☀ Sun Trine Saturn Card — Explains discipline, stability, responsibility, maturity, and constructive structure that supports long-term progress.",
+      "♀ Venus Square Saturn Card — Explains tension between love or desire and responsibility, showing where patience, realism, and emotional maturity are required.",
+      "♀ Venus Sextile Uranus Card — Explains supportive change in relationships, freedom in values, fresh experiences, and openness to unconventional connection.",
+      "📏 Orb Meaning — The card may mention how close the orb is, helping show whether the aspect is especially strong or more moderate.",
+      "🔗 Aspect Type Meaning — Each card explains the style of the aspect, such as trine for easy flow, square for challenge, or sextile for supportive opportunity.",
+      "💬 Easy Reading Format — Converts technical aspect data into short readable guidance for quick understanding.",
+      "🎯 Real-Life Meaning — Connects the aspect to practical themes such as confidence, relationships, structure, opportunity, awakening, and change management.",
+      "📖 Show More Purpose — Each card can open a deeper modal with fuller interpretation and visual symbolism.",
+      "✨ Why This Screen Is Useful — It gives a user-friendly summary of the strongest aspects shaping the Uranus Opposition cycle."
+    ]
+  },
+  {
+    "name": "horoscope_uranus_opposition_deep_aspect_analysis",
+    "label": "Uranus Opposition: Deep Aspect Analysis",
+    "description": "A detailed interpretation screen for one selected Uranus Opposition aspect, with expanded text and picture representation.",
+    "group": "Horoscope Toolkit",
+    "subModule": "Uranus Opposition",
+    "purpose": "This screen opens when the user clicks Show More on a Uranus Opposition aspect card. The system selects one important aspect and explains it in much greater depth. In the example shown, Sun trine Jupiter is expanded into a fuller psychological and practical reading. The purpose of this screen is to show how one exact aspect influences identity, optimism, generosity, expansion, timing, belief, and visible growth during the Uranus Opposition cycle, while the picture representation gives a faster symbolic understanding of the blended planetary forces.",
+    "bullets": [
+      "🔗 Selected Aspect Focus — This screen explains one key aspect in depth, such as Sun trine Jupiter.",
+      "☀ Sun Meaning Layer — The Sun represents identity, purpose, confidence, vitality, visibility, and conscious self-expression.",
+      "♃ Jupiter Meaning Layer — Jupiter represents growth, wisdom, generosity, opportunity, faith, learning, expansion, and abundance.",
+      "△ Trine Meaning Layer — A trine shows ease, harmony, natural flow, encouragement, and constructive support between two energies.",
+      "📏 Orb Meaning — The orb helps show how strongly the aspect is active in the Uranus Opposition cycle, with tighter orbs usually feeling stronger.",
+      "🧠 Psychological Interpretation — Explains how the user may experience stronger hope, wider perspective, open-hearted confidence, and a natural ability to grow through change.",
+      "🎯 Practical Life Interpretation — Shows how this aspect may appear through opportunity, recognition, learning, success, belief expansion, or confidence in taking the next step.",
+      "🖼 Picture Representation Purpose — The image visually breaks the aspect into Sun qualities, Jupiter qualities, and the merged field in the center.",
+      "🌞 Left Visual Field — Shows the Sun-side traits such as brilliance, clarity, identity, radiance, confidence, source energy, and visible purpose.",
+      "♃ Right Visual Field — Shows the Jupiter-side traits such as expansion, learning, generosity, joy, travel, philosophy, aspiration, and blessing.",
+      "🤝 Center Blend Meaning — Shows the merged aspect qualities such as optimism, wisdom, harmony, opportunity, confidence, prosperity, abundance, and balanced growth.",
+      "✨ Why This Screen Is Useful — It helps astrologers and users move beyond the short aspect summary into deeper symbolic and life-level interpretation.",
+      "🚀 Practical Use — Useful for deep client readings, growth-cycle analysis, confidence and belief work, and advanced Uranus Opposition aspect interpretation."
+    ]
+  },
+
+  {
+    "name": "horoscope_uranus_opposition_angles_points",
+    "label": "Uranus Opposition: Ascendant, Midheaven & Vertex",
+    "description": "A focused interpretation screen for the Uranus Opposition Ascendant, Midheaven, and Vertex, showing personal tone, career direction, and pivotal encounter themes.",
+    "group": "Horoscope Toolkit",
+    "subModule": "Uranus Opposition",
+    "purpose": "This section is generated after the Uranus Opposition chart is calculated from the user's date of birth, time of birth, and place of birth. The system identifies important chart points such as the Ascendant, Midheaven, and Vertex, then calculates their exact degrees and zodiac signs inside the Uranus Opposition chart. The purpose of this screen is to help astrologers and users understand the personal tone of the cycle, the public or career direction of the period, and the meaningful encounters or turning points that may arise. It translates exact angular and point data into clear interpretation.",
+    "bullets": [
+      "⬆ Ascendant Degree Meaning — Shows the exact degree of the opposition Ascendant and explains the user's personal style, instinctive response, outer behavior, and the overall tone of the Uranus Opposition cycle.",
+      "♓ Ascendant in Pisces Example — Pisces rising in the opposition chart can show greater intuition, empathy, sensitivity, imagination, and a softer but spiritually aware approach to life.",
+      "🏆 Midheaven Degree Meaning — Shows the exact degree of the Midheaven and explains career direction, ambition, public image, authority path, and visible achievement themes.",
+      "♐ Midheaven in Sagittarius Example — Sagittarius on the Midheaven can show growth through learning, travel, teaching, broad vision, optimism, and a more adventurous public path.",
+      "✨ Vertex Degree Meaning — Shows the exact degree of the Vertex and explains meaningful encounters, fated turning points, and deep transformational relationships or experiences.",
+      "♍ Vertex in Virgo Example — Virgo on the Vertex can show important turning points through service, health, work improvement, practical duty, skill refinement, and useful relationships.",
+      "📐 Exact Degree Refinement — The interpretation uses precise degree values to refine how the angular points are expressed and how strongly they may be felt.",
+      "🧠 Why These Points Matter — The Ascendant, Midheaven, and Vertex are major directional points that help explain the personal, public, and fated tone of the Uranus Opposition cycle.",
+      "💬 Easy Reading Format — Converts technical angular and point data into simple practical guidance so users can understand the message clearly.",
+      "🚀 Practical Use — Useful for yearly identity guidance, career forecasting, public-path interpretation, encounter timing, and understanding the strongest directional points of the Uranus Opposition."
+    ]
+  },
+
+  {
+    "name": "horoscope_uranus_opposition_lilith_information",
+    "label": "Uranus Opposition: Lilith Interpretation",
+    "description": "A focused Lilith screen showing sign, degree, house, speed, retrograde status, and the deeper interpretive meaning of Lilith in the Uranus Opposition chart.",
+    "group": "Horoscope Toolkit",
+    "subModule": "Uranus Opposition",
+    "purpose": "This section is generated after the Uranus Opposition chart is calculated using the user's date of birth, time of birth, and place of birth. The system identifies Lilith's exact sign, degree, house, speed, and retrograde status in the opposition chart, then translates that placement into a readable interpretation. The purpose of this screen is to help astrologers and users understand the raw, shadow, instinctive, rebellious, and uncompromising themes that may become active during the Uranus Opposition cycle. In the example shown, Lilith in Capricorn in the 10th house highlights themes of ambition, authority tension, public pressure, recognition hunger, and the urge to define one's own path in career and success.",
+    "bullets": [
+      "⚫ Lilith Placement Data — Shows Lilith's sign, full degree, house, normalized degree, speed, and retrograde status for accurate technical interpretation.",
+      "♑ Lilith in Capricorn Meaning — Lilith in Capricorn often emphasizes shadow themes around control, authority, achievement, ambition, social rules, status pressure, and resistance to limitation.",
+      "🏠 Lilith in the 10th House Meaning — The 10th house links Lilith to career, public image, recognition, leadership, reputation, and the user's relationship with authority structures.",
+      "✨ Combined Meaning — Lilith in Capricorn in the 10th house can show intense ambition, discomfort with control, fear of restriction, strong desire for success, and rebellion against career expectations that feel false or oppressive.",
+      "📐 Degree Meaning — The exact degree refines the intensity and tone of the placement, helping astrologers read Lilith with more accuracy.",
+      "⚡ Speed Meaning — Lilith's speed can help describe whether the influence feels more active, subtle, or gradually unfolding in the Uranus Opposition cycle.",
+      "🔁 Retrograde Status — A direct Lilith emphasizes a more outward expression of the shadow theme, while retrograde would indicate a more inward or internalized struggle.",
+      "🧠 Shadow and Authenticity Theme — This screen helps explain where the user may confront suppressed ambition, hidden resentment, power tension, public pressure, or the need for deeper authenticity in career direction.",
+      "💬 Easy Reading Format — Converts technical Lilith data into a direct readable interpretation that users can understand without advanced astrology knowledge.",
+      "🚀 Practical Use — Useful for shadow-work insight, career-pattern analysis, authority tension guidance, public-image reading, and advanced Uranus Opposition interpretation."
+    ]
+  },
+
+  
 
       // Programs
       { 
@@ -3014,71 +5601,101 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
       },
     ],
     screens: [
-      { 
-        name: "overview", 
-        label: "Practitioner CRM", 
-        description: "Overview of today's operations.", 
+      {
+        name: "overview",
+        label: "Practitioner CRM",
+        description: "The full-length command centre for your practice — every signal you need to run your day surfaces here on a single scrolling page. At the top, a banner shows promo opportunities (training, community). Below that, Today's Sessions shows your next appointment date, while Planetary Returns — Next 30 Days lists all upcoming planetary return milestones for your client base with exact dates. A profile completion checklist tracks your setup progress with a percentage bar. Eight stat cards follow: This Month Revenue, This Month Bookings, New Clients, Upcoming sessions, Testimonials rating, Client Retention rate, No-Show Rate, and Follow-Ups Due. A Revenue — Last 6 Months bar chart gives the financial arc at a glance. Then two columns of live widgets round out the page: Upcoming Bookings (next 5 appointments with status badges), Quick Actions (View Bookings, Edit Profile, Manage Services, View Live Profile), Check-Ins last 7 days, Gift Certificates outstanding value, Weekly Subscriptions active count, and Active Campaigns with spend vs. budget.",
         group: "My Schedule",
-        purpose: "The primary command center for professional diviners to manage their daily workflow and client load.",
+        purpose: "The primary command center for professional diviners to manage their daily workflow, revenue, and client load.",
         bullets: [
-          "Real-time overview of today's appointments",
-          "Quick-access to recent client interactions",
-          "Pending reading request notifications",
-          "Daily revenue and session velocity stats"
+          "Today's Sessions — shows the date of your next confirmed session; 'No sessions today' if the day is clear",
+          "Planetary Returns — Next 30 Days — lists every upcoming Mars/Jupiter/Saturn return across your client roster with dates",
+          "Complete Your Profile checklist — tracks 6 setup tasks (photo, tagline, Stripe, bio, specialties, testimonial, calendar) with a progress bar",
+          "This Month Revenue / Bookings / New Clients / Upcoming — four top stat cards with month-over-month comparison arrows",
+          "Testimonials / Client Retention / No-Show Rate / Follow-Ups Due — four operational health cards",
+          "Revenue — Last 6 Months — bar chart of monthly earnings for the trailing six months with a Full Report link",
+          "Upcoming Bookings — your next confirmed and pending sessions with client, service, date/time, and status badge",
+          "Quick Actions — one-click shortcuts: View Bookings, Edit Profile, Manage Services, View Live Profile",
+          "Check-Ins (Last 7 Days) — recent leads captured from your live session check-in page with dates",
+          "Gift Certificates — count of unredeemed certificates and their total remaining value",
+          "Weekly Subscriptions — count of currently active weekly subscribers",
+          "Active Campaigns — affiliate campaigns running now with spend vs. budget per campaign"
         ]
       },
-      { 
-        name: "calendar", 
-        label: "Session Calendar", 
-        description: "Map of upcoming readings.", 
+      {
+        name: "calendar",
+        label: "Session Calendar",
+        description: "The live calendar view of your practice schedule — every confirmed booking, available window, and blocked slot displayed across Day, Week, and Month layouts. The page header is titled 'Availability' and shows your public booking link with a one-click copy button. A colour legend at the top distinguishes Available slots (teal background fill), Booked sessions (amber blocks with title), and Blocked windows. Action buttons along the top bar let you Block Day Off, Add Special Hours, or Create Manual Booking without leaving the calendar. Session blocks show the service name and client, and the week navigator arrows let you move forward and backward through your schedule.",
         group: "My Schedule",
-        purpose: "A high-precision scheduling interface for managing personal availability and upcoming consultations.",
+        purpose: "A real-time visual map of your schedule so you can manage availability, spot gaps, and create bookings without switching between pages.",
         bullets: [
-          "Dynamic weekly and monthly session views",
-          "One-click availability overrides and holidays",
-          "Automated session remainder status tracking",
-          "Direct integration with live broadcast scheduling"
+          "Day / Week / Month toggle — switch between views to zoom in on today or survey the full month",
+          "Booking link banner — your public booking URL displayed at the top with a Copy Link button for sharing",
+          "Available window fill — teal background shows your configured open hours as a visual layer behind sessions",
+          "Booked session blocks — amber blocks with service name displayed; today is highlighted with an accent border",
+          "Block Day Off button — marks an entire day as unavailable in one click",
+          "Add Special Hours button — create a one-off availability window outside your regular schedule",
+          "Create Manual Booking button — add a booking directly from the calendar without a client self-booking",
+          "Week navigation — arrow controls to move between weeks; current week shown as default on page load",
+          "Calendar Connections shortcut — button in the header to jump to Google/Outlook calendar sync settings",
+          "Manage Weekly Schedule shortcut — button to edit your recurring availability windows"
         ]
       },
-      { 
-        name: "client-detail", 
-        label: "Client Spiritual Twin", 
-        description: "Comprehensive client history.", 
+      {
+        name: "client-detail",
+        label: "Client Spiritual Twin",
+        description: "The deepest view of any individual client on the platform — a single screen that assembles everything you know about one person before you sit down together. At the top, the client's avatar, full name, birth data, and natal chart thumbnail give you the astrological context immediately. Below that, a tabbed layout separates their complete session history, your private notes, their intake form responses, their birth chart in full, and a synastry comparison with your own chart if you have loaded yours. The session history table shows every past reading — date, type, duration, amount paid, and a link to the notes you wrote afterwards — so you carry full continuity into every future session without needing to ask the client to recap.",
         group: "Business",
         purpose: "A deep-dive clinical interface providing the full spiritual and interaction history for a specific client.",
         bullets: [
-          "Natal chart and transit history archive",
-          "Private practitioner notes and session logs",
-          "Client-specific compatibility and synastry data",
-          "Reading frequency and loyalty metrics"
+          "Client header — avatar, full name, email, birth date, birth time, and birth city displayed at a glance",
+          "Natal chart thumbnail — a miniature chart wheel rendered from the client's birth data, click to expand to full screen",
+          "Session history tab — every completed and upcoming booking with date, service type, duration, amount, and notes link",
+          "Private notes tab — your personal notes across all sessions with this client, newest at the top",
+          "Intake responses tab — all pre-session questionnaire answers the client has submitted, linked to their booking",
+          "Full birth chart tab — the complete natal chart wheel with planet positions, house cusps, and aspect grid",
+          "Synastry tab — a side-by-side comparison of the client's chart with yours, showing major relationship aspects",
+          "Loyalty and stats — total sessions with you, total spend, average session frequency, and first session date"
         ]
       },
-      { 
-        name: "broadcast", 
-        label: "Live Hub", 
-        description: "Streaming and chat interface.", 
+      {
+        name: "broadcast",
+        label: "Live Hub",
+        description: "Your professional broadcast studio for hosting live astrology sessions, group rituals, community gatherings, and subscriber-only events. The Live Hub is divided into three panels: a pre-live setup area where you configure your stream title, access level, recording preference, and thumbnail; the live stage itself with your camera feed, stream health indicator, viewer count, and a one-click start button; and a post-broadcast dashboard showing replay view counts, peak concurrent viewers, and check-ins captured during the event. Upcoming scheduled broadcasts appear at the top as countdown cards so followers know what is coming and you never start a session without an audience primed.",
         group: "Engagement",
         purpose: "The professional broadcast studio for hosting live sessions, rituals, and community gatherings.",
         bullets: [
-          "Integrated WebRTC live streaming controls",
-          "Real-time moderated community chat",
-          "Active viewer list and engagement triggers",
-          "One-click recording and archive dispatch"
+          "Scheduled broadcasts — upcoming live events shown as countdown cards with title, date, and RSVP count",
+          "Pre-live setup panel — set title, description, access level (public / members / paid), and recording toggle",
+          "Thumbnail upload — add a cover image shown in the live schedule and on your profile during the event",
+          "Go Live button — starts the stream and notifies followers who opted in to live alerts",
+          "Stream health indicator — live bitrate, frame rate, and latency gauge so you catch quality issues immediately",
+          "Viewer count — real-time count of active viewers updating every 10 seconds",
+          "Moderated chat — live audience chat with mod tools to mute or remove disruptive participants",
+          "Recording — automatic or manual recording with status light; saved recordings appear in the archive on stream end",
+          "Check-in capture — viewers who enter their name and email during the broadcast are logged as leads",
+          "Post-broadcast stats — total unique viewers, peak concurrent, average watch time, and check-ins captured"
         ]
       },
-      { 
-        name: "payouts", 
-        label: "Billing & Payouts", 
-        description: "Financial transparency.", 
+      {
+        name: "payouts",
+        label: "Billing & Payouts",
+        description: "Your complete financial record on the platform — every dollar earned, every platform fee deducted, every payout transferred to your bank, and every commission owed to affiliates, laid out transparently in one screen. The top of the page shows four headline figures: your current pending balance (earnings processed but not yet transferred), your total earnings to date, your total platform fees paid, and your next scheduled payout date. Below that, a transaction log breaks down every session by date, client, gross charge, platform fee percentage, and your net take-home. A separate Payouts tab shows each bank transfer with its Stripe transfer ID and settlement timestamp. The Tax tab calculates your estimated tax reserve at your configured percentage so you are never caught short at year-end.",
         group: "Business",
         purpose: "Ensures full financial clarity for practitioners regarding their platform earnings and transfer history.",
         bullets: [
-          "Real-time pending balance tracking",
-          "Detailed commission and fee breakdown",
-          "Historical payout bank transfer logs",
-          "Tax summary and financial year reports"
+          "Pending balance — earnings processed and awaiting the next payout cycle transfer to your bank",
+          "Total earned — cumulative gross earnings on the platform since account creation",
+          "Total fees paid — cumulative platform fee (percentage) deducted across all sessions",
+          "Next payout date — when the pending balance will be transferred based on your payout schedule",
+          "Transaction log — every completed session with date, client name, gross amount, fee, and net earnings",
+          "Payouts tab — each bank transfer with Stripe transfer ID, amount, currency, and settlement date",
+          "Tax reserve tab — estimated tax liability at your configured rate with year-to-date tracking",
+          "Filter by date range — narrow the transaction log to any period for reconciliation or export",
+          "Download CSV — export the full transaction log or payout history for your accountant or tax filing"
         ]
       },
+      
       {
         name: "finance",
         label: "Finance Dashboard",
@@ -3231,20 +5848,21 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
       },
       {
         name: "mktcontent",
-        label: "Content Management",
-        description: "Create and manage marketing content — images, videos, and caption templates — that you upload to social media to drive bookings. Write a caption once with dynamic placeholders for your username and booking link, then select the platforms you want to post to and preview how it will look before publishing.",
+        label: "Social Media Marketing",
+        description: "Your Push-to-Share marketing hub where the platform delivers branded cosmic content tied to real planetary events every day, and you share it to all your social platforms in 30 seconds. The page is built around four tabs: Push-to-Share (the daily content delivery), Content Library (all past packages), Upcoming (what content is queued for future events), and Share Tracking (engagement data across platforms). A 'Today's Shares' banner shows whether today's content is ready or still being prepared. Below that, the three-step flow explains how it works — the platform sends content triggered by planetary events, you tap Share Hub to distribute to all your connected platforms at once, and the system tracks which platforms you shared to and when. Email and SMS notification toggles let you choose how you are alerted when new content is ready. A Share History table below logs every past content package with its planetary event name, platform icons, date, and a Share Hub button to reshare.",
         group: "Marketing & Growth",
-        purpose: "Produce ready-to-post social content that consistently promotes your practice.",
+        purpose: "Distribute daily branded planetary content across all social platforms in one tap to maintain a consistent marketing presence without writing copy.",
         bullets: [
-          "Title field — give the content piece a name for your own library reference (e.g. 'Mercury Retrograde Awareness Post')",
-          "Media upload — drag and drop PNG, JPG, or MP4 files up to 50 MB; supports images and short video clips",
-          "Caption Template — write your post copy using {username} and {link} placeholders that auto-fill at share time",
-          "Available variables listed — {username} and {link} are shown as clickable hints below the caption field",
-          "Platform selection — toggle Instagram, Twitter / X, YouTube, TikTok, and Facebook individually",
-          "Preview panel — shows a real-time preview of how the caption looks with placeholders resolved",
-          "Content Tips sidebar — best-practice reminders (square images for IG, keep captions under 280 chars for Twitter, post peak hours)",
-          "Saved content library — all uploaded pieces appear below the form for reuse or editing",
-          "Share directly — once saved, each content piece has a one-click share button per selected platform"
+          "Today's Shares banner — shows whether today's cosmic content package is ready or still being prepared (check back at 10am UTC)",
+          "Push-to-Share tab — the main daily content delivery view with the Share Hub button",
+          "Content Library tab — all historical content packages you can browse and reshare",
+          "Upcoming tab — preview content packages queued for future planetary events",
+          "Share Tracking tab — engagement and reach data for each shared content package",
+          "Three-step explainer — We Send Content → You Tap Share → We Track It, shown on first use",
+          "Email Notifications toggle — turn on/off email alerts when new daily content is ready",
+          "SMS Notifications toggle — requires phone number in Settings; delivers a text when content drops",
+          "Share History — table of past packages with planetary event name, platforms shared, date, and reshare button",
+          "Share Hub — opens the sharing panel for a specific content package showing all connected platform options"
         ]
       },
       {
@@ -3348,17 +5966,73 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
       {
         name: "phone-session-flow",
         label: "Phone Session Flow",
-        description: "Initiate and manage phone-based reading sessions using the platform's built-in Chime telephony integration. Clients call a platform-managed number; you receive the call through your connected phone without sharing your personal number.",
-        group: "Engagement",
-        purpose: "Not every client is comfortable with video, and phone readings are a significant portion of the market. This flow handles the entire phone session experience — the client dials a platform number, the call routes to you, and both sides are protected. Your personal phone number is never exposed. Calls can optionally be recorded with client consent, and the session is logged automatically in your booking record.",
+        description: "Receive phone-based reading sessions via the platform's Chime telephony. Clients call your assigned Chime number; you answer from your web dashboard or personal phone (simultaneous ring) — your personal number is never exposed to the client.",
+        group: "Phone & Calling",
+        purpose: "Not every client is comfortable with video, and phone readings are a significant portion of the market. This flow handles the entire phone session — the client dials a platform number, the call routes to you via web and/or your mobile phone depending on your answer mode, and both sides are protected. Your personal phone number is never exposed to the client.",
         bullets: [
-          "Platform phone number — clients call a dedicated Chime-managed number assigned to your profile",
-          "Incoming call alert — a browser notification appears when the client calls at their session time",
-          "Accept or decline — answer the call from your dashboard without picking up a separate device",
-          "Call recording (optional) — record the call with client consent; recording is saved to the session record",
-          "Call duration timer — see elapsed call time so you manage session length correctly",
-          "Post-call session log — the system logs call start time, duration, and outcome automatically",
-          "International support — phased rollout supporting US first, then UK, AU, and Germany in subsequent phases"
+          "Platform phone number — clients call a dedicated Chime-managed number assigned to your profile by the admin",
+          "Answer mode — admin configures 'Browser Widget', 'Mobile Phone', or 'Both' (simultaneous ring) for how you receive calls",
+          "Incoming call alert — a browser notification and ringtone play in your dashboard when a client calls",
+          "Simultaneous ring — if 'Both' mode is enabled, your personal phone rings at the same time as the web widget",
+          "Accept from web — click the green Answer button on the incoming call popup to answer directly in the browser",
+          "Accept from phone — pick up your personal phone to answer; the web widget auto-dismisses",
+          "Post-call session log — the system logs call start time, duration, and outcome automatically"
+        ]
+      },
+      {
+        name: "diviner_phone_widget_idle",
+        label: "Phone Widget — Idle State",
+        description: "The Chime phone widget on your diviner dashboard in its idle state — showing your assigned phone number and readiness indicator. This widget is always visible when you have a Chime number assigned.",
+        group: "Phone & Calling",
+        purpose: "The idle widget confirms that your phone line is active and ready to receive calls. It shows the number clients should dial and confirms your answer mode setting.",
+        bullets: [
+          "Assigned Chime number displayed — the E.164 number clients will dial to reach you",
+          "Answer mode indicator — shows whether calls ring on web, phone, or both",
+          "Status: Ready — confirms the telephony connection is healthy and waiting for calls",
+          "Widget auto-hides if admin has not yet assigned a Chime number to your profile"
+        ]
+      },
+      {
+        name: "diviner_phone_widget_ringing",
+        label: "Phone Widget — Incoming Call",
+        description: "The phone widget in ringing state — a client is calling your Chime number. The widget shows the caller info, plays a ringtone, and displays accept/decline buttons. A browser push notification also appears.",
+        group: "Phone & Calling",
+        purpose: "When a client dials your Chime number, this is what you see. The ringing state gives you the caller's info and lets you answer with one click. If simultaneous ring is on, your personal phone also rings at the same time.",
+        bullets: [
+          "Caller info displayed — shows the client's phone number (or name if matched to a booking)",
+          "Accept button (green) — click to answer the call in your browser using WebRTC audio",
+          "Decline button (red) — sends the caller to a 'diviner unavailable' message",
+          "Ringtone plays — audible ring in the browser tab so you notice even if the tab is in the background",
+          "Browser push notification — a system notification pops up outside the browser window",
+          "Simultaneous ring — if 'Both' mode is on, your personal phone also rings at the same time",
+          "Auto-timeout — if no answer within 90 seconds, the call is released and the client hears a message"
+        ]
+      },
+      {
+        name: "diviner_phone_widget_active",
+        label: "Phone Widget — Active Call",
+        description: "The phone widget during an active call — showing call duration, mute/unmute toggle, and end call button. This is the in-call experience when you answered from the web dashboard.",
+        group: "Phone & Calling",
+        purpose: "Once you accept the call, the widget switches to active mode. You can see how long the call has been going, mute yourself if needed, and end the call cleanly when the session is done.",
+        bullets: [
+          "Call timer — elapsed time displayed so you manage session length",
+          "Mute/unmute toggle — mute your microphone without ending the call",
+          "End call button — cleanly terminates the call and triggers post-session logging",
+          "Audio indicator — visual feedback showing when audio is flowing in both directions"
+        ]
+      },
+      {
+        name: "diviner_phone_answer_mobile",
+        label: "Simultaneous Ring — Answer from Phone",
+        description: "When answer mode is set to 'Both', your personal phone rings at the same time as the web widget. If you pick up your phone, the web widget automatically dismisses and the client is bridged to your phone call.",
+        group: "Phone & Calling",
+        purpose: "Simultaneous ring means you never miss a call — even if you're away from your computer. The platform dials your personal phone in parallel. When you answer your phone, the system joins you into the Chime meeting and bridges the waiting client automatically.",
+        bullets: [
+          "Personal phone rings — your mobile rings with a call from the Chime platform number",
+          "Answer your phone — pick up normally; the system joins you to the meeting automatically",
+          "Web widget auto-dismisses — once you answer on your phone, the dashboard ringing stops",
+          "Client bridged in — the waiting client is connected to you within seconds of you answering",
+          "Your personal number stays hidden — the client only ever sees the platform Chime number"
         ]
       },
       {
@@ -3815,6 +6489,171 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Session count selector and eligible service types multi-select",
           "Bundle price field with automatic per-session savings calculation shown to the diviner",
           "Expiry window selector: 30, 60, 90, or 180 days from purchase date"
+        ]
+      },
+      {
+        name: "orders",
+        label: "My Orders",
+        description: "A complete transaction log of every order and payment placed by your clients — one-time session bookings, package purchases, gift certificate sales, and subscription charges all appear here. Four stat cards at the top give an instant snapshot: Total Orders all time, Completed orders with total value, Pending orders awaiting payment, and Refunded orders. A search bar lets you find any order by client name, email, service name, or Stripe payment ID. A date-range picker narrows the view to a specific period. The sortable table below shows every order row with Client, Service, Amount, Status, Date, and an Actions column for opening the full order detail.",
+        group: "My Practice",
+        purpose: "Track every payment and order your clients have placed so you can reconcile revenue, chase unpaid orders, and handle refund requests from one screen.",
+        bullets: [
+          "Total Orders — all-time count of orders across all types (sessions, packages, subscriptions, gift certs)",
+          "Completed — count and total value of fully paid and delivered orders",
+          "Pending — orders placed but not yet paid; click to see which clients need a payment nudge",
+          "Refunded — orders that have been reversed; click to see the refund reason and Stripe refund ID",
+          "Search bar — find any order instantly by client name, email, service name, or Stripe payment ID",
+          "Date range picker — filter the table to any custom date range for period reporting",
+          "Status filter dropdown — narrow to All Statuses, Completed, Pending, Refunded, or Cancelled",
+          "Sortable table — columns for Client, Service, Amount, Status (with colour badge), Date, and Actions",
+          "Actions column — open the full order detail to see line items, payment method, and refund controls"
+        ]
+      },
+      {
+        name: "clients-list",
+        label: "Clients",
+        description: "Your full client roster — every person who has ever booked a session with you, in one searchable, sortable table. Four stat cards at the top show Total Clients (all time), Active Clients (had a session in the last 30 days), Total Sessions completed across all clients, and Total Revenue from your client base. A search bar filters by name or email. Each row in the table shows the client's avatar, name, birth date, session count, total spend, date of first session, date of last session, and a Details button to open their full profile.",
+        group: "Clients",
+        purpose: "A bird's-eye view of your entire client base so you can spot your most loyal clients, identify who hasn't booked recently, and access any client's full profile in one click.",
+        bullets: [
+          "Total Clients — count of all unique clients who have ever booked with you",
+          "Active (30 days) — clients who had at least one session in the last 30 days",
+          "Total Sessions — cumulative completed session count across your entire client roster",
+          "Total Revenue — sum of all payments received from clients",
+          "Search by name or email — instant filter across your roster as you type",
+          "Birth Date column — client's birth date shown for quick reference without opening their profile",
+          "Sessions column — total completed sessions with this diviner, sortable ascending or descending",
+          "Spent column — lifetime spend per client, sortable to identify your highest-value relationships",
+          "First Session / Last Session columns — useful for spotting clients who have gone quiet",
+          "Details button — opens the full Client Detail screen with chart, session history, and notes"
+        ]
+      },
+      {
+        name: "rituals",
+        label: "My Rituals",
+        description: "Create and manage your configured Perennial ritual sessions — structured spiritual experiences you build once and offer to clients or run during live events. The page lists all your saved rituals with their title, status, and a playback link. A '+ Create New Ritual' button opens the ritual builder where you define the ritual's name, steps, timing cues, and resources. Each ritual can be played back during a live session or sent to a client as a guided practice.",
+        group: "Content & Media",
+        purpose: "Build reusable spiritual ritual experiences that you can run during live sessions, share with clients, or offer as standalone content products.",
+        bullets: [
+          "Ritual list — all configured rituals shown with title and current status",
+          "Create New Ritual button — opens the ritual builder to define name, steps, and resources",
+          "Ritual playback — each ritual has a playback view you can open during a live session for guided delivery",
+          "Status indicator — shows whether a ritual is Draft, Active, or Archived",
+          "Perennial rituals — rituals tied to the Perennial Mandalism spiritual framework used across the platform",
+          "Reusable format — build a ritual once and run it with any client or audience without rebuilding it each time"
+        ]
+      },
+      {
+        name: "mundane-diviner",
+        label: "Mundane Astrology",
+        description: "A world-astrology research workspace giving diviners access to geopolitical entity tracking, open forecasting projects, active sky alerts, and research notes — all tied to real planetary transits. Five stat cards at the top show Watched Entities, Today's Events, Open Forecasts, Active Projects, and Sky — Next 7 Days. The page has four main panels: Today's Sky (a live summary of significant sky events for the day), Watchlist (countries and institutions you are tracking, like Brazil, China, India, European Union, United States), Open Projects (research projects you have created to track specific geopolitical or economic themes), and Active Alerts (system-generated planetary alerts for your watched entities). A Recent Notes sidebar shows the latest entries from your mundane research journal. The toolbar at the top lets you filter by astrological tradition: Traditional, Ancient, Vedic, Hybrid, or Hellenistic.",
+        group: "Content & Tools",
+        purpose: "Use mundane astrology tools to research world events, build forecasting projects around real planetary transits, and deepen your practice beyond personal chart readings.",
+        bullets: [
+          "Watched Entities — count of countries, institutions, and public figures you are actively tracking",
+          "Today's Events — number of significant planetary events affecting your watchlist entities today",
+          "Open Forecasts — research forecasts you have started but not yet completed or published",
+          "Active Projects — live research projects tracking specific geopolitical, economic, or election themes",
+          "Sky — Next 7 Days — count of notable sky events in the coming week across your watchlist",
+          "Today's Sky panel — current planetary positions and any major sky events for today with interpretive notes",
+          "Watchlist panel — your tracked entities (countries, institutions) with a Manage button to add or remove",
+          "Open Projects panel — list of active research projects with status badges and links to full project pages",
+          "Active Alerts — system alerts for planetary events affecting your watched entities (Medium / Low / High severity)",
+          "Recent Notes — your latest research journal entries with excerpts and links to full notes",
+          "Tradition tabs — filter all data through Traditional, Ancient, Vedic, Hybrid, or Hellenistic frameworks"
+        ]
+      },
+      {
+        name: "subscriptions-manage",
+        label: "Weekly Subscriptions",
+        description: "Manage your weekly subscription product, your subscriber list, and your delivery history all from one screen. The active subscription product is shown at the top as a card — name, price per month, status, and an Edit button. Six stat cards follow: Active Subscribers, Deliveries Sent, Email Opt-outs, Payment Issues, Failed Deliveries, and Last Delivery date. Below the stats, two tabs separate the view: Subscribers (the list of everyone subscribed, with their payment status, email receipt setting, join date, and cancellation date if applicable) and Deliveries (a log of every weekly delivery sent, with date and open/click stats).",
+        group: "Finance & Billing",
+        purpose: "Monitor the health of your subscription product — who is active, who has a payment issue, and which weekly deliveries have been sent successfully.",
+        bullets: [
+          "Subscription product card — shows the product name (e.g. 'Weekly Astrological Insights'), monthly price, and active status",
+          "Edit button — opens the subscription product editor to update name, price, or content",
+          "Active Subscribers — current count of paying, receiving subscribers",
+          "Deliveries Sent — total weekly deliveries dispatched since the subscription launched",
+          "Email Opt-outs — count of subscribers who unsubscribed from delivery emails",
+          "Payment Issues — subscribers with failed or past-due payments; click to see who needs attention",
+          "Failed Deliveries — deliveries that bounced or failed to reach the subscriber",
+          "Last Delivery date — when the most recent weekly delivery was sent",
+          "Subscribers tab — full list with Name/Email, Status (Active / Unpaid / Past Due / Cancelled), Joined, Cancelled date",
+          "Deliveries tab — log of all past deliveries with date and engagement metrics"
+        ]
+      },
+      {
+        name: "gift-certificates",
+        label: "Gift Certificates",
+        description: "Track every gift certificate sold for your services — who bought it, who it was sent to, how much is remaining, and whether it has been redeemed. Four stat cards at the top show Total Sold, Total Revenue from certificates, count Redeemed, and Outstanding Value (total dollar value of unredeemed certificates still in circulation). The full table below shows each certificate with its unique Code, face Amount, Remaining balance, Purchaser name and email, Recipient name and email, Status (Active or Used), Expiry date, and date Issued.",
+        group: "Finance & Billing",
+        purpose: "Monitor your gift certificate programme — understand outstanding liability (unredeemed value), verify redemptions, and see which clients are buying certificates for others.",
+        bullets: [
+          "Total Sold — count of all gift certificates ever issued for your services",
+          "Total Revenue — total dollar amount collected from gift certificate purchases",
+          "Redeemed — count of certificates that have been fully used by the recipient",
+          "Outstanding Value — total remaining dollar value across all active (unredeemed) certificates",
+          "Certificate Code — unique alphanumeric code the recipient uses at checkout (e.g. T02-GIFT-001)",
+          "Amount / Remaining columns — original face value and how much has been used so far",
+          "Purchaser / Recipient columns — who bought the certificate and who received it, with email addresses",
+          "Status badge — Active (available to use) or Used (fully redeemed)",
+          "Expires — date after which the certificate is no longer valid",
+          "Issued — date the certificate was created and sent to the recipient"
+        ]
+      },
+      {
+        name: "analytics",
+        label: "Analytics",
+        description: "A public-profile analytics dashboard showing how prospective clients discover and interact with your diviner page. Eight stat cards at the top cover: Today's page views, This Week page views, Unique Visitors this week, Engagements (booking starts, check-ins, testimonials, subscription starts combined), Booking Starts (clients who began the booking flow), Check-Ins captured (last 30 days), Testimonials submitted (last 30 days), and Subscription Starts. A Views — Last 30 Days bar chart shows daily traffic for the month with a total count. Below the chart, two panels sit side by side: Top Referrers (traffic sources — social platforms, direct, referral links) and Recent Activity (a live feed of the latest public interactions — booking started, check-in submitted, page view, testimonial submitted — each tagged with referral source and the specific page visited).",
+        group: "Finance & Billing",
+        purpose: "Understand how prospective clients find and engage with your public profile so you can focus your marketing on what actually drives bookings.",
+        bullets: [
+          "Today — page views recorded today on your public diviner profile",
+          "This Week — total page views in the current 7-day window",
+          "Unique Visitors — distinct visitor count for the week (deduped by session)",
+          "Engagements — combined count of all meaningful interactions: booking starts, check-ins, testimonials, subscription starts",
+          "Booking Starts — how many visitors clicked through to begin booking a session this month",
+          "Check-Ins — check-in form submissions from your live session pages in the last 30 days",
+          "Testimonials — reviews submitted on your public profile in the last 30 days",
+          "Subscription Starts — weekly subscription checkout initiations",
+          "Views (Last 30 Days) bar chart — daily traffic bars with a total monthly view count",
+          "Top Referrers panel — where your traffic comes from: Instagram, Facebook, TikTok, direct, referral",
+          "Recent Activity feed — timestamped log of booking starts, check-ins, page views, and testimonial submissions with referral source tag"
+        ]
+      },
+      {
+        name: "billing-plan",
+        label: "Billing & Plan",
+        description: "Manage your AstrologyPro platform subscription plan and optional add-ons. The Current Plan section shows your active SaaS plan status — if no plan is active, the Professional Plan ($99/month) is recommended with a 'Get Started' call-to-action. Below the plan card, an Add-Ons section lists optional features you can bolt on to your plan: AI Question Helper ($30/month — AI-powered question suggestions during live readings), Phone Readings ($19/month — enable phone-based sessions billed per minute with automatic invoicing), and Priority Support ($9/month — guaranteed 4-hour response SLA). Each add-on shows its price and an availability badge. A Invoices section (further down) lists past billing receipts.",
+        group: "Account & Profile",
+        purpose: "Control your platform subscription tier and unlock optional capabilities like phone readings and AI reading assistance without contacting support.",
+        bullets: [
+          "Current Plan card — shows active plan name, status, and monthly price; prompts upgrade if no active subscription",
+          "Professional Plan — the recommended plan at $99/month covering bookings, client portal, live sessions, and more",
+          "Get Started button — initiates the subscription checkout flow for the recommended plan",
+          "Add-Ons section — optional features to extend the plan, each listed with price and availability badge",
+          "AI Question Helper add-on — $30/month; surfaces AI-suggested questions during live sessions",
+          "Phone Readings add-on — $19/month; enables phone sessions with per-minute billing and auto-invoicing",
+          "Priority Support add-on — $9/month; guarantees a 4-hour support response SLA",
+          "Subscribe to a plan first — add-ons require an active base plan before they can be enabled",
+          "Invoices — billing history with dates and amounts for each charge on your account"
+        ]
+      },
+      {
+        name: "availability-schedule",
+        label: "Availability (Weekly Schedule)",
+        description: "Define the recurring weekly windows when clients are allowed to book sessions with you. This screen manages your base availability schedule — the repeating pattern of open hours across each day of the week. It is separate from the Calendar View (which shows booked sessions against your availability) and from Blocked Dates (which overrides specific days). Click '+ New Schedule' to create a named schedule with days of the week and time ranges. Multiple schedules can exist — for example, a standard week schedule and a summer schedule — and you activate whichever applies.",
+        group: "Schedule & Availability",
+        purpose: "Set the foundation of your booking calendar by defining which days and hours each week you accept client sessions.",
+        bullets: [
+          "Schedule list — all saved availability schedules with their name and active/inactive status",
+          "New Schedule button — creates a new named schedule with day and time range configuration",
+          "Day toggles — enable or disable individual days of the week for the schedule",
+          "Time range picker — set start and end times for each enabled day (e.g. Mon–Fri 9am–6pm)",
+          "Multiple schedules — create separate schedules for different seasons or service types and switch between them",
+          "Active indicator — the currently live schedule driving your booking calendar is marked as active",
+          "Connection to Calendar — changes here reflect immediately in the teal availability overlay on the Calendar View page",
+          "Connection to Booking Page — your public booking page only shows slots within the active schedule's windows"
         ]
       },
     ],
