@@ -26,18 +26,13 @@ export default async function DashboardVideoPage() {
 
   if (!diviner) redirect("/onboarding");
 
-  if (!isVideoSDKConfigured()) {
-    return (
-      <div className="space-y-6">
-        <h1 className="text-xl font-semibold text-[#f5f0e8]">Video Sessions</h1>
-        <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 px-6 py-8 text-center">
-          <p className="text-sm text-yellow-300">
-            Video reading system not configured. Contact support to enable video sessions.
-          </p>
-        </div>
-      </div>
-    );
-  }
+  // Creation of new video rooms requires VideoSDK API credentials. Historical
+  // `video_sessions` rows, however, live in our own Supabase table and are safe
+  // (and expected) to display regardless of current env configuration. We used
+  // to bail out early here with a "not configured" banner, which hid years of
+  // completed sessions from diviners. Instead: always query the table, and
+  // gate only the "New Session" action via the `canCreateNew` prop.
+  const canCreateNew = isVideoSDKConfigured();
 
   const LIMIT = 20;
   const { data: rawData } = await admin
@@ -73,6 +68,7 @@ export default async function DashboardVideoPage() {
       initialSessions={typedSessions}
       initialNextCursor={nextCursor}
       initialHasMore={hasMore}
+      canCreateNew={canCreateNew}
     />
   );
 }

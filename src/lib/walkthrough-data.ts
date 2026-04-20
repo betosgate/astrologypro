@@ -6252,27 +6252,51 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
         ]
       },
       {
-        name: "service-create-form",
-        label: "Create New Service",
-        description: "Step-by-step form for adding a new reading or session service to the diviner's offering. Captures service name, type (video, phone, chat), duration options, price per duration tier, and a description shown on the public profile.",
+        name: "service-catalog-astrology",
+        label: "Astrology Service Catalog",
+        description: "The Astrology section of the Service Catalog — a curated library of 12 ready-to-publish astrology reading formats that diviners can add to their offering with a single click. Each card shows a colour-coded thumbnail, the default session duration, a suggested starting price (\"from $X\"), a \"birth data\" flag when the reading requires a client's natal chart, and a two-line description of what the reading covers. A green \"Added to your services\" state appears on any service already published; all other cards expose a prominent gold \"+ Add Service\" button that opens the price modal. The section header shows the live count (\"12 available\") and the whole catalog is gated by the diviner's admin-assigned Service Package (shown in the page header as \"Package: Astrology + Tarot\").",
         group: "Services",
-        purpose: "Empowers diviners to expand their offering without admin assistance by walking through all required fields in a structured wizard.",
+        purpose: "Lets diviners publish a professional reading menu in minutes — without writing descriptions, picking durations, or guessing at price — by working from a vetted library of the most common astrology formats. Package gating ensures diviners only see the reading types they are licensed to offer.",
         bullets: [
-          "Service type selector: Video Call, Phone Call, Chat, or In-Person",
-          "Duration and price matrix — add multiple duration tiers (30 min, 60 min, 90 min) each with their own price",
-          "Public description editor with character counter and live profile preview"
+          "Page header surfaces the active Service Package (e.g. \"Astrology + Tarot\") so diviners always know which categories are unlocked for them",
+          "12 astrology templates out of the box: Nativity Birth Chart (90 min, from $175), Solar Return (60 min, from $125), Weekly Transits (30 min, from $65), Monthly Transits + Lunar Return (45 min, from $95), Romantic Relationships (60 min, from $125), Friendship Relationships (60 min, from $125), Business Relationship (60 min, from $125), Predictive Event / Horary (45 min, from $95), Jupiter Return (45 min, from $95), Saturn Return (60 min, from $125), Mars Return (45 min, from $95), Uranus Opposition (60 min, from $125)",
+          "Every card shows: coloured thumbnail, duration, suggested starting price (\"from $X\"), a birth-data badge when the chart is required, and a short description",
+          "\"+ Add Service\" button opens a compact modal to set your price — defaults to the suggested price, fully editable, with a \"Use default\" link to snap back",
+          "Already-published templates show the green \"Added to your services\" state — preventing duplicates and making your current menu obvious at a glance",
+          "Left sidebar navigation — Services sits alongside the full diviner dashboard: Overview, Calendar, Orders, Clients, Check-Ins, Sessions, Landing Pages, Media Gallery, My Rituals, Mundane Astrology, Subscriptions, Intake Builder, Discounts, Gift Certificates, Marketing, Insights, Testimonials",
+          "After adding, a toast prompts the diviner to set availability — because a service without a linked availability window is invisible on the public booking page"
         ]
       },
       {
-        name: "service-edit-form",
-        label: "Edit Service",
-        description: "Edit form for an existing service. Pre-populated with all current settings. Diviners can update price, description, availability toggle, and duration options. Changes take effect on the next booking attempt.",
+        name: "service-catalog-tarot",
+        label: "Tarot Toolkit Catalog",
+        description: "The Tarot Toolkit section of the Service Catalog — 7 ready-to-publish tarot reading formats ranging from quick 3-card question spreads to the classic 10-card Celtic Cross and a 12-card Astrological Spread. Each card shows the spread thumbnail, duration (20–75 min), suggested \"from\" price, a description of the spread layout and what question it answers, and an \"+ Add Service\" button. Cards already added to the diviner's profile show the green \"Added to your services\" state. The 12 Card Astrological Spread is the only tarot template that requires client birth data (flagged with an amber \"birth data\" badge).",
         group: "Services",
-        purpose: "Allows diviners to keep service details accurate as their practice evolves without creating a duplicate service.",
+        purpose: "Gives tarot readers (and hybrid astrology-tarot diviners) a vetted library of the most common reading formats so they can publish a full tarot menu without writing spread descriptions or picking durations by hand.",
         bullets: [
-          "All fields pre-populated with current service data for quick editing",
-          "Active / Paused toggle — pausing hides the service from the public profile without deleting it",
-          "Price change warning: existing confirmed bookings are unaffected, only future bookings use the new price"
+          "7 tarot templates: 3 Card Basic Question Spread (20 min, from $35), 5 Card Complex Question Spread (30 min, from $55), 7 Card 6 Month Forward Review (45 min, from $75), 7 Card Horseshoe Spread / Major Read (45 min, from $75), 10 Card Relationship Spread (60 min, from $95), 10 Card Celtic Cross / Major Read (60 min, from $95), 12 Card Astrological Spread / Major Read (75 min, from $125)",
+          "\"Major Read\" label identifies the deeper, longer-session spreads (horseshoe, celtic cross, astrological) at a glance",
+          "Duration range spans short 20-minute readings up to 75-minute deep dives — so diviners can offer a price-tiered menu without manual configuration",
+          "Suggested prices range from $35 for a 3-card up to $125 for the 12-card astrological spread — aligned with typical market rates",
+          "Birth-data flag on the 12 Card Astrological Spread — signals to both the diviner and the client that this spread integrates the natal chart",
+          "\"Added to your services\" treatment matches the astrology cards — a consistent visual language across the whole catalog",
+          "Section header shows a count pill (\"7 available\") so the diviner sees exactly how many tarot formats the platform ships with"
+        ]
+      },
+      {
+        name: "service-add-modal",
+        label: "Add Service — Price Modal",
+        description: "The \"Add Service\" modal that pops up when a diviner clicks \"+ Add Service\" on any template card in the Astrology or Tarot catalog. A preview chip at the top restates exactly what is being added — the coloured thumbnail, the service name, the duration pill, a category tag (Astrology / Tarot), and an amber \"Requires birth data\" badge where applicable — followed by the full template description so the diviner can confirm the selection without leaving the modal. A single input field, \"Your Price (USD)\", captures the diviner's price and is pre-filled with the platform's suggested amount. A helper line reads \"Suggested: $X\" and a one-click \"Use default\" link snaps the input back to the recommended price at any time. Cancel closes the modal without saving; \"+ Add Service\" publishes the service to the diviner's profile, closes the modal, and fires a success toast that links directly to the Availability page so the new service can be made bookable immediately.",
+        group: "Services",
+        purpose: "Gives diviners complete pricing control on every service — without forcing them to rewrite durations, descriptions, or category metadata. The suggested price anchors new diviners to realistic market rates while the \"Use default\" link and \"you can update it anytime\" reassurance remove the pressure of getting it perfect on the first try.",
+        bullets: [
+          "Modal header: \"Add Service\" title + subtitle \"Set your price for {service name}. You can update it anytime.\"",
+          "Preview chip reflects the exact template being added: thumbnail, duration, category tag, optional \"Requires birth data\" badge, full description",
+          "Price input labelled \"Your Price (USD)\" with a \"$\" prefix, numeric keypad, and 0.01 step — defaults to the platform's suggested price on open",
+          "Helper text \"Suggested: $X\" plus a \"Use default\" link that restores the suggested price in one click",
+          "Footer: \"Cancel\" button (dismiss) + primary \"+ Add Service\" button (publish)",
+          "On success: modal closes, catalog card switches to the green \"Added to your services\" state, and a success toast prompts the diviner to \"Set Availability\" on the new service",
+          "Validation: price must be 0 or greater — the \"+ Add Service\" button is disabled while the input is empty or invalid"
         ]
       },
       {
@@ -6480,15 +6504,19 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
         ]
       },
       {
-        name: "service-bundle-create",
-        label: "Create Service Bundle",
-        description: "Form for creating a multi-session bundle that clients can purchase at a discounted rate. Diviners set the number of sessions, eligible service types, bundle price, and expiry window from the date of purchase.",
+        name: "service-active-list",
+        label: "Your Active Services",
+        description: "A live table at the bottom of the Services page showing every service the diviner has published to their public profile. Each row displays the service thumbnail, category label (Astrology or Tarot), duration, the diviner's configured price, a Status column (Active / Paused) alongside an \"Availability Set\" indicator confirming the service is linked to at least one availability template, and an Actions column for quick visibility and removal. The left edge of every row exposes up/down arrows so the diviner can reorder how services appear to clients on their public booking page. A summary line above the table reads \"N services on your profile — use ↕ arrows to reorder how they appear to clients.\"",
         group: "Services",
-        purpose: "Increases client retention by incentivising commitment to multiple sessions upfront through a structured discount offer.",
+        purpose: "Replaces a full edit modal with fast, inline management — reorder, pause, or remove a service in one click without leaving the catalog view. The \"Availability Set\" status answers the number-one question for a live profile: \"will clients actually be able to book this?\"",
         bullets: [
-          "Session count selector and eligible service types multi-select",
-          "Bundle price field with automatic per-session savings calculation shown to the diviner",
-          "Expiry window selector: 30, 60, 90, or 180 days from purchase date"
+          "Service column — thumbnail + display name + category label (Tarot / Astrology) so diviners recognise each row instantly",
+          "Duration column — the session length locked in at the time of adding (20 / 45 / 60 / 90 minutes, etc.)",
+          "Price column — the diviner's current price in USD, e.g. \"$35.00 · $175.00 · $100.00\"",
+          "Status column pairs two badges: green \"Active\" (service is live on the public profile) + green \"Availability Set\" (at least one matching availability template exists); a missing availability link surfaces as an amber warning banner above the list",
+          "Actions column — eye icon toggles the service active/paused without deleting it; trash icon removes the service from the diviner's profile (does not affect past bookings)",
+          "Reorder arrows on the left edge — up/down controls let the diviner change the order services appear on their public profile, persisted via the services sort_order column",
+          "Header line \"3 services on your profile — use ↕ arrows to reorder how they appear to clients\" reinforces the drag-free reorder pattern and gives an at-a-glance menu size"
         ]
       },
       {
