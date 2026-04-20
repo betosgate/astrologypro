@@ -21,6 +21,8 @@ interface BuilderState {
   sections: LandingPageSection[];
   selectedSectionId: string | null;
   availableSectionTypes: AvailableSectionType[];
+  divinerUsername: string | null;
+  serviceSlug: string | null;
   isSaving: boolean;
   hasUnsavedChanges: boolean;
   lastSavedAt: Date | null;
@@ -29,7 +31,7 @@ interface BuilderState {
 
 type BuilderAction =
   | { type: "SET_LOADING"; payload: boolean }
-  | { type: "SET_DATA"; payload: { page: ServiceLandingPage; sections: LandingPageSection[]; available: AvailableSectionType[] } }
+  | { type: "SET_DATA"; payload: { page: ServiceLandingPage; sections: LandingPageSection[]; available: AvailableSectionType[]; divinerUsername: string | null; serviceSlug: string | null } }
   | { type: "SELECT_SECTION"; payload: string | null }
   | { type: "SET_SAVING"; payload: boolean }
   | { type: "SET_SAVED"; payload: Date }
@@ -50,6 +52,8 @@ function builderReducer(state: BuilderState, action: BuilderAction): BuilderStat
         landingPage: action.payload.page,
         sections: action.payload.sections,
         availableSectionTypes: action.payload.available,
+        divinerUsername: action.payload.divinerUsername,
+        serviceSlug: action.payload.serviceSlug,
         isLoading: false,
       };
     case "SELECT_SECTION":
@@ -96,6 +100,8 @@ const initialState: BuilderState = {
   sections: [],
   selectedSectionId: null,
   availableSectionTypes: [],
+  divinerUsername: null,
+  serviceSlug: null,
   isSaving: false,
   hasUnsavedChanges: false,
   lastSavedAt: null,
@@ -160,6 +166,8 @@ export function BuilderProvider({ templateId, children }: { templateId: string; 
           page: json.landing_page,
           sections: json.sections,
           available: json.available_section_types,
+          divinerUsername: json.diviner?.username ?? null,
+          serviceSlug: json.service_template?.slug ?? null,
         },
       });
     } catch {

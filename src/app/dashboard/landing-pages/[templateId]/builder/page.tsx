@@ -2,7 +2,7 @@
 
 import { use } from "react";
 import Link from "next/link";
-import { ArrowLeft, Eye, Globe, GlobeLock, Loader2, LayoutTemplate } from "lucide-react";
+import { ArrowLeft, Eye, GlobeLock, Loader2, LayoutTemplate } from "lucide-react";
 import { BuilderProvider, useBuilder } from "@/components/dashboard/builder/builder-context";
 import { SectionList } from "@/components/dashboard/builder/section-list";
 import { SectionEditorPanel } from "@/components/dashboard/builder/section-editor-panel";
@@ -31,11 +31,14 @@ function StatusBadge({ status }: { status: string | undefined }) {
 
 // ── Toolbar ────────────────────────────────────────────────────────────────────
 
-function BuilderToolbar({ templateId }: { templateId: string }) {
+function BuilderToolbar() {
   const { state, unpublishPage } = useBuilder();
-  const { landingPage, isSaving, lastSavedAt, isLoading } = state;
+  const { landingPage, divinerUsername, serviceSlug, isSaving, lastSavedAt, isLoading } = state;
 
   const isPublished = landingPage?.status === "published";
+  const previewHref = divinerUsername && serviceSlug
+    ? `/${divinerUsername}/services/${serviceSlug}?preview=true`
+    : null;
 
   return (
     <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.06] bg-cosmos-900/60 backdrop-blur-sm">
@@ -69,7 +72,7 @@ function BuilderToolbar({ templateId }: { templateId: string }) {
       {/* Right: actions */}
       <div className="flex items-center gap-2 flex-shrink-0">
         {/* Preview link — opens the live route with ?preview=true */}
-        {landingPage && (
+        {landingPage && previewHref && (
           <Button
             size="sm"
             variant="ghost"
@@ -77,7 +80,7 @@ function BuilderToolbar({ templateId }: { templateId: string }) {
             className="text-silver/60 hover:text-cream gap-1.5"
           >
             <a
-              href={`/${landingPage.slug ?? templateId}?preview=true`}
+              href={previewHref}
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -152,7 +155,7 @@ export default function BuilderPage({ params }: { params: Promise<{ templateId: 
   return (
     <BuilderProvider templateId={templateId}>
       <div className="min-h-screen bg-cosmos-950 flex flex-col">
-        <BuilderToolbar templateId={templateId} />
+        <BuilderToolbar />
         <BuilderLayout />
       </div>
     </BuilderProvider>
