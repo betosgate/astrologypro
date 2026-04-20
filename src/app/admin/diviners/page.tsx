@@ -1,27 +1,9 @@
-import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { ChimeQuotasBanner } from "@/components/admin/chime-quotas-banner";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Star,
-  Plus,
-  Pencil,
-  Eye,
-  CheckCircle2,
-  XCircle,
-  CalendarCheck,
-  CreditCard,
-} from "lucide-react";
+  DivinerManagementClient,
+  type AdminDiviner,
+} from "@/components/admin/diviner-management-client";
 
 export const metadata = { title: "Diviners — Admin" };
 
@@ -30,114 +12,206 @@ export const metadata = { title: "Diviners — Admin" };
 interface DivinersSearchParams {
   q?: string;
   status?: string;
+  page?: string;
+  pageSize?: string;
+  sortBy?: string;
+  sortDir?: string;
+  joinedFrom?: string;
+  joinedTo?: string;
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function fmtDate(iso?: string | null) {
-  if (!iso) return "—";
-  return new Date(iso).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
-
-function StatusBadge({ isActive, accountStatus }: { isActive: boolean; accountStatus?: string | null }) {
-  const status = accountStatus ?? (isActive ? "active" : "inactive");
-  const s = status.toLowerCase();
-
-  const map: Record<string, string> = {
-    active:    "bg-green-500/10 text-green-700 dark:text-green-400",
-    inactive:  "bg-gray-500/10 text-gray-600",
-    suspended: "bg-amber-500/10 text-amber-700 dark:text-amber-400",
-    locked:    "bg-red-500/10 text-red-700 dark:text-red-400",
-    draft:     "bg-blue-500/10 text-blue-700",
-  };
-  const cls = map[s] ?? "bg-muted text-muted-foreground";
-  return (
-    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${cls}`}>
-      {status}
-    </span>
-  );
-}
+const ALLOWED_PAGE_SIZES = [10, 25, 50, 100];
+const DEFAULT_PAGE_SIZE = 10;
 
 // ─── Data fetch ───────────────────────────────────────────────────────────────
 
-async function getDiviners(params: DivinersSearchParams) {
+async function getDiviners(
+  params: DivinersSearchParams,
+  pageSize: number,
+): Promise<{
+  diviners: AdminDiviner[];
+  total: number;
+  counts: { all: number; active: number; suspended: number };
+}> {
   const admin = createAdminClient();
 
   const q = params.q?.trim() ?? "";
   const statusFilter = params.status ?? "all";
+  const sortBy = params.sortBy ?? "joinedAt";
+  const sortDir = (params.sortDir ?? "desc") as "asc" | "desc";
+  const page = Math.max(1, parseInt(params.page ?? "1", 10));
+  const joinedFrom = params.joinedFrom ?? "";
+  const joinedTo = params.joinedTo ?? "";
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let query: any = admin
-    .from("diviners")
-    .select(
-      "id, user_id, display_name, username, avatar_url, account_status, is_active, " +
-      "charges_enabled, google_calendar_connected, is_certified, onboarding_completed, created_at"
-    )
-    .order("created_at", { ascending: false })
-    .limit(500);
+  // NOTE: `google_calendar_connected` is legacy — the source of truth is the
+  // `calendar_connections` table (migrated in 20260408000110). We no longer
+  // read the legacy column here.
+  //
+  // Reading phone numbers come from either Twilio or AWS Chime depending on
+  // each diviner's `phone_provider`. Surface whichever is provisioned.
+  const selectStr =
+    "id, user_id, display_name, username, avatar_url, account_status, " +
+    "is_active, charges_enabled, is_certified, onboarding_completed, " +
+    "phone, twilio_phone_number, chime_phone_number, phone_provider, " +
+    "created_at";
 
-  if (statusFilter === "active")    query = query.eq("is_active", true);
-  if (statusFilter === "suspended") query = query.eq("account_status", "suspended");
+  // Map UI sort keys → DB columns (keep whitelist for safety)
+  const dbSort: string = (() => {
+    switch (sortBy) {
+      case "name":
+        return "display_name";
+      case "username":
+        return "username";
+      case "isActive":
+        return "is_active";
+      case "joinedAt":
+      default:
+        return "created_at";
+    }
+  })();
 
-  if (q) {
-    query = query.or(
-      `display_name.ilike.%${q}%,username.ilike.%${q}%`
-    );
-  }
+  // Using `any` keeps us compatible with Supabase's chained generics without
+  // having to spell out the full QueryBuilder type for every branch.
+  const buildFiltered = (base: any): any => {
+    let query: any = base;
+    if (statusFilter === "active") query = query.eq("is_active", true);
+    if (statusFilter === "suspended")
+      query = query.eq("account_status", "suspended");
+    if (q) {
+      // Escape commas and special PostgREST chars in q (basic safety)
+      const safe = q.replace(/[,()]/g, " ");
+      query = query.or(
+        `display_name.ilike.%${safe}%,username.ilike.%${safe}%,phone.ilike.%${safe}%`,
+      );
+    }
+    if (joinedFrom) query = query.gte("created_at", joinedFrom);
+    if (joinedTo) query = query.lte("created_at", joinedTo + "T23:59:59Z");
+    return query;
+  };
 
-  const { data: divinersRaw } = await query;
-  const diviners = (divinersRaw ?? []) as Array<Record<string, unknown>>;
+  const start = (page - 1) * pageSize;
+  const end = start + pageSize - 1;
 
-  // Fetch affiliate counts per diviner from user_relationships
-  const userIds = diviners.map((d) => d.user_id as string).filter(Boolean);
+  const [pageRes, allCountRes, activeCountRes, suspendedCountRes] =
+    await Promise.all([
+      // Paginated page + total-with-filters count
+      buildFiltered(admin.from("diviners").select(selectStr, { count: "exact" }))
+        .order(dbSort, { ascending: sortDir === "asc" })
+        .order("id", { ascending: true }) // deterministic tie-breaker
+        .range(start, end),
 
-  let affiliateCountMap: Record<string, number> = {};
-  let emailMap: Record<string, string> = {};
+      // Unfiltered status-tab counts (ignores search — tabs show global totals)
+      admin
+        .from("diviners")
+        .select("id", { count: "exact", head: true }),
+      admin
+        .from("diviners")
+        .select("id", { count: "exact", head: true })
+        .eq("is_active", true),
+      admin
+        .from("diviners")
+        .select("id", { count: "exact", head: true })
+        .eq("account_status", "suspended"),
+    ]);
+
+  const divinersPage = (pageRes.data ?? []) as Array<Record<string, unknown>>;
+  const total = pageRes.count ?? 0;
+
+  const counts = {
+    all: allCountRes.count ?? 0,
+    active: activeCountRes.count ?? 0,
+    suspended: suspendedCountRes.count ?? 0,
+  };
+
+  // ── Resolve emails + affiliate counts + calendar connections for this page ─
+  const userIds = divinersPage
+    .map((d) => d.user_id as string)
+    .filter(Boolean);
+  const divinerIds = divinersPage.map((d) => d.id as string).filter(Boolean);
+
+  const emailMap: Record<string, string> = {};
+  const affiliateCountMap: Record<string, number> = {};
+  const calendarConnectedSet = new Set<string>(); // diviner.id set
 
   if (userIds.length > 0) {
-    const [relRes, authRes] = await Promise.all([
+    const [authRes, relRes, calRes] = await Promise.all([
+      Promise.resolve(
+        admin.rpc("get_auth_users_by_ids", { user_ids: userIds }),
+      ).catch(() => ({ data: [] as unknown[] })),
+
       Promise.resolve(
         admin
           .from("user_relationships")
           .select("parent_user_id")
           .in("parent_user_id", userIds)
-          .eq("relationship_type", "affiliate")
+          .eq("relationship_type", "affiliate"),
       ).catch(() => ({ data: [] as unknown[] })),
 
-      Promise.resolve(
-        admin.rpc("get_auth_users_by_ids", { user_ids: userIds })
-      ).catch(() => ({ data: [] as unknown[] })),
+      // Calendar connections — source of truth since migration
+      // 20260408000110_backfill_calendar_connections. Keyed by owner_id =
+      // diviner.id. A diviner is "connected" if ANY row exists (google or
+      // microsoft) with a refresh_token.
+      divinerIds.length > 0
+        ? Promise.resolve(
+            admin
+              .from("calendar_connections")
+              .select("owner_id")
+              .in("owner_id", divinerIds),
+          ).catch(() => ({ data: [] as unknown[] }))
+        : Promise.resolve({ data: [] as unknown[] }),
     ]);
 
-    for (const rel of ((relRes as { data?: unknown }).data as Array<Record<string, unknown>>) ?? []) {
+    for (const u of (((authRes as { data?: unknown }).data ?? []) as Array<
+      Record<string, unknown>
+    >)) {
+      emailMap[u.user_id as string] = (u.email as string) ?? "";
+    }
+
+    for (const rel of (((relRes as { data?: unknown }).data ?? []) as Array<
+      Record<string, unknown>
+    >)) {
       const pid = rel.parent_user_id as string;
       affiliateCountMap[pid] = (affiliateCountMap[pid] ?? 0) + 1;
     }
 
-    for (const u of ((authRes as { data?: unknown }).data as Array<Record<string, unknown>>) ?? []) {
-      emailMap[u.user_id as string] = u.email as string ?? "";
+    for (const c of (((calRes as { data?: unknown }).data ?? []) as Array<
+      Record<string, unknown>
+    >)) {
+      const ownerId = c.owner_id as string;
+      if (ownerId) calendarConnectedSet.add(ownerId);
     }
   }
 
-  return diviners.map((d) => ({
-    id:                       d.id as string,
-    userId:                   d.user_id as string,
-    displayName:              (d.display_name as string) ?? "—",
-    username:                 (d.username as string) ?? "",
-    email:                    emailMap[d.user_id as string] ?? "",
-    accountStatus:            (d.account_status as string) ?? undefined,
-    isActive:                 !!(d.is_active as boolean),
-    chargesEnabled:           !!(d.charges_enabled as boolean),
-    calendarConnected:        !!(d.google_calendar_connected as boolean),
-    isCertified:              !!(d.is_certified as boolean),
-    onboardingCompleted:      !!(d.onboarding_completed as boolean),
-    affiliateCount:           affiliateCountMap[d.user_id as string] ?? 0,
-    joinedAt:                 d.created_at as string,
-  }));
+  const diviners: AdminDiviner[] = divinersPage.map((d) => {
+    const twilio = (d.twilio_phone_number as string) ?? "";
+    const chime = (d.chime_phone_number as string) ?? "";
+    const provider = (d.phone_provider as string) ?? "twilio";
+    // Active reading number = whichever provider the diviner is set to use
+    const readingNumber =
+      provider === "chime" ? chime || twilio : twilio || chime;
+
+    return {
+      id: d.id as string,
+      userId: d.user_id as string,
+      displayName: (d.display_name as string) ?? "—",
+      username: (d.username as string) ?? "",
+      email: emailMap[d.user_id as string] ?? "",
+      phone: (d.phone as string) ?? "",
+      accountStatus: (d.account_status as string) ?? undefined,
+      isActive: !!(d.is_active as boolean),
+      chargesEnabled: !!(d.charges_enabled as boolean),
+      calendarConnected: calendarConnectedSet.has(d.id as string),
+      phoneConnected: !!readingNumber,
+      phoneProvider: provider,
+      readingPhoneNumber: readingNumber,
+      isCertified: !!(d.is_certified as boolean),
+      onboardingCompleted: !!(d.onboarding_completed as boolean),
+      affiliateCount: affiliateCountMap[d.user_id as string] ?? 0,
+      joinedAt: d.created_at as string,
+    };
+  });
+
+  return { diviners, total, counts };
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -148,175 +222,28 @@ export default async function AdminDivinersPage({
   searchParams: Promise<DivinersSearchParams>;
 }) {
   const params = await searchParams;
-  const diviners = await getDiviners(params);
+  const rawPageSize = parseInt(
+    params.pageSize ?? String(DEFAULT_PAGE_SIZE),
+    10,
+  );
+  const pageSize = ALLOWED_PAGE_SIZES.includes(rawPageSize)
+    ? rawPageSize
+    : DEFAULT_PAGE_SIZE;
 
-  const statusFilter = params.status ?? "all";
-  const STATUS_TABS = ["all", "active", "suspended"];
-
-  const counts: Record<string, number> = {
-    all:       diviners.length,
-    active:    diviners.filter((d) => d.isActive).length,
-    suspended: diviners.filter((d) => d.accountStatus === "suspended").length,
-  };
+  const { diviners, total, counts } = await getDiviners(params, pageSize);
 
   return (
     <div className="space-y-6">
-      {/* ── Chime quotas notice ──────────────────────────────────────────────── */}
+      {/* ── Chime quotas notice ──────────────────────────────────────────── */}
       <ChimeQuotasBanner />
 
-      {/* ── Header ──────────────────────────────────────────────────────────── */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Diviners</h1>
-          <p className="text-sm text-muted-foreground">
-            All astrologers and tarot readers on the platform.
-          </p>
-        </div>
-        <Button size="sm" asChild>
-          <Link href="/admin/invitations?role=diviner">
-            <Plus className="mr-1.5 size-4" />
-            Add Diviner
-          </Link>
-        </Button>
-      </div>
-
-      {/* ── Status filter tabs ───────────────────────────────────────────────── */}
-      <div className="flex gap-1 border-b pb-3">
-        {STATUS_TABS.map((tab) => (
-          <Link
-            key={tab}
-            href={`/admin/diviners${tab === "all" ? "" : `?status=${tab}`}`}
-            className={`rounded-md px-3 py-1.5 text-sm font-medium capitalize transition-colors ${
-              statusFilter === tab
-                ? "bg-amber-500/15 text-amber-600 dark:text-amber-400"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground"
-            }`}
-          >
-            {tab}
-            <Badge
-              variant="secondary"
-              className="ml-1.5 h-5 min-w-5 px-1 text-xs"
-            >
-              {counts[tab] ?? 0}
-            </Badge>
-          </Link>
-        ))}
-      </div>
-
-      {/* ── Table ───────────────────────────────────────────────────────────── */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <Star className="size-4 text-amber-500" />
-            {statusFilter === "all" ? "All Diviners" : `${statusFilter} Diviners`}
-            <Badge variant="secondary" className="ml-1">{diviners.length}</Badge>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {diviners.length === 0 ? (
-            <div className="flex flex-col items-center gap-4 py-16 text-center">
-              <Star className="size-10 text-muted-foreground/30" />
-              <p className="text-muted-foreground">No diviners found.</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Diviner</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>
-                      <span className="flex items-center gap-1" title="Stripe payments connected">
-                        <CreditCard className="size-3.5" />
-                        Stripe
-                      </span>
-                    </TableHead>
-                    <TableHead>
-                      <span className="flex items-center gap-1" title="Google Calendar connected">
-                        <CalendarCheck className="size-3.5" />
-                        Calendar
-                      </span>
-                    </TableHead>
-                    <TableHead>Affiliates</TableHead>
-                    <TableHead>Certified</TableHead>
-                    <TableHead>Joined</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {diviners.map((diviner) => (
-                    <TableRow key={diviner.id}>
-                      <TableCell>
-                        <Link href={`/admin/diviners/${diviner.id}`} className="block hover:underline">
-                          <p className="font-medium text-sm">{diviner.displayName}</p>
-                          <p className="text-xs text-muted-foreground">{diviner.email || `@${diviner.username}`}</p>
-                          {diviner.username && diviner.email && (
-                            <p className="text-xs text-muted-foreground">@{diviner.username}</p>
-                          )}
-                        </Link>
-                      </TableCell>
-                      <TableCell>
-                        <StatusBadge
-                          isActive={diviner.isActive}
-                          accountStatus={diviner.accountStatus}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        {diviner.chargesEnabled ? (
-                          <CheckCircle2 className="size-4 text-green-600" />
-                        ) : (
-                          <XCircle className="size-4 text-muted-foreground/40" />
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {diviner.calendarConnected ? (
-                          <CheckCircle2 className="size-4 text-green-600" />
-                        ) : (
-                          <XCircle className="size-4 text-muted-foreground/40" />
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-sm">{diviner.affiliateCount}</span>
-                      </TableCell>
-                      <TableCell>
-                        {diviner.isCertified ? (
-                          <Badge
-                            variant="outline"
-                            className="bg-amber-500/10 text-amber-700 text-xs"
-                          >
-                            Certified
-                          </Badge>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">—</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
-                        {fmtDate(diviner.joinedAt)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <Button size="sm" variant="ghost" asChild>
-                            <Link href={`/admin/diviners/${diviner.id}`}>
-                              <Eye className="size-3.5" />
-                              <span className="sr-only">View detail</span>
-                            </Link>
-                          </Button>
-                          <Button size="sm" variant="ghost" asChild>
-                            <Link href={`/admin/users/edit/${diviner.userId}`}>
-                              <Pencil className="size-3.5" />
-                              <span className="sr-only">Edit</span>
-                            </Link>
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      <DivinerManagementClient
+        diviners={diviners}
+        total={total}
+        counts={counts}
+        pageSize={pageSize}
+        searchParams={params}
+      />
     </div>
   );
 }

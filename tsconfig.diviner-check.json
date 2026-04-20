@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "next-env.d.ts",
+    "src/app/admin/diviners/page.tsx",
+    "src/components/admin/diviner-management-client.tsx",
+    "src/components/admin/chime-quotas-banner.tsx",
+    "src/lib/supabase/admin.ts"
+  ]
+}
