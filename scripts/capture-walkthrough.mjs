@@ -109,6 +109,54 @@ async function resolveFirstTrainingEditHref(page, entity) {
   return `${BASE}${config.buildHref(best)}`;
 }
 
+async function resolveFirstTraineeTrainingHref(page, entity) {
+  const result = await page.evaluate(async () => {
+    const res = await fetch("/api/trainee/training/programs", {
+      credentials: "include",
+    });
+    if (!res.ok) return { ok: false, programs: [] };
+    const json = await res.json();
+    return { ok: true, programs: json.programs ?? [] };
+  });
+
+  if (!result.ok || !result.programs.length) return null;
+
+  const sortedPrograms = [...result.programs].sort((a, b) => {
+    const aStarted = a.completed_lessons > 0 || a.progress_pct > 0 ? 1 : 0;
+    const bStarted = b.completed_lessons > 0 || b.progress_pct > 0 ? 1 : 0;
+    if (aStarted !== bStarted) return bStarted - aStarted;
+    return (a.priority ?? 0) - (b.priority ?? 0);
+  });
+
+  const program =
+    sortedPrograms.find((item) => Array.isArray(item.categories) && item.categories.length > 0) ??
+    sortedPrograms[0];
+  if (!program?.id) return null;
+
+  if (entity === "program") {
+    return `${BASE}/trainee/training/${program.id}`;
+  }
+
+  const categories = Array.isArray(program.categories) ? program.categories : [];
+  const category =
+    categories.find((item) => !item.is_locked && Array.isArray(item.lessons) && item.lessons.length > 0) ??
+    categories.find((item) => Array.isArray(item.lessons) && item.lessons.length > 0);
+  if (!category?.id) return `${BASE}/trainee/training/${program.id}`;
+
+  if (entity === "category") {
+    return `${BASE}/trainee/training/${program.id}/${category.id}`;
+  }
+
+  const lessons = Array.isArray(category.lessons) ? category.lessons : [];
+  const lesson =
+    lessons.find((item) => !item.is_locked && !item.completed) ??
+    lessons.find((item) => !item.is_locked) ??
+    lessons[0];
+  if (!lesson?.id) return `${BASE}/trainee/training/${program.id}/${category.id}`;
+
+  return `${BASE}/trainee/training/${program.id}/${category.id}/${lesson.id}`;
+}
+
 async function navigateForScreen(page, screen) {
   if (typeof screen.resolveUrl === "function") {
     const resolved = await screen.resolveUrl(page);
@@ -249,11 +297,27 @@ const roles = [
   },
   {
     slug: "trainee",
-    email: "demo.astrologer@astrologypro.com",
-    password: "DemoAstro2026!",
+    email: "trainee4@test.astrologypro.com",
+    password: "TestUser123!",
     screens: [
       { name: "trainee-hub", url: "/trainee", label: "Trainee Dashboard" },
-      { name: "curriculum", url: "/trainee/curriculum", label: "Learning Path" },
+      { name: "training-center", url: "/trainee/training", label: "Training Center" },
+      {
+        name: "program-workspace",
+        label: "Program Workspace",
+        resolveUrl: async (page) => resolveFirstTraineeTrainingHref(page, "program"),
+      },
+      {
+        name: "lesson-detail",
+        label: "Lesson Viewer",
+        resolveUrl: async (page) => resolveFirstTraineeTrainingHref(page, "lesson"),
+      },
+      { name: "progress", url: "/trainee/progress", label: "Progress Tracker" },
+      { name: "quiz-history", url: "/trainee/quiz-history", label: "Quiz History" },
+      { name: "resources", url: "/trainee/resources", label: "Learning Resources" },
+      { name: "sessions", url: "/trainee/sessions", label: "Practice Sessions" },
+      { name: "graduation", url: "/trainee/training/graduation", label: "Graduation Readiness" },
+      { name: "trainee-profile", url: "/trainee/profile", label: "Trainee Profile" },
     ],
   },
 ];
