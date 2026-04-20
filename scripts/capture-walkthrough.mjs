@@ -172,6 +172,13 @@ async function resolveFirstTraineeTrainingHref(page, entity) {
   return `${BASE}/trainee/training/${program.id}/${category.id}/${lesson.id}`;
 }
 
+async function resolveTraineeCertificateHref(page) {
+  await page.goto(`${BASE}/trainee/certificate`, { waitUntil: "networkidle", timeout: 30000 });
+  await waitForStableView(page, 3000);
+
+  return page.url().includes("/trainee/certificate") ? page.url() : null;
+}
+
 async function navigateForScreen(page, screen) {
   if (typeof screen.resolveUrl === "function") {
     const resolved = await screen.resolveUrl(page);
@@ -336,6 +343,11 @@ const roles = [
       { name: "resources", url: "/trainee/resources", label: "Learning Resources" },
       { name: "sessions", url: "/trainee/sessions", label: "Practice Sessions" },
       { name: "graduation", url: "/trainee/training/graduation", label: "Graduation Readiness" },
+      {
+        name: "certificate",
+        label: "Certificate of Completion",
+        resolveUrl: async (page) => resolveTraineeCertificateHref(page),
+      },
       { name: "trainee-profile", url: "/trainee/profile", label: "Trainee Profile" },
     ],
   },
@@ -365,12 +377,15 @@ async function captureRole(browser, role) {
   
   const page = await context.newPage();
 
-  if (role.email) {
-    console.log(`  Logging in as ${role.slug} (${role.email})...`);
+  const loginEmail = process.env.WALKTHROUGH_EMAIL?.trim() || role.email;
+  const loginPassword = process.env.WALKTHROUGH_PASSWORD || role.password;
+
+  if (loginEmail) {
+    console.log(`  Logging in as ${role.slug} (${loginEmail})...`);
     try {
       await page.goto(`${BASE}/login`, { waitUntil: "networkidle" });
-      await page.fill('input[type="email"]', role.email);
-      await page.fill('input[type="password"]', role.password);
+      await page.fill('input[type="email"]', loginEmail);
+      await page.fill('input[type="password"]', loginPassword);
       await page.click('button[type="submit"]');
 
       const sessionReady = await waitForAuthSession(context, 15000);

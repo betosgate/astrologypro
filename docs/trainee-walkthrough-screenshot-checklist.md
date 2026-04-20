@@ -24,9 +24,9 @@ Not part of current active walkthrough:
 - Standalone notifications, mentor chat, schedule, bookmarks, badge wall, glossary, peer community, and help screens — no matching `/trainee/*` routes exist currently.
 - Separate training category and lesson detail deep links — the current learner flow uses the program workspace with inline lesson viewing; the detail-view navigation is not active in the UI.
 
-Manual screenshot required:
+Conditional capture:
 
-- `certificate.png` — `/trainee/certificate` is real, but it is only accessible for graduated trainees. The current automated trainee account redirects to `/trainee/progress`, so provide a graduated trainee screenshot manually or run the capture with a graduated trainee account.
+- `certificate.png` — `/trainee/certificate` is real, but it is only accessible for graduated trainees. The capture script skips it for incomplete trainees and captures it only when run with a graduated trainee account. Current screenshot was captured with the graduated trainee QA account.
 
 ## Capture Rules
 
@@ -107,7 +107,7 @@ Manual screenshot required:
 
 ### 9. `certificate.png`
 - Route: `/trainee/certificate`
-- Capture mode: manual unless a graduated trainee account is available.
+- Capture mode: automated with a graduated trainee account.
 - Show:
   - certificate page heading/action bar
   - printed certificate body
@@ -134,8 +134,9 @@ Manual screenshot required:
 The capture script resolves:
 
 - first available program route for `program-workspace`
+- guarded certificate route for `certificate`
 - direct routes for all static trainee pages
 
 If a trainee account has no accessible program data, the script should skip the dynamic program-workspace screenshot rather than overwrite valid images with empty or redirect states.
 
-The automation intentionally does not capture `certificate` with the current trainee account because the route redirects incomplete trainees. Add `public/walkthrough/screenshots/trainee/certificate.png` manually after capturing from a graduated trainee.
+The automation skips `certificate` when the active trainee is redirected away from `/trainee/certificate`, preventing an incomplete trainee's progress page from overwriting the certificate screenshot. Use `WALKTHROUGH_EMAIL` and `WALKTHROUGH_PASSWORD` when a graduated account is needed for a targeted capture.
