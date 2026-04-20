@@ -129,6 +129,8 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
     ],
     capabilities: [
       "Manage all platform accounts, roles, and permissions",
+      "Curate the service template catalog and enable services per diviner",
+      "Moderate diviner landing pages and monitor cross-diviner performance",
       "Govern mundane astrology engines and chart studios",
       "Oversee Mystery School students, decans, and curriculum",
       "Audit commerce activity, orders, and payment gateway",
@@ -137,6 +139,8 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
     ],
     keyPages: [
       "Executive Analytics",
+      "Service Templates",
+      "Landing Page Analytics",
       "Mundane Astrology",
       "Mystery School Admin",
       "Commerce Hub",
@@ -175,6 +179,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
       {
         groupLabel: "Commerce",
         cards: [
+          { title: "Service Templates", description: "Master catalog of offerable services", href: "/admin/service-templates", icon: Package, status: "live" },
           { title: "Orders", description: "Consolidated platform sales log", href: "/admin/orders", icon: ShoppingBag, status: "live" },
           { title: "Payments", description: "Gateway tracking and payouts", href: "/admin/payments", icon: CreditCard, status: "live" },
         ],
@@ -185,6 +190,12 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           { title: "Tarot Cards", description: "Master library of 78 archetypal symbols", href: "/admin/tarot/cards", icon: Layers, status: "live" },
           { title: "Tarot Spreads", description: "Geometric layouts and position patterns", href: "/admin/tarot/spreads", icon: Shuffle, status: "live" },
           { title: "Tarot Practice", description: "Interactive 3D reading simulator", href: "/admin/tarot/readings", icon: Sparkles, status: "live" },
+        ],
+      },
+      {
+        groupLabel: "Landing Pages",
+        cards: [
+          { title: "Landing Page Analytics", description: "Cross-diviner performance of service landing pages", href: "/admin/analytics/landing-pages", icon: BarChart3, status: "live" },
         ],
       },
     ],
@@ -231,10 +242,10 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "One-click login impersonation for support"
         ]
       },
-      { 
-        name: "diviners_v2", 
-        label: "Diviners", 
-        description: "Specialized view for practitioner management.", 
+      {
+        name: "diviners_v2",
+        label: "Diviners",
+        description: "Specialized view for practitioner management.",
         group: "People",
         purpose: "A dedicated interface for managing the platform's professional diviners, their credentials, and performance.",
         bullets: [
@@ -242,6 +253,27 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Specialty and service category management",
           "Payout configuration and liability tracking",
           "Performance metrics and review moderation"
+        ]
+      },
+      {
+        name: "admin_diviner_service_assignment",
+        label: "Service Assignment (per-diviner)",
+        description: "Inside the diviner detail page at /admin/diviners/[id], the Service Assignment section lets admins decide exactly which services a diviner is authorized to offer — and whether each landing page is live to the public. Each row represents one service template from the catalog and carries two independent toggles: the Active switch on the left (admin decision — can this diviner sell this service at all?) and the Published switch on the right (governs whether the landing page is visible to the public). A header strip shows '3/19 enabled · 3 published' style counts, category and status filter dropdowns, and three bulk actions — Enable All, Disable All, and Clone from Diviner. A dashed legend block below the filters reminds the admin which toggle is which, and every row shows inline ACTIVE/INACTIVE and PUBLISHED/UNPUBLISHED labels under each switch. Every enable/disable/publish action writes a row to the service_access_audit_log so the admin can always see who changed what, when, and why.",
+        group: "People",
+        purpose: "Gives admins granular per-diviner control over which services appear on that diviner's profile and landing pages, with a full audit trail — so the platform can onboard new practitioners with only the services they are qualified for and react instantly to compliance or quality issues.",
+        bullets: [
+          "Active toggle (LEFT, yellow when on) — flips diviner_services.is_enabled AND mirrors onto services.is_active so the public service page (/{username}/services/{slug}) becomes reachable or 404s in sync",
+          "Published toggle (RIGHT) — flips diviner_services.is_published; only visible when Active is on, controls whether the landing page renders for public visitors once enabled",
+          "ACTIVE / INACTIVE + PUBLISHED / UNPUBLISHED labels — small text tags rendered under each switch so admins can tell at a glance which toggle is which and what state it's in",
+          "Legend block — dashed panel at the top explains 'Left toggle = Active' and 'Right toggle = Published' in one line each",
+          "Category filter — narrow the list to Astrology or Tarot services",
+          "Status filter — All / Enabled / Disabled to quickly isolate rows that need attention",
+          "Enable All / Disable All — bulk action across every template with a single confirmation; each row logged individually in the audit trail",
+          "Clone from Diviner — copy another diviner's enabled set onto this one; existing assignments are skipped, missing ones are inserted",
+          "Audit log panel — shows the most recent enable/disable/publish changes for this diviner with actor, timestamp, and before/after values",
+          "Copy URL icon — copies the live public landing page URL for enabled + published rows so admins can share with the diviner",
+          "Assign button on unassigned rows — creates the diviner_services row with the template's default price and sets is_enabled = true in one click",
+          "Price override field — per-diviner price tweak stored on diviner_services.price, used by the public page in place of the template's base_price"
         ]
       },
       {
@@ -4417,6 +4449,64 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
       },
       { name: "refunds", label: "Refund Management", description: "Processing and tracking payment reversals.", group: "Commerce" },
       { name: "orders", label: "Orders", description: "Full directory of all platform purchases.", group: "Commerce" },
+      {
+        name: "admin_service_templates_list",
+        label: "Service Templates Catalog",
+        description: "The master catalog of every service a diviner can offer across the platform, located at /admin/service-templates. The list is the single source of truth that replaces the hardcoded service arrays from earlier versions — admins now add, edit, and retire services from the UI without a code deploy. Each row shows the template name, slug, category (Astrology / Tarot / etc.), base price, duration, is_active status, and the number of diviners currently enabled on it. A New Template button at the top opens the create form, clicking any row opens the detail editor, and an Active filter lets admins hide archived templates.",
+        group: "Commerce",
+        purpose: "Gives admins end-to-end control over the service catalog without developer help — new offerings can be added overnight, outdated ones retired, and pricing or descriptions updated in a single place.",
+        bullets: [
+          "Name column — human-readable template name displayed on diviner landing pages and the service directory",
+          "Slug column — URL-safe identifier used in /services/{slug} and /{username}/services/{slug} routes",
+          "Category badge — Astrology, Tarot, Phone, Numerology, etc. drives category-based filtering and role access",
+          "Base price column — default price; individual diviners can override via the Service Assignment screen",
+          "Duration column — default session length in minutes, used to compute overage rates and calendar slots",
+          "Enabled Diviners count — how many practitioners currently have this template enabled in diviner_services",
+          "is_active badge — when off, the template is hidden from onboarding and all diviner assignments ignore it",
+          "New Template button — opens the create form with name, slug, category, description, pricing, and SEO fields",
+          "Row click — opens the full template editor with every field including long_description, whats_included, who_its_for, and faq",
+          "Retiring a template (is_active = false) — hides it from onboarding and new assignments but preserves existing diviner_services rows for historical data"
+        ]
+      },
+      {
+        name: "admin_service_template_edit",
+        label: "Service Template Editor",
+        description: "Full create/edit form for a single service template at /admin/service-templates/[id] (or /new). The form is divided into Basic Info (name, slug, category, base_price, duration_minutes, icon), Content (description, long_description, whats_included list, who_its_for list, faq array), SEO (seo_title, seo_description, OG image), and Status (is_active toggle). Changes propagate immediately — a published diviner landing page that references this template picks up the new content on next render. Slugs are slugified on save and collisions are rejected so the URL layer stays clean.",
+        group: "Commerce",
+        purpose: "Central editor for catalog content and pricing; lets non-engineering admins ship new service offerings and iterate on copy, SEO, or default pricing without a code change.",
+        bullets: [
+          "Name + Slug — edited side by side; slug is auto-generated from the name but editable, with collision detection",
+          "Category select — Astrology / Tarot / Phone / Numerology / Psychic / Coaching; drives category-based access and filters",
+          "Base price + Overage rate — default price and per-minute overage used by all diviners unless they override per-service",
+          "Duration (minutes) — default session length used on booking forms and calendar slots",
+          "Description + Long description — short card copy and full landing-page hero copy, both Markdown-capable",
+          "What's Included — repeatable list of bullet points rendered on the landing page as the Included section",
+          "Who It's For — repeatable list shown in the Who It's For landing page section",
+          "FAQ — array of { question, answer } pairs rendered in the FAQ landing section",
+          "SEO title / SEO description / OG image — meta tags the service page uses when a diviner hasn't set their own overrides",
+          "is_active toggle — master on/off for the template across the platform; turning off hides it from onboarding and assignment",
+          "Save button — writes to service_templates; diviner_services.is_enabled rows are not touched, so existing assignments survive edits"
+        ]
+      },
+      {
+        name: "admin_landing_page_analytics",
+        label: "Landing Page Analytics (cross-diviner)",
+        description: "Admin dashboard at /admin/analytics/landing-pages showing aggregate performance for every service landing page across every diviner. The page lists each (diviner × service) combination with views, unique visitors, CTA clicks, bookings, conversion rate, and revenue, letting admins spot both top performers and stale pages that need moderation or a nudge to the diviner. Filters at the top scope the view by date range, diviner, service template, or category. A sortable table supports export to CSV for reporting.",
+        group: "Commerce",
+        purpose: "Gives the platform owner a bird's-eye view of which services and which diviners convert best, so marketing investment, featured placements, and quality-improvement outreach can be targeted with data rather than guessing.",
+        bullets: [
+          "Global summary cards — Total Views, Unique Visitors, Total Bookings, Conversion Rate, Total Revenue for the selected period",
+          "Per-service aggregates — roll up every diviner offering a given template so you see how Solar Return is doing platform-wide",
+          "Per-diviner breakdown — drill into one diviner's landing pages to see which of their services attract and convert the most traffic",
+          "Conversion rate column — bookings ÷ unique visitors, colour-coded so under-performing pages stand out",
+          "Period selector — Last 7 / 30 / 90 days or custom date range to track trends and compare windows",
+          "Category filter — focus on Astrology pages vs Tarot pages to spot category-specific performance differences",
+          "Moderation shortcut — flag or open a page for review directly from the row if a spike in traffic suggests manual inspection is worthwhile",
+          "CSV export — download the current filtered table for sharing with marketing or finance stakeholders",
+          "Sorting — click any metric header to sort descending then ascending; default sort is by unique visitors",
+          "Empty-state guidance — if a diviner has no published pages, the row is labelled 'No published pages yet' with a link to their service assignment"
+        ]
+      },
       { 
         name: "reports_commerce", 
         label: "Reports", 
@@ -5847,19 +5937,27 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
       "A full-featured workspace for practitioners — manage clients, services, calendar, media, and revenue in one place.",
     icon: Star,
     gradient: "from-amber-500/20 to-yellow-600/10",
-    featureAreas: ["Scheduling", "CRM", "Business Operations", "Engagement"],
+    featureAreas: ["Scheduling", "CRM", "Landing Pages", "Business Operations", "Engagement"],
     capabilities: [
       "Manage bookings and availability",
       "Track client history and readings",
+      "Build custom service landing pages with a drag-and-drop section editor",
+      "Run tracked marketing campaigns with per-destination click attribution",
       "Host live broadcast sessions",
       "Oversee affiliate commissions",
     ],
-    keyPages: ["CRM Overview", "Bookings", "Client Spirit Twin", "Broadcast Hub", "Billing"],
+    keyPages: ["CRM Overview", "Bookings", "My Landing Pages", "Campaigns", "Client Spirit Twin", "Broadcast Hub", "Billing"],
     groups: [
       {
         groupLabel: "My Schedule",
         cards: [
           { title: "Overview", description: "Daily workload summary", href: "/dashboard", icon: LayoutDashboard, status: "live" },
+        ],
+      },
+      {
+        groupLabel: "Landing Pages",
+        cards: [
+          { title: "My Landing Pages", description: "Build and publish per-service landing pages", href: "/dashboard/landing-pages", icon: Layers, status: "live" },
         ],
       },
     ],
@@ -6016,22 +6114,101 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
         ]
       },
       {
-        name: "campaigns",
-        label: "Affiliate Campaigns",
-        description: "Design and track affiliate marketing campaigns that your referral partners promote on your behalf. Each campaign has its own commission rate, date window, and affiliate links. The analytics tab reveals conversion counts, commission spend, and which campaigns drive the most real bookings.",
-        group: "Marketing & Growth",
-        purpose: "Run structured affiliate promotions with per-campaign tracking and commission control.",
+        name: "landing_pages_list",
+        label: "My Landing Pages",
+        description: "The dashboard at /dashboard/landing-pages is the diviner's home for every service landing page they own. Only services the admin has enabled for them appear here — disabled services are hidden completely. Each card shows the service thumbnail, name, status badge (Draft / Published / Unpublished), last-edited timestamp, and a quick-action cluster: Edit (opens the page builder), Preview (opens the live URL with ?preview=true in a new tab), Analytics (opens per-service analytics), and Copy URL for the public link. A filter bar at the top lets the diviner slice by status or category, and a summary strip shows how many of their pages are live versus still in draft.",
+        group: "Landing Pages",
+        purpose: "Gives each diviner a single pane of glass for the landing pages that drive their bookings — what's live, what's still in draft, and which ones deserve more attention based on recent activity.",
         bullets: [
-          "Total Campaigns — count of all campaigns ever created; active badge shows currently running ones",
-          "Total Affiliates — number of affiliate partners enrolled across all campaigns",
-          "Conversions — total confirmed bookings credited to affiliate referral links",
-          "Commission Spent — total dollars paid or owed to affiliates across all campaigns",
-          "Campaigns tab — table view with Name, Status, Dates, Commission %, Affiliates count, Conversions, Spent/Budget",
-          "Analytics tab — time-series charts of clicks, conversions, and earnings by campaign",
-          "Create Campaign button — define name, commission type (% or flat), date range, and UTM parameters",
-          "Status filter — filter table by All / Active / Draft / Ended / Paused",
-          "Campaign row actions — edit, pause, or archive a campaign without losing its historical data",
-          "Spring Solar Return Promo, Mercury Retrograde Prep Pack — real campaigns shown in the table with live status"
+          "Service card grid — one card per enabled service with thumbnail, name, category, and status badge",
+          "Status badges — Draft (not yet published), Published (live to the public), Unpublished (was live, now taken offline)",
+          "Edit button — opens the drag-and-drop page builder for that specific service template",
+          "Preview button — opens /{username}/services/{slug}?preview=true in a new tab so the diviner can see the draft version before publishing",
+          "Analytics shortcut — jump to per-service analytics (views, unique visitors, CTA clicks, bookings, conversion rate)",
+          "Copy URL — copies the public landing page URL for sharing on social media, email, or campaigns",
+          "Summary strip — e.g. '3 published · 2 drafts' so the diviner knows at a glance what's live",
+          "Filter bar — narrow the list by status (All / Draft / Published / Unpublished) or category (Astrology / Tarot)",
+          "Access control — services the admin has disabled in diviner_services.is_enabled are not listed here at all; backend enforces this, not just the UI",
+          "Empty state — if the admin hasn't enabled any services yet, the page prompts the diviner to contact admin rather than showing a blank grid"
+        ]
+      },
+      {
+        name: "landing_page_builder",
+        label: "Landing Page Builder",
+        description: "A modular drag-and-drop page builder at /dashboard/landing-pages/[templateId]/builder that lets a diviner compose their service landing page from 15 section types without writing any code. The screen is split into three zones: a toolbar at the top with the page title, auto-save timestamp, status badge, Preview button, and Publish/Unpublish dialog; a sections list on the left showing the current section order with enable/disable toggles and a drag handle; and an editor panel on the right that changes based on which section is selected. A '+ Add Section' button opens a picker with every available type — Hero, Pricing, Bio, FAQ, Testimonials, Gallery, Video, What's Included, Who It's For, Rich Content, Image Banner, Text Content, CTA, Expertise, Booking CTA. Content edits save as draft automatically; clicking Publish promotes the draft to the live version in a single atomic action.",
+        group: "Landing Pages",
+        purpose: "Gives diviners full ownership of their public service page without needing a developer — they design it, preview it safely, and publish when ready, all while the platform enforces moderation and security behind the scenes.",
+        bullets: [
+          "Sections list (left) — vertical list of every section on the page with drag handle (⋮⋮), section label, and enable/disable switch",
+          "Drag-to-reorder — grab a section by its handle and drop it anywhere in the list; order persists via a reorder API call",
+          "Per-section enable toggle — hide a section from the public page without deleting it; the draft stays intact",
+          "Add Section button — opens a dialog with all 15 available types, showing each one's label, description, and icon plus how many remaining slots it has",
+          "Section editor panel (right) — renders a type-specific form: rich text for Bio and Text Content via Tiptap, image upload for Gallery and Image Banner, repeatable lists for FAQ, and so on",
+          "Image upload — files go to Supabase Storage under /landing-pages/{diviner_id}/{template_id}/... and the returned URL is stored in content_json",
+          "Preview button (top-right) — opens /{username}/services/{slug}?preview=true in a new tab; the owning diviner sees draft content with a 'Draft preview' banner, everyone else sees the published version or 404",
+          "Auto-save — every field edit saves silently; the 'Saved HH:MM' stamp in the toolbar confirms the last successful write",
+          "Status badge — Draft / Published / Unpublished with colour coding so the diviner always knows the live state",
+          "Publish dialog — confirms the action, runs moderation checks (no flagged sections, moderation_status = approved), and promotes draft_content_json to published_content_json for every section",
+          "Unpublish button — instantly pulls the page off the public site; the draft stays intact so work isn't lost",
+          "Backward compatibility — pages without any sections fall back to the legacy service template on the public route, so nothing breaks during migration"
+        ]
+      },
+      {
+        name: "landing_page_analytics",
+        label: "Landing Page Analytics (per-service)",
+        description: "Per-service analytics dashboard at /dashboard/landing-pages/[templateId]/analytics, showing how a single service landing page is performing for this diviner. The top strip has five KPI cards: Views, Unique Visitors, CTA Clicks, Bookings, and Conversion Rate. Below that, a time-series chart plots views and bookings over the last 7/30/90 days. A referrer breakdown table shows which traffic sources (direct, Instagram, Google, campaign redirects) are sending the most real visitors, and a device breakdown shows mobile vs. desktop splits so the diviner knows where to focus.",
+        group: "Landing Pages",
+        purpose: "Lets the diviner see whether the effort they put into a specific landing page is paying off — are people landing on it, clicking Book, and converting into actual sessions? Data-driven iteration replaces guessing.",
+        bullets: [
+          "Views — every page load counted via the PageTracker beacon, excluding bot traffic",
+          "Unique Visitors — deduplicated by session cookie within a 24-hour window per visitor",
+          "CTA Clicks — button clicks tracked for each primary call-to-action on the page (Book Now, Book This Reading, etc.)",
+          "Bookings — confirmed bookings attributed to this page via the booking flow referrer",
+          "Conversion Rate — bookings ÷ unique visitors, the single number that tells the diviner if the page actually sells",
+          "Period selector — 7 / 30 / 90 days or All time with deterministic comparisons",
+          "Time-series chart — dual-line graph of views and bookings over the selected period to spot trends and spikes",
+          "Referrer table — top N sources (direct, social, search, campaign codes) ranked by unique visitors",
+          "Device breakdown — mobile vs desktop vs tablet so the diviner knows to optimise for where their audience actually is",
+          "Back-link to builder — one-click jump to the page builder so insights can be acted on immediately"
+        ]
+      },
+      {
+        name: "campaigns",
+        label: "Campaigns",
+        description: "Design and run trackable marketing campaigns at /dashboard/campaigns. Every campaign targets exactly one destination — the diviner's profile page OR one of their enabled service landing pages — and gets a unique short URL in the format /r/cmp_XXXXXXXX that logs rich click data for every visitor. The page opens on a Campaigns tab (table of all campaigns) with a sibling Analytics tab for aggregate performance across every campaign. Each row shows name, status (Draft / Active / Paused / Completed), destination badge (Profile or a specific service), the campaign URL with a Copy button, start/end dates, commission rate, and live counts for affiliates, clicks, unique clicks, and conversions. Creating a campaign prompts the diviner for a name, a destination picker populated only with their admin-enabled services, an optional date window, and commission terms for affiliates.",
+        group: "Marketing & Growth",
+        purpose: "Lets diviners promote a specific page (profile or single service) and measure exactly which channels, devices, and geographies drive real bookings — tied to the landing-page access-control system so disabled services can never be selected as a destination.",
+        bullets: [
+          "Destination Picker — shows 'My Profile Page' as the default and a dropdown of enabled service landing pages only; admin-disabled services never appear, even via dev-tools tampering (server validates)",
+          "Campaign URL format — /r/cmp_ + 8 alphanumeric chars (e.g. cmp_8FK29XQ) generated server-side, copied with one click from the row",
+          "/r/[code] tracking redirect — entity-based resolution: the redirect reads campaign.destination_type and looks up the current profile/service URL at click time, so username/slug renames don't break old campaign links",
+          "Click logging — every hit records device, geo (country), referrer, session cookie, and is_bot flag into campaign_clicks before redirecting via 307",
+          "Unique click window — the same visitor within 24h counts as total but not unique, giving clean 'visitors vs. hits' separation",
+          "Status lifecycle — Draft (URL is dormant, no clicks logged) → Active (live tracking) → Paused / Completed / Archived; only Active campaigns log clicks",
+          "Auto-pause trigger — if the admin disables the linked service via diviner_services.is_enabled, a DB trigger flips active campaigns pointing to that service into paused with a banner explaining why",
+          "Campaigns tab — sortable columns for Name, Status, Destination, Campaign URL, Dates, Affiliates, Clicks, Unique, Conversions, Revenue, Commission",
+          "Analytics tab — aggregate KPI cards (Total Campaigns, Active, Conversions, Revenue, Avg ROI) plus a Campaign Performance table with per-row Clicks and Unique columns so drill-down is not required for basic review",
+          "Row actions — eye icon opens the campaign detail page, edit dialog lets the diviner change status, dates, and commission without losing history",
+          "Create Campaign dialog — name, description, destination picker, commission type (% or flat), rate, budget cap, start/end dates; validates that the chosen destination is still enabled before saving"
+        ]
+      },
+      {
+        name: "campaign_analytics_detail",
+        label: "Per-Campaign Analytics",
+        description: "Deep-dive analytics for a single campaign at /dashboard/campaigns/[id]/analytics. The page is structured around the question 'where is this campaign's traffic coming from, and how is it converting?' — KPI cards at the top (Total Clicks, Unique Clicks, Bookings, Revenue, Conversion Rate, Bounce indicator), a clicks-over-time chart below them, and three side-by-side breakdowns: Devices (mobile / desktop / tablet), Geo (top countries), and Referrers (direct, social platforms, search engines, other tracking links). A clicks table at the bottom lists individual click events with timestamp, device summary, country, referrer, and unique/repeat flag, so the diviner can audit exactly how a spike or dip happened.",
+        group: "Marketing & Growth",
+        purpose: "Answers the practical question of whether this specific campaign is worth continuing — is traffic coming from the audience the diviner expected, and is it actually converting into bookings?",
+        bullets: [
+          "KPI strip — Total Clicks, Unique Clicks, Bookings, Revenue, Conversion Rate in prominent cards",
+          "Clicks over time — line chart showing hourly or daily click volume, useful for spotting campaign spikes aligned to posts or ads",
+          "Device breakdown — mobile / desktop / tablet shares so the diviner knows where to focus their copy and imagery",
+          "Geo breakdown — top countries by unique visitors, based on Vercel edge geo headers",
+          "Referrer breakdown — direct typed, social (Instagram, Facebook, X), search (Google, Bing), and other /r/ codes or affiliate links",
+          "Clicks table — individual event list with timestamp, device, country, referrer, is_unique_click flag, and is_bot flag",
+          "Period selector — 7 / 30 / 90 days or All time to match the aggregate analytics tab",
+          "Attribution chain — if a click came from an affiliate link that then routed to this campaign, the chain is shown in the click detail",
+          "Back to campaign — quick link to the campaign detail page to tweak settings without losing scroll position",
+          "Export CSV — download the clicks table for manual analysis or feeding into another BI tool"
         ]
       },
       {
