@@ -4487,55 +4487,172 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
 
 
       // ------------tarot spreads---------//
-      {
-        name: "tarot_spreads",
-        label: "Tarot Spreads: Layout Master Directory",
-        description: "A centralized directory for managing the geometric patterns and interpretive maps used in readings.",
-        group: "Tools",
-        subModule: "Tarot Spreads",
-        purpose: "This screen manages the 'Maps' of the tarot experience. While cards provide the symbols, Spreads provide the context. This directory allows admins to oversee every available reading layout, from simple 3-card snapshots to complex 12-card astrological cycles. It provides a high-level view of how many cards are required for each spread and their current activation status, ensuring the 'Consultation Library' is balanced and diverse.",
-        bullets: [
-          "🗺️ Layout Directory — A consolidated view of all available reading patterns in the system, sorted by name and status.",
-          "📐 Card Counts — Quickly identify the complexity of a spread by viewing exactly how many cards are required for that specific layout.",
-          "📊 Active Status — Control which spreads are available for use in the Practice simulator or public interfaces.",
-          "🖼️ Geometry Preview — Visual reference to help you identify the geometric shape of the layout at a glance.",
-          "🛠️ Spread Management — Entry point for creating new unique layouts or refining existing position patterns."
-        ]
-      },
-      {
-        name: "tarot_spread_form",
-        label: "Architecting the Spread: Positions & Context",
-        description: "Defining the positions, labels, and geometry of a specific tarot layout.",
-        group: "Tools",
-        subModule: "Tarot Spreads",
-        purpose: "This screen is where you architect the meaning of a reading. By naming each card position (e.g., 'Past', 'Obstacle', 'Outcome'), you create a narrative flow that guides the user. The spread form is designed to handle complex structural logic, allowing the admin to define exactly where cards sit and what 'question' that specific position is answering. This transforms a random draw into a coherent spiritual story.",
-        bullets: [
-          "🏷️ Position Labels — Assign specific context (Advice, Blockage, Foundation) to every card slot in the spread.",
-          "🧠 Narrative Logic — Build a story-path for the user by ordering the positions to follow a logical progression.",
-          "🛠️ Structural Requirements — Define the exact number of positions needed for the spread to function correctly in the reading engine.",
-          "👁️ Visual Identity — Upload a background or header image to set the mood and visual theme of the specific reading layout.",
-          "✅ Master Activation — Toggle the spread's availability once its 'Position Map' is fully defined and tested."
-        ]
-      },
-      {
-        name: "tarot_practice",
-        label: "Reading Practice: Interactive 3D Simulation",
-        description: "Experience the final application of the Tarot Suite through a live, interactive simulation.",
-        group: "Tools",
-        subModule: "Tarot Practice",
-        purpose: "This is the final destination and culmination of the Tarot Suite. It brings the 'Toolkit' (Cards) and the 'Map' (Spreads) together in a high-fidelity 3D environment. This simulator is designed to mimic a professional live consultation. It uses advanced randomization algorithms to shuffle the deck, and a responsive 3D engine to handle card reveals. It serves as both a testing ground for admins and a powerful interactive experience for those practicing the art of reading.",
-        bullets: [
-          "🔄 Real-Time 3D Shuffling — Experience a realistic 3D animation that randomizes the 78-card deck using the Fisher-Yates algorithm.",
-          "✨ Interactive 3D Reveal — Click individual face-down cards to watch them flip in a realistic 3D motion, revealing their archetypal imagery.",
-          "📖 Integrated Interpretation — Hover over any revealed card to see their meaning tailored to the spread position it occupies.",
-          "📐 Spread Selection — Toggle between different layouts to see how the same deck adapts to different geometric and interpretive maps.",
-          "🔄 Simulation Reset — Quickly reset the reading to practice different draw patterns and test new card combinations.",
-          "🧠 Full Engine Integration — Demonstrates how the Upright/Reversed logic and Display Priority come together in a live, functional session."
-        ]
-      },
-      { name: "rituals_list", label: "Rituals", description: "Library of template spiritual practices.", group: "Tools" },
+    {
+  name: "tarot_spread_add_screen",
+  label: "Create Tarot Spread",
+  description: "Build a new tarot spread by defining its card count, position labels, visual image, and availability.",
+  group: "Tools",
+  subModule: "Tarot Spreads",
+  purpose: "The Add Spread screen creates the layout foundation for tarot readings. A spread is not a card itself; it is the pattern that decides how many cards are drawn and what each card position represents. For example, a 3-card spread may use Past, Present, and Future, while a Celtic Cross spread may use ten different positions. This form allows admins to define that structure so Tarot Practice can display the correct number of card slots and explain the meaning of each slot.",
+  bullets: [
+    "Name — The title of the spread shown in admin lists and practice selection.",
+    "Card Count — The total number of cards required for this spread.",
+    "Description — A short explanation of what the spread is for and how it should be used.",
+    "Display Priority — Controls where the spread appears in ordered lists.",
+    "Card Position Names — Defines the meaning of each slot in the spread.",
+    "Add Position — Adds each position label one by one until the spread structure is complete.",
+    "Spread Image — Provides a visual thumbnail or reference image for the spread.",
+    "Active — Makes the spread available after it is created.",
+    "Create Spread — Saves the completed spread layout into the tarot system."
+  ]
+},
 
-      // Reports
+ {
+  name: "tarot_spreads_filter_screen",
+  label: "Tarot Spreads Filter Bar",
+  description: "Search and filter tarot spreads before reviewing or editing them.",
+  group: "Tools",
+  subModule: "Tarot Spreads",
+  purpose: "This area helps admins quickly find tarot spread records. It is useful when the spread library grows and admins need to locate a specific layout by name, status, creation date, or last update date. The Refresh button reloads the latest data, while Add Spread opens the form for creating a new reading layout.",
+  bullets: [
+    "Search by spread name to quickly locate a layout.",
+    "Filter by Active or Inactive status.",
+    "Use created date filters to find newly added spreads.",
+    "Use updated date filters to review recently changed spreads.",
+    "Refresh the list after changes.",
+    "Use Add Spread to create a new tarot spread layout."
+  ]
+},
+
+{
+  name: "tarot_spreads_table_screen",
+  label: "Tarot Spreads: Layout Directory & Management",
+  description: "The main admin screen for viewing, filtering, and managing tarot spread layouts used in practice readings.",
+  group: "Tools",
+  subModule: "Tarot Spreads",
+  purpose: "This screen is used to manage the complete library of tarot spread layouts. A spread defines the structure of a tarot reading, including how many cards are drawn and how each card position should be interpreted. Admins use this page to search for spreads, check which layouts are active, review priority ordering, track when spreads were created or updated, and open actions for editing or managing each spread. Active spreads can appear in Tarot Practice, where users choose a layout before beginning a reading simulation.",
+  bullets: [
+    "🔍 Spread Search — Search by spread name to quickly find a specific layout, such as Celtic Cross, Horseshoe, or Astrological Spread.",
+    "✅ Status Filtering — Filter spreads by Active or Inactive status to control which layouts are available for Tarot Practice.",
+    "📅 Date Filters — Use created and updated date filters to review spreads added or changed during a specific time period.",
+    "📐 Spread Inventory — View all available tarot layouts in one table, including basic, complex, relationship, Celtic Cross, and astrological spreads.",
+    "📊 Priority Ordering — Use the priority column to understand the display order of spreads in admin lists and practice selection screens.",
+    "🟢 Active Status — The status badge shows whether each spread is currently available for use.",
+    "🕒 Lifecycle Tracking — Created On and Updated On columns help admins monitor when each spread was added or last maintained.",
+    "⚙️ Row Actions — Use the action menu to manage an individual spread, such as previewing, editing, activating, deactivating, or deleting it.",
+    "🔄 Refresh Action — Reload the spread list to show the newest spread data after changes.",
+    "➕ Add Spread Entry — Open the Add Spread form to create a new tarot reading layout.",
+    "📄 Pagination Control — Shows how many spread records are visible and supports browsing when the spread library grows."
+  ]
+}
+,
+
+      // ------------tarot practice---------//
+   
+  {
+    "name": "tarot_practice",
+    "label": "Tarot Practice: Spread Library & Reading Flow",
+    "description": "The main practice screen where users choose a tarot spread and begin an interactive reading exercise.",
+    "group": "Tools",
+    "subModule": "Tarot Practice",
+    "purpose": "This screen is the entry point of Tarot Practice. It displays all available practice spreads in card format so the user can choose the reading structure that best matches the kind of question they want to explore. Each spread card shows the spread image, spread name, short description, total number of cards, and a Begin Reading button. The purpose of this screen is to help users quickly select the right practice format, whether they want a simple 3-card reading, a deeper 5-card reading, a structured 7-card spread, or a full 12-card astrological spread. It is useful because different spreads answer different types of questions, and this page makes that choice clear before the reading begins.",
+    "bullets": [
+      "🃏 Spread Selection Grid — Shows all available tarot practice spreads in one organized visual layout.",
+      "📖 Spread Preview Card — Each spread card includes image, title, short description, and total card count.",
+      "▶️ Begin Reading Action — Starts the selected tarot spread and opens its interactive card layout screen.",
+      "🎯 Use-Case Based Choice — Helps users choose a spread based on the depth and type of question they want to explore.",
+      "🔢 Card Count Visibility — The card-count badge helps users understand how simple or detailed the reading will be.",
+      "🧠 Guided Practice Purpose — This screen is designed for practice readings, helping users learn tarot spread structure through direct interaction.",
+      "🔄 Start Over Support — Spread reading screens can include a Start Over action so the user can reset and begin again.",
+      "📚 Multi-Spread Learning — Users can practice with short, medium, and advanced spreads from one place."
+    ]
+  },
+  {
+    "name": "tarot_practice_3_card_basic_question_spread",
+    "label": "Tarot Practice: 3 Card Basic Question Spread",
+    "description": "A simple three-card spread used for quick clarity around a basic question through past, present, and future positions.",
+    "group": "Tools",
+    "subModule": "Tarot Practice",
+    "purpose": "This spread is used when the user wants a simple and direct reading without too much complexity. It uses three cards and places them into a clear timeline structure: Past, Present, and Future. The purpose of this spread is to help the user understand what has influenced the situation, what is happening now, and what direction the issue may move toward next. It is ideal for beginners, quick practice sessions, and straightforward questions where the user wants a fast but meaningful reading.",
+    "bullets": [
+      "1️⃣ Card 1 — Past: Explains the background, previous influence, or earlier event connected to the question.",
+      "2️⃣ Card 2 — Present: Shows the current condition, emotional state, or active energy of the situation right now.",
+      "3️⃣ Card 3 — Future: Indicates the likely next direction, near outcome, or unfolding result if the current energy continues.",
+      "🎯 Why This Spread Is Used — Best for quick clarity, beginner tarot practice, and simple questions that do not need many layers.",
+      "🧠 Main Use Case — Useful for daily guidance, short decision support, emotional check-ins, and fast insight into a situation.",
+      "📚 Learning Value — Helps users understand card flow in a timeline format, making tarot practice easier to follow.",
+      "🔄 Start Over Option — The user can restart the spread and practice the layout again if needed."
+    ]
+  },
+  {
+    "name": "tarot_practice_5_card_complex_question_spread",
+    "label": "Tarot Practice: 5 Card Complex Question Spread",
+    "description": "A deeper five-card spread used to analyze layered situations through inside factors, outside factors, and the likely result.",
+    "group": "Tools",
+    "subModule": "Tarot Practice",
+    "purpose": "This spread is used when the user has a more complex question that cannot be answered well through only a simple past-present-future format. It organizes the reading into grouped sections that examine the internal side of the issue, the external side of the issue, and the likely final result. The purpose of this spread is to help the user understand both personal and outside influences before moving toward a conclusion. It is useful for difficult choices, emotionally mixed situations, and questions that involve hidden layers or multiple forces at once.",
+    "bullets": [
+      "1️⃣ Card 1 — Far Past: Shows the deeper root or earlier pattern that shaped the present situation.",
+      "2️⃣ Card 2 — Past: Explains the more recent influence that brought the issue into its current form.",
+      "3️⃣ Card 3 — Present: Shows the current state of the matter and the active energy surrounding it now.",
+      "4️⃣ Card 4 — Future: Indicates the next development or likely movement of the situation.",
+      "5️⃣ Card 5 — Far Future / Result: Gives the longer-view outcome or final direction if the current path continues.",
+      "🟢 Inside Section — Helps reveal the inner condition, hidden feelings, personal motivation, or the nature of the problem.",
+      "🟠 Outside Section — Shows outside pressure, visible events, practical conditions, or possible solutions.",
+      "🟣 Result Section — Brings the reading together into a final likely outcome or conclusion.",
+      "🎯 Why This Spread Is Used — Best for more involved questions where the user wants to understand both inner and outer influences.",
+      "🧠 Main Use Case — Useful for complex emotional questions, relationship issues, layered decision-making, and deeper personal reflection.",
+      "📚 Learning Value — Teaches users how to read grouped spread sections instead of only a straight timeline."
+    ]
+  },
+  {
+    "name": "tarot_practice_7_card_horseshoe_spread",
+    "label": "Tarot Practice: 7 Card Horseshoe Spread",
+    "description": "A structured seven-card spread used for a wider situation review, showing influences, obstacles, environment, and outcome.",
+    "group": "Tools",
+    "subModule": "Tarot Practice",
+    "purpose": "This spread is used when the user wants a broader view of a situation and needs more detail than a short spread can provide. The horseshoe layout organizes the cards in a curved pattern and is commonly used to examine past influences, present circumstances, future developments, the attitude of others, possible obstacles, and the final outcome. The purpose of this spread is to give a fuller situational map so the user can understand not only what is happening, but also the surrounding forces that shape the result.",
+    "bullets": [
+      "1️⃣ Card 1 — Past Influences: Shows previous factors that still affect the question.",
+      "2️⃣ Card 2 — Present Circumstances: Explains the current condition of the situation.",
+      "3️⃣ Card 3 — Upcoming Influences: Reveals the next important energy or event approaching the matter.",
+      "4️⃣ Card 4 — The Querent / Advice Position: Often reflects the user's current role, mindset, or what they should understand.",
+      "5️⃣ Card 5 — The Attitude of Others: Shows how other people around the issue may think, respond, or influence the situation.",
+      "6️⃣ Card 6 — Possible Obstacles: Highlights challenges, delays, resistance, or hidden problems.",
+      "7️⃣ Card 7 — Overall Outcome: Gives the likely final direction or conclusion of the reading.",
+      "🎯 Why This Spread Is Used — Best when the user wants a balanced reading that includes environment, outside people, and practical obstacles.",
+      "🧠 Main Use Case — Useful for career questions, relationships, conflict review, planning decisions, and general life situations.",
+      "📚 Learning Value — Helps users practice interpreting a more advanced multi-position spread with stronger situational detail.",
+      "🔄 Start Over Option — The layout can be reset so the user can begin another practice reading."
+    ]
+  },
+  {
+    "name": "tarot_practice_12_card_astrological_spread",
+    "label": "Tarot Practice: 12 Card Astrological Spread",
+    "description": "A full twelve-card spread based on the twelve astrological houses, used for an in-depth life-area reading.",
+    "group": "Tools",
+    "subModule": "Tarot Practice",
+    "purpose": "This spread is used when the user wants a full-spectrum reading across all major life areas. It places twelve cards in an astrological wheel pattern, with each card corresponding to one of the twelve houses. The purpose of this spread is to show how tarot messages appear across identity, resources, communication, home, creativity, work, relationships, transformation, beliefs, career, community, and spiritual life. It is the most detailed spread shown in the practice screen and is especially useful for deep self-reflection, yearly review, life mapping, and advanced tarot study.",
+    "bullets": [
+      "1️⃣ House 1 — Personality: Shows self-image, identity, presence, and the way the user moves through life.",
+      "2️⃣ House 2 — Possessions / Resources: Explains money, values, security, and material stability.",
+      "3️⃣ House 3 — Communication: Shows thought pattern, speech, learning, siblings, and everyday interaction.",
+      "4️⃣ House 4 — Home / Roots: Explains family, emotional base, private life, and inner foundation.",
+      "5️⃣ House 5 — Love / Creativity: Shows romance, joy, self-expression, passion, and creative energy.",
+      "6️⃣ House 6 — Work / Daily Life: Explains habits, duties, service, wellness, and practical routines.",
+      "7️⃣ House 7 — Relationships: Shows partnership, commitment, one-to-one dynamics, and open interactions with others.",
+      "8️⃣ House 8 — Change / Mystery: Explains transformation, shared energy, hidden depth, endings, and deeper emotional processes.",
+      "9️⃣ House 9 — Learning / Beliefs: Shows wisdom, philosophy, higher study, travel, and long-range meaning.",
+      "🔟 House 10 — Reputation / Status: Explains career, public image, ambition, life direction, and visible success.",
+      "1️⃣1️⃣ House 11 — Social Bonds / Hopes: Shows friendships, communities, networks, support systems, and future goals.",
+      "1️⃣2️⃣ House 12 — Mystical Life / Hidden Themes: Explains subconscious patterns, solitude, intuition, healing, and spiritual lessons.",
+      "🎯 Why This Spread Is Used — Best for full life review, advanced tarot practice, yearly guidance, and understanding how one question affects many life areas.",
+      "🧠 Main Use Case — Useful for self-discovery, personal development, long-form tarot study, and broad spiritual reflection.",
+      "📚 Learning Value — Helps users connect tarot reading with astrological house symbolism in a structured visual format."
+    ]
+  },
+
+      //----------- Reports-------------//
       { 
         name: "report_revenue", 
         label: "Revenue Analytics", 
