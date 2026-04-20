@@ -22,10 +22,14 @@ Current target set:
 12. `training_analytics`
 13. `trainee-quiz-scores`
 14. `training_settings`
+15. `certificate-config`
+16. `tabbie-appointment-config`
+17. `tabbie-appointment-monitor`
 
-Currently omitted:
+Not part of current active walkthrough:
 
-- `certificate-issued-log` — no matching admin issued-certificate audit log/revoke screen exists yet.
+- `class_config` — route exists, but the Admin Training nav item is currently commented out. Keep it excluded until the nav item is restored or the product decision changes.
+- `certificate-issued-log` — no matching admin issued-certificate audit log/revoke screen exists currently. If that audit screen is added later, create a new walkthrough entry instead of treating `Certificate Config` as an issued-certificate log.
 
 ## Capture rules
 
@@ -185,6 +189,38 @@ Currently omitted:
 - Best state:
   - at least one role visible
 
+### 15. `certificate-config.png`
+- Route: `/admin/certificate-config`
+- Show:
+  - Certificate Config heading
+  - school identity fields
+  - certification details fields
+  - training stats block
+  - save action
+- Best state:
+  - configured school/program values visible, not empty defaults where possible
+
+### 16. `tabbie-appointment-config.png`
+- Route: `/admin/tabbie-appointment`
+- Show:
+  - Tabbie Appointment Config heading
+  - feature toggle
+  - block content fields
+  - booking link / call-to-action fields
+  - lifecycle state message fields
+- Best state:
+  - enabled or configured state with meaningful copy visible
+
+### 17. `tabbie-appointment-monitor.png`
+- Route: `/admin/trainee-tabbie-appointments`
+- Show:
+  - Tabbie Appointment Monitor heading
+  - search and status filter controls
+  - trainee appointment status table
+  - training status, appointment status, completed, sync, and action columns
+- Best state:
+  - at least one trainee row visible
+
 ## Seed data recommendation
 
 For clean screenshots, seed at minimum:
@@ -196,6 +232,8 @@ For clean screenshots, seed at minimum:
 - mixed active/inactive status
 - one lesson with media attached
 - one quiz with at least one saved question
+- certificate config populated
+- trainee appointment records across at least two statuses
 
 ## Automation note
 
@@ -206,5 +244,6 @@ The capture script can automate:
 - first available edit route for category detail
 - first available edit route for lesson edit
 - first available edit route for quiz detail
+- direct capture for certificate and Tabbie appointment admin config/monitor screens
 
 If seed data is missing, the script should skip the corresponding detail screenshot instead of failing the full run.

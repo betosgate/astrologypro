@@ -247,6 +247,9 @@ const roles = [
         afterNavigate: async (page) => selectTrainingAnalyticsTab(page, "Users"),
       },
       { name: "training_settings", url: "/admin/training/settings", label: "Training Settings" },
+      { name: "certificate-config", url: "/admin/certificate-config", label: "Certificate Config" },
+      { name: "tabbie-appointment-config", url: "/admin/tabbie-appointment", label: "Tabbie Appointment Config" },
+      { name: "tabbie-appointment-monitor", url: "/admin/trainee-tabbie-appointments", label: "Tabbie Appointment Monitor" },
     ],
   },
   {

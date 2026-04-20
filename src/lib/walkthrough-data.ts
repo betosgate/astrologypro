@@ -49,6 +49,7 @@ import {
   type LucideIcon,
   TrendingUp,
   Shuffle,
+  Award,
 } from "lucide-react";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -4482,6 +4483,45 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Last updated metadata supports governance and change tracking"
         ]
       },
+      {
+        name: "certificate-config",
+        label: "Certificate Config",
+        description: "Admin configuration page for the trainee graduation certificate wording, school identity, designation, program lists, and completion statistics.",
+        group: "Training",
+        purpose: "This screen controls the certificate content that graduated trainees see on `/trainee/certificate`. Admins can update the school name, tagline, awarded designation, head master name, study-hour stats, and the astrology/tarot program lists without changing code.",
+        bullets: [
+          "School Identity controls the certificate header and footer branding",
+          "Certification Details define the program title, designation, and head master signature name",
+          "Training Stats populate the certificate achievement counters",
+          "Astrology and Tarot program lists determine the curriculum items printed on the certificate"
+        ]
+      },
+      {
+        name: "tabbie-appointment-config",
+        label: "Tabbie Appointment Config",
+        description: "Global configuration for the post-training appointment card shown to eligible or graduated trainees.",
+        group: "Training",
+        purpose: "This page governs the mentor/Tabbie appointment block that appears in the trainee experience after training milestones are reached. Admins can enable the feature, set the copy, define the booking link, choose how the link opens, and configure lifecycle messages.",
+        bullets: [
+          "Feature toggle controls whether the appointment block appears for eligible trainees",
+          "Block title, body, helper text, and CTA label define the trainee-facing copy",
+          "Booking link and open mode control the external appointment booking path",
+          "State messages explain booked, cancelled, completed, and post-booking appointment states"
+        ]
+      },
+      {
+        name: "tabbie-appointment-monitor",
+        label: "Tabbie Appointment Monitor",
+        description: "Operational monitor for trainee post-training appointment status, sync state, and manual overrides.",
+        group: "Training",
+        purpose: "This is the admin oversight table for the post-training appointment workflow. It helps staff find trainees by name/status, verify whether the appointment has been completed, retry sync operations, and manually override appointment outcomes when needed.",
+        bullets: [
+          "Search and status filters isolate trainees by appointment lifecycle state",
+          "Rows show trainee identity, training status, appointment status, completion, and sync state",
+          "Retry sync action helps recover failed appointment-provider synchronization",
+          "Manual override dialog records staff actions such as completed, cancelled, or reset"
+        ]
+      },
       // {
       //   name: "class_config",
       //   label: "Class Configuration",
@@ -5868,9 +5908,9 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Change history drawer showing who changed what permission and when"
         ]
       },
-      // Certificate Issued Log is intentionally omitted for now.
-      // There is a Certificate Config screen and trainee-facing certificate flow,
-      // but no admin issued-certificate audit log/revoke screen currently exists.
+      // No Certificate Issued Log entry exists because there is currently no
+      // matching admin issued-certificate audit/revoke route. Certificate Config
+      // is documented above as the real admin certificate-management screen.
       {
         name: "payment-dispute-detail",
         label: "Payment Dispute Detail",
@@ -8523,9 +8563,9 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
       "Work inside a two-pane program workspace with categories on the right and inline lesson content on the left",
       "Complete lessons inside the program workspace using embedded video, PDF assets, triggers, quizzes, and mark-complete progression",
       "Track lesson completion, module progress, quiz outcomes, and overall training status",
-      "Access downloadable lesson assets, study guides, mentor practice sessions, profile settings, and graduation certificate readiness",
+      "Access downloadable lesson assets, study guides, mentor practice sessions, profile settings, graduation readiness, and issued certificates",
     ],
-    keyPages: ["Dashboard", "Training Center", "Program Workspace", "Progress", "Quiz History", "Resources", "Sessions", "Profile", "Graduation"],
+    keyPages: ["Dashboard", "Training Center", "Program Workspace", "Progress", "Quiz History", "Resources", "Sessions", "Profile", "Graduation", "Certificate"],
     groups: [
       {
         groupLabel: "Training",
@@ -8547,6 +8587,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
         groupLabel: "Certification",
         cards: [
           { title: "Graduation", description: "Certificate readiness and issued certificate details", href: "/trainee/training/graduation", icon: GraduationCap, status: "live" },
+          { title: "Certificate", description: "Printable certificate for graduated trainees", href: "/trainee/certificate", icon: Award, status: "live" },
           { title: "Profile", description: "Trainee identity, package, specialties, birth data, and training status", href: "/trainee/profile", icon: User, status: "live" },
         ],
       },
@@ -8654,6 +8695,19 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Graduated state lists completed programs, lessons completed, award date, and certificate code",
           "Verification URL and copy action are shown when a certificate code exists",
           "Back-to-training action keeps incomplete trainees focused on the next requirement"
+        ]
+      },
+      {
+        name: "certificate",
+        label: "Certificate of Completion",
+        description: "Printable certificate page available to graduated trainees after all training requirements are satisfied.",
+        group: "Certification",
+        purpose: "This is the formal credential screen for a completed trainee. It presents the school identity, trainee name, awarded designation, training statistics, covered astrology and tarot programs, certificate ID, verification URL, and print/share actions.",
+        bullets: [
+          "Certificate header uses admin-managed school name, tagline, and visual seal",
+          "Trainee name, award date, designation, and certificate ID identify the credential",
+          "Training stats and program lists summarize the completed certification scope",
+          "Print and share controls support saving the certificate as a PDF and sharing its verification link"
         ]
       },
       {
