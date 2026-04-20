@@ -24,6 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 // ─── SortHeader ───────────────────────────────────────────────────────────────
 
@@ -53,9 +54,8 @@ export function SortHeader({
     <button
       type="button"
       onClick={() => onSort(column)}
-      className={`flex items-center gap-1 font-medium transition-colors hover:text-foreground ${
-        active ? "text-foreground" : "text-muted-foreground"
-      }`}
+      className={`flex items-center gap-1 font-medium transition-colors hover:text-foreground ${active ? "text-foreground" : "text-muted-foreground"
+        }`}
     >
       {label}
       <Icon className={`size-3 ${active ? "opacity-100" : "opacity-40"}`} />
@@ -109,42 +109,37 @@ export function AdminPagination({
   isPending,
 }: AdminPaginationProps) {
   const items = buildPaginationItems(currentPage, totalPages);
+  const start = Math.min((currentPage - 1) * pageSize + 1, total);
+  const end = Math.min(currentPage * pageSize, total);
 
   return (
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <p className="text-sm text-muted-foreground">
-        Page {currentPage} of {totalPages}{" "}
-        <span className="text-muted-foreground/60">({total} total)</span>
-      </p>
+    <div className={cn(
+      "flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between pt-4 transition-opacity",
+      isPending && "opacity-50 pointer-events-none"
+    )}>
+      <div className="flex items-center gap-4">
+        <p className="text-sm text-muted-foreground whitespace-nowrap">
+          Showing <span className="font-medium text-foreground">{start}–{end}</span> of <span className="font-medium text-foreground">{total}</span>
+        </p>
 
-      <div className="flex items-center gap-2">
         <Select
           value={String(pageSize)}
           onValueChange={onPageSizeChange}
         >
-          <SelectTrigger className="h-8 w-[80px]">
+          <SelectTrigger className="h-8 w-[110px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
             {PAGE_SIZE_OPTIONS.map((s) => (
               <SelectItem key={s} value={String(s)}>
-                {s}
+                {s} / page
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
+      </div>
 
-        <Button
-          variant="outline"
-          size="icon"
-          className="size-8"
-          disabled={currentPage <= 1 || isPending}
-          onClick={() => onPageChange(1)}
-          aria-label="First page"
-        >
-          <ChevronsLeft className="size-4" />
-        </Button>
-
+      <div className="flex items-center gap-1">
         <Button
           variant="outline"
           size="icon"
@@ -161,9 +156,9 @@ export function AdminPagination({
             item === "ellipsis" ? (
               <span
                 key={`ellipsis-${index}`}
-                className="px-1 text-sm text-muted-foreground"
+                className="px-2 text-sm text-muted-foreground"
               >
-                …
+                ...
               </span>
             ) : (
               <Button
@@ -190,17 +185,6 @@ export function AdminPagination({
           aria-label="Next page"
         >
           <ChevronRight className="size-4" />
-        </Button>
-
-        <Button
-          variant="outline"
-          size="icon"
-          className="size-8"
-          disabled={currentPage >= totalPages || isPending}
-          onClick={() => onPageChange(totalPages)}
-          aria-label="Last page"
-        >
-          <ChevronsRight className="size-4" />
         </Button>
       </div>
     </div>
