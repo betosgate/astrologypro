@@ -8521,11 +8521,11 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
       "Start from a personalised dashboard with current lesson focus, mentor context, recent activity, and graduation readiness",
       "Browse accessible training programs with category and lesson completion status",
       "Work inside a two-pane program workspace with categories on the right and inline lesson content on the left",
-      "Complete lessons using embedded video, PDF assets, triggers, quizzes, and mark-complete progression",
+      "Complete lessons inside the program workspace using embedded video, PDF assets, triggers, quizzes, and mark-complete progression",
       "Track lesson completion, module progress, quiz outcomes, and overall training status",
       "Access downloadable lesson assets, study guides, mentor practice sessions, profile settings, and graduation certificate readiness",
     ],
-    keyPages: ["Dashboard", "Training Center", "Program Workspace", "Lesson Viewer", "Progress", "Quiz History", "Resources", "Sessions", "Profile", "Graduation"],
+    keyPages: ["Dashboard", "Training Center", "Program Workspace", "Progress", "Quiz History", "Resources", "Sessions", "Profile", "Graduation"],
     groups: [
       {
         groupLabel: "Training",
@@ -8589,19 +8589,6 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Right category rail stays sticky and shows category progress, lock icons, and completion checks",
           "Sequential rules prevent jumping ahead when global or category locks are active",
           "Completing a lesson refreshes progress and can auto-advance the learner to the next available lesson"
-        ]
-      },
-      {
-        name: "lesson-detail",
-        label: "Lesson Viewer",
-        description: "Focused lesson page with video, written content, assets, triggers, quiz questions, and completion controls.",
-        group: "Training",
-        purpose: "The lesson viewer is where actual learning happens. It supports video playback, PDF/resource access, embedded assessment checkpoints, quiz remediation, and mark-complete progression from one focused interface.",
-        bullets: [
-          "Video area supports embedded/direct video playback and progress resume behavior",
-          "Lesson assets and PDFs can be previewed, opened, or downloaded when attached",
-          "Stepwise quiz questions provide immediate correctness feedback and remediation prompts",
-          "Mark Complete updates learner progress and unlocks the next sequential step when requirements are met"
         ]
       },
       {

@@ -328,11 +328,6 @@ const roles = [
         label: "Program Workspace",
         resolveUrl: async (page) => resolveFirstTraineeTrainingHref(page, "program"),
       },
-      {
-        name: "lesson-detail",
-        label: "Lesson Viewer",
-        resolveUrl: async (page) => resolveFirstTraineeTrainingHref(page, "lesson"),
-      },
       { name: "progress", url: "/trainee/progress", label: "Progress Tracker" },
       { name: "quiz-history", url: "/trainee/quiz-history", label: "Quiz History" },
       { name: "resources", url: "/trainee/resources", label: "Learning Resources" },

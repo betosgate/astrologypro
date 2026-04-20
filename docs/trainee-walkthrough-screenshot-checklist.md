@@ -11,17 +11,17 @@ Current target set:
 1. `trainee-hub`
 2. `training-center`
 3. `program-workspace`
-4. `lesson-detail`
-5. `progress`
-6. `quiz-history`
-7. `resources`
-8. `sessions`
-9. `graduation`
-10. `trainee-profile`
+4. `progress`
+5. `quiz-history`
+6. `resources`
+7. `sessions`
+8. `graduation`
+9. `trainee-profile`
 
 Currently omitted:
 
 - Standalone notifications, mentor chat, schedule, bookmarks, badge wall, glossary, peer community, and help screens — no matching `/trainee/*` routes exist currently.
+- Separate training category and lesson detail deep links — the current learner flow uses the program workspace with inline lesson viewing; the detail-view navigation is not active in the UI.
 - `/trainee/certificate` — route redirects incomplete trainees to progress; use `graduation` until a graduated screenshot account is available.
 
 ## Capture Rules
@@ -63,15 +63,7 @@ Currently omitted:
 - Avoid:
   - locked-only program where no lesson can be opened
 
-### 4. `lesson-detail.png`
-- Route: first available `/trainee/training/:programId/:categoryId/:lessonId`
-- Show:
-  - lesson breadcrumb and title
-  - video or lesson content
-  - lesson sidebar
-  - completion or quiz area if visible
-
-### 5. `progress.png`
+### 4. `progress.png`
 - Route: `/trainee/progress`
 - Show:
   - summary cards
@@ -79,7 +71,7 @@ Currently omitted:
   - module breakdown
   - lesson rows with completion indicators
 
-### 6. `quiz-history.png`
+### 5. `quiz-history.png`
 - Route: `/trainee/quiz-history`
 - Show:
   - quiz stats cards
@@ -88,7 +80,7 @@ Currently omitted:
 - Best state:
   - at least one quiz attempt
 
-### 7. `resources.png`
+### 6. `resources.png`
 - Route: `/trainee/resources`
 - Show:
   - quick links
@@ -96,20 +88,20 @@ Currently omitted:
   - download/open controls
   - study guides if available
 
-### 8. `sessions.png`
+### 7. `sessions.png`
 - Route: `/trainee/sessions`
 - Show:
   - upcoming sessions section
   - past sessions section
   - scheduling instructions or populated booking cards
 
-### 9. `graduation.png`
+### 8. `graduation.png`
 - Route: `/trainee/training/graduation`
 - Show:
   - not-yet-graduated card for incomplete trainees, or certificate summary for graduated trainees
   - Continue Training or certificate verification action
 
-### 10. `trainee-profile.png`
+### 9. `trainee-profile.png`
 - Route: `/trainee/profile`
 - Show:
   - profile completion bar
@@ -122,7 +114,6 @@ Currently omitted:
 The capture script resolves:
 
 - first available program route for `program-workspace`
-- first available unlocked lesson route for `lesson-detail`
 - direct routes for all static trainee pages
 
-If a trainee account has no accessible program data, the script should skip dynamic training-detail screenshots rather than overwrite valid images with empty or redirect states.
+If a trainee account has no accessible program data, the script should skip the dynamic program-workspace screenshot rather than overwrite valid images with empty or redirect states.
