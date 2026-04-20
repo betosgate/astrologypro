@@ -163,6 +163,26 @@ async function handleCommunityCheckoutCompleted(session: Stripe.Checkout.Session
   let communityMemberId: string | null = null;
 
   if (!isMysterySchool) {
+    // Resolve pm_tier_id: prefer explicit metadata (new conversion flow),
+    // otherwise map planType → tier name (Individual/couple → Individual, family → Family).
+    const explicitTargetTierId = session.metadata?.target_tier_id ?? null;
+    let resolvedTierId: string | null = explicitTargetTierId;
+    if (!resolvedTierId) {
+      const desiredTierName = planType === "family" ? "Family" : "Individual";
+      const { data: tierRow } = await supabase
+        .from("pm_plan_tiers")
+        .select("id")
+        .eq("is_active", true)
+        .ilike("name", desiredTierName)
+        .maybeSingle();
+      resolvedTierId = (tierRow?.id as string | undefined) ?? null;
+      if (!resolvedTierId) {
+        console.warn(
+          `[webhook/community] Could not resolve pm_tier_id for planType=${planType} — member will default to lowest-order tier on read`
+        );
+      }
+    }
+
     // PM checkout — upsert community_members as the PM record
     const { data: member } = await supabase
       .from("community_members")
@@ -176,6 +196,7 @@ async function handleCommunityCheckoutCompleted(session: Stripe.Checkout.Session
           plan_type: planType,
           stripe_subscription_id: subscriptionId ?? null,
           joined_at: new Date().toISOString(),
+          ...(resolvedTierId ? { pm_tier_id: resolvedTierId } : {}),
         },
         { onConflict: "user_id" }
       )
