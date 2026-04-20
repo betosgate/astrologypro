@@ -5886,22 +5886,274 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
         ]
       },
       {
-        name: "calendar",
-        label: "Session Calendar",
-        description: "The live calendar view of your practice schedule — every confirmed booking, available window, and blocked slot displayed across Day, Week, and Month layouts. The page header is titled 'Availability' and shows your public booking link with a one-click copy button. A colour legend at the top distinguishes Available slots (teal background fill), Booked sessions (amber blocks with title), and Blocked windows. Action buttons along the top bar let you Block Day Off, Add Special Hours, or Create Manual Booking without leaving the calendar. Session blocks show the service name and client, and the week navigator arrows let you move forward and backward through your schedule.",
-        group: "My Schedule",
-        purpose: "A real-time visual map of your schedule so you can manage availability, spot gaps, and create bookings without switching between pages.",
+        name: "bookings-list",
+        label: "Bookings — Session List",
+        description: "The Bookings page (Calendar → Bookings in the sidebar) — the diviner's master log of every session booked with them. Page header reads \"Bookings / Manage your client sessions and appointments.\" followed by a row of five KPI stat cards: Sessions this week, Hours booked, Upcoming sessions, Total clients, and Total revenue. Below the stats, an Upcoming / Past toggle switches between future and historical bookings, and a secondary status filter row (All / Pending / Awaiting Payment / Confirmed / In Progress / Completed / Cancelled / No Show) narrows the list further. A search bar on the right accepts client name, service, or date. The \"Upcoming Bookings\" table that follows shows every booking with Date & Time, Client (name + email), Service, Duration, Payment (amount + Paid/Unpaid/Free chip), Status pill, and an Actions column with Open Service (where applicable) and Details buttons — clicking Details opens the right-side Booking Details drawer.",
+        group: "Calendar",
+        purpose: "Gives diviners a complete, queryable history of every session on their calendar in a single page — the headline KPIs show how busy and how profitable the period is at a glance, and the combined Upcoming/Past toggle + status chip filters + search make it trivial to jump to any specific booking and open its full detail drawer.",
         bullets: [
-          "Day / Week / Month toggle — switch between views to zoom in on today or survey the full month",
-          "Booking link banner — your public booking URL displayed at the top with a Copy Link button for sharing",
-          "Available window fill — teal background shows your configured open hours as a visual layer behind sessions",
-          "Booked session blocks — amber blocks with service name displayed; today is highlighted with an accent border",
-          "Block Day Off button — marks an entire day as unavailable in one click",
-          "Add Special Hours button — create a one-off availability window outside your regular schedule",
-          "Create Manual Booking button — add a booking directly from the calendar without a client self-booking",
-          "Week navigation — arrow controls to move between weeks; current week shown as default on page load",
-          "Calendar Connections shortcut — button in the header to jump to Google/Outlook calendar sync settings",
-          "Manage Weekly Schedule shortcut — button to edit your recurring availability windows"
+          "Page header: \"Bookings\" title + subtitle \"Manage your client sessions and appointments.\"",
+          "Five KPI stat cards: Sessions this week / Hours booked / Upcoming sessions / Total clients / Total revenue",
+          "Upcoming / Past segmented toggle — amber-highlighted active segment flips the table between future and historical bookings",
+          "Status filter chips: All / Pending / Awaiting Payment / Confirmed / In Progress / Completed / Cancelled / No Show",
+          "Search input — matches on client name, service, or date",
+          "Upcoming Bookings table with a total-results count pill in the header (e.g. \"12 results\")",
+          "Table columns: Date & Time, Client (name + email), Service, Duration, Payment (amount + chip), Status pill, Actions",
+          "Payment chip variants: green \"Free\" / green \"Paid\" / amber \"Unpaid\" — surfaces Stripe state at a glance",
+          "Status pill variants: pending / completed / confirmed / cancelled / no_show — colour-coded by state",
+          "Actions column: \"Open Service\" deep-link (where a template maps) + \"Details\" to open the side drawer"
+        ]
+      },
+      {
+        name: "booking-detail-upcoming",
+        label: "Booking Details — Upcoming / Pending",
+        description: "The Booking Details drawer that slides in from the right when a diviner clicks \"Details\" on any upcoming or pending booking row. The drawer header shows the current status pill (pending / awaiting_payment / confirmed / in_progress), followed by the Client block (name + email), Service name, Date & Time, and Duration. A primary amber \"Join Session\" button opens the live video room, and a secondary \"Open Service\" button deep-links to the matching session tool (chart studio, card spread, etc.). Below that, the Birth Data block surfaces the client's birth date, birth time, and birth city with a copy button — everything the diviner needs to start a reading. Two destructive actions follow: \"Reschedule\" (propose a new slot) and \"Cancel Booking\" (red, outlined). A Payment block shows the amount and current Stripe status (Paid / Unpaid / Free). The drawer closes with a \"Note to Client\" composer — a free-text box that sends a direct email to the booking's client.",
+        group: "Calendar",
+        purpose: "Gives diviners everything they need to run, move, or cancel a booking in a single right-hand drawer — without losing their place in the Bookings table. The combination of Join Session, Open Service, Birth Data copy, and the Note to Client composer covers the full pre-session prep loop for upcoming sessions.",
+        bullets: [
+          "Drawer header: \"Booking Details\" title + close (×) affordance",
+          "Status pill (pending / awaiting_payment / confirmed / in_progress) at the top of the drawer",
+          "Client block: full name + email address",
+          "Service name + Date & Time + Duration laid out in a compact info grid",
+          "Primary CTA \"Join Session\" — opens the video room when the session is about to start",
+          "Secondary CTA \"Open Service\" — deep-links to the right session tool (chart studio, card spread, etc.)",
+          "Birth Data block: birth date + birth time + birth city with inline copy button",
+          "Reschedule action — opens the reschedule flow to propose a new slot",
+          "Cancel Booking action — red outlined button; cancels and notifies the client",
+          "Payment block: amount + status pill (Paid / Unpaid / Free)",
+          "Note to Client composer — free-text box + \"Send to Client\" button; sends an email to the booking's client email"
+        ]
+      },
+      {
+        name: "booking-detail-completed",
+        label: "Booking Details — Completed Session",
+        description: "The Booking Details drawer state for a session that has finished. Replaces the pre-session \"Join Session / Open Service / Reschedule / Cancel\" stack with post-session artefacts. The top \"Session Details\" block lists the meeting Provider (Chime) and Actual Duration (captured from the live room), plus the Meeting ID with a copy affordance. A Recording block streams the session recording inline with full HTML5 video controls — play/pause, scrub, volume, fullscreen, and download — and is backed by \"Download Recording\" and \"Copy Client Share Link\" buttons. Next comes a Transcript block (placeholder \"No transcript saved — full transcript persistence coming soon\"), then a completed pill followed by the same Client + Service + Date & Time + Duration info block from the upcoming state. Finally, a Linked Order block shows the matching order's amount, status pill (awaiting_intake / paid / refunded), and a \"View all orders →\" link.",
+        group: "Calendar",
+        purpose: "Turns the Bookings drawer into a full post-session review panel — everything a diviner needs to share the recording with the client, reconcile the linked order, or pull the meeting ID into a support ticket is right there in the same drawer that ran the live session.",
+        bullets: [
+          "Session Details block: Provider (Chime), Actual Duration (live-room captured), Meeting ID (copyable)",
+          "Recording block with an inline HTML5 video player — play / pause / scrub / volume / fullscreen",
+          "\"Download Recording\" button — pulls the .mp4 (or provider-native) recording file",
+          "\"Copy Client Share Link\" button — one-click share URL the diviner can email to the client",
+          "Transcript block — placeholder \"No transcript saved — full transcript persistence coming soon\"",
+          "Completed status pill displayed above the Client block",
+          "Client + Service + Date & Time + Duration info block — matches the upcoming drawer layout",
+          "Linked Order block: amount in USD + status pill + order ID preview + \"View all orders →\" deep link",
+          "Post-session actions (Note to Client, Reschedule, Cancel) are suppressed once the session is completed"
+        ]
+      },
+      {
+        name: "availability-list",
+        label: "Availability — Schedule List",
+        description: "The Availability page, reached from Calendar → Availability in the left sidebar. This is where diviners define the windows when clients can book sessions with them. Each availability schedule is shown as its own card with the schedule title at the top, an \"Active\" pill indicating whether it is live, the date range the schedule covers, and a row of weekday chips with the active weekdays highlighted in amber. Below the chips, a compact detail block shows the linked Service, the daily Time window, the session Duration, and the Timezone. A short description preview sits below the details, followed by an Active toggle and inline edit (pencil) and delete (trash) actions. A \"+ New Schedule\" button in the top right opens the creation modal.",
+        group: "Calendar",
+        purpose: "Gives diviners a single page to see every recurring availability schedule they have published — and exactly which service, days, hours, and timezone each one covers — so they can reorder, pause, or delete a schedule without leaving the page. Schedules defined here directly drive which slots appear on the public booking page.",
+        bullets: [
+          "Page header: \"Availability\" title + subtitle \"Define the windows when clients can book sessions with you.\" + \"+ New Schedule\" CTA",
+          "Schedule cards laid out in a responsive grid — each card represents one saved availability window",
+          "Card header: schedule title + green \"Active\" pill + start/end date range (e.g. \"Apr 17 – Jun 30, 2026\")",
+          "Weekday chip row — all seven days shown; enabled weekdays are highlighted in amber, disabled days appear muted",
+          "Detail block lists: Service (linked service name or \"No specific service\"), Time (start–end), Duration (minutes), Timezone (IANA label)",
+          "Description preview — first two lines of the schedule's rich-text notes, truncated with an ellipsis",
+          "Inline controls: Active toggle (pause without deleting), pencil icon (open edit modal), red trash icon (delete schedule)",
+          "Empty state appears when no schedules exist — prompts the diviner to create their first schedule",
+          "Schedules created here drive the slots shown on the diviner's public booking page and the availability overlay on Calendar View"
+        ]
+      },
+      {
+        name: "availability-new-modal",
+        label: "New Availability Schedule Modal",
+        description: "The \"New Availability Schedule\" modal that opens when a diviner clicks \"+ New Schedule\" on the Availability page. Captures every field needed to publish a recurring booking window — service, title, date range, weekdays, daily hours, session duration, timezone, rich-text notes, and active state — in a single scrollable form. The modal is dismissable via an X in the top-right, a Cancel button at the bottom, or by pressing Escape. The primary \"Create Schedule\" button validates the form and persists the new schedule to the availability list on submit.",
+        group: "Calendar",
+        purpose: "Lets diviners create a fully-configured availability schedule — optionally linked to a specific service — in one pass, without juggling multiple pages. The optional service link is the bridge that turns a published service into a bookable product on the public profile.",
+        bullets: [
+          "Service dropdown — optional link to a specific published service; defaults to \"No specific service\" with a helper line explaining the schedule will apply broadly if left blank",
+          "Title input — a human-readable label for the schedule (e.g. \"Spring Sessions\") shown on the list card and in admin views",
+          "Start Date (required) + End Date (optional, defaults to 2 years out) — dd/mm/yyyy native date pickers",
+          "Available Weekdays chip row — toggle Sun / Mon / Tue / Wed / Thu / Fri / Sat on or off; amber = on, muted = off",
+          "Start Time + End Time — native time pickers controlling the daily window (e.g. 09:00 AM – 05:00 PM)",
+          "Session Duration dropdown — discrete options (e.g. 30 / 45 / 60 / 90 / 120 minutes) used to slice the window into bookable slots",
+          "Timezone dropdown — IANA timezone list; determines how the start/end times are interpreted for booking clients",
+          "Notes / Instructions rich-text editor — optional client-facing copy with bold, italic, H2/H3 headings, bullet and numbered lists, blockquote, and undo/redo",
+          "\"Active — visible to clients\" toggle — enable now, or create the schedule hidden and activate later",
+          "Footer buttons: Cancel (dismiss without saving) + \"Create Schedule\" (validates required fields and publishes)"
+        ]
+      },
+      {
+        name: "calendar-view",
+        label: "Calendar View",
+        description: "The Calendar View page (`/dashboard/calendar`, reached from Calendar → Calendar View in the sidebar). Page header reads \"Availability / Set your weekly schedule, block days off, and add special hours.\" Two header CTAs — \"Calendar Connections\" and \"Manage Weekly Schedule\" — jump to the Google/Outlook sync page and the Availability Schedule List respectively. A prominent purple \"Your Booking Link\" card displays the diviner's public URL (e.g. `https://astrologypro.com/test-diviner-1`) with an open-in-new-tab icon and a \"Copy Link\" button — the subline reads \"Share this link with clients to let them book a session with you.\" Below the link card is the actual calendar: month navigation (‹ April 2026 ›), a Day / Week / Month segmented toggle (Month active by default), and three action buttons — \"× Block Day Off\", \"+ Add Special Hours\", and the primary amber \"+ Create Manual Booking\" CTA. A colour legend (green Available / amber Booked / red Blocked) sits above the grid. The month grid itself shows the seven weekday columns (Sun–Sat) with each day cell containing its date number and small coloured dots that preview that day's availability state; today's date is highlighted in an amber circle.",
+        group: "Calendar",
+        purpose: "Gives diviners a visual map of their schedule plus direct access to the three most common schedule changes — block a day off, add special hours, or manually create a booking — without leaving the calendar. The always-visible booking link at the top keeps share-your-URL one click away.",
+        bullets: [
+          "Page header: \"Availability\" title + subtitle \"Set your weekly schedule, block days off, and add special hours.\"",
+          "Header CTAs: Calendar Connections + Manage Weekly Schedule shortcuts",
+          "Your Booking Link card — purple gradient panel showing `https://astrologypro.com/{username}` with open-in-new-tab icon and \"Copy Link\" button",
+          "Month navigation: previous / next arrows + current month/year label (e.g. \"April 2026\")",
+          "Day / Week / Month segmented toggle — amber-highlighted active view",
+          "\"× Block Day Off\" action button — opens the Block Day Off side drawer with a date picker",
+          "\"+ Add Special Hours\" action button — opens the override flow to add one-off hours outside the regular schedule",
+          "\"+ Create Manual Booking\" primary amber CTA — opens the Create Manual Booking modal",
+          "Colour legend: green Available / amber Booked / red Blocked — matches the dots on each day cell",
+          "Month grid: seven weekday columns (Sun–Sat), days from prior/next month dimmed, today highlighted in amber",
+          "Each day cell shows small coloured availability dots derived from availability_slots and availability_overrides",
+          "Click a day to drill into its day view; click a booking block to open the Booking Details drawer"
+        ]
+      },
+      {
+        name: "calendar-manual-booking-modal",
+        label: "Create Manual Booking Modal",
+        description: "The modal that opens when a diviner clicks \"+ Create Manual Booking\" on the Calendar View page. Lets the diviner drop a booking on the calendar without a client payment flow — either as a personal reminder, with an existing client, or with a brand new client added on the fly. Top of the modal offers two toggles side-by-side: \"Personal Reminder / Only for Me\" and \"Add New Client Manually\". Below that, a \"Search Existing Client\" field with a magnifying-glass icon autocompletes on client name or email. A \"Service (optional)\" dropdown defaults to \"No service\" so a reminder slot does not need a linked service. The left column holds the Timezone selector (IANA zones, defaulting to the diviner's locale). The right column holds Session Date (dd/mm/yyyy), Start Time, and End Time — pickers default to the current hour. A \"Notes & Instructions (Internal)\" rich-text editor captures a private note for the diviner. A \"Client Notification\" row at the bottom carries a bell icon and the toggle \"Send a confirmation email to the client now\". Footer buttons: Cancel (dismiss) and a primary \"+ Confirm Booking\" that validates required fields and writes the booking with `metadata.is_manual = true`.",
+        group: "Calendar",
+        purpose: "Lets diviners block time for themselves, log walk-in sessions, or honour off-platform arrangements without forcing the client through a public booking flow — while still keeping the record in the same bookings table so the session shows up in Calendar View, Bookings, and Finance reports.",
+        bullets: [
+          "Modal header: \"Create Manual Booking\" title + close (×) affordance",
+          "Top toggle row: \"Personal Reminder / Only for Me\" + \"Add New Client Manually\" — switching modes reshapes the form",
+          "Search Existing Client field — autocompletes on name or email (hidden when reminder mode is on)",
+          "Service (optional) dropdown — defaults to \"No service\" so the slot does not require a linked service",
+          "Timezone dropdown — IANA timezones, defaults to the diviner's locale",
+          "Session Date picker + Start Time + End Time pickers — default to the current hour",
+          "Notes & Instructions (Internal) rich-text editor — bold, italic, H2/H3, bullet/numbered lists, blockquote, undo/redo",
+          "Client Notification toggle — \"Send a confirmation email to the client now\"; default off",
+          "Footer buttons: Cancel (dismiss without saving) + primary \"+ Confirm Booking\" (persists the booking)",
+          "Manual bookings are written with `metadata.is_manual = true` so they appear alongside public bookings on the Bookings list and Calendar View"
+        ]
+      },
+      {
+        name: "calendar-block-day-drawer",
+        label: "Block Day Off — Drawer",
+        description: "The right-hand drawer that slides in when a diviner clicks \"× Block Day Off\" on the Calendar View page. A minimal one-field drawer designed for a single action — mark a specific date as unavailable so no client can book that day. Drawer header reads \"Block Day Off\" with a close (×) affordance in the top-right. A single \"Date\" field with a dd/mm/yyyy native picker is the only input. Below sits a primary amber \"Block Day\" button that writes an `availability_override` row with `is_available = false` for the chosen date. Once saved, that day is immediately rendered with the red \"Blocked\" dot on the calendar grid and becomes unbookable on the public profile.",
+        group: "Calendar",
+        purpose: "One-click way to handle a vacation day, sick day, or personal appointment without editing the recurring weekly schedule — the diviner picks a date and saves, and the entire day disappears from the public booking page.",
+        bullets: [
+          "Drawer header: \"Block Day Off\" title + close (×) affordance",
+          "Single Date input with dd/mm/yyyy native picker — only required field in the drawer",
+          "Primary amber \"Block Day\" button — persists an availability_override row with `is_available = false`",
+          "Blocked day appears immediately on the calendar grid with the red \"Blocked\" legend colour",
+          "Public booking page hides the blocked date from client-facing slot pickers",
+          "Unblocking — blocked dates can be cleared later from the Availability override list",
+          "Partial-day blocking is handled separately via \"+ Add Special Hours\" — this drawer is whole-day only"
+        ]
+      },
+      {
+        name: "service-catalog-astrology",
+        label: "Astrology Service Catalog",
+        description: "The Astrology section of the Service Catalog — a curated library of 12 ready-to-publish astrology reading formats that diviners can add to their offering with a single click. Each card shows a colour-coded thumbnail, the default session duration, a suggested starting price (\"from $X\"), a \"birth data\" flag when the reading requires a client's natal chart, and a two-line description of what the reading covers. A green \"Added to your services\" state appears on any service already published; all other cards expose a prominent gold \"+ Add Service\" button that opens the price modal. The section header shows the live count (\"12 available\") and the whole catalog is gated by the diviner's admin-assigned Service Package (shown in the page header as \"Package: Astrology + Tarot\").",
+        group: "Services",
+        purpose: "Lets diviners publish a professional reading menu in minutes — without writing descriptions, picking durations, or guessing at price — by working from a vetted library of the most common astrology formats. Package gating ensures diviners only see the reading types they are licensed to offer.",
+        bullets: [
+          "Page header surfaces the active Service Package (e.g. \"Astrology + Tarot\") so diviners always know which categories are unlocked for them",
+          "12 astrology templates out of the box: Nativity Birth Chart (90 min, from $175), Solar Return (60 min, from $125), Weekly Transits (30 min, from $65), Monthly Transits + Lunar Return (45 min, from $95), Romantic Relationships (60 min, from $125), Friendship Relationships (60 min, from $125), Business Relationship (60 min, from $125), Predictive Event / Horary (45 min, from $95), Jupiter Return (45 min, from $95), Saturn Return (60 min, from $125), Mars Return (45 min, from $95), Uranus Opposition (60 min, from $125)",
+          "Every card shows: coloured thumbnail, duration, suggested starting price (\"from $X\"), a birth-data badge when the chart is required, and a short description",
+          "\"+ Add Service\" button opens a compact modal to set your price — defaults to the suggested price, fully editable, with a \"Use default\" link to snap back",
+          "Already-published templates show the green \"Added to your services\" state — preventing duplicates and making your current menu obvious at a glance",
+          "Left sidebar navigation — Services sits alongside the full diviner dashboard: Overview, Calendar, Orders, Clients, Check-Ins, Sessions, Landing Pages, Media Gallery, My Rituals, Mundane Astrology, Subscriptions, Intake Builder, Discounts, Gift Certificates, Marketing, Insights, Testimonials",
+          "After adding, a toast prompts the diviner to set availability — because a service without a linked availability window is invisible on the public booking page"
+        ]
+      },
+      {
+        name: "service-catalog-tarot",
+        label: "Tarot Toolkit Catalog",
+        description: "The Tarot Toolkit section of the Service Catalog — 7 ready-to-publish tarot reading formats ranging from quick 3-card question spreads to the classic 10-card Celtic Cross and a 12-card Astrological Spread. Each card shows the spread thumbnail, duration (20–75 min), suggested \"from\" price, a description of the spread layout and what question it answers, and an \"+ Add Service\" button. Cards already added to the diviner's profile show the green \"Added to your services\" state. The 12 Card Astrological Spread is the only tarot template that requires client birth data (flagged with an amber \"birth data\" badge).",
+        group: "Services",
+        purpose: "Gives tarot readers (and hybrid astrology-tarot diviners) a vetted library of the most common reading formats so they can publish a full tarot menu without writing spread descriptions or picking durations by hand.",
+        bullets: [
+          "7 tarot templates: 3 Card Basic Question Spread (20 min, from $35), 5 Card Complex Question Spread (30 min, from $55), 7 Card 6 Month Forward Review (45 min, from $75), 7 Card Horseshoe Spread / Major Read (45 min, from $75), 10 Card Relationship Spread (60 min, from $95), 10 Card Celtic Cross / Major Read (60 min, from $95), 12 Card Astrological Spread / Major Read (75 min, from $125)",
+          "\"Major Read\" label identifies the deeper, longer-session spreads (horseshoe, celtic cross, astrological) at a glance",
+          "Duration range spans short 20-minute readings up to 75-minute deep dives — so diviners can offer a price-tiered menu without manual configuration",
+          "Suggested prices range from $35 for a 3-card up to $125 for the 12-card astrological spread — aligned with typical market rates",
+          "Birth-data flag on the 12 Card Astrological Spread — signals to both the diviner and the client that this spread integrates the natal chart",
+          "\"Added to your services\" treatment matches the astrology cards — a consistent visual language across the whole catalog",
+          "Section header shows a count pill (\"7 available\") so the diviner sees exactly how many tarot formats the platform ships with"
+        ]
+      },
+      {
+        name: "service-add-modal",
+        label: "Add Service — Price Modal",
+        description: "The \"Add Service\" modal that pops up when a diviner clicks \"+ Add Service\" on any template card in the Astrology or Tarot catalog. A preview chip at the top restates exactly what is being added — the coloured thumbnail, the service name, the duration pill, a category tag (Astrology / Tarot), and an amber \"Requires birth data\" badge where applicable — followed by the full template description so the diviner can confirm the selection without leaving the modal. A single input field, \"Your Price (USD)\", captures the diviner's price and is pre-filled with the platform's suggested amount. A helper line reads \"Suggested: $X\" and a one-click \"Use default\" link snaps the input back to the recommended price at any time. Cancel closes the modal without saving; \"+ Add Service\" publishes the service to the diviner's profile, closes the modal, and fires a success toast that links directly to the Availability page so the new service can be made bookable immediately.",
+        group: "Services",
+        purpose: "Gives diviners complete pricing control on every service — without forcing them to rewrite durations, descriptions, or category metadata. The suggested price anchors new diviners to realistic market rates while the \"Use default\" link and \"you can update it anytime\" reassurance remove the pressure of getting it perfect on the first try.",
+        bullets: [
+          "Modal header: \"Add Service\" title + subtitle \"Set your price for {service name}. You can update it anytime.\"",
+          "Preview chip reflects the exact template being added: thumbnail, duration, category tag, optional \"Requires birth data\" badge, full description",
+          "Price input labelled \"Your Price (USD)\" with a \"$\" prefix, numeric keypad, and 0.01 step — defaults to the platform's suggested price on open",
+          "Helper text \"Suggested: $X\" plus a \"Use default\" link that restores the suggested price in one click",
+          "Footer: \"Cancel\" button (dismiss) + primary \"+ Add Service\" button (publish)",
+          "On success: modal closes, catalog card switches to the green \"Added to your services\" state, and a success toast prompts the diviner to \"Set Availability\" on the new service",
+          "Validation: price must be 0 or greater — the \"+ Add Service\" button is disabled while the input is empty or invalid"
+        ]
+      },
+      {
+        name: "service-active-list",
+        label: "Your Active Services",
+        description: "A live table at the bottom of the Services page showing every service the diviner has published to their public profile. Each row displays the service thumbnail, category label (Astrology or Tarot), duration, the diviner's configured price, a Status column (Active / Paused) alongside an \"Availability Set\" indicator confirming the service is linked to at least one availability template, and an Actions column for quick visibility and removal. The left edge of every row exposes up/down arrows so the diviner can reorder how services appear to clients on their public booking page. A summary line above the table reads \"N services on your profile — use ↕ arrows to reorder how they appear to clients.\"",
+        group: "Services",
+        purpose: "Replaces a full edit modal with fast, inline management — reorder, pause, or remove a service in one click without leaving the catalog view. The \"Availability Set\" status answers the number-one question for a live profile: \"will clients actually be able to book this?\"",
+        bullets: [
+          "Service column — thumbnail + display name + category label (Tarot / Astrology) so diviners recognise each row instantly",
+          "Duration column — the session length locked in at the time of adding (20 / 45 / 60 / 90 minutes, etc.)",
+          "Price column — the diviner's current price in USD, e.g. \"$35.00 · $175.00 · $100.00\"",
+          "Status column pairs two badges: green \"Active\" (service is live on the public profile) + green \"Availability Set\" (at least one matching availability template exists); a missing availability link surfaces as an amber warning banner above the list",
+          "Actions column — eye icon toggles the service active/paused without deleting it; trash icon removes the service from the diviner's profile (does not affect past bookings)",
+          "Reorder arrows on the left edge — up/down controls let the diviner change the order services appear on their public profile, persisted via the services sort_order column",
+          "Header line \"3 services on your profile — use ↕ arrows to reorder how they appear to clients\" reinforces the drag-free reorder pattern and gives an at-a-glance menu size"
+        ]
+      },
+      {
+        name: "public-profile-hero",
+        label: "Public Booking Page — Hero & Live Status",
+        description: "The top zone of the diviner's public-facing profile at `astrologypro.com/{username}` — the storefront every client lands on after clicking the shared booking link. The page has a Home / Bio tab switcher at the very top, a \"Access your personal divination back office\" link for logged-in diviners, and a sticky header nav (About / Services / Reviews / Book Now). The hero shows the diviner's avatar, display name, review aggregate (e.g. \"26 readings · 5.0 (2 reviews)\"), next-available copy (\"Next available: this week\"), and two CTAs — a primary gold \"Book a Reading\" button and a secondary \"View Services\" link — alongside a large hero image. Below the hero, a \"WHY CLIENTS BOOK\" strip and a \"TRUST SIGNALS\" strip surface auto-generated social proof (e.g. \"Private sessions delivered online through the platform\", \"5.0 average rating across 2 approved reviews\"). A live/offline status card follows, flipping between a live stream viewer and a \"OFFLINE NOW\" state (\"{Diviner} is not live right now. Browse media, testimonials, or book a private session below.\") when the diviner is not broadcasting.",
+        group: "Public Profile",
+        purpose: "Sets the first-impression above-the-fold — name, rating, availability, and two booking CTAs in the same frame — so a prospective client can decide to book within seconds of landing. The trust strips and offline status fill the gap between the hero and the bookable services so the page never feels empty when the diviner is not live.",
+        bullets: [
+          "URL pattern: `astrologypro.com/{username}` — shared via the Booking Link Banner on the dashboard",
+          "Home / Bio tabs at the top of the page — Home is the booking storefront; Bio is the long-form About view",
+          "\"Access your personal divination back office\" link in the top banner — appears for diviners browsing their own page, deep-links into `/dashboard`",
+          "Sticky header: diviner logo + nav links (About / Services / Reviews) + amber \"Book Now\" CTA",
+          "Hero block: avatar (animated halo) + display name + \"{N} readings · {rating} ({count} reviews)\" + \"Next available: this week\"",
+          "Primary CTA \"Book a Reading\" (gold) + secondary \"View Services\" — both scroll or deep-link into the booking flow",
+          "\"WHY CLIENTS BOOK\" strip — small-caps label + \"Available for online readings\" headline + description + pill (\"Private sessions delivered online through the platform\")",
+          "\"TRUST SIGNALS\" strip — small-caps label + pill (e.g. \"5.0 average rating across {count} approved reviews\")",
+          "Live / Offline status card — shows \"OFFLINE NOW\" with a character illustration when not broadcasting; switches to a live viewer pane when the diviner is streaming",
+          "Every field above is generated from the diviner's back-office setup — avatar from Profile, rating from Testimonials, availability from Calendar — so edits propagate without touching this page"
+        ]
+      },
+      {
+        name: "public-profile-calendar",
+        label: "Public Booking Page — Next Available Calendar",
+        description: "The \"Next Available\" month calendar section on the public booking page. A centred heading (\"Next Available\") and subline (\"Reserve your spot for a personal reading\") introduce the section. The calendar card shows month navigation (‹ April 2026 ›), a weekday header (Sun – Sat), and date cells with small coloured dots under every day that has at least one open booking slot. Today's date is highlighted with an amber border (20 in the screenshot). Past days appear dimmed and unclickable. A gold \"See All Available Times & Book →\" link below the calendar jumps to the full slot picker where the client chooses a service, date, and time in one flow.",
+        group: "Public Profile",
+        purpose: "Turns availability into the primary call-to-action on the page — instead of making the client hunt through services first, the calendar surfaces every bookable day at a glance so the \"can I book with this diviner?\" question is answered before the client scrolls further. The dots-under-dates pattern lets the client quickly spot the closest available slot.",
+        bullets: [
+          "Section heading: \"Next Available\" + subline \"Reserve your spot for a personal reading\"",
+          "Month navigation: ‹ and › arrows + current month/year label (e.g. \"April 2026\")",
+          "Weekday header row: SUN · MON · TUE · WED · THU · FRI · SAT",
+          "Date cells with a small coloured dot under every day that has at least one open booking slot",
+          "Today highlighted with an amber ring border (all other days are plain)",
+          "Past days are muted and unclickable — only future dates are selectable",
+          "Days without dots are visible but greyed out — the diviner has no availability that day",
+          "\"See All Available Times & Book →\" gold link — opens the full time-slot picker and kicks off the reservation flow",
+          "The dot density is computed live from availability_slots + availability_overrides minus existing bookings",
+          "Clicking a specific day scrolls directly to that day's time slots instead of requiring a second navigation"
+        ]
+      },
+      {
+        name: "public-profile-services",
+        label: "Public Booking Page — Services & Offerings",
+        description: "The Services & Offerings section at the bottom of the public booking page. A centred heading (\"Services & Offerings\") and subline (\"Explore the readings this diviner currently offers, from major timing cycles to evergreen guidance.\") introduce the section. Offerings are split into two named blocks — \"Time-Based Products\" (bookable sessions with a fixed duration) and \"Non-Time-Based Products\" (digital goods or async readings). Each service card shows title, price (top-right), a short description, duration pill (e.g. \"60 min\"), star rating, thumbnail image, a gold \"Book This Reading →\" primary CTA, a \"Learn More\" secondary link, and an expandable \"WHAT TO EXPECT\" accordion. Below those two blocks, a category tab row (e.g. \"Astrology (2)\" / \"Tarot (1)\") filters a second grid of cards by category so clients can browse by reading discipline.",
+        group: "Public Profile",
+        purpose: "Gives clients a complete menu of everything the diviner is currently offering, with enough detail (price, duration, description, rating) to make a booking decision on the spot. The Time-Based vs. Non-Time-Based split teaches the client the difference between a live session and an async deliverable, while the Astrology/Tarot tabs let category-curious clients narrow their options.",
+        bullets: [
+          "Section heading: \"Services & Offerings\" + subline explaining the scope of the diviner's menu",
+          "\"Time-Based Products\" heading — bookable sessions with a fixed duration (e.g. Solar Return Reading · 60 min · $100)",
+          "\"Non-Time-Based Products\" heading — digital goods or async readings (e.g. Nativity Birth Chart, 3 Card Basic Question Spread)",
+          "Service card layout: title (left) + price (top-right) + description + duration pill + star rating + thumbnail + CTAs",
+          "Primary CTA \"Book This Reading →\" (gold link) — opens the reservation flow with the service pre-selected",
+          "Secondary \"Learn More\" link — opens the full service detail drawer with long description and FAQs",
+          "\"WHAT TO EXPECT\" accordion on every card — expands to reveal the session agenda, preparation notes, and delivery format",
+          "Category tab row: e.g. \"Astrology ({count})\" / \"Tarot ({count})\" — live count pills + filters the card grid below",
+          "Filtered card grid uses the same card layout as the main blocks, just scoped to the selected category",
+          "All service data is pulled from the diviner's Services catalog — pricing, duration, description, thumbnail, and category come directly from the service_templates + services tables"
         ]
       },
       {
@@ -6147,44 +6399,6 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
         ]
       },
       {
-        name: "booking-detail-upcoming",
-        label: "Booking Details — Upcoming / Pending",
-        description: "The Booking Details drawer that slides in from the right when a diviner clicks \"Details\" on any upcoming or pending booking row. The drawer header shows the current status pill (pending / awaiting_payment / confirmed / in_progress), followed by the Client block (name + email), Service name, Date & Time, and Duration. A primary amber \"Join Session\" button opens the live video room, and a secondary \"Open Service\" button deep-links to the matching session tool (chart studio, card spread, etc.). Below that, the Birth Data block surfaces the client's birth date, birth time, and birth city with a copy button — everything the diviner needs to start a reading. Two destructive actions follow: \"Reschedule\" (propose a new slot) and \"Cancel Booking\" (red, outlined). A Payment block shows the amount and current Stripe status (Paid / Unpaid / Free). The drawer closes with a \"Note to Client\" composer — a free-text box that sends a direct email to the booking's client.",
-        group: "Calendar",
-        purpose: "Gives diviners everything they need to run, move, or cancel a booking in a single right-hand drawer — without losing their place in the Bookings table. The combination of Join Session, Open Service, Birth Data copy, and the Note to Client composer covers the full pre-session prep loop for upcoming sessions.",
-        bullets: [
-          "Drawer header: \"Booking Details\" title + close (×) affordance",
-          "Status pill (pending / awaiting_payment / confirmed / in_progress) at the top of the drawer",
-          "Client block: full name + email address",
-          "Service name + Date & Time + Duration laid out in a compact info grid",
-          "Primary CTA \"Join Session\" — opens the video room when the session is about to start",
-          "Secondary CTA \"Open Service\" — deep-links to the right session tool (chart studio, card spread, etc.)",
-          "Birth Data block: birth date + birth time + birth city with inline copy button",
-          "Reschedule action — opens the reschedule flow to propose a new slot",
-          "Cancel Booking action — red outlined button; cancels and notifies the client",
-          "Payment block: amount + status pill (Paid / Unpaid / Free)",
-          "Note to Client composer — free-text box + \"Send to Client\" button; sends an email to the booking's client email"
-        ]
-      },
-      {
-        name: "booking-detail-completed",
-        label: "Booking Details — Completed Session",
-        description: "The Booking Details drawer state for a session that has finished. Replaces the pre-session \"Join Session / Open Service / Reschedule / Cancel\" stack with post-session artefacts. The top \"Session Details\" block lists the meeting Provider (Chime) and Actual Duration (captured from the live room), plus the Meeting ID with a copy affordance. A Recording block streams the session recording inline with full HTML5 video controls — play/pause, scrub, volume, fullscreen, and download — and is backed by \"Download Recording\" and \"Copy Client Share Link\" buttons. Next comes a Transcript block (placeholder \"No transcript saved — full transcript persistence coming soon\"), then a completed pill followed by the same Client + Service + Date & Time + Duration info block from the upcoming state. Finally, a Linked Order block shows the matching order's amount, status pill (awaiting_intake / paid / refunded), and a \"View all orders →\" link.",
-        group: "Calendar",
-        purpose: "Turns the Bookings drawer into a full post-session review panel — everything a diviner needs to share the recording with the client, reconcile the linked order, or pull the meeting ID into a support ticket is right there in the same drawer that ran the live session.",
-        bullets: [
-          "Session Details block: Provider (Chime), Actual Duration (live-room captured), Meeting ID (copyable)",
-          "Recording block with an inline HTML5 video player — play / pause / scrub / volume / fullscreen",
-          "\"Download Recording\" button — pulls the .mp4 (or provider-native) recording file",
-          "\"Copy Client Share Link\" button — one-click share URL the diviner can email to the client",
-          "Transcript block — placeholder \"No transcript saved — full transcript persistence coming soon\"",
-          "Completed status pill displayed above the Client block",
-          "Client + Service + Date & Time + Duration info block — matches the upcoming drawer layout",
-          "Linked Order block: amount in USD + status pill + order ID preview + \"View all orders →\" deep link",
-          "Post-session actions (Note to Client, Reschedule, Cancel) are suppressed once the session is completed"
-        ]
-      },
-      {
         name: "service-pricing",
         label: "Service Pricing Configurator",
         description: "Set and fine-tune the pricing for each service you offer. Control base price, intro rates, package bundles, and session length options — all from one configuration screen per service.",
@@ -6214,81 +6428,6 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Reject a review — remove a review that is inaccurate, abusive, or violates policy, with a reason logged",
           "Overall rating display — your current star average shown at the top of the management view",
           "Request a testimonial — send a post-session email prompting a specific client to leave a review"
-        ]
-      },
-      {
-        name: "bookings-list",
-        label: "Bookings — Session List",
-        description: "The Bookings page (Calendar → Bookings in the sidebar) — the diviner's master log of every session booked with them. Page header reads \"Bookings / Manage your client sessions and appointments.\" followed by a row of five KPI stat cards: Sessions this week, Hours booked, Upcoming sessions, Total clients, and Total revenue. Below the stats, an Upcoming / Past toggle switches between future and historical bookings, and a secondary status filter row (All / Pending / Awaiting Payment / Confirmed / In Progress / Completed / Cancelled / No Show) narrows the list further. A search bar on the right accepts client name, service, or date. The \"Upcoming Bookings\" table that follows shows every booking with Date & Time, Client (name + email), Service, Duration, Payment (amount + Paid/Unpaid/Free chip), Status pill, and an Actions column with Open Service (where applicable) and Details buttons — clicking Details opens the right-side Booking Details drawer.",
-        group: "Calendar",
-        purpose: "Gives diviners a complete, queryable history of every session on their calendar in a single page — the headline KPIs show how busy and how profitable the period is at a glance, and the combined Upcoming/Past toggle + status chip filters + search make it trivial to jump to any specific booking and open its full detail drawer.",
-        bullets: [
-          "Page header: \"Bookings\" title + subtitle \"Manage your client sessions and appointments.\"",
-          "Five KPI stat cards: Sessions this week / Hours booked / Upcoming sessions / Total clients / Total revenue",
-          "Upcoming / Past segmented toggle — amber-highlighted active segment flips the table between future and historical bookings",
-          "Status filter chips: All / Pending / Awaiting Payment / Confirmed / In Progress / Completed / Cancelled / No Show",
-          "Search input — matches on client name, service, or date",
-          "Upcoming Bookings table with a total-results count pill in the header (e.g. \"12 results\")",
-          "Table columns: Date & Time, Client (name + email), Service, Duration, Payment (amount + chip), Status pill, Actions",
-          "Payment chip variants: green \"Free\" / green \"Paid\" / amber \"Unpaid\" — surfaces Stripe state at a glance",
-          "Status pill variants: pending / completed / confirmed / cancelled / no_show — colour-coded by state",
-          "Actions column: \"Open Service\" deep-link (where a template maps) + \"Details\" to open the side drawer"
-        ]
-      },
-      {
-        name: "calendar-view",
-        label: "Calendar View",
-        description: "The Calendar View page (`/dashboard/calendar`, reached from Calendar → Calendar View in the sidebar). Page header reads \"Availability / Set your weekly schedule, block days off, and add special hours.\" Two header CTAs — \"Calendar Connections\" and \"Manage Weekly Schedule\" — jump to the Google/Outlook sync page and the Availability Schedule List respectively. A prominent purple \"Your Booking Link\" card displays the diviner's public URL (e.g. `https://astrologypro.com/test-diviner-1`) with an open-in-new-tab icon and a \"Copy Link\" button — the subline reads \"Share this link with clients to let them book a session with you.\" Below the link card is the actual calendar: month navigation (‹ April 2026 ›), a Day / Week / Month segmented toggle (Month active by default), and three action buttons — \"× Block Day Off\", \"+ Add Special Hours\", and the primary amber \"+ Create Manual Booking\" CTA. A colour legend (green Available / amber Booked / red Blocked) sits above the grid. The month grid itself shows the seven weekday columns (Sun–Sat) with each day cell containing its date number and small coloured dots that preview that day's availability state; today's date is highlighted in an amber circle.",
-        group: "Calendar",
-        purpose: "Gives diviners a visual map of their schedule plus direct access to the three most common schedule changes — block a day off, add special hours, or manually create a booking — without leaving the calendar. The always-visible booking link at the top keeps share-your-URL one click away.",
-        bullets: [
-          "Page header: \"Availability\" title + subtitle \"Set your weekly schedule, block days off, and add special hours.\"",
-          "Header CTAs: Calendar Connections + Manage Weekly Schedule shortcuts",
-          "Your Booking Link card — purple gradient panel showing `https://astrologypro.com/{username}` with open-in-new-tab icon and \"Copy Link\" button",
-          "Month navigation: previous / next arrows + current month/year label (e.g. \"April 2026\")",
-          "Day / Week / Month segmented toggle — amber-highlighted active view",
-          "\"× Block Day Off\" action button — opens the Block Day Off side drawer with a date picker",
-          "\"+ Add Special Hours\" action button — opens the override flow to add one-off hours outside the regular schedule",
-          "\"+ Create Manual Booking\" primary amber CTA — opens the Create Manual Booking modal",
-          "Colour legend: green Available / amber Booked / red Blocked — matches the dots on each day cell",
-          "Month grid: seven weekday columns (Sun–Sat), days from prior/next month dimmed, today highlighted in amber",
-          "Each day cell shows small coloured availability dots derived from availability_slots and availability_overrides",
-          "Click a day to drill into its day view; click a booking block to open the Booking Details drawer"
-        ]
-      },
-      {
-        name: "calendar-manual-booking-modal",
-        label: "Create Manual Booking Modal",
-        description: "The modal that opens when a diviner clicks \"+ Create Manual Booking\" on the Calendar View page. Lets the diviner drop a booking on the calendar without a client payment flow — either as a personal reminder, with an existing client, or with a brand new client added on the fly. Top of the modal offers two toggles side-by-side: \"Personal Reminder / Only for Me\" and \"Add New Client Manually\". Below that, a \"Search Existing Client\" field with a magnifying-glass icon autocompletes on client name or email. A \"Service (optional)\" dropdown defaults to \"No service\" so a reminder slot does not need a linked service. The left column holds the Timezone selector (IANA zones, defaulting to the diviner's locale). The right column holds Session Date (dd/mm/yyyy), Start Time, and End Time — pickers default to the current hour. A \"Notes & Instructions (Internal)\" rich-text editor captures a private note for the diviner. A \"Client Notification\" row at the bottom carries a bell icon and the toggle \"Send a confirmation email to the client now\". Footer buttons: Cancel (dismiss) and a primary \"+ Confirm Booking\" that validates required fields and writes the booking with `metadata.is_manual = true`.",
-        group: "Calendar",
-        purpose: "Lets diviners block time for themselves, log walk-in sessions, or honour off-platform arrangements without forcing the client through a public booking flow — while still keeping the record in the same bookings table so the session shows up in Calendar View, Bookings, and Finance reports.",
-        bullets: [
-          "Modal header: \"Create Manual Booking\" title + close (×) affordance",
-          "Top toggle row: \"Personal Reminder / Only for Me\" + \"Add New Client Manually\" — switching modes reshapes the form",
-          "Search Existing Client field — autocompletes on name or email (hidden when reminder mode is on)",
-          "Service (optional) dropdown — defaults to \"No service\" so the slot does not require a linked service",
-          "Timezone dropdown — IANA timezones, defaults to the diviner's locale",
-          "Session Date picker + Start Time + End Time pickers — default to the current hour",
-          "Notes & Instructions (Internal) rich-text editor — bold, italic, H2/H3, bullet/numbered lists, blockquote, undo/redo",
-          "Client Notification toggle — \"Send a confirmation email to the client now\"; default off",
-          "Footer buttons: Cancel (dismiss without saving) + primary \"+ Confirm Booking\" (persists the booking)",
-          "Manual bookings are written with `metadata.is_manual = true` so they appear alongside public bookings on the Bookings list and Calendar View"
-        ]
-      },
-      {
-        name: "calendar-block-day-drawer",
-        label: "Block Day Off — Drawer",
-        description: "The right-hand drawer that slides in when a diviner clicks \"× Block Day Off\" on the Calendar View page. A minimal one-field drawer designed for a single action — mark a specific date as unavailable so no client can book that day. Drawer header reads \"Block Day Off\" with a close (×) affordance in the top-right. A single \"Date\" field with a dd/mm/yyyy native picker is the only input. Below sits a primary amber \"Block Day\" button that writes an `availability_override` row with `is_available = false` for the chosen date. Once saved, that day is immediately rendered with the red \"Blocked\" dot on the calendar grid and becomes unbookable on the public profile.",
-        group: "Calendar",
-        purpose: "One-click way to handle a vacation day, sick day, or personal appointment without editing the recurring weekly schedule — the diviner picks a date and saves, and the entire day disappears from the public booking page.",
-        bullets: [
-          "Drawer header: \"Block Day Off\" title + close (×) affordance",
-          "Single Date input with dd/mm/yyyy native picker — only required field in the drawer",
-          "Primary amber \"Block Day\" button — persists an availability_override row with `is_available = false`",
-          "Blocked day appears immediately on the calendar grid with the red \"Blocked\" legend colour",
-          "Public booking page hides the blocked date from client-facing slot pickers",
-          "Unblocking — blocked dates can be cleared later from the Availability override list",
-          "Partial-day blocking is handled separately via \"+ Add Special Hours\" — this drawer is whole-day only"
         ]
       },
       {
@@ -6596,54 +6735,6 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
         ]
       },
       {
-        name: "service-catalog-astrology",
-        label: "Astrology Service Catalog",
-        description: "The Astrology section of the Service Catalog — a curated library of 12 ready-to-publish astrology reading formats that diviners can add to their offering with a single click. Each card shows a colour-coded thumbnail, the default session duration, a suggested starting price (\"from $X\"), a \"birth data\" flag when the reading requires a client's natal chart, and a two-line description of what the reading covers. A green \"Added to your services\" state appears on any service already published; all other cards expose a prominent gold \"+ Add Service\" button that opens the price modal. The section header shows the live count (\"12 available\") and the whole catalog is gated by the diviner's admin-assigned Service Package (shown in the page header as \"Package: Astrology + Tarot\").",
-        group: "Services",
-        purpose: "Lets diviners publish a professional reading menu in minutes — without writing descriptions, picking durations, or guessing at price — by working from a vetted library of the most common astrology formats. Package gating ensures diviners only see the reading types they are licensed to offer.",
-        bullets: [
-          "Page header surfaces the active Service Package (e.g. \"Astrology + Tarot\") so diviners always know which categories are unlocked for them",
-          "12 astrology templates out of the box: Nativity Birth Chart (90 min, from $175), Solar Return (60 min, from $125), Weekly Transits (30 min, from $65), Monthly Transits + Lunar Return (45 min, from $95), Romantic Relationships (60 min, from $125), Friendship Relationships (60 min, from $125), Business Relationship (60 min, from $125), Predictive Event / Horary (45 min, from $95), Jupiter Return (45 min, from $95), Saturn Return (60 min, from $125), Mars Return (45 min, from $95), Uranus Opposition (60 min, from $125)",
-          "Every card shows: coloured thumbnail, duration, suggested starting price (\"from $X\"), a birth-data badge when the chart is required, and a short description",
-          "\"+ Add Service\" button opens a compact modal to set your price — defaults to the suggested price, fully editable, with a \"Use default\" link to snap back",
-          "Already-published templates show the green \"Added to your services\" state — preventing duplicates and making your current menu obvious at a glance",
-          "Left sidebar navigation — Services sits alongside the full diviner dashboard: Overview, Calendar, Orders, Clients, Check-Ins, Sessions, Landing Pages, Media Gallery, My Rituals, Mundane Astrology, Subscriptions, Intake Builder, Discounts, Gift Certificates, Marketing, Insights, Testimonials",
-          "After adding, a toast prompts the diviner to set availability — because a service without a linked availability window is invisible on the public booking page"
-        ]
-      },
-      {
-        name: "service-catalog-tarot",
-        label: "Tarot Toolkit Catalog",
-        description: "The Tarot Toolkit section of the Service Catalog — 7 ready-to-publish tarot reading formats ranging from quick 3-card question spreads to the classic 10-card Celtic Cross and a 12-card Astrological Spread. Each card shows the spread thumbnail, duration (20–75 min), suggested \"from\" price, a description of the spread layout and what question it answers, and an \"+ Add Service\" button. Cards already added to the diviner's profile show the green \"Added to your services\" state. The 12 Card Astrological Spread is the only tarot template that requires client birth data (flagged with an amber \"birth data\" badge).",
-        group: "Services",
-        purpose: "Gives tarot readers (and hybrid astrology-tarot diviners) a vetted library of the most common reading formats so they can publish a full tarot menu without writing spread descriptions or picking durations by hand.",
-        bullets: [
-          "7 tarot templates: 3 Card Basic Question Spread (20 min, from $35), 5 Card Complex Question Spread (30 min, from $55), 7 Card 6 Month Forward Review (45 min, from $75), 7 Card Horseshoe Spread / Major Read (45 min, from $75), 10 Card Relationship Spread (60 min, from $95), 10 Card Celtic Cross / Major Read (60 min, from $95), 12 Card Astrological Spread / Major Read (75 min, from $125)",
-          "\"Major Read\" label identifies the deeper, longer-session spreads (horseshoe, celtic cross, astrological) at a glance",
-          "Duration range spans short 20-minute readings up to 75-minute deep dives — so diviners can offer a price-tiered menu without manual configuration",
-          "Suggested prices range from $35 for a 3-card up to $125 for the 12-card astrological spread — aligned with typical market rates",
-          "Birth-data flag on the 12 Card Astrological Spread — signals to both the diviner and the client that this spread integrates the natal chart",
-          "\"Added to your services\" treatment matches the astrology cards — a consistent visual language across the whole catalog",
-          "Section header shows a count pill (\"7 available\") so the diviner sees exactly how many tarot formats the platform ships with"
-        ]
-      },
-      {
-        name: "service-add-modal",
-        label: "Add Service — Price Modal",
-        description: "The \"Add Service\" modal that pops up when a diviner clicks \"+ Add Service\" on any template card in the Astrology or Tarot catalog. A preview chip at the top restates exactly what is being added — the coloured thumbnail, the service name, the duration pill, a category tag (Astrology / Tarot), and an amber \"Requires birth data\" badge where applicable — followed by the full template description so the diviner can confirm the selection without leaving the modal. A single input field, \"Your Price (USD)\", captures the diviner's price and is pre-filled with the platform's suggested amount. A helper line reads \"Suggested: $X\" and a one-click \"Use default\" link snaps the input back to the recommended price at any time. Cancel closes the modal without saving; \"+ Add Service\" publishes the service to the diviner's profile, closes the modal, and fires a success toast that links directly to the Availability page so the new service can be made bookable immediately.",
-        group: "Services",
-        purpose: "Gives diviners complete pricing control on every service — without forcing them to rewrite durations, descriptions, or category metadata. The suggested price anchors new diviners to realistic market rates while the \"Use default\" link and \"you can update it anytime\" reassurance remove the pressure of getting it perfect on the first try.",
-        bullets: [
-          "Modal header: \"Add Service\" title + subtitle \"Set your price for {service name}. You can update it anytime.\"",
-          "Preview chip reflects the exact template being added: thumbnail, duration, category tag, optional \"Requires birth data\" badge, full description",
-          "Price input labelled \"Your Price (USD)\" with a \"$\" prefix, numeric keypad, and 0.01 step — defaults to the platform's suggested price on open",
-          "Helper text \"Suggested: $X\" plus a \"Use default\" link that restores the suggested price in one click",
-          "Footer: \"Cancel\" button (dismiss) + primary \"+ Add Service\" button (publish)",
-          "On success: modal closes, catalog card switches to the green \"Added to your services\" state, and a success toast prompts the diviner to \"Set Availability\" on the new service",
-          "Validation: price must be 0 or greater — the \"+ Add Service\" button is disabled while the input is empty or invalid"
-        ]
-      },
-      {
         name: "payout-history",
         label: "Payout History",
         description: "Complete history of all payouts received by the diviner from the platform. Each row shows the payout date, amount, currency, and Stripe transfer status. Filterable by date range and payment method.",
@@ -6848,22 +6939,6 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
         ]
       },
       {
-        name: "service-active-list",
-        label: "Your Active Services",
-        description: "A live table at the bottom of the Services page showing every service the diviner has published to their public profile. Each row displays the service thumbnail, category label (Astrology or Tarot), duration, the diviner's configured price, a Status column (Active / Paused) alongside an \"Availability Set\" indicator confirming the service is linked to at least one availability template, and an Actions column for quick visibility and removal. The left edge of every row exposes up/down arrows so the diviner can reorder how services appear to clients on their public booking page. A summary line above the table reads \"N services on your profile — use ↕ arrows to reorder how they appear to clients.\"",
-        group: "Services",
-        purpose: "Replaces a full edit modal with fast, inline management — reorder, pause, or remove a service in one click without leaving the catalog view. The \"Availability Set\" status answers the number-one question for a live profile: \"will clients actually be able to book this?\"",
-        bullets: [
-          "Service column — thumbnail + display name + category label (Tarot / Astrology) so diviners recognise each row instantly",
-          "Duration column — the session length locked in at the time of adding (20 / 45 / 60 / 90 minutes, etc.)",
-          "Price column — the diviner's current price in USD, e.g. \"$35.00 · $175.00 · $100.00\"",
-          "Status column pairs two badges: green \"Active\" (service is live on the public profile) + green \"Availability Set\" (at least one matching availability template exists); a missing availability link surfaces as an amber warning banner above the list",
-          "Actions column — eye icon toggles the service active/paused without deleting it; trash icon removes the service from the diviner's profile (does not affect past bookings)",
-          "Reorder arrows on the left edge — up/down controls let the diviner change the order services appear on their public profile, persisted via the services sort_order column",
-          "Header line \"3 services on your profile — use ↕ arrows to reorder how they appear to clients\" reinforces the drag-free reorder pattern and gives an at-a-glance menu size"
-        ]
-      },
-      {
         name: "orders",
         label: "My Orders",
         description: "A complete transaction log of every order and payment placed by your clients — one-time session bookings, package purchases, gift certificate sales, and subscription charges all appear here. Four stat cards at the top give an instant snapshot: Total Orders all time, Completed orders with total value, Pending orders awaiting payment, and Refunded orders. A search bar lets you find any order by client name, email, service name, or Stripe payment ID. A date-range picker narrows the view to a specific period. The sortable table below shows every order row with Client, Service, Amount, Status, Date, and an Actions column for opening the full order detail.",
@@ -7009,43 +7084,6 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Priority Support add-on — $9/month; guarantees a 4-hour support response SLA",
           "Subscribe to a plan first — add-ons require an active base plan before they can be enabled",
           "Invoices — billing history with dates and amounts for each charge on your account"
-        ]
-      },
-      {
-        name: "availability-list",
-        label: "Availability — Schedule List",
-        description: "The Availability page, reached from Calendar → Availability in the left sidebar. This is where diviners define the windows when clients can book sessions with them. Each availability schedule is shown as its own card with the schedule title at the top, an \"Active\" pill indicating whether it is live, the date range the schedule covers, and a row of weekday chips with the active weekdays highlighted in amber. Below the chips, a compact detail block shows the linked Service, the daily Time window, the session Duration, and the Timezone. A short description preview sits below the details, followed by an Active toggle and inline edit (pencil) and delete (trash) actions. A \"+ New Schedule\" button in the top right opens the creation modal.",
-        group: "Calendar",
-        purpose: "Gives diviners a single page to see every recurring availability schedule they have published — and exactly which service, days, hours, and timezone each one covers — so they can reorder, pause, or delete a schedule without leaving the page. Schedules defined here directly drive which slots appear on the public booking page.",
-        bullets: [
-          "Page header: \"Availability\" title + subtitle \"Define the windows when clients can book sessions with you.\" + \"+ New Schedule\" CTA",
-          "Schedule cards laid out in a responsive grid — each card represents one saved availability window",
-          "Card header: schedule title + green \"Active\" pill + start/end date range (e.g. \"Apr 17 – Jun 30, 2026\")",
-          "Weekday chip row — all seven days shown; enabled weekdays are highlighted in amber, disabled days appear muted",
-          "Detail block lists: Service (linked service name or \"No specific service\"), Time (start–end), Duration (minutes), Timezone (IANA label)",
-          "Description preview — first two lines of the schedule's rich-text notes, truncated with an ellipsis",
-          "Inline controls: Active toggle (pause without deleting), pencil icon (open edit modal), red trash icon (delete schedule)",
-          "Empty state appears when no schedules exist — prompts the diviner to create their first schedule",
-          "Schedules created here drive the slots shown on the diviner's public booking page and the availability overlay on Calendar View"
-        ]
-      },
-      {
-        name: "availability-new-modal",
-        label: "New Availability Schedule Modal",
-        description: "The \"New Availability Schedule\" modal that opens when a diviner clicks \"+ New Schedule\" on the Availability page. Captures every field needed to publish a recurring booking window — service, title, date range, weekdays, daily hours, session duration, timezone, rich-text notes, and active state — in a single scrollable form. The modal is dismissable via an X in the top-right, a Cancel button at the bottom, or by pressing Escape. The primary \"Create Schedule\" button validates the form and persists the new schedule to the availability list on submit.",
-        group: "Calendar",
-        purpose: "Lets diviners create a fully-configured availability schedule — optionally linked to a specific service — in one pass, without juggling multiple pages. The optional service link is the bridge that turns a published service into a bookable product on the public profile.",
-        bullets: [
-          "Service dropdown — optional link to a specific published service; defaults to \"No specific service\" with a helper line explaining the schedule will apply broadly if left blank",
-          "Title input — a human-readable label for the schedule (e.g. \"Spring Sessions\") shown on the list card and in admin views",
-          "Start Date (required) + End Date (optional, defaults to 2 years out) — dd/mm/yyyy native date pickers",
-          "Available Weekdays chip row — toggle Sun / Mon / Tue / Wed / Thu / Fri / Sat on or off; amber = on, muted = off",
-          "Start Time + End Time — native time pickers controlling the daily window (e.g. 09:00 AM – 05:00 PM)",
-          "Session Duration dropdown — discrete options (e.g. 30 / 45 / 60 / 90 / 120 minutes) used to slice the window into bookable slots",
-          "Timezone dropdown — IANA timezone list; determines how the start/end times are interpreted for booking clients",
-          "Notes / Instructions rich-text editor — optional client-facing copy with bold, italic, H2/H3 headings, bullet and numbered lists, blockquote, and undo/redo",
-          "\"Active — visible to clients\" toggle — enable now, or create the schedule hidden and activate later",
-          "Footer buttons: Cancel (dismiss without saving) + \"Create Schedule\" (validates required fields and publishes)"
         ]
       },
     ],
