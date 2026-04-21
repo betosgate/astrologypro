@@ -235,20 +235,16 @@ export async function publishLandingPage(
   publishedBy: string,
 ): Promise<void> {
   // Step 1: promote draft content to published on all draft sections
-  await supabase.rpc("publish_landing_page_sections", {
-    p_landing_page_id: landingPageId,
-  });
-
-  // Fallback if RPC not available: update sections directly
-  const { data: draftSections } = await supabase
+  const { data: draftSections, error: draftErr } = await supabase
     .from("service_landing_page_sections")
     .select("id, draft_content_json, draft_body_html")
     .eq("landing_page_id", landingPageId)
     .eq("is_draft", true);
+  if (draftErr) throw draftErr;
 
   if (draftSections && draftSections.length > 0) {
     for (const s of draftSections) {
-      await supabase
+      const { error } = await supabase
         .from("service_landing_page_sections")
         .update({
           published_content_json: s.draft_content_json,
@@ -257,44 +253,53 @@ export async function publishLandingPage(
           updated_by: publishedBy,
         })
         .eq("id", s.id);
+      if (error) throw error;
     }
   }
 
-  // Step 2: update landing page status
-  const { data: currentPage } = await supabase
+  // Step 2: flip the diviner_services gate FIRST. This is the flag the public
+  // route reads; doing it before advancing service_landing_pages.status means a
+  // failure here aborts before the page is marked as published, avoiding the
+  // mixed state where the builder reports "published" but the route 404s.
+  const { error: dsErr } = await supabase
+    .from("diviner_services")
+    .update({ is_published: true, publish_status: "published" })
+    .eq("diviner_id", divinerId)
+    .eq("template_id", serviceTemplateId)
+    .eq("is_enabled", true);
+  if (dsErr) throw dsErr;
+
+  // Step 3: update landing page status
+  const { data: currentPage, error: currentErr } = await supabase
     .from("service_landing_pages")
     .select("published_version")
     .eq("id", landingPageId)
     .single();
+  if (currentErr) throw currentErr;
 
   const nextVersion = (currentPage?.published_version ?? 0) + 1;
 
-  await supabase
+  const { error: pageErr } = await supabase
     .from("service_landing_pages")
     .update({
       status: "published",
       published_at: new Date().toISOString(),
+      unpublished_at: null,
       published_version: nextVersion,
       updated_by: publishedBy,
     })
     .eq("id", landingPageId);
-
-  // Step 3: sync diviner_services published flag
-  await supabase
-    .from("diviner_services")
-    .update({ is_published: true, publish_status: "live" })
-    .eq("diviner_id", divinerId)
-    .eq("template_id", serviceTemplateId)
-    .eq("is_enabled", true);
+  if (pageErr) throw pageErr;
 
   // Step 4: belt-and-suspenders — ensure the legacy `services.is_active` flag
   // is on so the public landing page route is reachable. The admin enable
   // toggle normally handles this; this is a safety net for drift.
-  await supabase
+  const { error: svcErr } = await supabase
     .from("services")
     .update({ is_active: true })
     .eq("diviner_id", divinerId)
     .eq("template_id", serviceTemplateId);
+  if (svcErr) throw svcErr;
 }
 
 /**
@@ -307,7 +312,16 @@ export async function unpublishLandingPage(
   divinerId: string,
   unpublishedBy: string,
 ): Promise<void> {
-  await supabase
+  // Flip the gate first so the public route stops serving immediately, even
+  // if the landing_page status update fails.
+  const { error: dsErr } = await supabase
+    .from("diviner_services")
+    .update({ is_published: false, publish_status: "unpublished" })
+    .eq("diviner_id", divinerId)
+    .eq("template_id", serviceTemplateId);
+  if (dsErr) throw dsErr;
+
+  const { error: pageErr } = await supabase
     .from("service_landing_pages")
     .update({
       status: "unpublished",
@@ -315,12 +329,7 @@ export async function unpublishLandingPage(
       updated_by: unpublishedBy,
     })
     .eq("id", landingPageId);
-
-  await supabase
-    .from("diviner_services")
-    .update({ is_published: false, publish_status: "draft" })
-    .eq("diviner_id", divinerId)
-    .eq("template_id", serviceTemplateId);
+  if (pageErr) throw pageErr;
 }
 
 // ── Section slot availability ──────────────────────────────────────────────────

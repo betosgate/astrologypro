@@ -26,10 +26,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { RoleUpgradeBanners } from "@/components/dashboard/role-upgrade-banners";
-import { TabbieAppointmentCard } from "@/components/trainee/tabbie-appointment-card";
-import { computeTraineeTabbieDashboardState } from "@/lib/trainee-tabbie-appointments";
-
-const TABBY_USERNAME = process.env.NEXT_PUBLIC_TABBY_USERNAME ?? "tabby";
+import { TabbieAppointmentSection } from "@/components/trainee/tabbie-appointment-section";
 
 export const metadata = { title: "Trainee Dashboard - AstrologyPro" };
 
@@ -242,7 +239,6 @@ export default async function TraineeDashboardPage() {
     recentCompletionsResult,
     quizStatsResult,
     timeSpentResult,
-    tabbieState,
   ] = await Promise.all([
     // Mentor
     trainee.mentor_diviner_id
@@ -280,9 +276,6 @@ export default async function TraineeDashboardPage() {
       .from("lesson_progress")
       .select("time_spent_seconds")
       .eq("user_id", user.id),
-
-    // Tabbie post-training appointment block state
-    computeTraineeTabbieDashboardState(trainee.id, user.id).catch(() => null),
   ]);
 
   const mentorName = mentorResult.data
@@ -426,38 +419,11 @@ export default async function TraineeDashboardPage() {
       />
 
       {/* ── Tabbie post-training appointment block ─────────────────────────── */}
-      {tabbieState && <TabbieAppointmentCard state={tabbieState} />}
+      <TabbieAppointmentSection
+        trainingCompleted={trainee.training_status === "graduated"}
+      />
 
       {/* ── Graduation CTA ──────────────────────────────────────────────────── */}
-      {trainee.training_status === "graduated" && (
-        <Card className="border-amber-300/50 bg-amber-50/30 dark:border-amber-700/50 dark:bg-amber-950/20">
-          <CardContent className="flex flex-col gap-4 py-5 sm:flex-row sm:items-center">
-            <div className="flex items-center gap-3 flex-1">
-              <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/40">
-                <GraduationCap className="size-5 text-amber-600" />
-              </div>
-              <div>
-                <p className="font-semibold text-amber-900 dark:text-amber-100">
-                  Congratulations, Graduate!
-                </p>
-                <p className="text-sm text-amber-800/80 dark:text-amber-200/80">
-                  You&apos;ve completed your training. Book your
-                  post-graduation consultation with Tabby to discuss next
-                  steps.
-                </p>
-              </div>
-            </div>
-            <Button
-              asChild
-              className="shrink-0 bg-amber-600 hover:bg-amber-700 text-white"
-            >
-              {/* <Link href={`/${TABBY_USERNAME}`}>Book with Tabby</Link> */}
-              <Link href={`/test-diviner-1`}>Book an appoinment</Link>
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-
       {/* ── Training Progress Summary ────────────────────────────────────────── */}
       {trainingPrograms.length > 0 && (
         <Card>

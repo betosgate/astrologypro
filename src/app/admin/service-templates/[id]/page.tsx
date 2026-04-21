@@ -2,10 +2,16 @@ import { notFound } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { TemplateForm } from "../_components/template-form";
 import type { TemplateFormData } from "../_components/template-form";
+import { TemplatePublicUrlActions } from "../_components/template-public-url-actions";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { APP_URL } from "@/lib/constants";
+import {
+  getServiceTemplatePublicPath,
+  isGeneralServiceTemplateSlug,
+} from "@/lib/service-template-public";
 
 export const dynamic = "force-dynamic";
 
@@ -56,6 +62,8 @@ export default async function EditServiceTemplatePage({ params }: Props) {
   if (!result) notFound();
 
   const { template, divinerCount, diviners } = result;
+  const isGeneralTemplate = isGeneralServiceTemplateSlug(template.slug ?? "");
+  const publicUrl = `${APP_URL}${getServiceTemplatePublicPath(template.slug)}`;
 
   // Map DB record to form shape
   const initialData: Partial<TemplateFormData> = {
@@ -115,14 +123,21 @@ export default async function EditServiceTemplatePage({ params }: Props) {
           </div>
         </div>
 
-        {divinerCount > 0 && (
-          <div className="text-right">
-            <div className="text-2xl font-bold">{divinerCount}</div>
-            <div className="text-xs text-muted-foreground">
-              diviner{divinerCount !== 1 ? "s" : ""} using this
+        <div className="space-y-3 text-right">
+          {isGeneralTemplate && (
+            <div className="flex justify-end">
+              <TemplatePublicUrlActions publicUrl={publicUrl} disabled={!template.is_active} />
             </div>
-          </div>
-        )}
+          )}
+          {divinerCount > 0 && (
+            <div>
+              <div className="text-2xl font-bold">{divinerCount}</div>
+              <div className="text-xs text-muted-foreground">
+                diviner{divinerCount !== 1 ? "s" : ""} using this
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Diviner list */}

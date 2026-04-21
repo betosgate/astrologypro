@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email";
+import { getAdminUser } from "@/lib/admin-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -96,6 +97,7 @@ export async function POST(
   }
 
   const admin = createAdminClient();
+  const adminUser = await getAdminUser();
 
   // Fetch booking + diviner + client
   const { data: booking, error: bErr } = await admin
@@ -110,14 +112,14 @@ export async function POST(
     return NextResponse.json({ error: "Booking not found" }, { status: 404 });
   }
 
-  // Verify diviner owns this booking
+  // Verify diviner owns this booking unless the caller is an admin
   const { data: diviner } = await admin
     .from("diviners")
     .select("id, display_name, username")
     .eq("user_id", user.id)
-    .single();
+    .maybeSingle();
 
-  if (!diviner || diviner.id !== booking.diviner_id) {
+  if (!adminUser && (!diviner || diviner.id !== booking.diviner_id)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -129,8 +131,9 @@ export async function POST(
   }
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://astrologypro.com";
-  const rebookUrl = `${appUrl}/${diviner.username ?? ""}`;
-  const divinerName = diviner.display_name ?? "Your Practitioner";
+  const bookingDiviner = booking.diviners as { display_name?: string; username?: string } | null;
+  const rebookUrl = `${appUrl}/${bookingDiviner?.username ?? diviner?.username ?? ""}`;
+  const divinerName = bookingDiviner?.display_name ?? diviner?.display_name ?? "Your Practitioner";
   const meta = booking.metadata as { availability_title?: string } | null;
   const serviceName =
     meta?.availability_title ??

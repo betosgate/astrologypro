@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe/client";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getAdminUser } from "@/lib/admin-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -22,24 +23,29 @@ export async function POST(req: NextRequest) {
   }
 
   const admin = createAdminClient();
+  const adminUser = await getAdminUser();
 
-  // Fetch the booking — only allow the diviner who owns it
+  // Fetch the booking — allow the owning diviner or any admin
   const { data: diviner } = await admin
     .from("diviners")
     .select("id")
     .eq("user_id", user.id)
     .maybeSingle();
 
-  if (!diviner) {
+  if (!diviner && !adminUser) {
     return NextResponse.json({ error: "Diviner account not found" }, { status: 403 });
   }
 
-  const { data: booking } = await admin
+  let bookingQuery = admin
     .from("bookings")
     .select("id, status, stripe_payment_intent_id, base_price, diviner_id")
-    .eq("id", body.booking_id)
-    .eq("diviner_id", diviner.id)
-    .maybeSingle();
+    .eq("id", body.booking_id);
+
+  if (!adminUser && diviner) {
+    bookingQuery = bookingQuery.eq("diviner_id", diviner.id);
+  }
+
+  const { data: booking } = await bookingQuery.maybeSingle();
 
   if (!booking) {
     return NextResponse.json({ error: "Booking not found" }, { status: 404 });
@@ -71,7 +77,7 @@ export async function POST(req: NextRequest) {
       const { data: divinerRecord } = await admin
         .from("diviners")
         .select("stripe_account_id")
-        .eq("id", diviner.id)
+        .eq("id", booking.diviner_id)
         .single();
       if (divinerRecord?.stripe_account_id) {
         paymentIntent = await stripe.paymentIntents.retrieve(

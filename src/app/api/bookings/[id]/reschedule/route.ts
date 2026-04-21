@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getAdminUser } from "@/lib/admin-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -36,6 +37,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
+      const adminUser = await getAdminUser();
+      if (adminUser) authorized = true;
       // client or diviner owns this booking
       if (booking.client_id === user.id) authorized = true;
       const { data: diviner } = await admin.from("diviners").select("id").eq("user_id", user.id).single();
