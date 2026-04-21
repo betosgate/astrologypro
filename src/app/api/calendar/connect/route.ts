@@ -19,15 +19,14 @@ export async function GET() {
     .from("diviners")
     .select("id")
     .eq("user_id", user.id)
-    .single();
+    .maybeSingle();
 
-  let ownerId = diviner?.id;
+  const role: "admin" | "diviner" = diviner?.id ? "diviner" : "admin";
+  const ownerId = diviner?.id ?? user.id;
 
-  // If not a Diviner, use their User ID (for Admins)
-  if (!ownerId) {
-    ownerId = user.id;
-  }
-
-  const oauthUrl = await getOAuthUrl(ownerId);
+  // State carries role so the callback knows where to redirect and how to
+  // persist the token. Format: "<role>:<ownerId>".
+  const state = `${role}:${ownerId}`;
+  const oauthUrl = await getOAuthUrl(state);
   return NextResponse.redirect(oauthUrl);
 }

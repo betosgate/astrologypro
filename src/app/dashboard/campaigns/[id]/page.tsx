@@ -37,8 +37,6 @@ import {
   ArrowLeft,
   Pencil,
   Trash2,
-  UserPlus,
-  UserMinus,
   DollarSign,
   Target,
   Users,
@@ -48,18 +46,6 @@ import {
 import { CampaignUrlDisplay } from "@/components/dashboard/campaign-url-display";
 import { CampaignAutoPauseBanner } from "@/components/dashboard/campaign-auto-pause-banner";
 import { CampaignDestinationBadge } from "@/components/dashboard/campaign-destination-badge";
-
-interface CampaignAffiliate {
-  id: string;
-  campaign_id: string;
-  affiliate_id: string;
-  affiliate_type: string;
-  custom_commission_value: number | null;
-  joined_at: string;
-  name: string;
-  conversions: number;
-  commission_cents: number;
-}
 
 interface Conversion {
   id: string;
@@ -87,7 +73,6 @@ interface CampaignDetail {
   utm_medium: string | null;
   utm_campaign: string | null;
   created_at: string;
-  affiliates: CampaignAffiliate[];
   conversions: Conversion[];
   // Destination fields
   destination_type: "PROFILE" | "SERVICE" | null;
@@ -122,8 +107,6 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
   const [loading, setLoading] = useState(true);
   const [editOpen, setEditOpen] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [addAffOpen, setAddAffOpen] = useState(false);
-  const [addAffSaving, setAddAffSaving] = useState(false);
 
   // Edit form
   const [editName, setEditName] = useState("");
@@ -134,11 +117,6 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
   const [editCommType, setEditCommType] = useState("");
   const [editCommValue, setEditCommValue] = useState("");
   const [editBudgetCap, setEditBudgetCap] = useState("");
-
-  // Add affiliate form
-  const [addAffId, setAddAffId] = useState("");
-  const [addAffType, setAddAffType] = useState("diviner_affiliate");
-  const [addAffCommission, setAddAffCommission] = useState("");
 
   const loadCampaign = useCallback(async () => {
     setLoading(true);
@@ -209,48 +187,7 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
     }
   }
 
-  async function handleAddAffiliate() {
-    if (!addAffId.trim()) {
-      toast.error("Affiliate ID is required");
-      return;
-    }
-    setAddAffSaving(true);
-    const res = await fetch(`/api/dashboard/campaigns/${id}/affiliates`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        affiliate_id: addAffId.trim(),
-        affiliate_type: addAffType,
-        custom_commission_value: addAffCommission ? parseFloat(addAffCommission) : undefined,
-      }),
-    });
-    if (res.ok) {
-      toast.success("Affiliate added to campaign");
-      setAddAffOpen(false);
-      setAddAffId("");
-      setAddAffCommission("");
-      await loadCampaign();
-    } else {
-      const err = await res.json();
-      toast.error(err.title ?? "Failed to add affiliate");
-    }
-    setAddAffSaving(false);
-  }
-
-  async function handleRemoveAffiliate(affiliateId: string, affiliateType: string) {
-    if (!confirm("Remove this affiliate from the campaign?")) return;
-    const res = await fetch(`/api/dashboard/campaigns/${id}/affiliates`, {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ affiliate_id: affiliateId, affiliate_type: affiliateType }),
-    });
-    if (res.ok) {
-      toast.success("Affiliate removed");
-      await loadCampaign();
-    } else {
-      toast.error("Failed to remove affiliate");
-    }
-  }
+  // Affiliate enrollment removed from campaign detail — see /dashboard/affiliates/assignments
 
   if (loading) {
     return (
@@ -371,15 +308,6 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Affiliates</CardTitle>
-            <Users className="size-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">{campaign.affiliates.length}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Conversions</CardTitle>
             <Target className="size-4 text-muted-foreground" />
           </CardHeader>
@@ -436,95 +364,25 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
         </Card>
       )}
 
-      {/* Enrolled Affiliates */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle>Enrolled Affiliates</CardTitle>
-            <CardDescription>{campaign.affiliates.length} affiliate{campaign.affiliates.length !== 1 ? "s" : ""}</CardDescription>
-          </div>
-          <Dialog open={addAffOpen} onOpenChange={setAddAffOpen}>
-            <Button variant="outline" size="sm" onClick={() => setAddAffOpen(true)}>
-              <UserPlus className="mr-2 size-3.5" />Add Affiliate
-            </Button>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Add Affiliate to Campaign</DialogTitle>
-                <DialogDescription>Enter the affiliate ID to enroll them in this campaign.</DialogDescription>
-              </DialogHeader>
-              <div className="mt-4 space-y-4">
-                <div className="space-y-2">
-                  <Label>Affiliate ID</Label>
-                  <Input value={addAffId} onChange={(e) => setAddAffId(e.target.value)} placeholder="UUID of the affiliate" />
-                </div>
-                <div className="space-y-2">
-                  <Label>Affiliate Type</Label>
-                  <select className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm" value={addAffType} onChange={(e) => setAddAffType(e.target.value)}>
-                    <option value="diviner_affiliate">Diviner Affiliate</option>
-                    <option value="social_advocate">Social Advocate</option>
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Custom Commission Override (optional)</Label>
-                  <Input type="number" min="0" value={addAffCommission} onChange={(e) => setAddAffCommission(e.target.value)} placeholder="Leave blank to use campaign default" />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button onClick={handleAddAffiliate} disabled={addAffSaving}>
-                  {addAffSaving ? <Loader2 className="mr-2 size-4 animate-spin" /> : <UserPlus className="mr-2 size-4" />}
-                  Add to Campaign
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </CardHeader>
-        <CardContent>
-          {campaign.affiliates.length === 0 ? (
-            <p className="py-8 text-center text-sm text-muted-foreground">No affiliates enrolled yet.</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Custom Commission</TableHead>
-                    <TableHead>Conversions</TableHead>
-                    <TableHead>Commission Earned</TableHead>
-                    <TableHead>Joined</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {campaign.affiliates.map((aff) => (
-                    <TableRow key={aff.id}>
-                      <TableCell className="font-medium">{aff.name}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{aff.affiliate_type === "diviner_affiliate" ? "Affiliate" : "Advocate"}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        {aff.custom_commission_value !== null ? `${aff.custom_commission_value}%` : "Default"}
-                      </TableCell>
-                      <TableCell>{aff.conversions}</TableCell>
-                      <TableCell>{fmtCents(aff.commission_cents)}</TableCell>
-                      <TableCell>{fmtDate(aff.joined_at)}</TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="size-8 text-destructive hover:text-destructive"
-                          title="Remove from campaign"
-                          onClick={() => handleRemoveAffiliate(aff.affiliate_id, aff.affiliate_type)}
-                        >
-                          <UserMinus className="size-3.5" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+      {/* Affiliate enrollment moved — see /dashboard/affiliates/assignments.
+          Sprint 2026-04-21: affiliates are no longer enrolled per-campaign;
+          they're assigned to a diviner's profile or a specific service, with
+          a pre-defined commission. This page now shows only campaign-level
+          data. */}
+      <Card className="border-dashed">
+        <CardContent className="py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Users className="size-5 text-muted-foreground" />
+            <div>
+              <p className="text-sm font-medium">Affiliate management moved</p>
+              <p className="text-xs text-muted-foreground">
+                Assign affiliates to your profile or a service (not per-campaign) from the Assignments page.
+              </p>
             </div>
-          )}
+          </div>
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/dashboard/affiliates/assignments">Open Assignments</Link>
+          </Button>
         </CardContent>
       </Card>
 
