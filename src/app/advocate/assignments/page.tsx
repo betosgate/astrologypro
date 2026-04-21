@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { isAffiliateAssignmentV2Enabled } from "@/lib/feature-flags";
 import {
   Card,
   CardContent,
@@ -66,9 +68,16 @@ function fmtCommission(type: "percent" | "flat", value: number) {
 }
 
 export default function AdvocateAssignmentsPage() {
+  const router = useRouter();
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [loading, setLoading] = useState(true);
   const [createFor, setCreateFor] = useState<Assignment | null>(null);
+
+  useEffect(() => {
+    if (!isAffiliateAssignmentV2Enabled()) {
+      router.replace("/advocate");
+    }
+  }, [router]);
 
   const load = useCallback(async () => {
     setLoading(true);
