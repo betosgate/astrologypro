@@ -49,7 +49,7 @@ SET
       "answer": "The main focus is the natal blueprint, but timing themes and developmental periods can be discussed when they are clearly relevant to the chart."
     }
   ]'::jsonb,
-  seo_title = 'General Nativity Birth Chart Reading | Complete Natal Astrology Overview',
+  seo_title = 'General Nativity Birth Chart Reading | Natal Astrology Overview',
   seo_description = 'Book a complete nativity birth chart reading with a full overview of personality, life path, relationships, vocation, and major themes in your natal chart.',
   updated_at = now()
 WHERE slug = 'general-nativity-birth-chart';
