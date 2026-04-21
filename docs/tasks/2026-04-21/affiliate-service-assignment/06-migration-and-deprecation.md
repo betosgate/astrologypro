@@ -168,8 +168,55 @@ Cutover plan:
 2. Migrated data in `diviner_service_affiliates` and new `affiliate_campaigns` rows stays; no harm done.
 3. If rollback is permanent, a separate cleanup script can delete the migrated `owner_type='affiliate'` rows where `source_assignment_id IS NOT NULL` — but rolling forward is the default.
 
-## Post-migration Cleanup (follow-up sprint)
+## Post-migration Cleanup (follow-up sprint, ~30 days later)
 
-- Drop `campaign_affiliates` table after 30 days of stability.
-- Remove the legacy "Enrolled Affiliates" panel code (deleted from `src/app/dashboard/campaigns/[id]/page.tsx` and related API routes).
-- Remove the feature flag.
+All cleanup ships as its OWN separate sprint and its OWN migration, via the same `/admin/db/migrations` runner pattern documented in Task 01.
+
+### Drop `campaign_affiliates` — as a follow-up migration (not this sprint)
+
+Three files, same as any other migration, just done later:
+
+1. `supabase/migrations/20260521000001_drop_campaign_affiliates.sql`
+   ```sql
+   -- Idempotent destructive migration. Run ONLY after:
+   -- • V2 flag has been on in prod for 30+ days
+   -- • campaign_affiliates row count has been zero (or stable historical archive) for 7+ days
+   -- • A snapshot of campaign_affiliates has been exported to cold storage
+
+   DROP TABLE IF EXISTS campaign_affiliates CASCADE;
+   ```
+2. Bundle into `src/data/migrations/20260521000001_drop_campaign_affiliates.ts` via the Python helper.
+3. Register in `src/lib/db/migrations.ts` with `sortKey: "20260521000001"`.
+4. Deploy, open `/admin/db/migrations`, click Run.
+
+**Do NOT drop the table in this sprint.** Dropping requires explicit human approval after the stability window.
+
+### Other code cleanup (also a follow-up)
+
+- Remove the legacy "Enrolled Affiliates" panel code from `src/app/dashboard/campaigns/[id]/page.tsx` and related API routes.
+- Remove the feature flag helper from `src/lib/feature-flags.ts` and all `isAffiliateAssignmentV2Enabled()` call sites.
+- Remove any legacy reads from `campaign_affiliates` in API routes (grep `"campaign_affiliates"` across `src/app/api` and delete).
+
+### Pre-drop safety checklist
+
+Before running the drop migration, verify:
+
+```sql
+-- No live code still writing to the table
+SELECT COUNT(*) FROM campaign_affiliates WHERE created_at > now() - interval '7 days';
+-- expect: 0 (if > 0, something is still inserting — find and fix first)
+
+-- All data has been mirrored
+SELECT COUNT(*) FROM campaign_affiliates ca
+  WHERE NOT EXISTS (
+    SELECT 1 FROM diviner_service_affiliates dsa
+    WHERE dsa.affiliate_id = ca.affiliate_id
+      AND dsa.affiliate_type = ca.affiliate_type
+  );
+-- expect: 0 (every legacy enrollment has a new-model row)
+
+-- Archive to cold storage (required before drop)
+\copy (SELECT * FROM campaign_affiliates) TO '/tmp/campaign_affiliates_backup_<date>.csv' CSV HEADER;
+```
+
+Only when all three pass → proceed with the drop migration.

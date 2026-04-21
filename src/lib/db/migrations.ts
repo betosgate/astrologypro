@@ -24,6 +24,8 @@ import { MIGRATION_SQL as MIG_20260413000006 } from "@/data/migrations/202604130
 import { MIGRATION_SQL as MIG_20260413000008 } from "@/data/migrations/20260413000008_services_platform_fee_percent";
 import { MIGRATION_SQL as MIG_20260413000140 } from "@/data/migrations/20260413000140_media_albums";
 import { MIGRATION_SQL as MIG_20260413000126 } from "@/data/migrations/20260413000126_training_quiz_question_progress";
+import { MIGRATION_SQL as MIG_20260413000182 } from "@/data/migrations/20260413000182_natal_generation_governance";
+import { MIGRATION_SQL as MIG_20260413000185 } from "@/data/migrations/20260413000185_natal_regeneration_audit";
 import { MIGRATION_SQL as MIG_20260414000002 } from "@/data/migrations/20260414000002_booking_session_started_at";
 import { MIGRATION_SQL as MIG_20260414000026 } from "@/data/migrations/20260414000026_chime_sip_rule_id";
 import { MIGRATION_SQL as MIG_20260415000001 } from "@/data/migrations/20260415000001_chime_pipeline_id";
@@ -42,6 +44,7 @@ import { MIGRATION_SQL as MIG_20260421000001 } from "@/data/migrations/202604210
 import { MIGRATION_SQL as MIG_20260421000002 } from "@/data/migrations/20260421000002_booking_call_pin";
 import { MIGRATION_SQL as MIG_20260421000003 } from "@/data/migrations/20260421000003_seed_central_chime_number";
 import { MIGRATION_SQL as MIG_20260421000004 } from "@/data/migrations/20260421000004_add_general_service_templates";
+import { MIGRATION_SQL as MIG_20260421000010 } from "@/data/migrations/20260421000010_repair_family_birth_country";
 
 /**
  * Allowlisted migrations that the admin migration runner can execute.
@@ -283,6 +286,22 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
     sortKey: "20260413000126",
     sql: MIG_20260413000126,
   },
+  "20260413000182_natal_generation_governance": {
+    id: "20260413000182_natal_generation_governance",
+    title: "Natal chart generation governance (lifecycle + retry fields)",
+    description:
+      "Adds natal_status, natal_retry_count, natal_max_retries, natal_first_generated_at, natal_last_generated_at, natal_failure_reason, natal_lock_reason to community_family_members. POST /api/community/generate-natal selects these columns — without this migration the route's .select() fails and the API incorrectly returns 'Family member not found' (404). Backfills rows that already have natal_chart to natal_status='generated'. Strictly additive — every column uses ADD COLUMN IF NOT EXISTS. Run BEFORE 20260413000185.",
+    sortKey: "20260413000182",
+    sql: MIG_20260413000182,
+  },
+  "20260413000185_natal_regeneration_audit": {
+    id: "20260413000185_natal_regeneration_audit",
+    title: "Natal regeneration audit table",
+    description:
+      "Creates natal_regeneration_audit — records every user-initiated chart regeneration event (initiator, retry number, before/after birth data, outcome) for accountability and admin support review. POST /api/community/generate-natal writes to this table during regeneration; missing table causes insert failures. RLS: members read their own family's audit rows; service_role full access. Additive only. Run AFTER 20260413000182.",
+    sortKey: "20260413000185",
+    sql: MIG_20260413000185,
+  },
   "20260413000140_media_albums": {
     id: "20260413000140_media_albums",
     title: "Media image albums",
@@ -418,6 +437,14 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Clones the 19 canonical diviner-specific service_templates rows into a parallel general catalog by preserving all source fields and only changing name + slug to their general equivalents. Safe to re-run because each clone is inserted only if its target slug does not already exist.",
     sortKey: "20260421000002",
     sql: MIG_20260421000004,
+  },
+  "20260421000010_repair_family_birth_country": {
+    id: "20260421000010_repair_family_birth_country",
+    title: "Repair existing family birth_country (parse from birth_city)",
+    description:
+      "One-time data repair for community_family_members rows where birth_country IS NULL and birth_city ends with a recognized country suffix (e.g. 'Miami, FL, United States of America'). Uses an allowlist of ~70 country names ordered longest-first so multi-word matches win. Never overwrites an existing birth_country; ambiguous labels are skipped, not guessed. Safe to re-run — a 2nd pass updates zero rows. NON-destructive: no schema changes, no deletes.",
+    sortKey: "20260421000010",
+    sql: MIG_20260421000010,
   },
 };
 
