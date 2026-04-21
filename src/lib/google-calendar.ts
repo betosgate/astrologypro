@@ -574,7 +574,7 @@ async function getGoogleBusyScheduleByRange(
  * google_api_keys table (with env var fallback). Callers that were
  * synchronous have been updated to await this.
  */
-export async function getOAuthUrl(ownerId: string): Promise<string> {
+export async function getOAuthUrl(state: string): Promise<string> {
   const creds = await getGoogleCredentials();
   const params = new URLSearchParams({
     client_id: creds.clientId,
@@ -583,7 +583,7 @@ export async function getOAuthUrl(ownerId: string): Promise<string> {
     scope: SCOPES.join(" "),
     access_type: "offline",
     prompt: "consent",
-    state: ownerId,
+    state,
   });
 
   return `${GOOGLE_AUTH_URL}?${params.toString()}`;
@@ -597,9 +597,18 @@ export async function getOAuthUrl(ownerId: string): Promise<string> {
  */
 export async function handleOAuthCallback(
   code: string,
-  ownerId: string, // Changed from divinerId
-  userId: string   // Added userId
+  state: string,  // "<role>:<ownerId>" (admin|diviner) or a bare ownerId (legacy)
+  userId: string
 ): Promise<void> {
+  // Parse state: "<role>:<ownerId>". Bare uuid (no colon) is legacy diviner.
+  let role: "admin" | "diviner" = "diviner";
+  let ownerId = state;
+  const colonIndex = state.indexOf(":");
+  if (colonIndex > 0) {
+    const rawRole = state.slice(0, colonIndex);
+    ownerId = state.slice(colonIndex + 1);
+    if (rawRole === "admin" || rawRole === "diviner") role = rawRole;
+  }
   const creds = await getGoogleCredentials();
   const response = await fetch(GOOGLE_TOKEN_URL, {
     method: "POST",
@@ -661,6 +670,8 @@ export async function handleOAuthCallback(
 
   await upsertCalendarConnection(supabase, {
     divinerId: ownerId,
+    userId,
+    skipDivinerLookup: role === "admin",
     provider: "google",
     refreshToken,
     accessToken,
