@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { formatDate } from "@/lib/format";
+import { formatBirthPlace } from "@/lib/community/birth-location";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -330,11 +331,7 @@ export default function FamilyMemberChartPage() {
             {(member.birth_city || member.birth_country) && (
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Birth place</span>
-                <span>
-                  {[member.birth_city, member.birth_country]
-                    .filter(Boolean)
-                    .join(", ")}
-                </span>
+                <span>{formatBirthPlace(member.birth_city, member.birth_country)}</span>
               </div>
             )}
             {member.relationship && (
@@ -541,7 +538,7 @@ export default function FamilyMemberChartPage() {
                   ? `Born ${dob.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })} at ${member.birth_time}`
                   : `Born ${dob.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })} (time unknown)`}
                 {(member.birth_city || member.birth_country) &&
-                  ` · ${[member.birth_city, member.birth_country].filter(Boolean).join(", ")}`}
+                  ` · ${formatBirthPlace(member.birth_city, member.birth_country)}`}
               </CardDescription>
             </CardHeader>
             <CardContent className="flex justify-center">
