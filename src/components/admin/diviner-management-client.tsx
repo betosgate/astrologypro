@@ -142,9 +142,8 @@ function SortHeader({
   return (
     <button
       onClick={() => onSort(column)}
-      className={`flex items-center gap-1 font-medium transition-colors hover:text-foreground ${
-        active ? "text-foreground" : "text-muted-foreground"
-      }`}
+      className={`flex items-center gap-1 font-medium transition-colors hover:text-foreground ${active ? "text-foreground" : "text-muted-foreground"
+        }`}
     >
       {label}
       <Icon className={`size-3 ${active ? "opacity-100" : "opacity-40"}`} />
@@ -338,17 +337,15 @@ export function DivinerManagementClient({
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {hasActiveFilters && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleReset}
-              className="gap-1.5 text-muted-foreground hover:text-foreground"
-            >
-              <FilterX className="size-4" />
-              Reset filters
-            </Button>
-          )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleReset}
+            className="gap-1.5 text-muted-foreground hover:text-foreground"
+          >
+            <FilterX className="size-4" />
+            Refresh
+          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -359,7 +356,7 @@ export function DivinerManagementClient({
             <RefreshCw
               className={cn("size-4", isRefreshing && "animate-spin")}
             />
-            {isRefreshing ? "Refreshing…" : "Refresh"}
+            {isRefreshing ? "Reloading…" : "Reload"}
           </Button>
           <Button size="sm" asChild>
             <Link href="/admin/invitations?role=diviner">
@@ -376,11 +373,10 @@ export function DivinerManagementClient({
           <button
             key={tab}
             onClick={() => handleStatusChange(tab)}
-            className={`rounded-md px-3 py-1.5 text-sm font-medium capitalize transition-colors ${
-              currentStatus === tab
+            className={`rounded-md px-3 py-1.5 text-sm font-medium capitalize transition-colors ${currentStatus === tab
                 ? "bg-amber-500/15 text-amber-600 dark:text-amber-400"
                 : "text-muted-foreground hover:bg-muted hover:text-foreground"
-            }`}
+              }`}
           >
             {tab}
             <Badge variant="secondary" className="ml-1.5 h-5 min-w-5 px-1 text-xs">
@@ -580,9 +576,8 @@ export function DivinerManagementClient({
                       {d.phoneConnected ? (
                         <span
                           className="inline-flex items-center gap-1"
-                          title={`${
-                            d.phoneProvider === "chime" ? "Chime" : "Twilio"
-                          } · ${d.readingPhoneNumber}`}
+                          title={`${d.phoneProvider === "chime" ? "Chime" : "Twilio"
+                            } · ${d.readingPhoneNumber}`}
                         >
                           <CheckCircle2 className="size-4 text-green-600" />
                         </span>
