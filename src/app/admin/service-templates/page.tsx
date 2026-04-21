@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -175,6 +175,10 @@ export default function ServiceTemplatesPage() {
     } catch {
       toast.error("Failed to copy public URL");
     }
+  }
+
+  function handleOpenPublicUrl(template: ServiceTemplateRow) {
+    window.open(`${APP_URL}${getServiceTemplatePublicPath(template.slug)}`, "_blank", "noopener,noreferrer");
   }
 
   const hasActiveFilters = currentQ !== "" || category !== "all" || statusFilter !== "all" || currentSort !== "display_order" || currentDir !== "asc";
@@ -371,17 +375,11 @@ export default function ServiceTemplatesPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            asChild
                             disabled={!t.is_active}
+                            onClick={() => handleOpenPublicUrl(t)}
+                            title={t.is_active ? "Open public page" : "Template is inactive"}
                           >
-                            <Link
-                              href={`${APP_URL}${getServiceTemplatePublicPath(t.slug)}`}
-                              target="_blank"
-                              rel="noreferrer"
-                              title={t.is_active ? "Open public page" : "Template is inactive"}
-                            >
-                              <ExternalLink className="h-3.5 w-3.5" />
-                            </Link>
+                            <ExternalLink className="h-3.5 w-3.5" />
                           </Button>
                         </>
                       )}

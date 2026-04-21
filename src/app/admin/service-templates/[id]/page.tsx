@@ -19,6 +19,11 @@ interface Props {
   params: Promise<{ id: string }>;
 }
 
+interface TemplateDiviner {
+  id: string;
+  display_name: string;
+}
+
 async function getTemplate(id: string) {
   const admin = createAdminClient();
 
@@ -39,10 +44,22 @@ async function getTemplate(id: string) {
     .eq("template_id", id)
     .eq("is_enabled", true);
 
+  const diviners = (divinerServices ?? [])
+    .flatMap((ds) => {
+      const relation = ds.diviners;
+      return Array.isArray(relation) ? relation : relation ? [relation] : [];
+    })
+    .filter(
+      (diviner): diviner is TemplateDiviner =>
+        !!diviner &&
+        typeof diviner.id === "string" &&
+        typeof diviner.display_name === "string",
+    );
+
   return {
     template,
     divinerCount: divinerServices?.length ?? 0,
-    diviners: (divinerServices ?? []).map((ds) => ds.diviners),
+    diviners,
   };
 }
 
@@ -90,7 +107,7 @@ export default async function EditServiceTemplatePage({ params }: Props) {
   };
 
   return (
-    <div className="p-6 max-w-3xl mx-auto space-y-6">
+    <div className="w-full max-w-[1600px] mx-auto space-y-6 px-4 sm:px-6 lg:px-8">
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
@@ -148,8 +165,8 @@ export default async function EditServiceTemplatePage({ params }: Props) {
           </p>
           <div className="flex flex-wrap gap-1.5">
             {diviners.map((d) => (
-              <Badge key={(d as { id: string }).id} variant="secondary" className="text-xs">
-                {(d as { display_name: string }).display_name}
+              <Badge key={d.id} variant="secondary" className="text-xs">
+                {d.display_name}
               </Badge>
             ))}
           </div>

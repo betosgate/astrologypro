@@ -628,35 +628,37 @@ export function TemplateForm({ initialData, templateId, divinerCount = 0 }: Temp
           <Badge variant="outline">Preview</Badge>
         </div>
 
-        <ServiceTemplatePublicPage
-          embedded
-          disableLinks
-          diviners={[]}
-          emptyStateMessage="Preview mode: public diviner cards will appear here once practitioners offer this template."
-          template={{
-            category: form.category || "astrology",
-            name: form.name.trim() || "Service Name Preview",
-            slug: form.slug.trim() || "service-slug",
-            description: form.description.trim() || "Short description preview.",
-            long_description: form.long_description.trim() || null,
-            duration_minutes: Number.parseInt(form.duration_minutes, 10) || 60,
-            base_price: Number.parseFloat(form.base_price) || 0,
-            overage_rate: form.overage_rate ? Number.parseFloat(form.overage_rate) : null,
-            requires_birth_data: form.requires_birth_data,
-            whats_included: form.whats_included
-              .map((item) => item.trim())
-              .filter(Boolean),
-            who_its_for: form.who_its_for
-              .map((item) => item.trim())
-              .filter(Boolean),
-            faq: form.faq
-              .map((item) => ({
-                question: item.question.trim(),
-                answer: item.answer.trim(),
-              }))
-              .filter((item) => item.question && item.answer),
-          }}
-        />
+        <div className="max-h-[900px] overflow-y-auto rounded-2xl border border-border bg-background">
+          <ServiceTemplatePublicPage
+            embedded
+            disableLinks
+            diviners={[]}
+            emptyStateMessage="Preview mode: public diviner cards will appear here once practitioners offer this template."
+            template={{
+              category: form.category || "astrology",
+              name: form.name.trim() || "Service Name Preview",
+              slug: form.slug.trim() || "service-slug",
+              description: form.description.trim() || "Short description preview.",
+              long_description: form.long_description.trim() || null,
+              duration_minutes: Number.parseInt(form.duration_minutes, 10) || 60,
+              base_price: Number.parseFloat(form.base_price) || 0,
+              overage_rate: form.overage_rate ? Number.parseFloat(form.overage_rate) : null,
+              requires_birth_data: form.requires_birth_data,
+              whats_included: form.whats_included
+                .map((item) => item.trim())
+                .filter(Boolean),
+              who_its_for: form.who_its_for
+                .map((item) => item.trim())
+                .filter(Boolean),
+              faq: form.faq
+                .map((item) => ({
+                  question: item.question.trim(),
+                  answer: item.answer.trim(),
+                }))
+                .filter((item) => item.question && item.answer),
+            }}
+          />
+        </div>
       </section>
 
       <Separator />
