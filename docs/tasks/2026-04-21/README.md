@@ -65,10 +65,17 @@ No precedence logic. An affiliate with both a PROFILE-level and a SERVICE-level 
 ### Rule 5: Don't break existing data
 Existing `campaign_affiliates` rows stay readable. Existing diviner-owned campaigns continue to work. Migration backfills, doesn't delete. A feature flag controls whether the new flow is active.
 
-### Rule 6: Migration file naming
-```
-supabase/migrations/20260421NNNNNN_description.sql
-```
+### Rule 6: Migration delivery — 3 files per migration, run via `/admin/db/migrations`
+
+This project uses a custom in-app migration runner. Every migration requires THREE files; applying it = clicking Run on that admin page after deploy. Full guide: `docs/db-migrations.md`.
+
+- `supabase/migrations/<id>.sql` — canonical SQL, idempotent (`IF NOT EXISTS`, `ON CONFLICT`, etc.)
+- `src/data/migrations/<id>.ts` — bundled mirror (generated via the Python helper in Task 01)
+- Entry in `src/lib/db/migrations.ts` — registers it in the allowlist
+
+Migration IDs use the timestamp prefix `20260421NNNNNN_description`. The same ID appears in all three places and must match exactly.
+
+**No DROPs in any migration this sprint.** Dropping the legacy `campaign_affiliates` table happens in a separate follow-up migration (spec'd in Task 06) ~30 days after cutover.
 
 ### Rule 7: Attribution logged everywhere
 Every click and every page view that carries `?ref=` gets the affiliate logged. No silent drops. No partial attribution.

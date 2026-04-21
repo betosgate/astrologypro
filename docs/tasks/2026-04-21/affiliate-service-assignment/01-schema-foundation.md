@@ -24,9 +24,46 @@ Lay the full data foundation for the new affiliate model in one migration:
 - `campaign_conversions` has `campaign_id, affiliate_id, affiliate_type, order_reference, order_amount_cents, commission_amount_cents`.
 - `bookings` has no `ref_code` or attribution link.
 
+## Migration delivery pattern (read first)
+
+This project uses a custom **in-app migration runner** at `/admin/db/migrations`. Migrations are NOT applied via `supabase db push` against prod — they're deployed as code and then triggered by an admin clicking **Run migration** on that page. Full guide: `docs/db-migrations.md`.
+
+Every migration produced by this task requires **three files** (not one):
+
+| # | File | Purpose |
+|---|---|---|
+| 1 | `supabase/migrations/<id>.sql` | Canonical SQL. Idempotent. Source of truth. |
+| 2 | `src/data/migrations/<id>.ts` | Bundled mirror — the same SQL as a template literal so the deployed Vercel function has the SQL in memory (no `fs` at runtime). |
+| 3 | An entry in `src/lib/db/migrations.ts` | Registers the migration in the allowlist that `/admin/db/migrations` reads. |
+
+### Idempotency rules (NON-NEGOTIABLE — the runner may be re-clicked)
+
+| Operation | Required form |
+|---|---|
+| Create table | `CREATE TABLE IF NOT EXISTS …` |
+| Add column | `ADD COLUMN IF NOT EXISTS …` |
+| Create index | `CREATE INDEX IF NOT EXISTS …` / `CREATE UNIQUE INDEX IF NOT EXISTS …` |
+| Create function | `CREATE OR REPLACE FUNCTION …` |
+| Create trigger | `DROP TRIGGER IF EXISTS … ; CREATE TRIGGER …` |
+| Create RLS policy | Guard with `DO $$ IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE …) …` |
+| Insert seed | `INSERT … ON CONFLICT … DO NOTHING` |
+
+### No DROPs in this migration
+
+This is an additive-only migration. Any DROP (dropping `campaign_affiliates`, dropping deprecated columns) lives in a **follow-up migration** shipped in a separate sprint, after all consumers have been updated and the feature flag has been on in prod for 30+ days.
+
+### After deploying — how to run
+
+1. Commit all three files.
+2. `git push origin master` → Vercel auto-deploys (~2 min).
+3. Open `/admin/db/migrations` as admin.
+4. Find the new entry (`20260421000001 — Affiliate Service Assignments`).
+5. Click **Run migration**. The result panel renders inline.
+6. Success = green `ok: true` badge + Supabase Management API response in the body.
+
 ## Implementation Steps
 
-### 1. Migration file
+### 1. SQL file
 
 Create `supabase/migrations/20260421000001_affiliate_service_assignments.sql`.
 
@@ -247,9 +284,72 @@ CREATE POLICY diviner_service_affiliates_write_diviner
 
 Add `src/types/affiliate-assignment.ts` exporting `DivinerServiceAffiliate`, `AffiliateCampaignOwnerType`, and extending existing `AffiliateCampaign` type.
 
+### 10. Bundle the SQL as a TS module
+
+Create `src/data/migrations/20260421000001_affiliate_service_assignments.ts` using the repo's Python helper (from `docs/db-migrations.md` walkthrough):
+
+```bash
+python3 - <<'PY'
+sql = open('supabase/migrations/20260421000001_affiliate_service_assignments.sql').read()
+escaped = sql.replace('\\', '\\\\').replace('`', '\\`').replace('${', '\\${')
+header = (
+  '// AUTO-GENERATED bundled mirror of '
+  'supabase/migrations/20260421000001_affiliate_service_assignments.sql\n'
+  '// Used by /api/admin/db/migrate so the deployed function does not need fs.\n'
+  '\n'
+  'export const MIGRATION_SQL = `'
+)
+open('src/data/migrations/20260421000001_affiliate_service_assignments.ts','w').write(header + escaped + '`;\n')
+PY
+```
+
+Verify the mirror:
+```bash
+# Count must match between the two files
+grep -c "CREATE TABLE" supabase/migrations/20260421000001_affiliate_service_assignments.sql
+grep -c "CREATE TABLE" src/data/migrations/20260421000001_affiliate_service_assignments.ts
+# expect: both report the same integer
+```
+
+### 11. Register in the allowlist
+
+Open `src/lib/db/migrations.ts` and add (preserve alphabetical/chronological ordering of existing imports and entries):
+
+```ts
+import { MIGRATION_SQL as MIG_20260421000001 } from "@/data/migrations/20260421000001_affiliate_service_assignments";
+
+// Inside const MIGRATIONS: Record<string, MigrationDescriptor> = { ... } :
+  "20260421000001_affiliate_service_assignments": {
+    id: "20260421000001_affiliate_service_assignments",
+    title: "Affiliate Service Assignments + URL Attribution",
+    description: "New diviner_service_affiliates table. Extends affiliate_campaigns with owner_type / owner_affiliate_id / commission snapshot. Extends campaign_clicks + campaign_conversions + page_views + bookings with affiliate attribution fields. Adds idempotency constraints and auto-pause trigger.",
+    sortKey: "20260421000001",
+    sql: MIG_20260421000001,
+  },
+```
+
+The `id` in both the property key and the `id` field must match the `.sql` filename stem exactly — the runner uses this string as the dispatch key.
+
 ## Verification Plan
 
-Run `supabase db reset` locally. Then execute each assertion and confirm the expected result:
+### A. Local dev
+Run `supabase db reset` locally to validate the SQL — this catches syntax errors before deploy.
+
+### B. Bundle parity
+```bash
+# Before pushing, confirm the .ts mirror matches the .sql
+diff <(grep -c "CREATE TABLE\|ALTER TABLE\|CREATE INDEX\|CREATE POLICY\|CREATE TRIGGER\|CREATE FUNCTION" supabase/migrations/20260421000001_affiliate_service_assignments.sql) <(grep -c "CREATE TABLE\|ALTER TABLE\|CREATE INDEX\|CREATE POLICY\|CREATE TRIGGER\|CREATE FUNCTION" src/data/migrations/20260421000001_affiliate_service_assignments.ts)
+# expect: 0 (no diff)
+```
+
+### C. Runner visibility
+After deploy, visit `/admin/db/migrations` as admin. Expect:
+- `20260421000001 — Affiliate Service Assignments + URL Attribution` appears in the list.
+- `SQL size` column shows a non-zero character count.
+- Green "Access token: configured" badge at the top.
+
+### D. Run + SQL assertions
+Click **Run migration**. Expect green Success card with `ok: true`. Then run the following assertions (directly in Supabase SQL editor or via `psql`):
 
 1. **Migration applies cleanly**
    ```sql
