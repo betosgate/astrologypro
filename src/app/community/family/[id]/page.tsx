@@ -110,6 +110,8 @@ const MODALITY: Record<string, string> = {
 // ---------------------------------------------------------------------------
 
 function InviteStatus({ member }: { member: FamilyMember }) {
+  if (member.relationship?.toLowerCase() === "self") return null;
+
   if (member.user_id && member.invite_accepted_at) {
     return (
       <div className="flex items-center gap-1.5 text-xs text-green-600">
@@ -432,62 +434,66 @@ export default function FamilyMemberChartPage() {
             )}
 
             {/* Invite status */}
-            <div className="border-t pt-2 space-y-2">
-              <InviteStatus member={member} />
-              {!member.user_id && !showInviteInput && (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-7 px-2 text-xs text-primary"
-                  onClick={() => setShowInviteInput(true)}
-                >
-                  <Mail className="mr-1.5 size-3" />
-                  Send Login Invite
-                </Button>
-              )}
-              {showInviteInput && (
-                <div className="space-y-2">
-                  <input
-                    type="email"
-                    className="w-full rounded-md border px-2 py-1.5 text-xs bg-background"
-                    placeholder="Email address"
-                    value={inviteEmail}
-                    onChange={(e) => setInviteEmail(e.target.value)}
-                  />
-                  {inviteError && (
-                    <p className="text-xs text-destructive">{inviteError}</p>
-                  )}
-                  <div className="flex gap-1.5">
-                    <Button
-                      size="sm"
-                      className="h-7 text-xs"
-                      onClick={sendInvite}
-                      disabled={sendingInvite || !inviteEmail}
-                    >
-                      {sendingInvite && (
-                        <Loader2 className="mr-1 size-3 animate-spin" />
-                      )}
-                      Send
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-7 text-xs"
-                      onClick={() => {
-                        setShowInviteInput(false);
-                        setInviteEmail("");
-                        setInviteError(null);
-                      }}
-                    >
-                      Cancel
-                    </Button>
+            {member.relationship?.toLowerCase() !== "self" && (
+              <div className="border-t pt-2 space-y-2">
+                <InviteStatus member={member} />
+                {!member.user_id && !showInviteInput && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 px-2 text-xs text-primary"
+                    onClick={() => setShowInviteInput(true)}
+                  >
+                    <Mail className="mr-1.5 size-3" />
+                    Send Login Invite
+                  </Button>
+                )}
+                {showInviteInput && (
+                  <div className="space-y-2">
+                    <input
+                      type="email"
+                      className="w-full rounded-md border px-2 py-1.5 text-xs bg-background"
+                      placeholder="Email address"
+                      value={inviteEmail}
+                      onChange={(e) => setInviteEmail(e.target.value)}
+                    />
+                    {inviteError && (
+                      <p className="text-xs text-destructive">{inviteError}</p>
+                    )}
+                    <div className="flex gap-1.5">
+                      <Button
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={sendInvite}
+                        disabled={sendingInvite || !inviteEmail}
+                      >
+                        {sendingInvite && (
+                          <Loader2 className="mr-1 size-3 animate-spin" />
+                        )}
+                        Send
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 text-xs"
+                        onClick={() => {
+                          setShowInviteInput(false);
+                          setInviteEmail("");
+                          setInviteError(null);
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              )}
-              {inviteSuccess && (
-                <p className="text-xs text-green-600">Invite sent successfully.</p>
-              )}
-            </div>
+                )}
+                {inviteSuccess && (
+                  <p className="text-xs text-green-600">
+                    Invite sent successfully.
+                  </p>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
