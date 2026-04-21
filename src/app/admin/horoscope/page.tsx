@@ -2569,6 +2569,42 @@ export default function AdminHoroscopePage() {
     setShowScrollTop(false); setShowChartBtn(false); setTransitChartSvg(null);
   }, [currentSlug]);
 
+  // Booking-session prefill + auto-submit.
+  // When the diviner is routed here from /admin/horoscope/session/[bookingId],
+  // that server route redirects with `?tab=<slug>&prefill=<encoded-FormState>`.
+  // We decode the prefill, apply it to the form, then auto-fire the reading so
+  // the diviner lands directly on the rendered result — no second click.
+  const [pendingAutoSubmit, setPendingAutoSubmit] = useState(false);
+  const prefillParam = searchParams.get("prefill");
+  useEffect(() => {
+    if (!prefillParam) return;
+    try {
+      const parsed = JSON.parse(decodeURIComponent(prefillParam)) as Partial<FormState>;
+      setForm((prev) => ({ ...prev, ...parsed }));
+      setPendingAutoSubmit(true);
+    } catch {
+      // malformed prefill — ignore so the diviner can fill the form by hand
+    }
+    // Re-run only when the prefill blob itself changes. Tab-switch resets are
+    // handled by the effect above; this one purely hydrates from the URL.
+  }, [prefillParam]);
+
+  // Fire handleSubmit once the prefill has populated the form and it's valid.
+  // We can't call handleSubmit() in the same effect that calls setForm() —
+  // setForm is async, so handleSubmit would read the old form from closure.
+  // Instead we flip the flag, wait for the next render where isFormValid is
+  // recomputed against the new form, then fire exactly once.
+  useEffect(() => {
+    if (!pendingAutoSubmit) return;
+    if (!isFormValid) return;
+    if (loading) return;
+    setPendingAutoSubmit(false);
+    void handleSubmit();
+    // handleSubmit is a hoisted function declaration referenced intentionally;
+    // we don't want this effect to re-fire when it happens to re-identify.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingAutoSubmit, isFormValid, loading]);
+
   // Pre-fetch decan possibilities (distinct planet+sign pairs)
   useEffect(() => {
     fetchWithRetry("/api/astro-decan/fetch-planet-signs", { method: "GET" })
