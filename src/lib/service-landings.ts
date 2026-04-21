@@ -7,12 +7,17 @@ export interface ServiceTemplateLanding {
   name: string;
   slug: string;
   description: string | null;
+  long_description?: string | null;
   duration_minutes: number;
   base_price: number;
+  overage_rate?: number | null;
   is_primary: boolean;
   requires_birth_data: boolean;
   trigger_event: string | null;
   sort_order: number;
+  whats_included?: string[];
+  who_its_for?: string[];
+  faq?: Array<{ question: string; answer: string }>;
 }
 
 export interface ServiceLandingDiviner {
