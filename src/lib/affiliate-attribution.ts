@@ -134,3 +134,150 @@ export function computeCommissionCents(
   // Default to percent for null / 'percent' / unexpected values
   return Math.max(0, Math.round((orderAmountCents * value) / 100));
 }
+
+// ───────────────────────────────────────────────────────────────────────────
+// Conversion attribution — Task 03
+// ───────────────────────────────────────────────────────────────────────────
+
+export interface CreditConversionInput {
+  bookingId: string;
+  divinerId: string;
+  /** service_templates.id for the booked service; null if booking is not tied to a template */
+  templateId: string | null;
+  orderAmountCents: number;
+  refCode: string | null | undefined;
+}
+
+export interface CreditConversionResult {
+  conversionId: string;
+  commissionCents: number;
+  campaignId: string;
+  affiliateId: string;
+  affiliateType: AffiliateType;
+}
+
+/**
+ * Credit a commission to the affiliate that owns the campaign identified
+ * by `refCode`. Idempotent — a second call for the same booking returns
+ * null because campaign_conversions has UNIQUE (booking_id).
+ *
+ * Returns null (no commission credited) when any of:
+ *   - refCode is missing / malformed
+ *   - no active affiliate-owned campaign matches the refCode
+ *   - the campaign's destination doesn't match the booking:
+ *       SERVICE  → campaign.destination_service_template_id must equal templateId
+ *       PROFILE  → campaign.diviner_id must equal divinerId
+ *   - the source assignment has been revoked (is_active=false)
+ *   - the booking is already credited (unique index on booking_id)
+ *
+ * All failure paths are logged with structured event
+ * `affiliate_conversion_no_match` so operations can grep for data-loss.
+ */
+export async function creditAffiliateConversion(
+  admin: SupabaseClient,
+  params: CreditConversionInput
+): Promise<CreditConversionResult | null> {
+  const logEvent = (matched: boolean, reason: string, extras?: Record<string, unknown>) => {
+    console.log(
+      JSON.stringify({
+        event: "affiliate_conversion",
+        bookingId: params.bookingId,
+        refCode: params.refCode ?? null,
+        matched,
+        reason,
+        ...extras,
+      })
+    );
+  };
+
+  const campaign = await resolveAffiliateFromRef(admin, params.refCode);
+  if (!campaign) {
+    logEvent(false, "no_campaign_match");
+    return null;
+  }
+
+  // Destination match
+  const matchesService =
+    campaign.destination_type === "SERVICE" &&
+    campaign.destination_service_template_id != null &&
+    campaign.destination_service_template_id === params.templateId;
+  const matchesProfile =
+    campaign.destination_type === "PROFILE" &&
+    campaign.diviner_id === params.divinerId;
+  if (!matchesService && !matchesProfile) {
+    logEvent(false, "destination_mismatch", {
+      campaignDestinationType: campaign.destination_type,
+      campaignTemplateId: campaign.destination_service_template_id,
+      bookingTemplateId: params.templateId,
+      campaignDivinerId: campaign.diviner_id,
+      bookingDivinerId: params.divinerId,
+    });
+    return null;
+  }
+
+  // Verify the source assignment is still active (revocation cuts off
+  // commission credit even if a stale campaign row still carries the
+  // snapshot).
+  if (!campaign.source_assignment_id) {
+    logEvent(false, "no_source_assignment");
+    return null;
+  }
+  const { data: assignment } = await admin
+    .from("diviner_service_affiliates")
+    .select("id, commission_type, commission_value, is_active")
+    .eq("id", campaign.source_assignment_id)
+    .maybeSingle();
+  if (!assignment || !assignment.is_active) {
+    logEvent(false, "assignment_revoked_or_missing");
+    return null;
+  }
+
+  // Compute commission from the LIVE assignment (not the frozen snapshot)
+  // so a rate change on the assignment applies to future conversions.
+  const commissionCents = computeCommissionCents(
+    params.orderAmountCents,
+    assignment.commission_type as AffiliateCommissionType | null,
+    Number(assignment.commission_value)
+  );
+
+  const { data: inserted, error } = await admin
+    .from("campaign_conversions")
+    .insert({
+      campaign_id: campaign.campaign_id,
+      affiliate_id: campaign.owner_affiliate_id,
+      affiliate_type: campaign.owner_affiliate_type,
+      booking_id: params.bookingId,
+      ref_code_snapshot: params.refCode ?? null,
+      order_reference: params.bookingId,
+      order_amount_cents: params.orderAmountCents,
+      commission_amount_cents: commissionCents,
+      commission_source: "campaign_assignment",
+    })
+    .select("id")
+    .single();
+
+  if (error) {
+    // 23505 = unique_violation (booking already credited)
+    const pgErr = error as unknown as { code?: string; message?: string };
+    if (pgErr.code === "23505") {
+      logEvent(false, "already_credited");
+      return null;
+    }
+    logEvent(false, "insert_error", { err: pgErr.message ?? String(error) });
+    throw error;
+  }
+
+  logEvent(true, "credited", {
+    conversionId: inserted?.id,
+    commissionCents,
+    affiliateId: campaign.owner_affiliate_id,
+  });
+
+  return {
+    conversionId: inserted!.id as string,
+    commissionCents,
+    campaignId: campaign.campaign_id,
+    affiliateId: campaign.owner_affiliate_id!,
+    affiliateType: campaign.owner_affiliate_type!,
+  };
+}
