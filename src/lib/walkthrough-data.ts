@@ -4359,61 +4359,161 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
 
   
 
-      // Programs
+      //----------programs module----------//
       { 
-        name: "mystery_school", 
+        name: "mystery_school_v1", 
         label: "Mystery School Hub", 
-        description: "Central management for esoteric training.", 
+        description: "Central management area for Mystery School curriculum, students, rituals, journals, member content, and live teaching sessions.", 
         group: "Programs",
-        purpose: "The administrative dashboard for managing the mystery school's esoteric curriculum and operational logs.",
+        purpose: "This is the main administrative hub for managing the Mystery School program. It connects the structured learning path, student progress tracking, decan ritual content, journal review workflows, Mandalism content publishing, and Sunday Service session management into one program area. It is used so admins can oversee both the educational structure and the operational side of the school from one place.",
         bullets: [
-          "Mystery School student enrollment management",
-          "Curriculum progression and milestone tracking",
-          "Teacher and mentor assignment governance",
-          "Audit trail for esoteric examinations"
+          "Mystery School curriculum management across weekly learning stages, including Foundation Weeks and ongoing content updates",
+          "Student enrollment and progress tracking from the same program area, including active members, Decan Year students, and graduated learners",
+          "Foundation Weeks list with published status, audio availability, description status, task counts, and edit actions",
+          "Decan ritual structure management for all 36 decans, including zodiac decan names, date ranges, planetary rulers, tarot correspondences, and ritual step counts",
+          "Student journal review workflow for scrying and mundane submissions, with filters for journal type, decan number, and submitted date range",
+          "Mandalism content library management for member-facing videos, documents, YouTube embeds, live streams, and announcements",
+          "Content publishing controls for free or members-only access, priority ordering, draft status, and published visibility",
+          "Sunday Service session management for live and archived sessions, including date filtering, session descriptions, preview, set-live, end-live, delete, and add-session actions",
+          "Quick navigation between Mystery School, Decan Rituals, Students, Student Journals, Mandalism content, and Sunday Service workflows",
+          "Operational visibility across curriculum blocks, student activity, ritual materials, journal submissions, member content, and live teaching records"
         ]
       },
       { 
-        name: "ms_students", 
-        label: "Student Roster", 
-        description: "Tracking student progress and milestones.", 
+        name: "ms_students_v1", 
+        label: "Mystery School Students", 
+        description: "Student progress overview for all enrolled Mystery School learners.", 
         group: "Programs",
-        purpose: "A granular view into the spiritual development of every Mystery School student.",
+        purpose: "This screen gives admins a complete view of Mystery School enrollment and learner progress. It is used to review total enrollment, active members, students currently in Decan Year, graduated students, and each student's Foundation Weeks and Decan completion status.",
         bullets: [
-          "Progression tracking against esoteric milestones",
-          "Student performance analytics and grading",
-          "One-on-one mentor assignment interface",
-          "Academic history and lesson completion logs"
-        ]
-      },
-      { name: "ms_decans", label: "MS Decan Studies", description: "School-specific decan curriculum config.", group: "Programs" },
-      { name: "ms_journals", label: "Student Journals", description: "Review of student esoteric practice logs.", group: "Programs" },
-      { 
-        name: "mandalism", 
-        label: "Perennial Mandalism", 
-        description: "Management of community program flow.", 
-        group: "Programs",
-        purpose: "Governs the onboarding and progression logic for the Perennial Mandalism community framework.",
-        bullets: [
-          "Mandalism phase configuration (I, II, III)",
-          "Plan-specific content entitlement rules",
-          "Automated transition logic for cohorts",
-          "Community health and participation scoring"
+          "Summary cards show Total Enrolled, Active Members, In Decan Year, and Graduated counts",
+          "Search field helps admins find students by name, email, or status",
+          "Student cards show learner name, email, track label, active status, active decan status, enrollment date, and current quarter",
+          "Foundation progress bar shows completed Foundation Weeks out of the total weekly curriculum",
+          "Decan progress bar shows completed decans out of all 36 decan studies",
+          "View Student action opens the detailed learner record for deeper progress review",
+          "Useful for spotting inactive students, active Decan Year learners, and students who need support",
+          "Keeps enrollment status and curriculum progress visible without leaving the Programs module"
         ]
       },
       { 
-        name: "sunday_service", 
+        name: "ms_decans_v1", 
+        label: "Decan Rituals", 
+        description: "Management screen for the 36 decan ritual entries and their ritual steps.", 
+        group: "Programs",
+        purpose: "Admins use this page to maintain the Decan Rituals curriculum. Each decan entry represents one of the 36 zodiac decans and stores its date range, planetary association, tarot correspondence, thematic description, and ritual steps for Mystery School practice.",
+        bullets: [
+          "Full Decan Rituals list covering all 36 decans",
+          "Each row shows decan number, decan name, zodiac section, date range, planetary ruler, and tarot correspondence",
+          "Step count badge shows how many ritual steps are configured for each decan",
+          "Expandable row control supports reviewing or editing the ritual details",
+          "Back navigation returns admins to the Foundation Weeks Mystery School area",
+          "Used to keep decan-specific ritual practice aligned with the Mystery School curriculum",
+          "Supports structured esoteric study through Aries I to Pisces III decan progression",
+          "Helps admins audit missing or incomplete ritual-step content before students reach each decan"
+        ]
+      },
+      { 
+        name: "ms_journals_v2", 
+        label: "Student Journals", 
+        description: "Review area for student scrying and mundane journal submissions.", 
+        group: "Programs",
+        purpose: "This screen is used to review Mystery School journal submissions from students. Admins can filter submissions by journal type, decan number, and submitted date range so they can focus on specific practices, time periods, or curriculum stages.",
+        bullets: [
+          "Journal Type filter separates different submission categories such as scrying and mundane journals",
+          "Decan Number filter narrows review to a specific decan from 1-36",
+          "Submitted From and Submitted To date fields support date-range review",
+          "Search action applies the selected filters to locate matching submissions",
+          "Reset action clears filter choices for a fresh review",
+          "Empty state clearly shows when no journal submissions are found",
+          "Back links connect the journal review workflow to Mystery School and Decan Rituals",
+          "Useful for mentor review, practice accountability, and student progress documentation"
+        ]
+      },
+      { 
+        name: "mandalism_v1", 
+        label: "Mandalism Content", 
+        description: "Content library management for Perennial Mandalism members.", 
+        group: "Programs",
+        purpose: "This screen manages the Perennial Mandalism content library. Admins use it to review published and draft content, filter by content type, manage access level, maintain priority ordering, and create member-facing videos, documents, live streams, YouTube embeds, and announcements.",
+        bullets: [
+          "Dashboard cards summarize total, published, draft, live stream, video, document, YouTube, and announcement counts",
+          "Type filters let admins switch between All Types, Live Stream, Video, Document, YouTube, and Announcement",
+          "Status filters separate All Status, Published, and Draft content",
+          "Access filters separate All Access, Free, and Members Only content",
+          "Search field finds content records by title",
+          "Content table shows title, type, access level, priority, status, created date, and row actions",
+          "New Content action opens the content creation workflow for the Mandalism library",
+          "Add Member action supports member administration from the same program area",
+          "Pagination controls help review larger content libraries without losing table context",
+          "Used to keep member-facing Mandalism materials organized, visible, and correctly gated"
+        ]
+      },
+
+       {
+    "name": "mystery_school_mandalism_new_content",
+    "label": "Mystery School: New Mandalism Content",
+    "description": "Content creation form for adding new live stream, video, document, YouTube, or announcement items to the Mandalism library.",
+    "group": "Programs",
+    
+    "purpose": "This screen is used to create a new content item inside the Mandalism library. Admins can select the content type, enter the title and description, add the core body text when needed, define whether the item is free or members-only, assign display priority, and choose whether it should be published immediately. It is useful because different content formats need a unified creation workflow with access and publishing controls built in.",
+    "bullets": [
+      "Content-type selector for Live Stream, Video, Document, YouTube, or Announcement",
+      "Title field for naming the new content item",
+      "Description field for optional summary text",
+      "Announcement Text field for announcement-body content",
+      "Access Control section for Free or Members Only visibility",
+      "Members-only option for subscription-gated resources",
+      "Priority field for display ordering, with higher values shown first",
+      "Published toggle for immediate visibility control",
+      "Create Content button to save the new item",
+      "Cancel button to exit without creating content",
+      "Useful for consistent content publishing across multiple formats",
+      "Supports member library growth and controlled content release"
+    ]
+  },
+      { 
+        name: "sunday_service_v1", 
         label: "Sunday Service", 
-        description: "Scheduling and assets for moral sermons.", 
+        description: "Management screen for live Sunday Service sessions and archived service records.", 
         group: "Programs",
-        purpose: "The administrative hub for organizing and delivering the platform's weekly spiritual gatherings.",
+        purpose: "This page manages Sunday Service programming. Admins use it to search sessions by date, add new sessions, review service descriptions, preview sessions, set a session live, end an active live session, and remove records when needed.",
         bullets: [
-          "Broadcast scheduling and asset preparation",
-          "Liturgical text and media management",
-          "Live event notification triggers",
-          "Post-service archive and wisdom indexing"
+          "Date From and Date To filters help locate Sunday Service sessions by time period",
+          "Search and Reset controls apply or clear the current date filters",
+          "Add Session action creates a new Sunday Service entry",
+          "Session cards show title, date, theme or book tag, and service description",
+          "Live badge identifies the currently active Sunday Service",
+          "Set Live action starts a selected session as the active live service",
+          "End Live action closes the currently active live session",
+          "Preview action lets admins inspect a session before changing its live status",
+          "Delete action removes outdated or incorrect session records",
+          "Used to manage both live teaching sessions and the archive of past Sunday Service programming"
         ]
       },
+
+       {
+    "name": "mystery_school_sunday_service_new_session",
+    "label": "Mystery School: Add Sunday Service Session",
+    "description": "Creation form for adding a new live or scheduled Sunday Service session.",
+    "group": "Programs",
+    
+    "purpose": "This screen is used to create a new Sunday Service session entry. It allows admins to enter the session title, description, video URL, optional book tag, date and time, optional thumbnail URL, and an immediate live-state option. It is useful for scheduling upcoming services, connecting external video platforms, and preparing live or archived session records in a controlled format.",
+    "bullets": [
+      "Title field for naming the service session",
+      "Description field for summarizing the theme or ritual focus",
+      "Video URL field for connecting YouTube, Vimeo, or embed sources",
+      "Book Name field for optional thematic tagging",
+      "Date and Time field for scheduling the session",
+      "Thumbnail URL field for optional visual preview media",
+      "Mark as LIVE now checkbox for instant activation",
+      "Save Session button for storing the new session",
+      "Cancel button to exit the creation flow",
+      "Date filters below the form for reviewing existing sessions",
+      "Useful for stream scheduling, archive setup, and operational control",
+      "Supports both planned broadcasts and immediate live session publishing"
+    ]
+  },
 
       // Live & Schedule
       { 
