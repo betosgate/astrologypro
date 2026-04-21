@@ -5,7 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 // It is a dynamic route handler but we explicitly set Cache-Control: public so Vercel
 // and social media scrapers can cache and process the OG tags.
 //
-// The middleware (proxy.ts / middleware.ts) rewrites /share/[token] requests from
+// The proxy (src/proxy.ts) rewrites /share/[token] requests from
 // known bot user-agents to this handler, preserving the original URL for og:url.
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
