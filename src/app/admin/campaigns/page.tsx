@@ -29,6 +29,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -157,6 +167,11 @@ export default function AdminCampaignsPage() {
   const [editCommValue, setEditCommValue] = useState("");
   const [editBudgetCap, setEditBudgetCap] = useState("");
 
+  // Deletion state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [campaignToDelete, setCampaignToDelete] = useState<Campaign | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
   function resetForm() {
     setFormName(""); setFormDesc(""); setFormStartDate(""); setFormEndDate("");
     setFormCommType("percentage"); setFormCommValue("10"); setFormBudgetCap("");
@@ -274,16 +289,25 @@ export default function AdminCampaignsPage() {
     setEditSaving(false);
   }
 
-  async function handleDelete(campaignId: string) {
-    if (!confirm("Delete this campaign? This cannot be undone.")) return;
-    const res = await fetch(`/api/admin/campaigns/${campaignId}`, { method: "DELETE" });
+  function handleDeleteRequest(campaign: Campaign) {
+    setCampaignToDelete(campaign);
+    setDeleteDialogOpen(true);
+  }
+
+  async function confirmDelete() {
+    if (!campaignToDelete) return;
+    setDeleting(true);
+    const res = await fetch(`/api/admin/campaigns/${campaignToDelete.id}`, { method: "DELETE" });
     if (res.ok) {
       toast.success("Campaign deleted");
+      setDeleteDialogOpen(false);
+      setCampaignToDelete(null);
       await loadCampaigns();
     } else {
       const err = await res.json();
       toast.error(err.title ?? "Failed to delete");
     }
+    setDeleting(false);
   }
 
   return (
@@ -546,7 +570,7 @@ export default function AdminCampaignsPage() {
                       <Button variant="ghost" size="icon" className="size-8" title="Edit" onClick={() => openEdit(c)}>
                         <Pencil className="size-3.5" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="size-8 text-destructive hover:text-destructive" title="Delete" onClick={() => handleDelete(c.id)}>
+                      <Button variant="ghost" size="icon" className="size-8 text-destructive hover:text-destructive" title="Delete" onClick={() => handleDeleteRequest(c)}>
                         <Trash2 className="size-3.5" />
                       </Button>
                     </div>
@@ -636,6 +660,50 @@ export default function AdminCampaignsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent className="sm:max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-destructive font-bold text-xl uppercase tracking-tight">
+              <AlertTriangle className="size-5" />
+              Delete Campaign
+            </AlertDialogTitle>
+            <AlertDialogDescription className="py-3 text-base">
+              Are you sure you want to delete the campaign{" "}
+              <span className="font-bold text-foreground underline decoration-destructive/30 underline-offset-4">
+                "{campaignToDelete?.name}"
+              </span>
+              ? This action cannot be undone and all associated data will be
+              permanently lost.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2 sm:gap-2">
+            <AlertDialogCancel
+              onClick={() => setDeleteDialogOpen(false)}
+              disabled={deleting}
+              className="h-10 px-4"
+            >
+              No, Keep it
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                confirmDelete();
+              }}
+              disabled={deleting}
+              className="h-10 px-4 bg-destructive text-destructive-foreground hover:bg-destructive/90 gap-1.5"
+            >
+              {deleting ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Trash2 className="size-4" />
+              )}
+              Yes, Delete Campaign
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

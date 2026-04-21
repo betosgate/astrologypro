@@ -1,19 +1,28 @@
 /**
  * /admin/horoscope/session/[bookingId]
  *
- * Diviner-facing single-tab horoscope page scoped to a specific booking.
+ * Diviner-facing booking-scoped horoscope route.
  *
- * Responsibilities (server):
- *   - Auth via requireDivinerOrAdminForBooking (admins + assigned diviner only)
- *   - Resolve the booking's service_template → horoscope tab slug
- *   - Collect birth data from client row (preferred) OR questionnaire_responses
- *     fallback (early bookings stored it there)
- *   - Collect partner birth data from bookings.partner_birth_data for the
- *     3 two-person services
- *   - Pass a fully-formed initialForm to the client component. The client
- *     renders a single-tab UI, auto-fires the compute/AI pipeline, and
- *     displays the result — keeping the sprawling /admin/horoscope/page.tsx
- *     untouched per product decision 2026-04-18.
+ * Rendering strategy (2026-04-20 product decision: "don't build a parallel
+ * result renderer — reuse the main toolkit page verbatim"):
+ *   1. Server-side auth via requireDivinerOrAdminForBooking (admin + assigned
+ *      diviner only).
+ *   2. Resolve the booking's service_template → horoscope tab slug.
+ *   3. Collect the client's birth data from `clients` (fallback to the older
+ *      `questionnaire_responses` JSONB for pre-refactor bookings) and the
+ *      partner's birth data for the three two-person services.
+ *   4. Build a FormState-shaped prefill payload and 307-redirect to
+ *      `/admin/horoscope?tab=<slug>&prefill=<encoded-json>`.
+ *
+ * The main /admin/horoscope page reads `prefill`, hydrates its form, and
+ * auto-fires handleSubmit — so the diviner lands directly on the rich,
+ * fully-rendered result (wheel charts + Solar Return Details table +
+ * Solar Return Planets table + AI interpretations) without a second click
+ * and without this route owning any rendering code.
+ *
+ * This replaces the old SingleHoroscopeSession client that dumped raw JSON.
+ * That file is dead but left in place to avoid a git churn in this patch —
+ * it's no longer imported anywhere and can be deleted in a follow-up.
  */
 
 import { notFound, redirect } from "next/navigation";
@@ -26,7 +35,6 @@ import {
   isToolkitEnabled,
   requiresPartnerBirthData,
 } from "@/lib/service-toolkit-mapping";
-import { SingleHoroscopeSession } from "./single-horoscope-session";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Horoscope Session — AstrologyPro" };
@@ -35,16 +43,28 @@ interface PageProps {
   params: Promise<{ bookingId: string }>;
 }
 
+// ─── Prefill shape — mirrors /admin/horoscope FormState + CityOption ────────
+// Kept inline so this route has zero cross-file coupling to the toolkit
+// internals beyond the URL contract.
+
+interface PrefillCity {
+  label: string;
+  lat: number;
+  lng: number;
+  timezone: { name: string; offset_string: string; utcOffset: string };
+}
 interface PrefillBirth {
-  fullName: string;
-  dob: string;   // YYYY-MM-DD
-  tob: string;   // HH:MM
-  city: {
-    label: string;
-    lat: number;
-    lng: number;
-    timezone: string;
-  } | null;
+  dob: string;
+  tob: string;
+  city: PrefillCity | null;
+}
+interface PrefillForm {
+  person1: PrefillBirth;
+  person2: PrefillBirth;
+  areaOfInquiry: string;
+  question: string;
+  futureWeek: string;
+  futureMonth: string;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -57,6 +77,42 @@ function num(v: number | string | null | undefined): number | null {
 
 function str(v: unknown): string {
   return typeof v === "string" ? v : "";
+}
+
+// Astrology convention: if no birth time was captured, fall back to a
+// 12:00 noon chart. Houses/rising are then approximate, but planetary
+// positions are still valid — the diviner can correct on the toolkit page.
+const NOON_DEFAULT_TOB = "12:00";
+
+function emptyBirth(): PrefillBirth {
+  return { dob: "", tob: "", city: null };
+}
+
+function asPrefillBirth(
+  dob: string,
+  tob: string,
+  cityLabel: string,
+  lat: number | null,
+  lng: number | null,
+  tz: string,
+): PrefillBirth {
+  return {
+    dob,
+    tob: tob && tob.trim() ? tob : NOON_DEFAULT_TOB,
+    city:
+      cityLabel && lat !== null && lng !== null
+        ? {
+            label: cityLabel,
+            lat,
+            lng,
+            timezone: {
+              name: tz || "UTC",
+              offset_string: "",
+              utcOffset: "",
+            },
+          }
+        : null,
+  };
 }
 
 /**
@@ -78,15 +134,7 @@ function extractClientBirth(booking: BookingForSession): PrefillBirth {
   const lng = num(client?.birth_lng) ?? num(q.birthLng as never);
   const tz = client?.birth_timezone || str(q.birthTimezone);
 
-  return {
-    fullName: client?.full_name ?? "",
-    dob,
-    tob,
-    city:
-      cityLabel && lat !== null && lng !== null
-        ? { label: cityLabel, lat, lng, timezone: tz || "UTC" }
-        : null,
-  };
+  return asPrefillBirth(dob, tob, cityLabel, lat, lng, tz);
 }
 
 function extractPartnerBirth(booking: BookingForSession): PrefillBirth | null {
@@ -100,15 +148,8 @@ function extractPartnerBirth(booking: BookingForSession): PrefillBirth | null {
   const lng = num(p.partner_birth_lng as never);
   const tz = str(p.partner_birth_timezone);
 
-  return {
-    fullName: str(p.partner_full_name),
-    dob,
-    tob,
-    city:
-      cityLabel && lat !== null && lng !== null
-        ? { label: cityLabel, lat, lng, timezone: tz || "UTC" }
-        : null,
-  };
+  if (!dob && !cityLabel) return null;
+  return asPrefillBirth(dob, tob, cityLabel, lat, lng, tz);
 }
 
 // ─── Page ────────────────────────────────────────────────────────────────────
@@ -135,15 +176,15 @@ export default async function HoroscopeSessionPage({ params }: PageProps) {
   const needsPartner = requiresPartnerBirthData(template.slug);
   const partnerBirth = needsPartner ? extractPartnerBirth(booking) : null;
 
-  return (
-    <SingleHoroscopeSession
-      bookingId={booking.id}
-      tabSlug={tabSlug}
-      serviceName={template.name}
-      scheduledAt={booking.scheduled_at}
-      clientBirth={clientBirth}
-      needsPartner={needsPartner}
-      partnerBirth={partnerBirth}
-    />
-  );
+  const prefill: PrefillForm = {
+    person1: clientBirth,
+    person2: partnerBirth ?? emptyBirth(),
+    areaOfInquiry: "",
+    question: "",
+    futureWeek: "",
+    futureMonth: "",
+  };
+
+  const encoded = encodeURIComponent(JSON.stringify(prefill));
+  redirect(`/admin/horoscope?tab=${tabSlug}&prefill=${encoded}`);
 }
