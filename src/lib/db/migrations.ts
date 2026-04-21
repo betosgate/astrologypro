@@ -49,6 +49,7 @@ import { MIGRATION_SQL as MIG_20260421000010 } from "@/data/migrations/202604210
 import { MIGRATION_SQL as MIG_20260421000001_ASA } from "@/data/migrations/20260421000001_affiliate_service_assignments";
 import { MIGRATION_SQL as MIG_20260421000020 } from "@/data/migrations/20260421000020_admin_booking_calendar";
 import { MIGRATION_SQL as MIG_20260421000021 } from "@/data/migrations/20260421000021_admin_bookings_gcal_event_id";
+import { MIGRATION_SQL as MIG_20260421000030_LPS } from "@/data/migrations/20260421000030_landing_page_slots_additive";
 
 /**
  * Allowlisted migrations that the admin migration runner can execute.
@@ -481,6 +482,14 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Adds google_calendar_event_id to admin_bookings so we can track the synced Google Calendar event for later update/cancel. Additive + idempotent.",
     sortKey: "20260421000021",
     sql: MIG_20260421000021,
+  },
+  "20260421000030_landing_page_slots_additive": {
+    id: "20260421000030_landing_page_slots_additive",
+    title: "Landing page V2 — slot column + block view (additive)",
+    description:
+      "Adds nullable slot column (CHECK 'about_diviner' | 'extra') to service_landing_page_sections. Backfills existing rows: hero/pricing/booking_cta → NULL (system), bio/about/testimonials → 'about_diviner', everything else → 'extra'. Creates CREATE OR REPLACE VIEW diviner_service_blocks as the V2 read surface (hides deprecated columns + system sections). Adds an index aligned with the V2 query pattern. COMMENT ON COLUMN annotations mark every column scheduled for Deploy 2 DROP. Strictly additive — no DROPs. Idempotent: WHERE slot IS NULL guard on backfill, IF NOT EXISTS on column/index, CREATE OR REPLACE on view.",
+    sortKey: "20260421000030",
+    sql: MIG_20260421000030_LPS,
   },
 };
 
