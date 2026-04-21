@@ -60,11 +60,11 @@ export function ProfileCompletionCard({ initialData }: ProfileCompletionCardProp
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="text-sm">Complete Your Profile</CardTitle>
+        <CardTitle className="text-sm">Journey Progress</CardTitle>
         <CardDescription className="text-xs">
           {isComplete
-            ? "Your profile is fully complete."
-            : `${incompleteItems.length} item${incompleteItems.length !== 1 ? "s" : ""} remaining`}
+            ? "Your journey is fully set up — profile, charts, family."
+            : `${incompleteItems.length} milestone${incompleteItems.length !== 1 ? "s" : ""} remaining — includes charts, family & profile`}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">

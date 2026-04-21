@@ -30,6 +30,7 @@ import {
   AlertCircle,
   MapPin,
 } from "lucide-react";
+import { BirthCityAutocomplete } from "@/components/community/birth-city-autocomplete";
 
 type ChartType = "natal" | "monthly" | "relationship";
 
@@ -81,10 +82,13 @@ export function ChartQuickActions() {
   const [dob, setDob] = useState("");
   const [time, setTime] = useState("");
   const [cityQuery, setCityQuery] = useState("");
-  const [cityOptions, setCityOptions] = useState<CityOption[]>([]);
   const [selectedCity, setSelectedCity] = useState<CityOption | null>(null);
   const [searchingCity, setSearchingCity] = useState(false);
+  // OLD STATE (Commented out as per user request)
+  /*
+  const [cityOptions, setCityOptions] = useState<CityOption[]>([]);
   const cityTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  */
 
   // ── Initial fetch ─────────────────────────────────────────────────────────
   useEffect(() => {
@@ -123,30 +127,6 @@ export function ChartQuickActions() {
     }
   }
 
-  // ── City search (reuses existing endpoint) ────────────────────────────────
-  useEffect(() => {
-    if (!cityQuery || cityQuery.length < 2 || selectedCity?.label === cityQuery) {
-      setCityOptions([]);
-      return;
-    }
-    if (cityTimer.current) clearTimeout(cityTimer.current);
-    cityTimer.current = setTimeout(async () => {
-      setSearchingCity(true);
-      try {
-        const res = await fetch(
-          `/api/community/nativity-chart/city-search?q=${encodeURIComponent(cityQuery)}`
-        );
-        if (res.ok) {
-          const json = await res.json();
-          setCityOptions(json.options ?? []);
-        }
-      } catch {
-        /* ignore */
-      } finally {
-        setSearchingCity(false);
-      }
-    }, 300);
-  }, [cityQuery, selectedCity?.label]);
 
   // ── Actions ───────────────────────────────────────────────────────────────
   function hasCompleteData(d: ResolvedBirthData | null): boolean {
@@ -363,6 +343,33 @@ export function ChartQuickActions() {
 
             <div className="space-y-1.5">
               <Label htmlFor="qa-city">Birth City</Label>
+              <BirthCityAutocomplete
+                id="qa-city"
+                value={cityQuery}
+                onChange={(label, opt) => {
+                  setCityQuery(label);
+                  if (opt) {
+                    setSelectedCity({
+                      label: opt.label,
+                      lat: opt.lat,
+                      lng: opt.lng,
+                      tzone: opt.tzone,
+                    });
+                  } else {
+                    setSelectedCity(null);
+                  }
+                }}
+                placeholder="Start typing your birth city…"
+              />
+              {selectedCity && (
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  <CheckCircle2 className="size-3 text-green-600" />
+                  {selectedCity.label} — {selectedCity.lat.toFixed(2)},{" "}
+                  {selectedCity.lng.toFixed(2)}
+                </p>
+              )}
+
+              {/* OLD Input (Commented out as per user request)
               <div className="relative">
                 <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
                 <Input
@@ -379,7 +386,7 @@ export function ChartQuickActions() {
                   <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 size-4 animate-spin text-muted-foreground" />
                 )}
               </div>
-              {cityOptions.length > 0 && !selectedCity && (
+              {cityOptions?.length > 0 && !selectedCity && (
                 <div className="border rounded-md max-h-48 overflow-y-auto">
                   {cityOptions.map((opt, i) => (
                     <button
@@ -397,13 +404,7 @@ export function ChartQuickActions() {
                   ))}
                 </div>
               )}
-              {selectedCity && (
-                <p className="text-xs text-muted-foreground flex items-center gap-1">
-                  <CheckCircle2 className="size-3 text-green-600" />
-                  {selectedCity.label} — {selectedCity.lat.toFixed(2)},{" "}
-                  {selectedCity.lng.toFixed(2)}
-                </p>
-              )}
+              */}
             </div>
           </div>
 
