@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getAdminUser } from "@/lib/admin-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -60,6 +61,20 @@ export async function PATCH(request: NextRequest) {
 
     // Determine role and column
     if (role === "diviner") {
+      const adminUser = await getAdminUser();
+      if (adminUser) {
+        const { error } = await admin
+          .from("bookings")
+          .update({ session_notes: sessionNotes ?? null })
+          .eq("id", bookingId);
+
+        if (error) {
+          return NextResponse.json({ error: error.message }, { status: 500 });
+        }
+
+        return NextResponse.json({ success: true });
+      }
+
       const { data: diviner } = await supabase
         .from("diviners")
         .select("id")
