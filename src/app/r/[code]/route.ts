@@ -50,17 +50,38 @@ export async function GET(
   let destinationId: string = link.diviner_id;
   let isCampaignLink = false;
 
+  // Affiliate attribution context — populated only when the campaign
+  // is owned by an affiliate (owner_type='affiliate'). Set to null
+  // on diviner-owned campaigns so diviner-owned clicks don't carry
+  // stale affiliate attribution.
+  let affiliateId: string | null = null;
+  let affiliateType: "diviner_affiliate" | "social_advocate" | null = null;
+  let commissionValueSnapshot: number | null = null;
+  let commissionTypeSnapshot: "percent" | "flat" | null = null;
+
   if (link.campaign_id && link.destination_type && link.destination_entity_id) {
     isCampaignLink = true;
 
-    // Load campaign for date/status validation
+    // Load campaign for date/status validation + affiliate owner context
     const { data: campaign } = await admin
       .from("affiliate_campaigns")
       .select(
-        "id, status, destination_type, destination_profile_id, destination_service_template_id, diviner_id, start_date, end_date"
+        "id, status, destination_type, destination_profile_id, destination_service_template_id, diviner_id, start_date, end_date, owner_type, owner_affiliate_id, owner_affiliate_type, commission_value_snapshot, commission_type_snapshot"
       )
       .eq("id", link.campaign_id)
       .maybeSingle();
+
+    if (campaign && campaign.owner_type === "affiliate") {
+      affiliateId = (campaign.owner_affiliate_id as string | null) ?? null;
+      affiliateType =
+        (campaign.owner_affiliate_type as "diviner_affiliate" | "social_advocate" | null) ?? null;
+      commissionValueSnapshot =
+        campaign.commission_value_snapshot != null
+          ? Number(campaign.commission_value_snapshot)
+          : null;
+      commissionTypeSnapshot =
+        (campaign.commission_type_snapshot as "percent" | "flat" | null) ?? null;
+    }
 
     if (campaign && campaign.status === "active") {
       // Validate date window
@@ -143,6 +164,11 @@ export async function GET(
         destinationId,
         resolvedUrl: destinationUrl,
         request,
+        affiliateId,
+        affiliateType,
+        commissionValueSnapshot,
+        commissionTypeSnapshot,
+        refCode: code,
       },
       clickData,
       unique

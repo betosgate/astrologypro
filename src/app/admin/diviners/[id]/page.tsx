@@ -103,7 +103,7 @@ async function getDivinerDetail(divinerId: string) {
   if (error || !diviner) return null;
 
   // Fetch related data in parallel
-  const [servicesRes, bookingsRes, affiliateCountRes, orderStatsRes, emailRes, registryRes, overrideRes, voicemailsRes] =
+  const [servicesRes, bookingsRes, affiliateCountRes, orderStatsRes, emailRes, registryRes, overrideRes, voicemailsRes, centralChimeRes] =
     await Promise.all([
       admin
         .from("services")
@@ -150,6 +150,17 @@ async function getDivinerDetail(divinerId: string) {
         .eq("diviner_id", divinerId)
         .order("created_at", { ascending: false })
         .limit(50),
+
+      // Shared central Chime number (status='central'). Drives the central-
+      // routing card on the Chime Phone section for diviners with no
+      // per-diviner number.
+      admin
+        .from("chime_phone_numbers")
+        .select("phone_number")
+        .eq("status", "central")
+        .order("created_at", { ascending: true })
+        .limit(1)
+        .maybeSingle(),
     ]);
 
   const services = (servicesRes.data ?? []) as Array<Record<string, unknown>>;
@@ -182,6 +193,9 @@ async function getDivinerDetail(divinerId: string) {
     created_at: string;
   }>;
 
+  const centralChimeNumber =
+    (centralChimeRes.data?.phone_number as string | undefined) ?? null;
+
   return {
     diviner,
     email,
@@ -189,6 +203,7 @@ async function getDivinerDetail(divinerId: string) {
     bookings,
     voicemails,
     affiliateCount,
+    centralChimeNumber,
     governedLivePlatforms: buildGovernedLivePlatforms(
       registryRes.data ?? [],
       overrideRes.data ?? []
@@ -217,7 +232,7 @@ export default async function AdminDivinerDetailPage({
   const result = await getDivinerDetail(id);
   if (!result) notFound();
 
-  const { diviner, email, services, bookings, voicemails, affiliateCount, governedLivePlatforms, stats, servicePackage } = result;
+  const { diviner, email, services, bookings, voicemails, affiliateCount, governedLivePlatforms, stats, servicePackage, centralChimeNumber } = result;
   const publishingPolicy = normalizePublishPolicy(diviner as Record<string, unknown>);
   const divinerAvatarUrl = getDivinerAvatarUrl(diviner.avatar_url as string | null | undefined);
   const seoScore = calcSeoCompletenessScore(diviner);
@@ -508,6 +523,7 @@ export default async function AdminDivinerDetailPage({
           }
           phoneMobile={(diviner.phone_mobile as string | null) ?? null}
           phoneDialinEnabled={!!diviner.phone_dialin_enabled}
+          centralChimeNumber={centralChimeNumber}
         />
       </div>
 

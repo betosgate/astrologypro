@@ -22,6 +22,16 @@ export interface ClickLogInput {
   destinationId: string;
   resolvedUrl: string;
   request: Request;
+
+  // Added by 2026-04-21 affiliate sprint. Set only when the campaign's
+  // owner_type === 'affiliate' so the click can be attributed to the
+  // affiliate at query time without a join. ref_code is always set when
+  // the click flows through /r/[code].
+  affiliateId?: string | null;
+  affiliateType?: "diviner_affiliate" | "social_advocate" | null;
+  commissionValueSnapshot?: number | null;
+  commissionTypeSnapshot?: "percent" | "flat" | null;
+  refCode?: string | null;
 }
 
 export interface ParsedClickData {
@@ -200,6 +210,12 @@ export async function logCampaignClick(
       utm_content: clickData.utm_content,
       is_unique_click: isUnique,
       is_bot: clickData.is_bot,
+      // 2026-04-21 affiliate attribution (null for diviner-owned campaigns)
+      affiliate_id: input.affiliateId ?? null,
+      affiliate_type: input.affiliateType ?? null,
+      commission_value_snapshot: input.commissionValueSnapshot ?? null,
+      commission_type_snapshot: input.commissionTypeSnapshot ?? null,
+      ref_code: input.refCode ?? input.campaignCode,
     });
   } catch (err) {
     console.error("[campaign-click-logger] Failed to log click:", err);
