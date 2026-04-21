@@ -15,6 +15,8 @@
     "src/lib/db/migrations.ts",
     "src/data/migrations/20260421000002_booking_call_pin.ts",
     "src/data/migrations/20260421000003_seed_central_chime_number.ts",
-    "src/app/api/admin/chime-phone-numbers/route.ts"
+    "src/app/api/admin/chime-phone-numbers/route.ts",
+    "src/components/admin/chime-phone-manager.tsx",
+    "src/app/admin/diviners/[id]/page.tsx"
   ]
 }
