@@ -44,6 +44,7 @@ import { MIGRATION_SQL as MIG_20260421000001 } from "@/data/migrations/202604210
 import { MIGRATION_SQL as MIG_20260421000002 } from "@/data/migrations/20260421000002_booking_call_pin";
 import { MIGRATION_SQL as MIG_20260421000003 } from "@/data/migrations/20260421000003_seed_central_chime_number";
 import { MIGRATION_SQL as MIG_20260421000004 } from "@/data/migrations/20260421000004_add_general_service_templates";
+import { MIGRATION_SQL as MIG_20260421000005 } from "@/data/migrations/20260421000005_seed_general_nativity_template_content";
 import { MIGRATION_SQL as MIG_20260421000010 } from "@/data/migrations/20260421000010_repair_family_birth_country";
 
 /**
@@ -437,6 +438,14 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Clones the 19 canonical diviner-specific service_templates rows into a parallel general catalog by preserving all source fields and only changing name + slug to their general equivalents. Safe to re-run because each clone is inserted only if its target slug does not already exist.",
     sortKey: "20260421000002",
     sql: MIG_20260421000004,
+  },
+  "20260421000005_seed_general_nativity_template_content": {
+    id: "20260421000005_seed_general_nativity_template_content",
+    title: "Seed general nativity template content",
+    description:
+      "Populates general-nativity-birth-chart with a complete reference set of admin-editable fields including long description, included items, target audience, FAQ, SEO metadata, and explicit display/pricing values.",
+    sortKey: "20260421000005",
+    sql: MIG_20260421000005,
   },
   "20260421000010_repair_family_birth_country": {
     id: "20260421000010_repair_family_birth_country",
