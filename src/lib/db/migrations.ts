@@ -44,6 +44,7 @@ import { MIGRATION_SQL as MIG_20260421000001 } from "@/data/migrations/202604210
 import { MIGRATION_SQL as MIG_20260421000002 } from "@/data/migrations/20260421000002_booking_call_pin";
 import { MIGRATION_SQL as MIG_20260421000003 } from "@/data/migrations/20260421000003_seed_central_chime_number";
 import { MIGRATION_SQL as MIG_20260421000004 } from "@/data/migrations/20260421000004_add_general_service_templates";
+import { MIGRATION_SQL as MIG_20260421000010 } from "@/data/migrations/20260421000010_repair_family_birth_country";
 
 /**
  * Allowlisted migrations that the admin migration runner can execute.
@@ -436,6 +437,14 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Clones the 19 canonical diviner-specific service_templates rows into a parallel general catalog by preserving all source fields and only changing name + slug to their general equivalents. Safe to re-run because each clone is inserted only if its target slug does not already exist.",
     sortKey: "20260421000002",
     sql: MIG_20260421000004,
+  },
+  "20260421000010_repair_family_birth_country": {
+    id: "20260421000010_repair_family_birth_country",
+    title: "Repair existing family birth_country (parse from birth_city)",
+    description:
+      "One-time data repair for community_family_members rows where birth_country IS NULL and birth_city ends with a recognized country suffix (e.g. 'Miami, FL, United States of America'). Uses an allowlist of ~70 country names ordered longest-first so multi-word matches win. Never overwrites an existing birth_country; ambiguous labels are skipped, not guessed. Safe to re-run — a 2nd pass updates zero rows. NON-destructive: no schema changes, no deletes.",
+    sortKey: "20260421000010",
+    sql: MIG_20260421000010,
   },
 };
 
