@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import { ArrowRight, ChevronLeft, BadgeCheck, CalendarDays } from "lucide-react";
 import { getDivinerAvatarUrl } from "@/lib/diviner-images";
+import { TIMEZONE_OPTIONS } from "@/lib/timezone-utils";
 
 const LIFE_AREAS = [
   "Career & Life Purpose",
@@ -16,6 +17,22 @@ const LIFE_AREAS = [
   "Major Life Transition",
   "Other",
 ] as const;
+
+const BASE_TIMEZONE_OPTIONS = Array.from(
+  new Set(["UTC", ...TIMEZONE_OPTIONS.map((option) => option.value)])
+);
+
+function normalizeTimezone(timezone: string): string {
+  return timezone === "Asia/Calcutta" ? "Asia/Kolkata" : timezone;
+}
+
+function getSupportedTimezones(): string[] {
+  const intl = Intl as unknown as {
+    supportedValuesOf?: (key: "timeZone") => string[];
+  };
+
+  return intl.supportedValuesOf?.("timeZone") ?? [];
+}
 
 export interface LeadDivinerCard {
   username: string;
@@ -30,6 +47,7 @@ export interface LeadDivinerCard {
 interface ReadingLeadFormProps {
   serviceType: "astrology" | "tarot";
   serviceName: string;
+  serviceSlug?: string;
   sourceUrl?: string;
   diviners?: LeadDivinerCard[];
 }
@@ -40,6 +58,7 @@ type Status = "idle" | "loading" | "success" | "error";
 export function ReadingLeadForm({
   serviceType,
   serviceName,
+  serviceSlug = "",
   sourceUrl,
   diviners = [],
 }: ReadingLeadFormProps) {
@@ -56,10 +75,28 @@ export function ReadingLeadForm({
   const [birthDate, setBirthDate] = useState("");
   const [birthTime, setBirthTime] = useState("");
   const [birthPlace, setBirthPlace] = useState("");
+  const [birthTimezone, setBirthTimezone] = useState("");
+  const [currentTimezone, setCurrentTimezone] = useState("");
+  const [timezoneOptions, setTimezoneOptions] = useState(BASE_TIMEZONE_OPTIONS);
   const [astrologyNote, setAstrologyNote] = useState("");
 
   // Step 2 — tarot
   const [question, setQuestion] = useState("");
+
+  useEffect(() => {
+    const detectedTimezone = normalizeTimezone(
+      Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"
+    );
+    const supportedTimezones = getSupportedTimezones();
+
+    setCurrentTimezone(detectedTimezone);
+    setBirthTimezone((value) => value || detectedTimezone);
+    setTimezoneOptions(
+      Array.from(
+        new Set([...BASE_TIMEZONE_OPTIONS, detectedTimezone, ...supportedTimezones])
+      ).sort((a, b) => a.localeCompare(b))
+    );
+  }, []);
 
   function handleStep1(e: React.FormEvent) {
     e.preventDefault();
@@ -72,6 +109,12 @@ export function ReadingLeadForm({
     setErrorMsg("");
 
     try {
+      const context = (serviceType === "tarot" ? question : astrologyNote).trim();
+      const hasBirthContext =
+        serviceType === "astrology" ||
+        Boolean(birthDate || birthTime || birthPlace.trim());
+      const trimmedBirthTimezone = birthTimezone.trim();
+
       const res = await fetch("/api/marketing/reading-lead", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -81,10 +124,15 @@ export function ReadingLeadForm({
           life_area: lifeArea,
           service_type: serviceType,
           service_name: serviceName,
+          service_slug: serviceSlug || undefined,
           birth_date: birthDate || undefined,
           birth_time: birthTime || undefined,
           birth_place: birthPlace.trim() || undefined,
-          question: (serviceType === "tarot" ? question : astrologyNote).trim() || undefined,
+          birth_timezone:
+            hasBirthContext && trimmedBirthTimezone ? trimmedBirthTimezone : undefined,
+          current_timezone: currentTimezone || trimmedBirthTimezone || undefined,
+          question: context || undefined,
+          additional_context: context || undefined,
           source_url: sourceUrl,
         }),
       });
@@ -113,7 +161,7 @@ export function ReadingLeadForm({
               Got it, {name.split(" ")[0]}! Your details are saved.
             </p>
             <p className="mt-0.5 text-xs text-[#b8bcd0]/60">
-              We&apos;ll send your free guide to {email}. Now choose a reader and book your session below.
+              Your intake is tied to {email}. Choose a reader and book your session below.
             </p>
           </div>
         </div>
@@ -126,7 +174,11 @@ export function ReadingLeadForm({
             </p>
             <div className="space-y-3">
               {diviners.map((d) => (
-                <DivinerBookingRow key={d.username} diviner={d} serviceType={serviceType} />
+                <DivinerBookingRow
+                  key={d.username}
+                  diviner={d}
+                  serviceSlug={serviceSlug}
+                />
               ))}
             </div>
             <p className="text-center text-xs text-[#b8bcd0]/35">
@@ -172,6 +224,12 @@ export function ReadingLeadForm({
 
   return (
     <div className="text-left">
+      <datalist id="lead-timezone-options">
+        {timezoneOptions.map((timezone) => (
+          <option key={timezone} value={timezone} />
+        ))}
+      </datalist>
+
       {/* Progress bar */}
       <div className="mb-6 flex items-center gap-3">
         <div className="flex items-center gap-2">
@@ -305,19 +363,36 @@ export function ReadingLeadForm({
             </div>
           </div>
 
-          <div>
-            <label htmlFor="birth-place" className={labelClass}>
-              Birth City &amp; Country <span className="text-[#c9a84c]">*</span>
-            </label>
-            <input
-              id="birth-place"
-              type="text"
-              required
-              value={birthPlace}
-              onChange={(e) => setBirthPlace(e.target.value)}
-              placeholder="e.g. London, UK"
-              className={inputClass}
-            />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label htmlFor="birth-place" className={labelClass}>
+                Birth City &amp; Country <span className="text-[#c9a84c]">*</span>
+              </label>
+              <input
+                id="birth-place"
+                type="text"
+                required
+                value={birthPlace}
+                onChange={(e) => setBirthPlace(e.target.value)}
+                placeholder="e.g. London, UK"
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label htmlFor="birth-timezone" className={labelClass}>
+                Birth Timezone <span className="text-[#c9a84c]">*</span>
+              </label>
+              <input
+                id="birth-timezone"
+                type="text"
+                required
+                list="lead-timezone-options"
+                value={birthTimezone}
+                onChange={(e) => setBirthTimezone(e.target.value)}
+                placeholder="e.g. America/New_York"
+                className={inputClass}
+              />
+            </div>
           </div>
 
           <div>
@@ -381,6 +456,62 @@ export function ReadingLeadForm({
             </p>
           </div>
 
+          <div className="space-y-3 border-t border-white/10 pt-4">
+            <div>
+              <p className={labelClass}>Optional birth context</p>
+              <p className="text-xs leading-relaxed text-[#b8bcd0]/45">
+                Add this if timing, compatibility, or personal cycles are part of your question.
+              </p>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label htmlFor="tarot-birth-date" className={labelClass}>Date of Birth</label>
+                <input
+                  id="tarot-birth-date"
+                  type="date"
+                  value={birthDate}
+                  onChange={(e) => setBirthDate(e.target.value)}
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label htmlFor="tarot-birth-time" className={labelClass}>Birth Time</label>
+                <input
+                  id="tarot-birth-time"
+                  type="time"
+                  value={birthTime}
+                  onChange={(e) => setBirthTime(e.target.value)}
+                  className={inputClass}
+                />
+              </div>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label htmlFor="tarot-birth-place" className={labelClass}>Birth Location</label>
+                <input
+                  id="tarot-birth-place"
+                  type="text"
+                  value={birthPlace}
+                  onChange={(e) => setBirthPlace(e.target.value)}
+                  placeholder="e.g. Austin, USA"
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label htmlFor="tarot-timezone" className={labelClass}>Timezone</label>
+                <input
+                  id="tarot-timezone"
+                  type="text"
+                  list="lead-timezone-options"
+                  value={birthTimezone}
+                  onChange={(e) => setBirthTimezone(e.target.value)}
+                  placeholder="e.g. America/Chicago"
+                  className={inputClass}
+                />
+              </div>
+            </div>
+          </div>
+
           {status === "error" && (
             <p className="text-sm text-red-400">{errorMsg}</p>
           )}
@@ -412,12 +543,13 @@ export function ReadingLeadForm({
 // ── Diviner booking row ────────────────────────────────────────────────────
 function DivinerBookingRow({
   diviner,
-  serviceType,
+  serviceSlug,
 }: {
   diviner: LeadDivinerCard;
-  serviceType: "astrology" | "tarot";
+  serviceSlug: string;
 }) {
   const avatarUrl = getDivinerAvatarUrl(diviner.avatarUrl);
+  const bookingHref = serviceSlug ? `/${diviner.username}/book/${serviceSlug}` : `/${diviner.username}`;
 
   return (
     <div className="group flex items-center gap-4 rounded-xl border border-white/[0.07] bg-white/[0.02] p-4 transition-all hover:border-[#c9a84c]/30 hover:bg-white/[0.04]">
@@ -465,7 +597,7 @@ function DivinerBookingRow({
           </p>
         )}
         <a
-          href={`/${diviner.username}`}
+          href={bookingHref}
           className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#c9a84c] px-4 text-xs font-bold text-black transition-colors hover:bg-[#e2c97e]"
         >
           <CalendarDays className="size-3.5" aria-hidden="true" />

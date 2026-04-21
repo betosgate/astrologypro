@@ -32,6 +32,7 @@ import {
   Save,
   Loader2,
   Check,
+  ExternalLink,
 } from "lucide-react";
 import { encodeAudioEvent, floatToPcm16, decodeTranscriptEvent } from "@/lib/transcribe-stream";
 import { toast } from "sonner";
@@ -79,6 +80,13 @@ interface ChimeSessionRoomProps {
     time?: string;
     city?: string;
   };
+  /**
+   * Pre-computed link to /admin/session/{bookingId} when the booking's service
+   * maps to a toolkit (horoscope tab or tarot spread). NULL when the service
+   * is unmapped (hides the button). Only meaningful for role === "diviner".
+   * Computed server-side via getSessionLinkForBooking().
+   */
+  sessionLink?: string | null;
 }
 
 export function ChimeSessionRoom({
@@ -97,6 +105,7 @@ export function ChimeSessionRoom({
   clientToken,
   questionnaire,
   clientBirthData,
+  sessionLink,
 }: ChimeSessionRoomProps) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const videoContainerRef = useRef<HTMLDivElement>(null);
@@ -1598,6 +1607,22 @@ export function ChimeSessionRoom({
               >
                 {isCaptionsEnabled ? <Captions className="h-5 w-5" /> : <CaptionsOff className="h-5 w-5" />}
               </button>
+            </Tip>
+          )}
+
+          {/* Open Service — diviner-only, hidden when service is unmapped */}
+          {role === "diviner" && sessionLink && (
+            <Tip label="Open the toolkit session for this booking">
+              <a
+                href={sessionLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex h-11 items-center gap-2 rounded-full bg-amber-500/90 px-4 text-sm font-medium text-zinc-900 shadow-lg shadow-amber-500/20 transition-all hover:bg-amber-500 md:h-12 md:px-5"
+              >
+                <Sparkles className="h-4 w-4" />
+                <span className="hidden sm:inline">Open Service</span>
+                <ExternalLink className="h-3 w-3 opacity-70" />
+              </a>
             </Tip>
           )}
 

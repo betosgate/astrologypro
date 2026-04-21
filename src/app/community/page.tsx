@@ -38,6 +38,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { AstroChartsSection } from "@/components/community/astro-charts-section";
+import { ChartQuickActions } from "@/components/community/chart-quick-actions";
 import { ProfileProgressSection } from "@/components/community/profile-progress-section";
 import { MembershipCard, type MembershipSubscription } from "@/components/community/membership-card";
 import { ManageSubscriptionButton } from "@/components/mystery-school/manage-subscription-button";
@@ -664,11 +665,7 @@ export default async function CommunityDashboardPage() {
             })}
           </p>
         </div>
-        <Badge
-          variant={member.membership_status === "active" ? "default" : "secondary"}
-        >
-          {member.membership_status}
-        </Badge>
+
       </div>
 
       {/* ═══════════════════════════════════════════════════════════════════
@@ -740,12 +737,12 @@ export default async function CommunityDashboardPage() {
           <div className="flex items-center gap-3 min-w-0">
             <div className="flex items-center gap-2 flex-1 sm:flex-initial sm:w-40">
               <span className="text-xs text-muted-foreground whitespace-nowrap">
-                Profile
+                Journey
               </span>
               <Progress
                 value={profileCompletionData.overall_pct}
                 className="h-1.5 flex-1"
-                aria-label={`Profile ${profileCompletionData.overall_pct}% complete`}
+                aria-label={`Journey setup ${profileCompletionData.overall_pct}% complete`}
               />
               <span className="text-xs font-bold tabular-nums text-primary">
                 {profileCompletionData.overall_pct}%
@@ -858,19 +855,21 @@ export default async function CommunityDashboardPage() {
             </Card>
           )}
 
-        {/* Profile completion — horizontal progress bar when not complete; badge when complete */}
+        {/* Journey setup progress — horizontal progress bar when not complete; badge when complete.
+            This is the WEIGHTED journey metric (photo, birth data, natal chart, family, relationship chart).
+            Profile Details data-field % is a separate bar on /community/profile. */}
         {profileIsComplete ? (
           <div className="flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-4 py-3">
             <CheckCircle2 className="size-4 shrink-0 text-emerald-600" aria-hidden="true" />
             <span className="text-sm font-medium text-emerald-700 dark:text-emerald-400">
-              Profile Complete
+              Journey Setup Complete
             </span>
           </div>
         ) : (
           <Card>
             <CardContent className="py-4 space-y-3">
               <div className="flex items-center justify-between gap-2">
-                <p className="text-sm font-semibold">Complete Your Profile</p>
+                <p className="text-sm font-semibold">Complete Your Journey Setup</p>
                 <span className="text-sm font-bold tabular-nums text-primary">
                   {profileCompletionData.overall_pct}%
                 </span>
@@ -878,15 +877,15 @@ export default async function CommunityDashboardPage() {
               <Progress
                 value={profileCompletionData.overall_pct}
                 className="h-2"
-                aria-label={`Profile ${profileCompletionData.overall_pct}% complete`}
+                aria-label={`Journey setup ${profileCompletionData.overall_pct}% complete`}
               />
               <div className="flex items-center justify-between gap-2">
                 <p className="text-xs text-muted-foreground">
-                  {profileCompletionData.items.filter((i) => !i.completed).length} item
+                  {profileCompletionData.items.filter((i) => !i.completed).length} milestone
                   {profileCompletionData.items.filter((i) => !i.completed).length !== 1 ? "s" : ""} remaining
                 </p>
                 <Button asChild variant="link" size="sm" className="h-auto p-0 text-xs">
-                  <Link href="/community/profile">Complete Profile →</Link>
+                  <Link href="/community/profile">Continue Setup →</Link>
                 </Button>
               </div>
               {/* Show next incomplete item inline */}
@@ -987,6 +986,9 @@ export default async function CommunityDashboardPage() {
       ════════════════════════════════════════════════════════════════════ */}
       <section className="space-y-4">
         <SectionHeading icon={Compass} title="Your Charts & Astrology" subtitle="Birth charts, transits, and cosmic insights" />
+
+        {/* Quick Chart Generation — one-click natal/monthly/relationship */}
+        <ChartQuickActions />
 
         {/* Profile Progress + Astro Charts */}
         <div className="grid gap-4 sm:grid-cols-2">

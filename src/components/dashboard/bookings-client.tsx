@@ -30,6 +30,7 @@ import {
   ChevronLeft,
   ChevronRight,
   DollarSign,
+  Sparkles,
 } from "lucide-react";
 import Link from "next/link";
 import { formatCurrency } from "@/lib/format";
@@ -51,6 +52,11 @@ interface BookingsClientProps {
   >;
   divinerUsername: string;
   ordersByBookingId?: Record<string, LinkedOrder>;
+  /**
+   * Server-computed "Open Service" toolkit link per booking id. NULL when
+   * the service has no toolkit mapping (the link is hidden for those rows).
+   */
+  sessionLinksByBookingId?: Record<string, string | null>;
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -83,6 +89,7 @@ export function BookingsClient({
   clientPrevSessions,
   divinerUsername,
   ordersByBookingId = {},
+  sessionLinksByBookingId = {},
 }: BookingsClientProps) {
   const [timeView, setTimeView] = useState<"upcoming" | "past">("upcoming");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -509,6 +516,16 @@ export function BookingsClient({
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
+                          {sessionLinksByBookingId[booking.id as string] && (
+                            <Link
+                              href={sessionLinksByBookingId[booking.id as string]!}
+                              className="inline-flex h-8 items-center gap-1 rounded-md border border-primary/30 bg-primary/10 px-2 text-xs font-medium text-primary transition-colors hover:bg-primary/20"
+                              title="Open the toolkit session for this booking"
+                            >
+                              <Sparkles className="h-3 w-3" />
+                              <span className="hidden md:inline">Open Service</span>
+                            </Link>
+                          )}
                           <BookingDetailSheet
                             booking={{
                               id: booking.id as string,
@@ -540,6 +557,7 @@ export function BookingsClient({
                               base_price: (booking.base_price as number) ?? null,
                             }}
                             linkedOrder={ordersByBookingId[booking.id as string] ?? null}
+                            sessionLink={sessionLinksByBookingId[booking.id as string] ?? null}
                           />
                         </div>
                       </TableCell>

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAdminUser } from "@/lib/admin-auth";
+import { requireAdminOrDiviner } from "@/lib/require-admin-or-diviner";
 import { callAstroAiApi, AstroAiBody } from "@/lib/astrology-api";
 
 export const dynamic = "force-dynamic";
@@ -7,7 +7,9 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
 export async function POST(req: NextRequest) {
-  const user = await getAdminUser();
+  // Admin OR registered diviner — the diviner-facing /admin/horoscope/session/
+  // route depends on this endpoint for AI interpretation.
+  const user = await requireAdminOrDiviner();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();

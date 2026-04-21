@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 import { BookingsClient } from "@/components/dashboard/bookings-client";
+import { getSessionLinkForBooking } from "@/lib/service-toolkit-mapping";
 
 export const metadata = { title: "Bookings" };
 export const dynamic = "force-dynamic";
@@ -67,7 +68,7 @@ export default async function BookingsPage() {
       ? admin.from("clients").select("id, full_name, email, birth_date, birth_time, birth_city").in("id", clientIds)
       : Promise.resolve({ data: [] as any[] }),
     serviceIds.length > 0
-      ? admin.from("services").select("id, name").in("id", serviceIds)
+      ? admin.from("services").select("id, name, template_id").in("id", serviceIds)
       : Promise.resolve({ data: [] as any[] }),
   ]);
 
@@ -78,6 +79,29 @@ export default async function BookingsPage() {
   const serviceMap: Record<string, Record<string, unknown>> = {};
   for (const s of (servicesResult.data ?? [])) {
     serviceMap[s.id] = s;
+  }
+
+  // Resolve service_templates for the services on this page — needed to
+  // decide, per booking, whether the "Open Service" link should appear.
+  const templateIds = [
+    ...new Set(
+      (servicesResult.data ?? [])
+        .map((s: any) => s.template_id as string | null | undefined)
+        .filter((v: unknown): v is string => typeof v === "string" && v.length > 0),
+    ),
+  ];
+  const templateMap: Record<string, { slug: string; category: string }> = {};
+  if (templateIds.length > 0) {
+    const { data: templates } = await admin
+      .from("service_templates")
+      .select("id, slug, category")
+      .in("id", templateIds);
+    for (const t of templates ?? []) {
+      templateMap[t.id as string] = {
+        slug: t.slug as string,
+        category: t.category as string,
+      };
+    }
   }
 
   // Merge into shape BookingsClient expects
@@ -138,12 +162,28 @@ export default async function BookingsPage() {
     }
   }
 
+  // Per-booking toolkit session links. NULL for unmapped services — the
+  // client UI uses that to decide whether to render "Open Service".
+  const sessionLinksByBookingId: Record<string, string | null> = {};
+  for (const b of bookings) {
+    const bookingId = b.id as string;
+    const service = b.services as { template_id?: string | null } | null;
+    const templateId = service?.template_id ?? null;
+    const template = templateId ? templateMap[templateId] : null;
+    sessionLinksByBookingId[bookingId] = getSessionLinkForBooking({
+      bookingId,
+      templateSlug: template?.slug ?? null,
+      category: template?.category ?? null,
+    });
+  }
+
   return (
     <BookingsClient
       bookings={bookings}
       clientPrevSessions={clientPrevSessions}
       divinerUsername={diviner?.username ?? ""}
       ordersByBookingId={ordersByBookingId}
+      sessionLinksByBookingId={sessionLinksByBookingId}
     />
   );
 }

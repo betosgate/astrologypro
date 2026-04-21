@@ -101,7 +101,7 @@ export function MarketingFooter() {
                 alt="AstrologyPro"
                 width={120}
                 height={55}
-                className="h-[55px] w-auto object-contain"
+                className="object-contain"
               />
             </Link>
             <p className="mt-3 text-sm text-[#b8bcd0]/70">

@@ -29,6 +29,7 @@ import {
   Video,
   Loader2,
   ChevronRight,
+  AlertTriangle,
 } from "lucide-react";
 
 type VideoSessionClient = {
@@ -55,6 +56,13 @@ interface VideoSessionsListProps {
   initialSessions: VideoSession[];
   initialNextCursor: string | null;
   initialHasMore: boolean;
+  /**
+   * Whether the current environment has VideoSDK credentials configured.
+   * When false, historical sessions still render but the "New Session" action
+   * is disabled and an inline banner explains why. Defaults to true so
+   * existing callers don't break.
+   */
+  canCreateNew?: boolean;
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -101,6 +109,7 @@ export function VideoSessionsList({
   initialSessions,
   initialNextCursor,
   initialHasMore,
+  canCreateNew = true,
 }: VideoSessionsListProps) {
   const router = useRouter();
   const [sessions, setSessions] = useState<VideoSession[]>(initialSessions);
@@ -200,20 +209,44 @@ export function VideoSessionsList({
         </div>
         <Button
           size="sm"
-          className="bg-[#c9a84c] hover:bg-[#b8973b] text-[#06080f] gap-1.5"
+          className="bg-[#c9a84c] hover:bg-[#b8973b] text-[#06080f] gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
           onClick={() => setShowNewModal(true)}
+          disabled={!canCreateNew}
+          title={
+            canCreateNew
+              ? "Start a new video session"
+              : "Video reading system not configured. Contact support to enable new sessions."
+          }
         >
           <Plus className="size-4" />
           New Session
         </Button>
       </div>
 
+      {!canCreateNew && (
+        <div className="flex items-start gap-2.5 rounded-lg border border-yellow-500/30 bg-yellow-500/10 px-4 py-3">
+          <AlertTriangle className="size-4 mt-0.5 text-yellow-400 shrink-0" />
+          <div className="space-y-0.5">
+            <p className="text-sm text-yellow-300 font-medium">
+              New video sessions are temporarily disabled
+            </p>
+            <p className="text-xs text-yellow-200/80">
+              Video reading system is not currently configured on this
+              environment. Your past sessions are still visible below — contact
+              support to re-enable starting new ones.
+            </p>
+          </div>
+        </div>
+      )}
+
       {sessions.length === 0 ? (
         <Card className="border-border bg-[#0a0e1a]">
           <CardContent className="py-16 text-center">
             <Video className="mx-auto mb-3 size-10 opacity-30" />
             <p className="text-sm text-muted-foreground">
-              No video sessions yet. Create your first session to get started.
+              {canCreateNew
+                ? "No video sessions yet. Create your first session to get started."
+                : "No video sessions on record."}
             </p>
           </CardContent>
         </Card>

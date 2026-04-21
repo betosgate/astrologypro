@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const user = await getAdminUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -24,7 +24,7 @@ export async function GET(
   const dateTo    = searchParams.get("date_to") ?? "";
 
   const admin = createAdminClient();
-  const divinerId = params.id;
+  const { id: divinerId } = await params;
 
   let query = admin
     .from("service_access_audit_log")

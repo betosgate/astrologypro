@@ -18,14 +18,14 @@ export async function generateMetadata(): Promise<Metadata> {
         "Every two years, Mars returns to its natal position — beginning a new cycle of drive, ambition, and assertive energy. A Mars Return reading reveals the themes, battles, and momentum that will define your next chapter of action.",
       type: "website",
       url: `${APP_URL}/readings/mars-return`,
-      images: [{ url: "https://astrologypro.com/images/home/og-card.jpg", width: 1200, height: 630, alt: "Mars Return Readings" }],
+      images: [{ url: getReadingOgImageUrl("mars-return"), width: 1200, height: 630, alt: "Mars Return Readings" }],
     },
     twitter: {
       card: "summary_large_image",
       title: "Mars Return Readings | AstrologyPro",
       description:
         "Every two years, Mars returns to its natal position — beginning a new cycle of drive, ambition, and assertive energy. A Mars Return reading reveals the themes, battles, and momentum that will define your next chapter of action.",
-      images: ["https://astrologypro.com/images/home/og-card.jpg"],
+      images: [getReadingOgImageUrl("mars-return")],
     },
   };
 }
@@ -134,7 +134,7 @@ export default async function MarsReturnPage() {
   return (
     <ReadingPageTemplate
       serviceType="astrology"
-      badge="Annual Mars Cycle"
+      badge="Two-Year Mars Cycle"
       heroImage={getReadingOgImageUrl("mars-return")}
       heroTitleBefore="Your Mars Return:"
       heroTitleGradient="A New Cycle of Drive & Desire"
@@ -173,6 +173,23 @@ export default async function MarsReturnPage() {
       divinerSectionTitle="Find Your Mars Return Astrologer"
       divinerSectionSubtitle="These practitioners specialize in Mars return and predictive astrology"
       emailGuideSubject="your Mars return reading"
+      methodNotes={[
+        {
+          label: "Technique",
+          title: "A two-year action cycle",
+          desc: "The Mars Return chart is read for initiative, conflict, desire, physical drive, and where your energy wants a cleaner outlet.",
+        },
+        {
+          label: "Best For",
+          title: "Launches, stamina, and conflict strategy",
+          desc: "Use it before starting a venture, training cycle, campaign, competitive push, or direct confrontation that needs disciplined force.",
+        },
+        {
+          label: "Prepare",
+          title: "Bring your current fight or goal",
+          desc: "Share where you feel urgency, anger, ambition, or burnout so the reader can help you channel Mars without wasting energy.",
+        },
+      ]}
       faqItems={[
         { q: "How often does a Mars Return happen?", a: "Mars takes approximately 687 days (just under two years) to return to its natal position. So you experience a Mars Return roughly every two years, though the exact timing shifts based on Mars's elliptical orbit and whether it goes retrograde during the cycle." },
         { q: "Is a Mars Return always significant?", a: "More significant than many minor returns, less sweeping than a Jupiter or Saturn return. The Mars Return is especially important when Mars occupies an angular house (1st, 4th, 7th, or 10th) in the return chart, or when it makes powerful aspects to your natal Sun, Moon, or angles — in those cases, the cycle often brings major initiative-taking, major conflicts, or significant physical exertion." },

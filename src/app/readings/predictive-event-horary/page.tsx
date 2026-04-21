@@ -10,12 +10,12 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: "Horary Astrology Readings | AstrologyPro",
     description:
-      "Horary astrology answers specific questions by casting a chart for the exact moment the question is asked. One of the most precise predictive techniques in all of traditional astrology.",
+      "Horary astrology answers specific questions by casting a chart for the moment the question is received and understood, then judging significators, dignity, reception, and applying aspects.",
     alternates: { canonical: `${APP_URL}/readings/predictive-event-horary` },
     openGraph: {
       title: "Horary Astrology Readings | AstrologyPro",
       description:
-        "Horary astrology answers specific questions by casting a chart for the exact moment the question is asked. One of the most precise predictive techniques in all of traditional astrology.",
+        "Horary astrology answers specific questions by casting a chart for the moment the question is received and understood, then judging significators, dignity, reception, and applying aspects.",
       type: "website",
       url: `${APP_URL}/readings/predictive-event-horary`,
       images: [{ url: "https://astrologypro.com/images/services/horary.png", width: 1200, height: 630, alt: "Predictive Event & Horary Readings" }],
@@ -24,7 +24,7 @@ export async function generateMetadata(): Promise<Metadata> {
       card: "summary_large_image",
       title: "Horary Astrology Readings | AstrologyPro",
       description:
-        "Horary astrology answers specific questions by casting a chart for the exact moment the question is asked. One of the most precise predictive techniques in all of traditional astrology.",
+        "Horary astrology answers specific questions by casting a chart for the moment the question is received and understood, then judging significators, dignity, reception, and applying aspects.",
       images: ["https://astrologypro.com/images/services/horary.png"],
     },
   };
@@ -138,7 +138,7 @@ export default async function PredictiveEventHoraryPage() {
       heroImage={getReadingOgImageUrl("predictive-event-horary")}
       heroTitleBefore="Horary Astrology:"
       heroTitleGradient="One Question. One Chart. One Answer."
-      heroSubtitle="Horary astrology is the ancient art of answering a specific question by casting a chart for the precise moment the question is asked. The resulting chart — born from the question itself — contains the answer. Remarkably accurate in practiced hands."
+      heroSubtitle="Horary astrology answers one sincere, specific question by casting a chart for the moment the question is received and understood. The chart is judged through traditional significators, dignity, reception, and applying aspects."
       heroStats={[
         { value: "Question-Based", label: "One Question Per Chart" },
         { value: "Precise Timing", label: "Cast at the Moment of Asking" },
@@ -173,10 +173,27 @@ export default async function PredictiveEventHoraryPage() {
       divinerSectionTitle="Find Your Horary Astrologer"
       divinerSectionSubtitle="These practitioners specialize in traditional horary and predictive astrology"
       emailGuideSubject="your horary astrology reading"
+      methodNotes={[
+        {
+          label: "Technique",
+          title: "A question chart, not a birth chart",
+          desc: "The astrologer casts the chart for the moment of the question and identifies the planets representing you, the matter, and other involved parties.",
+        },
+        {
+          label: "Best For",
+          title: "Specific yes/no or outcome questions",
+          desc: "Use it for clear matters like offers, lost items, timing, trust, property, jobs, or whether a defined action is likely to succeed.",
+        },
+        {
+          label: "Prepare",
+          title: "Ask one clean question",
+          desc: "No birth data is required, but the question must be sincere, specific, and not a bundle of several unrelated concerns.",
+        },
+      ]}
       faqItems={[
         { q: "What kinds of questions work best for horary astrology?", a: "Specific, sincere, answerable questions work best: Will I get this job? Is this property a good investment? Will this relationship work out? Should I take this opportunity? Questions that are too vague ('Am I on the right path?') or too compound ('What should I do about my career, relationship, and health?') produce ambiguous charts. One clear question at a time." },
         { q: "Do I need my birth data for a horary reading?", a: "No — this is one of horary's great advantages. The chart is cast for the moment the question is asked, not for your birth. Your personal birth data is not required for the horary chart itself, though a skilled astrologer may briefly note your sun sign for context." },
-        { q: "How accurate is horary astrology?", a: "In the hands of a skilled practitioner following traditional rules rigorously, horary has an impressive accuracy record — historically considered one of the most reliable predictive techniques available. The quality of the answer depends entirely on the clarity of the question and the skill of the astrologer." },
+        { q: "How accurate is horary astrology?", a: "Horary is traditionally valued for focused, testable questions, but it depends on a clear question, a coherent chart, and the astrologer's judgment. A good reading should explain the significators, applying aspects, dignity, reception, and any conditions that qualify the answer." },
         { q: "Can I ask the same question multiple times?", a: "Traditional horary holds that the same question should not be re-asked if a clear chart has already been cast for it — doing so suggests insincerity or anxiety about the answer rather than genuine inquiry. If circumstances change significantly, a new question reflecting the new situation can be cast." },
         { q: "What if the chart says 'no' but I still want the outcome?", a: "Horary reveals probability, not fate. A 'no' chart does not mean something is impossible — it indicates that at this moment, under current conditions, the described outcome is not the most likely trajectory. Sometimes timing, a change in approach, or new information can shift the situation that a different chart would reflect differently." },
       ]}

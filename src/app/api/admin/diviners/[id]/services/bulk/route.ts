@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const user = await getAdminUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -37,7 +37,7 @@ export async function POST(
   }
 
   const admin = createAdminClient();
-  const divinerId = params.id;
+  const { id: divinerId } = await params;
   const now = new Date().toISOString();
 
   const results: { template_id: string; success: boolean; error?: string }[] = [];
@@ -117,6 +117,16 @@ export async function POST(
       if (updateErr) {
         results.push({ template_id: templateId, success: false, error: updateErr.message });
         continue;
+      }
+
+      // Mirror is_enabled onto the legacy services.is_active gate so the
+      // public landing page route becomes reachable / hidden in sync.
+      if ("is_enabled" in patch) {
+        await admin
+          .from("services")
+          .update({ is_active: patch.is_enabled === true })
+          .eq("diviner_id", divinerId)
+          .eq("template_id", templateId);
       }
 
       if (ds) {

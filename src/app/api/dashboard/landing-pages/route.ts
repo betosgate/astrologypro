@@ -142,16 +142,41 @@ export async function GET(req: NextRequest) {
     results = results.filter((r) => r!.template_category === categoryFilter);
   }
   if (statusFilter === "published") {
-    results = results.filter((r) => r!.landing_page_status === "published");
+    // Published = custom landing page row is published, OR no custom row and the
+    // template-backed page is published via diviner_services.is_published.
+    results = results.filter(
+      (r) =>
+        r!.landing_page_status === "published" ||
+        (!r!.has_landing_page && r!.is_published === true)
+    );
   } else if (statusFilter === "draft") {
-    results = results.filter((r) => r!.landing_page_status === "draft" || r!.landing_page_status === "unpublished" || !r!.has_landing_page);
+    // Draft = everything enabled that is not currently published by either rule above.
+    results = results.filter(
+      (r) =>
+        !(
+          r!.landing_page_status === "published" ||
+          (!r!.has_landing_page && r!.is_published === true)
+        )
+    );
   }
 
   // 6. Summary
+  //
+  // A service is "published" if EITHER:
+  //   - its custom service_landing_pages row is status === 'published', OR
+  //   - it has no custom landing page row but diviner_services.is_published is true
+  //     (in this case the template-backed landing page is live).
+  //
+  // Everything else that is enabled but not published counts as a draft.
+  const isServicePublished = (r: NonNullable<(typeof results)[number]>) =>
+    r.landing_page_status === "published" || (!r.has_landing_page && r.is_published === true);
+
+  const publishedCount = results.filter((r) => isServicePublished(r!)).length;
+
   const summary = {
     total_enabled: results.length,
-    total_published: results.filter((r) => r!.landing_page_status === "published").length,
-    total_draft: results.filter((r) => r!.has_landing_page && r!.landing_page_status !== "published").length,
+    total_published: publishedCount,
+    total_draft: results.length - publishedCount,
     total_views_30d: 0,
     total_bookings_30d: 0,
   };

@@ -31,8 +31,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Pencil, Trash2, ChevronUp, ChevronDown, Search } from "lucide-react";
+import { Plus, Pencil, Trash2, ChevronUp, ChevronDown, Search, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
+import {
+  AdminPagination,
+  AdminTableSearch,
+  AdminResetButton,
+  useAdminTableParams,
+} from "@/components/admin/admin-table-parts";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -55,48 +61,58 @@ interface ServiceTemplateRow {
 
 export default function ServiceTemplatesPage() {
   const router = useRouter();
+  const {
+    pushParams,
+    currentPage,
+    currentSort,
+    currentDir,
+    currentQ,
+    isPending,
+  } = useAdminTableParams({ sort: "display_order", dir: "asc" });
 
   const [templates, setTemplates] = useState<ServiceTemplateRow[]>([]);
-  const [loading, setLoading]     = useState(true);
-  const [search, setSearch]       = useState("");
-  const [category, setCategory]   = useState("all");
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [category, setCategory] = useState("all");
   const [statusFilter, setStatus] = useState("all");
-  const [sortBy, setSortBy]       = useState("display_order");
-  const [sortDir, setSortDir]     = useState<"asc" | "desc">("asc");
+  const [pageSize, setPageSize] = useState(25);
+
   const [deleteTarget, setDeleteTarget] = useState<ServiceTemplateRow | null>(null);
-  const [deleting, setDeleting]   = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const fetchTemplates = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      if (search)   params.set("search", search);
+      if (currentQ) params.set("search", currentQ);
       if (category !== "all") params.set("category", category);
       if (statusFilter !== "all") params.set("is_active", statusFilter === "active" ? "true" : "false");
-      params.set("sort_by", sortBy);
-      params.set("sort_dir", sortDir);
+      params.set("sort_by", currentSort);
+      params.set("sort_dir", currentDir);
+      params.set("page", String(currentPage));
+      params.set("limit", String(pageSize));
 
       const res = await fetch(`/api/admin/service-templates?${params}`);
       if (!res.ok) throw new Error("Failed to load templates");
       const json = await res.json();
       setTemplates(json.templates ?? []);
+      setTotal(json.total ?? 0);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Error loading templates");
     } finally {
       setLoading(false);
     }
-  }, [search, category, statusFilter, sortBy, sortDir]);
+  }, [currentQ, category, statusFilter, currentSort, currentDir, currentPage, pageSize]);
 
   useEffect(() => {
     fetchTemplates();
   }, [fetchTemplates]);
 
   function handleSort(col: string) {
-    if (sortBy === col) {
-      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    if (currentSort === col) {
+      pushParams({ sortDir: currentDir === "asc" ? "desc" : "asc" });
     } else {
-      setSortBy(col);
-      setSortDir("asc");
+      pushParams({ sortBy: col, sortDir: "asc" });
     }
   }
 
@@ -130,47 +146,68 @@ export default function ServiceTemplatesPage() {
     }
   }
 
+  function handleReset() {
+    setCategory("all");
+    setStatus("all");
+    pushParams({ q: "", sortBy: "display_order", sortDir: "asc", page: "1" });
+  }
+
+  const hasActiveFilters = currentQ !== "" || category !== "all" || statusFilter !== "all" || currentSort !== "display_order" || currentDir !== "asc";
+
   function SortIcon({ col }: { col: string }) {
-    if (sortBy !== col) return null;
-    return sortDir === "asc" ? (
+    if (currentSort !== col) return null;
+    return currentDir === "asc" ? (
       <ChevronUp className="inline h-3 w-3 ml-1" />
     ) : (
       <ChevronDown className="inline h-3 w-3 ml-1" />
     );
   }
 
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Service Templates</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Service Templates</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            Manage the master service catalog available to diviners
+            {total} result{total !== 1 ? "s" : ""} · page {currentPage} of {totalPages}
           </p>
         </div>
-        <Button asChild>
-          <Link href="/admin/service-templates/new">
-            <Plus className="h-4 w-4 mr-2" />
-            Add Template
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <AdminResetButton hasActiveFilters={hasActiveFilters} onReset={handleReset} />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => fetchTemplates()}
+            disabled={loading}
+            className="gap-1.5"
+          >
+            <RefreshCw className={`h-4 w-4 ${loading && "animate-spin"}`} />
+            Refresh
+          </Button>
+          <Button asChild size="sm">
+            <Link href="/admin/service-templates/new">
+              <Plus className="h-4 w-4 mr-2" />
+              Add Template
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}
       <div className="flex flex-wrap gap-3 items-center">
-        <div className="relative flex-1 min-w-[220px] max-w-sm">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search templates..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
+        <div className="w-full sm:w-auto flex-1 min-w-[220px] max-w-sm">
+          <AdminTableSearch
+            defaultValue={currentQ}
+            onSearch={(val) => pushParams({ q: val })}
+            placeholder="Search templates by name..."
           />
         </div>
 
         <Select value={category} onValueChange={setCategory}>
-          <SelectTrigger className="w-40">
+          <SelectTrigger className="w-full sm:w-40">
             <SelectValue placeholder="Category" />
           </SelectTrigger>
           <SelectContent>
@@ -181,7 +218,7 @@ export default function ServiceTemplatesPage() {
         </Select>
 
         <Select value={statusFilter} onValueChange={setStatus}>
-          <SelectTrigger className="w-36">
+          <SelectTrigger className="w-full sm:w-36">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
@@ -256,7 +293,9 @@ export default function ServiceTemplatesPage() {
                   className="cursor-pointer hover:bg-muted/50"
                   onClick={() => router.push(`/admin/service-templates/${t.id}`)}
                 >
-                  <TableCell className="text-muted-foreground text-sm">{idx + 1}</TableCell>
+                  <TableCell className="text-muted-foreground text-sm">
+                    {(currentPage - 1) * pageSize + idx + 1}
+                  </TableCell>
                   <TableCell>
                     <div className="font-medium">{t.name}</div>
                     <div className="text-xs text-muted-foreground font-mono">{t.slug}</div>
@@ -321,11 +360,20 @@ export default function ServiceTemplatesPage() {
         </Table>
       </div>
 
-      {/* Summary */}
-      {!loading && templates.length > 0 && (
-        <p className="text-sm text-muted-foreground">
-          Showing {templates.length} template{templates.length !== 1 ? "s" : ""}
-        </p>
+      {/* Pagination */}
+      {!loading && total > 0 && (
+        <AdminPagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          total={total}
+          pageSize={pageSize}
+          onPageChange={(p) => pushParams({ page: String(p) })}
+          onPageSizeChange={(s) => {
+            setPageSize(parseInt(s, 10));
+            pushParams({ page: "1" });
+          }}
+          isPending={isPending}
+        />
       )}
 
       {/* Delete confirmation */}

@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 export const dynamic = "force-dynamic";
 
 interface Props {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 async function getTemplate(id: string) {
@@ -41,7 +41,8 @@ async function getTemplate(id: string) {
 }
 
 export async function generateMetadata({ params }: Props) {
-  const result = await getTemplate(params.id);
+  const { id } = await params;
+  const result = await getTemplate(id);
   return {
     title: result
       ? `Edit: ${result.template.name} | Admin`
@@ -50,7 +51,8 @@ export async function generateMetadata({ params }: Props) {
 }
 
 export default async function EditServiceTemplatePage({ params }: Props) {
-  const result = await getTemplate(params.id);
+  const { id } = await params;
+  const result = await getTemplate(id);
   if (!result) notFound();
 
   const { template, divinerCount, diviners } = result;

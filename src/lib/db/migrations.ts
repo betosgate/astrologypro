@@ -36,6 +36,9 @@ import { MIGRATION_SQL as MIG_20260416000004 } from "@/data/migrations/202604160
 import { MIGRATION_SQL as MIG_20260416000007 } from "@/data/migrations/20260416000007_drop_tarot_spread_cards";
 import { MIGRATION_SQL as MIG_20260417000021 } from "@/data/migrations/20260417000021_availability_templates_created_by";
 import { MIGRATION_SQL as MIG_20260417000023 } from "@/data/migrations/20260417000023_availability_templates_admin_owned";
+import { MIGRATION_SQL as MIG_20260418000001 } from "@/data/migrations/20260418000001_service_toolkit_session";
+import { MIGRATION_SQL as MIG_20260419000001 } from "@/data/migrations/20260419000001_social_accounts";
+import { MIGRATION_SQL as MIG_20260421000001 } from "@/data/migrations/20260421000001_phone_number_requests";
 
 /**
  * Allowlisted migrations that the admin migration runner can execute.
@@ -364,6 +367,30 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Drops the tarot_spread_cards junction table. Card-to-spread relationship now uses the related_spread_ids UUID[] array column on tarot_cards instead.",
     sortKey: "20260416000007",
     sql: MIG_20260416000007,
+  },
+  "20260418000001_service_toolkit_session": {
+    id: "20260418000001_service_toolkit_session",
+    title: "Service toolkit session (Open Service feature)",
+    description:
+      "Additive migration for the 'Open Service' feature. Adds two nullable columns to bookings: partner_birth_data (JSONB — optional partner birth info for the 3 two-person astrology services) and toolkit_session_opened_at (TIMESTAMPTZ — first-open telemetry). Also adds a partial B-tree index on (partner_birth_data IS NOT NULL) for 'how many two-person bookings have partner data?' reporting. No backfill, no RLS changes, no drops. Rollback = drop both columns.",
+    sortKey: "20260418000001",
+    sql: MIG_20260418000001,
+  },
+  "20260419000001_social_accounts": {
+    id: "20260419000001_social_accounts",
+    title: "Social accounts + OAuth state (native social posting, replaces Ayrshare)",
+    description:
+      "Creates social_accounts (per-owner OAuth connections to Twitter/Facebook/Instagram/LinkedIn/TikTok/YouTube — tokens AES-256-GCM encrypted at rest, key in SOCIAL_TOKEN_ENCRYPTION_KEY env var) and social_oauth_states (short-lived CSRF + PKCE verifier store for the OAuth redirect loop). One active connection per (owner_type, owner_id, platform) enforced by partial unique index. RLS enabled on both tables — no public/authenticated policies, all access goes through server routes with service-role client. Only Twitter is enabled in lib/social/platform-registry.ts at launch; other platforms scaffolded but return 'platform not yet enabled'. Additive only — no drops, no backfill. Rollback = drop both tables.",
+    sortKey: "20260419000001",
+    sql: MIG_20260419000001,
+  },
+  "20260421000001_phone_number_requests": {
+    id: "20260421000001_phone_number_requests",
+    title: "Phone number requests (diviner-initiated) + Chime pool",
+    description:
+      "Creates chime_phone_numbers (pool of AWS Chime numbers with status available|assigned) and phone_number_requests (diviner-initiated requests with status pending|assigned|rejected). Backfills the pool from every existing diviners.chime_phone_number as 'assigned' so the pool is the single source of truth. Partial unique index guarantees one pending request per diviner at the DB level; another guarantees one pool row per diviner. RLS: admin full access, diviner can read own rows + insert a 'pending' request for themselves (all status transitions are admin-only). Drives the new diviner Phone tab 'Request Phone Number' button and the admin 'Phone Requests' list under People. Strictly additive — no drops.",
+    sortKey: "20260421000001",
+    sql: MIG_20260421000001,
   },
 };
 

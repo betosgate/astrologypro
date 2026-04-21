@@ -15,10 +15,22 @@ export const runtime = "nodejs";
  *
  * Query params: members (integer, required)
  *
- * Response shape:
+ * Response shape (flat fields match frontend PreviewResult type; nested
+ * `breakdown` kept for backward compatibility):
  * {
+ *   // Flat fields (consumed by frontend pricing calculator):
+ *   base_price: number,
+ *   included_members: number,
+ *   extra_count: number,
+ *   extra_price_per: number,
+ *   extra_total: number,
+ *   total: number,
+ *
+ *   // Contextual:
  *   member_count: number,
  *   tier: { name, base_member_limit, base_price_usd, extra_per_member_usd },
+ *
+ *   // Back-compat nested breakdown:
  *   breakdown: {
  *     base_charge: number,
  *     extra_members: number,
@@ -101,26 +113,39 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const extraMembers = Math.max(0, memberCount - tier.base_member_limit);
-    const baseCharge = Number(tier.base_price_usd);
-    const extraCharge = Number(
-      (extraMembers * Number(tier.extra_per_member_usd)).toFixed(2)
-    );
-    const totalMonthly = Number((baseCharge + extraCharge).toFixed(2));
+    // All numeric fields coerced with Number() and guarded against NaN
+    // so the frontend calculator never renders `$NaN`.
+    const baseMemberLimit = Number(tier.base_member_limit) || 0;
+    const basePrice = Number(tier.base_price_usd) || 0;
+    const extraPricePer = Number(tier.extra_per_member_usd) || 0;
+    const extraCount = Math.max(0, memberCount - baseMemberLimit);
+    const extraTotal = Number((extraCount * extraPricePer).toFixed(2)) || 0;
+    const total = Number((basePrice + extraTotal).toFixed(2)) || 0;
 
     return NextResponse.json({
+      // Flat fields expected by /community/plan page's PreviewResult type
+      base_price: basePrice,
+      included_members: baseMemberLimit,
+      extra_count: extraCount,
+      extra_price_per: extraPricePer,
+      extra_total: extraTotal,
+      total,
+
+      // Contextual fields
       member_count: memberCount,
       tier: {
         name: tier.name,
-        base_member_limit: tier.base_member_limit,
-        base_price_usd: tier.base_price_usd,
-        extra_per_member_usd: tier.extra_per_member_usd,
+        base_member_limit: baseMemberLimit,
+        base_price_usd: basePrice,
+        extra_per_member_usd: extraPricePer,
       },
+
+      // Back-compat nested breakdown (do not remove — may be consumed elsewhere)
       breakdown: {
-        base_charge: baseCharge,
-        extra_members: extraMembers,
-        extra_charge: extraCharge,
-        total_monthly: totalMonthly,
+        base_charge: basePrice,
+        extra_members: extraCount,
+        extra_charge: extraTotal,
+        total_monthly: total,
       },
     });
   } catch (err) {

@@ -2784,6 +2784,11 @@ interface DivinerNewBookingParams {
     lifeArea?: string;
   };
   birthData?: string;
+  /**
+   * Pre-computed /admin/session/{bookingId} URL for the toolkit entry point.
+   * NULL when the service has no toolkit mapping (suppresses the CTA row).
+   */
+  sessionUrl?: string | null;
 }
 
 export async function sendDivinerNewBookingNotification({
@@ -2799,6 +2804,7 @@ export async function sendDivinerNewBookingNotification({
   dashboardUrl,
   questionnaire,
   birthData,
+  sessionUrl,
 }: DivinerNewBookingParams) {
   const focusSection = questionnaire?.focusQuestion
     ? `${sectionHeading("Client's Focus Question")}
@@ -2824,6 +2830,18 @@ export async function sendDivinerNewBookingNotification({
 
     ${focusSection}
     ${birthSection}
+
+    ${sessionUrl
+      ? `${sectionHeading("Jump Straight to the Toolkit")}
+         <p style="margin:0 0 12px;color:#a1a1aa;font-size:14px;">
+           The specific service the client booked is ready to open with their
+           birth data pre-populated — one click to the right toolkit tab (or
+           tarot spread).
+         </p>
+         <p style="margin:0 0 16px;">
+           <a href="${sessionUrl}" style="display:inline-block;padding:10px 18px;background:#f59e0b;color:#18181b;text-decoration:none;border-radius:9999px;font-weight:600;font-size:14px;">Open Service →</a>
+         </p>`
+      : ""}
 
     ${sectionHeading("Next Steps")}
     <ul style="margin:0;padding-left:20px;color:#a1a1aa;">

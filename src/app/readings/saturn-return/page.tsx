@@ -165,7 +165,7 @@ export default async function SaturnReturnPage() {
       whatIsParagraphs={[
         "Saturn, the planet of discipline, structure, and karma, takes approximately 29.5 years to complete one full orbit around the Sun. When it returns to the exact position it held at the moment of your birth, you experience what astrologers call a Saturn Return — one of the most structurally significant transits in your entire life.",
         "This transit is a cosmic audit of your foundations. Saturn does not destroy — it tests. Relationships built on genuine alignment deepen. Careers built on authenticity advance. Structures built on illusion or avoidance are dismantled. The return asks you to take full ownership of your choices, release what no longer fits, and rebuild on firmer ground.",
-        "A certified astrologer reads your Saturn's natal house, sign, and aspects to map exactly which areas of your life are under review — and when. Without this chart-specific analysis, the Saturn Return can feel like overwhelming chaos. With it, each shift has context, timing, and a direction to move toward.",
+        "A certified astrologer reads your Saturn's natal house, sign, and aspects to map which areas of your life are under review — and when. Without this chart-specific analysis, the Saturn Return can feel like overwhelming chaos. With it, each shift has context, timing, and a direction to move toward.",
       ]}
       revealsItems={[
         { label: "Where Saturn Is Restructuring Your Life", desc: "The specific house(s) Saturn occupies — showing exactly which life domain (career, relationships, home, identity) is undergoing the deepest review and rebuilding in your chart" },
@@ -217,6 +217,23 @@ export default async function SaturnReturnPage() {
       divinerSectionTitle="Find Your Saturn Return Guide"
       divinerSectionSubtitle="These practitioners specialize in Saturn Return readings"
       emailGuideSubject="your Saturn return reading"
+      methodNotes={[
+        {
+          label: "Technique",
+          title: "Saturn’s return to its natal degree",
+          desc: "The reading tracks the exact return, retrograde passes, house placement, aspects, and supporting transits across the larger two-to-three-year arc.",
+        },
+        {
+          label: "Best For",
+          title: "Structure, commitment, and maturity",
+          desc: "Use it when career, relationship, responsibility, family, or identity structures are being tested and need clearer long-term decisions.",
+        },
+        {
+          label: "Prepare",
+          title: "Bring the pressure points",
+          desc: "Share the commitments, endings, obligations, and choices weighing on you so the astrologer can separate temporary stress from Saturn’s actual assignment.",
+        },
+      ]}
       faqItems={[
         {
           q: "What is a Saturn Return?",

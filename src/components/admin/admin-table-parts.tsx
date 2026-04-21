@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import {
   Search,
@@ -24,6 +24,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 // ─── SortHeader ───────────────────────────────────────────────────────────────
 
@@ -53,9 +55,8 @@ export function SortHeader({
     <button
       type="button"
       onClick={() => onSort(column)}
-      className={`flex items-center gap-1 font-medium transition-colors hover:text-foreground ${
-        active ? "text-foreground" : "text-muted-foreground"
-      }`}
+      className={`flex items-center gap-1 font-medium transition-colors hover:text-foreground ${active ? "text-foreground" : "text-muted-foreground"
+        }`}
     >
       {label}
       <Icon className={`size-3 ${active ? "opacity-100" : "opacity-40"}`} />
@@ -109,42 +110,37 @@ export function AdminPagination({
   isPending,
 }: AdminPaginationProps) {
   const items = buildPaginationItems(currentPage, totalPages);
+  const start = Math.min((currentPage - 1) * pageSize + 1, total);
+  const end = Math.min(currentPage * pageSize, total);
 
   return (
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <p className="text-sm text-muted-foreground">
-        Page {currentPage} of {totalPages}{" "}
-        <span className="text-muted-foreground/60">({total} total)</span>
-      </p>
+    <div className={cn(
+      "flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between pt-4 transition-opacity",
+      isPending && "opacity-50 pointer-events-none"
+    )}>
+      <div className="flex items-center gap-4">
+        <p className="text-sm text-muted-foreground whitespace-nowrap">
+          Showing <span className="font-medium text-foreground">{start}–{end}</span> of <span className="font-medium text-foreground">{total}</span>
+        </p>
 
-      <div className="flex items-center gap-2">
         <Select
           value={String(pageSize)}
           onValueChange={onPageSizeChange}
         >
-          <SelectTrigger className="h-8 w-[80px]">
+          <SelectTrigger className="h-8 w-[110px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
             {PAGE_SIZE_OPTIONS.map((s) => (
               <SelectItem key={s} value={String(s)}>
-                {s}
+                {s} / page
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
+      </div>
 
-        <Button
-          variant="outline"
-          size="icon"
-          className="size-8"
-          disabled={currentPage <= 1 || isPending}
-          onClick={() => onPageChange(1)}
-          aria-label="First page"
-        >
-          <ChevronsLeft className="size-4" />
-        </Button>
-
+      <div className="flex items-center gap-1">
         <Button
           variant="outline"
           size="icon"
@@ -161,9 +157,9 @@ export function AdminPagination({
             item === "ellipsis" ? (
               <span
                 key={`ellipsis-${index}`}
-                className="px-1 text-sm text-muted-foreground"
+                className="px-2 text-sm text-muted-foreground"
               >
-                …
+                ...
               </span>
             ) : (
               <Button
@@ -190,17 +186,6 @@ export function AdminPagination({
           aria-label="Next page"
         >
           <ChevronRight className="size-4" />
-        </Button>
-
-        <Button
-          variant="outline"
-          size="icon"
-          className="size-8"
-          disabled={currentPage >= totalPages || isPending}
-          onClick={() => onPageChange(totalPages)}
-          aria-label="Last page"
-        >
-          <ChevronsRight className="size-4" />
         </Button>
       </div>
     </div>
@@ -294,6 +279,165 @@ export function AdminTableSearch({
         placeholder={placeholder}
         className="pl-9"
       />
+    </div>
+  );
+}
+
+// ─── AdminDivinerAutocomplete ──────────────────────────────────────────────────
+
+interface AdminDivinerAutocompleteProps {
+  defaultValue: string; // The selected ID
+  onSelect: (id: string) => void;
+  placeholder?: string;
+  className?: string;
+}
+
+export function AdminDivinerAutocomplete({
+  defaultValue,
+  onSelect,
+  placeholder = "All diviners",
+  className,
+}: AdminDivinerAutocompleteProps) {
+  const [inputValue, setInputValue] = useState("");
+  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const isSelectedRef = useRef(false);
+
+  // Load the initial display name AND pre-fetch initial suggestions on mount
+  useEffect(() => {
+    // 1. Resolve selected ID to name
+    if (defaultValue && !isSelectedRef.current) {
+      fetch(`/api/admin/diviners`)
+        .then(r => r.json())
+        .then(data => {
+          const diviner = data.diviners?.find((d: any) => d.id === defaultValue);
+          if (diviner) setInputValue(diviner.display_name);
+          else if (defaultValue === "all") setInputValue("");
+        })
+        .catch(() => { });
+    } else if (!defaultValue) {
+      setInputValue("");
+    }
+
+    // 2. Pre-fetch top 10 for instant click response
+    fetchSuggestions("");
+  }, [defaultValue]);
+
+  function fetchSuggestions(search: string = "") {
+    setLoading(true);
+    const params = new URLSearchParams();
+    if (search) params.set("q", search);
+    params.set("limit", "10");
+
+    fetch(`/api/admin/diviners?${params.toString()}`)
+      .then((r) => r.json())
+      .then((d) => {
+        setSuggestions(d.diviners ?? []);
+      })
+      .catch(() => {
+        toast.error("Failed to load diviners");
+      })
+      .finally(() => setLoading(false));
+  }
+
+  function handleFocus() {
+    isSelectedRef.current = false;
+    // Show current suggestions immediately
+    setOpen(true);
+    // Refresh only if we don't have results yet
+    if (suggestions.length === 0) {
+      fetchSuggestions(inputValue);
+    }
+  }
+
+  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const val = e.target.value;
+    setInputValue(val);
+    isSelectedRef.current = false;
+
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      fetchSuggestions(val);
+    }, 500);
+  }
+
+  function handleSelect(d: any) {
+    setInputValue(d.display_name);
+    setOpen(false);
+    isSelectedRef.current = true;
+    onSelect(d.id);
+  }
+
+  function handleClear() {
+    setInputValue("");
+    setOpen(false);
+    isSelectedRef.current = true;
+    onSelect(""); // maps to "all"
+  }
+
+  useEffect(() => {
+    function onClickOutside(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, []);
+
+  return (
+    <div ref={containerRef} className={cn("relative w-full sm:w-48", className)}>
+      <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+      <Input
+        value={inputValue}
+        placeholder={placeholder}
+        onFocus={handleFocus}
+        onChange={handleChange}
+        className="pl-9 pr-8 h-9"
+        autoComplete="off"
+      />
+      {inputValue && (
+        <button
+          type="button"
+          onClick={handleClear}
+          className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 rounded-full hover:bg-muted text-muted-foreground transition-colors"
+        >
+          <X className="size-3.5" />
+        </button>
+      )}
+
+      {open && (
+        <div className="absolute top-full left-0 right-0 z-50 mt-1 max-h-60 overflow-y-auto rounded-md border bg-popover text-popover-foreground shadow-md outline-none animate-in fade-in-0 zoom-in-95">
+          {loading && suggestions.length === 0 ? (
+            <div className="p-2 text-sm text-muted-foreground text-center">Loading...</div>
+          ) : suggestions.length === 0 ? (
+            <div className="p-2 text-sm text-muted-foreground text-center">No results</div>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={handleClear}
+                className="flex w-full items-center px-2 py-1.5 text-sm font-medium hover:bg-accent hover:text-accent-foreground rounded-sm transition-colors border-b"
+              >
+                All diviners
+              </button>
+              {suggestions.map((d) => (
+                <button
+                  key={d.id}
+                  type="button"
+                  onClick={() => handleSelect(d)}
+                  className="flex w-full items-center px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground rounded-sm transition-colors text-left"
+                >
+                  {d.display_name}
+                </button>
+              ))}
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }

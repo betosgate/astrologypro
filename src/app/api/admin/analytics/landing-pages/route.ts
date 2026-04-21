@@ -4,19 +4,10 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { getAdminUser } from "@/lib/admin-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
-
-async function assertAdmin(): Promise<boolean> {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return false;
-  const admin = createAdminClient();
-  const { data } = await admin.from("admins").select("id").eq("user_id", user.id).maybeSingle();
-  return !!data;
-}
 
 function getPeriodDates(period: string): { from: string; to: string } {
   const now = new Date();
@@ -28,8 +19,12 @@ function getPeriodDates(period: string): { from: string; to: string } {
 }
 
 export async function GET(req: NextRequest) {
-  if (!(await assertAdmin())) {
-    return NextResponse.json({ type: "about:blank", title: "Forbidden", status: 403 }, { status: 403 });
+  const user = await getAdminUser();
+  if (!user) {
+    return NextResponse.json(
+      { type: "https://httpstatuses.io/403", title: "Forbidden", status: 403 },
+      { status: 403 }
+    );
   }
 
   const url = new URL(req.url);

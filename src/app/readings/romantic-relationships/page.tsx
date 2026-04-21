@@ -173,6 +173,23 @@ export default async function RomanticRelationshipsPage() {
       divinerSectionTitle="Find Your Relationship Astrologer"
       divinerSectionSubtitle="These practitioners specialize in synastry and composite chart readings"
       emailGuideSubject="your relationship astrology reading"
+      methodNotes={[
+        {
+          label: "Technique",
+          title: "Synastry plus composite chart",
+          desc: "Synastry shows how two people affect each other; the composite chart shows the relationship pattern that forms between them.",
+        },
+        {
+          label: "Best For",
+          title: "Chemistry, communication, and commitment",
+          desc: "Use it for new relationships, long-term partnerships, breakups, recurring patterns, and decisions about deeper commitment.",
+        },
+        {
+          label: "Prepare",
+          title: "Bring both birth records and the real question",
+          desc: "Date, time, and location for both people give the clearest read; also share whether you want clarity, repair, closure, or next steps.",
+        },
+      ]}
       faqItems={[
         { q: "Do I need both people's birth data for a relationship reading?", a: "Yes — you'll need the birth date, time, and location for both individuals. The more precise the data (especially birth time), the more accurate and nuanced the synastry and composite analysis will be. If your partner's birth time is unknown, the reading will still provide valuable insight using a solar chart." },
         { q: "Does my partner need to be present for the reading?", a: "No. The reading is done with chart data alone. You can have the reading on your own, and your astrologer will interpret both charts objectively without requiring your partner's participation or knowledge." },

@@ -151,6 +151,16 @@ export async function GET(request: NextRequest) {
       avgROI,
     };
 
+    // ---- Click counts per campaign (shared by list + grouped breakdowns) ----
+    const campClickMap = new Map<string, { human: number; unique: number }>();
+    for (const c of allClicks) {
+      if (c.is_bot) continue;
+      const entry = campClickMap.get(c.campaign_id) ?? { human: 0, unique: 0 };
+      entry.human++;
+      if (c.is_unique_click) entry.unique++;
+      campClickMap.set(c.campaign_id, entry);
+    }
+
     // ---- Campaigns list ----
     const campaigns = allCampaigns.map((camp) => {
       const stats = campaignConvMap.get(camp.id) ?? {
@@ -170,6 +180,7 @@ export async function GET(request: NextRequest) {
         commissionDollars > 0
           ? Math.round(((revenueDollars - commissionDollars) / commissionDollars) * 100 * 10) / 10
           : 0;
+      const clicks = campClickMap.get(camp.id) ?? { human: 0, unique: 0 };
 
       return {
         id: camp.id,
@@ -178,6 +189,8 @@ export async function GET(request: NextRequest) {
         startDate: camp.start_date,
         endDate: camp.end_date,
         affiliates: campaignAffiliateCount.get(camp.id) ?? 0,
+        clicks: clicks.human,
+        uniqueClicks: clicks.unique,
         conversions: stats.count,
         revenue: revenueDollars,
         commissionSpent: commissionDollars,
@@ -219,15 +232,6 @@ export async function GET(request: NextRequest) {
       }))
       .sort((a, b) => a.month.localeCompare(b.month));
 
-    // ---- Click counts per campaign ----
-    const campClickMap = new Map<string, { human: number; unique: number }>();
-    for (const c of allClicks) {
-      if (c.is_bot) continue;
-      const entry = campClickMap.get(c.campaign_id) ?? { human: 0, unique: 0 };
-      entry.human++;
-      if (c.is_unique_click) entry.unique++;
-      campClickMap.set(c.campaign_id, entry);
-    }
 
     // ---- Destination comparison: PROFILE vs SERVICE ----
     const destMap = new Map<string, { campaigns: number; conversions: number; revenue: number; human_clicks: number; unique_clicks: number }>();

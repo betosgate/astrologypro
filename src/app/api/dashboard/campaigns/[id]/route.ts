@@ -423,7 +423,7 @@ export async function DELETE(
 
   const { data: existing } = await admin
     .from("affiliate_campaigns")
-    .select("id, status")
+    .select("id, status, tracking_link_id")
     .eq("id", id)
     .eq("diviner_id", diviner.id)
     .single();
@@ -440,6 +440,27 @@ export async function DELETE(
       { type: "https://httpstatuses.io/422", title: "Only draft campaigns can be deleted" },
       { status: 422 }
     );
+  }
+
+  // Deactivate any associated tracking link so the /r/<code> shortlink stops
+  // resolving. We prefer soft-deactivation over delete to preserve historic
+  // click rows that reference the tracking_link_id.
+  if (existing.tracking_link_id) {
+    const { error: trackingErr } = await admin
+      .from("tracking_links")
+      .update({ is_active: false })
+      .eq("id", existing.tracking_link_id);
+
+    if (trackingErr) {
+      return NextResponse.json(
+        {
+          type: "https://httpstatuses.io/500",
+          title: "Database error",
+          detail: `Failed to deactivate tracking link: ${trackingErr.message}`,
+        },
+        { status: 500 }
+      );
+    }
   }
 
   const { error } = await admin

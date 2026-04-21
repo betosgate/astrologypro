@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const user = await getAdminUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -33,7 +33,7 @@ export async function POST(
   const includePublish = body.include_publish === true;
 
   const admin = createAdminClient();
-  const targetDivinerId = params.id;
+  const { id: targetDivinerId } = await params;
 
   if (sourceDivinerId === targetDivinerId) {
     return NextResponse.json({ error: "Source and target diviner cannot be the same" }, { status: 422 });

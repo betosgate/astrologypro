@@ -267,7 +267,15 @@ export function BookingWizard({
   bookingLabel,
   hideServiceName = false,
 }: BookingWizardProps) {
-  const [step, setStep] = useState(0);
+  // Start on the Contact step when the URL already carries a chosen date + time
+  // (deep-link from the profile's "Next Available" picker) so users don't see a
+  // flash of the calendar while slots load. We fall back to step 0 if the
+  // requested time turns out to be unavailable.
+  const [step, setStep] = useState(() => {
+    if (typeof window === "undefined") return 0;
+    const p = new URLSearchParams(window.location.search);
+    return p.get("date") && p.get("time") ? 1 : 0;
+  });
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
@@ -293,7 +301,11 @@ export function BookingWizard({
   const [creatingPaymentIntent, setCreatingPaymentIntent] = useState(false);
   const [prefilled, setPrefilled] = useState(false);
   const [requestedTimeIso, setRequestedTimeIso] = useState<string | null>(null);
-  const [hasAutoAdvancedFromQuery, setHasAutoAdvancedFromQuery] = useState(false);
+  const [hasAutoAdvancedFromQuery, setHasAutoAdvancedFromQuery] = useState(() => {
+    if (typeof window === "undefined") return false;
+    const p = new URLSearchParams(window.location.search);
+    return !!(p.get("date") && p.get("time"));
+  });
   const [clientTimezone, setClientTimezone] = useState(diviner.timezone || "UTC");
   const resolvedServiceName = hideServiceName ? (bookingLabel ?? "Reading Session") : (bookingLabel ?? service.name);
   const availabilityQuery = availabilityServiceId ? `&serviceId=${availabilityServiceId}` : "";
@@ -367,11 +379,14 @@ export function BookingWizard({
       setRequestedTimeIso(time);
     }
 
-    if (date && time && !hasAutoAdvancedFromQuery) {
-      setStep(1);
+    // Jump to the Contact step immediately on a deep-link, before the slots API
+    // resolves. Without this, SSR renders step 0 and the user sees the calendar
+    // flash while the fetch (2-3s) settles.
+    if (date && time) {
+      setStep((s) => (s === 0 ? 1 : s));
       setHasAutoAdvancedFromQuery(true);
     }
-  }, [hasAutoAdvancedFromQuery]);
+  }, []);
 
   useEffect(() => {
     const detectedTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -399,9 +414,31 @@ export function BookingWizard({
           const slots: TimeSlot[] = await res.json();
           setTimeSlots(slots);
           if (pendingTimeIso) {
-            const requestedSlot = slots.find((slot) => slot.start === pendingTimeIso);
+            const requestedTs = new Date(pendingTimeIso).getTime();
+            const requestedSlot = slots.find((slot) => {
+              if (slot.start === pendingTimeIso) return true;
+              const slotTs = new Date(slot.start).getTime();
+              return Number.isFinite(slotTs) && Number.isFinite(requestedTs) && slotTs === requestedTs;
+            });
             if (requestedSlot) {
               setSelectedSlot(requestedSlot);
+            } else {
+              // No exact match in the fetched set — fall back to a synthetic slot
+              // built from the deep-link URL so the user stays on Contact instead
+              // of getting bounced back to the calendar. Server-side validation
+              // at submit time is authoritative anyway.
+              const start = pendingTimeIso;
+              const endMs = new Date(start).getTime() + service.duration_minutes * 60_000;
+              const end = Number.isFinite(endMs) ? new Date(endMs).toISOString() : start;
+              setSelectedSlot({
+                start,
+                end,
+                availabilityServiceId: availabilityServiceId ?? null,
+              });
+            }
+            if (!hasAutoAdvancedFromQuery) {
+              setStep(1);
+              setHasAutoAdvancedFromQuery(true);
             }
             setRequestedTimeIso(null);
           }

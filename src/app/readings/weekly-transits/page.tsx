@@ -10,12 +10,12 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: "Weekly Transit Readings | AstrologyPro",
     description:
-      "Personalized weekly transit readings show you exactly how current planetary movements activate your natal chart — so you can act with precision rather than guesswork.",
+      "Personalized weekly transit readings show how current planetary movements activate your natal chart — so you can act with precision rather than guesswork.",
     alternates: { canonical: `${APP_URL}/readings/weekly-transits` },
     openGraph: {
       title: "Weekly Transit Readings | AstrologyPro",
       description:
-        "Personalized weekly transit readings show you exactly how current planetary movements activate your natal chart — so you can act with precision rather than guesswork.",
+        "Personalized weekly transit readings show how current planetary movements activate your natal chart — so you can act with precision rather than guesswork.",
       type: "website",
       url: `${APP_URL}/readings/weekly-transits`,
       images: [{ url: "https://astrologypro.com/images/services/weekly-transits.png", width: 1200, height: 630, alt: "Weekly Transits Readings" }],
@@ -24,7 +24,7 @@ export async function generateMetadata(): Promise<Metadata> {
       card: "summary_large_image",
       title: "Weekly Transit Readings | AstrologyPro",
       description:
-        "Personalized weekly transit readings show you exactly how current planetary movements activate your natal chart — so you can act with precision rather than guesswork.",
+        "Personalized weekly transit readings show how current planetary movements activate your natal chart — so you can act with precision rather than guesswork.",
       images: ["https://astrologypro.com/images/services/weekly-transits.png"],
     },
   };
@@ -138,7 +138,7 @@ export default async function WeeklyTransitsPage() {
       heroImage={getReadingOgImageUrl("weekly-transits")}
       heroTitleBefore="Weekly Transits: "
       heroTitleGradient="Your Personal Planetary Forecast"
-      heroSubtitle="The planets never stop moving — and their movement creates a constantly shifting field of energy around your natal chart. A weekly transit reading shows you exactly what's activating right now and how to work with it."
+      heroSubtitle="The planets keep moving through your natal chart, activating different houses, angles, and planets in real time. A weekly transit reading turns that planetary weather into practical timing for the next seven days."
       heroStats={[
         { value: "7-Day Window", label: "Focused Weekly Forecast" },
         { value: "Personalized", label: "Mapped to Your Natal Chart" },
@@ -173,6 +173,23 @@ export default async function WeeklyTransitsPage() {
       divinerSectionTitle="Find Your Weekly Transit Astrologer"
       divinerSectionSubtitle="These practitioners specialize in transit readings and timing"
       emailGuideSubject="your weekly transit reading"
+      methodNotes={[
+        {
+          label: "Technique",
+          title: "Current planets over your natal chart",
+          desc: "Your reader checks exact and applying aspects from current planets to your natal placements, giving extra weight to slow planets and angles.",
+        },
+        {
+          label: "Best For",
+          title: "Short-window decisions",
+          desc: "Use this reading for launches, conversations, travel, deadlines, relationship check-ins, and weeks when timing matters more than broad life analysis.",
+        },
+        {
+          label: "Prepare",
+          title: "Bring the week’s real choices",
+          desc: "Share your birth data plus the decisions, meetings, or emotional flashpoints on your calendar so the forecast can stay practical.",
+        },
+      ]}
       faqItems={[
         { q: "Do I need to know my natal chart for a weekly transit reading?", a: "It helps enormously if you have your birth data ready (date, time, and location), as the reading maps current transits against your personal chart. If you have a copy of your natal chart already, share it with your reader in advance. If not, your astrologer will cast it from your birth data at the start of the session." },
         { q: "How are personal transits different from general horoscopes?", a: "A general weekly horoscope applies to everyone born under your sun sign — roughly 500 million people. A personal transit reading maps actual planetary positions against your specific natal chart. The results are incomparably more precise and relevant to your actual life circumstances." },

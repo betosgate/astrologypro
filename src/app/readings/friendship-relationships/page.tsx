@@ -173,6 +173,23 @@ export default async function FriendshipRelationshipsPage() {
       divinerSectionTitle="Find Your Friendship Compatibility Astrologer"
       divinerSectionSubtitle="These practitioners specialize in synastry and compatibility readings"
       emailGuideSubject="your friendship compatibility reading"
+      methodNotes={[
+        {
+          label: "Technique",
+          title: "Platonic synastry and composite analysis",
+          desc: "The reading uses relationship-chart techniques but prioritizes Mercury, Moon, Jupiter, 3rd-house, and 11th-house themes over romance.",
+        },
+        {
+          label: "Best For",
+          title: "Support, trust, and changing dynamics",
+          desc: "Use it for best friends, creative collaborators, chosen family, strained friendships, or connections that feel meaningful but hard to define.",
+        },
+        {
+          label: "Prepare",
+          title: "Bring both charts and the friendship story",
+          desc: "Share both birth records plus how the friendship began, what changed, and what kind of support or repair you want to understand.",
+        },
+      ]}
       faqItems={[
         { q: "Do I need both people's birth data for a friendship reading?", a: "Yes — you'll need the birth date, time, and location for both individuals. Birth time is especially important for accurate house placements and rising sign contacts. If you only have the date (no time), the reading will still be valuable but will use a solar chart with less precise house analysis." },
         { q: "Can this reading be done for a friendship that has become strained?", a: "Absolutely. Many people seek this reading when a close friendship has changed or grown difficult. The chart can reveal what created the original bond, what's currently being activated to create tension, and whether the connection has long-term composite chart support to work through the difficulty." },

@@ -17,11 +17,13 @@ export async function GET(req: NextRequest) {
   }
 
   const { searchParams } = new URL(req.url);
-  const search    = searchParams.get("search")    ?? "";
-  const category  = searchParams.get("category")  ?? "";
-  const isActive  = searchParams.get("is_active") ?? "";
-  const sortBy    = searchParams.get("sort_by")   ?? "display_order";
-  const sortDir   = searchParams.get("sort_dir")  === "desc" ? false : true;
+  const search = searchParams.get("search") ?? "";
+  const category = searchParams.get("category") ?? "";
+  const isActive = searchParams.get("is_active") ?? "";
+  const sortBy = searchParams.get("sort_by") ?? "display_order";
+  const sortDir = searchParams.get("sort_dir") === "desc" ? false : true;
+  const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
+  const limit = Math.max(1, parseInt(searchParams.get("limit") ?? "25", 10));
 
   const allowedSortCols = ["display_order", "name", "category", "base_price", "duration_minutes", "created_at"];
   const safeSort = allowedSortCols.includes(sortBy) ? sortBy : "display_order";
@@ -36,7 +38,7 @@ export async function GET(req: NextRequest) {
       trigger_event, sort_order, display_order, is_active,
       icon_name, color, whats_included, who_its_for, faq,
       seo_title, seo_description, created_by, updated_at, updated_by
-    `)
+    `, { count: "exact" })
     .order(safeSort, { ascending: sortDir });
 
   if (search) {
@@ -51,28 +53,44 @@ export async function GET(req: NextRequest) {
     query = query.eq("is_active", false);
   }
 
-  const { data: templates, error } = await query;
+  // Apply pagination
+  const from = (page - 1) * limit;
+  const to = from + limit - 1;
+  query = query.range(from, to);
+
+  const { data: templates, error, count } = await query;
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // Fetch diviner usage counts in one query
-  const { data: usageCounts } = await admin
-    .from("diviner_services")
-    .select("template_id")
-    .eq("is_enabled", true);
+  // Fetch diviner usage counts for the returned templates only
+  const templateIds = (templates ?? []).map(t => t.id);
+  let result = (templates ?? []).map(t => ({ ...t, diviner_count: 0 }));
 
-  const countMap = new Map<string, number>();
-  for (const row of usageCounts ?? []) {
-    countMap.set(row.template_id, (countMap.get(row.template_id) ?? 0) + 1);
+  if (templateIds.length > 0) {
+    const { data: usageCounts } = await admin
+      .from("diviner_services")
+      .select("template_id")
+      .eq("is_enabled", true)
+      .in("template_id", templateIds);
+
+    const countMap = new Map<string, number>();
+    for (const row of usageCounts ?? []) {
+      countMap.set(row.template_id, (countMap.get(row.template_id) ?? 0) + 1);
+    }
+
+    result = (templates ?? []).map((t) => ({
+      ...t,
+      diviner_count: countMap.get(t.id) ?? 0,
+    }));
   }
 
-  const result = (templates ?? []).map((t) => ({
-    ...t,
-    diviner_count: countMap.get(t.id) ?? 0,
-  }));
-
-  return NextResponse.json({ templates: result, total: result.length });
+  return NextResponse.json({
+    templates: result,
+    total: count ?? 0,
+    page,
+    limit
+  });
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -160,26 +178,26 @@ export async function POST(req: NextRequest) {
     name,
     slug,
     category,
-    description:       typeof body.description === "string" ? body.description.trim() : null,
-    long_description:  typeof body.long_description === "string" ? body.long_description.trim() : null,
-    base_price:        basePrice,
-    overage_rate:      body.overage_rate != null ? Number(body.overage_rate) : null,
-    duration_minutes:  durationMinutes,
-    is_primary:        body.is_primary === true,
+    description: typeof body.description === "string" ? body.description.trim() : null,
+    long_description: typeof body.long_description === "string" ? body.long_description.trim() : null,
+    base_price: basePrice,
+    overage_rate: body.overage_rate != null ? Number(body.overage_rate) : null,
+    duration_minutes: durationMinutes,
+    is_primary: body.is_primary === true,
     requires_birth_data: body.requires_birth_data === true,
-    trigger_event:     typeof body.trigger_event === "string" && body.trigger_event ? body.trigger_event : null,
-    display_order:     body.display_order != null ? Number(body.display_order) : 0,
-    sort_order:        body.display_order != null ? Number(body.display_order) : 0,
-    icon_name:         typeof body.icon_name === "string" ? body.icon_name : null,
-    color:             typeof body.color === "string" ? body.color : null,
-    whats_included:    Array.isArray(body.whats_included) ? body.whats_included : [],
-    who_its_for:       Array.isArray(body.who_its_for) ? body.who_its_for : [],
-    faq:               Array.isArray(body.faq) ? body.faq : [],
-    seo_title:         typeof body.seo_title === "string" ? body.seo_title.slice(0, 70) : null,
-    seo_description:   typeof body.seo_description === "string" ? body.seo_description.slice(0, 160) : null,
-    is_active:         true,
-    created_by:        user.id,
-    updated_by:        user.id,
+    trigger_event: typeof body.trigger_event === "string" && body.trigger_event ? body.trigger_event : null,
+    display_order: body.display_order != null ? Number(body.display_order) : 0,
+    sort_order: body.display_order != null ? Number(body.display_order) : 0,
+    icon_name: typeof body.icon_name === "string" ? body.icon_name : null,
+    color: typeof body.color === "string" ? body.color : null,
+    whats_included: Array.isArray(body.whats_included) ? body.whats_included : [],
+    who_its_for: Array.isArray(body.who_its_for) ? body.who_its_for : [],
+    faq: Array.isArray(body.faq) ? body.faq : [],
+    seo_title: typeof body.seo_title === "string" ? body.seo_title.slice(0, 70) : null,
+    seo_description: typeof body.seo_description === "string" ? body.seo_description.slice(0, 160) : null,
+    is_active: true,
+    created_by: user.id,
+    updated_by: user.id,
   };
 
   const { data: created, error: insertErr } = await admin

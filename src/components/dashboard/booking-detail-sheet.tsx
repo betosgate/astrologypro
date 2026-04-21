@@ -14,7 +14,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { ClipboardList, Loader2, RotateCcw, CheckCircle2, NotebookPen, CreditCard, RefreshCw, CalendarClock, XCircle, Send, Receipt, Video, Clock, Share2, Download, FileText, Copy } from "lucide-react";
+import { ClipboardList, Loader2, RotateCcw, CheckCircle2, NotebookPen, CreditCard, RefreshCw, CalendarClock, XCircle, Send, Receipt, Video, Clock, Share2, Download, FileText, Copy, Sparkles, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { SegmentVideoPlayer } from "@/components/dashboard/segment-video-player";
@@ -67,6 +67,11 @@ interface BookingDetailProps {
     base_price?: number | null;
   };
   linkedOrder?: LinkedOrder | null;
+  /**
+   * Server-computed "Open Service" link. NULL when the booking's service
+   * is unmapped (button is hidden). Only set when viewer is a diviner/admin.
+   */
+  sessionLink?: string | null;
 }
 
 // Format an ISO string into the value expected by <input type="datetime-local">
@@ -188,7 +193,7 @@ function RecordingSection({
   );
 }
 
-export function BookingDetailSheet({ booking, linkedOrder }: BookingDetailProps) {
+export function BookingDetailSheet({ booking, linkedOrder, sessionLink }: BookingDetailProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [sessionDetails, setSessionDetails] = useState<SessionDetails | null>(null);
@@ -584,6 +589,17 @@ export function BookingDetailSheet({ booking, linkedOrder }: BookingDetailProps)
             >
               <Video className="mr-2 size-4" />
               Join Session
+            </Button>
+          )}
+
+          {/* ── Open Service (toolkit) — diviner-only, hidden when unmapped ─ */}
+          {sessionLink && (
+            <Button asChild variant="secondary" className="w-full">
+              <Link href={sessionLink}>
+                <Sparkles className="mr-2 size-4" />
+                Open Service
+                <ExternalLink className="ml-2 size-3 opacity-70" />
+              </Link>
             </Button>
           )}
 

@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "next-env.d.ts",
+    "src/lib/walkthrough-data.ts",
+    "src/app/walkthrough/[role]/page.tsx",
+    "src/app/walkthrough/_components/screenshot-lightbox.tsx"
+  ]
+}

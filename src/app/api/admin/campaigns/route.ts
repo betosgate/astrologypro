@@ -5,7 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 export const dynamic = "force-dynamic";
 
 // GET /api/admin/campaigns
-// List ALL campaigns (platform-wide + per-diviner) with filters
+// List ALL campaigns (platform-wide + per-diviner) with filters + page-based pagination
 export async function GET(request: Request) {
   const user = await getAdminUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -14,22 +14,36 @@ export async function GET(request: Request) {
   const status = searchParams.get("status");
   const divinerId = searchParams.get("diviner_id");
   const q = searchParams.get("q");
-  const limit = Math.min(parseInt(searchParams.get("limit") ?? "50", 10), 200);
-  const cursor = searchParams.get("cursor");
+  const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
+  const limit = Math.min(parseInt(searchParams.get("limit") ?? "10", 10), 200);
+  const sortBy = searchParams.get("sort_by") ?? "start_date";
+  const sortDir = searchParams.get("sort_dir") === "asc";
+  const offset = (page - 1) * limit;
 
   const admin = createAdminClient();
 
+  // Count query (same filters, no pagination)
+  let countQuery = admin
+    .from("affiliate_campaigns")
+    .select("id", { count: "exact", head: true });
+
+  if (status) countQuery = countQuery.eq("status", status);
+  if (divinerId) countQuery = countQuery.eq("diviner_id", divinerId);
+  if (q) countQuery = countQuery.ilike("name", `%${q}%`);
+
+  const { count } = await countQuery;
+
+  // Data query
   let query = admin
     .from("affiliate_campaigns")
     .select("*")
-    .order("created_at", { ascending: false })
-    .order("id", { ascending: false })
-    .limit(limit + 1);
+    .order(sortBy, { ascending: sortDir })
+    .order("id", { ascending: false }) // stable secondary sort
+    .range(offset, offset + limit - 1);
 
   if (status) query = query.eq("status", status);
   if (divinerId) query = query.eq("diviner_id", divinerId);
   if (q) query = query.ilike("name", `%${q}%`);
-  if (cursor) query = query.lt("id", cursor);
 
   const { data, error } = await query;
   if (error) {
@@ -39,9 +53,7 @@ export async function GET(request: Request) {
     );
   }
 
-  const hasMore = (data ?? []).length > limit;
-  const items = hasMore ? (data ?? []).slice(0, limit) : (data ?? []);
-  const nextCursor = hasMore ? items[items.length - 1]?.id : null;
+  const items = data ?? [];
 
   // Enrich with diviner names and stats
   const divinerIds = [...new Set(items.filter((c: Record<string, unknown>) => c.diviner_id).map((c: Record<string, unknown>) => c.diviner_id as string))];
@@ -99,7 +111,18 @@ export async function GET(request: Request) {
     };
   });
 
-  return NextResponse.json({ data: enriched, nextCursor, hasMore });
+  const total = count ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / limit));
+
+  return NextResponse.json({
+    data: enriched,
+    total,
+    page,
+    totalPages,
+    hasMore: page < totalPages,
+    // Keep legacy cursor fields as null for backward compat
+    nextCursor: null,
+  });
 }
 
 // POST /api/admin/campaigns
