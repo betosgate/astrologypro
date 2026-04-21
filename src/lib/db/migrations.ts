@@ -39,6 +39,7 @@ import { MIGRATION_SQL as MIG_20260417000023 } from "@/data/migrations/202604170
 import { MIGRATION_SQL as MIG_20260418000001 } from "@/data/migrations/20260418000001_service_toolkit_session";
 import { MIGRATION_SQL as MIG_20260419000001 } from "@/data/migrations/20260419000001_social_accounts";
 import { MIGRATION_SQL as MIG_20260421000001 } from "@/data/migrations/20260421000001_phone_number_requests";
+import { MIGRATION_SQL as MIG_20260421000002 } from "@/data/migrations/20260421000002_add_general_service_templates";
 
 /**
  * Allowlisted migrations that the admin migration runner can execute.
@@ -391,6 +392,14 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Creates chime_phone_numbers (pool of AWS Chime numbers with status available|assigned) and phone_number_requests (diviner-initiated requests with status pending|assigned|rejected). Backfills the pool from every existing diviners.chime_phone_number as 'assigned' so the pool is the single source of truth. Partial unique index guarantees one pending request per diviner at the DB level; another guarantees one pool row per diviner. RLS: admin full access, diviner can read own rows + insert a 'pending' request for themselves (all status transitions are admin-only). Drives the new diviner Phone tab 'Request Phone Number' button and the admin 'Phone Requests' list under People. Strictly additive — no drops.",
     sortKey: "20260421000001",
     sql: MIG_20260421000001,
+  },
+  "20260421000002_add_general_service_templates": {
+    id: "20260421000002_add_general_service_templates",
+    title: "Add general service templates",
+    description:
+      "Clones the 19 canonical diviner-specific service_templates rows into a parallel general catalog by preserving all source fields and only changing name + slug to their general equivalents. Safe to re-run because each clone is inserted only if its target slug does not already exist.",
+    sortKey: "20260421000002",
+    sql: MIG_20260421000002,
   },
 };
 
