@@ -24,6 +24,8 @@ import { MIGRATION_SQL as MIG_20260413000006 } from "@/data/migrations/202604130
 import { MIGRATION_SQL as MIG_20260413000008 } from "@/data/migrations/20260413000008_services_platform_fee_percent";
 import { MIGRATION_SQL as MIG_20260413000140 } from "@/data/migrations/20260413000140_media_albums";
 import { MIGRATION_SQL as MIG_20260413000126 } from "@/data/migrations/20260413000126_training_quiz_question_progress";
+import { MIGRATION_SQL as MIG_20260413000182 } from "@/data/migrations/20260413000182_natal_generation_governance";
+import { MIGRATION_SQL as MIG_20260413000185 } from "@/data/migrations/20260413000185_natal_regeneration_audit";
 import { MIGRATION_SQL as MIG_20260414000002 } from "@/data/migrations/20260414000002_booking_session_started_at";
 import { MIGRATION_SQL as MIG_20260414000026 } from "@/data/migrations/20260414000026_chime_sip_rule_id";
 import { MIGRATION_SQL as MIG_20260415000001 } from "@/data/migrations/20260415000001_chime_pipeline_id";
@@ -39,7 +41,11 @@ import { MIGRATION_SQL as MIG_20260417000023 } from "@/data/migrations/202604170
 import { MIGRATION_SQL as MIG_20260418000001 } from "@/data/migrations/20260418000001_service_toolkit_session";
 import { MIGRATION_SQL as MIG_20260419000001 } from "@/data/migrations/20260419000001_social_accounts";
 import { MIGRATION_SQL as MIG_20260421000001 } from "@/data/migrations/20260421000001_phone_number_requests";
-import { MIGRATION_SQL as MIG_20260421000002 } from "@/data/migrations/20260421000002_add_general_service_templates";
+import { MIGRATION_SQL as MIG_20260421000002 } from "@/data/migrations/20260421000002_booking_call_pin";
+import { MIGRATION_SQL as MIG_20260421000003 } from "@/data/migrations/20260421000003_seed_central_chime_number";
+import { MIGRATION_SQL as MIG_20260421000004 } from "@/data/migrations/20260421000004_add_general_service_templates";
+import { MIGRATION_SQL as MIG_20260421000010 } from "@/data/migrations/20260421000010_repair_family_birth_country";
+import { MIGRATION_SQL as MIG_20260421000001_ASA } from "@/data/migrations/20260421000001_affiliate_service_assignments";
 
 /**
  * Allowlisted migrations that the admin migration runner can execute.
@@ -281,6 +287,22 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
     sortKey: "20260413000126",
     sql: MIG_20260413000126,
   },
+  "20260413000182_natal_generation_governance": {
+    id: "20260413000182_natal_generation_governance",
+    title: "Natal chart generation governance (lifecycle + retry fields)",
+    description:
+      "Adds natal_status, natal_retry_count, natal_max_retries, natal_first_generated_at, natal_last_generated_at, natal_failure_reason, natal_lock_reason to community_family_members. POST /api/community/generate-natal selects these columns — without this migration the route's .select() fails and the API incorrectly returns 'Family member not found' (404). Backfills rows that already have natal_chart to natal_status='generated'. Strictly additive — every column uses ADD COLUMN IF NOT EXISTS. Run BEFORE 20260413000185.",
+    sortKey: "20260413000182",
+    sql: MIG_20260413000182,
+  },
+  "20260413000185_natal_regeneration_audit": {
+    id: "20260413000185_natal_regeneration_audit",
+    title: "Natal regeneration audit table",
+    description:
+      "Creates natal_regeneration_audit — records every user-initiated chart regeneration event (initiator, retry number, before/after birth data, outcome) for accountability and admin support review. POST /api/community/generate-natal writes to this table during regeneration; missing table causes insert failures. RLS: members read their own family's audit rows; service_role full access. Additive only. Run AFTER 20260413000182.",
+    sortKey: "20260413000185",
+    sql: MIG_20260413000185,
+  },
   "20260413000140_media_albums": {
     id: "20260413000140_media_albums",
     title: "Media image albums",
@@ -393,13 +415,45 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
     sortKey: "20260421000001",
     sql: MIG_20260421000001,
   },
+  "20260421000002_booking_call_pin": {
+    id: "20260421000002_booking_call_pin",
+    title: "Booking call PIN + chime_phone_numbers 'central' status",
+    description:
+      "Adds bookings.call_pin (CHAR(6)) and bookings.call_pin_generated_at to support shared-central-number + PIN routing for inbound Chime calls. Partial unique index ux_bookings_active_call_pin guarantees no two concurrently-usable PINs across pending/confirmed/in_progress bookings; PINs recycle once a booking moves to a terminal state. Extends the existing chime_phone_numbers table (created in 20260421000001) by widening the status CHECK to include 'central' and relaxing the assignment-consistency CHECK so central rows carry no diviner assignment. Adds an RLS policy so authenticated users can read central rows (needed by the booking confirmation UI). Backfills PINs for every future/active booking with call_pin IS NULL via a retry-on-collision loop. Strictly additive — existing per-diviner chime flow (available/assigned pool rows + diviners.chime_phone_number) continues to work in parallel. Rollout gate is data-driven: a status='central' row in chime_phone_numbers turns the shared-number + PIN path on.",
+    sortKey: "20260421000002",
+    sql: MIG_20260421000002,
+  },
+  "20260421000003_seed_central_chime_number": {
+    id: "20260421000003_seed_central_chime_number",
+    title: "Seed: promote +12162206209 to 'central'",
+    description:
+      "Environment-specific seed. Promotes +12162206209 (originally bought for test diviner 1, already assigned to a Chime SIP Media Application) to status='central' in chime_phone_numbers, and severs the per-diviner binding by clearing chime_phone_number / chime_sma_phone_arn / chime_sip_rule_id on the diviners row. The number becomes the shared PSTN entry point for PIN routing. Idempotent: UPDATE flips status + INSERT ... ON CONFLICT DO NOTHING. phone_arn is NULL in the INSERT fallback (the Next.js app never reads phone_arn; if 001's backfill already seeded the ARN from diviners.chime_sma_phone_arn, step 1's UPDATE preserves it). Kill switch: UPDATE chime_phone_numbers SET status='available' WHERE phone_number='+12162206209'.",
+    sortKey: "20260421000003",
+    sql: MIG_20260421000003,
+  },
   "20260421000002_add_general_service_templates": {
     id: "20260421000002_add_general_service_templates",
     title: "Add general service templates",
     description:
       "Clones the 19 canonical diviner-specific service_templates rows into a parallel general catalog by preserving all source fields and only changing name + slug to their general equivalents. Safe to re-run because each clone is inserted only if its target slug does not already exist.",
     sortKey: "20260421000002",
-    sql: MIG_20260421000002,
+    sql: MIG_20260421000004,
+  },
+  "20260421000010_repair_family_birth_country": {
+    id: "20260421000010_repair_family_birth_country",
+    title: "Repair existing family birth_country (parse from birth_city)",
+    description:
+      "One-time data repair for community_family_members rows where birth_country IS NULL and birth_city ends with a recognized country suffix (e.g. 'Miami, FL, United States of America'). Uses an allowlist of ~70 country names ordered longest-first so multi-word matches win. Never overwrites an existing birth_country; ambiguous labels are skipped, not guessed. Safe to re-run — a 2nd pass updates zero rows. NON-destructive: no schema changes, no deletes.",
+    sortKey: "20260421000010",
+    sql: MIG_20260421000010,
+  },
+  "20260421000001_affiliate_service_assignments": {
+    id: "20260421000001_affiliate_service_assignments",
+    title: "Affiliate Service Assignments + URL Attribution",
+    description:
+      "New diviner_service_affiliates table (source of truth for affiliate assignments, PROFILE or SERVICE-scoped). Extends affiliate_campaigns with owner_type (diviner | affiliate) + owner_affiliate_id + commission_value_snapshot + source_assignment_id and a CHECK that affiliate-owned campaigns must carry the full owner context. Extends campaign_clicks with affiliate_id + ref_code + commission snapshots; campaign_conversions with booking_id + ref_code_snapshot + commission_source + reversal columns and a UNIQUE (booking_id) idempotency index; bookings with ref_code; page_views with affiliate_id + ref_code. Adds trigger auto_pause_affiliate_campaigns_on_revoke so revoking an assignment automatically pauses matching affiliate-owned campaigns. RLS: diviner and named affiliate can SELECT; only the owning diviner can write; service_role full access. Strictly additive — no DROPs.",
+    sortKey: "20260421000001",
+    sql: MIG_20260421000001_ASA,
   },
 };
 

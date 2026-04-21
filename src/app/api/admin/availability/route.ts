@@ -79,6 +79,21 @@ export async function POST(req: NextRequest) {
       .single());
   }
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    const msg = error.message.toLowerCase();
+    if (
+      msg.includes("diviner_id") &&
+      (msg.includes("null value") || msg.includes("not-null"))
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Admin-owned availability requires a pending database migration. Go to /admin/db/migrations and apply '20260417000021_availability_templates_created_by' and '20260417000023_availability_templates_admin_owned' in order, then try again.",
+        },
+        { status: 500 }
+      );
+    }
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
   return NextResponse.json({ template: data }, { status: 201 });
 }

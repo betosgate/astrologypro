@@ -133,6 +133,16 @@ interface BookingConfirmationParams {
   sessionLink: string;
   birthData?: string;
   phoneNumber?: string;
+  /**
+   * When the central-number + PIN routing is active for this booking,
+   * pass both `centralPhoneNumber` and `callPin`. The email renders a
+   * prominent "How to join by phone" card with the PIN. If either is
+   * missing (or if `phoneNumber` is provided instead), the legacy
+   * per-diviner dial-in card is used. Safe to pass both — the PIN card
+   * takes precedence.
+   */
+  centralPhoneNumber?: string;
+  callPin?: string;
 }
 
 export async function sendBookingConfirmation({
@@ -144,6 +154,8 @@ export async function sendBookingConfirmation({
   sessionLink,
   birthData,
   phoneNumber,
+  centralPhoneNumber,
+  callPin,
 }: BookingConfirmationParams) {
   const durationText = duration ? `${duration} minutes` : "See details";
 
@@ -152,7 +164,15 @@ export async function sendBookingConfirmation({
        ${infoCard(birthData)}`
     : "";
 
-  const phoneSection = phoneNumber
+  // Prefer the central-number + PIN card when both are present.
+  // Fall back to the legacy per-diviner dial-in for everything else.
+  const phoneSection = centralPhoneNumber && callPin
+    ? `${sectionHeading("How to Join by Phone")}
+       ${infoCard(
+         `Dial <strong style="color:#e4e4e7;">${centralPhoneNumber}</strong> at your scheduled time and enter your PIN when prompted.<br/>` +
+         `<br/>Your PIN: <strong style="color:#e4e4e7;font-size:20px;letter-spacing:3px;">${callPin}</strong>`
+       )}`
+    : phoneNumber
     ? `${sectionHeading("Phone Dial-in")}
        ${infoCard(`Can&#39;t use video? Dial in by phone: <strong style="color:#e4e4e7;">${phoneNumber}</strong>`)}`
     : "";

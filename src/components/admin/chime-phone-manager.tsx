@@ -10,6 +10,7 @@ import {
   CheckCircle2,
   AlertTriangle,
   Smartphone,
+  KeyRound,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -51,6 +52,13 @@ interface ChimePhoneManagerProps {
   phoneAnswerMode: PhoneAnswerMode | null;
   phoneMobile: string | null;
   phoneDialinEnabled: boolean;
+  /**
+   * E.164 of the shared central Chime number (chime_phone_numbers.status='central').
+   * When set, and this diviner has no per-diviner number, the empty state is
+   * replaced with a "Central routing" info card instead of the legacy
+   * provision flow.
+   */
+  centralChimeNumber?: string | null;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -62,11 +70,10 @@ export function ChimePhoneManager({
   phoneAnswerMode: initialAnswerMode,
   phoneMobile: initialMobile,
   phoneDialinEnabled: initialDialinEnabled,
+  centralChimeNumber,
 }: ChimePhoneManagerProps) {
   const [phone, setPhone] = useState<string | null>(initialPhone);
   const [smaArn, setSmaArn] = useState<string | null>(initialSmaArn);
-  const [areaCode, setAreaCode] = useState("");
-  const [provisioning, setProvisioning] = useState(false);
   const [releasing, setReleasing] = useState(false);
   const [releaseDialogOpen, setReleaseDialogOpen] = useState(false);
 
@@ -78,34 +85,6 @@ export function ChimePhoneManager({
   const [dialinEnabled, setDialinEnabled] = useState(initialDialinEnabled);
   const [togglingDialin, setTogglingDialin] = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
-
-  // ── Provision ──────────────────────────────────────────────────────────────
-
-  async function handleProvision() {
-    setProvisioning(true);
-    try {
-      const res = await fetch("/api/chime/voice/provision-number", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          divinerId,
-          ...(areaCode.trim() ? { areaCode: areaCode.trim() } : {}),
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        toast.error(data.error ?? "Failed to provision number");
-        return;
-      }
-      setPhone(data.phoneNumber);
-      setSmaArn(data.phoneArn ?? null);
-      toast.success(`Provisioned ${formatPhone(data.phoneNumber)}`);
-    } catch {
-      toast.error("Network error — could not provision number");
-    } finally {
-      setProvisioning(false);
-    }
-  }
 
   // ── Release ───────────────────────────────────────────────────────────────
 
@@ -252,61 +231,52 @@ export function ChimePhoneManager({
                 </Button>
               </div>
             </>
-          ) : (
+          ) : centralChimeNumber ? (
             <>
-              {/* Empty state */}
-              <p className="text-sm text-muted-foreground">
-                No phone number assigned to this diviner.
-              </p>
-
-              <div className="flex items-end gap-3">
-                <div className="space-y-1.5">
-                  <Label htmlFor="area-code" className="text-xs">
-                    Area Code (optional)
-                  </Label>
-                  <Input
-                    id="area-code"
-                    placeholder="617"
-                    maxLength={3}
-                    value={areaCode}
-                    onChange={(e) =>
-                      setAreaCode(e.target.value.replace(/\D/g, ""))
-                    }
-                    className="w-24"
-                  />
-                </div>
-
-                <Button
-                  size="sm"
-                  disabled={provisioning}
-                  onClick={handleProvision}
-                >
-                  {provisioning ? (
-                    <>
-                      <Loader2 className="mr-1.5 size-4 animate-spin" />
-                      Provisioning…
-                    </>
-                  ) : (
-                    <>
-                      <Phone className="mr-1.5 size-4" />
-                      Provision Number
-                    </>
-                  )}
-                </Button>
+              {/* Central routing state — no per-diviner number needed */}
+              <div className="flex items-center gap-3">
+                <p className="text-2xl font-mono font-semibold tracking-tight">
+                  {formatPhone(centralChimeNumber)}
+                </p>
+                <Badge className="bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/20">
+                  Shared
+                </Badge>
               </div>
 
-              {provisioning && (
-                <p className="text-xs text-muted-foreground">
-                  This may take up to 90 seconds while AWS allocates a number.
+              <div className="flex items-start gap-2 text-sm">
+                <KeyRound className="size-4 text-muted-foreground shrink-0 mt-0.5" />
+                <p className="text-muted-foreground">
+                  Inbound calls route through the shared central line. Clients
+                  enter the 6-digit PIN from their booking confirmation — the
+                  SMA Lambda looks up the matching booking and bridges to this
+                  diviner automatically. No per-diviner number required.
                 </p>
-              )}
+              </div>
+            </>
+          ) : (
+            <>
+              {/* No central configured — operator needs to run migration 003 */}
+              <div className="flex items-start gap-2 text-sm">
+                <AlertTriangle className="size-4 text-amber-500 shrink-0 mt-0.5" />
+                <p className="text-amber-600 dark:text-amber-400">
+                  No central Chime number is configured. Run the{" "}
+                  <span className="font-mono">
+                    20260421000003_seed_central_chime_number
+                  </span>{" "}
+                  migration to enable shared-number + PIN routing for all
+                  diviners.
+                </p>
+              </div>
             </>
           )}
         </CardContent>
       </Card>
 
-      {/* ── Dial-in enabled toggle (only shown when number is provisioned) */}
-      {phone && (
+      {/* ── Dial-in enabled toggle ─────────────────────────────────────
+          Shown when the diviner has a per-diviner number OR when the
+          central number is configured — the toggle + phone_mobile drive
+          where PIN-matched `enqueue` calls bridge to. */}
+      {(phone || centralChimeNumber) && (
         <Card>
           <CardContent className="flex items-center justify-between py-4">
             <div className="flex items-center gap-3">
@@ -329,8 +299,8 @@ export function ChimePhoneManager({
         </Card>
       )}
 
-      {/* ── Answer mode card (only shown when number is provisioned) ──── */}
-      {phone && (
+      {/* ── Answer mode card ──────────────────────────────────────────── */}
+      {(phone || centralChimeNumber) && (
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">

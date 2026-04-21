@@ -27,6 +27,8 @@ import {
   XCircle,
   Loader2,
   CheckCircle2,
+  Phone,
+  Copy,
 } from "lucide-react";
 
 // ---------------------------------------------------------------------------
@@ -66,6 +68,11 @@ interface Booking {
 interface BookingManageClientProps {
   booking: Booking;
   bookingToken: string;
+  /** Shared central Chime number. When both this and `callPin` are set,
+   *  the "Join by Phone" card is rendered. Either null → hide the card. */
+  centralPhoneNumber?: string | null;
+  /** The booking's 6-digit call PIN. Paired with `centralPhoneNumber`. */
+  callPin?: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -131,13 +138,32 @@ function statusBadge(status: string) {
 // Component
 // ---------------------------------------------------------------------------
 
-export function BookingManageClient({ booking, bookingToken }: BookingManageClientProps) {
+export function BookingManageClient({
+  booking,
+  bookingToken,
+  centralPhoneNumber,
+  callPin,
+}: BookingManageClientProps) {
   const [cancelReason, setCancelReason] = useState("");
   const [canceling, setCanceling] = useState(false);
   const [canceled, setCanceled] = useState(booking.status === "canceled");
   const [cancelError, setCancelError] = useState("");
   const [localDate, setLocalDate] = useState<string | null>(null);
   const [joinVisible, setJoinVisible] = useState(false);
+  const [pinCopied, setPinCopied] = useState(false);
+
+  const showPhoneDialIn = Boolean(centralPhoneNumber && callPin);
+
+  async function handleCopyPin() {
+    if (!callPin) return;
+    try {
+      await navigator.clipboard.writeText(callPin);
+      setPinCopied(true);
+      setTimeout(() => setPinCopied(false), 2000);
+    } catch {
+      // silent — fall back to manual copy
+    }
+  }
 
   const diviner = booking.diviners;
   const service = booking.services;
@@ -261,6 +287,64 @@ export function BookingManageClient({ booking, bookingToken }: BookingManageClie
             <Clock className="size-4 text-purple-400 shrink-0" />
             <p className="text-white/70 text-sm">{booking.duration_minutes} minutes</p>
           </div>
+
+          {/* Join by Phone — central shared number + PIN (feature-flagged).
+              Only renders when the server resolved both a number and a PIN. */}
+          {showPhoneDialIn && !isCanceled && !isCompleted && (
+            <div className="rounded-xl bg-amber-500/5 border border-amber-500/20 p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <Phone className="size-4 text-amber-300 shrink-0" />
+                <p className="text-white text-sm font-semibold">Join by Phone</p>
+              </div>
+              <p className="text-white/60 text-xs leading-relaxed">
+                Can&apos;t use video? Dial the number below at your scheduled
+                time and enter your 6-digit PIN when prompted.
+              </p>
+
+              <div className="space-y-2">
+                <div>
+                  <p className="text-white/40 text-[10px] uppercase tracking-widest mb-1">
+                    Dial
+                  </p>
+                  <a
+                    href={`tel:${centralPhoneNumber}`}
+                    className="text-amber-300 hover:text-amber-200 text-base font-semibold tracking-wide transition-colors"
+                  >
+                    {centralPhoneNumber}
+                  </a>
+                </div>
+
+                <div>
+                  <p className="text-white/40 text-[10px] uppercase tracking-widest mb-1">
+                    Your PIN
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-lg tracking-[0.4em] text-white bg-white/10 border border-white/10 rounded-md px-3 py-1.5">
+                      {callPin}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleCopyPin}
+                      className="flex items-center gap-1 px-2 py-1.5 rounded-md border border-white/10 text-white/60 hover:text-white hover:bg-white/10 text-xs transition-colors"
+                      aria-label="Copy PIN to clipboard"
+                    >
+                      {pinCopied ? (
+                        <>
+                          <CheckCircle2 className="size-3.5 text-emerald-400" />
+                          Copied
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="size-3.5" />
+                          Copy
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Client notes */}
           {booking.booking_notes && (
