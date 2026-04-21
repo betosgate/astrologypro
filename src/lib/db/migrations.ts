@@ -41,6 +41,7 @@ import { MIGRATION_SQL as MIG_20260419000001 } from "@/data/migrations/202604190
 import { MIGRATION_SQL as MIG_20260421000001 } from "@/data/migrations/20260421000001_phone_number_requests";
 import { MIGRATION_SQL as MIG_20260421000002 } from "@/data/migrations/20260421000002_booking_call_pin";
 import { MIGRATION_SQL as MIG_20260421000003 } from "@/data/migrations/20260421000003_seed_central_chime_number";
+import { MIGRATION_SQL as MIG_20260421000004 } from "@/data/migrations/20260421000004_add_general_service_templates";
 
 /**
  * Allowlisted migrations that the admin migration runner can execute.
@@ -409,6 +410,14 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Environment-specific seed. Promotes +12162206209 (originally bought for test diviner 1, already assigned to a Chime SIP Media Application) to status='central' in chime_phone_numbers, and severs the per-diviner binding by clearing chime_phone_number / chime_sma_phone_arn / chime_sip_rule_id on the diviners row. The number becomes the shared PSTN entry point for PIN routing. Idempotent: UPDATE flips status + INSERT ... ON CONFLICT DO NOTHING. phone_arn is NULL in the INSERT fallback (the Next.js app never reads phone_arn; if 001's backfill already seeded the ARN from diviners.chime_sma_phone_arn, step 1's UPDATE preserves it). Kill switch: UPDATE chime_phone_numbers SET status='available' WHERE phone_number='+12162206209'.",
     sortKey: "20260421000003",
     sql: MIG_20260421000003,
+  },
+  "20260421000002_add_general_service_templates": {
+    id: "20260421000002_add_general_service_templates",
+    title: "Add general service templates",
+    description:
+      "Clones the 19 canonical diviner-specific service_templates rows into a parallel general catalog by preserving all source fields and only changing name + slug to their general equivalents. Safe to re-run because each clone is inserted only if its target slug does not already exist.",
+    sortKey: "20260421000002",
+    sql: MIG_20260421000004,
   },
 };
 
