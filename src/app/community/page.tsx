@@ -83,6 +83,25 @@ function ringColor(pct: number): string {
   return "hsl(25, 90%, 55%)";
 }
 
+function journeySetupCtaLabel(key?: string): string {
+  switch (key) {
+    case "profile_photo":
+      return "Upload Photo →";
+    case "full_name":
+      return "Complete Profile →";
+    case "birth_data":
+      return "Complete Birth Data →";
+    case "natal_chart":
+      return "Generate Chart →";
+    case "family_member":
+      return "Add Family Member →";
+    case "relationship_chart":
+      return "Generate Relationship Chart →";
+    default:
+      return "Continue Setup →";
+  }
+}
+
 function formatDateLong(iso: string | null): string | null {
   if (!iso) return null;
   return new Date(iso).toLocaleDateString("en-US", {
@@ -539,6 +558,7 @@ export default async function CommunityDashboardPage() {
   };
 
   const profileIsComplete = profileCompletionData.overall_pct >= 100;
+  const nextJourneyItem = profileCompletionData.items.find((i) => !i.completed);
   const dashboardFeedItems = await getCommunityDashboardFeed(
     isMysterySchool ? "mystery_school" : "perennial_mandalism"
   );
@@ -885,18 +905,31 @@ export default async function CommunityDashboardPage() {
                   {profileCompletionData.items.filter((i) => !i.completed).length !== 1 ? "s" : ""} remaining
                 </p>
                 <Button asChild variant="link" size="sm" className="h-auto p-0 text-xs">
-                  <Link href="/community/profile">Continue Setup →</Link>
+                  {/* Legacy CTA always sent users to profile, even when the next
+                      journey milestone was chart or family setup:
+                      <Link href="/community/profile">Continue Setup →</Link> */}
+                  <Link href={nextJourneyItem?.action_url ?? "/community/profile"}>
+                    {journeySetupCtaLabel(nextJourneyItem?.key)}
+                  </Link>
                 </Button>
               </div>
-              {/* Show next incomplete item inline */}
-              {(() => {
-                const next = profileCompletionData.items.find((i) => !i.completed);
-                return next ? (
-                  <p className="text-xs text-muted-foreground">
-                    Next: <Link href={next.action_url} className="text-primary hover:underline">{next.label}</Link>
-                  </p>
-                ) : null;
-              })()}
+              {/* Legacy inline next-item logic recalculated the first incomplete
+                  item here. Kept for traceability; the active UI now reuses
+                  nextJourneyItem so the main CTA and inline link cannot diverge.
+                  {(() => {
+                    const next = profileCompletionData.items.find((i) => !i.completed);
+                    return next ? (
+                      <p className="text-xs text-muted-foreground">
+                        Next: <Link href={next.action_url} className="text-primary hover:underline">{next.label}</Link>
+                      </p>
+                    ) : null;
+                  })()} */}
+              {/* Show the same next incomplete item used by the main CTA. */}
+              {nextJourneyItem && (
+                <p className="text-xs text-muted-foreground">
+                  Next: <Link href={nextJourneyItem.action_url} className="text-primary hover:underline">{nextJourneyItem.label}</Link>
+                </p>
+              )}
             </CardContent>
           </Card>
         )}

@@ -41,6 +41,10 @@ import {
   Users,
 } from "lucide-react";
 import { toast } from "sonner";
+import {
+  BirthCityAutocomplete,
+  extractCountryFromCityLabel,
+} from "@/components/community/birth-city-autocomplete";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -105,6 +109,8 @@ const EMPTY_FORM = {
   birthTime: "",
   birthCity: "",
   birthCountry: "",
+  birthLat: "",
+  birthLng: "",
   relationship: "",
   notes: "",
 };
@@ -407,6 +413,9 @@ export default function CommunityPlanPage() {
   const [addMemberError, setAddMemberError] = useState<string | null>(null);
   const [addPreview, setAddPreview] = useState<PreviewResult | null>(null);
   const [addPreviewLoading, setAddPreviewLoading] = useState(false);
+  const addMemberMissingCoordinates =
+    Boolean(memberForm.birthCity.trim()) &&
+    (!memberForm.birthLat.trim() || !memberForm.birthLng.trim());
 
   // Fetch add-member price preview whenever drawer opens
   useEffect(() => {
@@ -1313,16 +1322,34 @@ export default function CommunityPlanPage() {
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label>Birth City</Label>
-                <Input
+                <BirthCityAutocomplete
                   value={memberForm.birthCity}
-                  onChange={(e) =>
-                    setMemberForm((f) => ({
-                      ...f,
-                      birthCity: e.target.value,
-                    }))
-                  }
+                  onChange={(label, option) => {
+                    setMemberForm((f) => {
+                      const next = {
+                        ...f,
+                        birthCity: label,
+                        birthLat: "",
+                        birthLng: "",
+                      };
+                      if (!option) return next;
+                      return {
+                        ...next,
+                        birthLat: String(option.lat),
+                        birthLng: String(option.lng),
+                        birthCountry:
+                          extractCountryFromCityLabel(option.label) ||
+                          f.birthCountry,
+                      };
+                    });
+                  }}
                   placeholder="City"
                 />
+                {addMemberMissingCoordinates && (
+                  <p className="text-xs text-amber-600">
+                    Select a city from suggestions to enable chart generation.
+                  </p>
+                )}
               </div>
               <div className="space-y-1.5">
                 <Label>Birth Country</Label>
@@ -1395,7 +1422,10 @@ export default function CommunityPlanPage() {
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={addMemberLoading}>
+              <Button
+                type="submit"
+                disabled={addMemberLoading || addMemberMissingCoordinates}
+              >
                 {addMemberLoading && (
                   <Loader2 className="mr-2 size-4 animate-spin" />
                 )}
