@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getAdminUser } from "@/lib/admin-auth";
 import { stripe } from "@/lib/stripe/client";
 import { sendRefundProcessed } from "@/lib/email";
 import { recordRefundEvent } from "@/lib/refund-events";
@@ -13,7 +14,7 @@ export const runtime = "nodejs";
 
 /**
  * Issue a refund for a completed booking.
- * Only the diviner who owns the booking can issue refunds.
+ * Only the diviner who owns the booking or an admin can issue refunds.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -27,6 +28,7 @@ export async function POST(request: NextRequest) {
     }
 
     const { bookingId, reason } = await request.json();
+    const adminUser = await getAdminUser();
 
     if (!bookingId) {
       return NextResponse.json(
@@ -35,16 +37,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify diviner ownership
+    // Verify diviner ownership unless the caller is an admin
     const { data: diviner } = await supabase
       .from("diviners")
       .select("id, display_name")
       .eq("user_id", user.id)
-      .single();
+      .maybeSingle();
 
-    if (!diviner) {
+    if (!diviner && !adminUser) {
       return NextResponse.json(
-        { error: "Only diviners can issue refunds" },
+        { error: "Only diviners or admins can issue refunds" },
         { status: 403 }
       );
     }
@@ -55,7 +57,7 @@ export async function POST(request: NextRequest) {
     const { data: booking, error: bookingError } = await admin
       .from("bookings")
       .select(
-        "id, diviner_id, client_id, base_price, stripe_payment_intent_id, status, refunded_at, clients(email, full_name)"
+        "id, diviner_id, client_id, base_price, stripe_payment_intent_id, status, refunded_at, clients(email, full_name), diviners(display_name)"
       )
       .eq("id", bookingId)
       .single();
@@ -67,7 +69,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (booking.diviner_id !== diviner.id) {
+    if (!adminUser && booking.diviner_id !== diviner?.id) {
       return NextResponse.json(
         { error: "You can only refund your own bookings" },
         { status: 403 }
@@ -98,8 +100,8 @@ export async function POST(request: NextRequest) {
       reason: "requested_by_customer",
       metadata: {
         booking_id: bookingId,
-        diviner_id: diviner.id,
-        refund_reason: reason ?? "Diviner-issued refund",
+        diviner_id: booking.diviner_id,
+        refund_reason: reason ?? (adminUser ? "Admin-issued refund" : "Diviner-issued refund"),
       },
     });
 
@@ -121,9 +123,9 @@ export async function POST(request: NextRequest) {
       paymentIntentId: booking.stripe_payment_intent_id,
       providerRefundId: refund.id,
       initiatedByUserId: user.id,
-      initiatedByRole: "diviner",
+      initiatedByRole: adminUser ? "admin" : "diviner",
       amountCents: refundAmountCents,
-      reason: reason ?? "Diviner-issued refund",
+      reason: reason ?? (adminUser ? "Admin-issued refund" : "Diviner-issued refund"),
       providerResponse: {
         refundStatus: refund.status,
         refundObject: refund.object,
@@ -136,28 +138,29 @@ export async function POST(request: NextRequest) {
       refundAmountCents,
       refundEventId: refundEvent.id,
       actorUserId: user.id,
-      actorRole: "diviner",
-      reason: reason ?? "Diviner-issued refund",
+      actorRole: adminUser ? "admin" : "diviner",
+      reason: reason ?? (adminUser ? "Admin-issued refund" : "Diviner-issued refund"),
     });
 
     await createFinanceOperationNote({
       createdByUserId: user.id,
       revenueLedgerEntryId: reconciledEntry.id,
-      divinerId: diviner.id,
+      divinerId: booking.diviner_id,
       orderReference: `booking:${bookingId}`,
       noteType: "refund_investigation",
-      note: reason ?? "Diviner-issued refund",
+      note: reason ?? (adminUser ? "Admin-issued refund" : "Diviner-issued refund"),
       status: "resolved",
     });
 
     // Send refund email to client
     const clientData = booking.clients as any;
+    const bookingDiviner = booking.diviners as { display_name?: string } | null;
     if (clientData?.email) {
       await sendRefundProcessed({
         clientEmail: clientData.email,
-        divinerName: diviner.display_name ?? "Your Diviner",
+        divinerName: bookingDiviner?.display_name ?? diviner?.display_name ?? "Your Diviner",
         amount: refundAmountDollars,
-        reason: reason ?? "Refund issued by your diviner",
+        reason: reason ?? (adminUser ? "Refund issued by an admin" : "Refund issued by your diviner"),
       }).catch((err) =>
         console.error("[Refund] Failed to send refund email:", err)
       );

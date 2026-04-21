@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getAdminUser } from "@/lib/admin-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -27,14 +28,16 @@ export async function GET(
 
     const admin = createAdminClient();
 
-    // Verify the caller is the diviner for this booking
+    const adminUser = await getAdminUser();
+
+    // Verify the caller is the diviner for this booking unless they are an admin
     const { data: diviner } = await admin
       .from("diviners")
       .select("id")
       .eq("user_id", user.id)
       .maybeSingle();
 
-    if (!diviner) {
+    if (!diviner && !adminUser) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -55,7 +58,7 @@ export async function GET(
     }
 
     // Enforce ownership
-    if ((booking.diviner_id as string) !== diviner.id) {
+    if (!adminUser && (booking.diviner_id as string) !== diviner?.id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

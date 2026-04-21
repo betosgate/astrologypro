@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getAdminUser } from "@/lib/admin-auth";
 import { S3Client, ListObjectsV2Command, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
@@ -38,14 +39,15 @@ export async function GET(
     }
 
     const admin = createAdminClient();
+    const adminUser = await getAdminUser();
 
-    // Verify caller is the diviner
+    // Verify caller is the diviner or an admin
     const { data: diviner } = await admin
       .from("diviners")
       .select("id")
       .eq("user_id", user.id)
       .maybeSingle();
-    if (!diviner) {
+    if (!diviner && !adminUser) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -55,7 +57,7 @@ export async function GET(
       .eq("id", bookingId)
       .maybeSingle();
 
-    if (!booking || booking.diviner_id !== diviner.id) {
+    if (!booking || (!adminUser && booking.diviner_id !== diviner?.id)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

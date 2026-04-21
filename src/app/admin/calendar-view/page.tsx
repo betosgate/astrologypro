@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { CalendarView } from "@/components/dashboard/calendar-view";
 import { BookingLinkBanner } from "@/components/dashboard/booking-link-banner";
+import { AdminBookingLinkCard } from "@/app/admin/availability/admin-booking-link-card";
 import { Info, LinkIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -141,6 +142,9 @@ export default async function AdminCalendarViewPage() {
           bookingUrl={`${process.env.NEXT_PUBLIC_APP_URL ?? "https://astrologypro.com"}/${diviner.username}`}
         />
       )}
+
+      <AdminBookingLinkCard />
+
 
       <CalendarView
         divinerId={ownerId}
