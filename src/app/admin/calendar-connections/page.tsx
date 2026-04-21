@@ -24,20 +24,22 @@ export default async function AdminCalendarConnectionsPage() {
     .eq("user_id", user.id)
     .maybeSingle();
 
+  // Look up by user_id so admins without a diviner row still see their own
+  // connections (admin-owned rows are written with user_id = admin auth.uid).
+  // This also covers admins who happen to have a diviner row — user_id is the
+  // canonical identity on calendar_connections.
   let connections: Array<Record<string, unknown>> = [];
-  if (diviner) {
-    const result = await admin
-      .from("calendar_connections")
-      .select("id, provider, email, account_identifier, created_at, updated_at")
-      .eq("owner_id", diviner.id)
-      .order("updated_at", { ascending: false })
-      .order("created_at", { ascending: false });
+  const result = await admin
+    .from("calendar_connections")
+    .select("id, provider, email, account_identifier, created_at, updated_at")
+    .eq("user_id", user.id)
+    .order("updated_at", { ascending: false })
+    .order("created_at", { ascending: false });
 
-    if (result.error) {
-      console.warn("[admin/calendar-connections] Query error:", result.error.message);
-    } else {
-      connections = result.data ?? [];
-    }
+  if (result.error) {
+    console.warn("[admin/calendar-connections] Query error:", result.error.message);
+  } else {
+    connections = result.data ?? [];
   }
 
   const googleConnections: CalendarConnectionSummary[] = connections
