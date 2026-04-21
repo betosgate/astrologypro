@@ -18,7 +18,7 @@ import {
 } from "@/lib/email";
 import { createCalendarEvent } from "@/lib/google-calendar";
 import { buildCalendarDescription } from "@/lib/calendar-utils";
-import { getActiveCentralChimeNumber } from "@/lib/booking-call-pin";
+import { getActiveChimePhoneNumber } from "@/lib/booking-call-pin";
 import { createMsCalendarEvent } from "@/lib/microsoft-calendar";
 import { ensureOrderForBooking, getOrderStatusForService } from "@/lib/orders";
 import { recordAffiliateCommission } from "@/lib/affiliate-commissions";
@@ -496,7 +496,7 @@ async function handleManualBookingCheckoutCompleted(
   const mbCallPin = (booking as Record<string, unknown>).call_pin as string | null | undefined;
   if (mbCallPin) {
     try {
-      const central = await getActiveCentralChimeNumber(supabase as any);
+      const central = await getActiveChimePhoneNumber(supabase as any);
       if (central) {
         mbAdvertisedCentralNumber = central.phoneNumber;
         mbAdvertisedCallPin = mbCallPin;
@@ -1843,7 +1843,7 @@ async function handlePaymentIntentSucceeded(
   const paidCallPin = (booking as Record<string, unknown>).call_pin as string | null | undefined;
   if (paidCallPin) {
     try {
-      const central = await getActiveCentralChimeNumber(supabase as any);
+      const central = await getActiveChimePhoneNumber(supabase as any);
       if (central) {
         paidAdvertisedCentralNumber = central.phoneNumber;
         paidAdvertisedCallPin = paidCallPin;

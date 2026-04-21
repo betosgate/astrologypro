@@ -5,7 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-const ALLOWED_STATUSES = ["available", "assigned", "all"] as const;
+const ALLOWED_STATUSES = ["available", "assigned", "central", "all"] as const;
 type StatusFilter = (typeof ALLOWED_STATUSES)[number];
 
 const PHONE_REGEX = /^\+?[0-9\s\-().]{6,20}$/;

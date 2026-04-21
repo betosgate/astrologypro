@@ -5,13 +5,16 @@
 // the admin UI at /admin/db/migrations which imports MIGRATIONS from
 // src/lib/db/migrations.ts).
 //
-// Purpose: Add per-booking 6-digit call PIN + chime_central_numbers
-// config table so that the app can advertise a single shared Chime
-// number and route inbound calls to the correct diviner by PIN.
+// Purpose: Add per-booking 6-digit call PIN and extend the existing
+// chime_phone_numbers table (created in 20260421000001) with a 'central'
+// status so one row can act as the shared number that accepts PIN-based
+// routing.
 //
-// Strictly ADDITIVE (CLAUDE.md §5 + §7): new columns, new table, new
-// indexes, new policies. Existing per-diviner Chime flow continues to
-// work in parallel — feature flag controls which number is advertised.
+// Strictly ADDITIVE (CLAUDE.md §5 + §7). The existing per-diviner Chime
+// flow (diviners.chime_phone_number + status='assigned' pool rows)
+// continues to work unchanged. Rollout is data-driven: presence of a
+// status='central' row in chime_phone_numbers turns the shared-number +
+// PIN path on.
 
 export const MIGRATION_SQL = `
 -- ─── 1. bookings: add call_pin columns ───────────────────────────────
@@ -29,54 +32,42 @@ CREATE INDEX IF NOT EXISTS idx_bookings_call_pin_lookup
   WHERE call_pin IS NOT NULL;
 
 
--- ─── 2. chime_central_numbers (config) ───────────────────────────────
-CREATE TABLE IF NOT EXISTS chime_central_numbers (
-  id            UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-  phone_number  VARCHAR(20) NOT NULL UNIQUE,
-  phone_arn     TEXT,
-  status        VARCHAR(20) NOT NULL DEFAULT 'active'
-    CHECK (status IN ('active', 'retired')),
-  region        VARCHAR(10),
-  label         TEXT,
-  created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
-);
+-- ─── 2. chime_phone_numbers: extend status to include 'central' ──────
+ALTER TABLE chime_phone_numbers
+  DROP CONSTRAINT IF EXISTS chime_phone_numbers_status_check;
 
-CREATE INDEX IF NOT EXISTS idx_chime_central_numbers_status
-  ON chime_central_numbers (status);
+ALTER TABLE chime_phone_numbers
+  ADD CONSTRAINT chime_phone_numbers_status_check
+  CHECK (status IN ('available', 'assigned', 'central'));
 
+ALTER TABLE chime_phone_numbers
+  DROP CONSTRAINT IF EXISTS chk_chime_phone_numbers_assignment_consistent;
 
--- ─── 3. updated_at trigger ───────────────────────────────────────────
-CREATE OR REPLACE FUNCTION set_updated_at_timestamp()
-RETURNS TRIGGER AS $$
-BEGIN
-  NEW.updated_at = now();
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-DROP TRIGGER IF EXISTS trg_chime_central_numbers_updated_at ON chime_central_numbers;
-CREATE TRIGGER trg_chime_central_numbers_updated_at
-  BEFORE UPDATE ON chime_central_numbers
-  FOR EACH ROW EXECUTE FUNCTION set_updated_at_timestamp();
+ALTER TABLE chime_phone_numbers
+  ADD CONSTRAINT chk_chime_phone_numbers_assignment_consistent
+  CHECK (
+    (status = 'assigned'
+       AND assigned_diviner_id IS NOT NULL
+       AND assigned_at         IS NOT NULL)
+    OR
+    (status = 'available'
+       AND assigned_diviner_id IS NULL
+       AND assigned_at         IS NULL)
+    OR
+    (status = 'central'
+       AND assigned_diviner_id IS NULL
+       AND assigned_at         IS NULL)
+  );
 
 
--- ─── 4. RLS ──────────────────────────────────────────────────────────
-ALTER TABLE chime_central_numbers ENABLE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS chime_central_numbers_admin_all ON chime_central_numbers;
-CREATE POLICY chime_central_numbers_admin_all ON chime_central_numbers
-  FOR ALL
-  USING (EXISTS (SELECT 1 FROM admin_users WHERE user_id = auth.uid()))
-  WITH CHECK (EXISTS (SELECT 1 FROM admin_users WHERE user_id = auth.uid()));
-
-DROP POLICY IF EXISTS chime_central_numbers_read_active ON chime_central_numbers;
-CREATE POLICY chime_central_numbers_read_active ON chime_central_numbers
+-- ─── 3. RLS: authenticated read on central rows ──────────────────────
+DROP POLICY IF EXISTS chime_phone_numbers_read_central ON chime_phone_numbers;
+CREATE POLICY chime_phone_numbers_read_central ON chime_phone_numbers
   FOR SELECT
-  USING (status = 'active');
+  USING (status = 'central');
 
 
--- ─── 5. Backfill ─────────────────────────────────────────────────────
+-- ─── 4. Backfill ─────────────────────────────────────────────────────
 DO $$
 DECLARE
   rec            RECORD;
@@ -97,7 +88,7 @@ BEGIN
 
       BEGIN
         UPDATE bookings
-           SET call_pin = candidate_pin,
+           SET call_pin              = candidate_pin,
                call_pin_generated_at = now()
          WHERE id = rec.id
            AND call_pin IS NULL;
@@ -110,8 +101,8 @@ BEGIN
 END$$;
 
 
--- ─── 6. Comments ─────────────────────────────────────────────────────
+-- ─── 5. Comments ─────────────────────────────────────────────────────
 COMMENT ON COLUMN bookings.call_pin              IS '6-digit PIN used by the client when calling the central Chime number to route to this booking. NULL for legacy bookings.';
 COMMENT ON COLUMN bookings.call_pin_generated_at IS 'When the PIN was first generated (audit trail).';
-COMMENT ON TABLE  chime_central_numbers          IS 'Shared central PSTN numbers that accept PIN-based routing. Added alongside per-diviner chime numbers. Rollout gate is data-driven: the presence of an active (status=''active'') row enables the shared-number + PIN path in booking confirmations; leave the table empty (or retire all rows) to keep the legacy per-diviner flow.';
+COMMENT ON COLUMN chime_phone_numbers.status     IS 'available = free pool row, admin may assign; assigned = dedicated to a specific diviner; central = shared PSTN number that accepts PIN-based routing to any booking.';
 `;

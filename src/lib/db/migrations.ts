@@ -40,6 +40,7 @@ import { MIGRATION_SQL as MIG_20260418000001 } from "@/data/migrations/202604180
 import { MIGRATION_SQL as MIG_20260419000001 } from "@/data/migrations/20260419000001_social_accounts";
 import { MIGRATION_SQL as MIG_20260421000001 } from "@/data/migrations/20260421000001_phone_number_requests";
 import { MIGRATION_SQL as MIG_20260421000002 } from "@/data/migrations/20260421000002_booking_call_pin";
+import { MIGRATION_SQL as MIG_20260421000003 } from "@/data/migrations/20260421000003_seed_central_chime_number";
 
 /**
  * Allowlisted migrations that the admin migration runner can execute.
@@ -395,11 +396,19 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
   },
   "20260421000002_booking_call_pin": {
     id: "20260421000002_booking_call_pin",
-    title: "Booking call PIN + chime_central_numbers",
+    title: "Booking call PIN + chime_phone_numbers 'central' status",
     description:
-      "Adds bookings.call_pin (CHAR(6)) and bookings.call_pin_generated_at to support shared-central-number + PIN routing for inbound Chime calls. Partial unique index ux_bookings_active_call_pin guarantees no two concurrently-usable PINs across pending/confirmed/in_progress bookings; PINs recycle once a booking moves to a terminal state. Creates chime_central_numbers (the config table for the shared central PSTN number(s), with status active|retired and RLS letting authenticated users read active rows so the booking confirmation UI can show the number). Backfills PINs for every future/active booking with call_pin IS NULL using a retry-on-collision loop. Strictly additive — existing per-diviner chime flow (diviners.chime_phone_number + /api/chime/voice/lookup) continues to work in parallel. Rollout gate is data-driven: an active row in chime_central_numbers turns the shared-number + PIN path on.",
+      "Adds bookings.call_pin (CHAR(6)) and bookings.call_pin_generated_at to support shared-central-number + PIN routing for inbound Chime calls. Partial unique index ux_bookings_active_call_pin guarantees no two concurrently-usable PINs across pending/confirmed/in_progress bookings; PINs recycle once a booking moves to a terminal state. Extends the existing chime_phone_numbers table (created in 20260421000001) by widening the status CHECK to include 'central' and relaxing the assignment-consistency CHECK so central rows carry no diviner assignment. Adds an RLS policy so authenticated users can read central rows (needed by the booking confirmation UI). Backfills PINs for every future/active booking with call_pin IS NULL via a retry-on-collision loop. Strictly additive — existing per-diviner chime flow (available/assigned pool rows + diviners.chime_phone_number) continues to work in parallel. Rollout gate is data-driven: a status='central' row in chime_phone_numbers turns the shared-number + PIN path on.",
     sortKey: "20260421000002",
     sql: MIG_20260421000002,
+  },
+  "20260421000003_seed_central_chime_number": {
+    id: "20260421000003_seed_central_chime_number",
+    title: "Seed: promote +12162206209 to 'central'",
+    description:
+      "Environment-specific seed. Promotes +12162206209 (originally bought for test diviner 1, already assigned to a Chime SIP Media Application) to status='central' in chime_phone_numbers, and severs the per-diviner binding by clearing chime_phone_number / chime_sma_phone_arn / chime_sip_rule_id on the diviners row. The number becomes the shared PSTN entry point for PIN routing. Idempotent: UPDATE flips status + INSERT ... ON CONFLICT DO NOTHING. phone_arn is NULL in the INSERT fallback (the Next.js app never reads phone_arn; if 001's backfill already seeded the ARN from diviners.chime_sma_phone_arn, step 1's UPDATE preserves it). Kill switch: UPDATE chime_phone_numbers SET status='available' WHERE phone_number='+12162206209'.",
+    sortKey: "20260421000003",
+    sql: MIG_20260421000003,
   },
 };
 

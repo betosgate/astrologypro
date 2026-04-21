@@ -17,11 +17,12 @@
 //  Rollout gating:
 //    PIN generation always runs (additive, nullable column — safe for
 //    existing flows). The PIN is advertised to the client (email/Gcal/
-//    confirmation page) only when getActiveCentralChimeNumber() returns
-//    a row. In other words: the presence of an active row in
-//    chime_central_numbers is the on/off switch. To disable the shared-
-//    number path, set every row in chime_central_numbers to status
-//    = 'retired' (or leave the table empty).
+//    confirmation page) only when getActiveChimePhoneNumber() returns
+//    a row. In other words: the presence of a status='central' row in
+//    chime_phone_numbers is the on/off switch. To disable the shared-
+//    number path, flip that row's status to anything other than
+//    'central' (e.g. UPDATE ... SET status='available'), or delete the
+//    row entirely. No redeploy required.
 // ═════════════════════════════════════════════════════════════════════
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -109,23 +110,25 @@ export async function generateBookingCallPin(
 }
 
 /**
- * Get the current active central Chime number (the one advertised on
- * booking confirmations and used for PIN-based routing).
+ * Get the currently-promoted 'central' Chime phone number from
+ * chime_phone_numbers (the one advertised on booking confirmations
+ * and used for PIN-based routing).
  *
- * Returns null if no active row exists or the table cannot be read —
- * callers must fall back to the per-diviner number in that case.
+ * Returns null if no status='central' row exists or the table cannot
+ * be read — callers must fall back to the per-diviner number in that
+ * case.
  *
- * If multiple active rows exist (e.g. multi-region rollout), returns
+ * If multiple central rows exist (e.g. multi-region rollout), returns
  * the first one ordered by created_at. Extend with region-aware
  * selection when that is needed.
  */
-export async function getActiveCentralChimeNumber(
+export async function getActiveChimePhoneNumber(
   supabase: SupabaseClient
 ): Promise<{ phoneNumber: string; phoneArn: string | null } | null> {
   const { data, error } = await supabase
-    .from("chime_central_numbers")
+    .from("chime_phone_numbers")
     .select("phone_number, phone_arn")
-    .eq("status", "active")
+    .eq("status", "central")
     .order("created_at", { ascending: true })
     .limit(1)
     .maybeSingle();

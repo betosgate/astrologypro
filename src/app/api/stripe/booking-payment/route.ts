@@ -15,7 +15,7 @@ import { calculateMoneySplit } from "@/lib/money-split";
 import { getSessionLinkForBooking } from "@/lib/service-toolkit-mapping";
 import {
   generateBookingCallPin,
-  getActiveCentralChimeNumber,
+  getActiveChimePhoneNumber,
 } from "@/lib/booking-call-pin";
 import {
   sendBookingConfirmation,
@@ -558,7 +558,7 @@ export async function POST(request: NextRequest) {
 
     // Generate a call PIN for shared-central-number routing. This is
     // always generated (additive, nullable column, no user-facing
-    // effect unless an active chime_central_numbers row is configured)
+    // effect unless an active chime_phone_numbers row is configured)
     // so the column is ready the moment ops provisions a central number.
     // Failure here is non-fatal — we log and continue; the booking is
     // still valid.
@@ -624,7 +624,7 @@ export async function POST(request: NextRequest) {
     let advertisedCallPin: string | null = null;
     if (callPin) {
       try {
-        const central = await getActiveCentralChimeNumber(adminSupabase as any);
+        const central = await getActiveChimePhoneNumber(adminSupabase as any);
         if (central) {
           advertisedCentralNumber = central.phoneNumber;
           advertisedCallPin = callPin.pin;

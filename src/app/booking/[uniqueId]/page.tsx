@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { BookingManageClient } from "@/components/booking/booking-manage-client";
-import { getActiveCentralChimeNumber } from "@/lib/booking-call-pin";
+import { getActiveChimePhoneNumber } from "@/lib/booking-call-pin";
 
 export const metadata = { robots: "noindex" };
 
@@ -29,8 +29,8 @@ export default async function BookingManagePage({
   if (!booking) notFound();
 
   // Resolve central phone number only when the booking has a PIN.
-  // Gate is data-driven: if an active row exists in chime_central_numbers
-  // (returned by getActiveCentralChimeNumber) AND the booking has a PIN,
+  // Gate is data-driven: if an active row exists in chime_phone_numbers
+  // (returned by getActiveChimePhoneNumber) AND the booking has a PIN,
   // advertise the central-number + PIN card. Otherwise the client falls
   // back to the existing join flow unchanged.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -39,7 +39,7 @@ export default async function BookingManagePage({
   let centralPhoneNumber: string | null = null;
 
   if (callPin) {
-    const central = await getActiveCentralChimeNumber(
+    const central = await getActiveChimePhoneNumber(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       admin as any
     );

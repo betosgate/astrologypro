@@ -74,8 +74,8 @@ Admin users must be able to view the PIN for any booking (customer-support use c
 ### 3.6 Rollout — parallel operation
 
 - Per-diviner numbers continue to work in parallel during migration.
-- The rollout gate is data-driven: booking confirmations advertise the central number + PIN when (a) the booking has a `call_pin`, and (b) at least one row in `chime_central_numbers` has `status = 'active'`. If either condition fails, confirmations fall back to the diviner's direct number.
-- To turn the shared-number path off globally, retire every row in `chime_central_numbers` (UPDATE … SET status = 'retired') or leave the table empty. No redeploy required.
+- The rollout gate is data-driven: booking confirmations advertise the central number + PIN when (a) the booking has a `call_pin`, and (b) at least one row in `chime_phone_numbers` has `status = 'central'`. Migration 20260421000002 widens the existing `status` enum — originally `available|assigned` from migration 20260421000001 — to also accept `'central'` and relaxes the assignment-consistency CHECK so central rows carry no diviner binding. If either condition fails, confirmations fall back to the diviner's direct number.
+- To turn the shared-number path off globally, flip every central row (`UPDATE chime_phone_numbers SET status='available' WHERE status='central'`) or delete the row. No redeploy required.
 - PIN generation runs on every new booking regardless, so rows are ready the moment a central number is provisioned.
 
 ## 4. Non-Goals (v1 — explicitly deferred)
@@ -122,7 +122,7 @@ CREATE UNIQUE INDEX ux_bookings_active_call_pin
 
 Run in the migration: for every future / active booking with `call_pin IS NULL`, generate and write a PIN. Use a DO block with a retry loop for collisions.
 
-### 5.5 `chime_central_numbers` (new — optional)
+### 5.5 `chime_phone_numbers` (new — optional)
 
 A tiny config table holding the shared central number(s). One row for now:
 
@@ -271,13 +271,13 @@ No functional change for v1. The `phone_number_requests` feature remains operati
 
 ## 10. Rollout Plan
 
-1. **Deploy migration** — add `call_pin` columns + partial unique index + `chime_central_numbers` table + backfill for future/active bookings. At this point PINs are being generated on every new booking but `chime_central_numbers` is empty, so confirmations still show the legacy per-diviner number. No user-visible change.
-2. **Deploy API + Lambda** — API is dual-mode (handles both legacy and PIN lookups); Lambda is updated to drive the PIN IVR flow. Still no user-visible change because `chime_central_numbers` is empty.
-3. **Procure one central Chime number** and insert a row into `chime_central_numbers` with `status = 'active'`. This is the data-driven on-switch: any booking created from this point whose PIN is non-null and whose confirmation email/Gcal runs will start advertising the central number.
+1. **Deploy migration 20260421000002** — adds `call_pin` columns + partial unique index, widens `chime_phone_numbers.status` enum to include `'central'`, relaxes the assignment-consistency CHECK, adds the read-central RLS policy, backfills PINs for future/active bookings. At this point PINs are being generated but no row in `chime_phone_numbers` has `status='central'`, so confirmations still show the legacy per-diviner number. No user-visible change.
+2. **Deploy API + Lambda** — API is dual-mode (handles both legacy and PIN lookups); Lambda is updated to drive the PIN IVR flow. Still no user-visible change.
+3. **Deploy migration 20260421000003 (seed)** — this is the data-driven on-switch. Before running, replace the `{{CENTRAL_PHONE_NUMBER}}` and `{{CENTRAL_PHONE_ARN}}` placeholders with the real values for the number you procured. The migration flips the existing pool row to `status='central'` (or INSERTs it if not present) and severs the per-diviner binding. Any booking created from this point whose PIN is non-null will start advertising the central number in confirmations/Gcal/email.
 4. **Wire SIP Rule** for the central number. (Can be done before step 3 — this is AWS-side and has no effect on app behavior.)
 5. **Internal test** — admin creates a test booking, confirms PIN in email + Gcal, calls central number, enters PIN, verifies routing.
 6. **Monitor** — call success rate, PIN entry success rate, abandon rate on IVR, diviner complaints.
-7. **Kill switch if needed** — `UPDATE chime_central_numbers SET status = 'retired'` reverts every new confirmation to the per-diviner flow instantly, no redeploy.
+7. **Kill switch if needed** — `UPDATE chime_phone_numbers SET status='available' WHERE status='central'` (or delete the row) reverts every new confirmation to the per-diviner flow instantly, no redeploy.
 8. **Cleanup (future task)** — retire per-diviner Chime numbers and the `phone_number_requests` feature once usage is zero for 30 days.
 
 ## 11. Test Plan
@@ -316,7 +316,7 @@ Cannot be unit tested end-to-end. Test harness plan:
 ## 12. Rollback Plan
 
 - **Feature flag off** → booking confirmations revert to per-diviner number advertising. Existing per-diviner numbers still work. Rollback is one config flip, no DB change.
-- **Migration rollback** — the new columns are additive. A down migration drops `call_pin`, `call_pin_generated_at`, and the partial unique index. `chime_central_numbers` table drop. No data loss on bookings.
+- **Migration rollback** — the new columns are additive. A down migration drops `call_pin`, `call_pin_generated_at`, and the partial unique index. `chime_phone_numbers` table drop. No data loss on bookings.
 - **SIP Rule rollback** — delete the central-number SIP Rule; per-diviner rules remain.
 
 ## 13. Open Questions / Future Work

@@ -1,13 +1,13 @@
 -- ═══════════════════════════════════════════════════════════════════
 -- Migration: 20260421000002_booking_call_pin
--- Purpose:  Add per-booking 6-digit call PIN + a small config table for
---           shared/central Chime numbers. Supports the "shared number +
---           PIN" routing architecture described in
---           docs/shared-chime-number-pin-spec.md.
+-- Purpose:  Add per-booking 6-digit call PIN + extend the existing
+--           chime_phone_numbers table (created in 20260421000001) with
+--           a 'central' status so one row can act as the shared number
+--           that accepts PIN-based routing.
 --
 -- Additive only (CLAUDE.md §5, §7). No columns dropped or renamed.
--- Existing per-diviner Chime number flow (diviners.chime_phone_number
--- + src/app/api/chime/voice/lookup) continues to work in parallel.
+-- The existing per-diviner Chime flow (diviners.chime_phone_number and
+-- status='assigned' pool rows) continues to work unchanged.
 -- ═══════════════════════════════════════════════════════════════════
 
 
@@ -16,79 +16,72 @@ ALTER TABLE bookings
   ADD COLUMN IF NOT EXISTS call_pin              CHAR(6),
   ADD COLUMN IF NOT EXISTS call_pin_generated_at TIMESTAMPTZ;
 
--- Partial unique index: no two concurrently-usable PINs.
--- Scoped to not-yet-terminal booking states. Rows that move to
--- 'completed', 'canceled', or 'no_show' release their PIN back to the
--- namespace (the PIN stays on the row for audit, but may be reused by
--- a new active booking).
+-- Partial unique index: no two concurrently-usable PINs. Scoped to
+-- non-terminal booking states; terminal statuses may recycle their PIN.
 CREATE UNIQUE INDEX IF NOT EXISTS ux_bookings_active_call_pin
   ON bookings (call_pin)
   WHERE call_pin IS NOT NULL
     AND status IN ('pending', 'confirmed', 'in_progress');
 
--- Lookup helper: fast PIN → booking lookup for the Chime Lambda path.
+-- Fast PIN → booking lookup for the Chime Lambda / admin view path.
 CREATE INDEX IF NOT EXISTS idx_bookings_call_pin_lookup
   ON bookings (call_pin)
   WHERE call_pin IS NOT NULL;
 
 
--- ─── 2. chime_central_numbers (config) ───────────────────────────────
-CREATE TABLE IF NOT EXISTS chime_central_numbers (
-  id            UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-  phone_number  VARCHAR(20) NOT NULL UNIQUE,
-  phone_arn     TEXT,
-  status        VARCHAR(20) NOT NULL DEFAULT 'active'
-    CHECK (status IN ('active', 'retired')),
-  region        VARCHAR(10),
-  label         TEXT,
-  created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
-);
+-- ─── 2. chime_phone_numbers: extend status enum to include 'central' ─
+-- The table is already created (20260421000001) with
+--   status IN ('available', 'assigned')
+-- plus a named CHECK constraint:
+--   chk_chime_phone_numbers_assignment_consistent
+-- which requires assigned_diviner_id+assigned_at when status='assigned'.
+--
+-- We (a) widen the status enum to also allow 'central', and
+-- (b) relax the consistency check so a 'central' row has no diviner
+--     assignment (it serves everyone via PIN routing, not one diviner).
 
-CREATE INDEX IF NOT EXISTS idx_chime_central_numbers_status
-  ON chime_central_numbers (status);
+-- 2a. The inline CHECK created with the column is named
+--     <table>_<column>_check by Postgres. Drop it safely.
+ALTER TABLE chime_phone_numbers
+  DROP CONSTRAINT IF EXISTS chime_phone_numbers_status_check;
+
+ALTER TABLE chime_phone_numbers
+  ADD CONSTRAINT chime_phone_numbers_status_check
+  CHECK (status IN ('available', 'assigned', 'central'));
+
+-- 2b. Relax assignment consistency so 'central' rows carry no diviner.
+ALTER TABLE chime_phone_numbers
+  DROP CONSTRAINT IF EXISTS chk_chime_phone_numbers_assignment_consistent;
+
+ALTER TABLE chime_phone_numbers
+  ADD CONSTRAINT chk_chime_phone_numbers_assignment_consistent
+  CHECK (
+    (status = 'assigned'
+       AND assigned_diviner_id IS NOT NULL
+       AND assigned_at         IS NOT NULL)
+    OR
+    (status = 'available'
+       AND assigned_diviner_id IS NULL
+       AND assigned_at         IS NULL)
+    OR
+    (status = 'central'
+       AND assigned_diviner_id IS NULL
+       AND assigned_at         IS NULL)
+  );
 
 
--- ─── 3. updated_at trigger ───────────────────────────────────────────
--- set_updated_at_timestamp() is created in 20260421000001 and may
--- already exist; CREATE OR REPLACE keeps the migration idempotent.
-CREATE OR REPLACE FUNCTION set_updated_at_timestamp()
-RETURNS TRIGGER AS $$
-BEGIN
-  NEW.updated_at = now();
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-DROP TRIGGER IF EXISTS trg_chime_central_numbers_updated_at ON chime_central_numbers;
-CREATE TRIGGER trg_chime_central_numbers_updated_at
-  BEFORE UPDATE ON chime_central_numbers
-  FOR EACH ROW EXECUTE FUNCTION set_updated_at_timestamp();
-
-
--- ─── 4. RLS ──────────────────────────────────────────────────────────
-ALTER TABLE chime_central_numbers ENABLE ROW LEVEL SECURITY;
-
--- Admin full access.
-DROP POLICY IF EXISTS chime_central_numbers_admin_all ON chime_central_numbers;
-CREATE POLICY chime_central_numbers_admin_all ON chime_central_numbers
-  FOR ALL
-  USING (EXISTS (SELECT 1 FROM admin_users WHERE user_id = auth.uid()))
-  WITH CHECK (EXISTS (SELECT 1 FROM admin_users WHERE user_id = auth.uid()));
-
--- Authenticated users (clients, diviners) can read the active central
--- number(s) — the booking confirmation UI shows the number so the
--- client knows where to call.
-DROP POLICY IF EXISTS chime_central_numbers_read_active ON chime_central_numbers;
-CREATE POLICY chime_central_numbers_read_active ON chime_central_numbers
+-- ─── 3. RLS: let authenticated users read 'central' rows ─────────────
+-- Booking confirmation UI (client + diviner roles) needs to display the
+-- shared central number. Admin already has full access from 001.
+DROP POLICY IF EXISTS chime_phone_numbers_read_central ON chime_phone_numbers;
+CREATE POLICY chime_phone_numbers_read_central ON chime_phone_numbers
   FOR SELECT
-  USING (status = 'active');
+  USING (status = 'central');
 
 
--- ─── 5. Backfill: seed PINs for future/active bookings ───────────────
--- Strictly additive: only touches rows with call_pin IS NULL and a
--- non-terminal status. Uses the unique index as the collision guard
--- (retries on unique_violation). Safe to re-run — second run is a no-op.
+-- ─── 4. Backfill: seed PINs for existing non-terminal bookings ───────
+-- Idempotent: only touches rows with call_pin IS NULL. Uses the unique
+-- index as the collision guard and retries on unique_violation.
 DO $$
 DECLARE
   rec            RECORD;
@@ -109,7 +102,7 @@ BEGIN
 
       BEGIN
         UPDATE bookings
-           SET call_pin = candidate_pin,
+           SET call_pin              = candidate_pin,
                call_pin_generated_at = now()
          WHERE id = rec.id
            AND call_pin IS NULL;
@@ -123,7 +116,7 @@ BEGIN
 END$$;
 
 
--- ─── 6. Comments for future maintainers ──────────────────────────────
+-- ─── 5. Comments for future maintainers ──────────────────────────────
 COMMENT ON COLUMN bookings.call_pin              IS '6-digit PIN used by the client when calling the central Chime number to route to this booking. NULL for legacy bookings.';
 COMMENT ON COLUMN bookings.call_pin_generated_at IS 'When the PIN was first generated (audit trail).';
-COMMENT ON TABLE  chime_central_numbers          IS 'Shared central PSTN numbers that accept PIN-based routing. Added alongside per-diviner chime numbers. Rollout gate is data-driven: the presence of an active (status=''active'') row enables the shared-number + PIN path in booking confirmations; leave the table empty (or retire all rows) to keep the legacy per-diviner flow.';
+COMMENT ON COLUMN chime_phone_numbers.status     IS 'available = free pool row, admin may assign; assigned = dedicated to a specific diviner; central = shared PSTN number that accepts PIN-based routing to any booking.';
