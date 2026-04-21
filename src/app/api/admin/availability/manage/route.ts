@@ -8,13 +8,18 @@ export async function GET(req: NextRequest) {
   const user = await getAdminUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  void req;
+  const sp = req.nextUrl.searchParams;
+  const ownerId = sp.get("owner_id") || sp.get("diviner_id");
+
   const admin = createAdminClient();
-  const { data, error } = await admin
+  let query = admin
     .from("availability_templates")
-    .select("*")
-    .eq("created_by", user.id)
+    .select("*, diviners(id, display_name, username)")
     .order("created_at", { ascending: false });
+
+  if (ownerId) query = query.eq("owner_id", ownerId);
+
+  const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ templates: data });
 }
@@ -25,6 +30,8 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json();
   const {
+    owner_id,
+    diviner_id,
     title,
     start_date,
     end_date,
@@ -35,9 +42,12 @@ export async function POST(req: NextRequest) {
     duration_minutes,
     description,
     is_active,
+    service_id,
   } = body;
+  const finalOwnerId = owner_id || diviner_id;
 
   if (
+    !finalOwnerId ||
     !start_date ||
     !end_date ||
     !Array.isArray(weekdays) ||
@@ -50,7 +60,9 @@ export async function POST(req: NextRequest) {
   }
 
   const admin = createAdminClient();
-  const insertPayload = {
+  const insertPayload: Record<string, unknown> = {
+    owner_id: finalOwnerId,
+    diviner_id: finalOwnerId,
     title: title || "Available",
     start_date,
     end_date,
@@ -64,14 +76,25 @@ export async function POST(req: NextRequest) {
     created_by: user.id,
   };
 
+  if (service_id) insertPayload.service_id = service_id;
+
   let { data, error } = await admin
     .from("availability_templates")
     .insert(insertPayload)
     .select()
     .single();
 
+  if (error && service_id && error.message.toLowerCase().includes("service_id")) {
+    delete insertPayload.service_id;
+    ({ data, error } = await admin
+      .from("availability_templates")
+      .insert(insertPayload)
+      .select()
+      .single());
+  }
+
   if (error && error.message.toLowerCase().includes("created_by")) {
-    delete (insertPayload as Record<string, unknown>).created_by;
+    delete insertPayload.created_by;
     ({ data, error } = await admin
       .from("availability_templates")
       .insert(insertPayload)

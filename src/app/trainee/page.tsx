@@ -451,7 +451,8 @@ export default async function TraineeDashboardPage() {
               asChild
               className="shrink-0 bg-amber-600 hover:bg-amber-700 text-white"
             >
-              <Link href={`/${TABBY_USERNAME}`}>Book with Tabby</Link>
+              {/* <Link href={`/${TABBY_USERNAME}`}>Book with Tabby</Link> */}
+              <Link href={`/test-diviner-1`}>Book an appoinment</Link>
             </Button>
           </CardContent>
         </Card>

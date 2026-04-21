@@ -34,6 +34,8 @@ import { MIGRATION_SQL as MIG_20260416000006 } from "@/data/migrations/MIG_20260
 import { MIGRATION_SQL as MIG_20260416000005 } from "@/data/migrations/20260416000005_simultaneous_ring";
 import { MIGRATION_SQL as MIG_20260416000004 } from "@/data/migrations/20260416000004_tarot_dynamic_system";
 import { MIGRATION_SQL as MIG_20260416000007 } from "@/data/migrations/20260416000007_drop_tarot_spread_cards";
+import { MIGRATION_SQL as MIG_20260417000021 } from "@/data/migrations/20260417000021_availability_templates_created_by";
+import { MIGRATION_SQL as MIG_20260417000023 } from "@/data/migrations/20260417000023_availability_templates_admin_owned";
 
 /**
  * Allowlisted migrations that the admin migration runner can execute.
@@ -123,6 +125,22 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Adds payment_intent_id, paid_at, affiliate_id columns to trainees so the diviner-signup Stripe webhook (handleDivinerSignupPaymentSucceeded) can persist payment confirmation state. All columns nullable + additive only. Re-running is safe via ADD COLUMN IF NOT EXISTS.",
     sortKey: "20260408000113",
     sql: MIG_20260408000113,
+  },
+  "20260417000021_availability_templates_created_by": {
+    id: "20260417000021_availability_templates_created_by",
+    title: "Availability Templates Created By",
+    description:
+      "Adds nullable created_by UUID to availability_templates so admin-created schedules can retain the auth.users identifier of the admin who created them. Indexed and additive-only.",
+    sortKey: "20260417000021",
+    sql: MIG_20260417000021,
+  },
+  "20260417000023_availability_templates_admin_owned": {
+    id: "20260417000023_availability_templates_admin_owned",
+    title: "Availability Templates Admin Owned",
+    description:
+      "Keeps admin availability in the existing availability_templates table by allowing diviner_id to be null and indexing created_by for admin-owned schedules.",
+    sortKey: "20260417000023",
+    sql: MIG_20260417000023,
   },
   "20260408000114_drop_unique_astro_system_settings": {
     id: "20260408000114_drop_unique_astro_system_settings",
