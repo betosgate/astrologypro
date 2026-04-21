@@ -46,36 +46,36 @@ import { ProfileCompletionCard, type ProfileCompletionData } from "@/components/
 import { ProgressRing } from "@/components/community/progress-ring";
 import { DashboardFeedPreview } from "@/components/community/dashboard-feed-preview";
 import { getCommunityDashboardFeed } from "@/lib/dashboard-content";
+import { calcFamilyProfileCompletion } from "@/lib/community/family-profile-completion";
+import { formatBirthPlace } from "@/lib/community/birth-location";
 
 export const metadata = { title: "Community - AstrologyPro" };
 export const dynamic = "force-dynamic";
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
-/**
- * Calculate profile completion % for a family member.
- * Weights: full_name 20%, date_of_birth 15%, birth_time 15%,
- *          birth_city 15%, birth_country 15%, relationship 10%, natal_chart 10%
- */
-function calcFamilyMemberPct(m: {
-  full_name?: string | null;
-  date_of_birth?: string | null;
-  birth_time?: string | null;
-  birth_city?: string | null;
-  birth_country?: string | null;
-  relationship?: string | null;
-  natal_chart?: Record<string, unknown> | null;
-}): number {
-  let pct = 0;
-  if (m.full_name?.trim()) pct += 20;
-  if (m.date_of_birth) pct += 15;
-  if (m.birth_time) pct += 15;
-  if (m.birth_city?.trim()) pct += 15;
-  if (m.birth_country?.trim()) pct += 15;
-  if (m.relationship?.trim()) pct += 10;
-  if (m.natal_chart && Object.keys(m.natal_chart).length > 0) pct += 10;
-  return pct;
-}
+// Legacy local profile completion calculation kept for traceability. It counted
+// natal_chart as 10%, which made complete profiles look incomplete while their
+// chart was still pending. Active UI now uses calcFamilyProfileCompletion().
+// function calcFamilyMemberPct(m: {
+//   full_name?: string | null;
+//   date_of_birth?: string | null;
+//   birth_time?: string | null;
+//   birth_city?: string | null;
+//   birth_country?: string | null;
+//   relationship?: string | null;
+//   natal_chart?: Record<string, unknown> | null;
+// }): number {
+//   let pct = 0;
+//   if (m.full_name?.trim()) pct += 20;
+//   if (m.date_of_birth) pct += 15;
+//   if (m.birth_time) pct += 15;
+//   if (m.birth_city?.trim()) pct += 15;
+//   if (m.birth_country?.trim()) pct += 15;
+//   if (m.relationship?.trim()) pct += 10;
+//   if (m.natal_chart && Object.keys(m.natal_chart).length > 0) pct += 10;
+//   return pct;
+// }
 
 function ringColor(pct: number): string {
   if (pct >= 100) return "hsl(142, 71%, 45%)";
@@ -1270,20 +1270,23 @@ export default async function CommunityDashboardPage() {
             ) : (
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {familyMembers.map((m, idx) => {
-                  const completionPct = calcFamilyMemberPct(
+                  const completion = calcFamilyProfileCompletion(
                     m as {
                       full_name?: string | null;
                       date_of_birth?: string | null;
                       birth_time?: string | null;
+                      birth_time_unknown?: boolean | null;
                       birth_city?: string | null;
                       birth_country?: string | null;
                       relationship?: string | null;
                       natal_chart?: Record<string, unknown> | null;
                     }
                   );
+                  const completionPct = completion.percent;
                   const hasNatalChart =
                     m.natal_chart != null &&
                     Object.keys(m.natal_chart as Record<string, unknown>).length > 0;
+                  const profileComplete = completionPct >= 100;
                   const avatarColor = AVATAR_COLORS[idx % AVATAR_COLORS.length];
 
                   return (
@@ -1336,11 +1339,10 @@ export default async function CommunityDashboardPage() {
                               {m.birth_time}
                             </span>
                           )}
-                          {m.birth_city && (
+                          {(m.birth_city || m.birth_country) && (
                             <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground">
                               <MapPin className="size-3 shrink-0" />
-                              {m.birth_city}
-                              {m.birth_country ? `, ${m.birth_country}` : ""}
+                              {formatBirthPlace(m.birth_city, m.birth_country)}
                             </span>
                           )}
                         </div>
@@ -1355,12 +1357,19 @@ export default async function CommunityDashboardPage() {
                           />
                           <div className="flex-1 min-w-0">
                             <p className="text-xs text-muted-foreground leading-snug">
-                              Profile {completionPct < 100 ? "incomplete" : "complete"}
+                              Profile {profileComplete ? "complete" : "incomplete"}
                             </p>
-                            {completionPct < 100 && (
+                            {!profileComplete && (
                               <Button asChild variant="link" size="sm" className="h-auto p-0 mt-0.5 text-xs text-primary">
                                 <Link href={`/community/family/${m.id}`}>
                                   Complete Profile →
+                                </Link>
+                              </Button>
+                            )}
+                            {profileComplete && !hasNatalChart && (
+                              <Button asChild variant="link" size="sm" className="h-auto p-0 mt-0.5 text-xs text-primary">
+                                <Link href={`/community/family/${m.id}`}>
+                                  Generate Chart →
                                 </Link>
                               </Button>
                             )}

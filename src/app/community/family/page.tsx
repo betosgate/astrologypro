@@ -28,6 +28,7 @@ import {
   BirthCityAutocomplete,
   extractCountryFromCityLabel,
 } from "@/components/community/birth-city-autocomplete";
+import { formatBirthPlace } from "@/lib/community/birth-location";
 
 type FamilyMember = {
   id: string;
@@ -460,11 +461,10 @@ export default function CommunityFamilyPage() {
                           </span>
                         </div>
                       )}
-                      {m.birth_city && (
+                      {(m.birth_city || m.birth_country) && (
                         <div>
                           <span className="text-muted-foreground">Born in: </span>
-                          {m.birth_city}
-                          {m.birth_country ? `, ${m.birth_country}` : ""}
+                          {formatBirthPlace(m.birth_city, m.birth_country)}
                         </div>
                       )}
                       {m.chart_updated_at && (

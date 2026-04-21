@@ -9,9 +9,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { isAffiliateAssignmentV2Enabled } from "@/lib/feature-flags";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
+
+function featureGate() {
+  if (isAffiliateAssignmentV2Enabled()) return null;
+  return NextResponse.json(
+    { error: "Feature disabled" },
+    { status: 503 }
+  );
+}
 
 async function getDiviner() {
   const supabase = await createClient();
@@ -151,6 +160,8 @@ export async function GET() {
 
 // ───────────────────────────────── POST ────────────────────────────────────
 export async function POST(req: NextRequest) {
+  const blocked = featureGate();
+  if (blocked) return blocked;
   const ctx = await getDiviner();
   if (!ctx) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const { user, diviner, admin } = ctx;

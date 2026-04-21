@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { isAffiliateAssignmentV2Enabled } from "@/lib/feature-flags";
 import {
   Card,
   CardContent,
@@ -109,11 +111,19 @@ function fmtDate(iso: string) {
 
 // ─── Page ──────────────────────────────────────────────────────────────────
 export default function AffiliateAssignmentsPage() {
+  const router = useRouter();
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [loading, setLoading] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
   const [groupBy, setGroupBy] = useState<"affiliate" | "service">("affiliate");
   const [showInactive, setShowInactive] = useState(false);
+
+  // Feature flag gating — redirect when off
+  useEffect(() => {
+    if (!isAffiliateAssignmentV2Enabled()) {
+      router.replace("/dashboard/affiliates");
+    }
+  }, [router]);
 
   const load = useCallback(async () => {
     setLoading(true);
