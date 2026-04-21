@@ -1813,15 +1813,52 @@ async function handlePaymentIntentSucceeded(
   const bookingId = paymentIntent.metadata?.bookingId;
   const clientEmail = paymentIntent.metadata?.clientEmail;
   const affiliateCode = paymentIntent.metadata?.affiliateCode;
+  const refCodeFromPi = paymentIntent.metadata?.refCode ?? null;
   if (!bookingId || !clientEmail) return;
 
   const supabase = createAdminClient();
 
-  // Mark booking as confirmed
+  // Mark booking as confirmed + (defensive) persist ref_code if it wasn't
+  // already stamped at booking creation time.
   await supabase
     .from("bookings")
-    .update({ status: "confirmed" })
+    .update({
+      status: "confirmed",
+      ...(refCodeFromPi ? { ref_code: refCodeFromPi } : {}),
+    })
     .eq("id", bookingId);
+
+  // ── Task 03: credit affiliate commission if this booking was attributed
+  // via ?ref=. Idempotent (UNIQUE (booking_id) on campaign_conversions).
+  try {
+    const { creditAffiliateConversion } = await import("@/lib/affiliate-attribution");
+    const { data: bookingForAttribution } = await supabase
+      .from("bookings")
+      .select("id, diviner_id, service_id, base_price, total_amount, ref_code, services(template_id)")
+      .eq("id", bookingId)
+      .single();
+
+    if (bookingForAttribution?.ref_code) {
+      const svc = bookingForAttribution.services as { template_id?: string | null } | { template_id?: string | null }[] | null;
+      const templateId = Array.isArray(svc)
+        ? svc[0]?.template_id ?? null
+        : svc?.template_id ?? null;
+      const amountCents =
+        Number(bookingForAttribution.total_amount ?? bookingForAttribution.base_price ?? 0) * 100;
+
+      await creditAffiliateConversion(supabase, {
+        bookingId: bookingForAttribution.id as string,
+        divinerId: bookingForAttribution.diviner_id as string,
+        templateId,
+        orderAmountCents: Math.round(amountCents),
+        refCode: bookingForAttribution.ref_code as string,
+      });
+    }
+  } catch (err) {
+    // Never fail the webhook on commission errors — log and continue so
+    // Stripe doesn't retry forever.
+    console.error("[affiliate_conversion] credit failed", { bookingId, err });
+  }
 
   // Fetch booking with related data for the email + calendar sync
   const { data: booking } = await supabase

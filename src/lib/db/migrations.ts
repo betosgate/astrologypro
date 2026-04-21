@@ -44,7 +44,9 @@ import { MIGRATION_SQL as MIG_20260421000001 } from "@/data/migrations/202604210
 import { MIGRATION_SQL as MIG_20260421000002 } from "@/data/migrations/20260421000002_booking_call_pin";
 import { MIGRATION_SQL as MIG_20260421000003 } from "@/data/migrations/20260421000003_seed_central_chime_number";
 import { MIGRATION_SQL as MIG_20260421000004 } from "@/data/migrations/20260421000004_add_general_service_templates";
+import { MIGRATION_SQL as MIG_20260421000005 } from "@/data/migrations/20260421000005_seed_general_nativity_template_content";
 import { MIGRATION_SQL as MIG_20260421000010 } from "@/data/migrations/20260421000010_repair_family_birth_country";
+import { MIGRATION_SQL as MIG_20260421000001_ASA } from "@/data/migrations/20260421000001_affiliate_service_assignments";
 
 /**
  * Allowlisted migrations that the admin migration runner can execute.
@@ -438,6 +440,14 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
     sortKey: "20260421000002",
     sql: MIG_20260421000004,
   },
+  "20260421000005_seed_general_nativity_template_content": {
+    id: "20260421000005_seed_general_nativity_template_content",
+    title: "Seed general nativity template content",
+    description:
+      "Populates general-nativity-birth-chart with a complete reference set of admin-editable fields including long description, included items, target audience, FAQ, SEO metadata, and explicit display/pricing values.",
+    sortKey: "20260421000005",
+    sql: MIG_20260421000005,
+  },
   "20260421000010_repair_family_birth_country": {
     id: "20260421000010_repair_family_birth_country",
     title: "Repair existing family birth_country (parse from birth_city)",
@@ -445,6 +455,14 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "One-time data repair for community_family_members rows where birth_country IS NULL and birth_city ends with a recognized country suffix (e.g. 'Miami, FL, United States of America'). Uses an allowlist of ~70 country names ordered longest-first so multi-word matches win. Never overwrites an existing birth_country; ambiguous labels are skipped, not guessed. Safe to re-run — a 2nd pass updates zero rows. NON-destructive: no schema changes, no deletes.",
     sortKey: "20260421000010",
     sql: MIG_20260421000010,
+  },
+  "20260421000001_affiliate_service_assignments": {
+    id: "20260421000001_affiliate_service_assignments",
+    title: "Affiliate Service Assignments + URL Attribution",
+    description:
+      "New diviner_service_affiliates table (source of truth for affiliate assignments, PROFILE or SERVICE-scoped). Extends affiliate_campaigns with owner_type (diviner | affiliate) + owner_affiliate_id + commission_value_snapshot + source_assignment_id and a CHECK that affiliate-owned campaigns must carry the full owner context. Extends campaign_clicks with affiliate_id + ref_code + commission snapshots; campaign_conversions with booking_id + ref_code_snapshot + commission_source + reversal columns and a UNIQUE (booking_id) idempotency index; bookings with ref_code; page_views with affiliate_id + ref_code. Adds trigger auto_pause_affiliate_campaigns_on_revoke so revoking an assignment automatically pauses matching affiliate-owned campaigns. RLS: diviner and named affiliate can SELECT; only the owning diviner can write; service_role full access. Strictly additive — no DROPs.",
+    sortKey: "20260421000001",
+    sql: MIG_20260421000001_ASA,
   },
 };
 
