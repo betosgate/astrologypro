@@ -176,9 +176,9 @@ const NAV_GROUPS = [
     ],
   },
   {
-    label: "My Schedule",
+    label: "Calender",
     items: [
-      { label: "My Schedule", href: "/admin/my-schedule", icon: UserCog },
+      { label: "Calender", href: "/admin/my-schedule", icon: UserCog },
       { label: "Bookings", href: "/admin/bookings", icon: CalendarDays },
       { label: "My Availability", href: "/admin/availability", icon: ClipboardList },
     ],
