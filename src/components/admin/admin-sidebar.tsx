@@ -78,6 +78,7 @@ import {
   Layers3,
   Timer,
   CalendarCheck,
+  PhoneCall,
 } from "lucide-react";
 
 // ─── Nav structure ─────────────────────────────────────────────────────────────
@@ -104,6 +105,7 @@ const NAV_GROUPS = [
       { label: "Deleted Users", href: "/admin/users/deleted", icon: UserX },
       { label: "Service Packages", href: "/admin/role-service-packages", icon: Layers3 },
       { label: "Contracts", href: "/admin/contracts", icon: ScrollText },
+      { label: "Phone Requests", href: "/admin/phone-requests", icon: PhoneCall },
     ],
   },
   {

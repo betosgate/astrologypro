@@ -174,6 +174,22 @@ function SettingsContent() {
   // Phone state
   // phoneProvisioning state removed — admin manages phone number provisioning
   const [phoneSessions, setPhoneSessions] = useState<PhoneSession[]>([]);
+  const [phoneRequestStatus, setPhoneRequestStatus] = useState<{
+    hasPhoneNumber: boolean;
+    currentRequest: {
+      id: string;
+      status: "pending" | "assigned" | "rejected";
+      created_at: string;
+      rejected_reason: string | null;
+    } | null;
+    latestRequest: {
+      id: string;
+      status: "pending" | "assigned" | "rejected";
+      created_at: string;
+      rejected_reason: string | null;
+    } | null;
+  } | null>(null);
+  const [submittingPhoneRequest, setSubmittingPhoneRequest] = useState(false);
 
   // Loyalty state
   const [discountRules, setDiscountRules] = useState<DiscountRule[]>([]);
@@ -324,11 +340,62 @@ function SettingsContent() {
         if (sessions) {
           setPhoneSessions(sessions);
         }
+
+        // Load phone number request status for the Phone tab.
+        try {
+          const res = await fetch("/api/diviner/phone-requests/me", {
+            cache: "no-store",
+          });
+          if (res.ok) {
+            const payload = await res.json();
+            setPhoneRequestStatus({
+              hasPhoneNumber: !!payload.hasPhoneNumber,
+              currentRequest: payload.currentRequest ?? null,
+              latestRequest: payload.latestRequest ?? null,
+            });
+          }
+        } catch {
+          // Non-fatal — UI will fall back to "Contact admin" messaging.
+        }
       }
       setLoading(false);
     }
     load();
   }, []);
+
+  async function handleRequestPhoneNumber() {
+    if (submittingPhoneRequest) return;
+    setSubmittingPhoneRequest(true);
+    try {
+      const res = await fetch("/api/diviner/phone-requests", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(payload?.error ?? "Could not submit request");
+        return;
+      }
+      toast.success("Phone number request sent to admin");
+      // Refetch status so UI flips to "pending" badge.
+      const statusRes = await fetch("/api/diviner/phone-requests/me", {
+        cache: "no-store",
+      });
+      if (statusRes.ok) {
+        const statusPayload = await statusRes.json();
+        setPhoneRequestStatus({
+          hasPhoneNumber: !!statusPayload.hasPhoneNumber,
+          currentRequest: statusPayload.currentRequest ?? null,
+          latestRequest: statusPayload.latestRequest ?? null,
+        });
+      }
+    } catch {
+      toast.error("Could not submit request. Please try again.");
+    } finally {
+      setSubmittingPhoneRequest(false);
+    }
+  }
 
   // Fetch live Stripe Connect status whenever stripe_account_id is known
   useEffect(() => {
@@ -1036,6 +1103,23 @@ function SettingsContent() {
                     {settings.phone_dialin_enabled ? "Active" : "Inactive"}
                   </Badge>
                 </div>
+              ) : phoneRequestStatus?.currentRequest ? (
+                <div className="rounded-lg border border-dashed bg-amber-500/5 p-6 text-center">
+                  <Phone className="mx-auto size-8 text-amber-500/60 mb-2" />
+                  <p className="text-sm font-medium text-foreground">
+                    Request pending — awaiting admin
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Submitted{" "}
+                    {new Date(
+                      phoneRequestStatus.currentRequest.created_at,
+                    ).toLocaleString()}
+                    . You&apos;ll see your number here once an admin assigns one.
+                  </p>
+                  <Badge variant="secondary" className="mt-3">
+                    Pending
+                  </Badge>
+                </div>
               ) : (
                 <div className="rounded-lg border border-dashed bg-muted/20 p-6 text-center">
                   <Phone className="mx-auto size-8 text-muted-foreground/50 mb-2" />
@@ -1043,8 +1127,31 @@ function SettingsContent() {
                     No phone number assigned yet.
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Contact the platform admin to get a dedicated phone number for your readings.
+                    Request a dedicated Chime number from the platform admin
+                    below. You&apos;ll be notified once it&apos;s assigned.
                   </p>
+                  {phoneRequestStatus?.latestRequest?.status === "rejected" &&
+                    phoneRequestStatus.latestRequest.rejected_reason && (
+                      <p className="mt-3 text-xs text-destructive">
+                        Previous request rejected:{" "}
+                        {phoneRequestStatus.latestRequest.rejected_reason}
+                      </p>
+                    )}
+                  <Button
+                    className="mt-4"
+                    size="sm"
+                    onClick={handleRequestPhoneNumber}
+                    disabled={submittingPhoneRequest}
+                  >
+                    {submittingPhoneRequest ? (
+                      <>
+                        <Loader2 className="mr-2 size-4 animate-spin" />
+                        Submitting…
+                      </>
+                    ) : (
+                      "Request Phone Number"
+                    )}
+                  </Button>
                 </div>
               )}
             </CardContent>
