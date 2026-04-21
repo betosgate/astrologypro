@@ -1,0 +1,18 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "src/app/admin/bookings/[id]/page.tsx",
+    "src/app/admin/bookings/[id]/_components/call-pin-card.tsx",
+    "src/app/booking/[uniqueId]/page.tsx",
+    "src/components/booking/booking-manage-client.tsx",
+    "src/app/api/admin/bookings/[id]/pin/route.ts",
+    "src/app/api/chime/voice/lookup/route.ts",
+    "src/app/api/stripe/booking-payment/route.ts",
+    "src/app/api/stripe/webhooks/route.ts",
+    "src/lib/booking-call-pin.ts",
+    "src/lib/calendar-utils.ts",
+    "src/lib/email.ts",
+    "src/lib/db/migrations.ts",
+    "src/data/migrations/20260421000002_booking_call_pin.ts"
+  ]
+}
