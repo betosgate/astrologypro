@@ -2381,7 +2381,15 @@ function HorarySection({ data, slug, areaOfInquiry, checkDacen, onDecanClick }: 
 
 // ─── Tab Bar (horizontal scrollable with arrow buttons) ──────────────────────
 
-function TabBar({ currentSlug, onSelect }: { currentSlug: string; onSelect: (slug: string) => void }) {
+function TabBar({
+  currentSlug,
+  onSelect,
+  tabs,
+}: {
+  currentSlug: string;
+  onSelect: (slug: string) => void;
+  tabs: TabDef[];
+}) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
@@ -2441,7 +2449,7 @@ function TabBar({ currentSlug, onSelect }: { currentSlug: string; onSelect: (slu
           className="flex flex-1 gap-1 overflow-x-auto"
           style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
         >
-          {TABS.map((tab) => {
+          {tabs.map((tab) => {
             const Icon = tab.icon;
             const active = tab.slug === currentSlug;
             return (
@@ -2505,13 +2513,27 @@ function BirthBlock({ title, value, onChange, disabled }: { title?: string; valu
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 
-export default function AdminHoroscopePage() {
+export interface HoroscopeToolkitPageProps {
+  basePath?: string;
+  allowedSlugs?: string[];
+  initialPrefill?: string | null;
+}
+
+export function HoroscopeToolkitPage({
+  basePath = "/admin/horoscope",
+  allowedSlugs,
+  initialPrefill = null,
+}: HoroscopeToolkitPageProps = {}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const resultRef = useRef<HTMLDivElement>(null);
 
-  const currentSlug = searchParams.get("tab") ?? TABS[0].slug;
-  const currentTab = TABS.find((t) => t.slug === currentSlug) ?? TABS[0];
+  const visibleTabs = allowedSlugs?.length
+    ? TABS.filter((tab) => allowedSlugs.includes(tab.slug))
+    : TABS;
+  const fallbackTab = visibleTabs[0] ?? TABS[0];
+  const currentSlug = searchParams.get("tab") ?? fallbackTab.slug;
+  const currentTab = visibleTabs.find((t) => t.slug === currentSlug) ?? fallbackTab;
 
   const [form, setForm] = useState<FormState>(defaultForm());
 
@@ -2575,7 +2597,7 @@ export default function AdminHoroscopePage() {
   // We decode the prefill, apply it to the form, then auto-fire the reading so
   // the diviner lands directly on the rendered result — no second click.
   const [pendingAutoSubmit, setPendingAutoSubmit] = useState(false);
-  const prefillParam = searchParams.get("prefill");
+  const prefillParam = searchParams.get("prefill") ?? initialPrefill;
   useEffect(() => {
     if (!prefillParam) return;
     try {
@@ -2585,9 +2607,9 @@ export default function AdminHoroscopePage() {
     } catch {
       // malformed prefill — ignore so the diviner can fill the form by hand
     }
-    // Re-run only when the prefill blob itself changes. Tab-switch resets are
-    // handled by the effect above; this one purely hydrates from the URL.
-  }, [prefillParam]);
+    // Re-apply when the tab changes so restricted community wrappers keep the
+    // saved pair/self data while switching between compatible report tabs.
+  }, [prefillParam, currentSlug]);
 
   // Fire handleSubmit once the prefill has populated the form and it's valid.
   // We can't call handleSubmit() in the same effect that calls setForm() —
@@ -2630,7 +2652,10 @@ export default function AdminHoroscopePage() {
     return () => target.removeEventListener("scroll", onScroll);
   }, []);
 
-  function setTab(slug: string) { router.push(`/admin/horoscope?tab=${slug}`); }
+  function setTab(slug: string) {
+    const separator = basePath.includes("?") ? "&" : "?";
+    router.push(`${basePath}${separator}tab=${slug}`);
+  }
   function addProgress(msg: string) { setProgress((p) => [...p, msg]); }
 
   function validateForm(): string | null {
@@ -3390,7 +3415,7 @@ export default function AdminHoroscopePage() {
       )}
 
       {/* Horizontal tab bar with scroll arrows */}
-      <TabBar currentSlug={currentSlug} onSelect={setTab} />
+      <TabBar currentSlug={currentSlug} onSelect={setTab} tabs={visibleTabs} />
 
       {/* Main panel */}
       <div className="flex-1 overflow-y-auto result-scroll-container" onScroll={(e) => setShowScrollTop((e.currentTarget.scrollTop) > 400)}>
@@ -3737,4 +3762,8 @@ export default function AdminHoroscopePage() {
       />
     </div>
   );
+}
+
+export default function AdminHoroscopePage() {
+  return <HoroscopeToolkitPage />;
 }

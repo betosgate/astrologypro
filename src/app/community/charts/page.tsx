@@ -267,6 +267,30 @@ export default function ChartsPage() {
 
                   return (
                     <CardContent className="border-t pt-4 space-y-5">
+                      <div className="rounded-lg border bg-primary/5 p-4">
+                        <p className="text-sm font-medium">Open the full diviner-style report</p>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          Reuse the saved birth data for this pair and load the same detailed relationship toolkit used in practitioner sessions.
+                        </p>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <Button asChild size="sm">
+                            <Link href={`/community/charts/detailed?personAId=${encodeURIComponent(a.id)}&personBId=${encodeURIComponent(b.id)}&mode=romantic`}>
+                              Romantic
+                            </Link>
+                          </Button>
+                          <Button asChild size="sm" variant="outline">
+                            <Link href={`/community/charts/detailed?personAId=${encodeURIComponent(a.id)}&personBId=${encodeURIComponent(b.id)}&mode=friendship`}>
+                              Friendship
+                            </Link>
+                          </Button>
+                          <Button asChild size="sm" variant="outline">
+                            <Link href={`/community/charts/detailed?personAId=${encodeURIComponent(a.id)}&personBId=${encodeURIComponent(b.id)}&mode=business`}>
+                              Business
+                            </Link>
+                          </Button>
+                        </div>
+                      </div>
+
                       {/* Summary */}
                       <p className="text-sm text-muted-foreground italic">
                         {synastry.summary}

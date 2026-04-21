@@ -91,13 +91,20 @@ export default async function TransitsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <div className="flex items-center gap-2">
-          <TrendingUp className="size-5 text-muted-foreground" />
-          <h1 className="text-2xl font-bold tracking-tight">Monthly Transits</h1>
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <div className="flex items-center gap-2">
+              <TrendingUp className="size-5 text-muted-foreground" />
+              <h1 className="text-2xl font-bold tracking-tight">Monthly Transits</h1>
+            </div>
+            <p className="text-muted-foreground">
+              How the current sky affects your family — {monthLabel}
+            </p>
+          </div>
+          <Button asChild size="sm">
+            <Link href="/community/transits/detailed">Open Full Monthly Report</Link>
+          </Button>
         </div>
-        <p className="text-muted-foreground">
-          How the current sky affects your family — {monthLabel}
-        </p>
       </div>
 
       {/* Community member cross-sell CTA */}
