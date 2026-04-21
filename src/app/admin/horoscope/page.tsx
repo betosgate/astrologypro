@@ -2529,7 +2529,9 @@ export function HoroscopeToolkitPage({
   const resultRef = useRef<HTMLDivElement>(null);
 
   const visibleTabs = allowedSlugs?.length
-    ? TABS.filter((tab) => allowedSlugs.includes(tab.slug))
+    ? allowedSlugs
+        .map((slug) => TABS.find((tab) => tab.slug === slug))
+        .filter((tab): tab is TabDef => Boolean(tab))
     : TABS;
   const fallbackTab = visibleTabs[0] ?? TABS[0];
   const currentSlug = searchParams.get("tab") ?? fallbackTab.slug;
