@@ -26,6 +26,17 @@ export interface CalendarConnectionRecord {
 
 interface UpsertCalendarConnectionInput {
   divinerId: string;
+  /**
+   * Auth user id. Required when `skipDivinerLookup` is true (admin-owned
+   * connections have no matching diviners row). When omitted, the helper
+   * resolves user_id by looking up the diviner row by divinerId.
+   */
+  userId?: string;
+  /**
+   * Set to true for admin-owned connections so we skip the diviners lookup
+   * and persist owner_id = divinerId as-is (which is the admin's auth.uid).
+   */
+  skipDivinerLookup?: boolean;
   provider: CalendarProvider;
   refreshToken: string;
   accessToken?: string | null;
@@ -44,18 +55,49 @@ export async function upsertCalendarConnection(
   input: UpsertCalendarConnectionInput,
 ): Promise<void> {
   try {
-    const { divinerId, provider, refreshToken, accessToken, expiresAt, email, accountIdentifier } = input;
+    const {
+      divinerId,
+      userId,
+      skipDivinerLookup,
+      provider,
+      refreshToken,
+      accessToken,
+      expiresAt,
+      email,
+      accountIdentifier,
+    } = input;
     if (!divinerId || !refreshToken) return;
 
-    const { data: diviner } = await admin
-      .from("diviners")
-      .select("id, user_id")
-      .eq("id", divinerId)
-      .maybeSingle();
+    let resolvedUserId: string | null = null;
+    let resolvedOwnerId: string = divinerId;
 
-    if (!diviner?.user_id) {
-      console.warn("[calendar/connections] cannot dual-write — diviner missing user_id:", divinerId);
-      return;
+    if (skipDivinerLookup) {
+      // Admin-owned connection: divinerId is the admin's auth.uid. Use it as
+      // both user_id and owner_id — there is no diviners row to look up.
+      if (!userId) {
+        console.warn(
+          "[calendar/connections] skipDivinerLookup requires userId — not writing",
+        );
+        return;
+      }
+      resolvedUserId = userId;
+      resolvedOwnerId = divinerId;
+    } else {
+      const { data: diviner } = await admin
+        .from("diviners")
+        .select("id, user_id")
+        .eq("id", divinerId)
+        .maybeSingle();
+
+      if (!diviner?.user_id) {
+        console.warn(
+          "[calendar/connections] cannot dual-write — diviner missing user_id:",
+          divinerId,
+        );
+        return;
+      }
+      resolvedUserId = diviner.user_id;
+      resolvedOwnerId = diviner.id;
     }
 
     let expiresAtIso: string | null = null;
@@ -78,8 +120,8 @@ export async function upsertCalendarConnection(
       .from("calendar_connections")
       .upsert(
         {
-          user_id: diviner.user_id,
-          owner_id: diviner.id,
+          user_id: resolvedUserId,
+          owner_id: resolvedOwnerId,
           provider,
           refresh_token: refreshToken,
           access_token: accessToken ?? null,
@@ -105,8 +147,8 @@ export async function upsertCalendarConnection(
           .from("calendar_connections")
           .upsert(
             {
-              user_id: diviner.user_id,
-              owner_id: diviner.id,
+              user_id: resolvedUserId,
+              owner_id: resolvedOwnerId,
               provider,
               refresh_token: refreshToken,
               access_token: accessToken ?? null,

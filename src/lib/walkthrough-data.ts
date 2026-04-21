@@ -9096,17 +9096,17 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
       {
         name: "pm-profile-settings",
         label: "Profile & Settings",
-        description: "Manage your Perennial Mandalism profile and account settings — personal details, birth data, notification preferences, privacy controls, and portal display options.",
+        description: "Manage your Perennial Mandalism member profile by reviewing and updating your personal information, birth data, address details, spiritual questionnaire responses, and membership information.",
         group: "My Membership",
-        purpose: "Your profile in the PM portal is the foundation for all personalized features. Your birth data powers your natal chart, transit reports, and personalized horoscopes. Notification settings control how you are alerted about events, new content, and Sunday Service reminders. Keeping this profile complete and accurate ensures every tool on the platform works as well as possible for you.",
+        purpose: "This section helps keep your Perennial Mandalism profile complete and accurate. Your personal and birth information support astrology-based personalization, while your address, questionnaire, and membership details help ensure your account reflects your active participation in the portal. The completion tracker at the top shows how much of your core profile has been filled in.",
         bullets: [
-          "Personal information — update your name, email, profile photo, and display name",
-          "Birth data — your date, time, and place of birth (required for all personalized astrology tools)",
-          "Timezone setting — ensure all events, service times, and transit data are displayed in your local time",
-          "Notification preferences — choose email or push notifications for events, Sunday Service, new rituals, and announcements",
-          "Privacy settings — control what parts of your profile (if any) are visible to other community members",
-          "Portal display — choose your preferred homepage layout (chart-first, calendar-first, or community feed-first)",
-          "Account security — update your password and manage login sessions"
+          "Profile completion tracker — view how many required profile fields are completed and monitor your overall profile status",
+          "Personal information — update your first name, last name, email, phone number, gender, occupation, and relationship status",
+          "Birth data — maintain your date of birth, birth time, and birth city for astrology-based personalization",
+          "Address details — review or edit your street address, city, state, and zip code",
+          "Spiritual Journey Questionnaire — access and manage your questionnaire responses connected to your member profile",
+          "Membership information — view your current program, membership status, and member-since date",
+          "Save changes — apply and store any profile updates made in this section"
         ]
       },
       {

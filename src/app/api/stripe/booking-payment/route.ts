@@ -14,6 +14,10 @@ import { isDivinerPayoutReadyForPaidServices } from "@/lib/payout-readiness";
 import { calculateMoneySplit } from "@/lib/money-split";
 import { getSessionLinkForBooking } from "@/lib/service-toolkit-mapping";
 import {
+  generateBookingCallPin,
+  getActiveChimePhoneNumber,
+} from "@/lib/booking-call-pin";
+import {
   sendBookingConfirmation,
   sendBookingAccessInstructions,
   sendBookingInvoice,
@@ -35,6 +39,13 @@ interface BookingPaymentBody {
   clientPhone?: string;
   questionnaire: Record<string, string | number | undefined>;
   affiliateCode?: string;
+  /**
+   * 2026-04-21 affiliate sprint: the `?ref=` value from the URL (e.g.
+   * `cmp_abCD1234`). When present and valid (matches /^cmp_[A-Za-z0-9]{8}$/),
+   * the booking row persists it in bookings.ref_code and the Stripe
+   * webhook will use it to credit commission to the owning affiliate.
+   */
+  refCode?: string;
   giftCode?: string;
   policyAcknowledgedAt?: string;
   booking_notes?: string;
@@ -57,6 +68,7 @@ export async function POST(request: NextRequest) {
       clientPhone,
       questionnaire,
       affiliateCode,
+      refCode: rawRefCode,
       giftCode,
       policyAcknowledgedAt,
       booking_notes,
@@ -64,6 +76,11 @@ export async function POST(request: NextRequest) {
       freeSlot,
     } = body;
     const questionnaireData = questionnaire ?? {};
+
+    // Sanitize ref_code against cmp_XXXXXXXX pattern so random URL params
+    // can't pollute the column.
+    const { sanitizeRefCode } = await import("@/lib/affiliate-attribution");
+    const refCode = sanitizeRefCode(rawRefCode);
 
     // Capture request metadata for audit/analytics
     const requestMetadata = {
@@ -552,6 +569,24 @@ export async function POST(request: NextRequest) {
 
     lap("client + conflicts resolved");
 
+    // Generate a call PIN for shared-central-number routing. This is
+    // always generated (additive, nullable column, no user-facing
+    // effect unless an active chime_phone_numbers row is configured)
+    // so the column is ready the moment ops provisions a central number.
+    // Failure here is non-fatal — we log and continue; the booking is
+    // still valid.
+    const callPin = await generateBookingCallPin(adminSupabase as any).catch(
+      (err) => {
+        console.warn("[booking-payment] call PIN generation failed", err);
+        return null;
+      }
+    );
+    if (!callPin) {
+      console.warn(
+        "[booking-payment] proceeding without call PIN (generator exhausted or errored)"
+      );
+    }
+
     // Create booking record with pending status
     // Use admin client — guest bookers have no session so RLS would block the insert
     const { data: booking, error: bookingError } = await adminSupabase
@@ -575,6 +610,13 @@ export async function POST(request: NextRequest) {
           ...(availabilityTemplateDescription ? { availability_description: availabilityTemplateDescription } : {}),
         },
         ...(policyAcknowledgedAt ? { policy_acknowledged_at: policyAcknowledgedAt } : {}),
+        ...(refCode ? { ref_code: refCode } : {}),
+        ...(callPin
+          ? {
+              call_pin: callPin.pin,
+              call_pin_generated_at: callPin.generatedAt,
+            }
+          : {}),
       })
       .select("id, booking_token")
       .single();
@@ -584,6 +626,29 @@ export async function POST(request: NextRequest) {
         { error: "Failed to create booking" },
         { status: 500 }
       );
+    }
+
+    // Resolve which phone dial-in to advertise to the client on the
+    // confirmation email / Gcal / confirmation page. Gate is data-
+    // driven: if this booking has a PIN and an active central number
+    // row exists, advertise the central number + PIN. Otherwise the
+    // helpers fall back to the legacy per-diviner number naturally
+    // (centralPhoneNumber/callPin will be null).
+    let advertisedCentralNumber: string | null = null;
+    let advertisedCallPin: string | null = null;
+    if (callPin) {
+      try {
+        const central = await getActiveChimePhoneNumber(adminSupabase as any);
+        if (central) {
+          advertisedCentralNumber = central.phoneNumber;
+          advertisedCallPin = callPin.pin;
+        }
+      } catch (err) {
+        console.warn(
+          "[booking-payment] central-number lookup failed; falling back to per-diviner number",
+          err
+        );
+      }
     }
 
     await trackDivinerActivityEvent({
@@ -643,6 +708,7 @@ export async function POST(request: NextRequest) {
           splitPlatformFeeRule: bookingSplit.trace.platformFeeRule,
           splitAffiliateRule: bookingSplit.trace.affiliateRule,
           ...(affiliateCode ? { affiliateCode } : {}),
+          ...(refCode ? { refCode } : {}),
           ...(giftCode ? { giftCode } : {}),
           ...(loyaltyRuleName
             ? { loyaltyDiscount: `${loyaltyDiscountPercent}%` }
@@ -686,6 +752,8 @@ export async function POST(request: NextRequest) {
           {
             sessionLink: paidSessionLink,
             phoneNumber: diviner?.chime_phone_number,
+            centralPhoneNumber: advertisedCentralNumber,
+            callPin: advertisedCallPin,
           },
         );
         const calAttendeesPaid: Array<{ email: string; name?: string }> = [];
@@ -776,6 +844,8 @@ export async function POST(request: NextRequest) {
         sessionLink: portalBookingsUrl,
         duration: service.duration_minutes,
         phoneNumber: diviner.chime_phone_number ?? undefined,
+        centralPhoneNumber: advertisedCentralNumber ?? undefined,
+        callPin: advertisedCallPin ?? undefined,
       };
 
       const emailPromises: Promise<unknown>[] = [
@@ -874,6 +944,8 @@ export async function POST(request: NextRequest) {
           {
             sessionLink: portalBookingsUrl,
             phoneNumber: diviner?.chime_phone_number,
+            centralPhoneNumber: advertisedCentralNumber,
+            callPin: advertisedCallPin,
           },
         );
         // Gather additional attendees for calendar event

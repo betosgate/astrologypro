@@ -16,7 +16,35 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { Plus, X, ArrowLeft } from "lucide-react";
+import {
+  Plus,
+  X,
+  ArrowLeft,
+  Sparkles,
+  Sun,
+  Moon,
+  Star,
+  Sunrise,
+  CalendarDays,
+  Heart,
+  Users,
+  Briefcase,
+  Eye,
+  Zap,
+  Circle,
+  Flame,
+  Layers,
+  LayoutGrid,
+  TrendingUp,
+  Anchor,
+  HeartHandshake,
+  Cross,
+  CircleDot,
+  Bolt,
+  Clock3,
+  BadgeDollarSign,
+  CheckCircle2,
+} from "lucide-react";
 import { toast } from "sonner";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -87,6 +115,59 @@ const ICON_OPTIONS = [
   "Anchor", "HeartHandshake", "Cross", "CircleDot", "Bolt", "Sparkles",
 ];
 
+const ICON_COMPONENTS = {
+  Sun,
+  Moon,
+  Star,
+  Sunrise,
+  CalendarDays,
+  Heart,
+  Users,
+  Briefcase,
+  Eye,
+  Zap,
+  Circle,
+  Flame,
+  Layers,
+  LayoutGrid,
+  TrendingUp,
+  Anchor,
+  HeartHandshake,
+  Cross,
+  CircleDot,
+  Bolt,
+  Sparkles,
+} as const;
+
+function getPreviewIcon(iconName: string) {
+  return ICON_COMPONENTS[iconName as keyof typeof ICON_COMPONENTS] ?? Sparkles;
+}
+
+function formatPrice(value: string) {
+  const numeric = Number.parseFloat(value);
+  if (!Number.isFinite(numeric)) return "$0";
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: numeric % 1 === 0 ? 0 : 2,
+  }).format(numeric);
+}
+
+function formatDuration(value: string) {
+  const minutes = Number.parseInt(value, 10);
+  if (!Number.isFinite(minutes) || minutes <= 0) return "Custom duration";
+  if (minutes % 60 === 0) {
+    const hours = minutes / 60;
+    return `${hours} hr${hours === 1 ? "" : "s"}`;
+  }
+  return `${minutes} min`;
+}
+
+function compactText(value: string, fallback: string) {
+  const trimmed = value.trim();
+  return trimmed || fallback;
+}
+
 // ── Props ────────────────────────────────────────────────────────────────────
 
 interface TemplateFormProps {
@@ -107,6 +188,11 @@ export function TemplateForm({ initialData, templateId, divinerCount = 0 }: Temp
   });
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const PreviewIcon = getPreviewIcon(form.icon_name);
+  const accentColor = form.color.trim() || (form.category === "tarot" ? "#7c3aed" : "#d97706");
+  const visibleIncluded = form.whats_included.filter((item) => item.trim());
+  const visibleAudience = form.who_its_for.filter((item) => item.trim());
+  const visibleFaq = form.faq.filter((item) => item.question.trim() || item.answer.trim());
 
   // ── Auto-slug from name (create mode only) ────────────────────────────────
   function handleNameChange(name: string) {
@@ -606,6 +692,185 @@ export function TemplateForm({ initialData, templateId, divinerCount = 0 }: Temp
           {errors.seo_description && (
             <p className="text-xs text-destructive">{errors.seo_description}</p>
           )}
+        </div>
+      </section>
+
+      <Separator />
+
+      {/* Live Preview */}
+      <section className="space-y-4">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold">Live Preview</h2>
+            <p className="text-sm text-muted-foreground">
+              Reflects the current form state and previews how this template will present in the UI.
+            </p>
+          </div>
+          <Badge variant="outline">Preview</Badge>
+        </div>
+
+        <div className="overflow-hidden rounded-2xl border bg-gradient-to-br from-stone-950 via-slate-950 to-stone-900 text-stone-50 shadow-sm">
+          <div
+            className="border-b border-white/10 px-6 py-6"
+            style={{
+              background: `linear-gradient(135deg, ${accentColor}30 0%, rgba(15, 23, 42, 0.92) 45%, rgba(12, 10, 9, 0.96) 100%)`,
+            }}
+          >
+            <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
+              <div className="space-y-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge variant="secondary" className="border-0 bg-white/12 text-stone-100">
+                    {form.category === "tarot" ? "Tarot" : "Astrology"}
+                  </Badge>
+                  {form.is_primary && (
+                    <Badge className="border-0 bg-amber-400 text-stone-950">Primary</Badge>
+                  )}
+                  {form.requires_birth_data && (
+                    <Badge variant="secondary" className="border-0 bg-white/12 text-stone-100">
+                      Birth data required
+                    </Badge>
+                  )}
+                </div>
+
+                <div className="flex items-start gap-4">
+                  <div
+                    className="flex h-14 w-14 items-center justify-center rounded-2xl border border-white/15"
+                    style={{ backgroundColor: `${accentColor}33` }}
+                  >
+                    <PreviewIcon className="h-7 w-7" style={{ color: accentColor }} />
+                  </div>
+                  <div className="space-y-2">
+                    <h3 className="text-2xl font-semibold tracking-tight">
+                      {compactText(form.name, "Service Name Preview")}
+                    </h3>
+                    <p className="max-w-3xl text-sm leading-6 text-stone-300">
+                      {compactText(
+                        form.description,
+                        "Brief service summary will appear here once a short description is provided."
+                      )}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid min-w-[220px] gap-3 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="flex items-center gap-2 text-stone-300">
+                    <BadgeDollarSign className="h-4 w-4" />
+                    Price
+                  </span>
+                  <span className="font-medium text-stone-50">{formatPrice(form.base_price)}</span>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="flex items-center gap-2 text-stone-300">
+                    <Clock3 className="h-4 w-4" />
+                    Duration
+                  </span>
+                  <span className="font-medium text-stone-50">{formatDuration(form.duration_minutes)}</span>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-stone-300">Slug</span>
+                  <code className="rounded bg-white/10 px-2 py-1 text-xs text-stone-100">
+                    {compactText(form.slug, "service-slug")}
+                  </code>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid gap-6 px-6 py-6 lg:grid-cols-[1.25fr_0.85fr]">
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <h4 className="text-sm font-semibold uppercase tracking-[0.18em] text-stone-400">
+                  Long Description
+                </h4>
+                <p className="text-sm leading-7 text-stone-300">
+                  {compactText(
+                    form.long_description,
+                    "A more complete landing-page description will render here once long description content is added."
+                  )}
+                </p>
+              </div>
+
+              <div className="grid gap-6 md:grid-cols-2">
+                <div className="space-y-3">
+                  <h4 className="text-sm font-semibold uppercase tracking-[0.18em] text-stone-400">
+                    What&apos;s Included
+                  </h4>
+                  <div className="space-y-2">
+                    {(visibleIncluded.length > 0 ? visibleIncluded : [
+                      "Included-item bullets will appear here.",
+                    ]).map((item, index) => (
+                      <div key={`${item}-${index}`} className="flex items-start gap-2 text-sm text-stone-300">
+                        <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0" style={{ color: accentColor }} />
+                        <span>{item}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <h4 className="text-sm font-semibold uppercase tracking-[0.18em] text-stone-400">
+                    Who This Is For
+                  </h4>
+                  <div className="space-y-2">
+                    {(visibleAudience.length > 0 ? visibleAudience : [
+                      "Audience-fit bullets will appear here.",
+                    ]).map((item, index) => (
+                      <div key={`${item}-${index}`} className="rounded-xl border border-white/8 bg-white/5 px-3 py-2 text-sm text-stone-300">
+                        {item}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              <div className="space-y-3">
+                <h4 className="text-sm font-semibold uppercase tracking-[0.18em] text-stone-400">
+                  FAQ Preview
+                </h4>
+                <div className="space-y-3">
+                  {(visibleFaq.length > 0 ? visibleFaq : [
+                    {
+                      question: "FAQ items will appear here.",
+                      answer: "Add question-and-answer rows above to populate this preview.",
+                    },
+                  ]).map((item, index) => (
+                    <div key={`${item.question}-${index}`} className="rounded-xl border border-white/8 bg-white/5 p-4">
+                      <p className="text-sm font-medium text-stone-100">
+                        {item.question || "Untitled question"}
+                      </p>
+                      <p className="mt-2 text-sm leading-6 text-stone-300">
+                        {item.answer || "Answer will appear here."}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <h4 className="text-sm font-semibold uppercase tracking-[0.18em] text-stone-400">
+                  Search Snippet
+                </h4>
+                <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4">
+                  <p className="text-sm font-medium text-emerald-300">
+                    {compactText(form.seo_title, "SEO title preview")}
+                  </p>
+                  <p className="mt-1 text-xs text-emerald-400">
+                    astrologypro.com/services/{compactText(form.slug, "service-slug")}
+                  </p>
+                  <p className="mt-2 text-sm leading-6 text-stone-300">
+                    {compactText(
+                      form.seo_description,
+                      "SEO description preview will appear here once metadata is filled."
+                    )}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 

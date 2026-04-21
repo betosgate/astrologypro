@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { formatDate } from "@/lib/format";
+import { formatBirthPlace } from "@/lib/community/birth-location";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -55,6 +56,8 @@ type FamilyMember = {
   birth_time: string | null;
   birth_city: string | null;
   birth_country: string | null;
+  birth_lat?: number | null;
+  birth_lng?: number | null;
   relationship: string | null;
   age_group: "child" | "adult";
   natal_chart: NatalChartData | null;
@@ -141,6 +144,7 @@ export default function FamilyMemberChartPage() {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [nowMs] = useState(() => Date.now());
 
   // Invite state
   const [inviteEmail, setInviteEmail] = useState("");
@@ -163,6 +167,7 @@ export default function FamilyMemberChartPage() {
   }, [id, router]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadMember();
   }, [loadMember]);
 
@@ -176,7 +181,7 @@ export default function FamilyMemberChartPage() {
     });
     const data = await res.json();
     if (!res.ok) {
-      setError(data.error ?? "Chart generation failed");
+      setError(data.detail ?? data.error ?? "Chart generation failed");
     } else {
       await loadMember();
     }
@@ -220,7 +225,7 @@ export default function FamilyMemberChartPage() {
   const chart = member.natal_chart;
   const dob = new Date(member.date_of_birth + "T12:00:00");
   const ageYears = Math.floor(
-    (Date.now() - dob.getTime()) / (365.25 * 24 * 3600 * 1000)
+    (nowMs - dob.getTime()) / (365.25 * 24 * 3600 * 1000)
   );
 
   // Profile completion
@@ -241,11 +246,14 @@ export default function FamilyMemberChartPage() {
       ? "hsl(var(--primary))"
       : "hsl(25, 90%, 55%)";
 
+  const hasBirthCoordinates =
+    Number.isFinite(Number(member.birth_lat)) &&
+    Number.isFinite(Number(member.birth_lng));
   const hasBirthDataForChart =
-    member.date_of_birth &&
-    (member.birth_time || true) && // chart can be generated without time (less accurate)
-    member.birth_city &&
-    member.birth_country;
+    Boolean(member.date_of_birth && member.birth_city && member.birth_country) &&
+    hasBirthCoordinates;
+  const hasBirthPlaceWithoutCoordinates =
+    Boolean(member.birth_city || member.birth_country) && !hasBirthCoordinates;
 
   // ---------------------------------------------------------------------------
   // Render
@@ -330,11 +338,7 @@ export default function FamilyMemberChartPage() {
             {(member.birth_city || member.birth_country) && (
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Birth place</span>
-                <span>
-                  {[member.birth_city, member.birth_country]
-                    .filter(Boolean)
-                    .join(", ")}
-                </span>
+                <span>{formatBirthPlace(member.birth_city, member.birth_country)}</span>
               </div>
             )}
             {member.relationship && (
@@ -414,6 +418,17 @@ export default function FamilyMemberChartPage() {
                 )}
                 Generate Chart Now
               </Button>
+            )}
+            {!chart && hasBirthPlaceWithoutCoordinates && (
+              <div className="rounded-md border border-amber-400/30 bg-amber-50/50 px-3 py-2 text-xs text-amber-800">
+                Select the birth city from suggestions before generating a chart.{" "}
+                <Link
+                  href={`/community/family/${id}/edit`}
+                  className="font-medium underline hover:text-amber-900"
+                >
+                  Edit birth place
+                </Link>
+              </div>
             )}
 
             {/* Invite status */}
@@ -541,7 +556,7 @@ export default function FamilyMemberChartPage() {
                   ? `Born ${dob.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })} at ${member.birth_time}`
                   : `Born ${dob.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })} (time unknown)`}
                 {(member.birth_city || member.birth_country) &&
-                  ` · ${[member.birth_city, member.birth_country].filter(Boolean).join(", ")}`}
+                  ` · ${formatBirthPlace(member.birth_city, member.birth_country)}`}
               </CardDescription>
             </CardHeader>
             <CardContent className="flex justify-center">

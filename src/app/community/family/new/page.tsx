@@ -24,6 +24,10 @@ import {
 import { ArrowLeft, AlertCircle, Loader2, ChevronDown, ChevronUp, Mail } from "lucide-react";
 import { ProgressRing } from "@/components/community/progress-ring";
 import { calcFamilyProfileCompletion } from "@/lib/community/family-profile-completion";
+import {
+  BirthCityAutocomplete,
+  extractCountryFromCityLabel,
+} from "@/components/community/birth-city-autocomplete";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -38,29 +42,32 @@ const RELATIONSHIPS = [
   "Other",
 ] as const;
 
-const COUNTRIES = [
-  "United States",
-  "United Kingdom",
-  "Canada",
-  "Australia",
-  "India",
-  "Mexico",
-  "Brazil",
-  "Germany",
-  "France",
-  "Spain",
-  "Italy",
-  "Portugal",
-  "Netherlands",
-  "Sweden",
-  "Norway",
-  "Japan",
-  "South Korea",
-  "China",
-  "South Africa",
-  "New Zealand",
-  "Other",
-] as const;
+// Previous country dropdown values kept for reference. The active UI uses a
+// free-text country input because autocomplete can return labels outside this
+// short fixed list.
+// const COUNTRIES = [
+//   "United States",
+//   "United Kingdom",
+//   "Canada",
+//   "Australia",
+//   "India",
+//   "Mexico",
+//   "Brazil",
+//   "Germany",
+//   "France",
+//   "Spain",
+//   "Italy",
+//   "Portugal",
+//   "Netherlands",
+//   "Sweden",
+//   "Norway",
+//   "Japan",
+//   "South Korea",
+//   "China",
+//   "South Africa",
+//   "New Zealand",
+//   "Other",
+// ] as const;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -341,15 +348,23 @@ export default function FamilyMemberNewPage() {
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label htmlFor="birthCity">Birth City</Label>
-                <Input
+                <BirthCityAutocomplete
                   id="birthCity"
                   value={birthCity}
-                  onChange={(e) => setBirthCity(e.target.value)}
+                  onChange={(label, option) => {
+                    setBirthCity(label);
+                    if (!option) return;
+                    setBirthLat(String(option.lat));
+                    setBirthLng(String(option.lng));
+                    const country = extractCountryFromCityLabel(option.label);
+                    if (country) setBirthCountry(country);
+                  }}
                   placeholder="City"
                 />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="birthCountry">Birth Country</Label>
+                {/* Previous dropdown kept for reference.
                 <Select value={birthCountry} onValueChange={setBirthCountry}>
                   <SelectTrigger id="birthCountry">
                     <SelectValue placeholder="Select country" />
@@ -362,6 +377,18 @@ export default function FamilyMemberNewPage() {
                     ))}
                   </SelectContent>
                 </Select>
+                */}
+                <Input
+                  id="birthCountry"
+                  value={birthCountry}
+                  onChange={(e) => setBirthCountry(e.target.value)}
+                  placeholder="Country"
+                />
+                {!birthCountry && birthCity && (
+                  <p className="text-xs text-amber-600">
+                    Add birth country so the family profile can be marked complete.
+                  </p>
+                )}
               </div>
             </div>
 

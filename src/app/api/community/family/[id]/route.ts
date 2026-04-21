@@ -37,6 +37,10 @@ export async function PATCH(
     updated_at: new Date().toISOString(),
   };
 
+  // Any change to a birth-location field invalidates the cached chart so
+  // the next generate-natal call recomputes against the new coordinates.
+  let invalidateChart = false;
+
   if (body.fullName !== undefined) updateData.full_name = body.fullName;
   if (body.dateOfBirth !== undefined) {
     updateData.date_of_birth = body.dateOfBirth;
@@ -44,21 +48,54 @@ export async function PATCH(
     const ageYears =
       (new Date().getTime() - dob.getTime()) / (365.25 * 24 * 3600 * 1000);
     updateData.age_group = ageYears < 14 ? "child" : "adult";
-    // Invalidate chart so it gets regenerated
-    updateData.natal_chart = null;
-    updateData.chart_updated_at = null;
+    invalidateChart = true;
   }
   if (body.birthTime !== undefined) {
     updateData.birth_time = body.birthTime || null;
-    updateData.natal_chart = null;
-    updateData.chart_updated_at = null;
+    invalidateChart = true;
   }
-  if (body.birthCity !== undefined) updateData.birth_city = body.birthCity || null;
-  if (body.birthCountry !== undefined)
+  if (body.birthCity !== undefined) {
+    updateData.birth_city = body.birthCity || null;
+    invalidateChart = true;
+  }
+  if (body.birthCountry !== undefined) {
     updateData.birth_country = body.birthCountry || null;
+    invalidateChart = true;
+  }
+  if (body.birthLat !== undefined) {
+    const latRaw = body.birthLat;
+    updateData.birth_lat =
+      latRaw == null || latRaw === ""
+        ? null
+        : Number.isFinite(Number(latRaw))
+        ? Number(latRaw)
+        : null;
+    invalidateChart = true;
+  }
+  if (body.birthLng !== undefined) {
+    const lngRaw = body.birthLng;
+    updateData.birth_lng =
+      lngRaw == null || lngRaw === ""
+        ? null
+        : Number.isFinite(Number(lngRaw))
+        ? Number(lngRaw)
+        : null;
+    invalidateChart = true;
+  }
   if (body.relationship !== undefined)
     updateData.relationship = body.relationship || null;
   if (body.notes !== undefined) updateData.notes = body.notes || null;
+
+  if (invalidateChart) {
+    // Clear cached chart + reset lifecycle so the next generate-natal call
+    // treats this as a regeneration path. natal_status fields only exist
+    // once the governance migration has been applied; swallow the update
+    // gracefully if those columns are missing in an older environment.
+    updateData.natal_chart = null;
+    updateData.chart_updated_at = null;
+    updateData.natal_status = "queued";
+    updateData.natal_failure_reason = null;
+  }
 
   const { data, error } = await supabase
     .from("community_family_members")

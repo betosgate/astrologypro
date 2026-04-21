@@ -24,6 +24,11 @@ import {
   Info,
 } from "lucide-react";
 import { formatDate } from "@/lib/format";
+import {
+  BirthCityAutocomplete,
+  extractCountryFromCityLabel,
+} from "@/components/community/birth-city-autocomplete";
+import { formatBirthPlace } from "@/lib/community/birth-location";
 
 type FamilyMember = {
   id: string;
@@ -32,6 +37,8 @@ type FamilyMember = {
   birth_time: string | null;
   birth_city: string | null;
   birth_country: string | null;
+  birth_lat?: number | null;
+  birth_lng?: number | null;
   relationship: string | null;
   age_group: "child" | "adult";
   natal_chart: Record<string, unknown> | null;
@@ -45,6 +52,8 @@ const EMPTY_FORM = {
   birthTime: "",
   birthCity: "",
   birthCountry: "",
+  birthLat: "",
+  birthLng: "",
   relationship: "",
   notes: "",
 };
@@ -90,6 +99,8 @@ export default function CommunityFamilyPage() {
       birthTime: m.birth_time ?? "",
       birthCity: m.birth_city ?? "",
       birthCountry: m.birth_country ?? "",
+      birthLat: m.birth_lat == null ? "" : String(m.birth_lat),
+      birthLng: m.birth_lng == null ? "" : String(m.birth_lng),
       relationship: m.relationship ?? "",
       notes: m.notes ?? "",
     });
@@ -241,11 +252,22 @@ export default function CommunityFamilyPage() {
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-1.5">
                   <Label>Birth City</Label>
-                  <Input
+                  <BirthCityAutocomplete
                     value={form.birthCity}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, birthCity: e.target.value }))
-                    }
+                    onChange={(label, option) => {
+                      setForm((f) => {
+                        const next = { ...f, birthCity: label };
+                        if (!option) return next;
+                        return {
+                          ...next,
+                          birthLat: String(option.lat),
+                          birthLng: String(option.lng),
+                          birthCountry:
+                            extractCountryFromCityLabel(option.label) ||
+                            f.birthCountry,
+                        };
+                      });
+                    }}
                     placeholder="City"
                   />
                 </div>
@@ -257,6 +279,34 @@ export default function CommunityFamilyPage() {
                       setForm((f) => ({ ...f, birthCountry: e.target.value }))
                     }
                     placeholder="Country"
+                  />
+                  {!form.birthCountry && form.birthCity && (
+                    <p className="text-xs text-amber-600">
+                      Add birth country so the family profile can be marked complete.
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label>Birth Latitude</Label>
+                  <Input
+                    value={form.birthLat}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, birthLat: e.target.value }))
+                    }
+                    placeholder="e.g. 40.7128"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Birth Longitude</Label>
+                  <Input
+                    value={form.birthLng}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, birthLng: e.target.value }))
+                    }
+                    placeholder="e.g. -74.0060"
                   />
                 </div>
               </div>
@@ -411,11 +461,10 @@ export default function CommunityFamilyPage() {
                           </span>
                         </div>
                       )}
-                      {m.birth_city && (
+                      {(m.birth_city || m.birth_country) && (
                         <div>
                           <span className="text-muted-foreground">Born in: </span>
-                          {m.birth_city}
-                          {m.birth_country ? `, ${m.birth_country}` : ""}
+                          {formatBirthPlace(m.birth_city, m.birth_country)}
                         </div>
                       )}
                       {m.chart_updated_at && (

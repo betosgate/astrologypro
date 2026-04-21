@@ -138,12 +138,12 @@ export default async function AdminMySchedulePage() {
             </CardHeader>
             <CardContent className="flex flex-wrap gap-3">
               <Button asChild size="sm">
-                <Link href={`/admin/availability?diviner_id=${diviner.id}`}>
+                <Link href="/admin/availability">
                   Manage My Availability
                 </Link>
               </Button>
               <Button asChild variant="outline" size="sm">
-                <Link href="/admin/availability">
+                <Link href="/admin/availability/manage">
                   All Diviner Availability
                 </Link>
               </Button>

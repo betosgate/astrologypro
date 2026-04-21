@@ -12,6 +12,14 @@ export interface BirthCityOption {
   tzone: string;
 }
 
+export function extractCountryFromCityLabel(label: string): string {
+  const parts = label
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+  return parts.at(-1) ?? "";
+}
+
 interface BirthCityAutocompleteProps {
   id?: string;
   value: string;

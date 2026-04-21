@@ -15,7 +15,7 @@ export const runtime = "nodejs";
  * the extra_member_count changes.
  *
  * Body: { full_name, date_of_birth, relationship, birth_time?, birth_city?,
- *          birth_country?, notes? }
+ *          birth_country?, birth_lat?, birth_lng?, notes? }
  *
  * Response: { family_member, new_total_monthly }
  */
@@ -38,12 +38,20 @@ export async function POST(request: NextRequest) {
       const v = (body[snake] ?? body[camel]) as unknown;
       return typeof v === "string" ? v : undefined;
     };
+    const pickNumber = (snake: string, camel: string): number | null => {
+      const v = body[snake] ?? body[camel];
+      if (v == null || v === "") return null;
+      const n = Number(v);
+      return Number.isFinite(n) ? n : null;
+    };
 
     const full_name = pickString("full_name", "fullName");
     const date_of_birth = pickString("date_of_birth", "dateOfBirth");
     const birth_time = pickString("birth_time", "birthTime");
     const birth_city = pickString("birth_city", "birthCity");
     const birth_country = pickString("birth_country", "birthCountry");
+    const birth_lat = pickNumber("birth_lat", "birthLat");
+    const birth_lng = pickNumber("birth_lng", "birthLng");
     const relationship =
       typeof body.relationship === "string" ? body.relationship : undefined;
     const notes = typeof body.notes === "string" ? body.notes : undefined;
@@ -138,6 +146,8 @@ export async function POST(request: NextRequest) {
         birth_time: birth_time ?? null,
         birth_city: birth_city ?? null,
         birth_country: birth_country ?? null,
+        birth_lat,
+        birth_lng,
         notes: notes ?? null,
         age_group,
       })

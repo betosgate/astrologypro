@@ -18,6 +18,7 @@ import {
 } from "@/lib/email";
 import { createCalendarEvent } from "@/lib/google-calendar";
 import { buildCalendarDescription } from "@/lib/calendar-utils";
+import { getActiveChimePhoneNumber } from "@/lib/booking-call-pin";
 import { createMsCalendarEvent } from "@/lib/microsoft-calendar";
 import { ensureOrderForBooking, getOrderStatusForService } from "@/lib/orders";
 import { recordAffiliateCommission } from "@/lib/affiliate-commissions";
@@ -479,12 +480,34 @@ async function handleManualBookingCheckoutCompleted(
   const { data: booking } = await supabase
     .from("bookings")
     .select(
-      "id, booking_token, scheduled_at, duration_minutes, base_price, metadata, questionnaire_responses, diviner_id, client_id, service_id, services(id, name, slug, category, duration_minutes, requires_birth_data, intake_template_id, product_kind, is_subscription, requires_birth_time, requires_birth_city, requires_partner_data, pre_checkout_fields, post_checkout_fields), diviners(id, display_name, username, chime_phone_number), clients(id, email, full_name)"
+      "id, booking_token, scheduled_at, duration_minutes, base_price, call_pin, metadata, questionnaire_responses, diviner_id, client_id, service_id, services(id, name, slug, category, duration_minutes, requires_birth_data, intake_template_id, product_kind, is_subscription, requires_birth_time, requires_birth_city, requires_partner_data, pre_checkout_fields, post_checkout_fields), diviners(id, display_name, username, chime_phone_number), clients(id, email, full_name)"
     )
     .eq("id", bookingId)
     .single();
 
   if (!booking) return;
+
+  // Resolve effective phone dial-in info (central+PIN vs per-diviner).
+  // Gate is data-driven: if the booking has a PIN AND a central number
+  // row is configured active, advertise that. Otherwise fall through to
+  // the legacy per-diviner number naturally (both left null).
+  let mbAdvertisedCentralNumber: string | null = null;
+  let mbAdvertisedCallPin: string | null = null;
+  const mbCallPin = (booking as Record<string, unknown>).call_pin as string | null | undefined;
+  if (mbCallPin) {
+    try {
+      const central = await getActiveChimePhoneNumber(supabase as any);
+      if (central) {
+        mbAdvertisedCentralNumber = central.phoneNumber;
+        mbAdvertisedCallPin = mbCallPin;
+      }
+    } catch (err) {
+      console.warn(
+        "[webhook:manual-booking] central-number lookup failed; falling back to per-diviner",
+        err
+      );
+    }
+  }
 
   const svc = (booking as Record<string, unknown>).services as {
     id: string;
@@ -563,6 +586,8 @@ async function handleManualBookingCheckoutCompleted(
       duration: durationMins,
       sessionLink,
       phoneNumber: div.chime_phone_number ?? undefined,
+      centralPhoneNumber: mbAdvertisedCentralNumber ?? undefined,
+      callPin: mbAdvertisedCallPin ?? undefined,
     }),
     sendBookingAccessInstructions({
       clientEmail: clientRecord.email,
@@ -583,6 +608,8 @@ async function handleManualBookingCheckoutCompleted(
         dateTime: formattedDateTime,
         duration: durationMins,
         sessionLink,
+        centralPhoneNumber: mbAdvertisedCentralNumber ?? undefined,
+        callPin: mbAdvertisedCallPin ?? undefined,
       })
     );
   }
@@ -594,7 +621,12 @@ async function handleManualBookingCheckoutCompleted(
   {
     createCalendarEvent(div.id, {
       title: `${eventTitle} — ${clientRecord.full_name ?? clientRecord.email}`,
-      description: buildCalendarDescription(meta?.availability_description ?? null, appUrl, booking.booking_token as string | undefined, { sessionLink, phoneNumber: div.chime_phone_number }),
+      description: buildCalendarDescription(meta?.availability_description ?? null, appUrl, booking.booking_token as string | undefined, {
+        sessionLink,
+        phoneNumber: div.chime_phone_number,
+        centralPhoneNumber: mbAdvertisedCentralNumber,
+        callPin: mbAdvertisedCallPin,
+      }),
       startTime: startTime.toISOString(),
       endTime: endTime.toISOString(),
       clientEmail: clientRecord.email,
@@ -1781,26 +1813,85 @@ async function handlePaymentIntentSucceeded(
   const bookingId = paymentIntent.metadata?.bookingId;
   const clientEmail = paymentIntent.metadata?.clientEmail;
   const affiliateCode = paymentIntent.metadata?.affiliateCode;
+  const refCodeFromPi = paymentIntent.metadata?.refCode ?? null;
   if (!bookingId || !clientEmail) return;
 
   const supabase = createAdminClient();
 
-  // Mark booking as confirmed
+  // Mark booking as confirmed + (defensive) persist ref_code if it wasn't
+  // already stamped at booking creation time.
   await supabase
     .from("bookings")
-    .update({ status: "confirmed" })
+    .update({
+      status: "confirmed",
+      ...(refCodeFromPi ? { ref_code: refCodeFromPi } : {}),
+    })
     .eq("id", bookingId);
+
+  // ── Task 03: credit affiliate commission if this booking was attributed
+  // via ?ref=. Idempotent (UNIQUE (booking_id) on campaign_conversions).
+  try {
+    const { creditAffiliateConversion } = await import("@/lib/affiliate-attribution");
+    const { data: bookingForAttribution } = await supabase
+      .from("bookings")
+      .select("id, diviner_id, service_id, base_price, total_amount, ref_code, services(template_id)")
+      .eq("id", bookingId)
+      .single();
+
+    if (bookingForAttribution?.ref_code) {
+      const svc = bookingForAttribution.services as { template_id?: string | null } | { template_id?: string | null }[] | null;
+      const templateId = Array.isArray(svc)
+        ? svc[0]?.template_id ?? null
+        : svc?.template_id ?? null;
+      const amountCents =
+        Number(bookingForAttribution.total_amount ?? bookingForAttribution.base_price ?? 0) * 100;
+
+      await creditAffiliateConversion(supabase, {
+        bookingId: bookingForAttribution.id as string,
+        divinerId: bookingForAttribution.diviner_id as string,
+        templateId,
+        orderAmountCents: Math.round(amountCents),
+        refCode: bookingForAttribution.ref_code as string,
+      });
+    }
+  } catch (err) {
+    // Never fail the webhook on commission errors — log and continue so
+    // Stripe doesn't retry forever.
+    console.error("[affiliate_conversion] credit failed", { bookingId, err });
+  }
 
   // Fetch booking with related data for the email + calendar sync
   const { data: booking } = await supabase
     .from("bookings")
     .select(
-      "id, booking_token, scheduled_at, duration_minutes, base_price, diviner_id, client_id, service_id, metadata, questionnaire_responses, services(id, name, slug, category, duration_minutes, requires_birth_data, intake_template_id, product_kind, is_subscription, requires_birth_time, requires_birth_city, requires_partner_data, pre_checkout_fields, post_checkout_fields), diviners(id, display_name, user_id, username, chime_phone_number), clients(id, email, full_name, user_id)"
+      "id, booking_token, scheduled_at, duration_minutes, base_price, call_pin, diviner_id, client_id, service_id, metadata, questionnaire_responses, services(id, name, slug, category, duration_minutes, requires_birth_data, intake_template_id, product_kind, is_subscription, requires_birth_time, requires_birth_city, requires_partner_data, pre_checkout_fields, post_checkout_fields), diviners(id, display_name, user_id, username, chime_phone_number), clients(id, email, full_name, user_id)"
     )
     .eq("id", bookingId)
     .single();
 
   if (!booking) return;
+
+  // Resolve effective phone dial-in info (central+PIN vs per-diviner).
+  // Gate is data-driven: if the booking has a PIN AND a central number
+  // row is configured active, advertise that. Otherwise fall through to
+  // the legacy per-diviner number naturally (both left null).
+  let paidAdvertisedCentralNumber: string | null = null;
+  let paidAdvertisedCallPin: string | null = null;
+  const paidCallPin = (booking as Record<string, unknown>).call_pin as string | null | undefined;
+  if (paidCallPin) {
+    try {
+      const central = await getActiveChimePhoneNumber(supabase as any);
+      if (central) {
+        paidAdvertisedCentralNumber = central.phoneNumber;
+        paidAdvertisedCallPin = paidCallPin;
+      }
+    } catch (err) {
+      console.warn(
+        "[webhook:paid-booking] central-number lookup failed; falling back to per-diviner",
+        err
+      );
+    }
+  }
 
   const svc = (booking as Record<string, unknown>).services as {
     id: string;
@@ -1968,6 +2059,8 @@ async function handlePaymentIntentSucceeded(
     sessionLink,
     duration: svc.duration_minutes,
     phoneNumber: div.chime_phone_number ?? undefined,
+    centralPhoneNumber: paidAdvertisedCentralNumber ?? undefined,
+    callPin: paidAdvertisedCallPin ?? undefined,
   };
 
   // Gather additional attendees from questionnaire_responses
@@ -2072,7 +2165,12 @@ async function handlePaymentIntentSucceeded(
         bookingMeta?.availability_description ?? null,
         appUrl,
         booking.booking_token as string | undefined,
-        { sessionLink, phoneNumber: div?.chime_phone_number },
+        {
+          sessionLink,
+          phoneNumber: div?.chime_phone_number,
+          centralPhoneNumber: paidAdvertisedCentralNumber,
+          callPin: paidAdvertisedCallPin,
+        },
       ),
       startTime: startTime.toISOString(),
       endTime: endTime.toISOString(),
