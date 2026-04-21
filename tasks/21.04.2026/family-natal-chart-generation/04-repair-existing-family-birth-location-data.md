@@ -6,8 +6,8 @@
 - Files: TBD by implementation approach
 - Related Table: `community_family_members`
 - Depends On:
-  - `03a-backend-family-birth-location-save-contract.md`
-  - `03b-frontend-family-birth-location-form-contract.md`
+  - `03-backend-family-birth-location-save-contract.md`
+  - Completed frontend family birth location form work
 
 ---
 
