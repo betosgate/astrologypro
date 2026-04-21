@@ -1,11 +1,16 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { APP_URL } from "@/lib/constants";
+import {
+  getServiceTemplatePublicPath,
+  isGeneralServiceTemplateSlug,
+} from "@/lib/service-template-public";
 import {
   Select,
   SelectContent,
@@ -31,7 +36,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Pencil, Trash2, ChevronUp, ChevronDown, Search, RefreshCw } from "lucide-react";
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  ChevronUp,
+  ChevronDown,
+  Search,
+  RefreshCw,
+  Copy,
+  ExternalLink,
+} from "lucide-react";
 import { toast } from "sonner";
 import {
   AdminPagination,
@@ -150,6 +165,20 @@ export default function ServiceTemplatesPage() {
     setCategory("all");
     setStatus("all");
     pushParams({ q: "", sortBy: "display_order", sortDir: "asc", page: "1" });
+  }
+
+  async function handleCopyPublicUrl(template: ServiceTemplateRow) {
+    try {
+      const publicUrl = `${APP_URL}${getServiceTemplatePublicPath(template.slug)}`;
+      await navigator.clipboard.writeText(publicUrl);
+      toast.success("Public URL copied");
+    } catch {
+      toast.error("Failed to copy public URL");
+    }
+  }
+
+  function handleOpenPublicUrl(template: ServiceTemplateRow) {
+    window.open(`${APP_URL}${getServiceTemplatePublicPath(template.slug)}`, "_blank", "noopener,noreferrer");
   }
 
   const hasActiveFilters = currentQ !== "" || category !== "all" || statusFilter !== "all" || currentSort !== "display_order" || currentDir !== "asc";
@@ -332,6 +361,28 @@ export default function ServiceTemplatesPage() {
                       className="flex justify-end gap-1"
                       onClick={(e) => e.stopPropagation()}
                     >
+                      {isGeneralServiceTemplateSlug(t.slug) && (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleCopyPublicUrl(t)}
+                            disabled={!t.is_active}
+                            title={t.is_active ? "Copy public URL" : "Template is inactive"}
+                          >
+                            <Copy className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={!t.is_active}
+                            onClick={() => handleOpenPublicUrl(t)}
+                            title={t.is_active ? "Open public page" : "Template is inactive"}
+                          >
+                            <ExternalLink className="h-3.5 w-3.5" />
+                          </Button>
+                        </>
+                      )}
                       <Button
                         variant="ghost"
                         size="sm"

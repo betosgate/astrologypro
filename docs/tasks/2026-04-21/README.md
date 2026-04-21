@@ -2,15 +2,28 @@
 
 ## READ THIS FIRST
 
-This sprint refactors the affiliate–campaign relationship so affiliates are tied to a diviner's **service or profile** (not to individual campaigns), and affiliates create their own campaigns from their own dashboard. Attribution is **URL-only** (`?ref=` query param) — no cookies.
-
 **App location:** `/home/this-pc/Documents/Indra/Beto Project/astrologypro/`
 **Stack:** Next.js 13 (App Router), Supabase (PostgreSQL), TypeScript, Tailwind, shadcn/ui
 **Project rules:** See `CLAUDE.md` at the repo root. Non-negotiable.
 
 ---
 
-## What You Are Building
+## Features in this sprint folder
+
+Two independent workstreams share this folder. Each has its own master task doc, migration plan, and rules.
+
+| Folder | Status | Entry point |
+|---|---|---|
+| [`affiliate-service-assignment/`](affiliate-service-assignment/00-master-task.md) | In progress | `affiliate-service-assignment/00-master-task.md` |
+| [`landing-page-simplification/`](landing-page-simplification/00-master-task.md) | Not started | `landing-page-simplification/00-master-task.md` |
+
+**The rest of this README covers only the affiliate work.** For landing-page-simplification, start at its own master task doc — its design, migration strategy, and acceptance criteria are distinct from the affiliate sprint.
+
+---
+
+## What You Are Building (affiliate workstream)
+
+This workstream refactors the affiliate–campaign relationship so affiliates are tied to a diviner's **service or profile** (not to individual campaigns), and affiliates create their own campaigns from their own dashboard. Attribution is **URL-only** (`?ref=` query param) — no cookies.
 
 ### Feature: Service-Scoped Affiliate Assignments + Affiliate-Owned Campaigns
 **Folder:** `affiliate-service-assignment/`
