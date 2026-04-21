@@ -48,6 +48,7 @@ import { MIGRATION_SQL as MIG_20260421000005 } from "@/data/migrations/202604210
 import { MIGRATION_SQL as MIG_20260421000010 } from "@/data/migrations/20260421000010_repair_family_birth_country";
 import { MIGRATION_SQL as MIG_20260421000001_ASA } from "@/data/migrations/20260421000001_affiliate_service_assignments";
 import { MIGRATION_SQL as MIG_20260421000020 } from "@/data/migrations/20260421000020_admin_booking_calendar";
+import { MIGRATION_SQL as MIG_20260421000021 } from "@/data/migrations/20260421000021_admin_bookings_gcal_event_id";
 
 /**
  * Allowlisted migrations that the admin migration runner can execute.
@@ -472,6 +473,14 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Adds a nullable, case-insensitive unique `username` column to admin_users and creates the `admin_bookings` table. Powers the public /book/<username> calendar flow for admins: calendar-only, no service/diviner/Stripe coupling. admin_bookings is isolated from `bookings` on purpose — admin calendar meetings have no diviner/client/service FK targets. RLS: service_role only. Additive, idempotent.",
     sortKey: "20260421000020",
     sql: MIG_20260421000020,
+  },
+  "20260421000021_admin_bookings_gcal_event_id": {
+    id: "20260421000021_admin_bookings_gcal_event_id",
+    title: "Admin Bookings — Google Calendar event id",
+    description:
+      "Adds google_calendar_event_id to admin_bookings so we can track the synced Google Calendar event for later update/cancel. Additive + idempotent.",
+    sortKey: "20260421000021",
+    sql: MIG_20260421000021,
   },
 };
 

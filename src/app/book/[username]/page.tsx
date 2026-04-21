@@ -4,14 +4,6 @@ import { AdminBookingWizard } from "./admin-booking-wizard";
 
 export const dynamic = "force-dynamic";
 
-/**
- * Public booking page for an admin's calendar.
- *
- * URL: /book/<username>  (distinct from diviner /<username>/book)
- *
- * Renders a calendar-only booking wizard — no service selection, no payment.
- * The admin must have set a username via /admin/availability.
- */
 export default async function AdminBookingPage({
   params,
 }: {
@@ -30,7 +22,6 @@ export default async function AdminBookingPage({
     notFound();
   }
 
-  // Pull the default timezone + duration from the first active template.
   const { data: template } = await admin
     .from("availability_templates")
     .select("timezone, duration_minutes")
@@ -41,20 +32,20 @@ export default async function AdminBookingPage({
     .maybeSingle();
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="mx-auto w-full max-w-3xl px-4 py-10">
-        <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold tracking-tight">Book a time</h1>
-          <p className="text-muted-foreground mt-2 text-sm">
-            Pick a slot on {adminRow.username}&rsquo;s calendar.
-          </p>
-        </div>
+    <section className="min-h-screen py-16 md:py-20">
+      <div className="mx-auto max-w-4xl px-4 text-center">
+        <h2 className="mb-2 font-display text-3xl font-semibold text-cream md:text-4xl">
+          Next Available
+        </h2>
+        <p className="mx-auto mb-10 max-w-md text-sm text-silver/60">
+          Reserve your spot on {adminRow.username}&rsquo;s calendar
+        </p>
         <AdminBookingWizard
           username={adminRow.username}
           defaultTimezone={template?.timezone ?? "America/New_York"}
           defaultDurationMinutes={Number(template?.duration_minutes) || 60}
         />
       </div>
-    </div>
+    </section>
   );
 }
