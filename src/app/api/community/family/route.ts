@@ -37,7 +37,7 @@ export async function GET() {
   const { data, error } = await supabase
     .from("community_family_members")
     .select(
-      "id, full_name, date_of_birth, birth_time, birth_city, birth_country, relationship, age_group, natal_chart, chart_updated_at, notes, created_at, updated_at"
+      "id, full_name, date_of_birth, birth_time, birth_city, birth_country, birth_lat, birth_lng, relationship, age_group, natal_chart, chart_updated_at, notes, created_at, updated_at"
     )
     .eq("member_id", member.id)
     .order("created_at", { ascending: true });
@@ -77,10 +77,23 @@ export async function POST(request: NextRequest) {
     birthTime,
     birthCity,
     birthCountry,
+    birthLat,
+    birthLng,
     relationship,
     notes,
     inviteEmail, // Task 10: optional — if provided, auto-send household invite
-  } = body;
+  } = body as {
+    fullName?: string;
+    dateOfBirth?: string;
+    birthTime?: string;
+    birthCity?: string;
+    birthCountry?: string;
+    birthLat?: number | string | null;
+    birthLng?: number | string | null;
+    relationship?: string;
+    notes?: string;
+    inviteEmail?: string;
+  };
 
   if (!fullName || !dateOfBirth) {
     return NextResponse.json(
@@ -88,6 +101,20 @@ export async function POST(request: NextRequest) {
       { status: 400 }
     );
   }
+
+  // Coerce lat/lng — accept numbers or numeric strings; null if missing/invalid.
+  const lat =
+    birthLat == null || birthLat === ""
+      ? null
+      : Number.isFinite(Number(birthLat))
+      ? Number(birthLat)
+      : null;
+  const lng =
+    birthLng == null || birthLng === ""
+      ? null
+      : Number.isFinite(Number(birthLng))
+      ? Number(birthLng)
+      : null;
 
   // Determine age group
   const dob = new Date(dateOfBirth);
@@ -104,6 +131,8 @@ export async function POST(request: NextRequest) {
       birth_time: birthTime || null,
       birth_city: birthCity || null,
       birth_country: birthCountry || null,
+      birth_lat: lat,
+      birth_lng: lng,
       relationship: relationship || null,
       notes: notes || null,
       age_group: ageGroup,

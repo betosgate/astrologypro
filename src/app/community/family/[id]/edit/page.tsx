@@ -24,6 +24,10 @@ import {
 import { ArrowLeft, AlertCircle, Loader2 } from "lucide-react";
 import { ProgressRing } from "@/components/community/progress-ring";
 import { calcFamilyProfileCompletion } from "@/lib/community/family-profile-completion";
+import {
+  BirthCityAutocomplete,
+  extractCountryFromCityLabel,
+} from "@/components/community/birth-city-autocomplete";
 
 // ---------------------------------------------------------------------------
 // Constants (mirror from new/page.tsx)
@@ -38,29 +42,32 @@ const RELATIONSHIPS = [
   "Other",
 ] as const;
 
-const COUNTRIES = [
-  "United States",
-  "United Kingdom",
-  "Canada",
-  "Australia",
-  "India",
-  "Mexico",
-  "Brazil",
-  "Germany",
-  "France",
-  "Spain",
-  "Italy",
-  "Portugal",
-  "Netherlands",
-  "Sweden",
-  "Norway",
-  "Japan",
-  "South Korea",
-  "China",
-  "South Africa",
-  "New Zealand",
-  "Other",
-] as const;
+// Previous country dropdown values kept for reference. The active UI uses a
+// free-text country input because autocomplete can return labels outside this
+// short fixed list.
+// const COUNTRIES = [
+//   "United States",
+//   "United Kingdom",
+//   "Canada",
+//   "Australia",
+//   "India",
+//   "Mexico",
+//   "Brazil",
+//   "Germany",
+//   "France",
+//   "Spain",
+//   "Italy",
+//   "Portugal",
+//   "Netherlands",
+//   "Sweden",
+//   "Norway",
+//   "Japan",
+//   "South Korea",
+//   "China",
+//   "South Africa",
+//   "New Zealand",
+//   "Other",
+// ] as const;
 
 // ---------------------------------------------------------------------------
 // Component
@@ -82,6 +89,8 @@ export default function FamilyMemberEditPage() {
   const [birthTime, setBirthTime] = useState("");
   const [birthCity, setBirthCity] = useState("");
   const [birthCountry, setBirthCountry] = useState("");
+  const [birthLat, setBirthLat] = useState("");
+  const [birthLng, setBirthLng] = useState("");
   const [notes, setNotes] = useState("");
 
   // UI state
@@ -106,6 +115,8 @@ export default function FamilyMemberEditPage() {
       birth_time: string | null;
       birth_city: string | null;
       birth_country: string | null;
+      birth_lat?: number | null;
+      birth_lng?: number | null;
       relationship: string | null;
       notes: string | null;
     };
@@ -127,6 +138,8 @@ export default function FamilyMemberEditPage() {
     }
     setBirthCity(found.birth_city ?? "");
     setBirthCountry(found.birth_country ?? "");
+    setBirthLat(found.birth_lat == null ? "" : String(found.birth_lat));
+    setBirthLng(found.birth_lng == null ? "" : String(found.birth_lng));
     setNotes(found.notes ?? "");
     setLoadingMember(false);
   }, [id]);
@@ -173,6 +186,8 @@ export default function FamilyMemberEditPage() {
       relationship: relationship || null,
       notes: notes || null,
     };
+    if (birthLat.trim()) body.birthLat = birthLat.trim();
+    if (birthLng.trim()) body.birthLng = birthLng.trim();
 
     const res = await fetch(`/api/community/family/${id}`, {
       method: "PATCH",
@@ -356,15 +371,23 @@ export default function FamilyMemberEditPage() {
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label htmlFor="birthCity">Birth City</Label>
-                <Input
+                <BirthCityAutocomplete
                   id="birthCity"
                   value={birthCity}
-                  onChange={(e) => setBirthCity(e.target.value)}
+                  onChange={(label, option) => {
+                    setBirthCity(label);
+                    if (!option) return;
+                    setBirthLat(String(option.lat));
+                    setBirthLng(String(option.lng));
+                    const country = extractCountryFromCityLabel(option.label);
+                    if (country) setBirthCountry(country);
+                  }}
                   placeholder="City"
                 />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="birthCountry">Birth Country</Label>
+                {/* Previous dropdown kept for reference.
                 <Select value={birthCountry} onValueChange={setBirthCountry}>
                   <SelectTrigger id="birthCountry">
                     <SelectValue placeholder="Select country" />
@@ -377,6 +400,40 @@ export default function FamilyMemberEditPage() {
                     ))}
                   </SelectContent>
                 </Select>
+                */}
+                <Input
+                  id="birthCountry"
+                  value={birthCountry}
+                  onChange={(e) => setBirthCountry(e.target.value)}
+                  placeholder="Country"
+                />
+                {!birthCountry && birthCity && (
+                  <p className="text-xs text-amber-600">
+                    Add birth country so the family profile can be marked complete.
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Lat / Lng */}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="birthLat">Birth Latitude</Label>
+                <Input
+                  id="birthLat"
+                  value={birthLat}
+                  onChange={(e) => setBirthLat(e.target.value)}
+                  placeholder="e.g. 40.7128"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="birthLng">Birth Longitude</Label>
+                <Input
+                  id="birthLng"
+                  value={birthLng}
+                  onChange={(e) => setBirthLng(e.target.value)}
+                  placeholder="e.g. -74.0060"
+                />
               </div>
             </div>
           </CardContent>

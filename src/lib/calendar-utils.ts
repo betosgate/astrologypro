@@ -20,10 +20,13 @@ export function stripHtml(html: string): string {
  * Google Calendar supports HTML in event descriptions, so we use
  * styled anchor tags that render as button-like links.
  *
- * - Session link  : clickable button to join the reading session.
- * - Body          : availability template description (HTML stripped to plain text).
- * - Phone dial-in : if diviner has a Chime phone number, show it as an alternative.
- * - Footer        : cancel / reschedule button link.
+ * - Session link   : clickable button to join the reading session.
+ * - Body           : availability template description (HTML stripped to plain text).
+ * - Phone dial-in  : if `centralPhoneNumber` + `callPin` are provided, render
+ *                    the shared-number + PIN instructions (takes precedence).
+ *                    Otherwise, if `phoneNumber` is provided, fall back to
+ *                    the legacy per-diviner Chime dial-in card.
+ * - Footer         : cancel / reschedule button link.
  */
 export function buildCalendarDescription(
   templateDescription: string | null | undefined,
@@ -32,6 +35,9 @@ export function buildCalendarDescription(
   options?: {
     sessionLink?: string;
     phoneNumber?: string | null;
+    /** Shared-central-number PIN-routing mode — pass both together. */
+    centralPhoneNumber?: string | null;
+    callPin?: string | null;
   }
 ): string {
   const parts: string[] = [];
@@ -48,8 +54,17 @@ export function buildCalendarDescription(
   const body = templateDescription ? stripHtml(templateDescription) : "";
   if (body) parts.push(body.replace(/\n/g, "<br>"));
 
-  // Phone dial-in
-  if (options?.phoneNumber) {
+  // Phone dial-in.
+  // Preference order:
+  //   1. Central shared number + PIN  (new, shared-architecture)
+  //   2. Per-diviner Chime number     (legacy)
+  if (options?.centralPhoneNumber && options?.callPin) {
+    parts.push(
+      `<b>📞 Join by Phone</b><br>` +
+      `Dial <a href="tel:${options.centralPhoneNumber}" style="color:#d4a017;font-weight:bold;">${options.centralPhoneNumber}</a> at your scheduled time and enter your 6-digit PIN when prompted.<br>` +
+      `<br>Your PIN: <b style="font-size:18px;letter-spacing:3px;">${options.callPin}</b>`
+    );
+  } else if (options?.phoneNumber) {
     parts.push(
       `<b>📞 Phone Dial-in</b><br>` +
       `<a href="tel:${options.phoneNumber}" style="display:inline-block;padding:8px 20px;background-color:#374151;color:#fff;text-decoration:none;border-radius:6px;font-weight:bold;margin:4px 0;">${options.phoneNumber}</a><br>` +

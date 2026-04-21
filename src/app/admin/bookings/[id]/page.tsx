@@ -17,6 +17,7 @@ import {
   Calendar,
   MessageSquare,
 } from "lucide-react";
+import { CallPinCard } from "./_components/call-pin-card";
 
 export const dynamic = "force-dynamic";
 
@@ -43,6 +44,7 @@ type BookingDetail = {
   outlook_calendar_event_id: string | null;
   daily_room_url: string | null;
   booking_token: string | null;
+  call_pin_generated_at: string | null;
   created_at: string;
   updated_at: string;
   diviners: { id: string; display_name: string; username: string } | null;
@@ -109,7 +111,9 @@ async function getBooking(id: string): Promise<BookingDetail | null> {
        questionnaire_responses, session_notes, client_session_notes, chat_transcript,
        cancellation_reason, canceled_at,
        google_calendar_event_id, outlook_calendar_event_id,
-       daily_room_url, booking_token, created_at, updated_at,
+       daily_room_url, booking_token,
+       call_pin_generated_at,
+       created_at, updated_at,
        diviners!inner(id, display_name, username),
        clients!inner(id, full_name, email),
        services!inner(id, name, duration_minutes)`
@@ -315,6 +319,13 @@ export default async function AdminBookingDetailPage({
               </InfoRow>
             </CardContent>
           </Card>
+
+          {/* Call PIN (audit-logged reveal) */}
+          <CallPinCard
+            bookingId={booking.id}
+            hasPin={Boolean(booking.call_pin_generated_at)}
+            generatedAt={booking.call_pin_generated_at}
+          />
 
           {/* Timeline */}
           <Card>
