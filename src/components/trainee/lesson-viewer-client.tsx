@@ -191,9 +191,9 @@ function VideoPlayer({
   const isDirect = isHtml5Video(video.video_url);
 
   return (
-    <div className="overflow-hidden rounded-xl border bg-black">
+    <div className="w-full overflow-hidden rounded-xl border bg-black">
       {embedUrl ? (
-        <div className="relative w-full" style={{ paddingBottom: "56.25%" }}>
+        <div className="relative aspect-video w-full">
           <iframe
             src={embedUrl}
             className="absolute inset-0 h-full w-full"
@@ -209,7 +209,7 @@ function VideoPlayer({
           autoPlay
           muted
           playsInline
-          className="w-full max-h-[480px]"
+          className="aspect-video w-full bg-black object-contain"
           onEnded={onEnded}
         />
       ) : (
@@ -560,7 +560,7 @@ function TriggerVideoPlayer({
   const showCountdown = rewindCountdown !== null;
 
   return (
-    <div className="relative overflow-hidden rounded-xl border bg-black">
+    <div className="relative w-full overflow-hidden rounded-xl border bg-black">
       <video
         ref={videoRef}
         src={video.video_url}
@@ -568,7 +568,7 @@ function TriggerVideoPlayer({
         autoPlay
         muted
         playsInline
-        className="w-full max-h-[480px]"
+        className="aspect-video w-full bg-black object-contain"
         onEnded={onEnded}
         onTimeUpdate={handleTimeUpdate}
         onSeeking={handleSeeking}
@@ -956,9 +956,9 @@ export function LessonViewerClient(props: LessonViewerProps) {
         </DialogContent>
       </Dialog>
 
-      <div className={cn("flex flex-col gap-6 items-start", hasSidebarRail && "lg:flex-row")}>
+      <div className={cn("flex w-full flex-col items-stretch gap-6", hasSidebarRail && "lg:flex-row lg:items-start")}>
         {/* ── Left: Main content ────────────────────────────────────────── */}
-        <div className="flex-1 min-w-0 space-y-5">
+        <div className="w-full flex-1 min-w-0 space-y-5">
           {/* Lesson header */}
           <div className="space-y-2">
             <div className="flex items-start gap-3 flex-wrap">
@@ -983,12 +983,12 @@ export function LessonViewerClient(props: LessonViewerProps) {
             )}
           </div>
 
-          <div className="max-h-[72vh] overflow-y-auto overscroll-contain rounded-xl border bg-card p-4 pr-3 space-y-5">
+          <div className="w-full max-h-[72vh] overflow-y-auto overscroll-contain rounded-xl border bg-card p-4 pr-3 space-y-5">
             {allVideos.length > 0 && (
               <div
                 ref={videoSectionRef}
                 tabIndex={-1}
-                className="space-y-3 scroll-mt-24 outline-none"
+                className="w-full space-y-3 scroll-mt-24 outline-none"
               >
                 {allVideos.length > 1 && (
                   <div className="flex gap-1 overflow-x-auto pb-1">
@@ -1125,7 +1125,7 @@ export function LessonViewerClient(props: LessonViewerProps) {
               <div
                 ref={quizSectionRef}
                 tabIndex={-1}
-                className="rounded-xl border bg-background/40 overflow-hidden scroll-mt-24 outline-none"
+                className="w-full rounded-xl border bg-background/40 overflow-hidden scroll-mt-24 outline-none"
               >
                 <div className="px-4 py-3 border-b flex items-center justify-between">
                   <p className="text-sm font-semibold">Lesson Quiz</p>

@@ -16,13 +16,17 @@ Current target set:
 6. `resources`
 7. `sessions`
 8. `graduation`
-9. `trainee-profile`
+9. `certificate`
+10. `trainee-profile`
 
-Currently omitted:
+Not part of current active walkthrough:
 
 - Standalone notifications, mentor chat, schedule, bookmarks, badge wall, glossary, peer community, and help screens — no matching `/trainee/*` routes exist currently.
 - Separate training category and lesson detail deep links — the current learner flow uses the program workspace with inline lesson viewing; the detail-view navigation is not active in the UI.
-- `/trainee/certificate` — route redirects incomplete trainees to progress; use `graduation` until a graduated screenshot account is available.
+
+Conditional capture:
+
+- `certificate.png` — `/trainee/certificate` is real, but it is only accessible for graduated trainees. The capture script skips it for incomplete trainees and captures it only when run with a graduated trainee account. Current screenshot was captured with the graduated trainee QA account.
 
 ## Capture Rules
 
@@ -54,12 +58,13 @@ Currently omitted:
   - Start / Continue action buttons
 
 ### 3. `program-workspace.png`
-- Route: first available `/trainee/training/:programId`
+- Route: preferred `/trainee/training/:programId` for `Tarot Mastery Track` when available; otherwise first available program
 - Show:
   - program header
   - lesson pane on the left
   - category rail on the right
-  - expanded lesson with content visible
+  - expanded lesson with full-width video/content visible
+  - lesson quiz section in the same workspace panel, scrolling the lesson panel if needed
 - Avoid:
   - locked-only program where no lesson can be opened
 
@@ -101,7 +106,23 @@ Currently omitted:
   - not-yet-graduated card for incomplete trainees, or certificate summary for graduated trainees
   - Continue Training or certificate verification action
 
-### 9. `trainee-profile.png`
+### 9. `certificate.png`
+- Route: `/trainee/certificate`
+- Capture mode: automated with a graduated trainee account.
+- Show:
+  - certificate page heading/action bar
+  - printed certificate body
+  - trainee name
+  - designation and program title
+  - training stats
+  - certificate ID / verification section
+  - Print and Share actions if visible
+- Avoid:
+  - redirected `/trainee/progress` page
+  - browser print dialog
+  - incomplete trainee state
+
+### 10. `trainee-profile.png`
 - Route: `/trainee/profile`
 - Show:
   - profile completion bar
@@ -114,6 +135,9 @@ Currently omitted:
 The capture script resolves:
 
 - first available program route for `program-workspace`
+- guarded certificate route for `certificate`
 - direct routes for all static trainee pages
 
 If a trainee account has no accessible program data, the script should skip the dynamic program-workspace screenshot rather than overwrite valid images with empty or redirect states.
+
+The automation skips `certificate` when the active trainee is redirected away from `/trainee/certificate`, preventing an incomplete trainee's progress page from overwriting the certificate screenshot. Use `WALKTHROUGH_EMAIL` and `WALKTHROUGH_PASSWORD` when a graduated account is needed for a targeted capture.

@@ -29,6 +29,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -48,13 +58,16 @@ import {
   AlertTriangle,
   BarChart3,
   RefreshCw,
+  FilterX,
 } from "lucide-react";
 import Link from "next/link";
+import { cn } from "@/lib/utils";
 import { CampaignDestinationBadge } from "@/components/dashboard/campaign-destination-badge";
 import {
   AdminPagination,
   AdminTableSearch,
   AdminResetButton,
+  AdminDivinerAutocomplete,
   SortHeader,
   useAdminTableParams,
 } from "@/components/admin/admin-table-parts";
@@ -154,6 +167,11 @@ export default function AdminCampaignsPage() {
   const [editCommValue, setEditCommValue] = useState("");
   const [editBudgetCap, setEditBudgetCap] = useState("");
 
+  // Deletion state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [campaignToDelete, setCampaignToDelete] = useState<Campaign | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
   function resetForm() {
     setFormName(""); setFormDesc(""); setFormStartDate(""); setFormEndDate("");
     setFormCommType("percentage"); setFormCommValue("10"); setFormBudgetCap("");
@@ -182,9 +200,7 @@ export default function AdminCampaignsPage() {
   useEffect(() => { loadCampaigns(); }, [loadCampaigns]);
 
   useEffect(() => {
-    fetch("/api/admin/diviners")
-      .then((r) => r.json())
-      .then((j) => setDiviners(j.diviners ?? []));
+    // No longer need to fetch all diviners here
   }, []);
 
   function handleSort(col: string) {
@@ -273,16 +289,25 @@ export default function AdminCampaignsPage() {
     setEditSaving(false);
   }
 
-  async function handleDelete(campaignId: string) {
-    if (!confirm("Delete this campaign? This cannot be undone.")) return;
-    const res = await fetch(`/api/admin/campaigns/${campaignId}`, { method: "DELETE" });
+  function handleDeleteRequest(campaign: Campaign) {
+    setCampaignToDelete(campaign);
+    setDeleteDialogOpen(true);
+  }
+
+  async function confirmDelete() {
+    if (!campaignToDelete) return;
+    setDeleting(true);
+    const res = await fetch(`/api/admin/campaigns/${campaignToDelete.id}`, { method: "DELETE" });
     if (res.ok) {
       toast.success("Campaign deleted");
+      setDeleteDialogOpen(false);
+      setCampaignToDelete(null);
       await loadCampaigns();
     } else {
       const err = await res.json();
       toast.error(err.title ?? "Failed to delete");
     }
+    setDeleting(false);
   }
 
   return (
@@ -296,11 +321,6 @@ export default function AdminCampaignsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <AdminResetButton hasActiveFilters={hasActiveFilters} onReset={handleReset} />
-          <Button variant="outline" size="sm" onClick={() => loadCampaigns()} disabled={loading} className="gap-1.5">
-            <RefreshCw className={`h-4 w-4 ${loading && "animate-spin"}`} />
-            Refresh
-          </Button>
           <Button variant="outline" size="sm" asChild>
             <Link href="/admin/campaigns/analytics">
               <BarChart3 className="mr-2 size-4" />
@@ -426,17 +446,35 @@ export default function AdminCampaignsPage() {
             <SelectItem value="expired">Expired</SelectItem>
           </SelectContent>
         </Select>
-        <Select value={filterDiviner} onValueChange={(v) => { setFilterDiviner(v === "all" ? "" : v); pushParams({ page: "1" }); }}>
-          <SelectTrigger className="w-full sm:w-48">
-            <SelectValue placeholder="All diviners" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All diviners</SelectItem>
-            {diviners.map((d) => (
-              <SelectItem key={d.id} value={d.id}>{d.display_name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <AdminDivinerAutocomplete
+          defaultValue={filterDiviner}
+          onSelect={(id) => {
+            setFilterDiviner(id);
+            pushParams({ diviner_id: id, page: "1" });
+          }}
+          placeholder="All diviners"
+        />
+
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => loadCampaigns()}
+          disabled={loading}
+          className="gap-1.5 h-9"
+        >
+          <RefreshCw className={cn("size-3.5", loading && "animate-spin")} />
+          Reload
+        </Button>
+
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleReset}
+          className="gap-1.5 h-9"
+        >
+          <FilterX className="size-3.5" />
+          Reset
+        </Button>
       </div>
 
       {/* Table */}
@@ -532,7 +570,7 @@ export default function AdminCampaignsPage() {
                       <Button variant="ghost" size="icon" className="size-8" title="Edit" onClick={() => openEdit(c)}>
                         <Pencil className="size-3.5" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="size-8 text-destructive hover:text-destructive" title="Delete" onClick={() => handleDelete(c.id)}>
+                      <Button variant="ghost" size="icon" className="size-8 text-destructive hover:text-destructive" title="Delete" onClick={() => handleDeleteRequest(c)}>
                         <Trash2 className="size-3.5" />
                       </Button>
                     </div>
@@ -622,6 +660,50 @@ export default function AdminCampaignsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent className="sm:max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-destructive font-bold text-xl uppercase tracking-tight">
+              <AlertTriangle className="size-5" />
+              Delete Campaign
+            </AlertDialogTitle>
+            <AlertDialogDescription className="py-3 text-base">
+              Are you sure you want to delete the campaign{" "}
+              <span className="font-bold text-foreground underline decoration-destructive/30 underline-offset-4">
+                "{campaignToDelete?.name}"
+              </span>
+              ? This action cannot be undone and all associated data will be
+              permanently lost.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2 sm:gap-2">
+            <AlertDialogCancel
+              onClick={() => setDeleteDialogOpen(false)}
+              disabled={deleting}
+              className="h-10 px-4"
+            >
+              No, Keep it
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                confirmDelete();
+              }}
+              disabled={deleting}
+              className="h-10 px-4 bg-destructive text-destructive-foreground hover:bg-destructive/90 gap-1.5"
+            >
+              {deleting ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Trash2 className="size-4" />
+              )}
+              Yes, Delete Campaign
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
