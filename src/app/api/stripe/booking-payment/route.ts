@@ -39,6 +39,13 @@ interface BookingPaymentBody {
   clientPhone?: string;
   questionnaire: Record<string, string | number | undefined>;
   affiliateCode?: string;
+  /**
+   * 2026-04-21 affiliate sprint: the `?ref=` value from the URL (e.g.
+   * `cmp_abCD1234`). When present and valid (matches /^cmp_[A-Za-z0-9]{8}$/),
+   * the booking row persists it in bookings.ref_code and the Stripe
+   * webhook will use it to credit commission to the owning affiliate.
+   */
+  refCode?: string;
   giftCode?: string;
   policyAcknowledgedAt?: string;
   booking_notes?: string;
@@ -61,6 +68,7 @@ export async function POST(request: NextRequest) {
       clientPhone,
       questionnaire,
       affiliateCode,
+      refCode: rawRefCode,
       giftCode,
       policyAcknowledgedAt,
       booking_notes,
@@ -68,6 +76,11 @@ export async function POST(request: NextRequest) {
       freeSlot,
     } = body;
     const questionnaireData = questionnaire ?? {};
+
+    // Sanitize ref_code against cmp_XXXXXXXX pattern so random URL params
+    // can't pollute the column.
+    const { sanitizeRefCode } = await import("@/lib/affiliate-attribution");
+    const refCode = sanitizeRefCode(rawRefCode);
 
     // Capture request metadata for audit/analytics
     const requestMetadata = {
@@ -597,6 +610,7 @@ export async function POST(request: NextRequest) {
           ...(availabilityTemplateDescription ? { availability_description: availabilityTemplateDescription } : {}),
         },
         ...(policyAcknowledgedAt ? { policy_acknowledged_at: policyAcknowledgedAt } : {}),
+        ...(refCode ? { ref_code: refCode } : {}),
         ...(callPin
           ? {
               call_pin: callPin.pin,
@@ -694,6 +708,7 @@ export async function POST(request: NextRequest) {
           splitPlatformFeeRule: bookingSplit.trace.platformFeeRule,
           splitAffiliateRule: bookingSplit.trace.affiliateRule,
           ...(affiliateCode ? { affiliateCode } : {}),
+          ...(refCode ? { refCode } : {}),
           ...(giftCode ? { giftCode } : {}),
           ...(loyaltyRuleName
             ? { loyaltyDiscount: `${loyaltyDiscountPercent}%` }
