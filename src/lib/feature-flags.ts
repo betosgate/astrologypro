@@ -21,3 +21,21 @@ export function isAffiliateAssignmentV2Enabled(): boolean {
   // Fallback: dev/preview → on, prod → off
   return process.env.NODE_ENV !== "production";
 }
+
+/**
+ * NEXT_PUBLIC_LANDING_PAGE_V2 ("on" | "off", default "off" in prod)
+ *   Gates the simplified landing-page flow introduced in the 2026-04-21
+ *   landing-page-simplification sprint. When "off", the current (pre-V2)
+ *   builder + publish model remains live. When "on":
+ *     - the new Live/Offline toggle UI is shown on /dashboard/landing-pages
+ *     - POST /api/dashboard/landing-pages/[templateId]/toggle-live is the
+ *       canonical publish-state write path (replaces publish + unpublish)
+ *     - public route renders legacy template + slot blocks (once Task 02
+ *       is implemented)
+ */
+export function isLandingPageV2Enabled(): boolean {
+  const raw = process.env.NEXT_PUBLIC_LANDING_PAGE_V2;
+  if (raw === "on") return true;
+  if (raw === "off") return false;
+  return process.env.NODE_ENV !== "production";
+}
