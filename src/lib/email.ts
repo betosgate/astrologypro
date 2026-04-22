@@ -1539,6 +1539,88 @@ export async function sendCancellationConfirmation({
   });
 }
 
+// ── Diviner Notification: Client Rescheduled ─────────────────────────────────
+export async function sendRescheduleNotificationToDiviner({
+  to,
+  divinerName,
+  clientName,
+  serviceName,
+  previousDate,
+  newDate,
+  dashboardUrl,
+}: {
+  to: string;
+  divinerName: string;
+  clientName: string;
+  serviceName: string;
+  previousDate: string;
+  newDate: string;
+  dashboardUrl: string;
+}) {
+  const content = `
+    <p style="margin:0 0 16px;color:#d4d4d8;">Hi ${divinerName},</p>
+    <p style="margin:0 0 16px;color:#a1a1aa;"><strong style="color:#f4f4f5;">${clientName}</strong> has rescheduled their <strong style="color:#f4f4f5;">${serviceName}</strong> session.</p>
+    ${infoCard(`<strong style="color:#e4e4e7;">Previous Time</strong><br>${previousDate}<br><br><strong style="color:#e4e4e7;">New Time</strong><br>${newDate}`)}
+    <p style="margin:24px 0 0;font-size:13px;color:#9ca3af;">Your calendar has been updated. Open the dashboard to view or manage the booking.</p>
+  `;
+
+  return sendEmail({
+    to,
+    subject: `Rescheduled by ${clientName}: ${serviceName}`,
+    html: buildEmailHtml({
+      title: "Client Rescheduled a Session",
+      preheader: `${clientName} moved their ${serviceName} to ${newDate}.`,
+      content,
+      ctaText: "Open Dashboard",
+      ctaUrl: dashboardUrl,
+      footer: `AstrologyPro &mdash; Run Your Divination Business`,
+    }),
+  });
+}
+
+// ── Diviner Notification: Client Cancelled ───────────────────────────────────
+export async function sendCancellationNotificationToDiviner({
+  to,
+  divinerName,
+  clientName,
+  serviceName,
+  scheduledAt,
+  cancelReason,
+  dashboardUrl,
+}: {
+  to: string;
+  divinerName: string;
+  clientName: string;
+  serviceName: string;
+  scheduledAt: string;
+  cancelReason?: string;
+  dashboardUrl: string;
+}) {
+  const reasonBlock = cancelReason
+    ? infoCard(`<strong style="color:#e4e4e7;">Reason from client</strong><br>${cancelReason}`)
+    : "";
+
+  const content = `
+    <p style="margin:0 0 16px;color:#d4d4d8;">Hi ${divinerName},</p>
+    <p style="margin:0 0 16px;color:#a1a1aa;"><strong style="color:#f4f4f5;">${clientName}</strong> has cancelled their <strong style="color:#f4f4f5;">${serviceName}</strong> session scheduled for <strong style="color:#f4f4f5;">${scheduledAt}</strong>.</p>
+    ${reasonBlock}
+    <p style="margin:16px 0 0;color:#a1a1aa;">Your calendar has been updated and the slot is now free again.</p>
+  `;
+
+  return sendEmail({
+    to,
+    subject: `Cancelled by ${clientName}: ${serviceName}`,
+    html: buildEmailHtml({
+      title: "Client Cancelled a Session",
+      preheader: `${clientName} cancelled their ${serviceName}.`,
+      content,
+      ctaText: "Open Dashboard",
+      ctaUrl: dashboardUrl,
+      footer: `AstrologyPro &mdash; Run Your Divination Business`,
+    }),
+  });
+}
+
 // ── 24-Hour / 1-Hour Session Reminder ────────────────────────────────────────
 export async function sendSessionReminder({
   to,

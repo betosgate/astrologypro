@@ -255,6 +255,7 @@ export function getAvailableSlots({
 
   const available: AvailableSlot[] = [];
   const seen = new Set<string>();
+  const now = Date.now();
 
   for (const window of windows) {
     const windowStart = zonedDateTimeToUtc(date, window.startTime, window.timezone);
@@ -264,6 +265,11 @@ export function getAvailableSlots({
     let slotStart = new Date(windowStart);
 
     while (slotStart.getTime() + durationMinutes * 60_000 <= windowEnd.getTime()) {
+      if (slotStart.getTime() < now) {
+        slotStart = new Date(slotStart.getTime() + stepMinutes * 60_000);
+        continue;
+      }
+
       const slotEnd = new Date(slotStart.getTime() + durationMinutes * 60_000);
 
       const candidate: AvailableSlot = {
