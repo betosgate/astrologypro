@@ -512,14 +512,14 @@ export function AstrologicalLayout({ positionLabels, drawnCards, onReveal, onCar
       </div>
 
       {/* Tablet: 4x3 grid */}
-      <div className="hidden w-full max-[1401px]:grid  grid-cols-4 gap-6 justify-items-center">
+      <div className="hidden w-full max-[1401px]:grid  grid-cols-4 gap-6 justify-items-center max-[768px]:hidden">
         {positionLabels.map((label, i) => (
           <CardSlot key={i} index={i} label={label} drawn={drawnCards[i]} onReveal={onReveal} onCardClick={onCardClick} cardBackUrl={cardBackUrl} cardWidth={140} cardHeight={200} />
         ))}
       </div>
 
       {/* Mobile: 2 columns */}
-      <div className="grid md:hidden grid-cols-2 gap-4 justify-items-center">
+      <div className="grid md:hidden grid-cols-2 gap-4 justify-items-center max-[599px]:grid-cols-1">
         {positionLabels.map((label, i) =>(
           <CardSlot key={i} index={i} label={label} drawn={drawnCards[i]} onReveal={onReveal} onCardClick={onCardClick} cardBackUrl={cardBackUrl} cardWidth={130} cardHeight={190} />
         ))}
