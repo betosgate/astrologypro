@@ -282,7 +282,7 @@ export function AstroChartsSection() {
               <p className="text-xs text-muted-foreground">
                 No monthly transit data found for this month yet.
               </p>
-              <Button asChild variant="ghost" size="sm">
+              <Button asChild variant="outline" size="sm">
                 <Link href="/community/transits">Check Transits Page</Link>
               </Button>
             </div>
