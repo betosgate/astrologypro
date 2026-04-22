@@ -12,6 +12,7 @@ import { canPubliclySellService } from "@/lib/payout-readiness";
 
 interface PageProps {
   params: Promise<{ username: string; serviceSlug: string }>;
+  searchParams: Promise<{ ref?: string }>;
 }
 
 async function getDivinerAndService(username: string, serviceSlug: string) {
@@ -105,8 +106,10 @@ export async function generateMetadata({
   };
 }
 
-export default async function BookingPage({ params }: PageProps) {
+export default async function BookingPage({ params, searchParams }: PageProps) {
   const { username, serviceSlug } = await params;
+  const { ref } = await searchParams;
+  const refParam = ref ? `?ref=${encodeURIComponent(ref)}` : "";
   const { diviner, service } = await getDivinerAndService(username, serviceSlug);
 
   if (!diviner || !service) {
@@ -120,7 +123,7 @@ export default async function BookingPage({ params }: PageProps) {
       <div className="mx-auto max-w-4xl px-4 py-8">
         {/* Back link */}
         <Button asChild variant="ghost" size="sm" className="mb-6 gap-2">
-          <Link href={`/${username}`}>
+          <Link href={`/${username}${refParam}`}>
             <ArrowLeft className="size-4" />
             Back to {diviner.display_name}
           </Link>

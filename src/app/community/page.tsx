@@ -1031,13 +1031,21 @@ export default async function CommunityDashboardPage() {
               <Link
                 key={action.label}
                 href={action.href}
-                className={`flex flex-col items-center gap-2 rounded-xl border p-3 text-center transition-colors hover:border-primary/40 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                className={`group relative flex flex-col items-center gap-2 rounded-xl border p-3 text-center transition-all hover:border-primary/40 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                   action.highlight
-                    ? "border-primary/30 bg-primary/5"
+                    ? "border-primary/30 bg-card shadow-[0_2px_8px_-2px_rgba(0,0,0,0.05)]"
                     : "border-border bg-card"
                 }`}
               >
-                <div className={`flex size-9 items-center justify-center rounded-full ${action.highlight ? "bg-primary/15" : "bg-muted"}`}>
+                {/* Pending action indicator dot */}
+                {action.highlight && (
+                  <span className="absolute -top-0.5 -right-0.5 flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                  </span>
+                )}
+
+                <div className={`flex size-9 items-center justify-center rounded-full transition-transform group-hover:scale-110 ${action.highlight ? "bg-primary/15" : "bg-muted"}`}>
                   <Icon className={`size-4 ${action.highlight ? "text-primary" : "text-muted-foreground"}`} aria-hidden="true" />
                 </div>
                 <span className="text-[11px] font-medium leading-tight text-foreground">
