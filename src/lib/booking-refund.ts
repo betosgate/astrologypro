@@ -54,7 +54,7 @@ export async function issueBookingRefund({
   const { data: booking, error: bookingError } = await admin
     .from("bookings")
     .select(
-      "id, diviner_id, base_price, stripe_payment_intent_id, refund_amount, refunded_at, refund_reason, clients(email, full_name), diviners(display_name)"
+      "id, diviner_id, base_price, stripe_payment_intent_id, stripe_refund_id, refund_amount, refunded_at, refund_reason, refunded_by_role, clients(email, full_name), diviners(display_name)"
     )
     .eq("id", bookingId)
     .single();
@@ -82,7 +82,7 @@ export async function issueBookingRefund({
       refundAmount: (booking.refund_amount as number | null) ?? (booking.base_price as number | null) ?? null,
       refundedAt: booking.refunded_at as string,
       refundReason: (booking.refund_reason as string | null) ?? null,
-      refundId: null,
+      refundId: (booking.stripe_refund_id as string | null) ?? null,
       error: null,
     };
   }
@@ -152,6 +152,9 @@ export async function issueBookingRefund({
       refund_amount: refundAmountDollars,
       refunded_at: refundedAt,
       refund_reason: resolvedReason,
+      stripe_refund_id: refundId,
+      refunded_by_user_id: initiatedByUserId,
+      refunded_by_role: initiatedByRole,
     })
     .eq("id", bookingId);
 

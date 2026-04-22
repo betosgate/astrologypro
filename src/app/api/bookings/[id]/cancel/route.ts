@@ -60,11 +60,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   }
   if (!authorized) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
 
-  // Update booking status
+  // Update booking status + record who initiated so the drawer can answer
+  // "cancelled by whom" without a separate audit table join.
   await admin.from("bookings").update({
     status: "canceled",
     canceled_at: new Date().toISOString(),
     cancellation_reason: body.reason ?? null,
+    canceled_by_user_id: actorUserId,
+    canceled_by_role: actorRole ?? "system",
     updated_at: new Date().toISOString(),
   }).eq("id", id);
 

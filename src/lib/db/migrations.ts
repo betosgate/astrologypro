@@ -53,7 +53,9 @@ import { MIGRATION_SQL as MIG_20260421000040 } from "@/data/migrations/202604210
 import { MIGRATION_SQL as MIG_20260421000050 } from "@/data/migrations/20260421000050_landing_page_slots_additive";
 import { MIGRATION_SQL as MIG_20260421000030_LPS } from "@/data/migrations/20260421000030_landing_page_slots_additive";
 import { MIGRATION_SQL as MIG_20260428000001_LPC } from "@/data/migrations/20260428000001_landing_page_cleanup_destructive";
+import { MIGRATION_SQL as MIG_20260428000002_FK } from "@/data/migrations/20260428000002_drop_section_type_fk";
 import { MIGRATION_SQL as MIG_20260422000001 } from "@/data/migrations/20260422000001_service_template_image_url";
+import { MIGRATION_SQL as MIG_20260422000002 } from "@/data/migrations/20260422000002_booking_cancel_refund_audit";
 
 /**
  * Allowlisted migrations that the admin migration runner can execute.
@@ -519,6 +521,14 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
     sortKey: "20260422000001",
     sql: MIG_20260422000001,
   },
+  "20260422000002_booking_cancel_refund_audit": {
+    id: "20260422000002_booking_cancel_refund_audit",
+    title: "Booking cancel/refund audit fields",
+    description:
+      "Additive columns on bookings: canceled_by_user_id, canceled_by_role, stripe_refund_id, refunded_by_user_id, refunded_by_role. Lets the booking-details drawer answer 'who cancelled, who refunded, which Stripe refund was it' without joining refund_events. Role-level CHECK constraints keep values to the allowlist (admin/diviner/client/system for canceled_by; admin/diviner/system for refunded_by). No existing columns are touched.",
+    sortKey: "20260422000002",
+    sql: MIG_20260422000002,
+  },
   "20260428000001_landing_page_cleanup_destructive": {
     id: "20260428000001_landing_page_cleanup_destructive",
     title: "⚠️ DESTRUCTIVE — Landing page V2 cleanup (Deploy 2)",
@@ -526,6 +536,14 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "DESTRUCTIVE. Run only after the paired V2 code refactor is deployed and the existing landing-page content is disposable. Drops the Deploy-1 view diviner_service_blocks, backfills service_template_id onto service_landing_page_sections from landing_page_id, drops landing_page_id + its FK, drops the service_landing_pages container table CASCADE, drops diviner_services.publish_status, purges rows violating the tighter section_type ('text'|'image'|'html') and slot NOT NULL CHECK constraints, renames service_landing_page_sections → diviner_service_blocks (physical table), drops deprecated columns (is_system, is_draft, draft_*, published_*, instance_key, subtitle, images), tightens CHECKs, and rebuilds the slot+order index. Single BEGIN/COMMIT — rolls back on any failure. NOT idempotent.",
     sortKey: "20260428000001",
     sql: MIG_20260428000001_LPC,
+  },
+  "20260428000002_drop_section_type_fk": {
+    id: "20260428000002_drop_section_type_fk",
+    title: "Drop legacy section_type FK + orphan registry table",
+    description:
+      "Follow-up to 20260428000001. Drops the legacy FK diviner_service_blocks.section_type → section_type_config.type (left behind by the rename — it still referenced the V1 registry seeded with hero/bio/pricing/etc, which blocked inserts of the V2 types text/image/html). Also drops the now-orphan section_type_config table (no live code references it). Idempotent.",
+    sortKey: "20260428000002",
+    sql: MIG_20260428000002_FK,
   },
 };
 
