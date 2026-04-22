@@ -60,6 +60,7 @@ import { MIGRATION_SQL as MIG_20260422000003 } from "@/data/migrations/202604220
 import { MIGRATION_SQL as MIG_20260422000004 } from "@/data/migrations/20260422000004_service_template_intake_submissions";
 import { MIGRATION_SQL as MIG_20260422000005 } from "@/data/migrations/20260422000005_admin_bookings_chime_fields";
 import { MIGRATION_SQL as MIG_20260422000006 } from "@/data/migrations/20260422000006_add_birth_country_to_community_members";
+import { MIGRATION_SQL as MIG_20260422000007 } from "@/data/migrations/20260422000007_repair_community_members_birth_country";
 
 /**
  * Allowlisted migrations that the admin migration runner can execute.
@@ -564,6 +565,14 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Additive column required by the shared HoroscopeToolkitPage (/community/horoscope) and resolveUserBirthData(). Unblocks the /community/profile form from persisting Birth Country and resolves the 'missing Birth country' card after the member completes the profile. Idempotent via ADD COLUMN IF NOT EXISTS — safe to re-run. Companion migration 20260421000010_repair_family_birth_country handles the sibling community_family_members.birth_country back-fill.",
     sortKey: "20260422000006",
     sql: MIG_20260422000006,
+  },
+  "20260422000007_repair_community_members_birth_country": {
+    id: "20260422000007_repair_community_members_birth_country",
+    title: "Repair community_members birth_country",
+    description:
+      "One-time data repair for community_members rows where birth_country IS NULL and birth_city ends with a recognized country suffix (e.g. 'Dublin, Ireland'). Never overwrites an existing birth_country; ambiguous labels are skipped. Includes a targeted repair for the known active PM account whose city label lacks a country suffix. Safe to re-run.",
+    sortKey: "20260422000007",
+    sql: MIG_20260422000007,
   },
   "20260428000001_landing_page_cleanup_destructive": {
     id: "20260428000001_landing_page_cleanup_destructive",

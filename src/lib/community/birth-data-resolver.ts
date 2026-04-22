@@ -160,34 +160,73 @@ export async function resolveUserBirthData(
   }
 
   // ── 2. Try clients row from past booking ──────────────────────────────────
-  const { data: booking } = await admin
-    .from("bookings")
-    .select("clients(id, full_name, birth_date, birth_time, birth_city, birth_lat, birth_lng, birth_timezone)")
-    .eq("user_id", userId)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  //
+  // `bookings` does not have a user_id column; the user link lives on
+  // `clients.user_id`, while bookings point to clients via `client_id`.
+  // Resolve the user's client rows first, then pick the most recent booking
+  // for any of those clients.
+  const { data: clientRows } = await admin
+    .from("clients")
+    .select("id, full_name, birth_date, birth_time, birth_city, birth_lat, birth_lng, birth_timezone")
+    .eq("user_id", userId);
 
-  const client = (booking as unknown as {
-    clients?: {
-      full_name: string | null;
-      birth_date: string | null;
-      birth_time: string | null;
-      birth_city: string | null;
-      birth_lat: number | null;
-      birth_lng: number | null;
-      birth_timezone: string | null;
-    } | null;
-  })?.clients;
+  const clients = (clientRows ?? []) as Array<{
+    id: string;
+    full_name: string | null;
+    birth_date: string | null;
+    birth_time: string | null;
+    birth_city: string | null;
+    birth_lat: number | null;
+    birth_lng: number | null;
+    birth_timezone: string | null;
+  }>;
+
+  let client:
+    | {
+        full_name: string | null;
+        birth_date: string | null;
+        birth_time: string | null;
+        birth_city: string | null;
+        birth_lat: number | null;
+        birth_lng: number | null;
+        birth_timezone: string | null;
+      }
+    | undefined;
+
+  if (clients.length > 0) {
+    const { data: booking } = await admin
+      .from("bookings")
+      .select("client_id")
+      .in(
+        "client_id",
+        clients.map((c) => c.id),
+      )
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const bookingClientId = (booking as { client_id?: string | null } | null)?.client_id;
+    client = clients.find((c) => c.id === bookingClientId);
+  }
 
   if (client && client.birth_date) {
+    const { data: memberCountry } = await admin
+      .from("community_members")
+      .select("birth_country")
+      .eq("id", memberId)
+      .maybeSingle();
+    const profileCountry = (memberCountry as { birth_country?: string | null } | null)
+      ?.birth_country;
     const data = {
       source: "past_booking" as const,
       fullName: client.full_name ?? memberName ?? null,
       dateOfBirth: client.birth_date,
       birthTime: client.birth_time,
       birthCity: client.birth_city,
-      birthCountry: null,
+      birthCountry:
+        typeof profileCountry === "string" && profileCountry.trim().length > 0
+          ? profileCountry.trim()
+          : null,
       birthLat: client.birth_lat,
       birthLng: client.birth_lng,
       birthTimezone: client.birth_timezone,
