@@ -9,10 +9,12 @@ export const dynamic = "force-dynamic";
 
 interface PageProps {
   params: Promise<{ username: string; bookingId: string }>;
+  searchParams: Promise<{ token?: string }>;
 }
 
-export default async function ReschedulePage({ params }: PageProps) {
+export default async function ReschedulePage({ params, searchParams }: PageProps) {
   const { username, bookingId } = await params;
+  const { token } = await searchParams;
   const admin = createAdminClient();
 
   const { data: diviner } = await admin
@@ -27,13 +29,23 @@ export default async function ReschedulePage({ params }: PageProps) {
   const { data: booking } = await admin
     .from("bookings")
     .select(
-      "id, scheduled_at, duration_minutes, session_notes, questionnaire_responses, metadata, services(id, name), clients(full_name, email)"
+      "id, scheduled_at, duration_minutes, session_notes, questionnaire_responses, metadata, booking_token, services(id, name), clients(full_name, email)"
     )
     .eq("id", bookingId)
     .eq("owner_id", diviner.id)
     .single();
 
   if (!booking) notFound();
+
+  // The reschedule page is accessed either by the diviner (from the dashboard)
+  // or by the client (from the booking-manage link in their confirmation
+  // email). The client path supplies the booking_token as a query param; we
+  // only pass it through to the view when it matches, so a random URL with a
+  // bogus token can't escalate privileges.
+  const bookingTokenForClient =
+    token && token === (booking as { booking_token?: string }).booking_token
+      ? token
+      : null;
 
   const svc = (booking as Record<string, unknown>).services as {
     id: string;
@@ -61,9 +73,15 @@ export default async function ReschedulePage({ params }: PageProps) {
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-purple-950">
       <div className="mx-auto max-w-4xl px-4 py-8">
         <Button asChild variant="ghost" size="sm" className="mb-6 gap-2">
-          <Link href="/dashboard/calendar">
+          <Link
+            href={
+              bookingTokenForClient
+                ? `/booking/${bookingTokenForClient}`
+                : "/dashboard/calendar"
+            }
+          >
             <ArrowLeft className="size-4" />
-            Back to Calendar
+            {bookingTokenForClient ? "Back to Booking" : "Back to Calendar"}
           </Link>
         </Button>
 
@@ -77,7 +95,13 @@ export default async function ReschedulePage({ params }: PageProps) {
           <p className="text-muted-foreground">
             Picking a new time for{" "}
             <strong className="text-foreground">{serviceName}</strong>
-            {clientName ? (
+            {bookingTokenForClient ? (
+              <>
+                {" "}
+                with{" "}
+                <strong className="text-foreground">{diviner.display_name}</strong>
+              </>
+            ) : clientName ? (
               <>
                 {" "}
                 with{" "}
@@ -105,6 +129,7 @@ export default async function ReschedulePage({ params }: PageProps) {
           bookingId={bookingId}
           divinerId={diviner.id}
           divinerDisplayName={diviner.display_name}
+          divinerUsername={diviner.username}
           serviceName={serviceName}
           durationMinutes={booking.duration_minutes}
           serviceId={serviceId}
@@ -113,6 +138,7 @@ export default async function ReschedulePage({ params }: PageProps) {
           sessionNotes={sessionNotes}
           existingAttendees={existingAttendees}
           currentScheduledAt={booking.scheduled_at}
+          bookingToken={bookingTokenForClient}
         />
       </div>
     </div>

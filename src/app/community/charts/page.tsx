@@ -128,13 +128,18 @@ export default function ChartsPage() {
 
       {/* Prereq notice */}
       {membersWithoutCharts.length > 0 && (
-        <Card className="border-amber-400/30 bg-amber-50/40">
+        <Card className="border-amber-500/40 bg-amber-500/10 dark:bg-amber-950/20">
           <CardContent className="py-4">
-            <p className="text-sm text-amber-800 font-medium">Generate natal charts first</p>
-            <p className="text-sm text-amber-700 mt-1">
+            <p className="text-sm text-amber-900 dark:text-amber-200 font-medium">
+              Generate natal charts first
+            </p>
+            <p className="text-sm text-amber-800 dark:text-amber-300/90 mt-1">
               {membersWithoutCharts.map((m) => m.full_name).join(", ")}{" "}
               {membersWithoutCharts.length === 1 ? "needs" : "need"} a natal chart before synastry can be calculated.{" "}
-              <Link href="/community/family" className="underline hover:text-amber-900">
+              <Link
+                href="/community/family"
+                className="underline hover:text-amber-700 dark:hover:text-amber-100"
+              >
                 Go to Family →
               </Link>
             </p>
