@@ -691,6 +691,7 @@ export default async function AdminBookingsPage({
                             <BookingDetailSheet
                               detailsOnly
                               actionBasePath={`/api/admin/my-bookings/${b.id}`}
+                              joinHref={`/api/admin/my-bookings/${b.id}/join`}
                               viewerRole="admin"
                               booking={{
                                 id: b.id,
