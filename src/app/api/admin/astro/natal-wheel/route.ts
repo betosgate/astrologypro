@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAdminUser } from "@/lib/admin-auth";
+import { requireAstroToolkitAccess } from "@/lib/astro-toolkit-access";
 import { listActiveAstroSettings } from "@/lib/astro/system-settings";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -67,8 +67,8 @@ async function toggleFreeAstroStatusByKeyValue(keyValue: string): Promise<void> 
 }
 
 export async function POST(req: NextRequest) {
-  const user = await getAdminUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const access = await requireAstroToolkitAccess();
+  if (!access) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
   // Expected: { hours, minutes, date, month, year, latitude, longitude, timezone }

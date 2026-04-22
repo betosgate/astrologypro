@@ -2,15 +2,26 @@ import { notFound } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { TemplateForm } from "../_components/template-form";
 import type { TemplateFormData } from "../_components/template-form";
+import { TemplatePublicUrlActions } from "../_components/template-public-url-actions";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { APP_URL } from "@/lib/constants";
+import {
+  getServiceTemplatePublicPath,
+  isGeneralServiceTemplateSlug,
+} from "@/lib/service-template-public";
 
 export const dynamic = "force-dynamic";
 
 interface Props {
   params: Promise<{ id: string }>;
+}
+
+interface TemplateDiviner {
+  id: string;
+  display_name: string;
 }
 
 async function getTemplate(id: string) {
@@ -33,10 +44,22 @@ async function getTemplate(id: string) {
     .eq("template_id", id)
     .eq("is_enabled", true);
 
+  const diviners = (divinerServices ?? [])
+    .flatMap((ds) => {
+      const relation = ds.diviners;
+      return Array.isArray(relation) ? relation : relation ? [relation] : [];
+    })
+    .filter(
+      (diviner): diviner is TemplateDiviner =>
+        !!diviner &&
+        typeof diviner.id === "string" &&
+        typeof diviner.display_name === "string",
+    );
+
   return {
     template,
     divinerCount: divinerServices?.length ?? 0,
-    diviners: (divinerServices ?? []).map((ds) => ds.diviners),
+    diviners,
   };
 }
 
@@ -56,6 +79,8 @@ export default async function EditServiceTemplatePage({ params }: Props) {
   if (!result) notFound();
 
   const { template, divinerCount, diviners } = result;
+  const isGeneralTemplate = isGeneralServiceTemplateSlug(template.slug ?? "");
+  const publicUrl = `${APP_URL}${getServiceTemplatePublicPath(template.slug)}`;
 
   // Map DB record to form shape
   const initialData: Partial<TemplateFormData> = {
@@ -82,7 +107,7 @@ export default async function EditServiceTemplatePage({ params }: Props) {
   };
 
   return (
-    <div className="p-6 max-w-3xl mx-auto space-y-6">
+    <div className="w-full max-w-[1600px] mx-auto space-y-6 px-4 sm:px-6 lg:px-8">
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
@@ -115,14 +140,21 @@ export default async function EditServiceTemplatePage({ params }: Props) {
           </div>
         </div>
 
-        {divinerCount > 0 && (
-          <div className="text-right">
-            <div className="text-2xl font-bold">{divinerCount}</div>
-            <div className="text-xs text-muted-foreground">
-              diviner{divinerCount !== 1 ? "s" : ""} using this
+        <div className="space-y-3 text-right">
+          {isGeneralTemplate && (
+            <div className="flex justify-end">
+              <TemplatePublicUrlActions publicUrl={publicUrl} disabled={!template.is_active} />
             </div>
-          </div>
-        )}
+          )}
+          {divinerCount > 0 && (
+            <div>
+              <div className="text-2xl font-bold">{divinerCount}</div>
+              <div className="text-xs text-muted-foreground">
+                diviner{divinerCount !== 1 ? "s" : ""} using this
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Diviner list */}
@@ -133,8 +165,8 @@ export default async function EditServiceTemplatePage({ params }: Props) {
           </p>
           <div className="flex flex-wrap gap-1.5">
             {diviners.map((d) => (
-              <Badge key={(d as { id: string }).id} variant="secondary" className="text-xs">
-                {(d as { display_name: string }).display_name}
+              <Badge key={d.id} variant="secondary" className="text-xs">
+                {d.display_name}
               </Badge>
             ))}
           </div>

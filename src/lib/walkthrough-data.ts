@@ -191,32 +191,91 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
     ],
     screens: [
       // Overview
-      { 
-        name: "overview", 
-        label: "Executive Analytics", 
-        description: "Global KPIs and platform health overview.", 
-        group: "Overview",
-        purpose: "Provides platform owners with a high-level summary of system performance, financial health, and user activity in real-time.",
-        bullets: [
-          "Real-time revenue and booking tracking",
-          "Active user sessions and platform health metrics",
-          "Conversion funnel visualization",
-          "Recent transaction logs and order summaries"
-        ]
-      },
-      { 
-        name: "overview_v2", 
-        label: "System Command Center", 
-        description: "Primary entry point for administrative controls and role-based navigation.", 
-        group: "Overview",
-        purpose: "A redesigned administrative hub focusing on actionable tasks and quick-access governance tools.",
-        bullets: [
-          "Shortcut widgets for frequent governance tasks",
-          "System alert and notification center",
-          "Role-based performance summaries",
-          "Quick-access to multi-role portal switching"
-        ]
-      },
+  
+  {
+    "name": "overview_v1",
+    "label": "Executive Analytics",
+    "description": "Global KPI dashboard showing platform performance, revenue health, user activity, role distribution, and recent operational movement.",
+    "group": "Overview",
+    "purpose": "This screen is the main executive analytics dashboard for the platform. It gives administrators and platform owners a high-level view of business performance, operational activity, public engagement, and account growth. The purpose of this page is to help decision-makers quickly understand how the platform is performing across bookings, revenue, conversions, user growth, role distribution, and recent transactions without opening multiple reports.",
+    "bullets": [
+      "📊 Platform Overview Header — Identifies this screen as the all-time statistics dashboard for overall platform performance.",
+      "📚 Total Bookings Card — Shows the total number of bookings processed by the platform and highlights how many are completed.",
+      "💰 Platform Revenue Card — Shows total completed revenue earned across the platform over time.",
+      "👁️ Page Views Card — Shows recent traffic volume, helping admins understand overall interest and page visibility.",
+      "✅ Completion Rate Card — Shows the percentage of bookings that successfully reach completion.",
+      "🟢 Active Users Today Card — Shows how many users signed in today, useful for daily activity monitoring.",
+      "🆕 New Users (7d) Card — Shows how many new users joined during the last 7 days.",
+      "🎯 Booking Conversion Card — Measures completed bookings against total bookings, helping track operational efficiency.",
+      "🧾 Avg Order Value Card — Shows the average value per completed order, useful for revenue quality analysis.",
+      "📈 MoM Growth Card — Shows month-over-month growth and compares current revenue performance to the previous period.",
+      "🌐 Public Activity Card — Shows recent public-facing interactions across diviner pages and platform surfaces.",
+      "👥 Users by Role Section — Breaks down the platform population by role categories such as Diviners, Clients, Advocates, Perennial, Mystery School, and Trainees.",
+      "🧑‍🏫 Diviners Role Card — Shows total diviners, active diviners, and recent growth for the role.",
+      "🙋 Clients Role Card — Shows total clients, active client count, and recent growth trend.",
+      "📣 Advocates Role Card — Shows advocate count and role growth over the recent period.",
+      "🌿 Perennial Role Card — Shows members or users related to the perennial program area.",
+      "🔮 Mystery School Role Card — Shows total Mystery School users and recent additions.",
+      "🎓 Trainees Role Card — Shows the number of trainee accounts and role growth over time.",
+      "🔎 Full Breakdown Link — Provides access to a deeper role-level or analytics breakdown beyond the summary cards.",
+      "🏆 Top Diviners by Revenue Table — Ranks diviners by completed booking revenue so leadership can identify top earners.",
+      "🧍 Recently Joined Table — Shows the newest diviner accounts, their plan, status, and joined date.",
+      "👁️ Top Diviners by Views Table — Shows which diviners are getting the most public page traffic in the recent period.",
+      "⚡ Recent Diviner Activity Feed — Shows the latest public actions such as page views and page-scroll events across diviner profiles.",
+      "🧾 Recent Bookings Table — Shows the latest bookings with client name, diviner, scheduled time, booking status, and amount.",
+      "🧠 Why This Screen Is Used — It gives owners and admins one executive-level screen to monitor business health, growth, user activity, and platform momentum."
+    ]
+  },
+  {
+    "name": "overview_v3",
+    "label": "System Command Center",
+    "description": "A broader administrative command dashboard combining executive KPIs, public activity trends, role distribution, top performers, and recent operational records.",
+    "group": "Overview",
+    "purpose": "This version of the overview works as a system command center by combining financial indicators, engagement activity, user growth signals, role-based summaries, and recent operational events in one place. It is designed to help administrators move from passive reporting into active monitoring, where they can quickly detect business trends, identify top-performing diviners, review new account activity, and inspect recent platform transactions and public interactions.",
+    "bullets": [
+      "🖥️ Central Command Dashboard — Serves as the first-stop admin screen for monitoring platform-wide movement and performance.",
+      "💵 Revenue Monitoring Widgets — Surface total revenue, average order value, and month-over-month growth for fast financial awareness.",
+      "📘 Booking Health Widgets — Show total bookings, completion rate, booking conversion, and recent booking outcomes.",
+      "👤 User Growth Widgets — Show active users today, new users in the last 7 days, and role-based population changes.",
+      "🌍 Public Engagement Tracking — Includes page views, public activity, top-viewed diviners, and recent diviner interaction logs.",
+      "🏷️ Role-Based Summary Blocks — Help admins compare the size and activity of Diviners, Clients, Advocates, Perennial, Mystery School, and Trainees.",
+      "🏆 Top Performer Ranking — Highlights top diviners by revenue so the platform can recognize strong business contributors.",
+      "🆕 Recently Joined Monitoring — Helps admins track which new diviner accounts are entering the platform and what state they are in.",
+      "⚡ Recent Activity Feed — Surfaces the latest user-facing activity events for fast behavior review and anomaly spotting.",
+      "🧾 Transaction Snapshot — The recent bookings table gives quick access to the latest monetized booking activity.",
+      "📈 Trend Awareness — Growth and activity cards help admins quickly notice whether the platform is improving, slowing, or shifting.",
+      "🚦Operational Readiness — Recent bookings, activity logs, and account joins help admins respond faster to support, finance, or onboarding needs.",
+      "🧠 Why This Version Is Useful — It acts like an executive and operational control room, mixing strategy metrics with day-to-day platform movement.",
+      "🔗 Natural Next Step Use Case — From this screen, admins can decide whether they need to inspect finance, bookings, user accounts, diviner performance, or public engagement more deeply."
+    ]
+  },
+  {
+  "name": "overview_recent_bookings",
+  "label": "Overview: Recent Bookings",
+  "description": "A live summary table showing the most recent bookings across all diviners, including client, diviner, schedule, booking status, and amount.",
+  "group": "Overview",
+  "purpose": "This block is used to help admins quickly monitor the latest booking activity happening across the platform. It gives a short operational view of recent orders without opening the full bookings module. The purpose of this section is to let platform owners, operations teams, and admins track who booked, which diviner received the booking, when the session is scheduled, what stage the booking is in, and how much revenue is attached to that record. It is useful for spotting fresh sales, pending orders, confirmed sessions, completed sessions, and zero-value bookings that may belong to free offers, internal tests, refunds, or promotional cases.",
+  "bullets": [
+    "🧾 Block Title — The section is named Recent Bookings, which indicates it is a short operational feed of the latest platform bookings.",
+    "🔟 Last 10 Records Purpose — The subtitle shows that this block displays only the latest 10 bookings across all diviners for quick review.",
+    "👤 Client Column — Shows the customer or booking holder name so admins can identify who made the booking.",
+    "🔮 Diviner Column — Shows which diviner the booking belongs to, helping admins connect revenue and sessions to the correct service provider.",
+    "📅 Scheduled Column — Shows the session date and time so admins can understand upcoming or recently placed appointment timing.",
+    "🚦 Status Column — Shows the booking lifecycle stage such as pending, confirmed, or completed.",
+    "💵 Amount Column — Shows the monetary value attached to the booking, helping admins quickly review sales value.",
+    "🟡 Pending Status Meaning — Indicates the booking exists but is still waiting for the next confirmation or completion step.",
+    "🔵 Confirmed Status Meaning — Indicates the booking has been accepted or secured and is ready for the scheduled flow.",
+    "🟢 Completed Status Meaning — Indicates the booking has successfully finished and is counted as a completed service outcome.",
+    "💲 Paid Booking Visibility — Amounts such as $100.00, $35.00, and $175.00 help admins compare booking values at a glance.",
+    "🆓 Zero Amount Detection — Rows with $0.00 help admins notice free bookings, test records, complimentary sessions, or other non-revenue cases.",
+    "📈 Revenue Monitoring Use — This block helps admins see whether new bookings are entering the system with real revenue value.",
+    "⏱️ Operational Awareness — Because the table is recent-first, admins can quickly react to the newest booking events.",
+    "🔍 Fast Issue Detection — Repeated pending bookings, unusual zero-value rows, or repeated client names may highlight support, payment, or workflow issues.",
+    "🤝 Cross-Diviner Monitoring — Since the table combines all diviners, it works as a platform-wide activity snapshot rather than a single-provider view.",
+    "🧠 Why This Block Is Useful — It gives a simple real-time operational summary of booking flow, booking status movement, and booking revenue without requiring deeper navigation.",
+    "🚀 Main Use Case — Best for booking oversight, support monitoring, revenue checking, session scheduling review, and quick admin decision-making."
+  ]
+},
       
       // People-------Users-----------//
    {
@@ -489,140 +548,772 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
   },
  
     
+  // ----------Affiliates-------------//
+
     
-      { name: "affiliates_v2", label: "Affiliates", description: "Tracking of platform growth partners.", group: "People" },
-      // { name: "campaigns", label: "Marketing Campaigns", description: "Governance of promotional initiatives.", group: "People" },
-      { 
-        name: "roles", 
-        label: "Roles", 
-        description: "Modular role and permission management.", 
-        group: "People",
-        purpose: "Governs the security and accessibility of the platform via Role-Based Access Control (RBAC).",
-        bullets: [
-          "Dynamic permission mapping for 8+ stakeholder roles",
-          "System-wide feature gate configuration",
-          "Audit logs for permission changes",
-          "Custom staff role creation and scoping"
-        ]
-      },
-      // { name: "invitations", label: "System Invitations", description: "Audit trail of pending account invites.", group: "People" },
-      // { name: "social_advocacy", label: "Social Advocacy", description: "Engagement tools for community leaders.", group: "People" },
-      // { name: "deleted_users", label: "Account Deletions", description: "Management of soft-deleted platform users.", group: "People" },
+     {
+  "name": "affiliates_v3",
+  "label": "Affiliates",
+  "description": "Admin directory for managing affiliate partners across all diviners, with search, filters, summary counts, and affiliate list review.",
+  "group": "People",
+  "subModule": "affiliates",
+  "purpose": "This screen is used by admins to manage the full affiliate partner database of the platform. It provides a central place to review how many affiliate records exist, how many are active, search by partner identity, filter by status, filter by diviner, and inspect the affiliate list in one table. The purpose of this page is to help admins monitor referral partnerships, track affiliate assignments across diviners, review commission setups, and keep partner records organized. It is useful because affiliate programs often span multiple diviners and many partner records, so admins need one overview screen to search, monitor, and control affiliate operations.",
+  "bullets": [
+    "👥 Page Purpose — This page manages affiliate partners across all diviners from one central admin screen.",
+    "📊 Total Affiliates Summary Card — Shows the total affiliate count and also highlights how many affiliates are currently active.",
+    "🔍 Search Field — Lets admins search affiliates by name or email to quickly find a specific partner record.",
+    "🚦 Status Filter — Helps narrow the affiliate list by state such as active or pending.",
+    "🔮 Diviner Filter — Lets admins review affiliates linked to one specific diviner or across all diviners.",
+    "📋 All Affiliates Table — Displays the affiliate records in a structured table for review and management.",
+    "🧑 Name Column — Shows the affiliate partner name for quick identification.",
+    "📧 Email Column — Shows the affiliate email address used for communication and record matching.",
+    "🌟 Diviner Column — Shows which diviner the affiliate is assigned to.",
+    "🏷️ Status Column — Indicates the current lifecycle state of each affiliate record.",
+    "💸 Commission Column — Shows the current commission setup, which may be percentage-based or fixed-amount based.",
+    "📅 Created Column — Shows when the affiliate record was created for timeline tracking and admin audit review.",
+    "👁 Actions Column — Opens a row-level action such as viewing the affiliate details.",
+    "📈 Referral Program Oversight — Helps admins monitor affiliate growth and assigned commission relationships.",
+    "🧠 Why This Screen Is Useful — It gives admins one clean overview for affiliate search, filtering, assignment review, and referral program control."
+  ]
+},
 
-      // Content
-      { 
-        name: "blog_posts", 
-        label: "Blog Posts", 
-        description: "Editorial workflow for platform articles.", 
-        group: "Content",
-        purpose: "The central nervous system for platform content. Allows admins to manage the editorial calendar, review drafts, and publish spiritual insights.",
-        bullets: [
-          "Markdown-powered editorial suite",
-          "Collaborative drafting and internal reviews",
-          "SEO optimization and meta-tagging suite",
-          "Scheduled publishing and distribution logic"
-        ]
-      },
-      { name: "blog_analytics", label: "Blog Analytics", description: "Performance tracking for editorial content.", group: "Content" },
-      // { name: "blog_cta_blocks", label: "Conversion Blocks", description: "Manage CTAs injected into blog posts.", group: "Content" },
-      { name: "blog_categories_v2", label: "Blog Categories", description: "Management of blog categories and tags.", group: "Content" },
-      { name: "blog_authors_v2", label: "Blog Authors", description: "Management of guest and staff writers.", group: "Content" },
-      // { name: "blog_series", label: "Content Series", description: "Grouping related articles into collections.", group: "Content" },
-      { 
-        name: "media_items_v2", 
-        label: "Media Items", 
-        description: "Centralized media and file management.", 
-        group: "Content",
-        purpose: "A high-performance digital asset manager for all platform imagery, video, and documents.",
-        bullets: [
-          "Cloud-hosted CDN asset management",
-          "Bulk upload and automated optimization",
-          "Categorized asset tagging and search",
-          "Usage tracking across platform modules"
-        ]
-      },
-      // { name: "videos", label: "Video Library", description: "Management of platform video content.", group: "Content" },
-      { name: "video_sessions", label: "Recorded Sessions", description: "Repository of archived video readings.", group: "Content" },
-      { name: "webinars_v2", label: "Webinar Hub", description: "Scheduling and management of live events.", group: "Content" },
-      { 
-        name: "spiritual_wisdom_v2", 
-        label: "Spiritual Wisdom", 
-        description: "Curation of esoteric spiritual knowledge.", 
-        group: "Content",
-        purpose: "The master repository for the platform's core spiritual doctrines and esoteric teachings.",
-        bullets: [
-          "Hierarchical spiritual knowledge mapping",
-          "Exclusive member-only content gates",
-          "Audio and visual wisdom asset linking",
-          "Searchable esoteric cross-references"
-        ]
-      },
-      // { name: "general_content", label: "Platform Pages", description: "Management of static information pages.", group: "Content" },
-      // { name: "perennial_content", label: "Perennial Knowledge", description: "Specific content for the PM community.", group: "Content" },
+{
+  "name": "affiliates_create_affiliate_drawer",
+  "label": "Affiliates: Add Affiliate",
+  "description": "Side-panel form for creating a new affiliate and assigning that affiliate to a diviner with a defined commission structure.",
+  "group": "People",
+   "subModule": "affiliates",
+  "purpose": "This panel is used when an admin wants to create a new affiliate partner record directly from the Affiliates page. It opens as a side drawer and collects the information needed to assign the affiliate to a diviner, define how the affiliate will be paid, and control which transaction types generate affiliate commission. The purpose of this form is to make affiliate onboarding fast, structured, and consistent so referral partnerships can be created without leaving the main affiliate management page.",
+  "bullets": [
+    "➕ Drawer Purpose — This side panel is used to create a new affiliate and connect that affiliate to a diviner.",
+    "🔮 Diviner Field — Required field used to assign the affiliate to the correct diviner account.",
+    "🧑 Name Field — Captures the affiliate partner's name for identification and record display.",
+    "📧 Email Field — Stores the affiliate email for communication and affiliate record tracking.",
+    "📞 Phone Field — Optional field for adding an affiliate contact number.",
+    "🧮 Commission Type Field — Lets admins choose the commission model, such as percentage or fixed amount.",
+    "📈 Commission Value Field — Defines the actual commission amount, such as 10 percent or a fixed currency value.",
+    "🎯 Commission Applies To Field — Controls which transactions generate affiliate commission, such as signups, sales, or both.",
+    "📝 Structured Onboarding — Ensures each affiliate is created with a valid diviner link and a clearly defined payout rule.",
+    "✅ Create Affiliate Button — Saves the new affiliate record and adds it to the affiliate system.",
+    "⚡ Fast Workflow Benefit — Because the form opens in a drawer, admins can create affiliates without leaving the main list page.",
+    "🧠 Why This Form Is Useful — It standardizes affiliate setup, reduces manual mistakes, and keeps commission rules clear from the start."
+  ]
+},
 
-      // Astrology
-      { name: "wheel_signs_v2", label: "Wheel Signs", description: "Definition and config of zodiac attributes.", group: "Astrology" },
-      { 
-        name: "mundane_dashboard", 
-        label: "Mundane Hub", 
-        description: "Global governance of geopolitical astrology.", 
-        group: "Astrology",
-        purpose: "The command center for world astrology, allowing users to track planetary transits against nations, entities, and global events.",
-        bullets: [
-          "Geo-political entity mapping and NAT charts",
-          "Global transit overlay against major nations",
-          "Historical mundante event search and analysis",
-          "Prophetic dashboard for geopolitical forecasting"
-        ]
-      },
-      { 
-        name: "ingress_charts_v2", 
-        label: "Ingress Charts", 
-        description: "Management of planetary entry charts.", 
-        group: "Astrology",
-        purpose: "A specialized tool for calculating the exact moment a planet enters a new sign (Ingress), used for mundane forecasting.",
-        bullets: [
-          "Precise ingress moment calculations",
-          "Regional chart overlay for world events",
-          "Historical search of past ingress alignments",
-          "Automated alert triggers for major entries"
-        ]
-      },
-      { name: "mundane_entities_v2", label: "Entities", description: "Mapping of nations and locations for charts.", group: "Astrology" },
-      { name: "forecasts_v2", label: "Forecasts", description: "Management of high-level temporal forecasts.", group: "Astrology" },
-      { name: "event_calendar_v2", label: "Event Calendar", description: "Scheduler for major cosmic alignments.", group: "Astrology" },
-      { 
-        name: "chart_studio", 
-        label: "Chart Studio", 
-        description: "Advanced visualization for natal charts.", 
-        group: "Astrology",
-        purpose: "The creative engine for platform-wide chart aesthetics. Admins can configure how astrology charts are rendered for all users.",
-        bullets: [
-          "Custom SVG chart rendering engine settings",
-          "Component-based chart layout configuration",
-          "Visual styling and token management",
-          "Real-time preview of chart generation types"
-        ]
-      },
-      { 
-        name: "world_map", 
-        label: "World Map", 
-        description: "Global mapping of planetary strength.", 
-        group: "Astrology",
-        purpose: "Visualizes the geographic lines of planetary influence (Astro-Cartography) across the physical globe.",
-        bullets: [
-          "Interactive SVG world map overlay",
-          "Planetary line calculations (AC, DC, MC, IC)",
-          "Region-specific influence density mapping",
-          "Exportable locality data for world forecasting"
-        ]
-      },
-      // { name: "research", label: "Astrology Research", description: "Data mining tool for historic chart patterns.", group: "Astrology" },
-      { name: "mundane_search_v2", label: "Mundane Search", description: "Searchable database of planetary positions.", group: "Astrology" },
-      // { name: "mundane_access", label: "Access Control", description: "Permissioning for premium astro data.", group: "Astrology" },
-      // { name: "decan_journals", label: "Decan Wisdom", description: "Granular journals for the 36 decans.", group: "Astrology" },
-      // { name: "decan_media", label: "Decan Media", description: "Visual assets for decan-based studies.", group: "Astrology" },
-      // { name: "quarters", label: "Solar Quarters", description: "Governance of seasonal solar transitions.", group: "Astrology" },
+// ----------Campaigns-------------//
+     {
+  "name": "campaigns",
+  "label": "Marketing Campaigns",
+  "description": "Admin workspace for managing affiliate and platform-wide campaigns, tracking conversions, and monitoring campaign performance.",
+  "group": "People",
+  "subModule": "Campaigns",
+  "purpose": "This screen is used by admins to create, review, filter, and monitor campaign records across the platform. It provides a central campaign list with summary cards, search tools, status and diviner filters, and performance columns such as conversions, affiliate count, commission, and campaign dates. The purpose of this page is to help admins control promotional activity, review which campaigns are active, check who owns each campaign, track conversion progress, and understand how campaigns are performing across diviners and affiliates.",
+  "bullets": [
+    "📊 Total Campaigns Card — Shows the total number of campaign records and also highlights how many are active on the current page.",
+    "👥 Total Affiliates Card — Shows how many affiliates are connected to campaign activity in the current campaign workspace.",
+    "🎯 Total Conversions Card — Shows the total number of successful campaign conversions tracked across listed campaigns.",
+    "🔍 Search by Name — Helps admins quickly find a campaign by title or campaign name.",
+    "🏷️ Status Filter — Lets admins narrow the campaign list by lifecycle state such as active or other status values.",
+    "🔮 Diviner Filter — Allows campaign review by one specific diviner or across all diviners.",
+    "🔄 Reload Button — Refreshes the campaign data so the latest records, counts, and performance numbers are shown.",
+    "🧹 Reset Button — Clears the current filters and restores the default campaign list view.",
+    "📋 Campaign Table — Displays all campaign records in a structured list for review and management.",
+    "📝 Name Column — Shows the campaign title or campaign label used to identify the promotion.",
+    "🌟 Diviner Column — Shows whether the campaign belongs to a specific diviner or is platform-wide.",
+    "🟢 Status Column — Indicates the current state of the campaign, such as active.",
+    "🧭 Destination Column — Shows where the campaign points, such as a service page, or whether no destination has been assigned.",
+    "🔐 Code Column — Displays the campaign code or tracking identifier used for campaign attribution.",
+    "📅 Start Date Column — Shows when the campaign begins.",
+    "📆 End Date Column — Shows when the campaign is scheduled to end, if an end date exists.",
+    "💸 Commission Column — Shows the commission percentage or reward rule linked to the campaign.",
+    "🤝 Affiliates Column — Shows how many affiliates are attached to that campaign.",
+    "📈 Conversions Column — Shows how many tracked conversions the campaign has generated.",
+    "💰 Spent Column — Reserved for tracking budget usage or total campaign spend when applicable.",
+    "📊 Analytics Button — Opens campaign analytics so admins can review deeper campaign performance metrics.",
+    "➕ Create Campaign Button — Starts the workflow for creating a new campaign record.",
+    "🧠 Why This Screen Is Useful — It gives admins one central place to control promotion strategy, monitor affiliate-linked campaign activity, and review campaign performance clearly."
+  ]
+},
+
+{
+  "name": "campaigns_create_platform_wide_v1",
+  "label": "Campaigns: Create Platform-Wide Campaign",
+  "description": "Modal form for creating a campaign that is visible across all diviners and their affiliates, with commission rules, schedule, budget, and UTM tracking.",
+  "group": "People",
+  "subModule": "Campaigns",
+  "purpose": "This form is used when an admin wants to create a new platform-wide campaign that can be shared across all diviners and their affiliate networks. It captures the campaign name, optional description, campaign dates, commission structure, optional budget cap, and UTM parameters for tracking. The purpose of this form is to let admins launch a consistent promotional campaign across the platform while keeping timing, reward logic, and attribution settings clearly defined from the start.",
+  "bullets": [
+    "➕ Modal Purpose — This form creates a new platform-wide campaign visible to all diviners and their affiliates.",
+    "📝 Campaign Name Field — Required field used to define the campaign title for internal management and identification.",
+    "📄 Description Field — Optional field used to explain the campaign goal, promotion details, or internal campaign notes.",
+    "📅 Start Date Field — Defines when the campaign becomes active and should begin tracking participation and conversions.",
+    "📆 End Date Field — Optional field used to set a campaign closing date for limited-time promotions.",
+    "💸 Commission Type Field — Lets admins choose how campaign rewards are calculated, such as percentage-based commission.",
+    "📊 Commission Percentage Field — Defines the exact reward rate used for qualifying campaign results.",
+    "💰 Budget Cap Field — Optional limit used to control the maximum campaign budget or spending exposure.",
+    "🔗 UTM Source Field — Helps identify the traffic source that brought users into the campaign.",
+    "📡 UTM Medium Field — Helps classify the marketing channel, such as email, social, ad, or affiliate.",
+    "🏷️ UTM Campaign Field — Stores the campaign tag used for attribution and analytics reporting.",
+    "🌐 Platform-Wide Scope — This setup is designed for promotions that should apply across the whole diviner network instead of only one diviner.",
+    "📈 Attribution Readiness — The UTM section helps campaign traffic and conversion performance stay measurable in analytics.",
+    "🧠 Why This Form Is Useful — It standardizes campaign creation, keeps promotional rules clear, and makes platform-wide marketing easier to track and manage.",
+    "✅ Create Campaign Button — Saves the campaign and adds it to the campaign management system."
+  ]
+},
+
+{
+  "name": "campaign_analytics",
+  "label": "Platform Campaign Analytics",
+  "description": "Performance analytics dashboard for tracking campaign clicks, conversions, commissions, and audience breakdowns across channels.",
+  "group": "People",
+  "subModule": "Campaigns",
+  "purpose": "This screen is used to monitor how platform campaigns are performing over a selected time range. It helps admins understand total campaign activity, distinguish human clicks from filtered bot traffic, review conversion results, measure commission payouts, and analyze where traffic is coming from. The page also breaks down performance by campaign, device, country, source, and channel so marketing decisions can be made using actual behavior data instead of guesswork. It is useful because admins need one analytics view to evaluate whether campaigns are attracting real users, generating conversions, and producing worthwhile results.",
+  "bullets": [
+    "📊 Total Campaigns Card — Shows the total number of campaigns included in the analytics view and how many are currently active.",
+    "👆 Human Clicks Card — Displays the number of valid user clicks after separating real engagement from suspicious or automated traffic.",
+    "🧍 Unique Clicks Card — Shows how many distinct users or unique click sessions interacted with campaigns, helping reduce duplicate click confusion.",
+    "🎯 Conversions Card — Displays the number of completed conversion actions and the calculated conversion rate for the selected period.",
+    "🤖 Bot Clicks Card — Shows the amount of traffic filtered out as bot or invalid click activity, helping admins trust the campaign data more.",
+    "💸 Total Commission Paid Card — Summarizes the total affiliate or campaign commission paid from conversions in the selected analytics period.",
+    "🗓️ Time Range Filters — The 7d, 30d, 90d, and All time options let admins quickly switch the analytics window for short-term or long-term review.",
+    "📈 Platform Clicks Over Time — This chart area shows how click activity changes over time so trends, spikes, or drop-offs can be identified.",
+    "🏆 Top Campaigns by Clicks — Ranks the best-performing campaigns by click volume and also shows conversion count for each listed campaign.",
+    "💻 By Device Block — Breaks traffic down by device type, such as desktop, so admins can understand where users are engaging from.",
+    "🌍 By Country Block — Shows campaign traffic distribution by country, helping identify geographic performance and audience concentration.",
+    "🔗 By Source Block — Explains where visits came from, such as direct traffic or other attribution sources, for campaign performance review.",
+    "📣 Channel Performance Block — Compares marketing channels such as Email or Facebook and shows clicks and conversions by channel.",
+    "🧠 Why This Screen Is Useful — It gives admins a clear campaign-performance command view for analyzing traffic quality, channel effectiveness, click behavior, and conversion outcomes.",
+    "🚀 Practical Use — Useful for campaign reporting, marketing optimization, affiliate review, budget decisions, traffic-source analysis, and performance audits."
+  ]
+},
+
+     {
+  "name": "roles_v1",
+  "label": "Roles Overview",
+  "description": "A role-based user summary dashboard showing total users, active users, recent growth, and per-role membership counts.",
+  "group": "People",
+  "subModule": "Roles",
+  "purpose": "This screen is used to give admins a clear overview of all major platform roles and their current user counts. It summarizes the total user base, how many users are active, how many joined recently, and how those users are distributed across key role groups such as Diviners, Clients, Social Advocates, Perennial Mandalism members, Mystery School members, and Trainees. The page is useful because admins need one place to quickly understand role distribution, monitor platform growth, compare role activity, and jump into a specific role list for deeper management.",
+  "bullets": [
+    "👥 Total Users Card — Shows the full number of user accounts across the platform, giving admins a top-level population summary.",
+    "✅ Active Users Card — Displays how many accounts are currently active, helping admins monitor real usable accounts versus inactive records.",
+    "📈 New (30D) Card — Shows how many users were added in the last 30 days, making it easier to measure recent growth.",
+    "🔗 View All Users Button — Opens the broader user directory so admins can move from summary analytics into full account management.",
+    "⭐ Diviners Block — Summarizes certified astrologers and tarot readers who provide readings on the platform.",
+    "🧑‍💼 Clients Block — Summarizes registered users who book and attend sessions or use services on the platform.",
+    "📣 Social Advocates Block — Summarizes referral and promotion partners who help grow the platform through signups and outreach.",
+    "📘 Perennial Mandalism Block — Summarizes members enrolled in the Perennial Mandalism subscription or content program.",
+    "🔮 Mystery School Block — Summarizes members enrolled in the Mystery School learning or subscription experience.",
+    "🎓 Trainees Block — Summarizes users taking part in training programs, apprenticeships, or guided development tracks.",
+    "📊 Role Count Panel — Each role card shows Total, Active, and New 30D values so admins can compare role growth and engagement quickly.",
+    "🟢 Active Rate Indicator — The progress bar on each role card shows the percentage of active users inside that role group.",
+    "⚠️ Inactive Note — Some role blocks also show inactive count so admins can quickly spot roles with dormant accounts.",
+    "➡️ View Role Action — Each role card includes a direct action such as View Diviners or View Clients to open the detailed listing for that role.",
+    "🧠 Why This Screen Is Useful — It helps admins understand platform structure, user segmentation, adoption trends, and role health without opening multiple pages.",
+    "🚀 Practical Use — Useful for executive review, role growth monitoring, staffing insight, membership tracking, user segmentation, and quick navigation into detailed people management."
+  ]
+},
+
+
+
+  {
+    "name": "roles_contract_templates",
+    "label": "Role Contracts: Templates & Contract Editor",
+    "description": "Create, review, and manage reusable contract templates for different platform roles.",
+    "group": "People",
+    "subModule": "Roles",
+    "purpose": "This screen is used to manage role-based legal or policy contract templates across the platform. Admins can select an existing template from the template list, review its key, version, status, and title, and edit the full contract configuration in one place. The page helps the platform standardize agreements for roles such as client, community, mystery_school, diviner, trainee, and advocate. It is useful because different role groups may need different terms, different versions, and different agreement logic before access, commissions, services, or permissions are enabled.",
+    "bullets": [
+      "📚 Templates Panel — Shows all saved contract templates so admins can quickly switch between available agreements.",
+      "🔑 Contract Key — A unique internal identifier used to track the template in the system.",
+      "📝 Title Field — Stores the readable agreement name shown to admins or used in contract presentation.",
+      "🔢 Version Field — Defines the current template version so changes can be tracked over time.",
+      "📅 Effective Date — Sets the date from which the contract version becomes valid.",
+      "🧾 Legacy Document Type — Maps the template to an older or legacy contract type when backward compatibility is needed.",
+      "🧬 Family Key — Groups related versions of the same contract under one contract family.",
+      "🌱 Version Kind — Marks whether the template is a base version or another contract version type.",
+      "🎯 Applicability — Defines who this contract can apply to, such as all users or a narrower group.",
+      "🔗 Amends Template Id — Used when one contract version formally updates or replaces an earlier template.",
+      "🏷️ Role Scope — Lets admins assign which user roles this contract applies to.",
+      "🛣️ Current Consolidated Path — Helps define the current active consolidated contract route or document chain.",
+      "🧠 Summary Field — Stores a short explanation of why this contract exists or when it is required.",
+      "📄 Template Body — Contains the full contract text that users may later review or sign.",
+      "➕ New Contract Button — Opens a fresh contract creation flow for building a new template from scratch.",
+      "🧠 Why This Screen Is Useful — It centralizes role agreement governance so admins can manage legal text, versioning, applicability, and role coverage in one place."
+    ]
+  },
+  {
+    "name": "roles_contract_amendment_rollouts",
+    "label": "Role Contracts: Amendment Rollouts",
+    "description": "Prepare and launch role-based amendment rollouts for selected contract templates.",
+    "group": "People",
+    "subModule": "Roles",
+    "purpose": "This screen is used to create a draft rollout for contract amendments. Admins can choose an amendment template, define which roles should receive it, link a future consolidated template, and add internal notes before rollout. The page is useful because contract updates often need controlled staged delivery instead of replacing agreements instantly for every user.",
+    "bullets": [
+      "📚 Templates List — Shows currently active template families and versions so admins know which agreements already exist.",
+      "🧩 Amendment Template Field — Lets admins select the amendment contract that should be rolled out.",
+      "🔮 Future-User Consolidated Template — Defines which consolidated agreement future users should receive after the rollout logic is applied.",
+      "🏷️ Target Roles — Lets admins choose which role groups the amendment rollout should affect.",
+      "📝 Notes Field — Stores internal rollout notes for admin review, legal context, or operational tracking.",
+      "🧪 Create Draft Rollout Button — Creates a rollout in draft mode before actual activation.",
+      "⚖️ Why This Block Is Used — It helps admins update agreements safely without immediately forcing changes on all users.",
+      "🚀 Practical Use — Useful for staged policy updates, legal amendments, role-specific contract changes, and controlled release management."
+    ]
+  },
+  {
+    "name": "roles_contract_variables_requirements",
+    "label": "Role Contracts: Variables & Role Requirements",
+    "description": "Configure dynamic contract variables and role-based requirement rules before saving a contract.",
+    "group": "People",
+    "subModule": "Roles",
+    "purpose": "This screen is used to define dynamic placeholders and enforcement rules inside a role contract. Admins can create variables such as signer name, signer email, company name, and effective date, then map each variable to a source like user_profile, system, or runtime. They can also define role requirements that determine when a contract is required for a role, such as during post-login or another lifecycle event. This is useful because contract templates often need dynamic values and conditional enforcement instead of fixed text only.",
+    "bullets": [
+      "🧷 Variables Section — Stores reusable placeholders that can be injected into contract text automatically.",
+      "🔤 Variable Key — The machine-readable placeholder name used in the contract template.",
+      "🏷️ Variable Label — The human-readable field name shown to admins.",
+      "🗂️ Variable Source — Defines where the value comes from, such as user profile data, system values, or runtime values.",
+      "🧮 Default Value — Provides a fallback value if no live value is available.",
+      "➕ Add Variable Button — Adds a new variable row for contract personalization.",
+      "🗑️ Remove Variable Button — Deletes an unwanted variable definition.",
+      "📋 Role Requirements Section — Defines when a contract becomes required for a specific role.",
+      "👤 Role Selector — Chooses which role the requirement applies to.",
+      "⏱️ Trigger Stage Field — Defines the event stage, such as post_login, when the contract requirement is enforced.",
+      "🔢 Priority / Order Field — Helps control evaluation order or rule precedence.",
+      "✅ Required Badge — Indicates that the selected requirement is mandatory.",
+      "➕ Add Requirement Button — Adds another role requirement rule.",
+      "💾 Save Contract Button — Saves variables, requirements, and contract configuration together.",
+      "🧠 Why This Screen Is Useful — It makes contracts dynamic, role-aware, and enforceable instead of static text only."
+    ]
+  },
+  {
+    "name": "roles_contract_rollout_block",
+    "label": "Role Contracts: Rollout Draft Block",
+    "description": "A focused rollout creation block for assigning amendment templates to roles with notes and future template mapping.",
+    "group": "People",
+    "subModule": "Roles",
+    "purpose": "This block is a focused rollout tool used when admins want to prepare a contract amendment rollout without editing the full contract body. It allows a fast setup of amendment template, target roles, future consolidated template behavior, and internal rollout notes. The block is useful because some admins may only need rollout control rather than full template authoring.",
+    "bullets": [
+      "🧾 Amendment Template Dropdown — Selects the amendment contract that should be distributed.",
+      "🔗 Future-User Consolidated Template Dropdown — Controls what consolidated agreement future users should receive.",
+      "🏷️ Target Roles Chips — Lets admins mark the roles included in the amendment rollout.",
+      "📝 Notes Box — Captures internal rollout explanation, review context, or rollout instructions.",
+      "🧪 Draft Mode Action — The rollout can be prepared as a draft before live enforcement.",
+      "⚙️ Operational Purpose — Helps separate legal rollout planning from core contract editing.",
+      "🧠 Why This Block Matters — It gives admins a simple controlled way to prepare role-specific amendment deployment."
+    ]
+  }
+,
+
+      
+    
+
+      // -----------------Content-------------//
+
+  {
+    "name": "blog_posts_v3",
+    "label": "Blog Posts",
+    "description": "Manage all blog articles and their publishing status.",
+    "group": "Content",
+    "purpose": "This screen is the main place for managing blog content on the platform. It helps admins review all posts, search by title, track status, see authors and categories, check read time, view publish dates, and open row actions for editing or other management tasks. It is useful because it keeps the full blog library organized in one place.",
+    "bullets": [
+      "Shows total number of blog posts",
+      "Tabs help filter posts by status such as Draft, In Review, Approved, Scheduled, Published, Unpublished, and Archived",
+      "Search bar helps find a post quickly by title",
+      "Post table shows title, author, category, status, read time, and published date",
+      "Featured or hero tags help identify special posts",
+      "Actions menu gives post-level management options",
+      "New Post button starts the blog creation flow",
+      "Useful for editors, content managers, and admins handling the platform blog"
+    ]
+  },
+  {
+    "name": "blog_post_create",
+    "label": "New Blog Post",
+    "description": "Create a new blog post with title and URL slug.",
+    "group": "Content",
+    "purpose": "This screen is used to create a new blog post before writing or editing the full article. It captures the basic setup information such as the post title and slug. It is useful because it gives the content team a quick first step to create a new article record and then move into the editing process.",
+    "bullets": [
+      "Title field is used to enter the blog post name",
+      "Slug field creates the URL path for the post",
+      "Slug can be auto-generated from the title and also edited manually",
+      "Create and Edit button saves the new post and opens it for further editing",
+      "Cancel button closes the creation flow without saving",
+      "Useful for starting a new article in a simple and controlled way"
+    ]
+  },
+  {
+    "name": "blog_analytics_v3",
+    "label": "Blog Analytics",
+    "description": "Performance dashboard for blog posts and CTA engagement.",
+    "group": "Content",
+    "purpose": "This screen is used to measure how the blog is performing over a selected period. It helps admins understand post views, number of published posts, CTA clicks, average views per post, top posts, top categories, and top CTA blocks. It is useful for improving content strategy and understanding which articles are getting attention.",
+    "bullets": [
+      "Shows total views for the selected time period",
+      "Shows how many blog posts are published",
+      "Shows CTA clicks for blog content",
+      "Shows average views per post",
+      "Views by Day block helps track traffic trend over recent days",
+      "Top Posts by Views highlights best-performing articles",
+      "Top Categories shows which topics are performing well",
+      "Top CTA Blocks by Clicks shows which calls-to-action are getting engagement",
+      "Useful for content planning, growth tracking, and campaign improvement"
+    ]
+  },
+  {
+    "name": "blog_categories_v4",
+    "label": "Blog Categories",
+    "description": "Manage the category structure used for blog posts.",
+    "group": "Content",
+    "purpose": "This screen is used to manage blog categories so posts can be grouped properly by topic. It helps admins define category names, slugs, sort order, descriptions, and active status. It is useful because categories make the blog easier to organize, filter, and browse.",
+    "bullets": [
+      "Shows all available blog categories in a table",
+      "Each category includes name, slug, sort order, and active status",
+      "Description explains what type of content belongs in the category",
+      "Edit action lets admins update category details",
+      "Delete action removes unused categories",
+      "Add Category button opens the form to create a new category",
+      "Useful for keeping the blog structure clear and organized"
+    ]
+  },
+  {
+    "name": "blog_category_create_vi2",
+    "label": "New Blog Category",
+    "description": "Create a new category for organizing blog posts.",
+    "group": "Content",
+    "purpose": "This form is used to create a new category for blog content. It helps define the category name, slug, description, display order, and whether the category is active. It is useful because it gives admins a clean way to expand the blog topic structure as new content areas are added.",
+    "bullets": [
+      "Name field stores the visible category title",
+      "Slug field stores the URL-friendly category identifier",
+      "Description explains the meaning or use of the category",
+      "Sort Order controls how categories appear in lists",
+      "Active checkbox controls whether the category is available for use",
+      "Add Category button saves the new category",
+      "Cancel button closes the form without saving",
+      "Useful for setting up new blog topics in a structured way"
+    ]
+  },
+  {
+    "name": "blog_authors_vi2",
+    "label": "Blog Authors",
+    "description": "Manage author profiles used on blog posts.",
+    "group": "Content",
+    "purpose": "This screen is used to manage the people shown as authors on blog posts. It helps admins keep author names and bios organized so articles can display clear writer information. It is useful because author profiles improve trust, branding, and content presentation.",
+    "bullets": [
+      "Shows all available blog authors",
+      "Each author entry includes the author name and short bio",
+      "Useful for assigning clear authorship to blog articles",
+      "Helps maintain consistent author branding across posts",
+      "Add Author button opens the form to create a new author profile"
+    ]
+  },
+  {
+    "name": "blog_author_create_v2",
+    "label": "New Blog Author",
+    "description": "Create a new author profile for blog content.",
+    "group": "Content",
+    "purpose": "This form is used to add a new author profile for the blog. It stores the author name, slug, bio, avatar, social handle, website, and active status. It is useful because blog posts often need public-facing writer details, and this screen makes author profile setup simple and organized.",
+    "bullets": [
+      "Name field stores the display name of the author",
+      "Slug field stores the URL-friendly author identifier",
+      "Bio field gives a short introduction to the author",
+      "Avatar URL stores the author's image",
+      "Twitter Handle field stores the social username",
+      "Website URL field links to the author's website or profile",
+      "Active checkbox controls whether the author is visible to readers",
+      "Add Author button saves the author profile",
+      "Cancel button exits without saving"
+    ]
+  },
+  {
+    "name": "media_item_create_ve2",
+    "label": "Media Items",
+    "description": "Manage media content for diviner profiles and platform content.",
+    "group": "Content",
+    "purpose": "This screen is used to manage all uploaded or linked media items across diviners. It supports videos, audio, articles, links, and images. Admins can filter by diviner, review status, and media type while also controlling featured flags, active status, and sort order. It is useful because it keeps media moderation and presentation in one place.",
+    "bullets": [
+      "Supports multiple media types such as Video, Audio, Article, Link, and Image",
+      "Filters by diviner and approval status",
+      "Tabs help switch between media type views",
+      "Table shows thumbnail, title, type, platform, diviner, review status, featured state, active state, and sort order",
+      "Approved or review state helps moderation workflow",
+      "Featured toggle highlights important content",
+      "Active toggle controls whether media is visible",
+      "Sort number controls display order",
+      "Edit and delete actions manage individual media items",
+      "Add Media button opens the media creation form"
+    ]
+  },
+  {
+    "name": "media_item_create",
+    "label": "Add Media Item",
+    "description": "Create a new media entry for a diviner or content area.",
+    "group": "Content",
+    "purpose": "This form is used to add a new media item to the platform. It lets admins connect content to a diviner, define the type, enter the title and description, add thumbnail and category information, choose a source platform, and control review and featured settings. It is useful because it gives a full setup flow for publishing or reviewing media content.",
+    "bullets": [
+      "Diviner field links the media item to a specific diviner",
+      "URL field stores the main content link",
+      "Type field defines whether the item is a video, article, image, link, or another format",
+      "Title field stores the media title",
+      "Description field gives a short explanation of the content",
+      "Thumbnail URL stores the preview image",
+      "Category field helps group the media item",
+      "Platform field identifies the source platform such as YouTube",
+      "Sort Order controls the display sequence",
+      "Featured toggle highlights important media",
+      "Moderation Status tracks review progress",
+      "Admin Review Notes allows internal feedback",
+      "Add Media button saves the item"
+    ]
+  },
+  {
+    "name": "video_sessions_v1",
+    "label": "Video Sessions",
+    "description": "Track live and completed video reading sessions across the platform.",
+    "group": "Content",
+    "purpose": "This screen is used to monitor live reading session activity across all diviners. It shows how many sessions exist, how many are live right now, how many ended today, and how many are ready or unused. It also lists recent sessions with identifiers, diviner-client pairings, duration, state, and date. It is useful for session oversight, troubleshooting, and operational review.",
+    "bullets": [
+      "Shows total number of video sessions",
+      "Shows how many sessions are live right now",
+      "Shows how many sessions ended today",
+      "Shows ready or unused sessions",
+      "Recent Sessions list shows session ID or title",
+      "Session row shows diviner and client pairing",
+      "Shows session duration",
+      "Shows session state such as created or ended",
+      "Shows the session date",
+      "Useful for live session monitoring, audit review, and support operations"
+    ]
+  },
+  {
+    "name": "webinars_v1",
+    "label": "Webinars",
+    "description": "Manage scheduled webinars and recorded webinar entries.",
+    "group": "Content",
+    "purpose": "This screen is used to manage webinar events on the platform. It helps admins filter webinar records by creation date, review webinar titles, hosts, schedule times, access type, status, and edit actions. It is useful because it keeps both free and paid webinar content organized in one place.",
+    "bullets": [
+      "Date filters help narrow webinars by creation period",
+      "Search and reset controls support quick filtering",
+      "Table lists title, host, schedule time, access type, and status",
+      "Access labels show whether the webinar is Free or Paid",
+      "Status shows whether the webinar is active",
+      "Edit action opens the webinar for updates",
+      "New Webinar button starts webinar creation",
+      "Useful for managing live teaching sessions and evergreen webinar content"
+    ]
+  },
+  {
+    "name": "webinar_create_v1",
+    "label": "New Webinar",
+    "description": "Create a new webinar with schedule, host, and access details.",
+    "group": "Content",
+    "purpose": "This form is used to create a new webinar on the platform. It captures title, description, host name, schedule time, duration, join URL, recording URL, and whether the webinar is free and active. It is useful because it allows admins to set up teaching events and recorded sessions in a clear structured flow.",
+    "bullets": [
+      "Title field stores the webinar name",
+      "Description field explains what the webinar is about",
+      "Host Name field shows who is presenting",
+      "Scheduled At field sets the webinar date and time",
+      "Duration field sets the length in minutes",
+      "Join URL stores the live access link",
+      "Recording URL stores the replay link if available",
+      "Free Webinar checkbox controls whether users pay to access it",
+      "Active checkbox controls whether the webinar is available",
+      "Create Webinar button saves the webinar",
+      "Cancel button exits without saving"
+    ]
+  },
+  {
+    "name": "spiritual_wisdom_V1",
+    "label": "Spiritual Wisdom",
+    "description": "Manage spiritual wisdom entries such as articles and YouTube content.",
+    "group": "Content",
+    "purpose": "This screen is used to manage a collection of spiritual wisdom content for the platform. It lets admins filter by created and updated date and review active entries in a simple card-style list. Each entry shows its title, short subtitle, priority order, active status, and row actions. It is useful for curating evergreen teaching content in an organized way.",
+    "bullets": [
+      "Date filters help search content by created and updated time",
+      "Search and reset controls simplify filtering",
+      "Card list shows each spiritual wisdom entry clearly",
+      "Each item shows title and short subtitle or explanation",
+      "Priority badge helps define display order",
+      "Active badge shows which items are currently enabled",
+      "View, edit, and delete actions manage each entry",
+      "New Entry button opens the content creation form",
+      "Useful for managing article and YouTube-based wisdom content"
+    ]
+  },
+  {
+    "name": "spiritual_wisdom_create_v1",
+    "label": "New Spiritual Wisdom Entry",
+    "description": "Create a new spiritual wisdom article or document entry.",
+    "group": "Content",
+    "purpose": "This form is used to create a new spiritual wisdom entry. It helps admins choose the content type, set the priority, enter the title, add a descriptive title, write rich text content, attach an image URL, and control active state. It is useful because it gives a clear publishing flow for long-form wisdom content.",
+    "bullets": [
+      "Type field defines the content format such as Text or Document",
+      "Priority field controls how early the item appears",
+      "Title field stores the main entry title",
+      "Descriptive Title adds a supporting heading or subtitle",
+      "Content area stores the main body in HTML or rich text",
+      "Image URL field links a thumbnail or cover image",
+      "Active checkbox controls whether the entry is visible",
+      "Create button saves the new entry",
+      "Cancel button exits without saving",
+      "Useful for publishing spiritual teachings in a structured way"
+    ]
+  }
+,
+
+      // ------------------------------Astrology
+  
+  {
+    "name": "wheel_signs_s1",
+    "label": "Wheel Signs",
+    "description": "Manage zodiac sign date ranges and display order.",
+    "group": "Astrology",
+    "purpose": "This page is used to manage the 12 zodiac wheel signs. Admins can search signs, filter by start date range, review each sign's start and end date, control priority order, check active status, and open each sign for editing.",
+    "bullets": [
+      "Shows all zodiac signs in one table",
+      "Stores sign start date and end date",
+      "Priority column controls sign ordering",
+      "Status shows whether a sign is active",
+      "Search helps find a sign quickly",
+      "Date filters help narrow results by period",
+      "New Sign button starts sign creation",
+      "Edit action opens a sign for updates"
+    ]
+  },
+  {
+    "name": "mundane_hub",
+    "label": "Mundane Astrology Hub",
+    "description": "Dashboard for ingress charts, entity registry, and forecasts.",
+    "group": "Astrology",
+    "purpose": "This dashboard gives a quick overview of the mundane astrology area. It shows high-level counts for active entities, ingress charts, active forecasts, and pending forecasts, while also giving fast access to the main working sections like Ingress Charts, Entity Registry, and Forecasts.",
+    "bullets": [
+      "Top cards show key activity counts",
+      "Quick access blocks open core mundane sections",
+      "Recent Ingress Charts list recently created chart entries",
+      "Entity Registry panel shows recently added tracked entities",
+      "Forecasts panel shows recently created predictions",
+      "Useful as the daily command center for mundane work",
+      "Helps admins move quickly between research and publishing tasks"
+    ]
+  },
+  {
+    "name": "mundane_dashboard_s1",
+    "label": "Mundane Astrology",
+    "description": "Main command center for entities, leaders, forecasts, charts, and research tools.",
+    "group": "Astrology",
+    "purpose": "This is the large navigation dashboard for the full mundane astrology system. It acts like a launchpad where users can open entity management, leader registry, forecast journal, event calendar, research tools, alerting tools, chart studio, map overlays, scoring, watchlists, and reporting.",
+    "bullets": [
+      "Provides one-click access to all major mundane astrology tools",
+      "Includes entity registry and leader registry",
+      "Includes forecast journal and mundane events",
+      "Includes event calendar and predictive timeline",
+      "Includes research workspace and collaborative workspaces",
+      "Includes watchlist, alert center, and AI brief tools",
+      "Includes chart studio, world map, scoring engine, and report builder",
+      "Top buttons allow quick creation of entity, leader, and forecast records"
+    ]
+  },
+  {
+    "name": "mundane_forecast_create_detailed",
+    "label": "New Forecast",
+    "description": "Create a structured astrological forecast with timing, confidence, and categories.",
+    "group": "Astrology",
+    "purpose": "This form is used to create a detailed mundane forecast entry. It captures the forecast title, related entity, forecast date range, confidence level, astrological basis, narrative summary, event categories, and visibility settings for community publishing.",
+    "bullets": [
+      "Title field stores the forecast name",
+      "Related Entity links the forecast to a country, region, or institution",
+      "Forecast Start and Forecast End define the active prediction window",
+      "Confidence Level helps rate certainty of the forecast",
+      "Astrological Basis records the transit or ingress reasoning",
+      "Narrative Summary explains the predicted outcome in simple words",
+      "Event Categories tag the forecast by theme like political, economic, weather, or social",
+      "Visibility setting controls whether the forecast is admin-only or community-visible"
+    ]
+  },
+  {
+    "name": "mundane_ingress_charts",
+    "label": "Mundane Astrology Charts",
+    "description": "Manage ingress chart publications with filters, status, and publishing controls.",
+    "group": "Astrology",
+    "purpose": "This page lists mundane ingress charts and lets admins review, filter, publish, unpublish, edit, or delete them. It also shows summary counts for total charts, published charts, upcoming charts, and social advocacy usage.",
+    "bullets": [
+      "Top summary cards show chart totals and publishing status",
+      "Search box helps find charts by title or location",
+      "Dropdown filters narrow charts by type, importance, sector, and status",
+      "Each chart card shows title, date range, importance, author, and tags",
+      "Publish and Unpublish buttons control visibility",
+      "Edit and delete actions manage each chart entry",
+      "Social advocacy toggle controls special distribution use",
+      "New Chart button starts chart creation"
+    ]
+  },
+  {
+    "name": "mundane_chart_create_basic",
+    "label": "Create Mundane Chart",
+    "description": "Set up a new mundane ingress chart with event, location, and publishing details.",
+    "group": "Astrology",
+    "purpose": "This form is used to create a mundane chart entry with its main metadata. It captures title, ingress type, importance, short description, event timing, validity period, location details, and publishing settings such as published state and social advocacy mode.",
+    "bullets": [
+      "Basic Info section stores chart title and ingress type",
+      "Importance level marks the expected impact of the chart",
+      "Short Description gives a quick summary for list view",
+      "Event Timestamp records the main chart event time",
+      "Validity Start and End define how long the chart remains relevant",
+      "Location section stores place name, latitude, longitude, and timezone",
+      "Published toggle controls whether the chart is live",
+      "Social Advocacy toggle marks special campaign or public use"
+    ]
+  },
+  {
+    "name": "mundane_ingress_chart_create_full_s1",
+    "label": "New Ingress Chart",
+    "description": "Build a full ingress chart with sectors, author details, tags, and interpretation content.",
+    "group": "Astrology",
+    "purpose": "This is the full extended form for creating an ingress chart. In addition to the basic chart details, it lets the admin assign sectors, tags, author information, intro text, body paragraphs, chart ruler notes, and challenge or strength observations for richer published analysis.",
+    "bullets": [
+      "Includes all basic chart fields such as title, type, timing, and location",
+      "Sector Tags connect the chart to themes like government, weather, public health, or markets",
+      "Tags section stores searchable keywords",
+      "Author Info stores the writer name and email",
+      "System Interpretation area supports intro and body paragraphs",
+      "Chart Ruler Items document important chart rulership notes",
+      "Challenge and Strength section helps structure interpretation points",
+      "Publishing panel controls live status and social advocacy settings"
+    ]
+  },
+  {
+    "name": "entity_registry",
+    "label": "Entity Registry",
+    "description": "Manage countries, institutions, cities, and other tracked mundane entities.",
+    "group": "Astrology",
+    "purpose": "This page is the main list view for tracked mundane entities. It helps admins review how many entities exist, which are active, and what types are stored, while also supporting search, filtering, drill-down access, editing, and deletion.",
+    "bullets": [
+      "Top cards show total entities, active entities, countries, and institutions",
+      "Search helps find entities by name or region",
+      "Type filter narrows results by entity kind",
+      "Each entity card shows short code, name, type, region, and linked chart count",
+      "Arrow action opens deeper entity details",
+      "Edit action updates entity information",
+      "Delete action removes the entity",
+      "Add Entity button opens the entity creation form"
+    ]
+  },
+  {
+    "name": "entity_create_s1",
+    "label": "Add Entity",
+    "description": "Create a new tracked mundane entity with region and location details.",
+    "group": "Astrology",
+    "purpose": "This form is used to add a new entity into the mundane registry. It stores the entity name, type, region, geographic coordinates, timezone, display code or emoji, and internal notes for research tracking.",
+    "bullets": [
+      "Name field stores the entity title",
+      "Type field defines whether it is a country, city, institution, or another type",
+      "Region helps group entities geographically",
+      "Latitude and Longitude store map coordinates",
+      "Timezone keeps event timing accurate",
+      "Flag Emoji or code gives a compact display label",
+      "Notes field stores internal admin comments",
+      "Add Entity button saves the new registry record"
+    ]
+  },
+  {
+    "name": "mundane_forecasts",
+    "label": "Mundane Forecasts",
+    "description": "Manage published and draft forecasts by type, entity, and date range.",
+    "group": "Astrology",
+    "purpose": "This page lists forecast entries so admins can review, filter, publish, unpublish, edit, or delete them. Each forecast shows its title, linked entity, forecast type, active period, and sometimes signal strength or draft state.",
+    "bullets": [
+      "Dropdown filters narrow forecasts by type and state",
+      "Count shows how many forecasts are stored",
+      "Each forecast card shows title and linked entity",
+      "Forecast type badges identify themes such as market, political, weather, or social",
+      "Date range shows when the forecast is active",
+      "Publish or Unpublish buttons control visibility",
+      "Edit and delete actions manage forecast content",
+      "Add Forecast button opens the creation form"
+    ]
+  },
+  {
+    "name": "mundane_forecast_create_quick_s1",
+    "label": "Add Forecast",
+    "description": "Quick form to add a forecast with entity, type, strength, period, and content.",
+    "group": "Astrology",
+    "purpose": "This modal is a faster forecast creation flow for admins. It captures the main forecast title, linked entity, forecast type, signal strength, start and end period, and the core forecast text, with an option to publish immediately.",
+    "bullets": [
+      "Title field stores the forecast headline",
+      "Entity field links the prediction to a tracked entity",
+      "Type field defines the forecast category",
+      "Signal Strength rates the expected intensity",
+      "Period Start and End define the forecast window",
+      "Content field stores the prediction text",
+      "Publish Immediately checkbox makes the forecast live instantly",
+      "Add Forecast button saves the new entry"
+    ]
+  },
+  {
+    "name": "mundane_event_calendar_s1",
+    "label": "Event Calendar",
+    "description": "Calendar view for astrological events such as ingresses, lunations, stations, and eclipses.",
+    "group": "Astrology",
+    "purpose": "This page is the time-based calendar for mundane events. It helps users browse events by month, week, or day, see event counts by type, and filter visible events using category chips like ingress, lunation, eclipse, conjunction, station, retrograde, direct, return, and custom.",
+    "bullets": [
+      "Top counters summarize how many events exist by type",
+      "Filter chips let users show only selected event categories",
+      "Month, Week, and Day modes support different calendar views",
+      "Calendar grid shows events on their exact dates",
+      "Prev and Next navigation moves across time periods",
+      "Back to Hub returns to the main mundane dashboard",
+      "Useful for planning, analysis, and timing-based research",
+      "Makes it easy to see event clusters within a month"
+    ]
+  },
+  {
+    "name": "chart_studio_s1",
+    "label": "Chart Studio",
+    "description": "Interactive workspace for viewing and analyzing mundane charts.",
+    "group": "Astrology",
+    "purpose": "This page is the main visualization and analysis tool for mundane charts. Users can search entities, select chart mode such as Natal, Transit, or Solar Arc, view the wheel chart, inspect planet positions and aspects, and use advanced tools like fixed stars, Arabic parts, snapshots, and export.",
+    "bullets": [
+      "Entity Search panel finds countries or institutions with chart data",
+      "Chart Mode switch changes between Natal, Transit, and Solar Arc views",
+      "Center area displays the actual chart wheel",
+      "Planet Positions panel lists planets, signs, degrees, and houses",
+      "Aspects panel shows major relationships between planets",
+      "Extra tools include Fixed Stars and Arabic Parts",
+      "Save Snapshot stores a chart state for later review",
+      "Export option supports chart output and sharing"
+    ]
+  },
+  {
+    "name": "research_workspace",
+    "label": "Research Workspace",
+    "description": "Manage mundane astrology research projects and linked entities.",
+    "group": "Astrology",
+    "purpose": "This page organizes research projects for mundane analysis. It helps users search projects, filter by status, review linked entity counts, see project dates, and open active research topics such as elections, diplomacy, eclipse cycles, or economic studies.",
+    "bullets": [
+      "Search helps locate a research project by title",
+      "Status filter narrows projects such as active work",
+      "Project cards show title, short description, linked entity count, and date",
+      "Back to Hub returns to the main mundane dashboard",
+      "New Project button opens the research project form",
+      "Useful for managing long-term studies and collaborative analysis",
+      "Helps keep forecasts tied to structured research topics"
+    ]
+  },
+  {
+    "name": "research_project_create",
+    "label": "New Research Project",
+    "description": "Create a research project with title, description, and linked entity.",
+    "group": "Astrology",
+    "purpose": "This form creates a new mundane research project. It stores the project title, a short description of the objective or scope, and an optional linked entity to keep the research connected to a country, institution, or another tracked subject.",
+    "bullets": [
+      "Title field stores the research project name",
+      "Description field explains goals or scope",
+      "Linked Entity connects the project to a tracked registry item",
+      "Create Project button saves the new project",
+      "Cancel button closes the form without saving",
+      "Useful for organizing investigation topics before writing forecasts or reports"
+    ]
+  },
+
 
 
 // ---------------Nativity Birth Chart---------------//
@@ -4516,78 +5207,508 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
   },
 
       // Live & Schedule
-      { 
-        name: "live_sessions", 
-        label: "Global Live Log", 
-        description: "Oversight of all active platform streams.", 
-        group: "Live",
-        purpose: "Real-time monitoring of all active broadcasts and video consultations across the platform.",
-        bullets: [
-          "Live stream health and bitrate monitoring",
-          "Active session participant tracking",
-          "Stream recording status and cloud storage logs",
-          "Immediate moderator intervention controls"
-        ]
-      },
-      { name: "check_ins", label: "System Check-ins", description: "Monitoring practitioner platform presence.", group: "Live" },
-      { 
-        name: "my_schedule", 
-        label: "Master Calendar", 
-        description: "Combined view of all platform bookings.", 
-        group: "My Schedule",
-        purpose: "The definitive platform-wide calendar, combining student sessions, live events, and diviner availability.",
-        bullets: [
-          "Global cross-timezone event visualization",
-          "Conflict detection and resolution tools",
-          "Platform-wide 'Blackout' period management",
-          "Filtered views for specific roles and programs"
-        ]
-      },
-      { name: "bookings", label: "Session Mgmt", description: "Oversight of individual user appointments.", group: "My Schedule" },
-      { 
-        name: "availability", 
-        label: "Global Availability", 
-        description: "Configuring system-wide booking windows.", 
-        group: "My Schedule",
-        purpose: "Sets the pulse for the platform's session economy by defining when services can be booked.",
-        bullets: [
-          "Hierarchical availability override logic",
-          "Holiday and maintenance window mapping",
-          "Service-type specific booking lead times",
-          "Automatic timezone normalization rules"
-        ]
-      },
+    
+  {
+    "name": "live_platform_governance_youtube",
+    "label": "Live Platform Governance: YouTube",
+    "description": "Configuration panel for enabling and controlling YouTube as a live platform option across the product.",
+    "group": "Live",
+    "subModule": "Platform Governance",
+    "purpose": "This screen is used by admins to control how YouTube behaves as a supported live provider inside the platform. It defines whether YouTube is globally available, whether diviners can choose it for their live sessions, whether embed playback is allowed, and whether the platform supports OAuth and event sync with YouTube. It is useful because YouTube is treated as a major live provider and needs centralized governance before it can be safely offered to users.",
+    "bullets": [
+      "🌍 Globally Enabled — Turns YouTube on or off for the whole platform.",
+      "🔮 Selectable by Diviners — Decides whether diviners can choose YouTube when creating or managing live sessions.",
+      "🖥 Supports Embed — Allows YouTube streams or videos to be shown inside the platform using embedded playback.",
+      "💬 Supports Chat Embed — Controls whether embedded YouTube chat is supported.",
+      "🔐 Supports OAuth Connection — Allows account connection and authorization flow with YouTube.",
+      "🔄 Supports Event Sync — Lets the system sync live event details from YouTube into the platform.",
+      "⭐ Integration Tier — Marks YouTube as a first-class provider with stronger native support.",
+      "▶ Playback Mode — Sets how content is played, such as inside an embedded player.",
+      "🏷 Display Name — Defines the visible platform name shown to admins or users.",
+      "↕ Sort Order — Controls where YouTube appears in provider lists compared with other platforms.",
+      "📝 Admin Notes — Stores internal guidance such as why YouTube is the primary embedded live platform.",
+      "💾 Save Platform — Saves all governance settings for YouTube."
+    ]
+  },
+  {
+    "name": "live_platform_governance_twitch",
+    "label": "Live Platform Governance: Twitch",
+    "description": "Configuration panel for managing Twitch as a supported live provider.",
+    "group": "Live",
+    "subModule": "Platform Governance",
+    "purpose": "This screen is used to manage Twitch as a live platform option. Admins can control whether Twitch is enabled globally, whether diviners can select it, whether embed and chat features are supported, and whether OAuth or event sync should be available. This block is useful because Twitch has strong live and chat capabilities and may need different rules than other platforms.",
+    "bullets": [
+      "🌍 Globally Enabled — Makes Twitch available platform-wide.",
+      "🔮 Selectable by Diviners — Lets diviners use Twitch for live broadcasting when enabled.",
+      "🖥 Supports Embed — Allows Twitch content to appear in an embedded player.",
+      "💬 Supports Chat Embed — Enables chat-heavy streaming behavior through Twitch integrations.",
+      "🔐 Supports OAuth Connection — Allows secure Twitch account linking.",
+      "🔄 Supports Event Sync — Syncs Twitch event or stream information into the platform.",
+      "⭐ Integration Tier — Shows Twitch is treated as a first-class supported provider.",
+      "▶ Playback Mode — Uses embedded playback instead of link-out mode.",
+      "🏷 Display Name — Sets the public or admin-facing provider label.",
+      "↕ Sort Order — Places Twitch in the correct order among other live providers.",
+      "📝 Admin Notes — Explains that Twitch is suited for gaming or chat-heavy live experiences.",
+      "💾 Save Platform — Saves Twitch governance rules."
+    ]
+  },
+  {
+    "name": "live_platform_governance_facebook",
+    "label": "Live Platform Governance: Facebook",
+    "description": "Administrative settings for enabling and controlling Facebook as a live video source.",
+    "group": "Live",
+    "subModule": "Platform Governance",
+    "purpose": "This screen is used to govern how Facebook can be used as a live platform. Admins can allow Facebook as a selectable provider, permit embeds, and define whether OAuth and event sync are supported. It is useful because Facebook may be supported more conservatively than primary platforms and may only be suitable for certain public video use cases.",
+    "bullets": [
+      "🌍 Globally Enabled — Keeps Facebook available as a possible provider option.",
+      "🔮 Selectable by Diviners — Allows diviners to pick Facebook when permitted.",
+      "🖥 Supports Embed — Allows public Facebook video embeds inside the platform.",
+      "💬 Supports Chat Embed — Can be disabled if Facebook chat is not supported in-product.",
+      "🔐 Supports OAuth Connection — Can be turned off when direct account linking is not required.",
+      "🔄 Supports Event Sync — Can remain disabled if event automation is limited.",
+      "🛠 Integration Tier — Marks Facebook as a managed provider instead of a top-tier native provider.",
+      "▶ Playback Mode — Uses embedded player playback where supported.",
+      "🏷 Display Name — Keeps the provider name clear for admin and user interfaces.",
+      "↕ Sort Order — Defines Facebook's listing priority among live providers.",
+      "📝 Admin Notes — Explains that Facebook is supported conservatively for public embeds.",
+      "💾 Save Platform — Saves Facebook governance settings."
+    ]
+  },
+  {
+    "name": "live_platform_governance_instagram",
+    "label": "Live Platform Governance: Instagram",
+    "description": "Governance controls for Instagram when offered as a link-out live platform option.",
+    "group": "Live",
+    "subModule": "Platform Governance",
+    "purpose": "This screen is used to control Instagram as a lighter-support live provider. The settings show that Instagram can be enabled and selectable by diviners, but playback is handled as an external link instead of embedded playback. This is useful because some providers do not support full native integration or reliable in-platform playback.",
+    "bullets": [
+      "🌍 Globally Enabled — Allows Instagram to remain available platform-wide.",
+      "🔮 Selectable by Diviners — Lets diviners choose Instagram as a live destination option.",
+      "🖥 Supports Embed — Can be disabled when embedded playback is not supported or not reliable.",
+      "💬 Supports Chat Embed — Can remain off when Instagram chat cannot be embedded safely.",
+      "🔐 Supports OAuth Connection — Can remain off when direct account integration is limited.",
+      "🔄 Supports Event Sync — Can remain off if no automated sync is supported.",
+      "🔗 Integration Tier — Marks Instagram as link-out only rather than deep native integration.",
+      "▶ Playback Mode — Uses external link behavior instead of embedded player mode.",
+      "🏷 Display Name — Controls how Instagram appears in provider selections.",
+      "↕ Sort Order — Determines where Instagram appears in the provider sequence.",
+      "📝 Admin Notes — Clarifies that Instagram is handled as link-out only.",
+      "💾 Save Platform — Saves all Instagram governance choices."
+    ]
+  },
+  {
+    "name": "live_platform_governance_tiktok",
+    "label": "Live Platform Governance: TikTok",
+    "description": "Settings for controlling TikTok as an externally linked live provider.",
+    "group": "Live",
+    "subModule": "Platform Governance",
+    "purpose": "This screen governs how TikTok is exposed inside the platform. Admins can make it available globally and selectable by diviners, while still restricting it to external-link playback rather than embedded viewing. This block is helpful because TikTok may be offered as a supported destination without deep native session integration.",
+    "bullets": [
+      "🌍 Globally Enabled — Makes TikTok available at the platform level.",
+      "🔮 Selectable by Diviners — Lets diviners choose TikTok where allowed.",
+      "🖥 Supports Embed — Can be disabled if embedded live playback is not supported.",
+      "💬 Supports Chat Embed — Can remain off if in-product chat is unavailable.",
+      "🔐 Supports OAuth Connection — Can remain off when account connection is not supported.",
+      "🔄 Supports Event Sync — Can remain off if system sync is unavailable.",
+      "🔗 Integration Tier — Marks TikTok as a link-out only platform.",
+      "▶ Playback Mode — Uses external links instead of embedded playback.",
+      "🏷 Display Name — Defines the visible TikTok provider name.",
+      "↕ Sort Order — Sets TikTok's order relative to other providers.",
+      "📝 Admin Notes — Notes that the provider is offered through link-out only.",
+      "💾 Save Platform — Saves TikTok platform rules."
+    ]
+  },
+  {
+    "name": "live_platform_governance_zoom",
+    "label": "Live Platform Governance: Zoom",
+    "description": "Administrative controls for using Zoom as a live session provider or owned-session path.",
+    "group": "Live",
+    "subModule": "Platform Governance",
+    "purpose": "This screen is used to manage Zoom as a supported live provider. Admins can globally enable it, allow diviner selection, define whether account connection is supported, and choose external-link playback. It is useful because Zoom may be an important provider for direct booked consultations, private sessions, or owned-session join paths.",
+    "bullets": [
+      "🌍 Globally Enabled — Keeps Zoom available across the system.",
+      "🔮 Selectable by Diviners — Lets diviners choose Zoom for sessions.",
+      "🖥 Supports Embed — Can remain disabled if Zoom sessions should not run inside an embedded player.",
+      "💬 Supports Chat Embed — Can remain off if embedded Zoom chat is not offered.",
+      "🔐 Supports OAuth Connection — Can remain off or be enabled depending on future Zoom account linking needs.",
+      "🔄 Supports Event Sync — Can remain off when automated schedule sync is not active.",
+      "⭐ Integration Tier — Marks Zoom as a first-class provider even though playback may still link out.",
+      "▶ Playback Mode — Uses external link mode for join or watch actions.",
+      "🏷 Display Name — Defines the visible provider label as Zoom.",
+      "↕ Sort Order — Controls where Zoom appears in provider priority.",
+      "📝 Admin Notes — Explains that Zoom is used for owned-session join or watch flows.",
+      "💾 Save Platform — Saves Zoom governance settings."
+    ]
+  },
+  {
+    "name": "live_platform_governance_other",
+    "label": "Live Platform Governance: Other / Custom Provider",
+    "description": "Fallback governance block for unsupported or custom live providers.",
+    "group": "Live",
+    "subModule": "Platform Governance",
+    "purpose": "This screen is used as a fallback for custom or unsupported live providers that do not have a dedicated integration block. Admins can still globally enable the provider, make it selectable by diviners, and define how playback should work. This is useful because the platform may need to support special third-party providers without building full dedicated integration for each one.",
+    "bullets": [
+      "🌍 Globally Enabled — Lets the custom provider be active across the platform.",
+      "🔮 Selectable by Diviners — Allows diviners to choose the custom provider when needed.",
+      "🖥 Supports Embed — Can remain disabled if the provider only supports external links.",
+      "💬 Supports Chat Embed — Can remain off for unsupported chat features.",
+      "🔐 Supports OAuth Connection — Can remain off if custom account linking is unavailable.",
+      "🔄 Supports Event Sync — Can remain off when no automatic event integration exists.",
+      "🛠 Integration Tier — Marks the provider as custom rather than a native or managed integration.",
+      "▶ Playback Mode — Uses external link mode for fallback delivery.",
+      "🏷 Display Name — Lets admins rename the provider in a friendly way.",
+      "↕ Sort Order — Places the custom option after major supported providers.",
+      "📝 Admin Notes — Stores internal explanation such as fallback custom provider usage.",
+      "💾 Save Platform — Saves the custom provider governance rules."
+    ]
+  },
 
-      // Community
-      { name: "pm_plan_tiers", label: "Plan Configuration", description: "Management of community payment tiers.", group: "Community" },
-      { name: "broadcasts", label: "System Broadcasts", description: "Pushing messages to the entire community.", group: "Community" },
-      { name: "calendar", label: "Community Events", description: "Shared calendar for public gatherings.", group: "Community" },
-      { 
-        name: "holy_books", 
-        label: "Sacred Texts Hub", 
-        description: "Curation of downloadable doctrine books.", 
-        group: "Community",
-        purpose: "The digital archive for the platform's sacred library and foundational spiritual texts.",
-        bullets: [
-          "Version-controlled sacred text repository",
-          "PDF and E-book distribution management",
-          "User-level reading progress analytics",
-          "Digital Rights Management (DRM) for doctrines"
-        ]
-      },
-      { 
-        name: "doctrine_links", 
-        label: "Wisdom Index", 
-        description: "External resource mapping for studies.", 
-        group: "Community",
-        purpose: "A curated directory of external spiritual resources, scholarly links, and cross-platform wisdom references.",
-        bullets: [
-          "Curated external wisdom link management",
-          "Broken link detection and auto-audit",
-          "Resource categorization by spiritual tradition",
-          "External bibliography and citation manager"
-        ]
-      },
+  {
+  "name": "live_checkins",
+  "label": "Check-ins",
+  "description": "Captured leads and attendee details collected from live session check-in forms.",
+  "group": "Live",
+  "subModule": "Check-ins",
+  "purpose": "This screen is used to review all lead records submitted through live-session check-in forms. It helps admins search attendees by name or email, filter records by diviner, review captured birth details, see which diviner collected the lead, and track when each submission was created. This is useful because check-ins often act as a lead-generation and intake source for live events, allowing the platform to organize attendee information for follow-up, astrology intake, and reporting.",
+  "bullets": [
+    "🔍 Search by Name or Email — Helps admins quickly find a specific attendee or lead without scanning the full list manually.",
+    "🔮 Diviner Filter — Limits the records to one diviner or shows all diviners, making it easier to review lead capture by provider.",
+    "👥 Total Record Count — Shows the total number of captured check-in submissions currently available in the list.",
+    "📤 Export CSV — Exports the full check-in dataset for reporting, outreach, marketing follow-up, analytics, or external review.",
+    "👤 Name Column — Shows the attendee or lead name submitted through the live check-in form.",
+    "📧 Email Column — Stores the submitted email address so the lead can be contacted later.",
+    "🎂 Birth Date Column — Captures the attendee's birth date when provided, which may support astrology-based intake or later reading preparation.",
+    "🌍 Birth City Column — Shows the submitted birth city, useful for natal chart or location-based astrology context.",
+    "🕒 Birth Time Column — Displays the submitted birth time when available, helping with deeper chart accuracy if the lead continues into a reading flow.",
+    "🔮 Diviner Column — Identifies which diviner's live session or check-in source generated the lead.",
+    "📅 Date Column — Shows when the check-in record was created so admins can track submission timing and recent activity.",
+    "🧾 Repeated Entries Visibility — Makes it easy to notice repeated submissions from the same lead, which may happen when a person checks in multiple times.",
+    "📊 Lead Review Use Case — Useful for live-event follow-up, conversion tracking, manual outreach, and understanding who engaged with diviner sessions.",
+    "🧠 Why This Screen Is Useful — It turns live session check-ins into a structured lead list that can support booking conversion, intake review, and audience management."
+  ]
+},
+     
+      // -------------schedule module-------------//
+  
+  {
+    "name": "my_schedule_bookings_V1",
+    "label": "Bookings",
+    "description": "Admin view of all bookings across all diviners.",
+    "group": "My Schedule",
+ 
+    "purpose": "This screen is used to monitor and review all booking records across the platform. It helps admins quickly understand how many bookings were created this month, how many are confirmed, how many are completed, and how much revenue has been generated. It also gives filtering tools to find bookings by client, status, diviner, and date range so admins can track session activity, resolve issues, and review booking history.",
+    "bullets": [
+      "Shows total bookings created this month",
+      "Shows how many bookings are currently confirmed",
+      "Shows how many bookings are completed",
+      "Shows this month's booking revenue",
+      "Search by client name or email",
+      "Filter by booking status such as pending, confirmed, completed, or canceled",
+      "Filter by specific diviner",
+      "Filter bookings by from and to date range",
+      "Table view includes date and time, client, diviner, service, duration, price, and status",
+      "View action opens the booking details for deeper review",
+      "Useful for operations, reporting, support, and booking oversight across all diviners"
+    ]
+  },
+  {
+    "name": "my_schedule_availability_list",
+    "label": "Availability Schedules",
+    "description": "Manage saved availability windows for client booking access.",
+    "group": "My Schedule",
+
+    "purpose": "This screen is used to manage saved availability schedules that define when clients are allowed to book sessions. Each schedule card shows the active date range, selected weekdays, session duration, timezone, and internal notes. It helps admins or diviners maintain clear booking windows, update scheduling rules, and keep public availability accurate.",
+    "bullets": [
+      "Shows each saved availability schedule as a separate card",
+      "Displays the schedule title",
+      "Displays the date range during which the schedule is valid",
+      "Shows which weekdays are enabled for booking",
+      "Shows available start time and end time",
+      "Shows session duration",
+      "Shows timezone used for the schedule",
+      "Can include internal notes or instructions",
+      "Active toggle controls whether the schedule is currently enabled",
+      "Edit icon allows schedule updates",
+      "Delete icon removes an unused schedule",
+      "New Schedule button creates a new availability rule",
+      "Useful for controlling when clients can and cannot book sessions"
+    ]
+  },
+  {
+    "name": "my_schedule_availability_create",
+    "label": "New Availability Schedule",
+    "description": "Create a new booking availability window.",
+    "group": "My Schedule",
+
+    "purpose": "This form is used to create a new availability schedule for booking sessions. It lets the user define the schedule name, start and end dates, available weekdays, working hours, session duration, timezone, optional notes, and whether the schedule should be visible to clients. It is useful for setting up seasonal hours, special booking windows, or new recurring schedules.",
+    "bullets": [
+      "Title field for naming the schedule",
+      "Start date field to define when the schedule begins",
+      "End date field to define when the schedule ends",
+      "Weekday selector to choose available days",
+      "Start time field for daily booking start hour",
+      "End time field for daily booking end hour",
+      "Session duration selector for default booking length",
+      "Timezone selector to keep scheduling accurate",
+      "Optional notes and instructions field for internal or schedule-specific guidance",
+      "Active toggle makes the schedule visible to clients",
+      "Create Schedule button saves the new schedule",
+      "Cancel button closes the form without saving",
+      "Useful for setting clear and repeatable client booking hours"
+    ]
+  },
+  {
+    "name": "my_schedule_master_calendar",
+    "label": "Master Calendar",
+    "description": "Calendar view for managing weekly availability, blocks, special hours, and manual bookings.",
+    "group": "My Schedule",
+   
+    "purpose": "This is the main scheduling workspace where a user can manage their bookable time on a calendar. It provides day, week, and month views, shows available, booked, and blocked slots, and includes tools to block days off, add special hours, connect calendars, and create manual bookings. It is useful because it gives one central place to control real booking availability and prevent conflicts.",
+    "bullets": [
+      "Calendar can be viewed by day, week, or month",
+      "Shows visual status for available, booked, and blocked time slots",
+      "Lets users move between date ranges using previous and next controls",
+      "Calendar Connections button supports syncing with external calendars if needed",
+      "Manage Weekly Schedule button helps maintain regular recurring availability",
+      "Block Day Off button marks unavailable days",
+      "Add Special Hours button adds exceptions to the regular schedule",
+      "Create Manual Booking button allows staff-created bookings directly from the calendar",
+      "Useful for organizing real availability in one place",
+      "Helps prevent scheduling conflicts and improves booking control"
+    ]
+  },
+  {
+    "name": "my_schedule_manual_booking",
+    "label": "Create Manual Booking",
+    "description": "Manually create a session, reminder, or private booking entry.",
+    "group": "My Schedule",
+
+    "purpose": "This panel is used to create a booking manually without waiting for the client to book from the public side. The user can select an existing client or add a new one, choose a service, set timezone, pick the date and time, enter internal notes, and optionally send a confirmation to the client. It is useful for admin-assisted bookings, private reminders, direct scheduling, and special session entries.",
+    "bullets": [
+      "Can create a personal reminder that is only for the scheduler",
+      "Can add a new client manually if the client does not already exist",
+      "Search existing client by name or email",
+      "Optional service selector links the booking to a service",
+      "Timezone selector keeps the session time accurate",
+      "Session date field sets the booking day",
+      "Start time and end time fields define the session slot",
+      "Notes and instructions editor stores internal booking details",
+      "Client notification toggle can send a confirmation email immediately",
+      "Useful for manual scheduling, staff-created appointments, and internal reminder blocks"
+    ]
+  }
+,
+
+      //-------------- Community
+      
+  {
+    "name": "community_broadcasting",
+    "label": "Broadcasting",
+    "description": "Manage broadcast announcements and replay-style community content.",
+    "group": "Community",
+   
+    "purpose": "This screen is used to manage all broadcast items shown to the community. Admins can search broadcasts by title, filter by status, narrow results by updated date range, review item details, and control whether a broadcast stays active. It helps keep community-facing broadcast content organized, visible, and easy to maintain.",
+    "bullets": [
+      "Search broadcasts by title",
+      "Filter broadcasts by status such as active or inactive",
+      "Filter by updated-from and updated-to date range",
+      "View total number of broadcast records",
+      "Create a new broadcast from the top action button",
+      "See broadcast title and short summary at a glance",
+      "Check the current status badge for each broadcast",
+      "Review the last updated date for each broadcast",
+      "Preview an item before making changes",
+      "Deactivate a broadcast without deleting it",
+      "Edit an existing broadcast",
+      "Delete a broadcast when it is no longer needed",
+      "Useful for managing community announcements, replays, teachings, and member update messages"
+    ]
+  },
+  {
+    "name": "community_broadcast_create",
+    "label": "New Broadcast",
+    "description": "Create a new broadcast item for the community feed.",
+    "group": "Community",
+    
+    "purpose": "This form is used to create a new broadcast entry that can later appear in the community experience. Admins enter a title, short description, full description, priority value, and status. It is useful for publishing important member updates, ceremonial notices, learning replays, or featured content with clear display order and visibility control.",
+    "bullets": [
+      "Title field for the broadcast name",
+      "Short description for quick preview text",
+      "Full description for detailed message or explanation",
+      "Priority field to control display order",
+      "Status selector to decide whether the item starts as active or not",
+      "Create button to save the new broadcast",
+      "Cancel button to leave the form without saving",
+      "Useful when admins need to publish a new community-facing message or featured content item"
+    ]
+  },
+  {
+    "name": "community_dashboard_publishing",
+    "label": "Perennial Dashboard Publishing",
+    "description": "Schedule and control dashboard cards shown to community members.",
+    "group": "Community",
+
+    "purpose": "This screen is used to publish content cards onto the community dashboard. Admins can choose category, mode, audience, publication state, call-to-action details, publish timing, expiry timing, sort weight, and pinned state. It helps decide what content appears on the member dashboard, when it appears, who sees it, and how important it is in the display order.",
+    "bullets": [
+      "Choose content category such as announcement or other content type",
+      "Choose publishing mode such as native or linked content behavior",
+      "Select the audience that should see the dashboard item",
+      "Set publication state such as draft or published",
+      "Enter a title for the dashboard card",
+      "Enter CTA URL for where the card should send users",
+      "Add description text for the item",
+      "Add thumbnail URL for visual presentation",
+      "Set CTA label text such as Read Article",
+      "Set publish date and time",
+      "Set optional expiry date and time",
+      "Manual sort weight controls position in the dashboard list",
+      "Active toggle controls whether the item is enabled",
+      "Pinned toggle keeps important items highlighted",
+      "Create Item button saves the dashboard publishing record",
+      "Useful for scheduling important community content in a controlled and organized way"
+    ]
+  },
+  {
+    "name": "community_scheduled_feed",
+    "label": "Scheduled Feed",
+    "description": "View and manage scheduled or published content in the member feed.",
+    "group": "Community",
+
+    "purpose": "This screen is used to review all scheduled and published items that appear in the community feed. Admins can see each item's title, category, publication state, publish timing, target audience, active status, and actions. It helps monitor what content is live, what is scheduled next, and what needs editing or removal.",
+    "bullets": [
+      "View all scheduled and published feed items in one list",
+      "See item title and short description",
+      "Check category such as announcement, blog, document, video, or event",
+      "See publication state such as published or scheduled",
+      "Review publish date and expiry details",
+      "Check the target audience for each item",
+      "See active status badges",
+      "See tags such as pinned, native, or source-linked",
+      "Edit existing scheduled feed items",
+      "Delete feed items that should no longer appear",
+      "Useful for controlling the flow of content shown to community members over time"
+    ]
+  },
+  {
+    "name": "community_calendar_events",
+    "label": "Calendar Events",
+    "description": "Manage community sessions, events, and scheduled gatherings.",
+    "group": "Community",
+  
+    "purpose": "This screen is used to manage all community events such as ceremonies, workshops, orientations, and member sessions. Admins can filter events by start date range and category, create new events, and review event details in a structured table. It helps keep the community calendar organized and easy to manage.",
+    "bullets": [
+      "Filter events by start date from",
+      "Filter events by start date to",
+      "Filter by category such as ceremony, workshop, or orientation",
+      "Search button applies the chosen filters",
+      "Reset button clears the filters",
+      "New Event button opens the event creation flow",
+      "View event title in the list",
+      "See category for each event",
+      "Review start and end time",
+      "See target audience such as members",
+      "Check current event status",
+      "Preview or inspect event details",
+      "Edit existing events",
+      "Useful for managing the full event schedule for the community"
+    ]
+  },
+  {
+    "name": "community_calendar_event_create",
+    "label": "New Event",
+    "description": "Create a new community calendar event.",
+    "group": "Community",
+  
+    "purpose": "This form is used to create a new community event record. Admins can enter title, description, category, start and end time, audience, priority, and active state. It is useful for adding workshops, ceremonies, Q&A sessions, orientations, or any other scheduled experience for members.",
+    "bullets": [
+      "Title field for the event name",
+      "Description field for event details",
+      "Category field for event type",
+      "Start date and time field",
+      "End date and time field",
+      "Audience selector to choose who can access the event",
+      "Priority field for sorting or display order",
+      "Active checkbox to control visibility or enablement",
+      "Create Event button saves the event",
+      "Cancel button exits without saving",
+      "Useful for adding new community programs and sessions to the event calendar"
+    ]
+  },
+  {
+    "name": "community_holy_books",
+    "label": "Holy Books",
+    "description": "Manage sacred texts shown inside the Community Library.",
+    "group": "Community",
+  
+    "purpose": "This screen is used to manage the holy books or sacred reading collection available in the Community Library. Admins can review book order, titles, and descriptions, and control how books are arranged in the library. It helps maintain a curated reading sequence for members.",
+    "bullets": [
+      "View all holy books in one ordered list",
+      "See display order number for each book",
+      "See title and long description for each book",
+      "Reorder books to control reading sequence or importance",
+      "Add Book button opens the creation form",
+      "Useful for organizing sacred reading material in a structured and intentional order",
+      "Helps members access official study texts in a guided sequence"
+    ]
+  },
+  {
+    "name": "community_holy_book_create",
+    "label": "New Holy Book",
+    "description": "Add a new sacred text to the Community Library.",
+    "group": "Community",
+ 
+    "purpose": "This form is used to add a new holy book entry into the Community Library. Admins can enter the title, description, cover image URL, file URL, sort order, and active state. It is useful for uploading new reading material and controlling how it appears to members.",
+    "bullets": [
+      "Title field for the book name",
+      "Description field for member-facing summary",
+      "Cover image URL field for visual presentation",
+      "File URL field for PDF or storage link",
+      "Sort order field to control position in the list",
+      "Active checkbox to make the book visible to members",
+      "Add Book button saves the new entry",
+      "Cancel button exits without saving",
+      "Useful for publishing new sacred texts, manuals, and study documents into the library"
+    ]
+  },
+  {
+    "name": "community_doctrine_links",
+    "label": "Doctrine Links",
+    "description": "Manage doctrine, creed, and reference links in the Community Library.",
+    "group": "Community",
+
+    "purpose": "This screen is used to manage important doctrine and reference links shown to community members. Admins can review the order, label, type, URL, and active status of each link. It helps maintain a trusted collection of internal and external resources for study, teaching, and member guidance.",
+    "bullets": [
+      "View all doctrine links in a structured ordered list",
+      "See label and short description for each link",
+      "See whether a link is internal or external",
+      "Review destination URL",
+      "Check active status of each link",
+      "Reorder items to control which resources appear first",
+      "Add Link button opens the creation form",
+      "Useful for organizing official study references, research sources, and recommended doctrine resources"
+    ]
+  },
+  {
+    "name": "community_doctrine_link_create",
+    "label": "New Doctrine Link",
+    "description": "Add a new doctrine or study reference link to the Community Library.",
+    "group": "Community",
+
+    "purpose": "This form is used to create a new doctrine or reference link for members. Admins can enter the label, link type, URL, description, optional icon, sort order, and active state. It is useful for adding recommended reading lists, official teachings, study references, and supporting resource links.",
+    "bullets": [
+      "Label field for the visible link name",
+      "Link type selector to classify the resource",
+      "URL field for internal route or external destination",
+      "Description field for member-friendly explanation",
+      "Optional icon field for visual styling",
+      "Sort order field to control placement in the list",
+      "Active checkbox to control member visibility",
+      "Add Link button saves the new record",
+      "Cancel button exits without saving",
+      "Useful for keeping the Community Library connected to trusted learning resources and doctrine references"
+    ]
+  },
+
 
       // Training
       { 
@@ -8543,6 +9664,8 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
       },
     ],
   },
+
+  // ---------MYSTERY SCHOOL ---------//
   {
     role: "Mystery School",
     slug: "mystery-school",
