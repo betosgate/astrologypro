@@ -453,6 +453,13 @@ export function BookingDetailSheet({
     ["pending", "confirmed"].includes(booking.status) &&
     !canceled;
 
+  // Diviners get the full calendar-picker reschedule page. Admin calendar
+  // bookings (which use actionBasePath because they live outside the standard
+  // bookings table) and the client/trainee drawer fall back to the inline
+  // datetime form since the calendar page is routed under the diviner profile.
+  const useCalendarReschedulePage =
+    canReschedule && !isClientView && !actionBasePath && !!booking.username;
+
   const canCancel =
     (!detailsOnly || !!actionBasePath) &&
     ["pending", "confirmed", "in_progress"].includes(booking.status) &&
@@ -721,10 +728,23 @@ export function BookingDetailSheet({
           {(canReschedule || canCancel || canRefund) && !showRescheduleForm && !showCancelForm && !showRefundForm && (
             <div className="flex flex-col gap-2">
               {canReschedule && (
-                <Button variant="outline" className="w-full gap-2" onClick={() => setShowRescheduleForm(true)}>
-                  <CalendarClock className="size-4" />
-                  Reschedule
-                </Button>
+                useCalendarReschedulePage ? (
+                  <Button
+                    asChild
+                    variant="outline"
+                    className="w-full gap-2"
+                  >
+                    <Link href={`/${booking.username}/reschedule/${booking.id}`}>
+                      <CalendarClock className="size-4" />
+                      Reschedule
+                    </Link>
+                  </Button>
+                ) : (
+                  <Button variant="outline" className="w-full gap-2" onClick={() => setShowRescheduleForm(true)}>
+                    <CalendarClock className="size-4" />
+                    Reschedule
+                  </Button>
+                )
               )}
               {canCancel && (
                 <Button

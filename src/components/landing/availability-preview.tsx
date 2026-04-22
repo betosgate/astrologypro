@@ -217,7 +217,7 @@ export function AvailabilityPreview({
             const day = i + 1;
             const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
             const isPast = new Date(year, month, day) < today;
-            const isAvailable = availableDates.has(dateStr);
+            const isAvailable = !isPast && availableDates.has(dateStr);
             const isSelected = selectedDate === dateStr;
             const isToday = new Date(year, month, day).toDateString() === new Date().toDateString();
 

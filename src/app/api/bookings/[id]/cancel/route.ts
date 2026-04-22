@@ -13,7 +13,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   const { data: booking, error: bErr } = await admin
     .from("bookings")
-    .select("id, diviner_id, client_id, status, duration_minutes, google_calendar_event_id, outlook_calendar_event_id, booking_token, scheduled_at, questionnaire_responses, metadata, clients(full_name, email), diviners(display_name, username), services(name)")
+    .select("id, diviner_id, client_id, status, duration_minutes, google_calendar_event_id, outlook_calendar_event_id, booking_token, scheduled_at, questionnaire_responses, metadata, clients(full_name, email), diviners(display_name, username, user_id), services(name)")
     .eq("id", id)
     .single();
 
@@ -99,6 +99,41 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         }).catch(() => {});
       }
     }).catch(() => {});
+  }
+
+  // Notify the diviner that a booking was cancelled. This is essential when
+  // the client cancels via their booking-token link — otherwise the diviner
+  // would only find out by refreshing the dashboard.
+  const divinerUserId = (booking.diviners as { user_id?: string } | null)?.user_id;
+  if (divinerUserId) {
+    (async () => {
+      try {
+        const { data: divinerAuth } = await admin.auth.admin.getUserById(divinerUserId);
+        const divinerEmail = divinerAuth?.user?.email;
+        if (!divinerEmail) return;
+        const scheduledAtDisplay = new Date(booking.scheduled_at).toLocaleString("en-US", {
+          weekday: "long",
+          month: "long",
+          day: "numeric",
+          year: "numeric",
+          hour: "numeric",
+          minute: "2-digit",
+        });
+        const dashboardUrl = `${appUrl}/dashboard/bookings`;
+        const { sendCancellationNotificationToDiviner } = await import("@/lib/email");
+        await sendCancellationNotificationToDiviner({
+          to: divinerEmail,
+          divinerName,
+          clientName,
+          serviceName,
+          scheduledAt: scheduledAtDisplay,
+          cancelReason: body.reason,
+          dashboardUrl,
+        });
+      } catch {
+        // fire-and-forget
+      }
+    })();
   }
 
   return NextResponse.json({ success: true });
