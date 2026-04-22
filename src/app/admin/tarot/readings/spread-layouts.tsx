@@ -469,9 +469,9 @@ export function AstrologicalLayout({ positionLabels, drawnCards, onReveal, onCar
   // Col positions (% of container): 0=0%, 1=16.6%, 2=33.3%, 3=50%, 4=66.6%, 5=83.3%, 6=100%
 
   return (
-    <div className="flex flex-col items-center">
+    <div className="flex w-full flex-col items-center overflow-x-hidden">
       {/* Desktop: zodiac wheel */}
-      <div className="hidden lg:block relative mx-auto" style={{ width: "100%", height: 1700 }}>
+      <div className="relative mx-auto hidden w-full min-[1401px]:block" style={{ height: 1700 }}>
 
         {/* Col 3 (center): Capricorn (top) + Cancer (bottom) — full height */}
         <div className="absolute left-1/2 -translate-x-1/2 top-[calc(var(--spacing)*48)] flex flex-col justify-between items-center" style={{ height: 1370 }}>
@@ -498,20 +498,21 @@ export function AstrologicalLayout({ positionLabels, drawnCards, onReveal, onCar
         </div>
 
         {/* Col 5: Scorpio (top) + Virgo (bottom) — inner right */}
+
         <div className="absolute flex flex-col justify-between items-center" style={{ left: '83%', transform: 'translateX(-50%)', top: '27%', height: '49%' }}>
           <CardSlot index={7} label={positionLabels[7]} drawn={drawnCards[7]} onReveal={onReveal} onCardClick={onCardClick} cardBackUrl={cardBackUrl} cardWidth={CW} cardHeight={CH} />
           <CardSlot index={5} label={positionLabels[5]} drawn={drawnCards[5]} onReveal={onReveal} onCardClick={onCardClick} cardBackUrl={cardBackUrl} cardWidth={CW} cardHeight={CH} />
         </div>
 
         {/* Col 0 + Col 6: Aries (left) + Libra (right) — horizontal axis */}
-        <div className="absolute w-full flex justify-between items-center max-[1440px]:left-[11px] max-[1365px]:left-0" style={{ top: '51.3%', transform: 'translateY(-50%)' }}>
+        <div className="absolute inset-x-0 flex items-center justify-between px-3" style={{ top: '51.3%', transform: 'translateY(-50%)' }}>
           <CardSlot index={0} label={positionLabels[0]} drawn={drawnCards[0]} onReveal={onReveal} onCardClick={onCardClick} cardBackUrl={cardBackUrl} cardWidth={CW} cardHeight={CH} />
           <CardSlot index={6} label={positionLabels[6]} drawn={drawnCards[6]} onReveal={onReveal} onCardClick={onCardClick} cardBackUrl={cardBackUrl} cardWidth={CW} cardHeight={CH} />
         </div>
       </div>
 
       {/* Tablet: 4x3 grid */}
-      <div className="hidden md:grid lg:hidden grid-cols-4 gap-6 justify-items-center">
+      <div className="hidden w-full max-[1401px]:grid  grid-cols-4 gap-6 justify-items-center">
         {positionLabels.map((label, i) => (
           <CardSlot key={i} index={i} label={label} drawn={drawnCards[i]} onReveal={onReveal} onCardClick={onCardClick} cardBackUrl={cardBackUrl} cardWidth={140} cardHeight={200} />
         ))}
@@ -519,7 +520,7 @@ export function AstrologicalLayout({ positionLabels, drawnCards, onReveal, onCar
 
       {/* Mobile: 2 columns */}
       <div className="grid md:hidden grid-cols-2 gap-4 justify-items-center">
-        {positionLabels.map((label, i) => (
+        {positionLabels.map((label, i) =>(
           <CardSlot key={i} index={i} label={label} drawn={drawnCards[i]} onReveal={onReveal} onCardClick={onCardClick} cardBackUrl={cardBackUrl} cardWidth={130} cardHeight={190} />
         ))}
       </div>

@@ -206,7 +206,7 @@ export default function AdminSpreadReadingPage() {
         </Button>
       </div>
 
-      <div className="rounded-2xl border border-[#343a45] bg-[#1a1e27] p-6 md:p-10 overflow-hidden -mx-4 md:-mx-10 lg:-mx-16">
+      <div className="rounded-2xl border border-[#343a45] bg-[#1a1e27] p-6 md:p-10 overflow-hidden">
         <SpreadLayout
           spreadName={spread.name}
           cardCount={spread.card_count}
