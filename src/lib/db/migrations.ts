@@ -58,6 +58,8 @@ import { MIGRATION_SQL as MIG_20260422000001 } from "@/data/migrations/202604220
 import { MIGRATION_SQL as MIG_20260422000002 } from "@/data/migrations/20260422000002_booking_cancel_refund_audit";
 import { MIGRATION_SQL as MIG_20260422000003 } from "@/data/migrations/20260422000003_service_template_intake_forms";
 import { MIGRATION_SQL as MIG_20260422000004 } from "@/data/migrations/20260422000004_service_template_intake_submissions";
+import { MIGRATION_SQL as MIG_20260422000005 } from "@/data/migrations/20260422000005_admin_bookings_chime_fields";
+import { MIGRATION_SQL as MIG_20260422000006 } from "@/data/migrations/20260422000006_add_birth_country_to_community_members";
 
 /**
  * Allowlisted migrations that the admin migration runner can execute.
@@ -546,6 +548,22 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Creates service_template_intake_submissions for product-form leads captured from public service template pages. Stores template metadata, toolkit mapping, normalized summary columns, full JSON payload, status, and submission timestamps for admin review workflows.",
     sortKey: "20260422000004",
     sql: MIG_20260422000004,
+  },
+  "20260422000005_admin_bookings_chime_fields": {
+    id: "20260422000005_admin_bookings_chime_fields",
+    title: "Admin bookings Chime video fields",
+    description:
+      "Additive columns on admin_bookings (chime_meeting_id, chime_external_meeting_id, video_provider) so admin-hosted sessions can run through the same Chime pipeline as diviner-hosted ones instead of being limited to a Google Calendar meet link. Safe to re-run.",
+    sortKey: "20260422000005",
+    sql: MIG_20260422000005,
+  },
+  "20260422000006_add_birth_country_to_community_members": {
+    id: "20260422000006_add_birth_country_to_community_members",
+    title: "Add birth_country to community_members",
+    description:
+      "Additive column required by the shared HoroscopeToolkitPage (/community/horoscope) and resolveUserBirthData(). Unblocks the /community/profile form from persisting Birth Country and resolves the 'missing Birth country' card after the member completes the profile. Idempotent via ADD COLUMN IF NOT EXISTS — safe to re-run. Companion migration 20260421000010_repair_family_birth_country handles the sibling community_family_members.birth_country back-fill.",
+    sortKey: "20260422000006",
+    sql: MIG_20260422000006,
   },
   "20260428000001_landing_page_cleanup_destructive": {
     id: "20260428000001_landing_page_cleanup_destructive",

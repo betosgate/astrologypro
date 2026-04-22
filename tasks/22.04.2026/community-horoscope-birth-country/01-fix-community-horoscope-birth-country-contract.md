@@ -104,7 +104,7 @@ community_members.birth_country
 Local migration exists:
 
 ```txt
-supabase/migrations/20260413000198_add_birth_country_to_community_members.sql
+supabase/migrations/20260422000006_add_birth_country_to_community_members.sql
 ```
 
 Do not remove the birth-country requirement from `/community/horoscope` as a workaround.
@@ -232,3 +232,48 @@ Handle this carefully:
 - The API already accepts `birth_country`; the profile form simply does not send it.
 - The resolver must read the same field that the profile form saves.
 - Watch for the self-row priority edge case: a stale `community_family_members` self-row can override complete `community_members` data.
+
+---
+
+## Implementation Notes (22.04.2026)
+
+Status: **Done**.
+
+Changes landed:
+
+- `supabase/migrations/20260422000006_add_birth_country_to_community_members.sql`
+  - Pre-existing. Declares `ALTER TABLE community_members ADD COLUMN IF NOT EXISTS birth_country VARCHAR(100)`. Idempotent, additive — no schema change required here. (Companion migration `20260421000010_repair_family_birth_country.sql` already back-fills `community_family_members.birth_country` from the tail of `birth_city` for a known-country allowlist.)
+- `src/app/community/profile/page.tsx`
+  - Added `birth_country` to the `community_members` select list so the form hydrates from the column.
+- `src/components/community/profile-form.tsx`
+  - `CommunityMember` now declares `birth_country: string | null`.
+  - New `birthCountry` state initialized from `member.birth_country ?? ""`.
+  - Birth Data section split into two 2-column rows: DoB + Birth Time, then Birth City + Birth Country. Birth City keeps `BirthCityAutocomplete`; when the user picks a city and the Country field is empty, the city-label tail is prefilled via `extractCountryFromCityLabel()` — the user can still edit. We **never** overwrite a non-empty Country.
+  - Save payload includes `birth_country: birthCountry.trim() || null`. `/api/community/onboarding/complete` already reads and persists this field via `trimStr(birth_country)` — no API change was needed.
+- `src/lib/profile-completion.ts`
+  - `CommunityProfileValues` gains `birthCountry: string`. `COMMUNITY_PROFILE_FIELD_KEYS.birthCountry = "community-birth-country"`. The `getCommunityProfileFields` output now includes `{ key, label: "Birth country", value }`, so the Profile Details completion bar counts Birth Country the same way the Horoscope Toolkit does.
+- `src/lib/community/birth-data-resolver.ts`
+  - `emptyResult().missing` now includes `birthCountry`.
+  - `computeMissing()` now pushes `birthCountry` when empty.
+  - The `community_members` fallback selects `birth_country` and returns `birthCountry: member.birth_country` instead of a hard-coded `null`.
+  - Stale-self-row edge case: when a family_self row wins priority 1 but its `birth_country IS NULL`, the resolver runs a secondary admin lookup on `community_members` and uses that country instead (only when the self-row's country is null — non-null family country is never overwritten). Family/booking data integrity is preserved; the merge is one-way.
+  - Header + block comments updated so the resolver no longer implies Birth City alone describes the full location record.
+
+Verification:
+
+- Scoped typecheck via `tsconfig.ux-check.json`: `tsc --noEmit -p tsconfig.ux-check.json` → **EXIT 0**. Includes the profile page, profile form, birth-city autocomplete, resolver, onboarding API, Horoscope/Family toolkit routes, and `profile-completion.ts`.
+- `/community/horoscope/page.tsx` was already checking `!resolved.birthCountry` (unchanged by this task). Combined with the resolver update, a user who has filled Date of Birth + Birth Time + Birth City + Birth Country on `/community/profile` now sees the Horoscope Toolkit render instead of the amber missing-data card.
+- `/api/community/onboarding/complete` already accepted and persisted `birth_country` via `trimStr(birth_country)`. The profile form simply wasn't sending it — fixed.
+
+Constraints honored:
+
+- No destructive schema changes (the `ADD COLUMN IF NOT EXISTS` migration was already present).
+- `birthCountry` requirement on `/community/horoscope` remains — not weakened.
+- Astrology calculation API untouched.
+- Existing family member create/edit birth-country flows untouched (`/api/community/onboarding/complete` still normalizes `birth_country` on family payloads; `community_family_members.birth_country` column already exists).
+- No refactor of the profile form beyond the Birth Data section.
+- Mystery School surfaces out of scope (the shared form is only mounted from `/community/profile`).
+
+Operational note:
+
+- The migration file `20260422000006_add_birth_country_to_community_members.sql` must be present in the active Supabase project (`wyluvclvtvwptsvvtgkv`) for this bundle to work. The ALTER TABLE is `IF NOT EXISTS`, so re-running it on a DB that already has the column is safe. `CLAUDE.md` instructs applying via `supabase db push` — not run from this session by design (no auto-migrations).

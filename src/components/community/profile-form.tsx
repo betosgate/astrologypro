@@ -39,7 +39,10 @@ import {
   calculateProfileCompletion,
   getCommunityProfileFields,
 } from "@/lib/profile-completion";
-import { BirthCityAutocomplete } from "@/components/community/birth-city-autocomplete";
+import {
+  BirthCityAutocomplete,
+  extractCountryFromCityLabel,
+} from "@/components/community/birth-city-autocomplete";
 
 const MAX_AVATAR_BYTES = 2 * 1024 * 1024; // 2 MB
 
@@ -54,6 +57,10 @@ interface CommunityMember {
   date_of_birth: string | null;
   birth_time: string | null;
   birth_city: string | null;
+  // Required by the shared Horoscope Toolkit (`/community/horoscope`).
+  // Loaded/persisted via `community_members.birth_country`. See
+  // `tasks/22.04.2026/community-horoscope-birth-country`.
+  birth_country: string | null;
   address: string | null;
   city: string | null;
   state: string | null;
@@ -89,6 +96,7 @@ export function CommunityProfileForm({
   const [dateOfBirth, setDateOfBirth] = useState(member.date_of_birth ?? "");
   const [birthTime, setBirthTime] = useState(member.birth_time ?? "");
   const [birthCity, setBirthCity] = useState(member.birth_city ?? "");
+  const [birthCountry, setBirthCountry] = useState(member.birth_country ?? "");
   const [address, setAddress] = useState(member.address ?? "");
   const [city, setCity] = useState(member.city ?? "");
   const [state, setState] = useState(member.state ?? "");
@@ -127,6 +135,7 @@ export function CommunityProfileForm({
       dateOfBirth,
       birthTime,
       birthCity,
+      birthCountry,
       address,
       city,
       state,
@@ -249,6 +258,10 @@ export function CommunityProfileForm({
           date_of_birth: dateOfBirth || null,
           birth_time: birthTime || null,
           birth_city: birthCity.trim() || null,
+          // `/api/community/onboarding/complete` already accepts and persists
+          // `birth_country` via `trimStr(birth_country)` — we just need to
+          // send it. Empty string → null.
+          birth_country: birthCountry.trim() || null,
           address: address.trim(),
           city: city.trim(),
           state: state.trim(),
@@ -436,9 +449,13 @@ export function CommunityProfileForm({
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Birth Data</CardTitle>
+          <CardDescription>
+            Date of Birth, Birth Time, Birth City, and Birth Country are all
+            required to generate your natal chart on Horoscope.
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label>Date of Birth</Label>
               <Input
@@ -457,13 +474,34 @@ export function CommunityProfileForm({
                 onChange={(e) => setBirthTime(e.target.value)}
               />
             </div>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label>Birth City</Label>
               <BirthCityAutocomplete
                 id="community-birth-city"
                 value={birthCity}
-                onChange={(label) => setBirthCity(label)}
+                onChange={(label) => {
+                  setBirthCity(label);
+                  // Prefill Birth Country from the city label ONLY when the
+                  // Country field is currently empty. We never overwrite a
+                  // value the user has already set — the user stays in
+                  // control of the country string.
+                  if (!birthCountry.trim()) {
+                    const guessed = extractCountryFromCityLabel(label);
+                    if (guessed) setBirthCountry(guessed);
+                  }
+                }}
                 placeholder="e.g. New York, NY"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Birth Country</Label>
+              <Input
+                id="community-birth-country"
+                value={birthCountry}
+                onChange={(e) => setBirthCountry(e.target.value)}
+                placeholder="e.g. United States"
               />
             </div>
           </div>
