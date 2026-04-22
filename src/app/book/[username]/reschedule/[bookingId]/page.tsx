@@ -22,6 +22,34 @@ interface PageProps {
  * The submit target, `/api/admin/my-bookings/{id}/reschedule`, accepts
  * either auth pathway via the broadened auth check.
  */
+/**
+ * If the caller landed here with a legacy diviner booking (row lives in
+ * `bookings`, not `admin_bookings`) or with the wrong username prefix,
+ * redirect to the canonical legacy reschedule URL instead of 404ing.
+ * Returns the target pathname when a redirect is warranted, else null.
+ */
+async function resolveLegacyRedirect(
+  admin: ReturnType<typeof createAdminClient>,
+  bookingId: string,
+): Promise<string | null> {
+  const { data: legacy } = await admin
+    .from("bookings")
+    .select("id, diviners:diviner_id ( username )")
+    .eq("id", bookingId)
+    .maybeSingle();
+  if (!legacy) return null;
+  const divinerField = legacy.diviners as
+    | { username?: string | null }
+    | Array<{ username?: string | null }>
+    | null;
+  const divinerRow = Array.isArray(divinerField)
+    ? divinerField[0] ?? null
+    : divinerField;
+  const divinerUsername = divinerRow?.username ?? null;
+  if (!divinerUsername) return null;
+  return `/${encodeURIComponent(divinerUsername)}/reschedule/${bookingId}`;
+}
+
 export default async function PublicAdminBookingReschedulePage({ params }: PageProps) {
   const { username, bookingId } = await params;
   const admin = createAdminClient();
@@ -32,7 +60,14 @@ export default async function PublicAdminBookingReschedulePage({ params }: PageP
     .ilike("username", username)
     .maybeSingle();
 
-  if (!adminRow?.user_id) notFound();
+  if (!adminRow?.user_id) {
+    // `username` isn't an admin at all. If the booking id belongs to a
+    // legacy diviner booking, point the caller at the correct route
+    // instead of showing a blunt 404.
+    const legacyTarget = await resolveLegacyRedirect(admin, bookingId);
+    if (legacyTarget) redirect(legacyTarget);
+    notFound();
+  }
 
   const { data: booking } = await admin
     .from("admin_bookings")
@@ -43,7 +78,14 @@ export default async function PublicAdminBookingReschedulePage({ params }: PageP
     .eq("admin_user_id", adminRow.user_id)
     .maybeSingle();
 
-  if (!booking) notFound();
+  if (!booking) {
+    // Admin username resolves, but the booking id doesn't match a row in
+    // `admin_bookings` for this admin. The id may actually be a legacy
+    // diviner booking — redirect if so.
+    const legacyTarget = await resolveLegacyRedirect(admin, bookingId);
+    if (legacyTarget) redirect(legacyTarget);
+    notFound();
+  }
 
   if (booking.status === "canceled") {
     redirect(`/book/${encodeURIComponent(username)}?error=canceled`);
