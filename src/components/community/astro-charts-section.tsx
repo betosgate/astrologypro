@@ -1,12 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
-  CardDescription,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -29,53 +28,109 @@ type NatalChartData = {
   date_of_birth: string;
 } | null;
 
-// Poll Supabase for chart/transit data every 10 seconds until found
+type ChartStatus = "loading" | "ready" | "empty" | "pending" | "failed";
+
+type ApiStatus = "ready" | "empty" | "pending" | "failed";
+
+type ApiResponse = {
+  natalChart: NatalChartData;
+  monthlyTransit: ChartData;
+  // Older responses won't include status — treat as inferred from data.
+  status?: { natal: ApiStatus; transit: ApiStatus };
+};
+
+// Polling is reserved for real "pending" (background generation) states.
+// Confirmed empty/failed/ready responses stop fetching immediately so the
+// dashboard doesn't sit on a spinner for minutes when no data exists.
 const POLL_INTERVAL_MS = 10_000;
-const MAX_POLLS = 18; // ~3 minutes
+const MAX_PENDING_POLLS = 18; // ~3 minutes, only while explicitly pending
+const MAX_ERROR_RETRIES = 2;
 
 export function AstroChartsSection() {
   const [natalChart, setNatalChart] = useState<NatalChartData>(null);
   const [monthlyTransit, setMonthlyTransit] = useState<ChartData>(null);
-  const [natalLoading, setNatalLoading] = useState(true);
-  const [transitLoading, setTransitLoading] = useState(true);
-  const [pollCount, setPollCount] = useState(0);
+  const [natalStatus, setNatalStatus] = useState<ChartStatus>("loading");
+  const [transitStatus, setTransitStatus] = useState<ChartStatus>("loading");
   const [showTooltip, setShowTooltip] = useState<"natal" | "transit" | null>(null);
 
+  // Refs for values we want to read inside the interval without re-running it.
+  const errorCountRef = useRef(0);
+  const pendingPollsRef = useRef(0);
+
   useEffect(() => {
-    let intervalId: ReturnType<typeof setInterval>;
-    let polls = 0;
+    let intervalId: ReturnType<typeof setInterval> | null = null;
+    let cancelled = false;
+
+    function stopPolling() {
+      if (intervalId !== null) {
+        clearInterval(intervalId);
+        intervalId = null;
+      }
+    }
 
     async function fetchCharts() {
-      const res = await fetch("/api/community/astro-charts");
-      if (!res.ok) return;
-      const data = await res.json();
+      try {
+        const res = await fetch("/api/community/astro-charts");
+        if (!res.ok) {
+          errorCountRef.current += 1;
+          if (errorCountRef.current >= MAX_ERROR_RETRIES) {
+            if (cancelled) return;
+            setNatalStatus("failed");
+            setTransitStatus("failed");
+            stopPolling();
+          }
+          return;
+        }
 
-      if (data.natalChart) {
-        setNatalChart(data.natalChart);
-        setNatalLoading(false);
-      }
-      if (data.monthlyTransit) {
-        setMonthlyTransit(data.monthlyTransit);
-        setTransitLoading(false);
-      }
+        const data: ApiResponse = await res.json();
+        if (cancelled) return;
 
-      polls += 1;
-      setPollCount(polls);
+        errorCountRef.current = 0;
 
-      // Stop polling when both are loaded or max polls reached
-      if ((data.natalChart && data.monthlyTransit) || polls >= MAX_POLLS) {
-        clearInterval(intervalId);
-        // If max polls reached, stop loading states
-        if (polls >= MAX_POLLS) {
-          setNatalLoading(false);
-          setTransitLoading(false);
+        // Infer status from payload shape when the API hasn't been updated yet.
+        const natal: ApiStatus =
+          data.status?.natal ?? (data.natalChart ? "ready" : "empty");
+        const transit: ApiStatus =
+          data.status?.transit ?? (data.monthlyTransit ? "ready" : "empty");
+
+        if (data.natalChart) setNatalChart(data.natalChart);
+        if (data.monthlyTransit) setMonthlyTransit(data.monthlyTransit);
+
+        setNatalStatus(natal);
+        setTransitStatus(transit);
+
+        // Keep polling only while the backend says something is genuinely
+        // pending. "empty" and "ready" are terminal states.
+        const anyPending = natal === "pending" || transit === "pending";
+        if (!anyPending) {
+          stopPolling();
+          return;
+        }
+
+        pendingPollsRef.current += 1;
+        if (pendingPollsRef.current >= MAX_PENDING_POLLS) {
+          // Give up gracefully instead of spinning forever.
+          if (natal === "pending") setNatalStatus("empty");
+          if (transit === "pending") setTransitStatus("empty");
+          stopPolling();
+        }
+      } catch {
+        errorCountRef.current += 1;
+        if (errorCountRef.current >= MAX_ERROR_RETRIES && !cancelled) {
+          setNatalStatus("failed");
+          setTransitStatus("failed");
+          stopPolling();
         }
       }
     }
 
     fetchCharts();
     intervalId = setInterval(fetchCharts, POLL_INTERVAL_MS);
-    return () => clearInterval(intervalId);
+
+    return () => {
+      cancelled = true;
+      stopPolling();
+    };
   }, []);
 
   return (
@@ -107,16 +162,22 @@ export function AstroChartsSection() {
           )}
         </CardHeader>
         <CardContent>
-          {natalLoading ? (
+          {natalStatus === "loading" || natalStatus === "pending" ? (
             <div className="flex flex-col items-center gap-2 py-4 text-center">
               <Loader2 className="size-5 animate-spin text-muted-foreground" />
               <p className="text-xs text-muted-foreground">
-                {pollCount === 0
-                  ? "Checking for your chart..."
-                  : "Your chart is being prepared..."}
+                {natalStatus === "pending"
+                  ? "Your chart is being prepared..."
+                  : "Checking chart data..."}
               </p>
             </div>
-          ) : natalChart ? (
+          ) : natalStatus === "failed" ? (
+            <div className="space-y-2">
+              <p className="text-xs text-muted-foreground">
+                Could not load chart data. Try refreshing the page.
+              </p>
+            </div>
+          ) : natalStatus === "ready" && natalChart ? (
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <Badge variant="default" className="text-xs">Chart Ready</Badge>
@@ -138,7 +199,7 @@ export function AstroChartsSection() {
           ) : (
             <div className="space-y-2">
               <p className="text-xs text-muted-foreground">
-                No natal chart found. Add a family member to generate one.
+                No natal chart found yet. Generate your chart from Family or Horoscope.
               </p>
               <Button asChild variant="outline" size="sm">
                 <Link href="/community/family">Add Family Member</Link>
@@ -175,16 +236,22 @@ export function AstroChartsSection() {
           )}
         </CardHeader>
         <CardContent>
-          {transitLoading ? (
+          {transitStatus === "loading" || transitStatus === "pending" ? (
             <div className="flex flex-col items-center gap-2 py-4 text-center">
               <Loader2 className="size-5 animate-spin text-muted-foreground" />
               <p className="text-xs text-muted-foreground">
-                {pollCount === 0
-                  ? "Checking for transit data..."
-                  : "Monthly transit is being calculated..."}
+                {transitStatus === "pending"
+                  ? "Monthly transit is being calculated..."
+                  : "Checking chart data..."}
               </p>
             </div>
-          ) : monthlyTransit ? (
+          ) : transitStatus === "failed" ? (
+            <div className="space-y-2">
+              <p className="text-xs text-muted-foreground">
+                Could not load chart data. Try refreshing the page.
+              </p>
+            </div>
+          ) : transitStatus === "ready" && monthlyTransit ? (
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <Badge variant="default" className="text-xs bg-blue-500">Ready</Badge>
@@ -199,7 +266,7 @@ export function AstroChartsSection() {
           ) : (
             <div className="space-y-2">
               <p className="text-xs text-muted-foreground">
-                No transit data for this month yet. Generated on the 1st of each month.
+                No monthly transit data found for this month yet.
               </p>
               <Button asChild variant="ghost" size="sm">
                 <Link href="/community/transits">Check Transits Page</Link>

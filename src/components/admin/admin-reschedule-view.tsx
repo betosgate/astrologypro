@@ -72,6 +72,13 @@ interface Props {
   currentScheduledAt: string;
   clientName: string;
   clientEmail: string;
+  /**
+   * Where the back/cancel/done-state buttons navigate. Defaults to the
+   * admin dashboard. Trainee/client callers override to `/trainee/sessions`.
+   */
+  backHref?: string;
+  /** Label shown inside the "done" state Back button. */
+  backLabel?: string;
 }
 
 export function AdminRescheduleView({
@@ -82,6 +89,8 @@ export function AdminRescheduleView({
   currentScheduledAt,
   clientName,
   clientEmail,
+  backHref = "/admin/my-bookings",
+  backLabel = "Back to My Bookings",
 }: Props) {
   const router = useRouter();
 
@@ -218,9 +227,9 @@ export function AdminRescheduleView({
             {clientEmail} has been notified by email.
           </p>
           <Button asChild className="mt-2 w-full">
-            <Link href="/admin/my-bookings">
+            <Link href={backHref}>
               <ArrowLeft className="mr-2 size-4" />
-              Back to My Bookings
+              {backLabel}
             </Link>
           </Button>
         </CardContent>
@@ -374,7 +383,7 @@ export function AdminRescheduleView({
         <div className="flex gap-2">
           <Button
             variant="outline"
-            onClick={() => router.push("/admin/my-bookings")}
+            onClick={() => router.push(backHref)}
             disabled={submitting}
           >
             Cancel

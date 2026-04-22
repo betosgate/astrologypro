@@ -171,6 +171,25 @@ export async function GET() {
     .ilike("client_email", email)
     .order("scheduled_at", { ascending: false });
 
+  // Resolve admin usernames so trainees can deep-link to the calendar
+  // reschedule page at `/book/<admin-username>/reschedule/<booking-id>`.
+  const adminUserIds = new Set<string>();
+  for (const row of adminBookingRows ?? []) {
+    if (row.admin_user_id) adminUserIds.add(row.admin_user_id as string);
+  }
+  const adminUsernameByUserId = new Map<string, string>();
+  if (adminUserIds.size > 0) {
+    const { data: adminUserRows } = await admin
+      .from("admin_users")
+      .select("user_id, username")
+      .in("user_id", Array.from(adminUserIds));
+    for (const row of adminUserRows ?? []) {
+      if (row.user_id && row.username) {
+        adminUsernameByUserId.set(row.user_id as string, row.username as string);
+      }
+    }
+  }
+
   const adminBookingsMissing =
     !!adminBookingsError &&
     adminBookingsError.message.toLowerCase().includes("admin_bookings");
@@ -197,6 +216,10 @@ export async function GET() {
         ? divinerUsernameById.get(booking.owner_id) ?? null
         : null);
 
+    const rescheduleHref = resolvedUsername
+      ? `/${resolvedUsername}/reschedule/${booking.id}`
+      : null;
+
     return {
       id: booking.id,
       source: "bookings" as const,
@@ -205,6 +228,7 @@ export async function GET() {
       duration_minutes: Number(booking.duration_minutes ?? 0),
       diviner_id: booking.diviner_id ?? null,
       diviner_username: resolvedUsername,
+      reschedule_href: rescheduleHref,
       service_id: booking.service_id ?? null,
       service_name: service?.name ?? null,
       client_id: booking.client_id ?? null,
@@ -231,6 +255,14 @@ export async function GET() {
         (client) => client.email.trim().toLowerCase() === email
       ) ?? null;
 
+    const adminUsername =
+      booking.admin_user_id
+        ? adminUsernameByUserId.get(booking.admin_user_id as string) ?? null
+        : null;
+    const rescheduleHref = adminUsername
+      ? `/book/${adminUsername}/reschedule/${booking.id}`
+      : null;
+
     return {
       id: booking.id,
       source: "admin_bookings" as const,
@@ -238,7 +270,8 @@ export async function GET() {
       scheduled_at: booking.scheduled_at,
       duration_minutes: Number(booking.duration_minutes ?? 0),
       diviner_id: booking.admin_user_id ?? null,
-      diviner_username: null,
+      diviner_username: adminUsername,
+      reschedule_href: rescheduleHref,
       service_id: null,
       service_name: "Appointment",
       client_id: matchedClient?.id ?? null,

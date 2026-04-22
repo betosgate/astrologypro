@@ -9,27 +9,38 @@ import Link from "next/link";
 interface ProfileProgressSectionProps {
   profilePct: number;
   membersCount: number;
+  /**
+   * Human-readable labels for missing birth-data fields (e.g.
+   * "Date of birth", "Birth time", "Birth city"). The dashboard owns the
+   * source of truth — this component just renders whatever it is handed.
+   * Falls back to a generic message when the caller does not pass it.
+   */
+  missingFields?: string[];
 }
 
 export function ProfileProgressSection({
   profilePct,
   membersCount,
+  missingFields,
 }: ProfileProgressSectionProps) {
+  const fieldsToList = missingFields ?? [];
+  const isComplete = profilePct === 100 || fieldsToList.length === 0;
+
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="text-sm">Profile Completion</CardTitle>
+        <CardTitle className="text-sm">Birth Data Readiness</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex items-center justify-around gap-4">
-          {/* My Profile ring */}
+          {/* Birth-data readiness ring */}
           <ProgressRing
             percentage={profilePct}
             size={88}
             strokeWidth={8}
-            label="Your Profile"
-            sublabel="Birth data filled"
-            color={profilePct === 100 ? "hsl(142, 71%, 45%)" : "hsl(var(--primary))"}
+            label="Birth Data"
+            sublabel={isComplete ? "Complete" : "Needed for charts"}
+            color={isComplete ? "hsl(142, 71%, 45%)" : "hsl(var(--primary))"}
           />
 
           {/* Members ring — approximate metric based on other active members */}
@@ -43,16 +54,19 @@ export function ProfileProgressSection({
           />
         </div>
 
-        {profilePct < 100 && (
+        {!isComplete && (
           <div className="space-y-1">
             <p className="text-xs text-muted-foreground">
-              Complete your profile for full chart accuracy:
+              Add the following for full chart accuracy:
             </p>
             <ul className="space-y-0.5 text-xs text-muted-foreground pl-3">
-              {profilePct < 34 && <li>• Add your date of birth</li>}
-              {profilePct < 67 && profilePct >= 34 && <li>• Add your birth time</li>}
-              {profilePct < 100 && profilePct >= 67 && <li>• Add your birth city</li>}
-              {profilePct === 0 && <li>• Add your date of birth, birth time, and birth city</li>}
+              {fieldsToList.length > 0 ? (
+                fieldsToList.map((field) => (
+                  <li key={field}>• Add your {field.toLowerCase()}</li>
+                ))
+              ) : (
+                <li>• Add your date of birth, birth time, and birth city</li>
+              )}
             </ul>
           </div>
         )}
@@ -60,7 +74,7 @@ export function ProfileProgressSection({
         <Button asChild variant="outline" size="sm" className="w-full">
           <Link href="/community/profile">
             <Users className="mr-1.5 size-3.5" />
-            {profilePct === 100 ? "View Profile" : "Complete Profile"}
+            {isComplete ? "View Profile" : "Complete Profile"}
           </Link>
         </Button>
       </CardContent>

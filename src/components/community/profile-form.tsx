@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Card,
   CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -19,7 +21,18 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Save, ChevronDown, ChevronUp } from "lucide-react";
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+} from "@/components/ui/avatar";
+import {
+  Loader2,
+  Save,
+  ChevronDown,
+  ChevronUp,
+  Upload,
+} from "lucide-react";
 import { toast } from "sonner";
 import { ProfileCompletionBar } from "@/components/ui/profile-completion-bar";
 import {
@@ -27,6 +40,8 @@ import {
   getCommunityProfileFields,
 } from "@/lib/profile-completion";
 import { BirthCityAutocomplete } from "@/components/community/birth-city-autocomplete";
+
+const MAX_AVATAR_BYTES = 2 * 1024 * 1024; // 2 MB
 
 interface CommunityMember {
   id: string;
@@ -54,10 +69,18 @@ interface CommunityMember {
 interface CommunityProfileFormProps {
   member: CommunityMember;
   userId?: string;
+  initialAvatarUrl?: string | null;
 }
 
-export function CommunityProfileForm({ member }: CommunityProfileFormProps) {
+export function CommunityProfileForm({
+  member,
+  initialAvatarUrl = null,
+}: CommunityProfileFormProps) {
+  const router = useRouter();
   const intake = member.intake_data ?? {};
+
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(initialAvatarUrl);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   const [firstName, setFirstName] = useState(member.first_name ?? "");
   const [lastName, setLastName] = useState(member.last_name ?? "");
@@ -119,6 +142,92 @@ export function CommunityProfileForm({ member }: CommunityProfileFormProps) {
     });
   }
 
+  async function handleAvatarUpload(
+    e: React.ChangeEvent<HTMLInputElement>
+  ) {
+    const file = e.target.files?.[0];
+    // Reset the input so the same file can be re-selected after an error.
+    e.target.value = "";
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image file.");
+      return;
+    }
+    if (file.size > MAX_AVATAR_BYTES) {
+      toast.error("Image must be under 2 MB.");
+      return;
+    }
+
+    setUploadingAvatar(true);
+    try {
+      // 1. Upload the file to storage (reuses the existing avatar route).
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("folder", "avatars");
+
+      const uploadRes = await fetch("/api/upload/avatar", {
+        method: "POST",
+        body: formData,
+      });
+      const uploadData = await uploadRes.json().catch(() => ({}));
+
+      if (!uploadRes.ok) {
+        toast.error(
+          `Failed to upload photo: ${uploadData.error ?? "Unknown error"}`
+        );
+        return;
+      }
+
+      const publicUrl: string | undefined = uploadData.publicUrl;
+      if (!publicUrl) {
+        toast.error("Upload did not return a public URL.");
+        return;
+      }
+
+      // 2. Persist the URL on user_metadata.avatar_url — this is what
+      //    Journey Progress reads to flip the milestone to complete.
+      const persistRes = await fetch("/api/community/profile/avatar", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ avatar_url: publicUrl }),
+      });
+
+      if (!persistRes.ok) {
+        const data = await persistRes.json().catch(() => ({}));
+        toast.error(
+          data.error ?? "Failed to save photo. Please try again."
+        );
+        return;
+      }
+
+      // 3. Update local preview immediately and refresh server state so
+      //    other surfaces (e.g. /community Journey Progress) pick it up.
+      setAvatarUrl(publicUrl);
+      toast.success("Profile photo updated.");
+      router.refresh();
+    } catch {
+      toast.error("An unexpected error occurred while uploading.");
+    } finally {
+      setUploadingAvatar(false);
+    }
+  }
+
+  const avatarInitials = (() => {
+    const source = [firstName, lastName]
+      .map((v) => v?.trim())
+      .filter((v) => v && v.length > 0)
+      .join(" ");
+    const name = source || member.full_name || member.email || "";
+    return name
+      .split(/\s+/)
+      .map((part) => part[0])
+      .filter(Boolean)
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
+  })();
+
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     if (!firstName.trim() || !lastName.trim()) {
@@ -173,6 +282,58 @@ export function CommunityProfileForm({ member }: CommunityProfileFormProps) {
 
   return (
     <form onSubmit={handleSave} className="space-y-6">
+      {/* Profile Photo */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Profile Photo</CardTitle>
+          <CardDescription>
+            Used across your community dashboard. Max 2 MB — JPEG, PNG, WebP, or GIF.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col items-start gap-4 sm:flex-row sm:items-center">
+          <Avatar className="size-20">
+            {avatarUrl ? <AvatarImage src={avatarUrl} alt="Profile photo" /> : null}
+            <AvatarFallback className="text-lg">
+              {avatarInitials || "?"}
+            </AvatarFallback>
+          </Avatar>
+          <div className="space-y-2">
+            <Label
+              htmlFor="community-avatar-upload"
+              className={`inline-flex items-center gap-2 rounded-md border px-4 py-2 text-sm font-medium transition-colors ${
+                uploadingAvatar
+                  ? "cursor-not-allowed opacity-60"
+                  : "cursor-pointer hover:bg-muted"
+              }`}
+            >
+              {uploadingAvatar ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Upload className="size-4" />
+              )}
+              {uploadingAvatar
+                ? "Uploading..."
+                : avatarUrl
+                ? "Change Photo"
+                : "Upload Photo"}
+            </Label>
+            <input
+              id="community-avatar-upload"
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleAvatarUpload}
+              disabled={uploadingAvatar}
+            />
+            <p className="text-xs text-muted-foreground">
+              {avatarUrl
+                ? "Replace your current photo with a new one."
+                : "Add a photo to complete your profile."}
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
       <ProfileCompletionBar
         title="Profile Details"
         subtitle="Tracks your personal & birth data only. Charts, family, and account setup progress are shown on your dashboard as Journey Progress."
