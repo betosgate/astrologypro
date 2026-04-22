@@ -94,6 +94,14 @@ interface BookingDetailProps {
    * trainee/client booking drawer.
    */
   viewerRole?: "diviner" | "admin" | "client";
+  /**
+   * Explicit override for the Reschedule button's navigation target. When
+   * provided, the drawer turns the button into a Link to this href and
+   * skips its own host-type detection. Used by the trainee dashboard,
+   * which mixes diviner-owned and admin-owned bookings that live at
+   * different reschedule URLs.
+   */
+  rescheduleHref?: string | null;
 }
 
 // Format an ISO string into the value expected by <input type="datetime-local">
@@ -101,6 +109,27 @@ function toDatetimeLocal(iso: string): string {
   const d = new Date(iso);
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+interface CancellationActor {
+  role: "admin" | "diviner" | "client" | "system" | null;
+  name: string | null;
+}
+
+interface CancellationDetails {
+  status: string;
+  cancellation: {
+    canceledAt: string;
+    reason: string | null;
+    canceledBy: CancellationActor;
+  } | null;
+  refund: {
+    amount: number | null;
+    refundedAt: string;
+    reason: string | null;
+    stripeRefundId: string | null;
+    refundedBy: CancellationActor;
+  } | null;
 }
 
 interface SessionDetails {
@@ -231,6 +260,7 @@ export function BookingDetailSheet({
   detailsOnly = false,
   actionBasePath = null,
   viewerRole = "diviner",
+  rescheduleHref = null,
 }: BookingDetailProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -250,6 +280,28 @@ export function BookingDetailSheet({
       .catch(() => setSessionDetails(null))
       .finally(() => setLoadingSession(false));
   }, [open, booking.id, sessionDetails, detailsOnly]);
+
+  // Fetch cancellation + refund audit so we can show who/when/refund-id.
+  // Skipped for `detailsOnly` because those rows live outside the standard
+  // bookings table (admin calendar, etc.) and don't share this audit.
+  useEffect(() => {
+    if (!open || detailsOnly) return;
+    if (booking.status !== "canceled" && !booking.refunded_at) return;
+    let cancelled = false;
+    fetch(`/api/bookings/${booking.id}/cancellation-details`, {
+      credentials: "include",
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: CancellationDetails | null) => {
+        if (!cancelled && d) setCancellationDetails(d);
+      })
+      .catch(() => {
+        if (!cancelled) setCancellationDetails(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, booking.id, booking.status, booking.refunded_at, detailsOnly]);
   const [showRefundForm, setShowRefundForm] = useState(false);
   const [refundReason, setRefundReason] = useState("");
   const [refunding, setRefunding] = useState(false);
@@ -263,6 +315,7 @@ export function BookingDetailSheet({
   const [refundReasonDisplay, setRefundReasonDisplay] = useState<string | null>(
     booking.refund_reason ?? null
   );
+  const [cancellationDetails, setCancellationDetails] = useState<CancellationDetails | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [syncingRecording, setSyncingRecording] = useState(false);
   const [sessionNotes, setSessionNotes] = useState(booking.session_notes ?? "");
@@ -486,11 +539,18 @@ export function BookingDetailSheet({
     !canceled;
 
   // Both diviners and clients/trainees get the full calendar-picker reschedule
-  // page (routed under the diviner profile slug). Admin calendar bookings use
-  // actionBasePath because they live outside the standard bookings table, so
-  // they fall back to the inline datetime form.
+  // page (routed under the diviner profile slug). Admin "my bookings" rows
+  // live outside the standard bookings table and have their own reschedule
+  // calendar at /admin/my-bookings/{id}/reschedule — driven by the
+  // /api/book/{adminUsername}/* availability endpoints. Any remaining case
+  // (admin calendar bookings without a dedicated page) falls back to the
+  // inline datetime form.
   const useCalendarReschedulePage =
     canReschedule && !actionBasePath && !!booking.username;
+  const adminRescheduleHref =
+    canReschedule && actionBasePath?.startsWith("/api/admin/my-bookings/")
+      ? `/admin/my-bookings/${booking.id}/reschedule`
+      : null;
 
   const canCancel =
     (!detailsOnly || !!actionBasePath) &&
@@ -760,13 +820,31 @@ export function BookingDetailSheet({
           {(canReschedule || canCancel || canRefund) && !showRescheduleForm && !showCancelForm && !showRefundForm && (
             <div className="flex flex-col gap-2">
               {canReschedule && (
-                useCalendarReschedulePage ? (
+                rescheduleHref ? (
+                  <Button asChild variant="outline" className="w-full gap-2">
+                    <Link href={rescheduleHref}>
+                      <CalendarClock className="size-4" />
+                      Reschedule
+                    </Link>
+                  </Button>
+                ) : useCalendarReschedulePage ? (
                   <Button
                     asChild
                     variant="outline"
                     className="w-full gap-2"
                   >
                     <Link href={`/${booking.username}/reschedule/${booking.id}`}>
+                      <CalendarClock className="size-4" />
+                      Reschedule
+                    </Link>
+                  </Button>
+                ) : adminRescheduleHref ? (
+                  <Button
+                    asChild
+                    variant="outline"
+                    className="w-full gap-2"
+                  >
+                    <Link href={adminRescheduleHref}>
                       <CalendarClock className="size-4" />
                       Reschedule
                     </Link>
@@ -879,28 +957,148 @@ export function BookingDetailSheet({
             </div>
           )}
 
-          {/* ── Refund status ─────────────────────────────────────────── */}
-          {refunded && (
-            <div className="rounded-lg border border-green-500/20 bg-green-500/5 p-3">
+          {/* ── Cancellation audit ────────────────────────────────────── */}
+          {canceled && (
+            <div className="rounded-lg border border-red-500/20 bg-red-500/5 p-3 space-y-1.5">
               <div className="flex items-center gap-2">
-                <CheckCircle2 className="size-4 text-green-500" />
-                <p className="text-sm font-medium text-green-500">
-                  {canceled ? "Cancelled & Refunded" : "Refunded"}
+                <XCircle className="size-4 text-red-500" />
+                <p className="text-sm font-medium text-red-500">
+                  {refunded ? "Cancelled & Refunded" : "Cancelled"}
                 </p>
               </div>
+              {cancellationDetails?.cancellation?.canceledAt && (
+                <p className="text-xs text-muted-foreground">
+                  <span className="text-muted-foreground/70">Cancelled at:</span>{" "}
+                  {formatDateTime(cancellationDetails.cancellation.canceledAt)}
+                </p>
+              )}
+              {cancellationDetails?.cancellation?.canceledBy?.name && (
+                <p className="text-xs text-muted-foreground">
+                  <span className="text-muted-foreground/70">Cancelled by:</span>{" "}
+                  <span className="font-medium text-foreground/80">
+                    {cancellationDetails.cancellation.canceledBy.name}
+                  </span>
+                  {cancellationDetails.cancellation.canceledBy.role && (
+                    <span className="ml-1 text-muted-foreground/60">
+                      ({cancellationDetails.cancellation.canceledBy.role})
+                    </span>
+                  )}
+                </p>
+              )}
+              {cancellationDetails?.cancellation?.reason && (
+                <p className="text-xs text-muted-foreground">
+                  <span className="text-muted-foreground/70">Reason:</span>{" "}
+                  {cancellationDetails.cancellation.reason}
+                </p>
+              )}
+
+              {!refunded && (
+                <p className="mt-2 rounded-md bg-red-500/10 px-2 py-1.5 text-xs text-muted-foreground">
+                  {booking.payment_intent_id && booking.amount > 0
+                    ? "No refund was issued. The payment was not captured or has already been refunded elsewhere — check your Stripe dashboard if this looks wrong."
+                    : "No refund was needed — this booking had no captured payment."}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* ── Refund audit (standalone refund, no cancellation) ─────── */}
+          {!canceled && refunded && (
+            <div className="rounded-lg border border-green-500/20 bg-green-500/5 p-3 space-y-1.5">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="size-4 text-green-500" />
+                <p className="text-sm font-medium text-green-500">Refunded</p>
+              </div>
               {refundAmount != null && refundAmount > 0 && (
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Amount: {formatCurrency(refundAmount)}
+                <p className="text-xs text-muted-foreground">
+                  <span className="text-muted-foreground/70">Amount:</span>{" "}
+                  <span className="font-medium text-foreground/80">
+                    {formatCurrency(refundAmount)}
+                  </span>
                 </p>
               )}
               {refundedAt && (
                 <p className="text-xs text-muted-foreground">
-                  Date: {formatDateTime(refundedAt)}
+                  <span className="text-muted-foreground/70">Refunded at:</span>{" "}
+                  {formatDateTime(refundedAt)}
+                </p>
+              )}
+              {cancellationDetails?.refund?.refundedBy?.name && (
+                <p className="text-xs text-muted-foreground">
+                  <span className="text-muted-foreground/70">Refunded by:</span>{" "}
+                  <span className="font-medium text-foreground/80">
+                    {cancellationDetails.refund.refundedBy.name}
+                  </span>
+                  {cancellationDetails.refund.refundedBy.role && (
+                    <span className="ml-1 text-muted-foreground/60">
+                      ({cancellationDetails.refund.refundedBy.role})
+                    </span>
+                  )}
+                </p>
+              )}
+              {cancellationDetails?.refund?.stripeRefundId && (
+                <p className="text-xs text-muted-foreground">
+                  <span className="text-muted-foreground/70">Stripe refund id:</span>{" "}
+                  <span className="font-mono text-foreground/70 break-all">
+                    {cancellationDetails.refund.stripeRefundId}
+                  </span>
                 </p>
               )}
               {refundReasonDisplay && (
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Reason: {refundReasonDisplay}
+                <p className="text-xs text-muted-foreground">
+                  <span className="text-muted-foreground/70">Reason:</span>{" "}
+                  {refundReasonDisplay}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* ── Refund details block when part of a cancellation ─────── */}
+          {canceled && refunded && (
+            <div className="rounded-lg border border-green-500/20 bg-green-500/5 p-3 space-y-1.5">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="size-4 text-green-500" />
+                <p className="text-sm font-medium text-green-500">Refund</p>
+              </div>
+              {refundAmount != null && refundAmount > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  <span className="text-muted-foreground/70">Amount:</span>{" "}
+                  <span className="font-medium text-foreground/80">
+                    {formatCurrency(refundAmount)}
+                  </span>
+                </p>
+              )}
+              {refundedAt && (
+                <p className="text-xs text-muted-foreground">
+                  <span className="text-muted-foreground/70">Refunded at:</span>{" "}
+                  {formatDateTime(refundedAt)}
+                </p>
+              )}
+              {cancellationDetails?.refund?.refundedBy?.name && (
+                <p className="text-xs text-muted-foreground">
+                  <span className="text-muted-foreground/70">Refunded by:</span>{" "}
+                  <span className="font-medium text-foreground/80">
+                    {cancellationDetails.refund.refundedBy.name}
+                  </span>
+                  {cancellationDetails.refund.refundedBy.role && (
+                    <span className="ml-1 text-muted-foreground/60">
+                      ({cancellationDetails.refund.refundedBy.role})
+                    </span>
+                  )}
+                </p>
+              )}
+              {cancellationDetails?.refund?.stripeRefundId && (
+                <p className="text-xs text-muted-foreground">
+                  <span className="text-muted-foreground/70">Stripe refund id:</span>{" "}
+                  <span className="font-mono text-foreground/70 break-all">
+                    {cancellationDetails.refund.stripeRefundId}
+                  </span>
+                </p>
+              )}
+              {refundReasonDisplay && (
+                <p className="text-xs text-muted-foreground">
+                  <span className="text-muted-foreground/70">Reason:</span>{" "}
+                  {refundReasonDisplay}
                 </p>
               )}
             </div>

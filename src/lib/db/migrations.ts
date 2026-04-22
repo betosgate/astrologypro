@@ -55,6 +55,7 @@ import { MIGRATION_SQL as MIG_20260421000030_LPS } from "@/data/migrations/20260
 import { MIGRATION_SQL as MIG_20260428000001_LPC } from "@/data/migrations/20260428000001_landing_page_cleanup_destructive";
 import { MIGRATION_SQL as MIG_20260428000002_FK } from "@/data/migrations/20260428000002_drop_section_type_fk";
 import { MIGRATION_SQL as MIG_20260422000001 } from "@/data/migrations/20260422000001_service_template_image_url";
+import { MIGRATION_SQL as MIG_20260422000002 } from "@/data/migrations/20260422000002_booking_cancel_refund_audit";
 
 /**
  * Allowlisted migrations that the admin migration runner can execute.
@@ -519,6 +520,14 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Adds nullable image_url to service_templates so admin-managed template pages can use uploaded hero images instead of relying only on slug-based static service art.",
     sortKey: "20260422000001",
     sql: MIG_20260422000001,
+  },
+  "20260422000002_booking_cancel_refund_audit": {
+    id: "20260422000002_booking_cancel_refund_audit",
+    title: "Booking cancel/refund audit fields",
+    description:
+      "Additive columns on bookings: canceled_by_user_id, canceled_by_role, stripe_refund_id, refunded_by_user_id, refunded_by_role. Lets the booking-details drawer answer 'who cancelled, who refunded, which Stripe refund was it' without joining refund_events. Role-level CHECK constraints keep values to the allowlist (admin/diviner/client/system for canceled_by; admin/diviner/system for refunded_by). No existing columns are touched.",
+    sortKey: "20260422000002",
+    sql: MIG_20260422000002,
   },
   "20260428000001_landing_page_cleanup_destructive": {
     id: "20260428000001_landing_page_cleanup_destructive",
