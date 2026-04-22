@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 // ─────────────────────────────────────────────────────────────────────────────
 // GET /api/admin/service-templates
 // Returns all service templates with diviner usage counts.
-// Query params: ?search=&category=&is_active=&sort_by=&sort_dir=
+// Query params: ?search=&category=&is_active=&scope=&sort_by=&sort_dir=
 // ─────────────────────────────────────────────────────────────────────────────
 
 export async function GET(req: NextRequest) {
@@ -20,6 +20,7 @@ export async function GET(req: NextRequest) {
   const search = searchParams.get("search") ?? "";
   const category = searchParams.get("category") ?? "";
   const isActive = searchParams.get("is_active") ?? "";
+  const scope = searchParams.get("scope") ?? "";
   const sortBy = searchParams.get("sort_by") ?? "display_order";
   const sortDir = searchParams.get("sort_dir") === "desc" ? false : true;
   const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
@@ -52,6 +53,9 @@ export async function GET(req: NextRequest) {
     query = query.eq("is_active", true);
   } else if (isActive === "false") {
     query = query.eq("is_active", false);
+  }
+  if (scope === "general") {
+    query = query.ilike("slug", "general-%");
   }
 
   // Apply pagination
