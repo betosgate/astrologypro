@@ -1,45 +1,35 @@
 /**
- * POST /api/dashboard/landing-pages/[templateId]/unpublish
+ * DEPRECATED — replaced by POST /api/dashboard/landing-pages/[templateId]/toggle-live.
+ *
+ * Under V2 there is no separate unpublish path. The dashboard sends a single
+ * `{ is_published: boolean }` to toggle-live and that writes
+ * `diviner_services.is_published` directly. This stub stays only so an old
+ * client that still calls this URL gets a clear error instead of a 404.
+ *
+ * Removed in Deploy 2 of docs/tasks/2026-04-21/landing-page-simplification.
  */
 
-import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { unpublishLandingPage } from "@/lib/landing-page-builder";
+import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
-interface RouteParams {
-  params: Promise<{ templateId: string }>;
+function gone() {
+  return NextResponse.json(
+    {
+      type: "about:blank",
+      title: "Endpoint removed",
+      status: 410,
+      detail:
+        "POST /unpublish is no longer available. Use POST /toggle-live with `{ \"is_published\": false }` instead.",
+    },
+    { status: 410 },
+  );
 }
 
-export async function POST(_req: NextRequest, { params }: RouteParams) {
-  const { templateId } = await params;
+export async function POST() {
+  return gone();
+}
 
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ status: 401, title: "Unauthorized" }, { status: 401 });
-
-  const admin = createAdminClient();
-  const { data: diviner } = await admin
-    .from("diviners")
-    .select("id")
-    .eq("user_id", user.id)
-    .maybeSingle();
-  if (!diviner) return NextResponse.json({ status: 403, title: "Forbidden" }, { status: 403 });
-
-  const { data: page } = await admin
-    .from("service_landing_pages")
-    .select("id")
-    .eq("diviner_id", diviner.id)
-    .eq("service_template_id", templateId)
-    .maybeSingle();
-
-  if (!page) {
-    return NextResponse.json({ status: 404, title: "Landing page not found" }, { status: 404 });
-  }
-
-  await unpublishLandingPage(admin, page.id, templateId, diviner.id, user.id);
-
-  return NextResponse.json({ success: true });
+export async function GET() {
+  return gone();
 }
