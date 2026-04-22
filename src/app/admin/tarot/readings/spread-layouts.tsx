@@ -342,15 +342,17 @@ export function RelationshipLayout({ positionLabels, drawnCards, onReveal, onCar
   //              [8 Hopes]                        ← centered lower
   //   [0] [1] [2] [3] [4]                        ← full width row
   //          [6]     [7]                          ← centered bottom
-  const CW = 140;
-  const CH = 200;
+const is599OrBelow = useMaxWidth(399);
+  const is1440OrBelow = useMaxWidth(1540);
+  const CW = is599OrBelow ? 210 : is1440OrBelow ? 150 : 180;
+  const CH = is599OrBelow ? 310 : is1440OrBelow ? 210 : 260;
 
   return (
     <div className="flex flex-col items-center">
       {/* Desktop */}
-      <div className="hidden md:flex flex-col items-center gap-6">
+      <div className=" flex flex-col items-center gap-6 max-[1399px]:hidden">
         {/* Top section: 6 and 10 raised, 9 lower between them */}
-        <div className="relative w-full" style={{ maxWidth: 800, height: CH + CH * 0.4 + 80 }}>
+        <div className="relative w-full max-[1540.98px]:!h-[272px]" style={{ maxWidth: 800, height: CH * 0 + 322 }}>
           {/* Card 6 (Beliefs) — top left */}
           <div className="absolute" style={{ left: 0, top: 0 }}>
             <CardSlot index={5} label={positionLabels[5]} drawn={drawnCards[5]} onReveal={onReveal} onCardClick={onCardClick} cardBackUrl={cardBackUrl} cardWidth={CW} cardHeight={CH} />
@@ -381,9 +383,9 @@ export function RelationshipLayout({ positionLabels, drawnCards, onReveal, onCar
       </div>
 
       {/* Mobile: 2 columns */}
-      <div className="grid md:hidden grid-cols-2 gap-4 justify-items-center">
+      <div className="hidden max-[1399px]:grid grid-cols-5 gap-4 justify-items-center max-[768px]:grid-cols-2 max-[399px]:grid-cols-1">
         {positionLabels.map((label, i) => (
-          <CardSlot key={i} index={i} label={label} drawn={drawnCards[i]} onReveal={onReveal} onCardClick={onCardClick} cardBackUrl={cardBackUrl} cardWidth={120} cardHeight={170} />
+          <CardSlot key={i} index={i} label={label} drawn={drawnCards[i]} onReveal={onReveal} onCardClick={onCardClick} cardBackUrl={cardBackUrl} cardWidth={120} cardHeight={170}/>
         ))}
       </div>
     </div>
