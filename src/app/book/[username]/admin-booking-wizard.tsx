@@ -61,12 +61,21 @@ interface Props {
   username: string;
   defaultTimezone: string;
   defaultDurationMinutes: number;
+  /**
+   * When set, the email input is prefilled with this value and
+   * rendered read-only. The value MUST come from server-side auth
+   * (supabase.auth.getUser()), never from a client-supplied query param,
+   * so the caller cannot spoof a foreign email.
+   * Used by the trainee-dashboard → Tabbie booking prefill flow.
+   */
+  lockedEmail?: string | null;
 }
 
 export function AdminBookingWizard({
   username,
   defaultTimezone,
   defaultDurationMinutes,
+  lockedEmail,
 }: Props) {
   const [currentMonth, setCurrentMonth] = useState(() => {
     const now = new Date();
@@ -87,8 +96,14 @@ export function AdminBookingWizard({
   const [timezone, setTimezone] = useState<string>(defaultTimezone);
 
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(lockedEmail ?? "");
   const [note, setNote] = useState("");
+
+  // If the caller passes a lockedEmail (trainee prefill flow), keep the
+  // state in sync even if Next.js hydrates with an empty default.
+  useEffect(() => {
+    if (lockedEmail) setEmail(lockedEmail);
+  }, [lockedEmail]);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [confirmation, setConfirmation] = useState<Slot | null>(null);
@@ -562,10 +577,26 @@ export function AdminBookingWizard({
                 id="client-email"
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  if (lockedEmail) return; // locked — ignore edits
+                  setEmail(e.target.value);
+                }}
                 autoComplete="email"
-                className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-[#f5f0e8] outline-none transition focus:border-[#c9a84c]/60"
+                readOnly={!!lockedEmail}
+                disabled={!!lockedEmail}
+                aria-readonly={!!lockedEmail}
+                title={lockedEmail ? "This email is locked to your account" : undefined}
+                className={`w-full rounded-lg border bg-white/5 px-3 py-2 text-sm text-[#f5f0e8] outline-none transition focus:border-[#c9a84c]/60 ${
+                  lockedEmail
+                    ? "border-white/5 cursor-not-allowed opacity-80"
+                    : "border-white/10"
+                }`}
               />
+              {lockedEmail && (
+                <p className="mt-1 text-[10px] text-[#b8bcd0]/50">
+                  Locked to your account email.
+                </p>
+              )}
             </div>
             <div>
               <label

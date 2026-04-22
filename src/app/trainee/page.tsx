@@ -27,6 +27,7 @@ import {
 import Link from "next/link";
 import { RoleUpgradeBanners } from "@/components/dashboard/role-upgrade-banners";
 import { TabbieAppointmentSection } from "@/components/trainee/tabbie-appointment-section";
+import { TraineeAppointmentsSection } from "@/components/trainee/trainee-appointments-section";
 
 export const metadata = { title: "Trainee Dashboard - AstrologyPro" };
 
@@ -422,6 +423,9 @@ export default async function TraineeDashboardPage() {
       <TabbieAppointmentSection
         trainingCompleted={trainee.training_status === "graduated"}
       />
+
+      {/* ── Booked appointments list + See Details (21.04.2026 sprint) ────── */}
+      <TraineeAppointmentsSection />
 
       {/* ── Graduation CTA ──────────────────────────────────────────────────── */}
       {/* ── Training Progress Summary ────────────────────────────────────────── */}

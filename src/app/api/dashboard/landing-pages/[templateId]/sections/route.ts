@@ -1,19 +1,61 @@
 /**
- * GET  /api/dashboard/landing-pages/[templateId]/sections  — list sections (lazy-init)
- * POST /api/dashboard/landing-pages/[templateId]/sections  — add a new custom section
+ * GET  /api/dashboard/landing-pages/[templateId]/sections — list blocks grouped by slot.
+ * POST /api/dashboard/landing-pages/[templateId]/sections — create a block in a slot.
+ *
+ * Rewritten in Task 03 of the 2026-04-21 landing-page-simplification:
+ *
+ * - Only three block types are accepted: text | image | html.
+ * - Every block belongs to exactly one of two slots: about_diviner | extra.
+ * - GET is READ-ONLY — never lazy-creates a service_landing_pages row.
+ *   Returns `{ about_diviner: [], extra: [] }` when no blocks exist yet.
+ * - POST lazy-creates the service_landing_pages container atomically so the
+ *   landing_page_id FK (still present in Deploy 1) is satisfied without
+ *   surfacing the container to the diviner.
+ * - HTML blocks are sanitized in STRICT mode: if the sanitizer would change
+ *   the input at all, the response is 422 Problem Details per RFC 9457 with
+ *   a `stripped_example` breadcrumb.
+ * - Errors use the RFC 9457 shape {type, title, status, detail?}.
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { SECTION_TYPES, validateSectionContent } from "@/lib/landing-page-section-types";
-import { getOrCreateLandingPage, getAvailableSectionTypes } from "@/lib/landing-page-builder";
-import { sanitizeSectionHtml } from "@/lib/html-sanitizer";
+import {
+  SECTION_TYPES,
+  SLOTS,
+  isBlockSlot,
+  isBlockType,
+  validateSectionContent,
+  type BlockSlot,
+  type BlockType,
+} from "@/lib/landing-page-section-types";
+import {
+  HtmlSanitizationError,
+  sanitizeDivinerHtmlStrict,
+} from "@/lib/html-sanitizer";
+import {
+  countBlocksInSlot,
+  ensureLandingPageContainer,
+  getDivinerBlocksForOwner,
+  nextDisplayOrderInSlot,
+} from "@/lib/diviner-service-blocks";
 
 export const dynamic = "force-dynamic";
 
 interface RouteParams {
   params: Promise<{ templateId: string }>;
+}
+
+function problem(
+  status: number,
+  title: string,
+  detail?: string,
+  extra?: Record<string, unknown>,
+) {
+  return NextResponse.json(
+    { type: "about:blank", title, status, ...(detail ? { detail } : {}), ...(extra ?? {}) },
+    { status },
+  );
 }
 
 async function resolveDiviner() {
@@ -29,230 +71,202 @@ async function resolveDiviner() {
   return { user, diviner };
 }
 
-// ── GET ────────────────────────────────────────────────────────────────────────
+async function verifyTemplateAccess(
+  admin: ReturnType<typeof createAdminClient>,
+  divinerId: string,
+  templateId: string,
+) {
+  const { data: ds } = await admin
+    .from("diviner_services")
+    .select("is_enabled")
+    .eq("diviner_id", divinerId)
+    .eq("template_id", templateId)
+    .maybeSingle();
+  return { ok: !!ds?.is_enabled, ds };
+}
+
+// ── GET — read-only, grouped by slot ──────────────────────────────────────────
 
 export async function GET(_req: NextRequest, { params }: RouteParams) {
   const { templateId } = await params;
   const { user, diviner } = await resolveDiviner();
-
-  if (!user) return NextResponse.json({ status: 401, title: "Unauthorized" }, { status: 401 });
-  if (!diviner) return NextResponse.json({ status: 403, title: "Diviner profile not found" }, { status: 403 });
+  if (!user) return problem(401, "Unauthorized");
+  if (!diviner) return problem(403, "Diviner profile not found");
 
   const admin = createAdminClient();
-
-  // Verify diviner_services access for this template
-  const { data: ds } = await admin
-    .from("diviner_services")
-    .select("is_enabled")
-    .eq("diviner_id", diviner.id)
-    .eq("template_id", templateId)
-    .maybeSingle();
-
-  if (!ds || !ds.is_enabled) {
-    return NextResponse.json(
-      { type: "https://httpstatuses.com/403", title: "Forbidden", status: 403, detail: "This service template is not enabled for your account" },
-      { status: 403 },
-    );
+  const { ok } = await verifyTemplateAccess(admin, diviner.id, templateId);
+  if (!ok) {
+    return problem(403, "Forbidden", "This service template is not enabled for your account");
   }
 
-  // Lazy-init: get or create landing page
-  const { page, sections } = await getOrCreateLandingPage(
-    admin,
-    diviner.id,
-    templateId,
-    user.id,
-  );
-
-  // Fetch section_type_config for available slot calculation
-  const { data: typeConfig } = await admin
-    .from("section_type_config")
-    .select("type, max_per_page, is_globally_enabled");
-
-  const dbConfig: Record<string, { max_per_page: number; is_globally_enabled: boolean }> = {};
-  for (const t of typeConfig ?? []) {
-    dbConfig[t.type] = { max_per_page: t.max_per_page, is_globally_enabled: t.is_globally_enabled };
-  }
-
-  const availableSectionTypes = getAvailableSectionTypes(sections, dbConfig);
-
-  // Fetch the template slug so the client can build preview/live URLs
-  // without having to issue a second round-trip.
   const { data: template } = await admin
     .from("service_templates")
     .select("slug")
     .eq("id", templateId)
     .maybeSingle();
 
+  const blocks = await getDivinerBlocksForOwner(admin, diviner.id, templateId);
+
   return NextResponse.json({
-    landing_page: {
-      id: page.id,
-      status: page.status,
-      custom_page_title: page.custom_page_title,
-      accent_color: page.accent_color,
-      draft_version: page.draft_version,
-      published_version: page.published_version,
-      moderation_status: page.moderation_status,
-    },
-    diviner: {
-      username: diviner.username,
-    },
-    service_template: {
-      slug: template?.slug ?? null,
-    },
-    sections: sections.map((s) => ({
-      id: s.id,
-      section_type: s.section_type,
-      instance_key: s.instance_key,
-      title: s.title,
-      subtitle: s.subtitle,
-      content_json: s.draft_content_json ?? s.content_json,
-      body_html: s.draft_body_html ?? s.body_html,
-      primary_image_url: s.primary_image_url,
-      images: s.images,
-      display_order: s.display_order,
-      is_enabled: s.is_enabled,
-      is_system: s.is_system,
-      is_draft: s.is_draft,
-      moderation_status: s.moderation_status,
-      created_at: s.created_at,
-      updated_at: s.updated_at,
+    diviner: { username: diviner.username },
+    service_template: { slug: template?.slug ?? null },
+    slots: Object.values(SLOTS),
+    block_types: Object.values(SECTION_TYPES).map((t) => ({
+      type: t.type,
+      label: t.label,
+      description: t.description,
+      icon: t.icon,
+      category: t.category,
+      max_per_slot: t.max_per_slot,
     })),
-    available_section_types: availableSectionTypes,
+    limits: { max_per_slot: SLOTS.about_diviner.max_per_slot },
+    about_diviner: blocks.about_diviner,
+    extra: blocks.extra,
   });
 }
 
-// ── POST ───────────────────────────────────────────────────────────────────────
+// ── POST — create a block in a slot ───────────────────────────────────────────
 
 export async function POST(req: NextRequest, { params }: RouteParams) {
   const { templateId } = await params;
   const { user, diviner } = await resolveDiviner();
-
-  if (!user) return NextResponse.json({ status: 401, title: "Unauthorized" }, { status: 401 });
-  if (!diviner) return NextResponse.json({ status: 403, title: "Diviner profile not found" }, { status: 403 });
+  if (!user) return problem(401, "Unauthorized");
+  if (!diviner) return problem(403, "Diviner profile not found");
 
   const admin = createAdminClient();
-
-  // Verify template access
-  const { data: ds } = await admin
-    .from("diviner_services")
-    .select("is_enabled")
-    .eq("diviner_id", diviner.id)
-    .eq("template_id", templateId)
-    .maybeSingle();
-
-  if (!ds || !ds.is_enabled) {
-    return NextResponse.json(
-      { type: "https://httpstatuses.com/403", title: "Forbidden", status: 403, detail: "This service template is not enabled for your account" },
-      { status: 403 },
-    );
+  const { ok } = await verifyTemplateAccess(admin, diviner.id, templateId);
+  if (!ok) {
+    return problem(403, "Forbidden", "This service template is not enabled for your account");
   }
 
   let body: Record<string, unknown>;
   try {
     body = await req.json();
   } catch {
-    return NextResponse.json({ status: 422, title: "Invalid JSON" }, { status: 422 });
+    return problem(422, "Invalid JSON");
   }
 
-  const sectionType = typeof body.section_type === "string" ? body.section_type : "";
-
-  // 1. Validate section type exists in TypeScript registry and is not system
-  const typeDef = SECTION_TYPES[sectionType];
-  if (!typeDef) {
-    return NextResponse.json(
-      { type: "https://httpstatuses.com/422", title: "Validation error", status: 422, detail: `Unknown section type: ${sectionType}` },
-      { status: 422 },
+  // ── Validate section_type + slot against the V2 enum ────────────────────────
+  const sectionType = body.section_type;
+  const slot = body.slot;
+  if (!isBlockType(sectionType)) {
+    return problem(
+      422,
+      "Unknown block type",
+      `section_type must be one of: ${Object.keys(SECTION_TYPES).join(", ")}`,
     );
   }
-  if (typeDef.is_system) {
-    return NextResponse.json(
-      { type: "https://httpstatuses.com/422", title: "Validation error", status: 422, detail: "System sections cannot be added manually" },
-      { status: 422 },
-    );
-  }
-
-  // 2. Check DB config (is_globally_enabled, max_per_page)
-  const { data: dbType } = await admin
-    .from("section_type_config")
-    .select("is_globally_enabled, max_per_page")
-    .eq("type", sectionType)
-    .maybeSingle();
-
-  if (!dbType?.is_globally_enabled) {
-    return NextResponse.json(
-      { type: "https://httpstatuses.com/422", title: "Validation error", status: 422, detail: "This section type is not available" },
-      { status: 422 },
+  if (!isBlockSlot(slot)) {
+    return problem(
+      422,
+      "Unknown slot",
+      `slot must be one of: ${Object.keys(SLOTS).join(", ")}`,
     );
   }
 
-  // Get or create landing page
-  const { page, sections } = await getOrCreateLandingPage(admin, diviner.id, templateId, user.id);
+  const typeDef = SECTION_TYPES[sectionType as BlockType];
+  const slotDef = SLOTS[slot as BlockSlot];
 
-  // 3. Enforce max_per_page
-  const maxPerPage = dbType.max_per_page ?? typeDef.max_per_page;
-  if (maxPerPage > 0) {
-    const existing = sections.filter((s) => s.section_type === sectionType).length;
-    if (existing >= maxPerPage) {
-      return NextResponse.json(
-        { type: "https://httpstatuses.com/422", title: "Validation error", status: 422, detail: `Maximum ${maxPerPage} section(s) of type "${sectionType}" allowed per page` },
-        { status: 422 },
-      );
+  // ── Enforce max_per_slot ────────────────────────────────────────────────────
+  const existing = await countBlocksInSlot(admin, diviner.id, templateId, slot);
+  const cap = slotDef.max_per_slot;
+  if (cap > 0 && existing >= cap) {
+    return problem(
+      422,
+      "Slot full",
+      `You can have at most ${cap} blocks in the "${slotDef.label}" slot. Remove one before adding another.`,
+    );
+  }
+
+  // ── Validate content + HTML ─────────────────────────────────────────────────
+  const title = typeof body.title === "string" ? body.title : null;
+  if (title && title.length > 140) {
+    return problem(422, "Title too long", "Titles must be 140 characters or fewer.");
+  }
+
+  const contentJson = (body.content_json as Record<string, unknown> | null | undefined) ?? null;
+  if (contentJson !== null) {
+    const validation = validateSectionContent(sectionType, contentJson);
+    if (!validation.success) {
+      return problem(422, "Validation error", validation.errors?.join("; "));
     }
   }
 
-  // 4. Validate content_json against Zod schema
-  const contentJson = (body.content_json as Record<string, unknown>) ?? typeDef.default_content;
-  const validation = validateSectionContent(sectionType, contentJson);
-  if (!validation.success) {
-    return NextResponse.json(
-      { type: "https://httpstatuses.com/422", title: "Validation error", status: 422, detail: validation.errors?.join("; ") },
-      { status: 422 },
+  let safeHtml: string | null = null;
+  if (sectionType === "html") {
+    const raw = typeof body.body_html === "string" ? body.body_html : "";
+    if (!raw.trim()) {
+      return problem(422, "Missing HTML", "HTML blocks require a non-empty body_html value.");
+    }
+    try {
+      safeHtml = sanitizeDivinerHtmlStrict(raw);
+    } catch (err) {
+      if (err instanceof HtmlSanitizationError) {
+        return problem(
+          422,
+          "Invalid HTML",
+          "Your HTML contains tags or attributes we don't allow. Remove them and resubmit.",
+          { stripped_example: err.strippedExample },
+        );
+      }
+      throw err;
+    }
+  }
+
+  const primaryImageUrl =
+    typeof body.primary_image_url === "string" ? body.primary_image_url : null;
+  if (sectionType === "image" && !primaryImageUrl) {
+    return problem(
+      422,
+      "Missing image",
+      "Image blocks require a primary_image_url. Upload through /upload first.",
     );
   }
 
-  // 5. Sanitize body_html
-  const rawHtml = typeof body.body_html === "string" ? body.body_html : null;
-  const safeHtml = rawHtml ? sanitizeSectionHtml(rawHtml) : null;
+  // ── Lazy-create the container row (Deploy-1 FK satisfaction) ────────────────
+  const landingPageId = await ensureLandingPageContainer(
+    admin,
+    diviner.id,
+    templateId,
+    user.id,
+  );
 
-  // 6. Auto-assign display_order
-  const maxOrder = sections.reduce((m, s) => Math.max(m, s.display_order), 0);
-  const displayOrder = typeof body.display_order === "number" ? body.display_order : maxOrder + 10;
+  // ── Determine display_order ────────────────────────────────────────────────
+  const displayOrder =
+    typeof body.display_order === "number"
+      ? body.display_order
+      : await nextDisplayOrderInSlot(admin, landingPageId, slot as BlockSlot);
 
-  // 7. Generate instance_key for multi-instance types
-  const instanceCount = sections.filter((s) => s.section_type === sectionType).length;
-  const instanceKey = instanceCount > 0 ? `${sectionType}_${instanceCount + 1}` : null;
-
+  // ── Insert ─────────────────────────────────────────────────────────────────
   const { data: created, error } = await admin
     .from("service_landing_page_sections")
     .insert({
-      landing_page_id: page.id,
+      landing_page_id: landingPageId,
       diviner_id: diviner.id,
       section_type: sectionType,
-      instance_key: instanceKey,
-      title: typeof body.title === "string" ? body.title : null,
-      subtitle: typeof body.subtitle === "string" ? body.subtitle : null,
-      content_json: contentJson,
+      slot,
+      title,
+      content_json: contentJson ?? typeDef.default_content,
       body_html: safeHtml,
-      primary_image_url: typeof body.primary_image_url === "string" ? body.primary_image_url : null,
-      images: Array.isArray(body.images) ? body.images : [],
+      primary_image_url: primaryImageUrl,
       display_order: displayOrder,
       is_enabled: true,
       is_system: false,
-      is_draft: true,
-      draft_content_json: contentJson,
+      // Deploy-1 compat: legacy columns still NOT NULL in some envs.
+      is_draft: false,
+      draft_content_json: contentJson ?? typeDef.default_content,
       draft_body_html: safeHtml,
       created_by: user.id,
       updated_by: user.id,
     })
-    .select("*")
+    .select(
+      "id, diviner_id, section_type, slot, title, content_json, body_html, primary_image_url, display_order, is_enabled, moderation_status, moderation_note, created_at, updated_at",
+    )
     .single();
 
-  if (error) {
-    return NextResponse.json(
-      { type: "https://httpstatuses.com/500", title: "Insert failed", status: 500, detail: error.message },
-      { status: 500 },
-    );
+  if (error || !created) {
+    return problem(500, "Insert failed", error?.message ?? "unknown error");
   }
 
-  return NextResponse.json({ section: created }, { status: 201 });
+  return NextResponse.json({ block: created }, { status: 201 });
 }

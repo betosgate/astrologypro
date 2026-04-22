@@ -2,19 +2,47 @@
  * GET    /api/dashboard/landing-pages/[templateId]/sections/[sectionId]
  * PATCH  /api/dashboard/landing-pages/[templateId]/sections/[sectionId]
  * DELETE /api/dashboard/landing-pages/[templateId]/sections/[sectionId]
+ *
+ * Rewritten in Task 03 of the 2026-04-21 landing-page-simplification. PATCH
+ * is strictly allowlisted: only title, content_json, body_html,
+ * primary_image_url, and is_enabled may be changed. Any other field
+ * (is_draft, is_system, moderation_*, draft_*, published_*, display_order,
+ * section_type, slot, diviner_id, landing_page_id) is rejected with 422 per
+ * RFC 9457. Display order and slot are changed via the reorder endpoint.
+ * HTML is sanitized in strict mode.
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { SECTION_TYPES, validateSectionContent } from "@/lib/landing-page-section-types";
-import { sanitizeSectionHtml } from "@/lib/html-sanitizer";
+import { HtmlSanitizationError, sanitizeDivinerHtmlStrict } from "@/lib/html-sanitizer";
 
 export const dynamic = "force-dynamic";
 
 interface RouteParams {
   params: Promise<{ templateId: string; sectionId: string }>;
 }
+
+function problem(
+  status: number,
+  title: string,
+  detail?: string,
+  extra?: Record<string, unknown>,
+) {
+  return NextResponse.json(
+    { type: "about:blank", title, status, ...(detail ? { detail } : {}), ...(extra ?? {}) },
+    { status },
+  );
+}
+
+const ALLOWED_PATCH_FIELDS = new Set([
+  "title",
+  "content_json",
+  "body_html",
+  "primary_image_url",
+  "is_enabled",
+]);
 
 async function resolveDiviner() {
   const supabase = await createClient();
@@ -29,93 +57,152 @@ async function resolveDiviner() {
   return { user, diviner };
 }
 
-async function resolveSection(admin: ReturnType<typeof createAdminClient>, sectionId: string, divinerId: string) {
+async function resolveBlock(
+  admin: ReturnType<typeof createAdminClient>,
+  sectionId: string,
+  divinerId: string,
+) {
   const { data } = await admin
     .from("service_landing_page_sections")
-    .select("*")
+    .select(
+      "id, diviner_id, section_type, slot, title, content_json, body_html, primary_image_url, display_order, is_enabled, moderation_status, moderation_note, created_at, updated_at",
+    )
     .eq("id", sectionId)
     .eq("diviner_id", divinerId)
     .maybeSingle();
   return data;
 }
 
-// ── GET ────────────────────────────────────────────────────────────────────────
+// ── GET ───────────────────────────────────────────────────────────────────────
 
 export async function GET(_req: NextRequest, { params }: RouteParams) {
   const { sectionId } = await params;
   const { user, diviner } = await resolveDiviner();
-
-  if (!user) return NextResponse.json({ status: 401, title: "Unauthorized" }, { status: 401 });
-  if (!diviner) return NextResponse.json({ status: 403, title: "Forbidden" }, { status: 403 });
+  if (!user) return problem(401, "Unauthorized");
+  if (!diviner) return problem(403, "Forbidden");
 
   const admin = createAdminClient();
-  const section = await resolveSection(admin, sectionId, diviner.id);
-  if (!section) {
-    return NextResponse.json({ status: 404, title: "Section not found" }, { status: 404 });
-  }
+  const block = await resolveBlock(admin, sectionId, diviner.id);
+  if (!block) return problem(404, "Block not found");
 
-  return NextResponse.json({ section });
+  return NextResponse.json({ block });
 }
 
-// ── PATCH ──────────────────────────────────────────────────────────────────────
+// ── PATCH ─────────────────────────────────────────────────────────────────────
 
 export async function PATCH(req: NextRequest, { params }: RouteParams) {
   const { sectionId } = await params;
   const { user, diviner } = await resolveDiviner();
-
-  if (!user) return NextResponse.json({ status: 401, title: "Unauthorized" }, { status: 401 });
-  if (!diviner) return NextResponse.json({ status: 403, title: "Forbidden" }, { status: 403 });
+  if (!user) return problem(401, "Unauthorized");
+  if (!diviner) return problem(403, "Forbidden");
 
   const admin = createAdminClient();
-  const section = await resolveSection(admin, sectionId, diviner.id);
-  if (!section) {
-    return NextResponse.json({ status: 404, title: "Section not found" }, { status: 404 });
-  }
+  const block = await resolveBlock(admin, sectionId, diviner.id);
+  if (!block) return problem(404, "Block not found");
 
   let body: Record<string, unknown>;
   try {
     body = await req.json();
   } catch {
-    return NextResponse.json({ status: 422, title: "Invalid JSON" }, { status: 422 });
+    return problem(422, "Invalid JSON");
+  }
+
+  // ── Reject any disallowed field ────────────────────────────────────────────
+  const invalidKeys = Object.keys(body).filter((k) => !ALLOWED_PATCH_FIELDS.has(k));
+  if (invalidKeys.length > 0) {
+    return problem(
+      422,
+      "Disallowed fields",
+      `These fields cannot be changed here: ${invalidKeys.join(", ")}. Allowed: ${[...ALLOWED_PATCH_FIELDS].join(", ")}.`,
+    );
   }
 
   const updates: Record<string, unknown> = { updated_by: user.id };
 
-  // Allowed editable fields
-  if ("title" in body) updates.title = body.title;
-  if ("subtitle" in body) updates.subtitle = body.subtitle;
-  if ("primary_image_url" in body) updates.primary_image_url = body.primary_image_url;
-  if ("images" in body) updates.images = body.images;
+  // title
+  if ("title" in body) {
+    const title = body.title;
+    if (title !== null && (typeof title !== "string" || title.length > 140)) {
+      return problem(422, "Invalid title", "Title must be a string ≤ 140 characters, or null.");
+    }
+    updates.title = title;
+  }
 
-  // content_json: validate against type schema
+  // content_json
   if ("content_json" in body) {
-    const typeDef = SECTION_TYPES[section.section_type];
-    if (typeDef) {
-      const validation = validateSectionContent(section.section_type, body.content_json);
+    const contentJson = body.content_json;
+    if (contentJson !== null) {
+      const validation = validateSectionContent(block.section_type, contentJson);
       if (!validation.success) {
-        return NextResponse.json(
-          { type: "https://httpstatuses.com/422", title: "Validation error", status: 422, detail: validation.errors?.join("; ") },
-          { status: 422 },
-        );
+        return problem(422, "Validation error", validation.errors?.join("; "));
       }
     }
-    updates.draft_content_json = body.content_json;
-    updates.content_json = body.content_json;
+    updates.content_json = contentJson;
+    // Deploy-1 compat: keep draft_content_json in sync so legacy readers
+    // don't see a stale value until Deploy 2 drops the column.
+    updates.draft_content_json = contentJson;
   }
 
-  // body_html: sanitize before saving
+  // body_html — strict sanitize
   if ("body_html" in body) {
-    const html = typeof body.body_html === "string" ? body.body_html : null;
-    const safe = html ? sanitizeSectionHtml(html) : null;
-    updates.draft_body_html = safe;
-    updates.body_html = safe;
+    const raw = body.body_html;
+    if (raw === null || raw === "") {
+      updates.body_html = null;
+      updates.draft_body_html = null;
+    } else if (typeof raw !== "string") {
+      return problem(422, "Invalid body_html", "body_html must be a string or null.");
+    } else if (block.section_type !== "html") {
+      return problem(
+        422,
+        "body_html not allowed",
+        "Only `html` blocks accept body_html. Use content_json or primary_image_url for this block type.",
+      );
+    } else {
+      try {
+        const safe = sanitizeDivinerHtmlStrict(raw);
+        updates.body_html = safe;
+        updates.draft_body_html = safe;
+      } catch (err) {
+        if (err instanceof HtmlSanitizationError) {
+          return problem(
+            422,
+            "Invalid HTML",
+            "Your HTML contains tags or attributes we don't allow. Remove them and resubmit.",
+            { stripped_example: err.strippedExample },
+          );
+        }
+        throw err;
+      }
+    }
   }
 
-  // Mark as draft (needs re-publish to go live)
-  updates.is_draft = true;
+  // primary_image_url
+  if ("primary_image_url" in body) {
+    const url = body.primary_image_url;
+    if (url !== null && typeof url !== "string") {
+      return problem(422, "Invalid primary_image_url", "Must be a string URL or null.");
+    }
+    if (block.section_type === "image" && (url === null || url === "")) {
+      return problem(
+        422,
+        "Image URL required",
+        "Image blocks cannot have an empty primary_image_url.",
+      );
+    }
+    updates.primary_image_url = url;
+  }
 
-  // If section was flagged, editing resets to pending_review
-  if (section.moderation_status === "flagged" || section.moderation_status === "rejected") {
+  // is_enabled
+  if ("is_enabled" in body) {
+    if (typeof body.is_enabled !== "boolean") {
+      return problem(422, "Invalid is_enabled", "Must be boolean.");
+    }
+    updates.is_enabled = body.is_enabled;
+  }
+
+  // If the block was previously flagged/rejected, an edit drops it back to
+  // pending_review — the admin moderation queue will pick it up again.
+  if (block.moderation_status === "flagged" || block.moderation_status === "rejected") {
     updates.moderation_status = "pending_review";
   }
 
@@ -124,40 +211,29 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
     .update(updates)
     .eq("id", sectionId)
     .eq("diviner_id", diviner.id)
-    .select("*")
+    .select(
+      "id, diviner_id, section_type, slot, title, content_json, body_html, primary_image_url, display_order, is_enabled, moderation_status, moderation_note, created_at, updated_at",
+    )
     .single();
 
-  if (error) {
-    return NextResponse.json(
-      { type: "https://httpstatuses.com/500", title: "Update failed", status: 500, detail: error.message },
-      { status: 500 },
-    );
+  if (error || !updated) {
+    return problem(500, "Update failed", error?.message ?? "unknown error");
   }
 
-  return NextResponse.json({ section: updated });
+  return NextResponse.json({ block: updated });
 }
 
-// ── DELETE ─────────────────────────────────────────────────────────────────────
+// ── DELETE ────────────────────────────────────────────────────────────────────
 
 export async function DELETE(_req: NextRequest, { params }: RouteParams) {
   const { sectionId } = await params;
   const { user, diviner } = await resolveDiviner();
-
-  if (!user) return NextResponse.json({ status: 401, title: "Unauthorized" }, { status: 401 });
-  if (!diviner) return NextResponse.json({ status: 403, title: "Forbidden" }, { status: 403 });
+  if (!user) return problem(401, "Unauthorized");
+  if (!diviner) return problem(403, "Forbidden");
 
   const admin = createAdminClient();
-  const section = await resolveSection(admin, sectionId, diviner.id);
-  if (!section) {
-    return NextResponse.json({ status: 404, title: "Section not found" }, { status: 404 });
-  }
-
-  if (section.is_system) {
-    return NextResponse.json(
-      { type: "https://httpstatuses.com/422", title: "Cannot delete system section", status: 422, detail: "System sections (hero, pricing, booking CTA) cannot be deleted" },
-      { status: 422 },
-    );
-  }
+  const block = await resolveBlock(admin, sectionId, diviner.id);
+  if (!block) return problem(404, "Block not found");
 
   const { error } = await admin
     .from("service_landing_page_sections")
@@ -166,11 +242,13 @@ export async function DELETE(_req: NextRequest, { params }: RouteParams) {
     .eq("diviner_id", diviner.id);
 
   if (error) {
-    return NextResponse.json(
-      { type: "https://httpstatuses.com/500", title: "Delete failed", status: 500, detail: error.message },
-      { status: 500 },
-    );
+    return problem(500, "Delete failed", error.message);
   }
 
   return new NextResponse(null, { status: 204 });
 }
+
+// Reference so the static analyzer doesn't flag SECTION_TYPES as unused when
+// future handlers want to gate by type.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const _keepTypeRegistry = SECTION_TYPES;

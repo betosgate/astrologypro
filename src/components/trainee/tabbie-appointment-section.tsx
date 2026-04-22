@@ -124,6 +124,12 @@ export function TabbieAppointmentSection({ trainingCompleted }: { trainingComple
   const target = config.openMode === "new_tab" ? "_blank" : undefined;
   const rel = config.openMode === "new_tab" ? "noopener noreferrer" : undefined;
 
+  // Append ?prefill=trainee so the admin booking page knows to resolve
+  // the authenticated trainee's email server-side and lock the email
+  // input. The trainee's email itself is NOT included in the URL —
+  // the booking page reads it from Supabase auth.
+  const bookingHref = appendPrefillQuery(config.bookingLink);
+
   return (
     <>
       <Card className={styles.card}>
@@ -141,7 +147,7 @@ export function TabbieAppointmentSection({ trainingCompleted }: { trainingComple
             </div>
           </div>
           <Button asChild className="shrink-0">
-            <a href={config.bookingLink} target={target} rel={rel}>
+            <a href={bookingHref} target={target} rel={rel}>
               {config.buttonLabel}
               {config.openMode === "new_tab" && <ExternalLink className="ml-1.5 size-4" />}
             </a>
@@ -150,4 +156,25 @@ export function TabbieAppointmentSection({ trainingCompleted }: { trainingComple
       </Card>
     </>
   );
+}
+
+/**
+ * Append `?prefill=trainee` to a bookingLink, preserving any existing
+ * query string. Falls back to the raw link if URL parsing fails
+ * (e.g. relative path without a base).
+ */
+function appendPrefillQuery(link: string): string {
+  try {
+    // Handle absolute and root-relative paths. URL() needs a base for the
+    // latter — pick any placeholder then strip it back out.
+    const hasProto = /^[a-z][a-z0-9+.-]*:/i.test(link);
+    const base = hasProto ? undefined : "https://__placeholder__";
+    const u = new URL(link, base);
+    u.searchParams.set("prefill", "trainee");
+    if (hasProto) return u.toString();
+    return `${u.pathname}${u.search}${u.hash}`;
+  } catch {
+    const sep = link.includes("?") ? "&" : "?";
+    return `${link}${sep}prefill=trainee`;
+  }
 }

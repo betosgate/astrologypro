@@ -86,6 +86,8 @@ function fmtDateTime(iso: string) {
   });
 }
 
+/** @deprecated Admin no longer renders publish badges — diviner owns publish state. Kept for type safety only. */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function PublishBadge({ status }: { status: string }) {
   if (status === "published") {
     return (
@@ -212,8 +214,13 @@ export function ServiceAssignment({ divinerId }: Props) {
   }
 
   // ── Toggle publish ─────────────────────────────────────────────────────────
-  async function handlePublishToggle(svc: ServiceRow, publishing: boolean) {
-    await patchService(svc.template_id, { is_published: publishing });
+  // Removed in Task 04 of 2026-04-21 landing-page-simplification — publish
+  // state is owned by the diviner under V2 and the admin API returns 422 if
+  // is_published is sent. This handler is kept as a no-op stub so the
+  // ServiceRow prop contract doesn't change in this PR; the Switch it used
+  // to drive has been replaced with a read-only Live/Offline badge.
+  async function handlePublishToggle(_svc: ServiceRow, _publishing: boolean) {
+    // no-op — publish toggle was removed from the admin UI
   }
 
   // ── Assign service ─────────────────────────────────────────────────────────
@@ -608,7 +615,7 @@ function ServiceRow({ svc, onEnableToggle, onPublishToggle, onAssign }: ServiceR
             {svc.template_name}
           </span>
           {svc.is_primary && <Badge variant="secondary" className="text-xs">Primary</Badge>}
-          {isAssigned && <PublishBadge status={svc.publish_status} />}
+          {/* PublishBadge removed — publish state is diviner-owned, shown read-only on the right */}
         </div>
 
         <div className="text-xs text-muted-foreground mt-0.5 flex flex-wrap gap-x-3">
@@ -642,18 +649,27 @@ function ServiceRow({ svc, onEnableToggle, onPublishToggle, onAssign }: ServiceR
         )}
       </div>
 
-      {/* Publish toggle */}
+      {/*
+        Publish state — read-only under V2. Publish ownership moved to the
+        diviner (diviner_services.is_published), toggled from the diviner
+        dashboard. Admin sees the current state but cannot change it here.
+        Task 04 of 2026-04-21 landing-page-simplification.
+      */}
       <div className="flex flex-col items-center pt-0.5 gap-1 min-w-[72px]">
-        {isAssigned && svc.is_enabled ? (
+        {isAssigned ? (
           <>
-            <Switch
-              checked={svc.is_published}
-              onCheckedChange={(v) => onPublishToggle(svc, v)}
-              aria-label={`${svc.is_published ? "Unpublish" : "Publish"} ${svc.template_name}`}
-              title={svc.is_published ? "Unpublish this landing page" : "Publish this landing page"}
-            />
-            <span className="text-[10px] uppercase tracking-wide text-muted-foreground leading-none">
-              {svc.is_published ? "Published" : "Unpublished"}
+            <span
+              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium ${
+                svc.is_published
+                  ? "bg-emerald-500/15 text-emerald-300"
+                  : "bg-slate-500/15 text-slate-300"
+              }`}
+              title="Publish state is owned by the diviner"
+            >
+              {svc.is_published ? "Live" : "Offline"}
+            </span>
+            <span className="text-[9px] uppercase tracking-wide text-muted-foreground leading-none">
+              Diviner-controlled
             </span>
           </>
         ) : (

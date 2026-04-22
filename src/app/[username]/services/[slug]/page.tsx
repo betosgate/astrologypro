@@ -27,9 +27,10 @@ import { filterVisiblePublicServices, getServiceCategoryLabel } from "@/lib/publ
 import { buildServiceDetailSchemaGraph } from "@/lib/seo/schema-builders";
 import { applyRuntimePricesToServices } from "@/lib/runtime-service-pricing";
 import { canPubliclySellService } from "@/lib/payout-readiness";
-import { getDraftLandingPage, getPublishedLandingPage } from "@/lib/landing-page-builder";
-import { SectionRenderer } from "@/components/landing/section-renderer";
+import { getDivinerBlocks } from "@/lib/diviner-service-blocks";
 import { PreviewBanner } from "@/components/landing/preview-banner";
+import { BlockSlotRenderer } from "@/components/landing/block-renderer";
+import type { BlocksBySlot } from "@/types/landing-page-builder";
 
 interface PageProps {
   params: Promise<{ username: string; slug: string }>;
@@ -231,91 +232,15 @@ export default async function ServiceDetailPage({
   const service = await getService(diviner.id, slug, { allowUnpublished: isOwner });
   if (!service) notFound();
 
-  // ── Preview mode: render draft landing page sections if available ──────────
-  if (wantsPreview && isOwner && service.template_id) {
-    const draftPage = await getDraftLandingPage(
-      createAdminClient(),
-      diviner.id,
-      service.template_id,
-    );
-
-    if (draftPage) {
-      const refParam = ref ? `?ref=${encodeURIComponent(ref)}` : "";
-      const bookUrl = `/${username}/book/${service.slug}${refParam}`;
-      const bookingEnabled = canPubliclySellService(service, diviner);
-      const builderUrl = `/dashboard/landing-pages/${service.template_id}/builder`;
-
-      return (
-        <>
-          <PreviewBanner templateId={service.template_id} builderUrl={builderUrl} />
-          <div className="min-h-screen bg-cosmos-950">
-            {draftPage.sections
-              .filter((s) => s.is_enabled)
-              .sort((a, b) => a.display_order - b.display_order)
-              .map((section) => (
-                <SectionRenderer
-                  key={section.id}
-                  section={section}
-                  context={{
-                    service,
-                    bookUrl,
-                    bookingEnabled,
-                    testimonials: [],
-                  }}
-                />
-              ))}
-          </div>
-        </>
-      );
-    }
-    // If no draft page exists, fall through to the default page
-  }
-
-  // ── Published builder page: render the diviner's custom sections when the
-  //    landing page builder has a published version. The legacy template
-  //    below only kicks in as a fallback when no builder page exists, so new
-  //    builder pages fully replace the default rendering.
-  if (!wantsPreview && service.template_id) {
-    const publishedPage = await getPublishedLandingPage(
-      createAdminClient(),
-      diviner.id,
-      service.template_id,
-    );
-
-    if (publishedPage && publishedPage.sections.length > 0) {
-      const refParam = ref ? `?ref=${encodeURIComponent(ref)}` : "";
-      const bookUrl = `/${username}/book/${service.slug}${refParam}`;
-      const bookingEnabled = canPubliclySellService(service, diviner);
-      const testimonials = await getTestimonials(diviner.id, 6);
-
-      return (
-        <div className="min-h-screen bg-cosmos-950">
-          {publishedPage.sections
-            .sort((a, b) => a.display_order - b.display_order)
-            .map((section) => (
-              <SectionRenderer
-                key={section.id}
-                section={section}
-                context={{
-                  service,
-                  bookUrl,
-                  bookingEnabled,
-                  testimonials,
-                }}
-              />
-            ))}
-          <PageTracker
-            divinerId={diviner.id}
-            path={`/${username}/services/${slug}`}
-            username={diviner.username}
-            serviceTemplateId={service.template_id ?? undefined}
-            serviceSlug={service.slug}
-          />
-        </div>
-      );
-    }
-    // No published builder page — fall through to the legacy template below
-  }
+  // ── Fetch diviner-authored blocks for the two fixed slots.
+  //        The legacy hardcoded template ALWAYS renders. Blocks are
+  //        optional overlays in `about_diviner` and `extra`. No
+  //        builder-replaces-page branch exists any more.
+  const inPreview = wantsPreview && isOwner;
+  const emptyBlocks: BlocksBySlot = { about_diviner: [], extra: [] };
+  const blocks: BlocksBySlot = service.template_id
+    ? await getDivinerBlocks(createAdminClient(), diviner.id, service.template_id)
+    : emptyBlocks;
 
   const [testimonials, bookingCount] = await Promise.all([
     getTestimonials(diviner.id, 3),
@@ -427,12 +352,20 @@ export default async function ServiceDetailPage({
     ],
   );
 
+  const builderUrl = service.template_id
+    ? `/dashboard/landing-pages/${service.template_id}/builder`
+    : "/dashboard/landing-pages";
+
   return (
     <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
       />
+
+      {inPreview && service.template_id ? (
+        <PreviewBanner templateId={service.template_id} builderUrl={builderUrl} />
+      ) : null}
 
       {/* ===== STICKY TOP NAV ===== */}
       <nav className="sticky top-0 z-40 border-b border-white/5 bg-cosmos-900/80 backdrop-blur-xl">
@@ -771,6 +704,13 @@ export default async function ServiceDetailPage({
               </div>
             </div>
           </div>
+
+          {/* ===== V2 SLOT: about_diviner — diviner-authored blocks ===== */}
+          {blocks.about_diviner.length > 0 && (
+            <div className="mt-8">
+              <BlockSlotRenderer blocks={blocks.about_diviner} />
+            </div>
+          )}
         </div>
 
         <div className="cosmic-divider mx-auto mt-12 max-w-6xl md:mt-16" />
@@ -905,6 +845,16 @@ export default async function ServiceDetailPage({
 
         <div className="cosmic-divider mx-auto mt-12 max-w-6xl md:mt-16" />
       </section>
+
+      {/* ===== V2 SLOT: extra — diviner-authored blocks between FAQ and Final CTA ===== */}
+      {blocks.extra.length > 0 && (
+        <section className="py-8 md:py-12">
+          <div className="mx-auto max-w-4xl px-4">
+            <BlockSlotRenderer blocks={blocks.extra} />
+          </div>
+          <div className="cosmic-divider mx-auto mt-12 max-w-6xl md:mt-16" />
+        </section>
+      )}
 
       {/* ===== 7. FINAL CTA ===== */}
       <section className="relative overflow-hidden py-14 md:py-20">
