@@ -498,6 +498,7 @@ export function AstrologicalLayout({ positionLabels, drawnCards, onReveal, onCar
         </div>
 
         {/* Col 5: Scorpio (top) + Virgo (bottom) — inner right */}
+
         <div className="absolute flex flex-col justify-between items-center" style={{ left: '83%', transform: 'translateX(-50%)', top: '27%', height: '49%' }}>
           <CardSlot index={7} label={positionLabels[7]} drawn={drawnCards[7]} onReveal={onReveal} onCardClick={onCardClick} cardBackUrl={cardBackUrl} cardWidth={CW} cardHeight={CH} />
           <CardSlot index={5} label={positionLabels[5]} drawn={drawnCards[5]} onReveal={onReveal} onCardClick={onCardClick} cardBackUrl={cardBackUrl} cardWidth={CW} cardHeight={CH} />
@@ -519,7 +520,7 @@ export function AstrologicalLayout({ positionLabels, drawnCards, onReveal, onCar
 
       {/* Mobile: 2 columns */}
       <div className="grid md:hidden grid-cols-2 gap-4 justify-items-center">
-        {positionLabels.map((label, i) => (
+        {positionLabels.map((label, i) =>(
           <CardSlot key={i} index={i} label={label} drawn={drawnCards[i]} onReveal={onReveal} onCardClick={onCardClick} cardBackUrl={cardBackUrl} cardWidth={130} cardHeight={190} />
         ))}
       </div>
