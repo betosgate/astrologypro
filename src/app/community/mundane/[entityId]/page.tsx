@@ -147,25 +147,38 @@ export default async function CommunityEntityPage({
 
       {/* Primary chart info */}
       {primaryChart && (
-        <Card className="border-amber-200 bg-amber-50/40 dark:bg-amber-950/10">
+        <Card className="border-amber-500/40 bg-amber-500/10 dark:bg-amber-950/20">
           <CardHeader className="pb-2">
             <div className="flex items-center gap-2">
               <Star className="size-4 text-amber-500 fill-amber-500" />
-              <CardTitle className="text-base">Foundation Chart</CardTitle>
+              <CardTitle className="text-base text-amber-900 dark:text-amber-200">
+                Foundation Chart
+              </CardTitle>
             </div>
           </CardHeader>
           <CardContent className="space-y-1 text-sm">
-            <p className="font-medium">{primaryChart.chart_title}</p>
-            <div className="flex flex-wrap items-center gap-3 text-muted-foreground">
+            <p className="font-medium text-amber-900 dark:text-amber-100">
+              {primaryChart.chart_title}
+            </p>
+            <div className="flex flex-wrap items-center gap-3 text-amber-800/80 dark:text-amber-300/80">
               <span className="flex items-center gap-1">
                 <Calendar className="size-3.5" />
                 {formatDate(primaryChart.event_date)}
                 {primaryChart.event_time && ` at ${primaryChart.event_time}`}
               </span>
               {primaryChart.timezone && <span>{primaryChart.timezone}</span>}
-              <Badge variant="outline" className="text-xs capitalize">{primaryChart.chart_type}</Badge>
+              <Badge
+                variant="outline"
+                className="text-xs capitalize border-amber-500/40 text-amber-800 dark:text-amber-200"
+              >
+                {primaryChart.chart_type}
+              </Badge>
             </div>
-            {primaryChart.notes && <p className="text-muted-foreground text-xs mt-1">{primaryChart.notes}</p>}
+            {primaryChart.notes && (
+              <p className="text-amber-800/80 dark:text-amber-300/80 text-xs mt-1">
+                {primaryChart.notes}
+              </p>
+            )}
             {primaryChart.chart_url && (
               <a
                 href={primaryChart.chart_url}

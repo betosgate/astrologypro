@@ -96,11 +96,10 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     .from("diviner_services")
     .update({
       is_published: desired,
-      publish_status: desired ? "published" : "unpublished",
       updated_at: new Date().toISOString(),
     })
     .eq("id", ds.id)
-    .select("id, is_published, publish_status, is_enabled")
+    .select("id, is_published, is_enabled")
     .single();
 
   if (error) {
@@ -110,7 +109,6 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
   return NextResponse.json({
     template_id: templateId,
     is_published: updated.is_published,
-    publish_status: updated.publish_status,
     is_enabled: updated.is_enabled,
   });
 }

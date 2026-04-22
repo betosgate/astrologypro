@@ -169,12 +169,14 @@ export default function CommunityFamilyPage() {
 
       {/* Plan notice for individual members */}
       {planType === "individual" && (
-        <Card className="border-amber-400/30 bg-amber-50/40">
+        <Card className="border-amber-500/40 bg-amber-500/10 dark:bg-amber-950/20">
           <CardContent className="flex items-start gap-3 py-4">
-            <Info className="size-5 shrink-0 text-amber-600 mt-0.5" />
+            <Info className="size-5 shrink-0 text-amber-500 mt-0.5" />
             <div>
-              <p className="font-medium text-amber-800 text-sm">Individual Plan</p>
-              <p className="text-sm text-amber-700">
+              <p className="font-medium text-amber-900 dark:text-amber-200 text-sm">
+                Individual Plan
+              </p>
+              <p className="text-sm text-amber-800 dark:text-amber-300/90">
                 Upgrade to the Family Plan to add up to 5 family members and
                 generate charts for everyone.
               </p>
@@ -242,7 +244,7 @@ export default function CommunityFamilyPage() {
                     }
                   />
                   {!form.birthTime && (
-                    <p className="text-xs text-amber-600">
+                    <p className="text-xs text-amber-700 dark:text-amber-300">
                       Add birth time for greater chart accuracy
                     </p>
                   )}
@@ -281,7 +283,7 @@ export default function CommunityFamilyPage() {
                     placeholder="Country"
                   />
                   {!form.birthCountry && form.birthCity && (
-                    <p className="text-xs text-amber-600">
+                    <p className="text-xs text-amber-700 dark:text-amber-300">
                       Add birth country so the family profile can be marked complete.
                     </p>
                   )}
@@ -454,8 +456,8 @@ export default function CommunityFamilyPage() {
                         </div>
                       )}
                       {!m.birth_time && (
-                        <div className="flex items-center gap-1.5 text-amber-600">
-                          <Info className="size-3.5 shrink-0" />
+                        <div className="flex items-center gap-1.5 text-amber-700 dark:text-amber-300">
+                          <Info className="size-3.5 shrink-0 text-amber-500" />
                           <span className="text-xs">
                             Add birth time for greater chart accuracy
                           </span>

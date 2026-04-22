@@ -29,7 +29,6 @@ export interface DivinerServiceRecord {
   disabled_at: string | null;
   enabled_by: string | null;
   disabled_by: string | null;
-  publish_status: ServicePublishStatus;
   published_at: string | null;
   unpublished_at: string | null;
   notes: string | null;

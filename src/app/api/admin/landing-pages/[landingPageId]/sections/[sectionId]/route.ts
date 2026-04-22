@@ -32,7 +32,7 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
 
   const admin = createAdminClient();
   const { data: section, error } = await admin
-    .from("service_landing_page_sections")
+    .from("diviner_service_blocks")
     .select("*")
     .eq("id", sectionId)
     .maybeSingle();
@@ -50,7 +50,7 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
 
   const admin = createAdminClient();
   const { data: section } = await admin
-    .from("service_landing_page_sections")
+    .from("diviner_service_blocks")
     .select("section_type")
     .eq("id", sectionId)
     .maybeSingle();
@@ -67,35 +67,27 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
   const updates: Record<string, unknown> = { updated_by: user.id };
 
   if ("title" in body) updates.title = body.title;
-  if ("subtitle" in body) updates.subtitle = body.subtitle;
   if ("is_enabled" in body) updates.is_enabled = body.is_enabled;
   if ("moderation_status" in body) updates.moderation_status = body.moderation_status;
   if ("moderation_note" in body) updates.moderation_note = body.moderation_note;
   if ("primary_image_url" in body) updates.primary_image_url = body.primary_image_url;
-  if ("images" in body) updates.images = body.images;
 
   if ("content_json" in body) {
     const validation = validateSectionContent(section.section_type, body.content_json);
     if (!validation.success) {
       return NextResponse.json({ status: 422, title: "Validation error", detail: validation.errors?.join("; ") }, { status: 422 });
     }
-    updates.draft_content_json = body.content_json;
     updates.content_json = body.content_json;
   }
 
   if ("body_html" in body) {
     const html = typeof body.body_html === "string" ? body.body_html : null;
     const safe = html ? sanitizeSectionHtml(html) : null;
-    updates.draft_body_html = safe;
     updates.body_html = safe;
   }
 
-  if ("content_json" in body || "body_html" in body) {
-    updates.is_draft = true;
-  }
-
   const { data: updated, error } = await admin
-    .from("service_landing_page_sections")
+    .from("diviner_service_blocks")
     .update(updates)
     .eq("id", sectionId)
     .select("*")

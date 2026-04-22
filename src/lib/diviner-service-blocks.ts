@@ -108,58 +108,7 @@ export async function getDivinerBlocksForOwner(
   return result;
 }
 
-// ── Write path (lazy container bootstrap) ─────────────────────────────────────
-
-/**
- * Deploy-1 reality: `service_landing_page_sections.landing_page_id` is
- * still NOT NULL with an FK back to `service_landing_pages`. To satisfy
- * the FK without surfacing the container to the diviner, the first block
- * INSERT lazy-creates the container row. `ON CONFLICT DO NOTHING` makes
- * concurrent writers safe.
- *
- * In Deploy 2 this function becomes a no-op and is removed — `landing_page_id`
- * is dropped and blocks live directly under `(diviner_id, service_template_id)`.
- */
-export async function ensureLandingPageContainer(
-  supabase: SupabaseClient,
-  divinerId: string,
-  serviceTemplateId: string,
-  userId: string | null,
-): Promise<string> {
-  // Upsert — ON CONFLICT guarded by the existing unique index on
-  // (diviner_id, service_template_id). We select after to get the id back
-  // regardless of whether the row was created now or already existed.
-  const { error: upsertErr } = await supabase
-    .from("service_landing_pages")
-    .upsert(
-      {
-        diviner_id: divinerId,
-        service_template_id: serviceTemplateId,
-        status: "draft",
-        draft_version: 1,
-        moderation_status: "approved",
-        created_by: userId,
-        updated_by: userId,
-      },
-      {
-        onConflict: "diviner_id,service_template_id",
-        ignoreDuplicates: true,
-      },
-    );
-  if (upsertErr) throw upsertErr;
-
-  const { data, error: selErr } = await supabase
-    .from("service_landing_pages")
-    .select("id")
-    .eq("diviner_id", divinerId)
-    .eq("service_template_id", serviceTemplateId)
-    .maybeSingle();
-  if (selErr) throw selErr;
-  if (!data?.id) {
-    throw new Error("Container row missing after upsert — RLS policy likely denied the read.");
-  }
-  return data.id as string;
-}
+// ── Write path ────────────────────────────────────────────────────────────────
 
 /**
  * Count blocks currently in a slot. Used to enforce `max_per_slot` at
@@ -187,13 +136,15 @@ export async function countBlocksInSlot(
  */
 export async function nextDisplayOrderInSlot(
   supabase: SupabaseClient,
-  landingPageId: string,
+  divinerId: string,
+  serviceTemplateId: string,
   slot: BlockSlot,
 ): Promise<number> {
   const { data, error } = await supabase
-    .from("service_landing_page_sections")
+    .from("diviner_service_blocks")
     .select("display_order")
-    .eq("landing_page_id", landingPageId)
+    .eq("diviner_id", divinerId)
+    .eq("service_template_id", serviceTemplateId)
     .eq("slot", slot)
     .order("display_order", { ascending: false })
     .limit(1)

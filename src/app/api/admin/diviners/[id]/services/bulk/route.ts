@@ -67,7 +67,7 @@ export async function POST(
     try {
       const { data: ds } = await admin
         .from("diviner_services")
-        .select("id, is_enabled, is_published, publish_status, price, notes")
+        .select("id, is_enabled, is_published, price, notes")
         .eq("diviner_id", divinerId)
         .eq("template_id", templateId)
         .maybeSingle();
@@ -97,7 +97,6 @@ export async function POST(
             price: tmpl.base_price ?? 0,
             is_enabled: true,
             is_published: false,
-            publish_status: "draft",
             enabled_at: now,
             enabled_by: user.id,
             notes,
@@ -126,7 +125,6 @@ export async function POST(
         patch.is_enabled = false;
         // CHECK constraint: disabled ⟹ not published.
         patch.is_published = false;
-        patch.publish_status = "unpublished";
         patch.disabled_at = now;
         patch.disabled_by = user.id;
         patch.unpublished_at = now;

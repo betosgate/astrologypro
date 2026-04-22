@@ -381,7 +381,7 @@ export function BookingManageClient({
             {/* Reschedule */}
             {diviner && (
               <Link
-                href={`/${diviner.username}?rescheduling=true`}
+                href={`/${diviner.username}/reschedule/${booking.id}?token=${booking.booking_token}`}
                 className="flex items-center justify-center gap-2 w-full px-4 py-3 rounded-xl border border-white/20 hover:bg-white/10 text-white text-sm font-semibold transition-colors"
               >
                 <CalendarRange className="size-4" />

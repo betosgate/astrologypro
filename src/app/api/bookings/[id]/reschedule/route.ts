@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAdminUser } from "@/lib/admin-auth";
+import { resolveBookingViewer } from "@/lib/booking-access";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +19,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   // Fetch the booking
   const { data: booking, error: bErr } = await admin
     .from("bookings")
-    .select("id, diviner_id, client_id, service_id, status, duration_minutes, google_calendar_event_id, outlook_calendar_event_id, booking_token, scheduled_at, booking_notes, clients(full_name, email), diviners(id, display_name, username), services(name)")
+    .select("id, diviner_id, client_id, service_id, status, duration_minutes, google_calendar_event_id, outlook_calendar_event_id, booking_token, scheduled_at, booking_notes, clients(full_name, email), diviners(id, display_name, username, user_id), services(name)")
     .eq("id", id)
     .single();
 
@@ -28,7 +29,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: "Cannot reschedule a " + booking.status + " booking" }, { status: 422 });
   }
 
-  // Auth: token-based OR authenticated user (client or diviner)
+  // Auth: token-based OR authenticated user (client, diviner, or admin)
   let authorized = false;
 
   if (body.booking_token && body.booking_token === booking.booking_token) {
@@ -38,11 +39,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
       const adminUser = await getAdminUser();
-      if (adminUser) authorized = true;
-      // client or diviner owns this booking
-      if (booking.client_id === user.id) authorized = true;
-      const { data: diviner } = await admin.from("diviners").select("id").eq("user_id", user.id).single();
-      if (diviner?.id === booking.diviner_id) authorized = true;
+      const access = await resolveBookingViewer(admin, id, user, !!adminUser);
+      authorized = !!access;
     }
   }
 
@@ -90,16 +88,52 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   // Send reschedule confirmation emails (fire and forget)
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://astrologypro.com";
   const manageUrl = `${appUrl}/booking/${booking.booking_token}`;
-  const newDateStr = new Date(body.scheduled_at).toLocaleString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
+  const dashboardUrl = `${appUrl}/dashboard/bookings`;
+  const formatDisplay = (iso: string) =>
+    new Date(iso).toLocaleString("en-US", {
+      weekday: "long",
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  const newDateStr = formatDisplay(body.scheduled_at);
+  const previousDateStr = formatDisplay(booking.scheduled_at);
   const clientEmail = (booking.clients as { email?: string } | null)?.email ?? "";
   const clientName = (booking.clients as { full_name?: string } | null)?.full_name ?? "Client";
-  const divinerName = (booking.diviners as { display_name?: string } | null)?.display_name ?? "Your Practitioner";
+  const divinerRecord = booking.diviners as { display_name?: string; user_id?: string } | null;
+  const divinerName = divinerRecord?.display_name ?? "Your Practitioner";
   const serviceName = (booking.services as { name?: string } | null)?.name ?? "Session";
 
   if (clientEmail) {
     import("@/lib/email").then(({ sendRescheduleConfirmation }) => {
       sendRescheduleConfirmation({ to: clientEmail, name: clientName, divinerName, serviceName, newDate: newDateStr, manageUrl }).catch(() => {});
     }).catch(() => {});
+  }
+
+  // Notify the diviner so they see the calendar change (especially when the
+  // client initiates the reschedule via their booking-token link).
+  if (divinerRecord?.user_id) {
+    (async () => {
+      try {
+        const { data: divinerAuth } = await admin.auth.admin.getUserById(divinerRecord.user_id!);
+        const divinerEmail = divinerAuth?.user?.email;
+        if (!divinerEmail) return;
+        const { sendRescheduleNotificationToDiviner } = await import("@/lib/email");
+        await sendRescheduleNotificationToDiviner({
+          to: divinerEmail,
+          divinerName,
+          clientName,
+          serviceName,
+          previousDate: previousDateStr,
+          newDate: newDateStr,
+          dashboardUrl,
+        });
+      } catch {
+        // fire-and-forget
+      }
+    })();
   }
 
   return NextResponse.json({ success: true });
