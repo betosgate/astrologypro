@@ -459,7 +459,7 @@ export function AstrologicalLayout({ positionLabels, drawnCards, onReveal, onCar
   // grp5: [8 Sagittarius (top-right outer)] — [4 Leo (bottom-right outer)]
   // grp6: [7 Scorpio (top-right inner)] — [5 Virgo (bottom-right inner)]
   const is599OrBelow = useMaxWidth(399);
-  const is1440OrBelow = useMaxWidth(1499);
+  const is1440OrBelow = useMaxWidth(1540);
   const CW = is599OrBelow ? 210 : is1440OrBelow ? 150 : 180;
   const CH = is599OrBelow ? 310 : is1440OrBelow ? 210 : 260;
 
