@@ -219,6 +219,9 @@ export async function GET() {
     const rescheduleHref = resolvedUsername
       ? `/${resolvedUsername}/reschedule/${booking.id}`
       : null;
+    const joinHref = resolvedUsername
+      ? `/${resolvedUsername}/session/${booking.id}`
+      : null;
 
     return {
       id: booking.id,
@@ -229,6 +232,7 @@ export async function GET() {
       diviner_id: booking.diviner_id ?? null,
       diviner_username: resolvedUsername,
       reschedule_href: rescheduleHref,
+      join_href: joinHref,
       service_id: booking.service_id ?? null,
       service_name: service?.name ?? null,
       client_id: booking.client_id ?? null,
@@ -262,6 +266,9 @@ export async function GET() {
     const rescheduleHref = adminUsername
       ? `/book/${adminUsername}/reschedule/${booking.id}`
       : null;
+    const joinHref = adminUsername
+      ? `/book/${adminUsername}/session/${booking.id}`
+      : null;
 
     return {
       id: booking.id,
@@ -272,6 +279,7 @@ export async function GET() {
       diviner_id: booking.admin_user_id ?? null,
       diviner_username: adminUsername,
       reschedule_href: rescheduleHref,
+      join_href: joinHref,
       service_id: null,
       service_name: "Appointment",
       client_id: matchedClient?.id ?? null,

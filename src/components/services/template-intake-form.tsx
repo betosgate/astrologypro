@@ -14,6 +14,7 @@ import {
   type ServiceTemplateCityOption,
   type ServiceTemplateFormConfig,
   type ServiceTemplateIntakeState,
+  validateServiceTemplateIntakeState,
 } from "@/lib/service-template-form";
 
 interface TemplateIntakeFormProps {
@@ -206,25 +207,12 @@ export function TemplateIntakeForm({
   const [submitting, setSubmitting] = useState(false);
   const requiresPartner = config.mode === "couple";
 
-  function validate() {
-    if (!state.person1.dob || !state.person1.tob || !state.person1.city) {
-      return "Please complete the primary birth details.";
-    }
-    if (requiresPartner && (!state.person2.dob || !state.person2.tob || !state.person2.city)) {
-      return "Please complete the second person's birth details.";
-    }
-    if (config.fields.question && !state.question.trim()) {
-      return "Please add the core question for this reading.";
-    }
-    return null;
-  }
-
   function updateBirth(personKey: "person1" | "person2", next: ServiceTemplateBirthInput) {
     setState((current) => ({ ...current, [personKey]: next }));
   }
 
   async function continueFlow() {
-    const validationError = validate();
+    const validationError = validateServiceTemplateIntakeState(config, state);
     if (validationError) {
       toast.error(validationError);
       return;
@@ -244,7 +232,22 @@ export function TemplateIntakeForm({
         return;
       }
 
-      router.push(`/book/demo?template=${encodeURIComponent(templateSlug)}`);
+      const res = await fetch(`/api/services/${encodeURIComponent(templateSlug)}/intake`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ payload: state }),
+      });
+      const json = await res.json();
+
+      if (!res.ok) {
+        throw new Error(typeof json.error === "string" ? json.error : "Failed to save intake submission.");
+      }
+
+      router.push(
+        typeof json.next_url === "string"
+          ? json.next_url
+          : `/book/demo?template=${encodeURIComponent(templateSlug)}`,
+      );
     } finally {
       setSubmitting(false);
     }
