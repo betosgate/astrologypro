@@ -20,6 +20,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import Link from "next/link";
 import {
   Sparkles,
   Telescope,
@@ -32,6 +33,12 @@ import {
 } from "lucide-react";
 import { BirthCityAutocomplete } from "@/components/community/birth-city-autocomplete";
 
+// Task 04: "natal" is no longer reachable from this component's generator
+// path. The Natal Chart CTA now deep-links into `/community/horoscope`, which
+// renders the shared HoroscopeToolkitPage (Task 02). We keep the literal in
+// the union for safety because `runGenerate` still accepts it as a backend
+// parameter — but the UI never dispatches a natal generate from here, so we
+// don't need two conflicting natal chart experiences on the dashboard.
 type ChartType = "natal" | "monthly" | "relationship";
 
 interface CityOption {
@@ -244,21 +251,28 @@ export function ChartQuickActions() {
 
           {/* Three action buttons */}
           <div className="grid gap-3 sm:grid-cols-3">
+            {/*
+              Task 04: Natal Chart deep-links to `/community/horoscope` (the
+              shared HoroscopeToolkitPage from Task 02) instead of dispatching
+              the legacy inline generator. We intentionally keep Monthly
+              Transits and Relationship Charts on the one-click generator
+              because they do not have a canonical toolkit route in this
+              surface and they do not duplicate any other UI.
+            */}
             <Button
+              asChild
               variant="outline"
               className="h-auto flex-col gap-2 py-4"
-              disabled={loading || isLoading("natal")}
-              onClick={() => handleGenerate("natal")}
             >
-              {isLoading("natal") ? (
-                <Loader2 className="size-6 animate-spin" />
-              ) : (
+              <Link href="/community/horoscope">
                 <Telescope className="size-6 text-primary" />
-              )}
-              <div className="text-center">
-                <p className="font-semibold text-sm">Natal Chart</p>
-                <p className="text-xs text-muted-foreground">Your birth chart</p>
-              </div>
+                <div className="text-center">
+                  <p className="font-semibold text-sm">Natal Chart</p>
+                  <p className="text-xs text-muted-foreground">
+                    Open Horoscope
+                  </p>
+                </div>
+              </Link>
             </Button>
 
             <Button
