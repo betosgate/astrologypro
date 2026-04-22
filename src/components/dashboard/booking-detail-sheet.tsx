@@ -72,6 +72,16 @@ interface BookingDetailProps {
    * is unmapped (button is hidden). Only set when viewer is a diviner/admin.
    */
   sessionLink?: string | null;
+  /**
+   * Who is viewing the sheet. Defaults to `"diviner"` so the existing
+   * diviner dashboard and admin console keep full functionality without
+   * opting in. When set to `"client"` the sheet renders read-only —
+   * mutation actions (reschedule / cancel / refund / session-notes /
+   * send-note / sync-payment / sync-recording / join-session / open-
+   * service) are hidden, and the diviner-private session-notes field is
+   * suppressed. Used by the /trainee "See Details" drawer.
+   */
+  viewerRole?: "diviner" | "admin" | "client";
 }
 
 // Format an ISO string into the value expected by <input type="datetime-local">
@@ -101,12 +111,19 @@ function RecordingSection({
   shareId,
   syncingRecording,
   onSync,
+  canSync = true,
 }: {
   bookingId: string;
   recordingUrl: string | null;
   shareId: string | null;
   syncingRecording: boolean;
   onSync: () => void;
+  /**
+   * Controls whether "Sync Recording from S3" is rendered. Admin and
+   * diviner viewers can sync; client viewers (see BookingDetailSheet's
+   * `viewerRole`) cannot.
+   */
+  canSync?: boolean;
 }) {
   const [segments, setSegments] = useState<{ key: string; size: number; url: string }[] | null>(null);
   const [loading, setLoading] = useState(false);
@@ -173,7 +190,7 @@ function RecordingSection({
           <Button size="sm" variant="outline" className="w-full gap-2" onClick={loadSegments}>
             <RefreshCw className="size-3.5" />Retry
           </Button>
-          {!recordingUrl && (
+          {!recordingUrl && canSync && (
             <Button size="sm" variant="outline" className="w-full gap-2" disabled={syncingRecording} onClick={onSync}>
               {syncingRecording ? <Loader2 className="size-3.5 animate-spin" /> : <RefreshCw className="size-3.5" />}
               {syncingRecording ? "Syncing…" : "Sync Recording from S3"}
@@ -183,19 +200,29 @@ function RecordingSection({
       ) : (
         <div className="space-y-2">
           <p className="text-sm text-muted-foreground">No recording available yet.</p>
-          <Button size="sm" variant="outline" className="w-full gap-2" disabled={syncingRecording} onClick={onSync}>
-            {syncingRecording ? <Loader2 className="size-3.5 animate-spin" /> : <RefreshCw className="size-3.5" />}
-            {syncingRecording ? "Syncing…" : "Sync Recording from S3"}
-          </Button>
+          {canSync && (
+            <Button size="sm" variant="outline" className="w-full gap-2" disabled={syncingRecording} onClick={onSync}>
+              {syncingRecording ? <Loader2 className="size-3.5 animate-spin" /> : <RefreshCw className="size-3.5" />}
+              {syncingRecording ? "Syncing…" : "Sync Recording from S3"}
+            </Button>
+          )}
         </div>
       )}
     </div>
   );
 }
 
-export function BookingDetailSheet({ booking, linkedOrder, sessionLink }: BookingDetailProps) {
+export function BookingDetailSheet({
+  booking,
+  linkedOrder,
+  sessionLink,
+  viewerRole = "diviner",
+}: BookingDetailProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  // Shorthand: the drawer is read-only (mutation buttons hidden) when
+  // the viewer is the end-user of the booking rather than the host.
+  const isClientView = viewerRole === "client";
   const [sessionDetails, setSessionDetails] = useState<SessionDetails | null>(null);
   const [loadingSession, setLoadingSession] = useState(false);
 
@@ -399,18 +426,28 @@ export function BookingDetailSheet({ booking, linkedOrder, sessionLink }: Bookin
     }
   }
 
+  // Mutation capabilities are fully suppressed in the client view —
+  // trainees / clients viewing their own booking can see the details
+  // but cannot reschedule, cancel, refund, sync payment, etc. Those
+  // actions belong to the host on /dashboard/bookings or admin.
   const canReschedule =
-    ["pending", "confirmed"].includes(booking.status) && !canceled;
+    !isClientView &&
+    ["pending", "confirmed"].includes(booking.status) &&
+    !canceled;
 
   const canCancel =
-    ["pending", "confirmed", "in_progress"].includes(booking.status) && !canceled;
+    !isClientView &&
+    ["pending", "confirmed", "in_progress"].includes(booking.status) &&
+    !canceled;
 
   const canRefund =
+    !isClientView &&
     booking.status === "completed" &&
     booking.amount > 0 &&
     !refunded;
 
   const canSyncPayment =
+    !isClientView &&
     booking.status === "pending" &&
     booking.amount > 0 &&
     !!booking.payment_intent_id;
@@ -532,6 +569,7 @@ export function BookingDetailSheet({ booking, linkedOrder, sessionLink }: Bookin
                   shareId={sessionDetails.recording_share_id}
                   syncingRecording={syncingRecording}
                   onSync={handleSyncRecording}
+                  canSync={!isClientView}
                 />
 
                 <div className="rounded-lg border border-border bg-muted/20 p-3 space-y-2">
@@ -580,20 +618,22 @@ export function BookingDetailSheet({ booking, linkedOrder, sessionLink }: Bookin
           </div>
 
           {/* ── Join Session (upcoming/in-progress only) ─────────────── */}
-          {["confirmed", "in_progress", "pending"].includes(booking.status) && booking.username && (
-            <Button
-              className="w-full"
-              onClick={() => {
-                window.location.href = `/${booking.username}/session/${booking.id}`;
-              }}
-            >
-              <Video className="mr-2 size-4" />
-              Join Session
-            </Button>
-          )}
+          {!isClientView &&
+            ["confirmed", "in_progress", "pending"].includes(booking.status) &&
+            booking.username && (
+              <Button
+                className="w-full"
+                onClick={() => {
+                  window.location.href = `/${booking.username}/session/${booking.id}`;
+                }}
+              >
+                <Video className="mr-2 size-4" />
+                Join Session
+              </Button>
+            )}
 
           {/* ── Open Service (toolkit) — diviner-only, hidden when unmapped ─ */}
-          {sessionLink && (
+          {!isClientView && sessionLink && (
             <Button asChild variant="secondary" className="w-full">
               <Link href={sessionLink}>
                 <Sparkles className="mr-2 size-4" />
@@ -852,8 +892,8 @@ export function BookingDetailSheet({ booking, linkedOrder, sessionLink }: Bookin
             </div>
           )}
 
-          {/* ── Session Notes (completed only) ────────────────────────── */}
-          {booking.status === "completed" && (
+          {/* ── Session Notes (completed only, diviner/admin only) ───── */}
+          {!isClientView && booking.status === "completed" && (
             <div className="space-y-2">
               <Label htmlFor="session-notes" className="flex items-center gap-1.5">
                 <NotebookPen className="size-3.5" />
@@ -869,7 +909,7 @@ export function BookingDetailSheet({ booking, linkedOrder, sessionLink }: Bookin
 
 
           {/* ── Client's Session Notes (read-only for diviner) ────────── */}
-          {booking.client_session_notes && (
+          {!isClientView && booking.client_session_notes && (
             <div className="space-y-2">
               <Label className="flex items-center gap-1.5">
                 <NotebookPen className="size-3.5" />
@@ -882,8 +922,9 @@ export function BookingDetailSheet({ booking, linkedOrder, sessionLink }: Bookin
             </div>
           )}
 
-          {/* ── Note to Client ────────────────────────────────────────── */}
-          {booking.status !== "canceled" && (
+          {/* ── Note to Client — diviner-only; client viewing their own
+                booking can't send a note to themselves. ──────────────── */}
+          {!isClientView && booking.status !== "canceled" && (
             <div className="space-y-2 rounded-lg border bg-muted/20 p-4">
               <Label htmlFor="client-note" className="flex items-center gap-1.5">
                 <Send className="size-3.5" />
@@ -896,6 +937,18 @@ export function BookingDetailSheet({ booking, linkedOrder, sessionLink }: Bookin
               <Button size="sm" onClick={handleSendNote} disabled={sendingNote || !clientNote.trim()} className="gap-1.5">
                 {sendingNote ? <><Loader2 className="size-3.5 animate-spin" />Sending…</> : <><Send className="size-3.5" />Send to Client</>}
               </Button>
+            </div>
+          )}
+
+          {/* ── Client-view footer: safe guidance when mutation UI is
+                hidden. ───────────────────────────────────────────────── */}
+          {isClientView && (
+            <div className="rounded-lg border border-border bg-muted/20 p-3">
+              <p className="text-xs text-muted-foreground">
+                Need to reschedule, cancel, or manage this appointment?
+                Reply to your booking confirmation email or contact the
+                host directly.
+              </p>
             </div>
           )}
 
