@@ -214,6 +214,9 @@ export default function ServiceTemplatesPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button asChild variant="outline" size="sm">
+            <Link href="/admin/service-template-intakes">Intake Submissions</Link>
+          </Button>
           <AdminResetButton hasActiveFilters={hasActiveFilters} onReset={handleReset} />
           <Button
             variant="outline"
