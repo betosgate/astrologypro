@@ -104,6 +104,8 @@ export default async function EditServiceTemplatePage({ params }: Props) {
     faq:               Array.isArray(template.faq) ? template.faq : [],
     seo_title:         template.seo_title ?? "",
     seo_description:   template.seo_description ?? "",
+    form_enabled:      template.form_enabled ?? true,
+    form_config:       template.form_config ?? null,
     is_active:         template.is_active ?? true,
   };
 

@@ -9,6 +9,7 @@
  */
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import type { ServiceTemplateFormConfig } from "@/lib/service-template-form";
 
 // ── DB-backed service template (superset of ServiceTemplate) ─────────────────
 
@@ -19,6 +20,9 @@ export interface DbServiceTemplate {
   category: "astrology" | "tarot";
   description: string | null;
   long_description: string | null;
+  image_url: string | null;
+  form_enabled: boolean;
+  form_config: ServiceTemplateFormConfig | null;
   base_price: number;
   overage_rate: number | null;
   duration_minutes: number;
