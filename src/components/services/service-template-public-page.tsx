@@ -59,7 +59,6 @@ interface ServiceTemplatePublicPageProps {
   diviners: ServiceTemplatePublicPageDiviner[];
   embedded?: boolean;
   disableLinks?: boolean;
-  emptyStateMessage?: string;
 }
 
 function CategoryBadge({ category }: { category: string }) {
@@ -188,7 +187,6 @@ export function ServiceTemplatePublicPage({
   diviners,
   embedded = false,
   disableLinks = false,
-  emptyStateMessage = "Preview mode: public diviner cards will appear here once practitioners offer this template.",
 }: ServiceTemplatePublicPageProps) {
   const serviceImageUrl = template.image_url ?? getServiceImageUrl(template.slug);
   const requiresBirthData =
@@ -430,103 +428,6 @@ export function ServiceTemplatePublicPage({
                     </div>
                   ))}
                 </div>
-              </div>
-            </div>
-
-            <div className="cosmic-divider mx-auto mt-12 max-w-6xl md:mt-16" />
-          </section>
-
-          <section className="py-12 md:py-16">
-            <div className="mx-auto max-w-5xl px-4">
-              <h2 className="mb-8 text-center font-display text-3xl font-semibold text-cream md:text-4xl">
-                Available Diviners
-              </h2>
-
-              <div className="grid gap-5 sm:grid-cols-2">
-                {diviners.length > 0 ? (
-                  diviners.map((diviner) => (
-                    <div key={diviner.divinerId} className="glass-card rounded-xl p-5">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="space-y-2">
-                          <h3 className="font-display text-xl font-semibold text-cream">
-                            {diviner.displayName}
-                          </h3>
-                          {diviner.tagline && (
-                            <p className="text-sm text-silver/60">{diviner.tagline}</p>
-                          )}
-                          <div className="flex flex-wrap gap-2">
-                            {diviner.isCertified && (
-                              <span className="inline-flex items-center gap-1 rounded-full border border-gold/20 bg-gold/5 px-2.5 py-0.5 text-[11px] font-medium text-gold/80">
-                                <Shield className="size-3" />
-                                Certified
-                              </span>
-                            )}
-                            {diviner.availabilityConfigured && (
-                              <span className="rounded-full border border-white/10 px-2.5 py-0.5 text-[11px] font-medium text-silver/70">
-                                Availability active
-                              </span>
-                            )}
-                          </div>
-                          <div className="text-sm text-silver/60">
-                            {formatCurrency(diviner.price)} · {diviner.durationMinutes} min · {diviner.completedSessions} session{diviner.completedSessions === 1 ? "" : "s"}
-                          </div>
-                        </div>
-
-                        <div className="relative size-16 shrink-0 overflow-hidden rounded-full border border-gold/20 bg-white/[0.02]">
-                          {diviner.avatarUrl ? (
-                            <Image
-                              src={getDivinerAvatarUrl(diviner.avatarUrl)}
-                              alt={diviner.displayName}
-                              fill
-                              className="object-cover"
-                              sizes="64px"
-                            />
-                          ) : (
-                            <div className="flex h-full items-center justify-center">
-                              <Sparkles className="size-5 text-gold/40" />
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      {diviner.specialties.length > 0 && (
-                        <div className="mt-4 flex flex-wrap gap-2">
-                          {diviner.specialties.slice(0, 4).map((specialty) => (
-                            <span
-                              key={specialty}
-                              className="rounded-full border border-gold/20 bg-gold/5 px-2.5 py-0.5 text-[11px] font-medium text-gold/80"
-                            >
-                              {specialty}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-
-                      <div className="mt-5 flex flex-wrap gap-3">
-                        <MaybeLink
-                          href={`/${diviner.username}/book/${template.slug}`}
-                          disabled={disableLinks}
-                          className="inline-flex items-center gap-1.5 text-sm font-medium text-gold/80 transition-colors hover:text-gold"
-                        >
-                          View Availability
-                          <ArrowRight className="size-3.5" />
-                        </MaybeLink>
-                        <MaybeLink
-                          href={`/${diviner.username}`}
-                          disabled={disableLinks}
-                          className="inline-flex items-center gap-1.5 text-sm font-medium text-silver/70 transition-colors hover:text-gold"
-                        >
-                          View Profile
-                          <ArrowRight className="size-3.5" />
-                        </MaybeLink>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="glass-card rounded-xl p-8 text-center text-sm text-silver/60 sm:col-span-2">
-                    {emptyStateMessage}
-                  </div>
-                )}
               </div>
             </div>
 
