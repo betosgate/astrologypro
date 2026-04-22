@@ -67,6 +67,8 @@ export default async function AdminMyBookingsPage() {
     ? []
     : (rows as unknown as AdminBookingRow[] | null) ?? [];
 
+  // Server-rendered snapshot time for splitting upcoming vs past rows.
+  // eslint-disable-next-line react-hooks/purity
   const now = Date.now();
   const upcoming = bookings.filter(
     (b) => new Date(b.scheduled_at).getTime() >= now && b.status === "confirmed",
@@ -243,6 +245,7 @@ function BookingRow({
           }}
           detailsOnly
           actionBasePath={`/api/admin/my-bookings/${booking.id}`}
+          joinHref={`/api/admin/my-bookings/${booking.id}/join`}
           viewerRole="admin"
         />
       </div>

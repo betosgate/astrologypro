@@ -14,6 +14,7 @@ import {
   type ServiceTemplateCityOption,
   type ServiceTemplateFormConfig,
   type ServiceTemplateIntakeState,
+  validateServiceTemplateIntakeState,
 } from "@/lib/service-template-form";
 
 interface TemplateIntakeFormProps {
@@ -206,26 +207,12 @@ export function TemplateIntakeForm({
   const [submitting, setSubmitting] = useState(false);
   const requiresPartner = config.mode === "couple";
 
-  function validate() {
-    if (!state.person1.dob || !state.person1.tob || !state.person1.city) {
-      return "Please complete the primary birth details.";
-    }
-    if (requiresPartner && (!state.person2.dob || !state.person2.tob || !state.person2.city)) {
-      return "Please complete the second person's birth details.";
-    }
-    if (config.fields.question && !state.question.trim()) {
-      return "Please add the core question for this reading.";
-    }
-    return null;
-  }
-
   function updateBirth(personKey: "person1" | "person2", next: ServiceTemplateBirthInput) {
     setState((current) => ({ ...current, [personKey]: next }));
   }
 
-  async function handleSubmit(event: React.FormEvent) {
-    event.preventDefault();
-    const validationError = validate();
+  async function continueFlow() {
+    const validationError = validateServiceTemplateIntakeState(config, state);
     if (validationError) {
       toast.error(validationError);
       return;
@@ -245,14 +232,40 @@ export function TemplateIntakeForm({
         return;
       }
 
-      router.push(`/book/demo?template=${encodeURIComponent(templateSlug)}`);
+      const res = await fetch(`/api/services/${encodeURIComponent(templateSlug)}/intake`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ payload: state }),
+      });
+      const json = await res.json();
+
+      if (!res.ok) {
+        throw new Error(typeof json.error === "string" ? json.error : "Failed to save intake submission.");
+      }
+
+      router.push(
+        typeof json.next_url === "string"
+          ? json.next_url
+          : `/book/demo?template=${encodeURIComponent(templateSlug)}`,
+      );
     } finally {
       setSubmitting(false);
     }
   }
 
+  async function handleSubmit(event: React.FormEvent) {
+    event.preventDefault();
+    await continueFlow();
+  }
+
+  const Container = embedded ? "div" : "form";
+
   return (
-    <form id="template-intake-form" className="space-y-6" onSubmit={handleSubmit}>
+    <Container
+      id="template-intake-form"
+      className="scroll-mt-20 space-y-6"
+      onSubmit={embedded ? undefined : handleSubmit}
+    >
       <div className="rounded-3xl border border-gold/15 bg-gold/[0.04] p-6 md:p-8">
         <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div>
@@ -371,9 +384,10 @@ export function TemplateIntakeForm({
             After this step you will continue into the booking flow.
           </p>
           <Button
-            type="submit"
+            type={embedded ? "button" : "submit"}
             className="bg-gold text-cosmos-900 hover:bg-gold-light"
             disabled={submitting}
+            onClick={embedded ? () => void continueFlow() : undefined}
           >
             {submitting ? (
               <Loader2 className="mr-2 size-4 animate-spin" />
@@ -384,6 +398,6 @@ export function TemplateIntakeForm({
           </Button>
         </div>
       </div>
-    </form>
+    </Container>
   );
 }

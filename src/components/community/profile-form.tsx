@@ -282,6 +282,16 @@ export function CommunityProfileForm({
 
   return (
     <form onSubmit={handleSave} className="space-y-6">
+      <ProfileCompletionBar
+        title="Profile Details"
+        subtitle="Tracks your personal & birth data only. Charts, family, and account setup progress are shown on your dashboard as Journey Progress."
+        percentage={completion.percentage}
+        missingFields={completion.missingFields}
+        completedCount={completion.completedCount}
+        totalCount={completion.totalCount}
+        onMissingFieldClick={focusField}
+      />
+
       {/* Profile Photo */}
       <Card>
         <CardHeader>
@@ -333,16 +343,6 @@ export function CommunityProfileForm({
           </div>
         </CardContent>
       </Card>
-
-      <ProfileCompletionBar
-        title="Profile Details"
-        subtitle="Tracks your personal & birth data only. Charts, family, and account setup progress are shown on your dashboard as Journey Progress."
-        percentage={completion.percentage}
-        missingFields={completion.missingFields}
-        completedCount={completion.completedCount}
-        totalCount={completion.totalCount}
-        onMissingFieldClick={focusField}
-      />
 
       {/* Personal Information */}
       <Card>

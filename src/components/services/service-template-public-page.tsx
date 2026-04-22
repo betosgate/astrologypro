@@ -1,3 +1,5 @@
+"use client";
+
 import type { ReactNode } from "react";
 import Link from "next/link";
 import Image from "next/image";
@@ -67,6 +69,14 @@ interface ServiceTemplatePublicPageProps {
   disableLinks?: boolean;
 }
 
+interface CtaButtonProps {
+  hasIntakeForm: boolean;
+  href: string;
+  label: string;
+  className: string;
+  disabled?: boolean;
+}
+
 function CategoryBadge({ category }: { category: string }) {
   const label = getServiceCategoryLabel(category);
   return (
@@ -96,6 +106,42 @@ function MaybeLink({
     <Link href={href} className={className}>
       {children}
     </Link>
+  );
+}
+
+function CtaButton({ hasIntakeForm, href, label, className, disabled }: CtaButtonProps) {
+  const content = (
+    <>
+      {label}
+      <ArrowRight className="size-4" />
+    </>
+  );
+
+  if (disabled) {
+    return <span className={`${className} cursor-default opacity-90`}>{content}</span>;
+  }
+
+  if (!hasIntakeForm) {
+    return (
+      <Link href={href} className={className}>
+        {content}
+      </Link>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      className={className}
+      onClick={() => {
+        const target = document.getElementById("template-intake-form");
+        if (!target) return;
+        target.scrollIntoView({ behavior: "smooth", block: "start" });
+        window.history.replaceState(null, "", "#template-intake-form");
+      }}
+    >
+      {content}
+    </button>
   );
 }
 
@@ -250,13 +296,13 @@ export function ServiceTemplatePublicPage(props: ServiceTemplatePublicPageProps)
               <ChevronRight className="size-3 text-silver/40" />
               <span className="max-w-[160px] truncate text-silver/40">{template.name}</span>
             </div>
-            <MaybeLink
+            <CtaButton
+              hasIntakeForm={hasIntakeForm}
               href={ctaHref}
               disabled={disableLinks}
+              label={ctaLabel}
               className="rounded-full bg-gold px-4 py-1.5 text-xs font-semibold text-cosmos-900 transition-colors hover:bg-gold-light"
-            >
-              {ctaLabel}
-            </MaybeLink>
+            />
           </div>
         </nav>
 
@@ -312,14 +358,13 @@ export function ServiceTemplatePublicPage(props: ServiceTemplatePublicPageProps)
                 </p>
 
                 <div className="mt-8 flex flex-wrap gap-3">
-                  <MaybeLink
+                  <CtaButton
+                    hasIntakeForm={hasIntakeForm}
                     href={ctaHref}
                     disabled={disableLinks}
+                    label={ctaLabel}
                     className="inline-flex h-12 items-center gap-2 rounded-lg bg-gold px-8 text-sm font-semibold text-cosmos-900 shadow-[0_0_20px_rgba(201,168,76,0.3)] transition-all hover:bg-gold-light hover:shadow-[0_0_30px_rgba(201,168,76,0.4)]"
-                  >
-                    {ctaLabel}
-                    <ArrowRight className="size-4" />
-                  </MaybeLink>
+                  />
                   <MaybeLink
                     href="/services"
                     disabled={disableLinks}
@@ -417,17 +462,34 @@ export function ServiceTemplatePublicPage(props: ServiceTemplatePublicPageProps)
                     {bullet}
                   </li>
                 ))}
-              </ul>
+                </ul>
 
-              {requiresBirthData && (
+                {requiresBirthData && (
                 <div className="mt-5 rounded-lg border border-gold/15 bg-gold/5 px-4 py-3">
                   <p className="text-xs text-gold/80">
                     <strong>Note:</strong> Exact birth date, time, and location improve the quality of astrology-based readings.
                   </p>
+                  </div>
+                )}
+
+                <div className="mt-6 flex flex-wrap gap-3 border-t border-white/8 pt-6">
+                  <CtaButton
+                    hasIntakeForm={hasIntakeForm}
+                    href={ctaHref}
+                    disabled={disableLinks}
+                    label={hasIntakeForm ? "Complete Intake Details" : "Book This Reading"}
+                    className="inline-flex h-11 items-center justify-center rounded-lg bg-gold px-6 text-sm font-semibold text-cosmos-900 transition-all hover:bg-gold-light"
+                  />
+                  <MaybeLink
+                    href="/services"
+                    disabled={disableLinks}
+                    className="inline-flex h-11 items-center justify-center rounded-lg border border-white/10 px-6 text-sm font-semibold text-cream transition-colors hover:border-gold/30 hover:text-gold"
+                  >
+                    Compare Services
+                  </MaybeLink>
                 </div>
-              )}
+              </div>
             </div>
-          </div>
 
           <div className="cosmic-divider mx-auto mt-12 max-w-6xl md:mt-16" />
         </section>
@@ -462,6 +524,15 @@ export function ServiceTemplatePublicPage(props: ServiceTemplatePublicPageProps)
                     {bullet}
                   </div>
                 ))}
+              </div>
+              <div className="mt-6">
+                <CtaButton
+                  hasIntakeForm={hasIntakeForm}
+                  href={ctaHref}
+                  disabled={disableLinks}
+                  label={hasIntakeForm ? "Go To Intake Form" : "Continue to Booking"}
+                  className="inline-flex h-11 items-center justify-center rounded-lg border border-gold/25 bg-gold/10 px-5 text-sm font-semibold text-gold transition-colors hover:bg-gold/20"
+                />
               </div>
             </div>
           </div>
@@ -576,14 +647,13 @@ export function ServiceTemplatePublicPage(props: ServiceTemplatePublicPageProps)
             <p className="mx-auto mb-8 max-w-md text-sm leading-relaxed text-silver/60">
               {template.duration_minutes}-minute session starting at {formatCurrency(Number(template.base_price))}
             </p>
-            <MaybeLink
+            <CtaButton
+              hasIntakeForm={hasIntakeForm}
               href={ctaHref}
               disabled={disableLinks}
+              label={ctaLabel}
               className="inline-flex h-12 items-center gap-2 rounded-lg bg-gold px-8 text-sm font-semibold text-cosmos-900 shadow-[0_0_20px_rgba(201,168,76,0.3)] transition-all hover:bg-gold-light hover:shadow-[0_0_30px_rgba(201,168,76,0.4)]"
-            >
-              {ctaLabel}
-              <ArrowRight className="size-4" />
-            </MaybeLink>
+            />
           </div>
         </section>
       </div>

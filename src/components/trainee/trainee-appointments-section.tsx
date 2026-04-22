@@ -165,6 +165,11 @@ export function TraineeAppointmentsSection() {
                   }
                   viewerRole="client"
                   rescheduleHref={a.reschedule_href ?? null}
+                  joinHref={
+                    a.source === "admin_bookings"
+                      ? `/api/trainee/appointments/admin-bookings/${a.id}/join`
+                      : null
+                  }
                   booking={{
                     id: a.id,
                     scheduled_at: a.scheduled_at,

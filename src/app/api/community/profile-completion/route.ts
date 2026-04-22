@@ -18,7 +18,7 @@ export const dynamic = "force-dynamic";
  * Completion weights:
  *   profile_photo    20%
  *   full_name        10%
- *   birth_data       25%  (birth_date + birth_time + birth_city all set)
+ *   birth_data       25%  (community_members date_of_birth + birth_time + birth_city all set)
  *   natal_chart      20%  (any family member has natal_chart data)
  *   family_member    10%  (at least 1 family member added)
  *   relationship_chart 15% (at least 1 relationship_chart generated)
