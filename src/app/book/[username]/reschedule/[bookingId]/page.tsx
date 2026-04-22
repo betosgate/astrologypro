@@ -28,7 +28,7 @@ export default async function PublicAdminBookingReschedulePage({ params }: PageP
 
   const { data: adminRow } = await admin
     .from("admin_users")
-    .select("user_id, username, display_name")
+    .select("user_id, username, email")
     .ilike("username", username)
     .maybeSingle();
 
@@ -86,7 +86,7 @@ export default async function PublicAdminBookingReschedulePage({ params }: PageP
           <h1 className="text-2xl font-bold tracking-tight">Reschedule Session</h1>
           <p className="text-sm text-muted-foreground">
             Pick a new time for your appointment with{" "}
-            <strong>{adminRow.display_name ?? adminRow.username}</strong>.
+            <strong>{adminRow.username ?? adminRow.email ?? username}</strong>.
           </p>
         </div>
       </div>
