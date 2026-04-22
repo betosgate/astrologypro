@@ -90,6 +90,7 @@ export default function ServiceTemplatesPage() {
   const [loading, setLoading] = useState(true);
   const [category, setCategory] = useState("all");
   const [statusFilter, setStatus] = useState("all");
+  const [scopeFilter, setScopeFilter] = useState("all");
   const [pageSize, setPageSize] = useState(25);
 
   const [deleteTarget, setDeleteTarget] = useState<ServiceTemplateRow | null>(null);
@@ -102,6 +103,7 @@ export default function ServiceTemplatesPage() {
       if (currentQ) params.set("search", currentQ);
       if (category !== "all") params.set("category", category);
       if (statusFilter !== "all") params.set("is_active", statusFilter === "active" ? "true" : "false");
+      if (scopeFilter !== "all") params.set("scope", scopeFilter);
       params.set("sort_by", currentSort);
       params.set("sort_dir", currentDir);
       params.set("page", String(currentPage));
@@ -117,7 +119,7 @@ export default function ServiceTemplatesPage() {
     } finally {
       setLoading(false);
     }
-  }, [currentQ, category, statusFilter, currentSort, currentDir, currentPage, pageSize]);
+  }, [currentQ, category, statusFilter, scopeFilter, currentSort, currentDir, currentPage, pageSize]);
 
   useEffect(() => {
     fetchTemplates();
@@ -164,6 +166,7 @@ export default function ServiceTemplatesPage() {
   function handleReset() {
     setCategory("all");
     setStatus("all");
+    setScopeFilter("all");
     pushParams({ q: "", sortBy: "display_order", sortDir: "asc", page: "1" });
   }
 
@@ -181,7 +184,13 @@ export default function ServiceTemplatesPage() {
     window.open(`${APP_URL}${getServiceTemplatePublicPath(template.slug)}`, "_blank", "noopener,noreferrer");
   }
 
-  const hasActiveFilters = currentQ !== "" || category !== "all" || statusFilter !== "all" || currentSort !== "display_order" || currentDir !== "asc";
+  const hasActiveFilters =
+    currentQ !== "" ||
+    category !== "all" ||
+    statusFilter !== "all" ||
+    scopeFilter !== "all" ||
+    currentSort !== "display_order" ||
+    currentDir !== "asc";
 
   function SortIcon({ col }: { col: string }) {
     if (currentSort !== col) return null;
@@ -254,6 +263,16 @@ export default function ServiceTemplatesPage() {
             <SelectItem value="all">All Status</SelectItem>
             <SelectItem value="active">Active</SelectItem>
             <SelectItem value="inactive">Inactive</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Select value={scopeFilter} onValueChange={setScopeFilter}>
+          <SelectTrigger className="w-full sm:w-44">
+            <SelectValue placeholder="Template Type" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Templates</SelectItem>
+            <SelectItem value="general">General Only</SelectItem>
           </SelectContent>
         </Select>
       </div>

@@ -28,6 +28,7 @@ interface ServiceTemplatePublicPageTemplate {
   slug: string;
   description: string | null;
   long_description?: string | null;
+  image_url?: string | null;
   duration_minutes: number;
   base_price: number;
   overage_rate?: number | null;
@@ -189,7 +190,7 @@ export function ServiceTemplatePublicPage({
   disableLinks = false,
   emptyStateMessage = "Preview mode: public diviner cards will appear here once practitioners offer this template.",
 }: ServiceTemplatePublicPageProps) {
-  const serviceImageUrl = getServiceImageUrl(template.slug);
+  const serviceImageUrl = template.image_url ?? getServiceImageUrl(template.slug);
   const requiresBirthData =
     template.category === "astrology" || template.requires_birth_data === true;
   const includedBullets = getIncludedBullets(template);
