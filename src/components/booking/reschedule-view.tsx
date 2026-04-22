@@ -60,6 +60,13 @@ interface RescheduleViewProps {
    * notes, attendees, client name edits) are hidden.
    */
   bookingToken?: string | null;
+  /**
+   * Trainee/client session path: the viewer is the authenticated client
+   * (no email-link token), so we still use the public `/api/bookings/{id}/
+   * reschedule` endpoint (which accepts cookie auth via `resolveBookingViewer`)
+   * and hide host-only controls.
+   */
+  clientAuthFlow?: boolean;
 }
 
 function formatSlotTime(iso: string, timezone: string): string {
@@ -93,8 +100,9 @@ export function RescheduleView({
   existingAttendees,
   currentScheduledAt,
   bookingToken,
+  clientAuthFlow,
 }: RescheduleViewProps) {
-  const isClientFlow = !!bookingToken;
+  const isClientFlow = !!bookingToken || !!clientAuthFlow;
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
@@ -158,15 +166,19 @@ export function RescheduleView({
     setSubmitting(true);
     try {
       if (isClientFlow) {
-        // Client path: use the token-authenticated booking reschedule endpoint.
-        // No session-notes / attendee edits — those are host-only concerns.
+        // Client path: use the public booking reschedule endpoint. It accepts
+        // either a booking_token (email-link path) or a cookie-authenticated
+        // client via resolveBookingViewer (trainee/dashboard path). No session
+        // notes / attendee edits — those are host-only concerns.
+        const clientPayload: Record<string, unknown> = {
+          scheduled_at: selectedSlot.start,
+        };
+        if (bookingToken) clientPayload.booking_token = bookingToken;
         const res = await fetch(`/api/bookings/${bookingId}/reschedule`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            scheduled_at: selectedSlot.start,
-            booking_token: bookingToken,
-          }),
+          credentials: "include",
+          body: JSON.stringify(clientPayload),
         });
         if (!res.ok) {
           const d = await res.json();
@@ -244,17 +256,19 @@ export function RescheduleView({
           <Button asChild className="w-full mt-2">
             <Link
               href={
-                isClientFlow
-                  ? bookingToken
-                    ? `/booking/${bookingToken}`
-                    : divinerUsername
-                      ? `/${divinerUsername}`
-                      : "/"
-                  : "/dashboard/calendar"
+                bookingToken
+                  ? `/booking/${bookingToken}`
+                  : clientAuthFlow
+                    ? "/trainee/sessions"
+                    : isClientFlow
+                      ? divinerUsername
+                        ? `/${divinerUsername}`
+                        : "/"
+                      : "/dashboard/calendar"
               }
             >
               <ArrowLeft className="mr-2 size-4" />
-              {isClientFlow ? "Back to Booking" : "Back to Calendar"}
+              {isClientFlow ? "Back to Sessions" : "Back to Calendar"}
             </Link>
           </Button>
         </CardContent>

@@ -254,6 +254,15 @@ export function BookingDetailSheet({
   const [refundReason, setRefundReason] = useState("");
   const [refunding, setRefunding] = useState(false);
   const [refunded, setRefunded] = useState(!!booking.refunded_at);
+  const [refundAmount, setRefundAmount] = useState<number | null>(
+    booking.refund_amount ?? null
+  );
+  const [refundedAt, setRefundedAt] = useState<string | null>(
+    booking.refunded_at ?? null
+  );
+  const [refundReasonDisplay, setRefundReasonDisplay] = useState<string | null>(
+    booking.refund_reason ?? null
+  );
   const [syncing, setSyncing] = useState(false);
   const [syncingRecording, setSyncingRecording] = useState(false);
   const [sessionNotes, setSessionNotes] = useState(booking.session_notes ?? "");
@@ -316,12 +325,27 @@ export function BookingDetailSheet({
       const data = await res.json();
 
       if (!res.ok) {
+        // Already refunded? Surface the existing refund state so the drawer
+        // switches to the "Refunded" display without re-issuing anything.
+        if (data.alreadyRefunded) {
+          setRefunded(true);
+          setRefundAmount(data.amount ?? null);
+          setRefundedAt(data.refundedAt ?? null);
+          setRefundReasonDisplay(data.refundReason ?? null);
+          setShowRefundForm(false);
+          toast.info("This booking has already been refunded");
+          router.refresh();
+          return;
+        }
         toast.error(data.error ?? "Failed to issue refund");
         return;
       }
 
       toast.success(`Refund of ${formatCurrency(data.amount)} issued successfully`);
       setRefunded(true);
+      setRefundAmount(data.amount ?? null);
+      setRefundedAt(data.refundedAt ?? null);
+      setRefundReasonDisplay(refundReason.trim());
       setShowRefundForm(false);
       router.refresh();
     } catch {
@@ -370,38 +394,13 @@ export function BookingDetailSheet({
     }
     setCanceling(true);
     try {
-      // Auto-refund: if paid and not yet refunded, issue refund first
-      const shouldRefund =
-        !actionBasePath &&
-        !isClientView &&
-        !!booking.payment_intent_id &&
-        booking.amount > 0 &&
-        !refunded;
-
-      if (shouldRefund) {
-        const refundRes = await fetch("/api/stripe/refund", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            bookingId: booking.id,
-            reason: cancelReason.trim(),
-          }),
-        });
-        const refundData = await refundRes.json();
-        if (!refundRes.ok) {
-          toast.error(refundData.error ?? "Failed to process refund. Cancellation aborted.");
-          return;
-        }
-        setRefunded(true);
-      }
-
-      // Cancel the booking
       const cancelUrl = actionBasePath
         ? `${actionBasePath}/cancel`
         : `/api/bookings/${booking.id}/cancel`;
       const cancelRes = await fetch(cancelUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ reason: cancelReason.trim() }),
       });
       const cancelData = await cancelRes.json();
@@ -410,7 +409,40 @@ export function BookingDetailSheet({
         return;
       }
 
-      toast.success(shouldRefund ? "Booking cancelled and refund issued" : "Booking cancelled");
+      // Server returns refund details when the cancel triggered an auto-refund
+      // OR when the booking was already canceled with an existing refund. In
+      // either case, surface the refund block so the user never sees an
+      // ambiguous "cancelled" state for a paid booking.
+      const refund = cancelData.refund as
+        | {
+            amount: number | null;
+            refundedAt: string | null;
+            reason: string | null;
+            alreadyRefunded?: boolean;
+          }
+        | null;
+
+      if (refund && refund.refundedAt) {
+        setRefunded(true);
+        setRefundAmount(refund.amount ?? null);
+        setRefundedAt(refund.refundedAt);
+        setRefundReasonDisplay(refund.reason ?? null);
+      }
+
+      if (cancelData.alreadyCanceled) {
+        toast.info(
+          refund?.refundedAt
+            ? "This booking was already cancelled and refunded"
+            : "This booking was already cancelled"
+        );
+      } else {
+        toast.success(
+          refund?.refundedAt
+            ? `Booking cancelled and ${formatCurrency(refund.amount ?? 0)} refunded`
+            : "Booking cancelled"
+        );
+      }
+
       setCanceled(true);
       setShowCancelForm(false);
       router.refresh();
@@ -453,12 +485,12 @@ export function BookingDetailSheet({
     ["pending", "confirmed"].includes(booking.status) &&
     !canceled;
 
-  // Diviners get the full calendar-picker reschedule page. Admin calendar
-  // bookings (which use actionBasePath because they live outside the standard
-  // bookings table) and the client/trainee drawer fall back to the inline
-  // datetime form since the calendar page is routed under the diviner profile.
+  // Both diviners and clients/trainees get the full calendar-picker reschedule
+  // page (routed under the diviner profile slug). Admin calendar bookings use
+  // actionBasePath because they live outside the standard bookings table, so
+  // they fall back to the inline datetime form.
   const useCalendarReschedulePage =
-    canReschedule && !isClientView && !actionBasePath && !!booking.username;
+    canReschedule && !actionBasePath && !!booking.username;
 
   const canCancel =
     (!detailsOnly || !!actionBasePath) &&
@@ -852,11 +884,25 @@ export function BookingDetailSheet({
             <div className="rounded-lg border border-green-500/20 bg-green-500/5 p-3">
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="size-4 text-green-500" />
-                <p className="text-sm font-medium text-green-500">Refunded</p>
+                <p className="text-sm font-medium text-green-500">
+                  {canceled ? "Cancelled & Refunded" : "Refunded"}
+                </p>
               </div>
-              {booking.refund_amount && <p className="mt-1 text-xs text-muted-foreground">Amount: {formatCurrency(booking.refund_amount)}</p>}
-              {booking.refunded_at && <p className="text-xs text-muted-foreground">Date: {formatDateTime(booking.refunded_at)}</p>}
-              {booking.refund_reason && <p className="mt-1 text-xs text-muted-foreground">Reason: {booking.refund_reason}</p>}
+              {refundAmount != null && refundAmount > 0 && (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Amount: {formatCurrency(refundAmount)}
+                </p>
+              )}
+              {refundedAt && (
+                <p className="text-xs text-muted-foreground">
+                  Date: {formatDateTime(refundedAt)}
+                </p>
+              )}
+              {refundReasonDisplay && (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Reason: {refundReasonDisplay}
+                </p>
+              )}
             </div>
           )}
 
@@ -874,7 +920,7 @@ export function BookingDetailSheet({
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Status</p>
-                  {booking.refunded_at ? (
+                  {refunded || refundedAt ? (
                     <span className="inline-flex items-center rounded-full border border-red-500/20 bg-red-500/10 px-2 py-0.5 text-xs font-medium text-red-500">Refunded</span>
                   ) : ["confirmed", "completed", "in_progress"].includes(booking.status) ? (
                     <span className="inline-flex items-center rounded-full border border-green-500/20 bg-green-500/10 px-2 py-0.5 text-xs font-medium text-green-500">Paid</span>
