@@ -57,6 +57,7 @@ import { MIGRATION_SQL as MIG_20260428000002_FK } from "@/data/migrations/202604
 import { MIGRATION_SQL as MIG_20260422000001 } from "@/data/migrations/20260422000001_service_template_image_url";
 import { MIGRATION_SQL as MIG_20260422000002 } from "@/data/migrations/20260422000002_booking_cancel_refund_audit";
 import { MIGRATION_SQL as MIG_20260422000003 } from "@/data/migrations/20260422000003_service_template_intake_forms";
+import { MIGRATION_SQL as MIG_20260422000004 } from "@/data/migrations/20260422000004_service_template_intake_submissions";
 
 /**
  * Allowlisted migrations that the admin migration runner can execute.
@@ -537,6 +538,14 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Adds form_enabled and form_config to service_templates, constrains form_config to JSON objects, and backfills astrology templates with structured intake presets mapped from the product slug. Supports the admin template form builder and public pre-booking intake flow.",
     sortKey: "20260422000003",
     sql: MIG_20260422000003,
+  },
+  "20260422000004_service_template_intake_submissions": {
+    id: "20260422000004_service_template_intake_submissions",
+    title: "Service template intake submissions",
+    description:
+      "Creates service_template_intake_submissions for product-form leads captured from public service template pages. Stores template metadata, toolkit mapping, normalized summary columns, full JSON payload, status, and submission timestamps for admin review workflows.",
+    sortKey: "20260422000004",
+    sql: MIG_20260422000004,
   },
   "20260428000001_landing_page_cleanup_destructive": {
     id: "20260428000001_landing_page_cleanup_destructive",
