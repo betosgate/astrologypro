@@ -458,9 +458,10 @@ export function AstrologicalLayout({ positionLabels, drawnCards, onReveal, onCar
   // grp4: [9 Capricorn (top center)] — [3 Cancer (bottom center)]   vertical axis
   // grp5: [8 Sagittarius (top-right outer)] — [4 Leo (bottom-right outer)]
   // grp6: [7 Scorpio (top-right inner)] — [5 Virgo (bottom-right inner)]
+  const is599OrBelow = useMaxWidth(399);
   const is1440OrBelow = useMaxWidth(1440);
-  const CW = is1440OrBelow ? 150 : 180;
-  const CH = is1440OrBelow ? 210 : 260;
+  const CW = is599OrBelow ? 210 : is1440OrBelow ? 150 : 180;
+  const CH = is599OrBelow ? 310 : is1440OrBelow ? 210 : 260;
 
   // Layout: 7 columns evenly spaced — Aries, Pisces/Taurus, Aquarius/Gemini, Cap/Cancer, Sag/Leo, Scorpio/Virgo, Libra
   // Each column is CW (150px), gap between columns ~30px
@@ -521,7 +522,7 @@ export function AstrologicalLayout({ positionLabels, drawnCards, onReveal, onCar
       {/* Mobile: 2 columns */}
       <div className="grid md:hidden grid-cols-2 gap-4 justify-items-center max-[599px]:grid-cols-1">
         {positionLabels.map((label, i) =>(
-          <CardSlot key={i} index={i} label={label} drawn={drawnCards[i]} onReveal={onReveal} onCardClick={onCardClick} cardBackUrl={cardBackUrl} cardWidth={130} cardHeight={190} />
+          <CardSlot key={i} index={i} label={label} drawn={drawnCards[i]} onReveal={onReveal} onCardClick={onCardClick} cardBackUrl={cardBackUrl} cardWidth={is599OrBelow ? 210 : 130} cardHeight={is599OrBelow ? 310 : 190} />
         ))}
       </div>
     </div>

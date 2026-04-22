@@ -568,7 +568,7 @@ export function AdminSidebar() {
   return (
     <>
       {/* Mobile top bar */}
-      <header className="sticky top-0 z-40 flex h-14 items-center gap-3 border-b bg-background px-4 lg:hidden">
+      <header className="sticky top-0 z-40 flex h-14 items-center gap-3 border-b bg-background px-4 lg:hidden max-[768px]:flex-wrap max-[768px]:pb-[10px] max-[768px]:h-auto max-[768px]:justify-start">
         <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
           <SheetTrigger asChild>
             <Button variant="ghost" size="icon">
@@ -595,7 +595,7 @@ export function AdminSidebar() {
         <span className="text-xs font-semibold uppercase tracking-widest text-amber-500">
           Admin
         </span>
-        <div className="ml-auto">
+        <div className="ml-auto max-[599px]:w-full">
           <GlobalSearch />
         </div>
       </header>
