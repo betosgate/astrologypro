@@ -22,12 +22,25 @@ export function PageTracker({
   attributionSource,
 }: PageTrackerProps) {
   useEffect(() => {
+    // Read ?ref= (affiliate attribution) off the URL on every fire so
+    // subsequent SPA navigations (where Task 02 preserves ?ref=) still
+    // record attribution on each page_view.
+    const params = new URLSearchParams(window.location.search);
+    const rawRef = params.get("ref");
+    // Cap length defensively — column is TEXT but an oversized value
+    // suggests abuse.
+    const refCode =
+      typeof rawRef === "string" && rawRef.length > 0
+        ? rawRef.slice(0, 256)
+        : null;
+
     // General page view tracking (existing /api/analytics/track)
     const data = JSON.stringify({
       divinerId,
       path,
       referrer: document.referrer || null,
       search: window.location.search || "",
+      refCode,
     });
 
     if (typeof navigator.sendBeacon === "function") {
@@ -74,8 +87,7 @@ export function PageTracker({
         cleanupTime();
       };
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [divinerId, path, username, serviceTemplateId, serviceSlug]);
+  }, [divinerId, path, username, serviceTemplateId, serviceSlug, attributionSource]);
 
   return null;
 }

@@ -214,6 +214,7 @@ const NAV_GROUPS = [
       { label: "Service Templates", href: "/admin/service-templates", icon: LayoutGrid },
       { label: "Service Config", href: "/admin/service-config", icon: Settings2 },
       { label: "Landing Page Analytics", href: "/admin/analytics/landing-pages", icon: BarChart3 },
+      { label: "Campaign Leaderboard", href: "/admin/analytics/campaigns", icon: BarChart3 },
     ],
   },
   {

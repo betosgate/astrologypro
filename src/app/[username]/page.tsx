@@ -392,6 +392,8 @@ export default async function DivinerPage({ params, searchParams }: PageProps) {
   const { username } = await params;
   const { tab, ref } = await searchParams;
   const refParam = ref ? `?ref=${encodeURIComponent(ref)}` : "";
+  // When a path already carries a query string, join the ref with '&'.
+  const refAmp = ref ? `&ref=${encodeURIComponent(ref)}` : "";
   const diviner = await getDiviner(username);
 
   if (!diviner) {
@@ -496,7 +498,9 @@ export default async function DivinerPage({ params, searchParams }: PageProps) {
             serviceName: undefined,
           }
         : null;
-  const bookHref = bookingPreview ? "#booking" : `/${username}`;
+  // `#booking` is an in-page anchor and keeps its query string implicitly.
+  // The fallback route needs the ref re-attached so attribution survives.
+  const bookHref = bookingPreview ? "#booking" : `/${username}${refParam}`;
   const heroOpenSlotsThisWeek =
     stats.openSlotsThisWeek > 0
       ? stats.openSlotsThisWeek
@@ -579,7 +583,7 @@ export default async function DivinerPage({ params, searchParams }: PageProps) {
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4">
           <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] p-1">
             <Link
-              href={`/${username}`}
+              href={`/${username}${refParam}`}
               className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
                 activeTab === "home"
                   ? "bg-gold text-cosmos-900"
@@ -590,7 +594,7 @@ export default async function DivinerPage({ params, searchParams }: PageProps) {
             </Link>
             {!bioBlocked && (
               <Link
-                href={`/${username}?tab=bio`}
+                href={`/${username}?tab=bio${refAmp}`}
                 className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
                   activeTab === "bio"
                     ? "bg-gold text-cosmos-900"
@@ -615,6 +619,7 @@ export default async function DivinerPage({ params, searchParams }: PageProps) {
       <DivinerHero
         username={username}
         displayName={diviner.display_name}
+        refParam={refParam}
         tagline={heroBlocked ? null : diviner.tagline}
         avatarUrl={heroBlocked ? null : getDivinerAvatarUrl(diviner.avatar_url)}
         coverImageUrl={heroBlocked ? null : getDivinerCoverImageUrl(diviner.cover_image_url)}
@@ -723,6 +728,7 @@ export default async function DivinerPage({ params, searchParams }: PageProps) {
                   bookPath={bookingPreview.bookPath}
                   durationMinutes={bookingPreview.durationMinutes}
                   serviceName={bookingPreview.serviceName}
+                  refParam={refParam}
                   allSlots
                 />
               </div>
@@ -1012,7 +1018,7 @@ export default async function DivinerPage({ params, searchParams }: PageProps) {
                   {diviner.display_name}? Give the gift of cosmic insight.
                 </p>
                 <Link
-                  href={`/${username}/gift`}
+                  href={`/${username}/gift${refParam}`}
                   className="inline-flex h-11 items-center gap-2 rounded-lg border border-gold/40 px-6 text-sm font-medium text-gold transition-all hover:border-gold/70 hover:bg-gold/5"
                 >
                   Purchase Gift Certificate
