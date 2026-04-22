@@ -788,7 +788,6 @@ function OnboardingContent() {
             is_enabled: true,
             enabled_at: now,
             is_published: true,         // auto-publish — diviner explicitly chose this service
-            publish_status: "published",
             published_at: now,
           }))
         );

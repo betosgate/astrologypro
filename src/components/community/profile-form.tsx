@@ -358,27 +358,29 @@ export function CommunityProfileForm({ member }: CommunityProfileFormProps) {
           </button>
         </CardHeader>
         {showQuestionnaire && (
-          <CardContent className="space-y-4">
-            {[
-              { label: "What is your personality type?", value: personality, set: setPersonality },
-              { label: "What are your key strengths?", value: strengths, set: setStrengths },
-              { label: "Which life areas are most fulfilling?", value: lifeAreasFulfilling, set: setLifeAreasFulfilling },
-              { label: "Which life areas need improvement?", value: lifeAreasImprovement, set: setLifeAreasImprovement },
-              { label: "What are your long-term goals?", value: longTermGoals, set: setLongTermGoals },
-              { label: "Any major life events recently?", value: majorLifeEvents, set: setMajorLifeEvents },
-              { label: "What is your main concern?", value: mainConcern, set: setMainConcern },
-              { label: "Anything else you'd like to share?", value: additionalInfo, set: setAdditionalInfo },
-            ].map((field) => (
-              <div key={field.label} className="space-y-2">
-                <Label className="text-sm">{field.label}</Label>
-                <Textarea
-                  value={field.value}
-                  onChange={(e) => field.set(e.target.value)}
-                  rows={2}
-                  className="resize-none"
-                />
-              </div>
-            ))}
+          <CardContent>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {[
+                { label: "What is your personality type?", value: personality, set: setPersonality },
+                { label: "What are your key strengths?", value: strengths, set: setStrengths },
+                { label: "Which life areas are most fulfilling?", value: lifeAreasFulfilling, set: setLifeAreasFulfilling },
+                { label: "Which life areas need improvement?", value: lifeAreasImprovement, set: setLifeAreasImprovement },
+                { label: "What are your long-term goals?", value: longTermGoals, set: setLongTermGoals },
+                { label: "Any major life events recently?", value: majorLifeEvents, set: setMajorLifeEvents },
+                { label: "What is your main concern?", value: mainConcern, set: setMainConcern },
+                { label: "Anything else you'd like to share?", value: additionalInfo, set: setAdditionalInfo },
+              ].map((field) => (
+                <div key={field.label} className="space-y-2">
+                  <Label className="text-sm">{field.label}</Label>
+                  <Textarea
+                    value={field.value}
+                    onChange={(e) => field.set(e.target.value)}
+                    rows={1}
+                    className="resize-none min-h-[52px]"
+                  />
+                </div>
+              ))}
+            </div>
           </CardContent>
         )}
       </Card>

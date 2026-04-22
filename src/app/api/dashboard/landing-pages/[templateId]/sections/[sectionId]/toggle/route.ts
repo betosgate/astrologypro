@@ -51,7 +51,7 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
   }
 
   const { data: block } = await admin
-    .from("service_landing_page_sections")
+    .from("diviner_service_blocks")
     .select("id, section_type, slot")
     .eq("id", sectionId)
     .eq("diviner_id", diviner.id)
@@ -60,7 +60,7 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
   if (!block) return problem(404, "Block not found");
 
   const { data: updated, error } = await admin
-    .from("service_landing_page_sections")
+    .from("diviner_service_blocks")
     .update({ is_enabled: body.is_enabled, updated_by: user.id })
     .eq("id", sectionId)
     .eq("diviner_id", diviner.id)

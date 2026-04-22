@@ -79,19 +79,10 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
 
   // Fetch all blocks the diviner owns for this template, with their slots.
   const { data: existingBlocks } = await admin
-    .from("service_landing_page_sections")
+    .from("diviner_service_blocks")
     .select("id, slot")
     .eq("diviner_id", diviner.id)
-    .in(
-      "landing_page_id",
-      (
-        await admin
-          .from("service_landing_pages")
-          .select("id")
-          .eq("diviner_id", diviner.id)
-          .eq("service_template_id", templateId)
-      ).data?.map((r) => r.id) ?? [],
-    );
+    .eq("service_template_id", templateId);
 
   const blockMap = new Map(existingBlocks?.map((b) => [b.id, b]) ?? []);
 
@@ -119,7 +110,7 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
   const errors: string[] = [];
   for (const item of sectionOrder) {
     const { error } = await admin
-      .from("service_landing_page_sections")
+      .from("diviner_service_blocks")
       .update({ display_order: item.display_order, updated_by: user.id })
       .eq("id", item.id)
       .eq("diviner_id", diviner.id);
@@ -132,9 +123,10 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
 
   // Return the freshly-ordered slot.
   const { data: updated } = await admin
-    .from("service_landing_page_sections")
+    .from("diviner_service_blocks")
     .select("id, slot, section_type, display_order, is_enabled, title")
     .eq("diviner_id", diviner.id)
+    .eq("service_template_id", templateId)
     .eq("slot", slot)
     .order("display_order", { ascending: true });
 

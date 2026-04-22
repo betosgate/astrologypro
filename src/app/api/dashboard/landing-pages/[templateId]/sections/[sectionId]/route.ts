@@ -63,7 +63,7 @@ async function resolveBlock(
   divinerId: string,
 ) {
   const { data } = await admin
-    .from("service_landing_page_sections")
+    .from("diviner_service_blocks")
     .select(
       "id, diviner_id, section_type, slot, title, content_json, body_html, primary_image_url, display_order, is_enabled, moderation_status, moderation_note, created_at, updated_at",
     )
@@ -138,9 +138,6 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
       }
     }
     updates.content_json = contentJson;
-    // Deploy-1 compat: keep draft_content_json in sync so legacy readers
-    // don't see a stale value until Deploy 2 drops the column.
-    updates.draft_content_json = contentJson;
   }
 
   // body_html — strict sanitize
@@ -148,7 +145,6 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
     const raw = body.body_html;
     if (raw === null || raw === "") {
       updates.body_html = null;
-      updates.draft_body_html = null;
     } else if (typeof raw !== "string") {
       return problem(422, "Invalid body_html", "body_html must be a string or null.");
     } else if (block.section_type !== "html") {
@@ -161,7 +157,6 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
       try {
         const safe = sanitizeDivinerHtmlStrict(raw);
         updates.body_html = safe;
-        updates.draft_body_html = safe;
       } catch (err) {
         if (err instanceof HtmlSanitizationError) {
           return problem(
@@ -207,7 +202,7 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
   }
 
   const { data: updated, error } = await admin
-    .from("service_landing_page_sections")
+    .from("diviner_service_blocks")
     .update(updates)
     .eq("id", sectionId)
     .eq("diviner_id", diviner.id)
@@ -236,7 +231,7 @@ export async function DELETE(_req: NextRequest, { params }: RouteParams) {
   if (!block) return problem(404, "Block not found");
 
   const { error } = await admin
-    .from("service_landing_page_sections")
+    .from("diviner_service_blocks")
     .delete()
     .eq("id", sectionId)
     .eq("diviner_id", diviner.id);

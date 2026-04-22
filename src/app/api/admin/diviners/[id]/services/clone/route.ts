@@ -92,7 +92,6 @@ export async function POST(
       is_enabled: true,
       // V2: cloned rows are never live. Target diviner publishes themselves.
       is_published: false,
-      publish_status: "draft",
       enabled_at: now,
       enabled_by: user.id,
       published_at: null,

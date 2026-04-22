@@ -24,7 +24,6 @@ interface DestinationService {
   price: number;
   duration_minutes: number;
   is_published: boolean;
-  publish_status: string;
 }
 
 interface DestinationOptions {
