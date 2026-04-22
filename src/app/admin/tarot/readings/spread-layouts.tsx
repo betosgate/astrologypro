@@ -400,10 +400,14 @@ export function CelticCrossLayout({ positionLabels, drawnCards, onReveal, onCard
   //  Row 4:              [2]                    [6]
   // Card 1 (Problem) placed below card 0, no rotation
 
-  const CW = 140;
-  const CH = 200;
-  const SCW = 130;
-  const SCH = 180;
+const is599OrBelow = useMaxWidth(337);
+const is1440OrBelow = useMaxWidth(1540);
+
+const CW = is599OrBelow ? 210 : is1440OrBelow ? 150 : 180;
+const CH = is599OrBelow ? 310 : is1440OrBelow ? 210 : 260;
+
+const SCW = CW;
+const SCH = CH;
 
   return (
     <div className="flex flex-col items-center">
@@ -459,7 +463,7 @@ export function AstrologicalLayout({ positionLabels, drawnCards, onReveal, onCar
   // grp5: [8 Sagittarius (top-right outer)] — [4 Leo (bottom-right outer)]
   // grp6: [7 Scorpio (top-right inner)] — [5 Virgo (bottom-right inner)]
   const is599OrBelow = useMaxWidth(399);
-  const is1440OrBelow = useMaxWidth(1440);
+  const is1440OrBelow = useMaxWidth(1540);
   const CW = is599OrBelow ? 210 : is1440OrBelow ? 150 : 180;
   const CH = is599OrBelow ? 310 : is1440OrBelow ? 210 : 260;
 
@@ -475,32 +479,32 @@ export function AstrologicalLayout({ positionLabels, drawnCards, onReveal, onCar
       <div className="relative mx-auto hidden w-full min-[1401px]:block" style={{ height: 1700 }}>
 
         {/* Col 3 (center): Capricorn (top) + Cancer (bottom) — full height */}
-        <div className="absolute left-1/2 -translate-x-1/2 top-[calc(var(--spacing)*48)] flex flex-col justify-between items-center" style={{ height: 1370 }}>
+        <div className="absolute left-1/2 -translate-x-1/2 top-[calc(var(--spacing)*48)] flex flex-col justify-between items-center max-[1499px]:!top-[calc(var(--spacing)*73)] max-[1499px]:!h-[1120px]" style={{ height: 1370 }}>
           <CardSlot index={9} label={positionLabels[9]} drawn={drawnCards[9]} onReveal={onReveal} onCardClick={onCardClick} cardBackUrl={cardBackUrl} cardWidth={CW} cardHeight={CH} />
           <CardSlot index={3} label={positionLabels[3]} drawn={drawnCards[3]} onReveal={onReveal} onCardClick={onCardClick} cardBackUrl={cardBackUrl} cardWidth={CW} cardHeight={CH} />
         </div>
 
         {/* Col 2: Aquarius (top) + Gemini (bottom) */}
-        <div className="absolute flex flex-col justify-between items-center" style={{ left: '33%', transform: 'translateX(-50%)', top: '19%', height: '65%' }}>
+        <div className="absolute flex flex-col justify-between items-center max-[1499px]:!top-[23%] max-[1499px]:!h-[55%]" style={{ left: '33%', transform: 'translateX(-50%)', top: '19%', height: '65%' }}>
           <CardSlot index={10} label={positionLabels[10]} drawn={drawnCards[10]} onReveal={onReveal} onCardClick={onCardClick} cardBackUrl={cardBackUrl} cardWidth={CW} cardHeight={CH} />
           <CardSlot index={2} label={positionLabels[2]} drawn={drawnCards[2]} onReveal={onReveal} onCardClick={onCardClick} cardBackUrl={cardBackUrl} cardWidth={CW} cardHeight={CH} />
         </div>
 
         {/* Col 4: Sagittarius (top) + Leo (bottom) */}
-        <div className="absolute flex flex-col justify-between items-center" style={{ left: '67%', transform: 'translateX(-50%)', top: '19%', height: '65%' }}>
+        <div className="absolute flex flex-col justify-between items-center max-[1499px]:!top-[23%] max-[1499px]:!h-[55%]" style={{ left: '67%', transform: 'translateX(-50%)', top: '19%', height: '65%' }}>
           <CardSlot index={8} label={positionLabels[8]} drawn={drawnCards[8]} onReveal={onReveal} onCardClick={onCardClick} cardBackUrl={cardBackUrl} cardWidth={CW} cardHeight={CH} />
           <CardSlot index={4} label={positionLabels[4]} drawn={drawnCards[4]} onReveal={onReveal} onCardClick={onCardClick} cardBackUrl={cardBackUrl} cardWidth={CW} cardHeight={CH} />
         </div>
 
         {/* Col 1: Pisces (top) + Taurus (bottom) — inner left */}
-        <div className="absolute flex flex-col justify-between items-center" style={{ left: '17%', transform: 'translateX(-50%)', top: '27%', height: '49%' }}>
+        <div className="absolute flex flex-col justify-between items-center max-[1499px]:!top-[30%] max-[1499px]:!h-[43%]" style={{ left: '17%', transform: 'translateX(-50%)', top: '27%', height: '49%' }}>
           <CardSlot index={11} label={positionLabels[11]} drawn={drawnCards[11]} onReveal={onReveal} onCardClick={onCardClick} cardBackUrl={cardBackUrl} cardWidth={CW} cardHeight={CH} />
           <CardSlot index={1} label={positionLabels[1]} drawn={drawnCards[1]} onReveal={onReveal} onCardClick={onCardClick} cardBackUrl={cardBackUrl} cardWidth={CW} cardHeight={CH} />
         </div>
 
         {/* Col 5: Scorpio (top) + Virgo (bottom) — inner right */}
 
-        <div className="absolute flex flex-col justify-between items-center" style={{ left: '83%', transform: 'translateX(-50%)', top: '27%', height: '49%' }}>
+        <div className="absolute flex flex-col justify-between items-center max-[1499px]:!top-[30%] max-[1499px]:!h-[43%]" style={{ left: '83%', transform: 'translateX(-50%)', top: '27%', height: '49%' }}>
           <CardSlot index={7} label={positionLabels[7]} drawn={drawnCards[7]} onReveal={onReveal} onCardClick={onCardClick} cardBackUrl={cardBackUrl} cardWidth={CW} cardHeight={CH} />
           <CardSlot index={5} label={positionLabels[5]} drawn={drawnCards[5]} onReveal={onReveal} onCardClick={onCardClick} cardBackUrl={cardBackUrl} cardWidth={CW} cardHeight={CH} />
         </div>

@@ -661,17 +661,23 @@ export default async function CommunityDashboardPage() {
   const relationshipChartCount = pcRelCharts.length;
 
   // ── Quick actions definition ───────────────────────────────────────────────
+  //
+  // Task 04: natal chart + transits now point at the canonical toolkit routes
+  // delivered in Tasks 02 (`/community/horoscope`) and existing
+  // `/community/transits`. The "missing birth data" branch still points to
+  // `/community/profile` because the user needs to complete their profile
+  // before the toolkit page can render a chart.
   const quickActions = [
     {
       icon: ownChartReady ? Star : Sparkles,
-      label: ownChartReady ? "View Charts" : "Generate Chart",
-      href: ownChartReady ? "/community/family" : "/community/profile",
+      label: ownChartReady ? "View Chart" : "Generate Chart",
+      href: ownChartReady ? "/community/horoscope" : "/community/profile",
       highlight: !ownChartReady,
     },
     {
       icon: TrendingUp,
       label: "Transits",
-      href: "/community/family",
+      href: "/community/transits",
       highlight: false,
     },
     {
@@ -1075,9 +1081,14 @@ export default async function CommunityDashboardPage() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold leading-tight">Your Natal Chart</p>
-                  <p className="text-xs text-emerald-600 mt-0.5">Birth data complete — ready to generate</p>
+                  <p className="text-xs text-emerald-600 mt-0.5">Birth data complete — open your chart</p>
+                  {/*
+                    Task 04: deep-link directly into the shared toolkit route
+                    instead of sending users back to the family list — the
+                    toolkit now renders the member's natal chart on demand.
+                  */}
                   <Button asChild variant="link" size="sm" className="h-auto p-0 mt-1 text-xs text-primary">
-                    <Link href="/community/family">View Charts →</Link>
+                    <Link href="/community/horoscope">View Chart →</Link>
                   </Button>
                 </div>
                 <Badge variant="outline" className="shrink-0 text-xs border-emerald-500/40 text-emerald-700">

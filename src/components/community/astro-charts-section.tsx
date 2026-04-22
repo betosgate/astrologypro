@@ -192,17 +192,31 @@ export function AstroChartsSection() {
                   { month: "long", day: "numeric", year: "numeric" }
                 )}
               </p>
+              {/*
+                Deep-link into the family-member detail route where the shared
+                HoroscopeToolkitPage now renders the chart (Task 03). Previous
+                link pointed at `/community/family` (the list) which required
+                an extra click to find the ready chart.
+              */}
               <Button asChild variant="outline" size="sm" className="w-full">
-                <Link href="/community/family">View Full Chart →</Link>
+                <Link href={`/community/family/${natalChart.id}`}>
+                  View Full Chart →
+                </Link>
               </Button>
             </div>
           ) : (
             <div className="space-y-2">
+              {/*
+                Task 04: keep empty-state copy honest — do not imply a generation
+                job is running. Link straight to the shared toolkit route
+                (`/community/horoscope`), where the user can complete birth
+                data or render their chart.
+              */}
               <p className="text-xs text-muted-foreground">
-                No natal chart found yet. Generate your chart from Family or Horoscope.
+                No natal chart found yet. Open Horoscope to generate or view your chart.
               </p>
               <Button asChild variant="outline" size="sm">
-                <Link href="/community/family">Add Family Member</Link>
+                <Link href="/community/horoscope">Open Horoscope</Link>
               </Button>
             </div>
           )}

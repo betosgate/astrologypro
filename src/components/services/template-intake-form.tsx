@@ -223,8 +223,7 @@ export function TemplateIntakeForm({
     setState((current) => ({ ...current, [personKey]: next }));
   }
 
-  async function handleSubmit(event: React.FormEvent) {
-    event.preventDefault();
+  async function continueFlow() {
     const validationError = validate();
     if (validationError) {
       toast.error(validationError);
@@ -251,8 +250,19 @@ export function TemplateIntakeForm({
     }
   }
 
+  async function handleSubmit(event: React.FormEvent) {
+    event.preventDefault();
+    await continueFlow();
+  }
+
+  const Container = embedded ? "div" : "form";
+
   return (
-    <form id="template-intake-form" className="space-y-6" onSubmit={handleSubmit}>
+    <Container
+      id="template-intake-form"
+      className="scroll-mt-20 space-y-6"
+      onSubmit={embedded ? undefined : handleSubmit}
+    >
       <div className="rounded-3xl border border-gold/15 bg-gold/[0.04] p-6 md:p-8">
         <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div>
@@ -371,9 +381,10 @@ export function TemplateIntakeForm({
             After this step you will continue into the booking flow.
           </p>
           <Button
-            type="submit"
+            type={embedded ? "button" : "submit"}
             className="bg-gold text-cosmos-900 hover:bg-gold-light"
             disabled={submitting}
+            onClick={embedded ? () => void continueFlow() : undefined}
           >
             {submitting ? (
               <Loader2 className="mr-2 size-4 animate-spin" />
@@ -384,6 +395,6 @@ export function TemplateIntakeForm({
           </Button>
         </div>
       </div>
-    </form>
+    </Container>
   );
 }
