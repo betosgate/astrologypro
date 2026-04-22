@@ -17,6 +17,13 @@ export default async function CommunityProfilePage() {
 
   if (!member) redirect("/get-started");
 
+  // Community Journey Progress reads the avatar off auth.users.user_metadata,
+  // so that is the source of truth for this form too.
+  const rawAvatarUrl = user.user_metadata?.avatar_url;
+  const initialAvatarUrl =
+    typeof rawAvatarUrl === "string" && rawAvatarUrl.trim() !== ""
+      ? rawAvatarUrl
+      : null;
 
   return (
     <div className="space-y-6">
@@ -26,7 +33,11 @@ export default async function CommunityProfilePage() {
       </div>
 
 
-      <CommunityProfileForm member={member} userId={user.id} />
+      <CommunityProfileForm
+        member={member}
+        userId={user.id}
+        initialAvatarUrl={initialAvatarUrl}
+      />
     </div>
   );
 }

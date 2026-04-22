@@ -8,11 +8,20 @@ import { BookingDetailSheet } from "@/components/dashboard/booking-detail-sheet"
 
 interface TraineeAppointment {
   id: string;
+  source: "bookings" | "admin_bookings";
   status: string;
   scheduled_at: string;
   duration_minutes: number;
   diviner_id: string | null;
   diviner_username: string | null;
+  /**
+   * Server-computed calendar reschedule page URL:
+   *   - Diviner booking → `/{divinerUsername}/reschedule/{id}`
+   *   - Admin booking   → `/book/{adminUsername}/reschedule/{id}`
+   * Null when we can't resolve a host username, in which case the drawer
+   * falls back to its inline datetime form.
+   */
+  reschedule_href: string | null;
   service_id: string | null;
   service_name: string | null;
   client_id: string | null;
@@ -148,7 +157,14 @@ export function TraineeAppointmentsSection() {
                   </p>
                 </div>
                 <BookingDetailSheet
+                  detailsOnly={a.source === "admin_bookings"}
+                  actionBasePath={
+                    a.source === "admin_bookings"
+                      ? `/api/trainee/appointments/admin-bookings/${a.id}`
+                      : null
+                  }
                   viewerRole="client"
+                  rescheduleHref={a.reschedule_href ?? null}
                   booking={{
                     id: a.id,
                     scheduled_at: a.scheduled_at,

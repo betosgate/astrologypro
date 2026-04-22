@@ -94,6 +94,14 @@ interface BookingDetailProps {
    * trainee/client booking drawer.
    */
   viewerRole?: "diviner" | "admin" | "client";
+  /**
+   * Explicit override for the Reschedule button's navigation target. When
+   * provided, the drawer turns the button into a Link to this href and
+   * skips its own host-type detection. Used by the trainee dashboard,
+   * which mixes diviner-owned and admin-owned bookings that live at
+   * different reschedule URLs.
+   */
+  rescheduleHref?: string | null;
 }
 
 // Format an ISO string into the value expected by <input type="datetime-local">
@@ -252,6 +260,7 @@ export function BookingDetailSheet({
   detailsOnly = false,
   actionBasePath = null,
   viewerRole = "diviner",
+  rescheduleHref = null,
 }: BookingDetailProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -811,7 +820,14 @@ export function BookingDetailSheet({
           {(canReschedule || canCancel || canRefund) && !showRescheduleForm && !showCancelForm && !showRefundForm && (
             <div className="flex flex-col gap-2">
               {canReschedule && (
-                useCalendarReschedulePage ? (
+                rescheduleHref ? (
+                  <Button asChild variant="outline" className="w-full gap-2">
+                    <Link href={rescheduleHref}>
+                      <CalendarClock className="size-4" />
+                      Reschedule
+                    </Link>
+                  </Button>
+                ) : useCalendarReschedulePage ? (
                   <Button
                     asChild
                     variant="outline"

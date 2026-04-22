@@ -31,6 +31,7 @@ interface MatchedClient {
 interface LegacyBookingRow {
   id: string;
   diviner_id: string | null;
+  owner_id?: string | null;
   client_id: string | null;
   service_id: string | null;
   scheduled_at: string;
@@ -119,7 +120,7 @@ export async function GET() {
     const { data } = await admin
       .from("bookings")
       .select(
-        `id, diviner_id, client_id, service_id, scheduled_at, duration_minutes,
+        `id, diviner_id, owner_id, client_id, service_id, scheduled_at, duration_minutes,
          status, base_price, total_amount, booking_notes, metadata, created_at,
          services:service_id ( id, name, slug, duration_minutes, template_id ),
          clients:client_id ( id, email, full_name ),
@@ -130,6 +131,38 @@ export async function GET() {
     bookings = (data ?? []) as LegacyBookingRow[];
   }
 
+  // Backfill diviner usernames for any bookings where the embed returned
+  // nothing — happens when the diviner_id → owner_id rename leaves some rows
+  // with owner_id populated and diviner_id null, so the embed join yields
+  // nothing. Without this, booking.username is undefined on the client and
+  // the drawer falls back to the inline datetime form instead of the
+  // calendar reschedule page.
+  const divinerUsernameById = new Map<string, string>();
+  const missingDivinerIds = new Set<string>();
+  for (const row of bookings) {
+    const embedded = Array.isArray(row.diviners)
+      ? row.diviners[0] ?? null
+      : row.diviners;
+    if (embedded?.username) {
+      if (row.diviner_id) divinerUsernameById.set(row.diviner_id, embedded.username);
+      if (row.owner_id) divinerUsernameById.set(row.owner_id, embedded.username);
+      continue;
+    }
+    const fallbackKey = row.diviner_id ?? row.owner_id ?? null;
+    if (fallbackKey && !divinerUsernameById.has(fallbackKey)) {
+      missingDivinerIds.add(fallbackKey);
+    }
+  }
+  if (missingDivinerIds.size > 0) {
+    const { data: divinerRows } = await admin
+      .from("diviners")
+      .select("id, username")
+      .in("id", Array.from(missingDivinerIds));
+    for (const row of divinerRows ?? []) {
+      if (row.username) divinerUsernameById.set(row.id as string, row.username as string);
+    }
+  }
+
   const { data: adminBookingRows, error: adminBookingsError } = await admin
     .from("admin_bookings")
     .select(
@@ -137,6 +170,25 @@ export async function GET() {
     )
     .ilike("client_email", email)
     .order("scheduled_at", { ascending: false });
+
+  // Resolve admin usernames so trainees can deep-link to the calendar
+  // reschedule page at `/book/<admin-username>/reschedule/<booking-id>`.
+  const adminUserIds = new Set<string>();
+  for (const row of adminBookingRows ?? []) {
+    if (row.admin_user_id) adminUserIds.add(row.admin_user_id as string);
+  }
+  const adminUsernameByUserId = new Map<string, string>();
+  if (adminUserIds.size > 0) {
+    const { data: adminUserRows } = await admin
+      .from("admin_users")
+      .select("user_id, username")
+      .in("user_id", Array.from(adminUserIds));
+    for (const row of adminUserRows ?? []) {
+      if (row.user_id && row.username) {
+        adminUsernameByUserId.set(row.user_id as string, row.username as string);
+      }
+    }
+  }
 
   const adminBookingsMissing =
     !!adminBookingsError &&
@@ -155,6 +207,18 @@ export async function GET() {
     const diviner = Array.isArray(booking.diviners)
       ? booking.diviners[0] ?? null
       : booking.diviners;
+    const resolvedUsername =
+      diviner?.username ??
+      (booking.diviner_id
+        ? divinerUsernameById.get(booking.diviner_id) ?? null
+        : null) ??
+      (booking.owner_id
+        ? divinerUsernameById.get(booking.owner_id) ?? null
+        : null);
+
+    const rescheduleHref = resolvedUsername
+      ? `/${resolvedUsername}/reschedule/${booking.id}`
+      : null;
 
     return {
       id: booking.id,
@@ -163,7 +227,8 @@ export async function GET() {
       scheduled_at: booking.scheduled_at,
       duration_minutes: Number(booking.duration_minutes ?? 0),
       diviner_id: booking.diviner_id ?? null,
-      diviner_username: diviner?.username ?? null,
+      diviner_username: resolvedUsername,
+      reschedule_href: rescheduleHref,
       service_id: booking.service_id ?? null,
       service_name: service?.name ?? null,
       client_id: booking.client_id ?? null,
@@ -190,6 +255,14 @@ export async function GET() {
         (client) => client.email.trim().toLowerCase() === email
       ) ?? null;
 
+    const adminUsername =
+      booking.admin_user_id
+        ? adminUsernameByUserId.get(booking.admin_user_id as string) ?? null
+        : null;
+    const rescheduleHref = adminUsername
+      ? `/book/${adminUsername}/reschedule/${booking.id}`
+      : null;
+
     return {
       id: booking.id,
       source: "admin_bookings" as const,
@@ -197,7 +270,8 @@ export async function GET() {
       scheduled_at: booking.scheduled_at,
       duration_minutes: Number(booking.duration_minutes ?? 0),
       diviner_id: booking.admin_user_id ?? null,
-      diviner_username: null,
+      diviner_username: adminUsername,
+      reschedule_href: rescheduleHref,
       service_id: null,
       service_name: "Appointment",
       client_id: matchedClient?.id ?? null,

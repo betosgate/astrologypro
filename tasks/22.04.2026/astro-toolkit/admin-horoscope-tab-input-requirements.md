@@ -356,3 +356,6 @@ If building UI, API, docs, or task breakdowns for `/admin/horoscope`, the minimu
 - horary additionally requires `question`
 - transits may optionally use future date selectors
 - most tabs optionally use `areaOfInquiry`
+
+
+Payload format : {"day":31,"month":3,"year":2000,"hour":13,"min":0,"lat":22.5726459,"lon":88.3638953,"tzone":5.5}
