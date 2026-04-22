@@ -8,6 +8,7 @@ export interface ServiceTemplateLanding {
   slug: string;
   description: string | null;
   long_description?: string | null;
+  image_url?: string | null;
   duration_minutes: number;
   base_price: number;
   overage_rate?: number | null;

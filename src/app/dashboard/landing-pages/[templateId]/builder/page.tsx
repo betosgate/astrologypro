@@ -53,7 +53,7 @@ function BuilderToolbar() {
         <LayoutTemplate className="size-4 text-gold/70 flex-shrink-0" />
         <div className="min-w-0">
           <p className="text-sm font-medium text-cream truncate leading-tight">
-            {landingPage?.custom_page_title || "Landing Page Builder"}
+            Landing Page Builder
           </p>
           {lastSavedAt && !isSaving && (
             <p className="text-[11px] text-silver/40">
