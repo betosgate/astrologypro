@@ -49,7 +49,7 @@ export async function GET() {
   const { data: divinerServices } = await admin
     .from("diviner_services")
     .select(
-      "id, template_id, price, is_enabled, is_published, publish_status, service_templates(id, name, slug, category, duration_minutes, base_price, is_active)"
+      "id, template_id, price, is_enabled, is_published, service_templates(id, name, slug, category, duration_minutes, base_price, is_active)"
     )
     .eq("diviner_id", diviner.id)
     .eq("is_enabled", true)
@@ -73,7 +73,6 @@ export async function GET() {
       price: typeof ds.price === "number" ? ds.price : Number(ds.price),
       duration_minutes: ds.service_templates.duration_minutes as number,
       is_published: ds.is_published as boolean,
-      publish_status: (ds.publish_status as string) ?? "draft",
     }))
     .sort((a: { category: string; template_name: string }, b: { category: string; template_name: string }) => {
       const cat = a.category.localeCompare(b.category);

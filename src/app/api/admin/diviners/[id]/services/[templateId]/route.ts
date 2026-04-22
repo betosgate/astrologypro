@@ -39,7 +39,6 @@ function problem(status: number, title: string, detail?: string) {
 const ADMIN_OWNED_FIELDS = new Set(["is_enabled", "price", "notes"]);
 const DIVINER_OWNED_FIELDS = new Set([
   "is_published",
-  "publish_status",
   "published_at",
   "unpublished_at",
 ]);
@@ -93,7 +92,6 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
   const oldValue: Record<string, unknown> = {
     is_enabled: ds.is_enabled,
     is_published: ds.is_published,
-    publish_status: ds.publish_status,
     price: ds.price,
     notes: ds.notes,
   };
@@ -121,7 +119,6 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
       // re-enables.
       patch.is_enabled = false;
       patch.is_published = false;
-      patch.publish_status = "unpublished";
       patch.disabled_at = now;
       patch.disabled_by = user.id;
       patch.unpublished_at = now;
