@@ -19,6 +19,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const template = await getServiceLandingTemplate(slug);
   if (!template) return { title: "Not Found" };
 
+  const socialImage = template.image_url ?? getServiceImageUrl(slug);
+
   return {
     title: `${template.name} | Choose Your Diviner | AstrologyPro`,
     description:
@@ -34,7 +36,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       type: "website",
       images: [
         {
-          url: getServiceImageUrl(slug) ? `${APP_URL}${getServiceImageUrl(slug)}` : `${APP_URL}/images/home/og-card.jpg`,
+          url: socialImage
+            ? (socialImage.startsWith("http") ? socialImage : `${APP_URL}${socialImage}`)
+            : `${APP_URL}/images/home/og-card.jpg`,
           width: 1200,
           height: 630,
           alt: template.name,
@@ -45,7 +49,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       card: "summary_large_image",
       title: `${template.name} | AstrologyPro`,
       description: template.description ?? `Choose a diviner for ${template.name} on AstrologyPro.`,
-      images: [getServiceImageUrl(slug) ? `${APP_URL}${getServiceImageUrl(slug)}` : `${APP_URL}/images/home/og-card.jpg`],
+      images: [
+        socialImage
+          ? (socialImage.startsWith("http") ? socialImage : `${APP_URL}${socialImage}`)
+          : `${APP_URL}/images/home/og-card.jpg`,
+      ],
     },
   };
 }

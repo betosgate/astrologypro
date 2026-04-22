@@ -34,6 +34,7 @@ export async function GET(req: NextRequest) {
     .from("service_templates")
     .select(`
       id, name, slug, category, description, long_description,
+      image_url,
       base_price, duration_minutes, is_primary, requires_birth_data,
       trigger_event, sort_order, display_order, is_active,
       icon_name, color, whats_included, who_its_for, faq,
@@ -180,6 +181,7 @@ export async function POST(req: NextRequest) {
     category,
     description: typeof body.description === "string" ? body.description.trim() : null,
     long_description: typeof body.long_description === "string" ? body.long_description.trim() : null,
+    image_url: typeof body.image_url === "string" ? body.image_url.trim() || null : null,
     base_price: basePrice,
     overage_rate: body.overage_rate != null ? Number(body.overage_rate) : null,
     duration_minutes: durationMinutes,
@@ -221,6 +223,7 @@ function buildUpdatePayload(body: Record<string, unknown>, userId: string) {
   if (typeof body.name === "string") payload.name = body.name.trim();
   if (typeof body.description === "string") payload.description = body.description.trim();
   if (typeof body.long_description === "string") payload.long_description = body.long_description.trim();
+  if (typeof body.image_url === "string") payload.image_url = body.image_url.trim() || null;
   if (body.base_price != null) payload.base_price = Number(body.base_price);
   if (body.overage_rate != null) payload.overage_rate = Number(body.overage_rate);
   if (body.duration_minutes != null) payload.duration_minutes = Number(body.duration_minutes);
