@@ -91,6 +91,7 @@ export async function GET() {
         diviner_id: b.diviner_id as string | null,
         service_id: b.service_id as string | null,
         service_name: flatSvc?.name ?? null,
+        client_id: (b.client_id as string | null) ?? null,
         client_name: flatClient?.full_name ?? null,
         client_email: flatClient?.email ?? null,
         base_price: Number(b.base_price ?? 0),

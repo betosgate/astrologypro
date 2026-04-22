@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAdminUser } from "@/lib/admin-auth";
+import { resolveBookingViewer } from "@/lib/booking-access";
 import { S3Client, ListObjectsV2Command, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
@@ -41,23 +42,16 @@ export async function GET(
     const admin = createAdminClient();
     const adminUser = await getAdminUser();
 
-    // Verify caller is the diviner or an admin
-    const { data: diviner } = await admin
-      .from("diviners")
-      .select("id")
-      .eq("user_id", user.id)
-      .maybeSingle();
-    if (!diviner && !adminUser) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
-    const { data: booking } = await admin
-      .from("bookings")
-      .select("id, diviner_id")
-      .eq("id", bookingId)
-      .maybeSingle();
-
-    if (!booking || (!adminUser && booking.diviner_id !== diviner?.id)) {
+    // Access is allowed for admin | diviner (owner) | client (email match).
+    // Trainees viewing their own admin-calendar booking via /trainee come
+    // in as "client". See lib/booking-access.ts for the full rules.
+    const access = await resolveBookingViewer(
+      admin,
+      bookingId,
+      user,
+      !!adminUser,
+    );
+    if (!access) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

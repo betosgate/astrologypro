@@ -2,13 +2,23 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAdminUser } from "@/lib/admin-auth";
+import { resolveBookingViewer } from "@/lib/booking-access";
 
 export const dynamic = "force-dynamic";
 
 /**
  * GET /api/bookings/[id]/session-details
  * Returns recording + session metadata for a single booking.
- * Only accessible by the diviner who owns the booking.
+ *
+ * Access is granted to three roles via `resolveBookingViewer`:
+ *   - admin
+ *   - the diviner who owns the booking
+ *   - the client whose authenticated email matches the booking's client
+ *     row (used by the /trainee "See Details" drawer so trainees can see
+ *     their own admin-calendar appointments).
+ *
+ * Writes remain diviner/admin-only (see reschedule/cancel/session-notes
+ * routes) — this endpoint is strictly read-only.
  */
 export async function GET(
   _request: NextRequest,
@@ -27,17 +37,18 @@ export async function GET(
     }
 
     const admin = createAdminClient();
-
     const adminUser = await getAdminUser();
 
-    // Verify the caller is the diviner for this booking unless they are an admin
-    const { data: diviner } = await admin
-      .from("diviners")
-      .select("id")
-      .eq("user_id", user.id)
-      .maybeSingle();
+    const access = await resolveBookingViewer(
+      admin,
+      id,
+      user,
+      !!adminUser,
+    );
 
-    if (!diviner && !adminUser) {
+    if (!access) {
+      // Could be not-found or not-authorized — return 403 either way to
+      // avoid leaking booking existence.
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -57,11 +68,6 @@ export async function GET(
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
-    // Enforce ownership
-    if (!adminUser && (booking.diviner_id as string) !== diviner?.id) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
     // Step 2 — fetch optional columns (recording, billing etc.)
     let extended: Record<string, unknown> = {};
     const { data: ext } = await admin
@@ -79,6 +85,9 @@ export async function GET(
       video_provider: extended.video_provider ?? null,
       total_amount: extended.total_amount ?? null,
       overage_amount: extended.overage_amount ?? null,
+      // Viewer role hint — useful to the client to hide mutation UIs
+      // belt-and-braces even if the caller forgot to pass viewerRole.
+      viewer_role: access.role,
     });
   } catch (err) {
     console.error("[session-details]", err);
