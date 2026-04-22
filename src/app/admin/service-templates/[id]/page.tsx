@@ -89,6 +89,7 @@ export default async function EditServiceTemplatePage({ params }: Props) {
     category:          template.category ?? "",
     description:       template.description ?? "",
     long_description:  template.long_description ?? "",
+    image_url:         template.image_url ?? "",
     base_price:        template.base_price?.toString() ?? "",
     overage_rate:      template.overage_rate?.toString() ?? "",
     duration_minutes:  template.duration_minutes?.toString() ?? "",
