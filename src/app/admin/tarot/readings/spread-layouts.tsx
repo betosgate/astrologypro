@@ -400,10 +400,14 @@ export function CelticCrossLayout({ positionLabels, drawnCards, onReveal, onCard
   //  Row 4:              [2]                    [6]
   // Card 1 (Problem) placed below card 0, no rotation
 
-  const CW = 140;
-  const CH = 200;
-  const SCW = 130;
-  const SCH = 180;
+const is599OrBelow = useMaxWidth(337);
+const is1440OrBelow = useMaxWidth(1540);
+
+const CW = is599OrBelow ? 210 : is1440OrBelow ? 150 : 180;
+const CH = is599OrBelow ? 310 : is1440OrBelow ? 210 : 260;
+
+const SCW = CW;
+const SCH = CH;
 
   return (
     <div className="flex flex-col items-center">
