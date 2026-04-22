@@ -52,6 +52,7 @@ import { MIGRATION_SQL as MIG_20260421000021 } from "@/data/migrations/202604210
 import { MIGRATION_SQL as MIG_20260421000040 } from "@/data/migrations/20260421000040_repair_landing_page_publish_drift";
 import { MIGRATION_SQL as MIG_20260421000050 } from "@/data/migrations/20260421000050_landing_page_slots_additive";
 import { MIGRATION_SQL as MIG_20260421000030_LPS } from "@/data/migrations/20260421000030_landing_page_slots_additive";
+import { MIGRATION_SQL as MIG_20260428000001_LPC } from "@/data/migrations/20260428000001_landing_page_cleanup_destructive";
 import { MIGRATION_SQL as MIG_20260422000001 } from "@/data/migrations/20260422000001_service_template_image_url";
 
 /**
@@ -517,6 +518,14 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Adds nullable image_url to service_templates so admin-managed template pages can use uploaded hero images instead of relying only on slug-based static service art.",
     sortKey: "20260422000001",
     sql: MIG_20260422000001,
+  },
+  "20260428000001_landing_page_cleanup_destructive": {
+    id: "20260428000001_landing_page_cleanup_destructive",
+    title: "⚠️ DESTRUCTIVE — Landing page V2 cleanup (Deploy 2)",
+    description:
+      "DESTRUCTIVE. Run only after the paired V2 code refactor is deployed and the existing landing-page content is disposable. Drops the Deploy-1 view diviner_service_blocks, backfills service_template_id onto service_landing_page_sections from landing_page_id, drops landing_page_id + its FK, drops the service_landing_pages container table CASCADE, drops diviner_services.publish_status, purges rows violating the tighter section_type ('text'|'image'|'html') and slot NOT NULL CHECK constraints, renames service_landing_page_sections → diviner_service_blocks (physical table), drops deprecated columns (is_system, is_draft, draft_*, published_*, instance_key, subtitle, images), tightens CHECKs, and rebuilds the slot+order index. Single BEGIN/COMMIT — rolls back on any failure. NOT idempotent.",
+    sortKey: "20260428000001",
+    sql: MIG_20260428000001_LPC,
   },
 };
 

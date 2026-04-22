@@ -140,10 +140,12 @@ export default async function TransitsPage() {
       )}
 
       {(familyCount ?? 0) > 0 && familyTransits.length === 0 && (
-        <Card className="border-amber-400/30 bg-amber-50/40">
+        <Card className="border-amber-500/40 bg-amber-500/10 dark:bg-amber-950/20">
           <CardContent className="py-4">
-            <p className="text-sm font-medium text-amber-800">Transits generating soon</p>
-            <p className="text-sm text-amber-700 mt-1">
+            <p className="text-sm font-medium text-amber-900 dark:text-amber-200">
+              Transits generating soon
+            </p>
+            <p className="text-sm text-amber-800 dark:text-amber-300/90 mt-1">
               Monthly transits are generated on the 1st of each month. Check back then, or ask an admin to trigger a manual run.
             </p>
           </CardContent>

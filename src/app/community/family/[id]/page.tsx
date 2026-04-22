@@ -122,8 +122,8 @@ function InviteStatus({ member }: { member: FamilyMember }) {
   }
   if (member.invite_sent_at) {
     return (
-      <div className="flex items-center gap-1.5 text-xs text-amber-600">
-        <Mail className="size-3.5" />
+      <div className="flex items-center gap-1.5 text-xs text-amber-700 dark:text-amber-300">
+        <Mail className="size-3.5 text-amber-500" />
         Invite sent {formatDate(member.invite_sent_at)}
         {member.invite_email && ` to ${member.invite_email}`}
       </div>
@@ -334,7 +334,7 @@ export default function FamilyMemberChartPage() {
               {member.birth_time ? (
                 <span>{member.birth_time}</span>
               ) : (
-                <span className="text-amber-600 text-xs">Unknown</span>
+                <span className="text-amber-700 dark:text-amber-300 text-xs">Unknown</span>
               )}
             </div>
             {(member.birth_city || member.birth_country) && (
@@ -393,7 +393,7 @@ export default function FamilyMemberChartPage() {
               ) : (
                 <Badge
                   variant="outline"
-                  className="border-amber-400/50 text-amber-700 bg-amber-50/50"
+                  className="border-amber-500/40 text-amber-700 dark:text-amber-300 bg-amber-500/10 dark:bg-amber-950/20"
                 >
                   Chart Pending
                 </Badge>
@@ -422,11 +422,11 @@ export default function FamilyMemberChartPage() {
               </Button>
             )}
             {!chart && hasBirthPlaceWithoutCoordinates && (
-              <div className="rounded-md border border-amber-400/30 bg-amber-50/50 px-3 py-2 text-xs text-amber-800">
+              <div className="rounded-md border border-amber-500/40 bg-amber-500/10 dark:bg-amber-950/20 px-3 py-2 text-xs text-amber-900 dark:text-amber-200">
                 Select the birth city from suggestions before generating a chart.{" "}
                 <Link
                   href={`/community/family/${id}/edit`}
-                  className="font-medium underline hover:text-amber-900"
+                  className="font-medium underline hover:text-amber-800 dark:hover:text-amber-100"
                 >
                   Edit birth place
                 </Link>
@@ -500,17 +500,19 @@ export default function FamilyMemberChartPage() {
 
       {/* ── Birth time warning ──────────────────────────────────────────── */}
       {!member.birth_time && (
-        <Card className="border-amber-400/30 bg-amber-50/40">
+        <Card className="border-amber-500/40 bg-amber-500/10 dark:bg-amber-950/20">
           <CardContent className="flex items-start gap-3 py-4">
-            <Info className="size-5 shrink-0 text-amber-600 mt-0.5" />
+            <Info className="size-5 shrink-0 text-amber-500 mt-0.5" />
             <div>
-              <p className="text-sm font-medium text-amber-800">Birth time missing</p>
-              <p className="text-sm text-amber-700">
+              <p className="text-sm font-medium text-amber-900 dark:text-amber-200">
+                Birth time missing
+              </p>
+              <p className="text-sm text-amber-800 dark:text-amber-300/90">
                 Add a birth time for greater accuracy — the ascendant and house
                 positions cannot be calculated without it.{" "}
                 <Link
                   href={`/community/family/${id}/edit`}
-                  className="underline hover:text-amber-900"
+                  className="underline hover:text-amber-700 dark:hover:text-amber-100"
                 >
                   Edit profile →
                 </Link>
