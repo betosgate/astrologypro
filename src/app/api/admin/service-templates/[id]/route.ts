@@ -154,6 +154,7 @@ export async function PATCH(
   strField("category");
   strField("description");
   strField("long_description");
+  strField("image_url");
   strField("trigger_event");
   strField("icon_name");
   strField("color");

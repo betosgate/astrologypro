@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import Image from "next/image";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,10 +17,15 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import {
   Plus,
   X,
   ArrowLeft,
+  Loader2,
+  Upload,
+  Expand,
+  ExternalLink,
 } from "lucide-react";
 import { toast } from "sonner";
 import { ServiceTemplatePublicPage } from "@/components/services/service-template-public-page";
@@ -32,6 +38,7 @@ export interface TemplateFormData {
   category: "astrology" | "tarot" | "";
   description: string;
   long_description: string;
+  image_url: string;
   base_price: string;
   overage_rate: string;
   duration_minutes: string;
@@ -55,6 +62,7 @@ export const DEFAULT_FORM: TemplateFormData = {
   category: "",
   description: "",
   long_description: "",
+  image_url: "",
   base_price: "",
   overage_rate: "",
   duration_minutes: "",
@@ -105,6 +113,7 @@ interface TemplateFormProps {
 export function TemplateForm({ initialData, templateId, divinerCount = 0 }: TemplateFormProps) {
   const router = useRouter();
   const isEdit = !!templateId;
+  const initialImageUrl = (initialData?.image_url ?? "").trim();
 
   const [form, setForm] = useState<TemplateFormData>({
     ...DEFAULT_FORM,
@@ -112,6 +121,37 @@ export function TemplateForm({ initialData, templateId, divinerCount = 0 }: Temp
   });
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadStatus, setUploadStatus] = useState<string | null>(null);
+  const [imageDialogOpen, setImageDialogOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const imageOverlayRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (imageDialogOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [imageDialogOpen]);
+
+  useEffect(() => {
+    if (!imageDialogOpen) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setImageDialogOpen(false);
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [imageDialogOpen]);
 
   // ── Auto-slug from name (create mode only) ────────────────────────────────
   function handleNameChange(name: string) {
@@ -166,6 +206,98 @@ export function TemplateForm({ initialData, templateId, divinerCount = 0 }: Temp
     setForm((f) => ({ ...f, faq: f.faq.filter((_, i) => i !== idx) }));
   }
 
+  async function handleTemplateImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("Template image must be 10 MB or smaller");
+      e.target.value = "";
+      return;
+    }
+
+    setUploadingImage(true);
+    setUploadProgress(0);
+    setUploadStatus("Preparing upload…");
+    try {
+      const json = await new Promise<{ url: string }>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("kind", "card");
+
+        xhr.open("POST", "/api/admin/tarot/upload");
+
+        xhr.upload.addEventListener("progress", (event) => {
+          if (!event.lengthComputable) return;
+          setUploadProgress(Math.min(95, Math.round((event.loaded / event.total) * 95)));
+        });
+
+        xhr.upload.addEventListener("load", () => {
+          setUploadProgress(95);
+          setUploadStatus("Processing image…");
+        });
+
+        xhr.onerror = () => reject(new Error("Upload failed"));
+        xhr.onload = () => {
+          let response: unknown = null;
+          try {
+            response = JSON.parse(xhr.responseText);
+          } catch {
+            reject(new Error("Upload failed"));
+            return;
+          }
+
+          if (xhr.status < 200 || xhr.status >= 300) {
+            const message =
+              response &&
+              typeof response === "object" &&
+              "error" in response &&
+              typeof response.error === "string"
+                ? response.error
+                : "Upload failed";
+            reject(new Error(message));
+            return;
+          }
+
+          if (!response || typeof response !== "object" || !("url" in response) || typeof response.url !== "string") {
+            reject(new Error("Upload failed"));
+            return;
+          }
+
+          setUploadProgress(100);
+          setUploadStatus("Upload complete.");
+          resolve({ url: response.url });
+        };
+
+        xhr.send(formData);
+      });
+
+      setForm((f) => ({ ...f, image_url: json.url }));
+      toast.success("Template image uploaded");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setUploadProgress(0);
+      setUploadStatus(null);
+      setUploadingImage(false);
+      e.target.value = "";
+    }
+  }
+
+  async function handleRemoveTemplateImage() {
+    const imageUrl = form.image_url.trim();
+    if (!imageUrl) return;
+
+    setForm((f) => ({ ...f, image_url: "" }));
+    setImageDialogOpen(false);
+    toast.success(
+      imageUrl === initialImageUrl
+        ? "Template image cleared. Save the form to apply the removal."
+        : "Template image removed",
+    );
+  }
+
   // ── Submit ────────────────────────────────────────────────────────────────
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -179,6 +311,7 @@ export function TemplateForm({ initialData, templateId, divinerCount = 0 }: Temp
         category: form.category,
         description: form.description,
         long_description: form.long_description,
+        image_url: form.image_url || null,
         base_price: parseFloat(form.base_price),
         overage_rate: form.overage_rate ? parseFloat(form.overage_rate) : null,
         duration_minutes: parseInt(form.duration_minutes),
@@ -576,6 +709,180 @@ export function TemplateForm({ initialData, templateId, divinerCount = 0 }: Temp
 
       <Separator />
 
+      <section className="space-y-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="space-y-1">
+            <h2 className="text-lg font-semibold">Template Image</h2>
+            <p className="text-sm text-muted-foreground">
+              Upload the hero image shown in the public template page and live preview.
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Accepted: JPG, PNG, WebP, GIF. Maximum size: 10 MB.
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploadingImage}
+          >
+            {uploadingImage ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Upload className="mr-2 h-4 w-4" />
+            )}
+            {form.image_url ? "Change Image" : "Upload Image"}
+          </Button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            className="hidden"
+            onChange={handleTemplateImageUpload}
+          />
+        </div>
+
+        <div className="rounded-2xl border bg-muted/10 p-4">
+          {uploadingImage && (
+            <div className="mb-4 rounded-xl border bg-background/60 p-3">
+              <div className="mb-2 flex items-center justify-between gap-3 text-xs text-muted-foreground">
+                <span>{uploadStatus ?? "Uploading image..."}</span>
+                <span>{uploadProgress}%</span>
+              </div>
+              <Progress value={uploadProgress} className="h-2 bg-white/10" />
+            </div>
+          )}
+
+          {form.image_url ? (
+            <div className="flex flex-col gap-4 md:flex-row md:items-center">
+              <button
+                type="button"
+                className="group relative h-28 w-full overflow-hidden rounded-xl border bg-muted/20 md:w-44 md:shrink-0"
+                onClick={() => setImageDialogOpen(true)}
+              >
+                <Image
+                  src={form.image_url}
+                  alt={form.name || "Template image preview"}
+                  fill
+                  className="object-cover transition-transform duration-200 group-hover:scale-[1.02]"
+                  sizes="176px"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-background/60 via-background/10 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
+                <span className="absolute bottom-2 right-2 inline-flex items-center gap-1 rounded-full bg-background/85 px-2 py-1 text-[11px] font-medium text-foreground shadow-sm">
+                  <Expand className="h-3 w-3" />
+                  Preview
+                </span>
+              </button>
+              <div className="flex min-w-0 flex-1 flex-col gap-3">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium">Current Hero Image</p>
+                  <p className="text-xs text-muted-foreground">
+                    Used on the public template page and in the live preview.
+                  </p>
+                  <p className="break-all text-xs text-muted-foreground">{form.image_url}</p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setImageDialogOpen(true)}
+                  >
+                    <Expand className="mr-2 h-4 w-4" />
+                    Preview Image
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploadingImage}
+                  >
+                    <Upload className="mr-2 h-4 w-4" />
+                    Replace
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="text-destructive hover:text-destructive"
+                    onClick={handleRemoveTemplateImage}
+                  >
+                    <X className="mr-2 h-4 w-4" />
+                    Remove
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex min-h-24 items-center justify-center rounded-xl border border-dashed bg-muted/20 px-4 text-sm text-muted-foreground">
+              No template image uploaded yet.
+            </div>
+          )}
+
+          {imageDialogOpen && form.image_url ? (
+            <div
+              ref={imageOverlayRef}
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+              onClick={(event) => {
+                if (event.target === imageOverlayRef.current) {
+                  setImageDialogOpen(false);
+                }
+              }}
+              role="dialog"
+              aria-modal="true"
+              aria-label={`Preview: ${form.name || "Template image"}`}
+            >
+              <div className="relative flex h-[85vh] w-full max-w-5xl flex-col rounded-lg border bg-background shadow-xl">
+                <div className="flex items-center justify-between border-b px-4 py-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">
+                      {form.name || "Template Image"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Public hero image preview
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      asChild
+                      className="gap-1.5 text-xs"
+                    >
+                      <a href={form.image_url} target="_blank" rel="noopener noreferrer">
+                        <ExternalLink className="size-3.5" />
+                        Open in tab
+                      </a>
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setImageDialogOpen(false)}
+                      aria-label="Close preview"
+                    >
+                      <X className="size-4" />
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="flex flex-1 items-center justify-center overflow-hidden rounded-b-lg bg-black p-4 md:p-6">
+                  <img
+                    src={form.image_url}
+                    alt={form.name || "Template image"}
+                    className="max-h-full max-w-full rounded-md object-contain"
+                  />
+                </div>
+              </div>
+            </div>
+          ) : null}
+        </div>
+      </section>
+
+      <Separator />
+
       {/* SEO */}
       <section className="space-y-4">
         <h2 className="text-lg font-semibold">SEO</h2>
@@ -640,6 +947,7 @@ export function TemplateForm({ initialData, templateId, divinerCount = 0 }: Temp
               slug: form.slug.trim() || "service-slug",
               description: form.description.trim() || "Short description preview.",
               long_description: form.long_description.trim() || null,
+              image_url: form.image_url.trim() || null,
               duration_minutes: Number.parseInt(form.duration_minutes, 10) || 60,
               base_price: Number.parseFloat(form.base_price) || 0,
               overage_rate: form.overage_rate ? Number.parseFloat(form.overage_rate) : null,

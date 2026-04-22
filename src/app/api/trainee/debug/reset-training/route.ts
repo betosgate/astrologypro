@@ -28,6 +28,17 @@ export async function POST() {
   }
 
   const admin = createAdminClient();
+  const email = user.email?.trim().toLowerCase() ?? null;
+
+  const { data: clientRows } = email
+    ? await admin
+        .from("clients")
+        .select("id")
+        .ilike("email", email)
+    : { data: [] as Array<{ id: string }> };
+  const clientIds = (clientRows ?? [])
+    .map((client) => client.id)
+    .filter((id): id is string => typeof id === "string" && id.length > 0);
 
   // 1. Delete all completions and progress
   await Promise.all([
@@ -37,6 +48,14 @@ export async function POST() {
     // trainee_tabbie_appointments history and records
     admin.from("trainee_tabbie_appointment_history").delete().eq("user_id", user.id),
     admin.from("trainee_tabbie_appointments").delete().eq("user_id", user.id),
+    // Legacy bookings linked through clients.id
+    ...(clientIds.length > 0
+      ? [admin.from("bookings").delete().in("client_id", clientIds)]
+      : []),
+    // Admin calendar bookings linked directly by stored client email
+    ...(email
+      ? [admin.from("admin_bookings").delete().ilike("client_email", email)]
+      : []),
   ]);
 
   // 2. Reset trainee fields

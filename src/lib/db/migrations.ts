@@ -53,6 +53,7 @@ import { MIGRATION_SQL as MIG_20260421000040 } from "@/data/migrations/202604210
 import { MIGRATION_SQL as MIG_20260421000050 } from "@/data/migrations/20260421000050_landing_page_slots_additive";
 import { MIGRATION_SQL as MIG_20260421000030_LPS } from "@/data/migrations/20260421000030_landing_page_slots_additive";
 import { MIGRATION_SQL as MIG_20260428000001_LPC } from "@/data/migrations/20260428000001_landing_page_cleanup_destructive";
+import { MIGRATION_SQL as MIG_20260422000001 } from "@/data/migrations/20260422000001_service_template_image_url";
 
 /**
  * Allowlisted migrations that the admin migration runner can execute.
@@ -509,6 +510,14 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Adds nullable slot column (CHECK 'about_diviner' | 'extra') to service_landing_page_sections. Backfills existing rows: hero/pricing/booking_cta → NULL (system), bio/about/testimonials → 'about_diviner', everything else → 'extra'. Creates CREATE OR REPLACE VIEW diviner_service_blocks as the V2 read surface (hides deprecated columns + system sections). Adds an index aligned with the V2 query pattern. COMMENT ON COLUMN annotations mark every column scheduled for Deploy 2 DROP. Strictly additive — no DROPs. Idempotent: WHERE slot IS NULL guard on backfill, IF NOT EXISTS on column/index, CREATE OR REPLACE on view.",
     sortKey: "20260421000030",
     sql: MIG_20260421000030_LPS,
+  },
+  "20260422000001_service_template_image_url": {
+    id: "20260422000001_service_template_image_url",
+    title: "Service template image URL",
+    description:
+      "Adds nullable image_url to service_templates so admin-managed template pages can use uploaded hero images instead of relying only on slug-based static service art.",
+    sortKey: "20260422000001",
+    sql: MIG_20260422000001,
   },
   "20260428000001_landing_page_cleanup_destructive": {
     id: "20260428000001_landing_page_cleanup_destructive",

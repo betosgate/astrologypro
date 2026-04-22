@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAdminUser } from "@/lib/admin-auth";
+import { resolveBookingViewer } from "@/lib/booking-access";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +21,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (booking.status === "canceled") return NextResponse.json({ error: "Already canceled" }, { status: 422 });
   if (booking.status === "completed") return NextResponse.json({ error: "Cannot cancel a completed booking" }, { status: 422 });
 
-  // Auth: token OR authenticated
+  // Auth: token OR authenticated client/diviner/admin
   let authorized = false;
   if (body.booking_token && body.booking_token === booking.booking_token) {
     authorized = true;
@@ -29,10 +30,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
       const adminUser = await getAdminUser();
-      if (adminUser) authorized = true;
-      if (booking.client_id === user.id) authorized = true;
-      const { data: diviner } = await admin.from("diviners").select("id").eq("user_id", user.id).single();
-      if (diviner?.id === booking.diviner_id) authorized = true;
+      const access = await resolveBookingViewer(admin, id, user, !!adminUser);
+      authorized = !!access;
     }
   }
   if (!authorized) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });

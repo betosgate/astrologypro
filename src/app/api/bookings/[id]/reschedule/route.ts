@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAdminUser } from "@/lib/admin-auth";
+import { resolveBookingViewer } from "@/lib/booking-access";
 
 export const dynamic = "force-dynamic";
 
@@ -28,7 +29,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: "Cannot reschedule a " + booking.status + " booking" }, { status: 422 });
   }
 
-  // Auth: token-based OR authenticated user (client or diviner)
+  // Auth: token-based OR authenticated user (client, diviner, or admin)
   let authorized = false;
 
   if (body.booking_token && body.booking_token === booking.booking_token) {
@@ -38,11 +39,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
       const adminUser = await getAdminUser();
-      if (adminUser) authorized = true;
-      // client or diviner owns this booking
-      if (booking.client_id === user.id) authorized = true;
-      const { data: diviner } = await admin.from("diviners").select("id").eq("user_id", user.id).single();
-      if (diviner?.id === booking.diviner_id) authorized = true;
+      const access = await resolveBookingViewer(admin, id, user, !!adminUser);
+      authorized = !!access;
     }
   }
 
