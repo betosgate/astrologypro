@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdminOrDiviner } from "@/lib/require-admin-or-diviner";
+import { requireAstroToolkitAccess } from "@/lib/astro-toolkit-access";
 import { callAstrologyApi } from "@/lib/astrology-api";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -99,10 +99,9 @@ async function updateSettingStatusById(id: string, nextStatus: "active" | "inact
 }
 
 export async function POST(req: NextRequest) {
-  // Admin OR registered diviner — the diviner-facing /admin/horoscope/session/
-  // route depends on this endpoint for compute.
-  const user = await requireAdminOrDiviner();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  // Shared toolkit runtime for admins, diviners, and active PM members.
+  const access = await requireAstroToolkitAccess();
+  if (!access) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
   const { endpoint, payload } = body as { endpoint: string; payload: Record<string, unknown> };

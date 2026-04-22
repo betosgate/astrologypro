@@ -49,6 +49,9 @@ import { MIGRATION_SQL as MIG_20260421000010 } from "@/data/migrations/202604210
 import { MIGRATION_SQL as MIG_20260421000001_ASA } from "@/data/migrations/20260421000001_affiliate_service_assignments";
 import { MIGRATION_SQL as MIG_20260421000020 } from "@/data/migrations/20260421000020_admin_booking_calendar";
 import { MIGRATION_SQL as MIG_20260421000021 } from "@/data/migrations/20260421000021_admin_bookings_gcal_event_id";
+import { MIGRATION_SQL as MIG_20260421000040 } from "@/data/migrations/20260421000040_repair_landing_page_publish_drift";
+import { MIGRATION_SQL as MIG_20260421000050 } from "@/data/migrations/20260421000050_landing_page_slots_additive";
+import { MIGRATION_SQL as MIG_20260421000030_LPS } from "@/data/migrations/20260421000030_landing_page_slots_additive";
 
 /**
  * Allowlisted migrations that the admin migration runner can execute.
@@ -481,6 +484,30 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Adds google_calendar_event_id to admin_bookings so we can track the synced Google Calendar event for later update/cancel. Additive + idempotent.",
     sortKey: "20260421000021",
     sql: MIG_20260421000021,
+  },
+  "20260421000040_repair_landing_page_publish_drift": {
+    id: "20260421000040_repair_landing_page_publish_drift",
+    title: "Repair landing-page publish drift (Deploy 0 hotfix)",
+    description:
+      "One-time data repair for the 2026-04-21 publish-drift incident. Resyncs diviner_services.is_published + publish_status for rows where the builder wrote service_landing_pages.status='published' but the diviner-services gate was never flipped, causing the dashboard to show 'Published' while the public URL 404'd. Scoped explicitly by diviner_services.id; WHERE clause self-excludes already-correct rows so re-running is a no-op. No schema changes.",
+    sortKey: "20260421000040",
+    sql: MIG_20260421000040,
+  },
+  "20260421000050_landing_page_slots_additive": {
+    id: "20260421000050_landing_page_slots_additive",
+    title: "Landing-page slots (additive Deploy 1 schema)",
+    description:
+      "Additive schema for the landing-page simplification. Adds nullable slot column to service_landing_page_sections with CHECK ('about_diviner' | 'extra' | NULL), backfills existing rows (hero/pricing/booking_cta → NULL; bio/about/testimonials → about_diviner; rest → extra), adds an index on (diviner_id, landing_page_id, slot, display_order) for enabled non-null-slot rows, creates the V2 read-only VIEW diviner_service_blocks (Deploy 2 rename target), and tags every column scheduled for removal with a deprecation COMMENT. No DROPs. Idempotent.",
+    sortKey: "20260421000050",
+    sql: MIG_20260421000050,
+  },
+  "20260421000030_landing_page_slots_additive": {
+    id: "20260421000030_landing_page_slots_additive",
+    title: "Landing page V2 — slot column + block view (additive)",
+    description:
+      "Adds nullable slot column (CHECK 'about_diviner' | 'extra') to service_landing_page_sections. Backfills existing rows: hero/pricing/booking_cta → NULL (system), bio/about/testimonials → 'about_diviner', everything else → 'extra'. Creates CREATE OR REPLACE VIEW diviner_service_blocks as the V2 read surface (hides deprecated columns + system sections). Adds an index aligned with the V2 query pattern. COMMENT ON COLUMN annotations mark every column scheduled for Deploy 2 DROP. Strictly additive — no DROPs. Idempotent: WHERE slot IS NULL guard on backfill, IF NOT EXISTS on column/index, CREATE OR REPLACE on view.",
+    sortKey: "20260421000030",
+    sql: MIG_20260421000030_LPS,
   },
 };
 

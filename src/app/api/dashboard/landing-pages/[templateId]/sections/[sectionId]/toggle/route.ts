@@ -1,13 +1,15 @@
 /**
  * PATCH /api/dashboard/landing-pages/[templateId]/sections/[sectionId]/toggle
- * Toggle a section's is_enabled flag.
- * System sections (hero, pricing, booking_cta) cannot be disabled.
+ *
+ * Toggle a block's `is_enabled` flag. Under V2 every block is diviner-owned
+ * (there is no "system" block concept), so there is no is_removable guard.
+ *
+ * Rewritten in Task 03 of the 2026-04-21 landing-page-simplification.
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { SECTION_TYPES } from "@/lib/landing-page-section-types";
 
 export const dynamic = "force-dynamic";
 
@@ -15,12 +17,19 @@ interface RouteParams {
   params: Promise<{ templateId: string; sectionId: string }>;
 }
 
+function problem(status: number, title: string, detail?: string) {
+  return NextResponse.json(
+    { type: "about:blank", title, status, ...(detail ? { detail } : {}) },
+    { status },
+  );
+}
+
 export async function PATCH(req: NextRequest, { params }: RouteParams) {
   const { sectionId } = await params;
 
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ status: 401, title: "Unauthorized" }, { status: 401 });
+  if (!user) return problem(401, "Unauthorized");
 
   const admin = createAdminClient();
   const { data: diviner } = await admin
@@ -28,51 +37,41 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
     .select("id")
     .eq("user_id", user.id)
     .maybeSingle();
-  if (!diviner) return NextResponse.json({ status: 403, title: "Forbidden" }, { status: 403 });
+  if (!diviner) return problem(403, "Forbidden");
 
   let body: { is_enabled?: boolean };
   try {
     body = await req.json();
   } catch {
-    return NextResponse.json({ status: 422, title: "Invalid JSON" }, { status: 422 });
+    return problem(422, "Invalid JSON");
   }
 
   if (typeof body.is_enabled !== "boolean") {
-    return NextResponse.json({ status: 422, title: "is_enabled (boolean) required" }, { status: 422 });
+    return problem(422, "Invalid is_enabled", "`is_enabled` must be boolean.");
   }
 
-  // Fetch section
-  const { data: section } = await admin
+  const { data: block } = await admin
     .from("service_landing_page_sections")
-    .select("id, section_type, is_system")
+    .select("id, section_type, slot")
     .eq("id", sectionId)
     .eq("diviner_id", diviner.id)
     .maybeSingle();
 
-  if (!section) {
-    return NextResponse.json({ status: 404, title: "Section not found" }, { status: 404 });
-  }
-
-  // Guard: non-removable system sections cannot be disabled
-  const typeDef = SECTION_TYPES[section.section_type];
-  if (!body.is_enabled && section.is_system && typeDef && !typeDef.is_removable) {
-    return NextResponse.json(
-      { type: "https://httpstatuses.com/422", title: "Cannot disable system section", status: 422, detail: `The "${section.section_type}" section is required and cannot be disabled` },
-      { status: 422 },
-    );
-  }
+  if (!block) return problem(404, "Block not found");
 
   const { data: updated, error } = await admin
     .from("service_landing_page_sections")
-    .update({ is_enabled: body.is_enabled, is_draft: true, updated_by: user.id })
+    .update({ is_enabled: body.is_enabled, updated_by: user.id })
     .eq("id", sectionId)
     .eq("diviner_id", diviner.id)
-    .select("*")
+    .select(
+      "id, diviner_id, section_type, slot, title, content_json, body_html, primary_image_url, display_order, is_enabled, moderation_status, moderation_note, created_at, updated_at",
+    )
     .single();
 
-  if (error) {
-    return NextResponse.json({ status: 500, title: "Update failed", detail: error.message }, { status: 500 });
+  if (error || !updated) {
+    return problem(500, "Update failed", error?.message ?? "unknown error");
   }
 
-  return NextResponse.json({ section: updated });
+  return NextResponse.json({ block: updated });
 }
