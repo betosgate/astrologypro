@@ -58,6 +58,10 @@ interface LegacyBookingRow {
       }>
     | null;
   clients: MatchedClient | MatchedClient[] | null;
+  diviners:
+    | { username: string | null }
+    | Array<{ username: string | null }>
+    | null;
 }
 
 interface AdminBookingRow {
@@ -118,7 +122,8 @@ export async function GET() {
         `id, diviner_id, client_id, service_id, scheduled_at, duration_minutes,
          status, base_price, total_amount, booking_notes, metadata, created_at,
          services:service_id ( id, name, slug, duration_minutes, template_id ),
-         clients:client_id ( id, email, full_name )`
+         clients:client_id ( id, email, full_name ),
+         diviners:diviner_id ( username )`
       )
       .in("client_id", clientIds)
       .order("scheduled_at", { ascending: false });
@@ -147,6 +152,9 @@ export async function GET() {
     const client = Array.isArray(booking.clients)
       ? booking.clients[0] ?? null
       : booking.clients;
+    const diviner = Array.isArray(booking.diviners)
+      ? booking.diviners[0] ?? null
+      : booking.diviners;
 
     return {
       id: booking.id,
@@ -155,6 +163,7 @@ export async function GET() {
       scheduled_at: booking.scheduled_at,
       duration_minutes: Number(booking.duration_minutes ?? 0),
       diviner_id: booking.diviner_id ?? null,
+      diviner_username: diviner?.username ?? null,
       service_id: booking.service_id ?? null,
       service_name: service?.name ?? null,
       client_id: booking.client_id ?? null,
@@ -188,6 +197,7 @@ export async function GET() {
       scheduled_at: booking.scheduled_at,
       duration_minutes: Number(booking.duration_minutes ?? 0),
       diviner_id: booking.admin_user_id ?? null,
+      diviner_username: null,
       service_id: null,
       service_name: "Appointment",
       client_id: matchedClient?.id ?? null,

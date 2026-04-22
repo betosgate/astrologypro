@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { BookingDetailSheet } from "@/components/dashboard/booking-detail-sheet";
 import { CalendarDays, Mail, StickyNote } from "lucide-react";
 
 export const metadata = { title: "My Bookings — Admin" };
@@ -226,6 +227,24 @@ function BookingRow({
             </span>
           </div>
         )}
+      </div>
+      <div className="shrink-0">
+        <BookingDetailSheet
+          booking={{
+            id: booking.id,
+            scheduled_at: booking.scheduled_at,
+            status: booking.status,
+            duration: booking.duration_minutes,
+            amount: 0,
+            notes: booking.client_note,
+            client_name: booking.client_name,
+            client_email: booking.client_email,
+            service_name: "Admin Calendar",
+          }}
+          detailsOnly
+          actionBasePath={`/api/admin/my-bookings/${booking.id}`}
+          viewerRole="admin"
+        />
       </div>
     </div>
   );
