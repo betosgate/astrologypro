@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -29,6 +30,13 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { ServiceTemplatePublicPage } from "@/components/services/service-template-public-page";
+import {
+  getAstrologyTemplateFormPreset,
+  getBaseServiceTemplateSlug,
+  getServiceTemplateToolkitTabSlug,
+  normalizeServiceTemplateFormConfig,
+  type ServiceTemplateFormConfig,
+} from "@/lib/service-template-form";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -53,6 +61,8 @@ export interface TemplateFormData {
   faq: { question: string; answer: string }[];
   seo_title: string;
   seo_description: string;
+  form_enabled: boolean;
+  form_config: ServiceTemplateFormConfig | null;
   is_active: boolean;
 }
 
@@ -77,6 +87,8 @@ export const DEFAULT_FORM: TemplateFormData = {
   faq: [],
   seo_title: "",
   seo_description: "",
+  form_enabled: true,
+  form_config: null,
   is_active: true,
 };
 
@@ -118,6 +130,7 @@ export function TemplateForm({ initialData, templateId, divinerCount = 0 }: Temp
   const [form, setForm] = useState<TemplateFormData>({
     ...DEFAULT_FORM,
     ...initialData,
+    form_config: normalizeServiceTemplateFormConfig(initialData?.form_config ?? null),
   });
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -152,6 +165,18 @@ export function TemplateForm({ initialData, templateId, divinerCount = 0 }: Temp
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [imageDialogOpen]);
+
+  useEffect(() => {
+    if (form.category !== "astrology" || !form.form_enabled) return;
+
+    const normalized = normalizeServiceTemplateFormConfig(form.form_config);
+    if (normalized) return;
+
+    const preset = getAstrologyTemplateFormPreset(form.slug);
+    if (!preset) return;
+
+    setForm((current) => ({ ...current, form_config: preset }));
+  }, [form.category, form.slug, form.form_enabled, form.form_config]);
 
   // ── Auto-slug from name (create mode only) ────────────────────────────────
   function handleNameChange(name: string) {
@@ -204,6 +229,40 @@ export function TemplateForm({ initialData, templateId, divinerCount = 0 }: Temp
 
   function removeFaq(idx: number) {
     setForm((f) => ({ ...f, faq: f.faq.filter((_, i) => i !== idx) }));
+  }
+
+  function updateFormConfig(updater: (current: ServiceTemplateFormConfig) => ServiceTemplateFormConfig) {
+    setForm((current) => {
+      const baseConfig =
+        normalizeServiceTemplateFormConfig(current.form_config) ??
+        getAstrologyTemplateFormPreset(current.slug) ??
+        {
+          version: 1,
+          kind: "astrology_intake" as const,
+          mode: "single" as const,
+          fields: {
+            areaOfInquiry: false,
+            question: false,
+            futureWeek: false,
+            futureMonth: false,
+          },
+        };
+
+      return {
+        ...current,
+        form_config: updater(baseConfig),
+      };
+    });
+  }
+
+  function resetAstrologyFormPreset() {
+    const preset = getAstrologyTemplateFormPreset(form.slug);
+    if (!preset) {
+      toast.error("No astrology preset is available for this slug yet.");
+      return;
+    }
+    setForm((current) => ({ ...current, form_config: preset }));
+    toast.success("Intake form reset to the product preset.");
   }
 
   async function handleTemplateImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -326,6 +385,8 @@ export function TemplateForm({ initialData, templateId, divinerCount = 0 }: Temp
         faq: form.faq.filter((f) => f.question || f.answer),
         seo_title: form.seo_title || null,
         seo_description: form.seo_description || null,
+        form_enabled: form.form_enabled,
+        form_config: normalizeServiceTemplateFormConfig(form.form_config),
         is_active: form.is_active,
       };
 
@@ -369,6 +430,11 @@ export function TemplateForm({ initialData, templateId, divinerCount = 0 }: Temp
   }
 
   // ── Render ────────────────────────────────────────────────────────────────
+  const resolvedFormConfig = normalizeServiceTemplateFormConfig(form.form_config);
+  const astrologyFormPreset = getAstrologyTemplateFormPreset(form.slug);
+  const toolkitTabSlug = getServiceTemplateToolkitTabSlug(form.slug);
+  const supportsAstrologyBuilder = form.category === "astrology";
+
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
       {/* Basic Info */}
@@ -540,6 +606,159 @@ export function TemplateForm({ initialData, templateId, divinerCount = 0 }: Temp
             />
             <Label htmlFor="requires_birth_data">Requires Birth Data</Label>
           </div>
+        </div>
+      </section>
+
+      <Separator />
+
+      <section className="space-y-4">
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-1">
+            <h2 className="text-lg font-semibold">Intake Form</h2>
+            <p className="text-sm text-muted-foreground">
+              Controls whether CTA buttons open a structured pre-booking form or go straight to booking.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Switch
+              id="form_enabled"
+              checked={form.form_enabled}
+              onCheckedChange={(value) => setForm((current) => ({ ...current, form_enabled: value }))}
+            />
+            <Label htmlFor="form_enabled">Enable Form</Label>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border bg-muted/20 p-4 space-y-4">
+          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+            <Badge variant={form.form_enabled ? "default" : "secondary"}>
+              {form.form_enabled ? "Enabled" : "Disabled"}
+            </Badge>
+            <Badge variant="outline">
+              {supportsAstrologyBuilder ? "Astrology Builder" : "Tarot Placeholder"}
+            </Badge>
+            {toolkitTabSlug && (
+              <Badge variant="outline" className="font-mono">
+                {toolkitTabSlug}
+              </Badge>
+            )}
+          </div>
+
+          {!form.form_enabled ? (
+            <p className="text-sm text-muted-foreground">
+              The public CTA will skip the form section and go directly to the booking route.
+            </p>
+          ) : supportsAstrologyBuilder ? (
+            <>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-medium">Astrology Intake Preset</p>
+                  <p className="text-xs text-muted-foreground">
+                    Person 1 is always required. Couple mode automatically adds Person 2.
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={resetAstrologyFormPreset}
+                  disabled={!astrologyFormPreset}
+                >
+                  Reset To Preset
+                </Button>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Form Mode</Label>
+                  <Select
+                    value={resolvedFormConfig?.mode ?? "single"}
+                    onValueChange={(value) =>
+                      updateFormConfig((current) => ({
+                        ...current,
+                        mode: value === "couple" ? "couple" : "single",
+                      }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="single">Single Person</SelectItem>
+                      <SelectItem value="couple">Couple</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="rounded-xl border bg-background/60 p-3 text-sm text-muted-foreground">
+                  <p className="font-medium text-foreground">Required birth blocks</p>
+                  <p className="mt-1">
+                    {resolvedFormConfig?.mode === "couple"
+                      ? "Person 1 and Person 2 birth details."
+                      : "Person 1 birth details only."}
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-2">
+                {[
+                  {
+                    key: "areaOfInquiry",
+                    label: "Area of Inquiry",
+                    hint: "Optional context for the reading focus.",
+                  },
+                  {
+                    key: "question",
+                    label: "Specific Question",
+                    hint: "Required when enabled. Best for horary-style requests.",
+                  },
+                  {
+                    key: "futureWeek",
+                    label: "Future Week",
+                    hint: "Useful for weekly transit products.",
+                  },
+                  {
+                    key: "futureMonth",
+                    label: "Future Month",
+                    hint: "Useful for monthly transit products.",
+                  },
+                ].map((field) => (
+                  <label
+                    key={field.key}
+                    className="flex items-start gap-3 rounded-xl border bg-background/60 p-4"
+                  >
+                    <Checkbox
+                      checked={
+                        resolvedFormConfig?.fields[
+                          field.key as keyof ServiceTemplateFormConfig["fields"]
+                        ] ?? false
+                      }
+                      onCheckedChange={(checked) =>
+                        updateFormConfig((current) => ({
+                          ...current,
+                          fields: {
+                            ...current.fields,
+                            [field.key]: checked === true,
+                          },
+                        }))
+                      }
+                    />
+                    <span className="space-y-1">
+                      <span className="block text-sm font-medium text-foreground">
+                        {field.label}
+                      </span>
+                      <span className="block text-xs text-muted-foreground">
+                        {field.hint}
+                      </span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </>
+          ) : (
+            <div className="rounded-xl border bg-background/60 p-4 text-sm text-muted-foreground">
+              Tarot templates can keep the form toggle enabled for future use, but the astrology-only builder is intentionally hidden until tarot field requirements are defined. Public CTA buttons will fall back to booking until a supported form config exists.
+            </div>
+          )}
         </div>
       </section>
 
@@ -947,6 +1166,8 @@ export function TemplateForm({ initialData, templateId, divinerCount = 0 }: Temp
               description: form.description.trim() || "Short description preview.",
               long_description: form.long_description.trim() || null,
               image_url: form.image_url.trim() || null,
+              form_enabled: form.form_enabled,
+              form_config: normalizeServiceTemplateFormConfig(form.form_config),
               duration_minutes: Number.parseInt(form.duration_minutes, 10) || 60,
               base_price: Number.parseFloat(form.base_price) || 0,
               overage_rate: form.overage_rate ? Number.parseFloat(form.overage_rate) : null,

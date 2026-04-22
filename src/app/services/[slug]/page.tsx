@@ -22,16 +22,16 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const socialImage = template.image_url ?? getServiceImageUrl(slug);
 
   return {
-    title: `${template.name} | Choose Your Diviner | AstrologyPro`,
+    title: `${template.name} | AstrologyPro`,
     description:
       template.description ??
-      `Learn about ${template.name}, then choose a diviner by availability or profile.`,
+      `Learn about ${template.name} and continue into the right next step for this service.`,
     alternates: { canonical: `${APP_URL}/services/${slug}` },
     openGraph: {
       title: `${template.name} | AstrologyPro`,
       description:
         template.description ??
-        `Choose a diviner for ${template.name} on AstrologyPro.`,
+        `Explore ${template.name} on AstrologyPro.`,
       url: `${APP_URL}/services/${slug}`,
       type: "website",
       images: [
@@ -48,7 +48,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     twitter: {
       card: "summary_large_image",
       title: `${template.name} | AstrologyPro`,
-      description: template.description ?? `Choose a diviner for ${template.name} on AstrologyPro.`,
+      description: template.description ?? `Explore ${template.name} on AstrologyPro.`,
       images: [
         socialImage
           ? (socialImage.startsWith("http") ? socialImage : `${APP_URL}${socialImage}`)

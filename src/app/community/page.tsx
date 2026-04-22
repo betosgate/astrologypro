@@ -525,9 +525,7 @@ export default async function CommunityDashboardPage() {
       String(user.user_metadata.avatar_url).trim() !== ""
   );
   const pcHasFullName = Boolean(member.full_name && member.full_name.trim() !== "");
-  const pcHasBirthData = Boolean(
-    client?.birth_date && client?.birth_time && client?.birth_city
-  );
+  const pcHasBirthData = hasDob && hasBirthTime && hasBirthCity;
   const pcHasNatalChart = pcFamilyMembers.some(
     (fm) =>
       fm.natal_chart != null &&
@@ -663,17 +661,23 @@ export default async function CommunityDashboardPage() {
   const relationshipChartCount = pcRelCharts.length;
 
   // ── Quick actions definition ───────────────────────────────────────────────
+  //
+  // Task 04: natal chart + transits now point at the canonical toolkit routes
+  // delivered in Tasks 02 (`/community/horoscope`) and existing
+  // `/community/transits`. The "missing birth data" branch still points to
+  // `/community/profile` because the user needs to complete their profile
+  // before the toolkit page can render a chart.
   const quickActions = [
     {
       icon: ownChartReady ? Star : Sparkles,
-      label: ownChartReady ? "View Charts" : "Generate Chart",
-      href: ownChartReady ? "/community/family" : "/community/profile",
+      label: ownChartReady ? "View Chart" : "Generate Chart",
+      href: ownChartReady ? "/community/horoscope" : "/community/profile",
       highlight: !ownChartReady,
     },
     {
       icon: TrendingUp,
       label: "Transits",
-      href: "/community/family",
+      href: "/community/transits",
       highlight: false,
     },
     {
@@ -1027,13 +1031,21 @@ export default async function CommunityDashboardPage() {
               <Link
                 key={action.label}
                 href={action.href}
-                className={`flex flex-col items-center gap-2 rounded-xl border p-3 text-center transition-colors hover:border-primary/40 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                className={`group relative flex flex-col items-center gap-2 rounded-xl border p-3 text-center transition-all hover:border-primary/40 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                   action.highlight
-                    ? "border-primary/30 bg-primary/5"
+                    ? "border-primary/30 bg-card shadow-[0_2px_8px_-2px_rgba(0,0,0,0.05)]"
                     : "border-border bg-card"
                 }`}
               >
-                <div className={`flex size-9 items-center justify-center rounded-full ${action.highlight ? "bg-primary/15" : "bg-muted"}`}>
+                {/* Pending action indicator dot */}
+                {action.highlight && (
+                  <span className="absolute -top-0.5 -right-0.5 flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                  </span>
+                )}
+
+                <div className={`flex size-9 items-center justify-center rounded-full transition-transform group-hover:scale-110 ${action.highlight ? "bg-primary/15" : "bg-muted"}`}>
                   <Icon className={`size-4 ${action.highlight ? "text-primary" : "text-muted-foreground"}`} aria-hidden="true" />
                 </div>
                 <span className="text-[11px] font-medium leading-tight text-foreground">
@@ -1077,9 +1089,14 @@ export default async function CommunityDashboardPage() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold leading-tight">Your Natal Chart</p>
-                  <p className="text-xs text-emerald-600 mt-0.5">Birth data complete — ready to generate</p>
+                  <p className="text-xs text-emerald-600 mt-0.5">Birth data complete — open your chart</p>
+                  {/*
+                    Task 04: deep-link directly into the shared toolkit route
+                    instead of sending users back to the family list — the
+                    toolkit now renders the member's natal chart on demand.
+                  */}
                   <Button asChild variant="link" size="sm" className="h-auto p-0 mt-1 text-xs text-primary">
-                    <Link href="/community/family">View Charts →</Link>
+                    <Link href="/community/horoscope">View Chart →</Link>
                   </Button>
                 </div>
                 <Badge variant="outline" className="shrink-0 text-xs border-emerald-500/40 text-emerald-700">

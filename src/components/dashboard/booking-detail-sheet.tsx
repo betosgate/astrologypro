@@ -102,6 +102,12 @@ interface BookingDetailProps {
    * different reschedule URLs.
    */
   rescheduleHref?: string | null;
+  /**
+   * Explicit join-session target. Used for booking-like records that do
+   * not use the legacy `/{username}/session/{bookingId}` path but still
+   * need the same prominent join action in the drawer.
+   */
+  joinHref?: string | null;
 }
 
 // Format an ISO string into the value expected by <input type="datetime-local">
@@ -261,6 +267,7 @@ export function BookingDetailSheet({
   actionBasePath = null,
   viewerRole = "diviner",
   rescheduleHref = null,
+  joinHref = null,
 }: BookingDetailProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -737,9 +744,16 @@ export function BookingDetailSheet({
           </div>
 
           {/* ── Join Session (upcoming/in-progress only) ─────────────── */}
-          {!isClientView &&
-            ["confirmed", "in_progress", "pending"].includes(booking.status) &&
-            booking.username && (
+          {["confirmed", "in_progress", "pending"].includes(booking.status) &&
+            (joinHref || (!detailsOnly && booking.username)) && (
+              joinHref ? (
+                <Button asChild className="w-full">
+                  <a href={joinHref}>
+                    <Video className="mr-2 size-4" />
+                    Join Session
+                  </a>
+                </Button>
+              ) : (
               <Button
                 className="w-full"
                 onClick={() => {
@@ -749,6 +763,7 @@ export function BookingDetailSheet({
                 <Video className="mr-2 size-4" />
                 Join Session
               </Button>
+              )
             )}
 
           {/* ── Open Service (toolkit) — diviner-only, hidden when unmapped ─ */}

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminUser } from "@/lib/admin-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { resolveServiceTemplateFormConfig } from "@/lib/service-template-form";
 
 export const dynamic = "force-dynamic";
 
@@ -142,6 +143,17 @@ export async function PATCH(
 
   // ── Build update payload ─────────────────────────────────────────────────────
   const payload: Record<string, unknown> = { updated_by: user.id };
+  const nextSlug =
+    typeof body.slug === "string" && body.slug.trim() ? body.slug.trim() : existing.slug;
+  const nextCategory =
+    body.category === "astrology" || body.category === "tarot"
+      ? body.category
+      : existing.category;
+  const normalizedFormConfig = resolveServiceTemplateFormConfig({
+    category: nextCategory,
+    slug: nextSlug,
+    form_config: "form_config" in body ? body.form_config : existing.form_config,
+  });
 
   const strField = (key: string, maxLen?: number) => {
     if (key in body && typeof body[key] === "string") {
@@ -174,6 +186,10 @@ export async function PATCH(
   if ("whats_included" in body && Array.isArray(body.whats_included)) payload.whats_included = body.whats_included;
   if ("who_its_for" in body && Array.isArray(body.who_its_for)) payload.who_its_for = body.who_its_for;
   if ("faq" in body && Array.isArray(body.faq)) payload.faq = body.faq;
+  if ("form_enabled" in body) payload.form_enabled = body.form_enabled === true;
+  if ("form_config" in body || "slug" in body || "category" in body) {
+    payload.form_config = normalizedFormConfig;
+  }
 
   const { data: updated, error: updateErr } = await admin
     .from("service_templates")

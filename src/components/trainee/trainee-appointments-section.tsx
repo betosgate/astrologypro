@@ -8,6 +8,7 @@ import { BookingDetailSheet } from "@/components/dashboard/booking-detail-sheet"
 
 interface TraineeAppointment {
   id: string;
+  source: "bookings" | "admin_bookings";
   status: string;
   scheduled_at: string;
   duration_minutes: number;
@@ -156,8 +157,19 @@ export function TraineeAppointmentsSection() {
                   </p>
                 </div>
                 <BookingDetailSheet
+                  detailsOnly={a.source === "admin_bookings"}
+                  actionBasePath={
+                    a.source === "admin_bookings"
+                      ? `/api/trainee/appointments/admin-bookings/${a.id}`
+                      : null
+                  }
                   viewerRole="client"
                   rescheduleHref={a.reschedule_href ?? null}
+                  joinHref={
+                    a.source === "admin_bookings"
+                      ? `/api/trainee/appointments/admin-bookings/${a.id}/join`
+                      : null
+                  }
                   booking={{
                     id: a.id,
                     scheduled_at: a.scheduled_at,

@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { canPubliclySellService } from "@/lib/payout-readiness";
+import type { ServiceTemplateFormConfig } from "@/lib/service-template-form";
 
 export interface ServiceTemplateLanding {
   id: string;
@@ -9,6 +10,8 @@ export interface ServiceTemplateLanding {
   description: string | null;
   long_description?: string | null;
   image_url?: string | null;
+  form_enabled?: boolean;
+  form_config?: ServiceTemplateFormConfig | null;
   duration_minutes: number;
   base_price: number;
   overage_rate?: number | null;

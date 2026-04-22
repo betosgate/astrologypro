@@ -596,7 +596,7 @@ export function AdminSidebar() {
         <span className="text-xs font-semibold uppercase tracking-widest text-amber-500">
           Admin
         </span>
-        <div className="ml-auto max-[768px]:w-full">
+        <div className="ml-auto max-[599px]:w-full">
           <GlobalSearch />
         </div>
       </header>
