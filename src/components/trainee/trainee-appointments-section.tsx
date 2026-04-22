@@ -12,6 +12,7 @@ interface TraineeAppointment {
   scheduled_at: string;
   duration_minutes: number;
   diviner_id: string | null;
+  diviner_username: string | null;
   service_id: string | null;
   service_name: string | null;
   client_id: string | null;
@@ -162,6 +163,7 @@ export function TraineeAppointmentsSection() {
                     client_id: a.client_id,
                     service_name: a.service_name ?? "Appointment",
                     metadata: a.metadata,
+                    username: a.diviner_username ?? undefined,
                   }}
                 />
               </div>
