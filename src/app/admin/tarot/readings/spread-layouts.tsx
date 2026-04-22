@@ -342,8 +342,10 @@ export function RelationshipLayout({ positionLabels, drawnCards, onReveal, onCar
   //              [8 Hopes]                        ← centered lower
   //   [0] [1] [2] [3] [4]                        ← full width row
   //          [6]     [7]                          ← centered bottom
-  const CW = 140;
-  const CH = 200;
+const is599OrBelow = useMaxWidth(399);
+  const is1440OrBelow = useMaxWidth(1540);
+  const CW = is599OrBelow ? 210 : is1440OrBelow ? 150 : 180;
+  const CH = is599OrBelow ? 310 : is1440OrBelow ? 210 : 260;
 
   return (
     <div className="flex flex-col items-center">
