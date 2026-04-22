@@ -1,7 +1,15 @@
-"use client";
+import Link from "next/link";
+import { notFound, redirect } from "next/navigation";
+import {
+  AlertCircle,
+  ArrowLeft,
+  CheckCircle2,
+  ChevronLeft,
+  Info,
+  Mail,
+  Star,
+} from "lucide-react";
 
-import { useEffect, useState, useCallback } from "react";
-import { useParams, useRouter } from "next/navigation";
 import {
   Card,
   CardContent,
@@ -11,234 +19,147 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { NatalWheel } from "@/components/community/natal-wheel";
 import { ProgressRing } from "@/components/community/progress-ring";
-import { calcFamilyProfileCompletion } from "@/lib/community/family-profile-completion";
-import {
-  ArrowLeft,
-  RefreshCw,
-  Info,
-  Loader2,
-  Star,
-  Pencil,
-  Mail,
-  CheckCircle2,
-} from "lucide-react";
-import Link from "next/link";
+
+import { HoroscopeToolkitPage } from "@/app/admin/horoscope/page";
+import { buildToolkitPrefillForm } from "@/lib/horoscope-toolkit-prefill";
+import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { formatDate } from "@/lib/format";
 import { formatBirthPlace } from "@/lib/community/birth-location";
+import { calcFamilyProfileCompletion } from "@/lib/community/family-profile-completion";
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
+import { FamilyMemberActions } from "./_family-member-actions";
 
-type PlanetPosition = {
-  name: string;
-  sign: string;
-  degree: number;
-  longitude: number;
-  retrograde: boolean;
+/**
+ * Community family-member natal chart route.
+ *
+ * Renders the shared admin Horoscope Toolkit restricted to the Nativity
+ * Birth Chart tab (`western_horoscope_v2`), prefilled from the
+ * selected family member's saved birth fields.
+ *
+ * Pattern mirrors `src/app/community/charts/detailed/page.tsx`:
+ *  1. server-side auth via the Next Supabase client,
+ *  2. membership gate on `community_members`,
+ *  3. ownership-scoped read on `community_family_members` (query-level
+ *     enforcement — `.eq("member_id", member.id).eq("id", id)` — so
+ *     this route never leaks another account's family member even
+ *     though the read uses the admin client),
+ *  4. `buildToolkitPrefillForm` → `HoroscopeToolkitPage`.
+ *
+ * The previous bespoke client implementation (NatalWheel + Ascendant/MC
+ * cards + Planet Placements grid, plus its own fetch-loop loading
+ * lifecycle) is preserved as `./_legacy-family-member-page.tsx` per the
+ * master task directive. See the JSX comment at the toolkit render site.
+ */
+
+export const metadata = {
+  title: "Family Member Natal Chart - AstrologyPro Community",
 };
 
-type NatalChartData = {
-  planets: PlanetPosition[];
-  ascendant: { sign: string; degree: number; longitude: number } | null;
-  mc: { sign: string; degree: number; longitude: number } | null;
-  generatedAt: string;
-  birthTime: string | null;
-  ageGroup: "child" | "adult";
-};
+export const dynamic = "force-dynamic";
 
-type FamilyMember = {
+const NATAL_TAB_SLUG = "western_horoscope_v2";
+
+interface PageProps {
+  params: Promise<{ id: string }>;
+}
+
+type FamilyMemberRow = {
   id: string;
   full_name: string;
-  date_of_birth: string;
+  date_of_birth: string | null;
   birth_time: string | null;
   birth_city: string | null;
   birth_country: string | null;
-  birth_lat?: number | null;
-  birth_lng?: number | null;
+  birth_lat: number | null;
+  birth_lng: number | null;
   relationship: string | null;
-  age_group: "child" | "adult";
-  natal_chart: NatalChartData | null;
+  age_group: "child" | "adult" | string | null;
+  natal_chart: Record<string, unknown> | null;
   chart_updated_at: string | null;
   notes: string | null;
-  // invite fields
   invite_email: string | null;
   invite_sent_at: string | null;
   invite_accepted_at: string | null;
   user_id: string | null;
 };
 
-// ---------------------------------------------------------------------------
-// Astrology lookup tables
-// ---------------------------------------------------------------------------
+export default async function CommunityFamilyMemberPage({ params }: PageProps) {
+  const { id } = await params;
 
-const PLANET_GLYPHS: Record<string, string> = {
-  Sun: "☉", Moon: "☽", Mercury: "☿", Venus: "♀",
-  Mars: "♂", Jupiter: "♃", Saturn: "♄", Uranus: "♅",
-  Neptune: "♆", Pluto: "♇",
-};
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-const PLANET_DESCRIPTIONS: Record<string, string> = {
-  Sun: "Core identity and ego",
-  Moon: "Emotions and subconscious",
-  Mercury: "Communication and intellect",
-  Venus: "Love, beauty and values",
-  Mars: "Drive, energy and action",
-  Jupiter: "Growth, luck and expansion",
-  Saturn: "Structure, karma and discipline",
-  Uranus: "Innovation and sudden change",
-  Neptune: "Dreams, spirituality and illusion",
-  Pluto: "Transformation and power",
-};
+  if (!user) redirect("/login");
 
-const ELEMENT: Record<string, string> = {
-  Aries: "Fire", Taurus: "Earth", Gemini: "Air", Cancer: "Water",
-  Leo: "Fire", Virgo: "Earth", Libra: "Air", Scorpio: "Water",
-  Sagittarius: "Fire", Capricorn: "Earth", Aquarius: "Air", Pisces: "Water",
-};
+  // Membership gate.
+  const { data: member } = await supabase
+    .from("community_members")
+    .select("id, full_name, membership_type, membership_status")
+    .eq("user_id", user.id)
+    .maybeSingle();
 
-const MODALITY: Record<string, string> = {
-  Aries: "Cardinal", Taurus: "Fixed", Gemini: "Mutable", Cancer: "Cardinal",
-  Leo: "Fixed", Virgo: "Mutable", Libra: "Cardinal", Scorpio: "Fixed",
-  Sagittarius: "Mutable", Capricorn: "Cardinal", Aquarius: "Fixed", Pisces: "Mutable",
-};
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function InviteStatus({ member }: { member: FamilyMember }) {
-  if (member.relationship?.toLowerCase() === "self") return null;
-
-  if (member.user_id && member.invite_accepted_at) {
-    return (
-      <div className="flex items-center gap-1.5 text-xs text-green-600">
-        <CheckCircle2 className="size-3.5" />
-        Login activated on {formatDate(member.invite_accepted_at)}
-      </div>
-    );
-  }
-  if (member.invite_sent_at) {
-    return (
-      <div className="flex items-center gap-1.5 text-xs text-amber-700 dark:text-amber-300">
-        <Mail className="size-3.5 text-amber-500" />
-        Invite sent {formatDate(member.invite_sent_at)}
-        {member.invite_email && ` to ${member.invite_email}`}
-      </div>
-    );
-  }
-  return (
-    <div className="text-xs text-muted-foreground">Not yet invited to log in</div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Main page
-// ---------------------------------------------------------------------------
-
-export default function FamilyMemberChartPage() {
-  const { id } = useParams<{ id: string }>();
-  const router = useRouter();
-
-  const [member, setMember] = useState<FamilyMember | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [generating, setGenerating] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [nowMs] = useState(() => Date.now());
-
-  // Invite state
-  const [inviteEmail, setInviteEmail] = useState("");
-  const [showInviteInput, setShowInviteInput] = useState(false);
-  const [sendingInvite, setSendingInvite] = useState(false);
-  const [inviteSuccess, setInviteSuccess] = useState(false);
-  const [inviteError, setInviteError] = useState<string | null>(null);
-
-  const loadMember = useCallback(async () => {
-    const res = await fetch("/api/community/family");
-    if (!res.ok) return;
-    const data = await res.json();
-    const found = (data.members ?? []).find((m: FamilyMember) => m.id === id);
-    if (!found) {
-      router.replace("/community/family");
-      return;
-    }
-    setMember(found);
-    setLoading(false);
-  }, [id, router]);
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    loadMember();
-  }, [loadMember]);
-
-  async function generateChart() {
-    setGenerating(true);
-    setError(null);
-    const res = await fetch("/api/community/generate-natal", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ familyMemberId: id }),
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      setError(data.detail ?? data.error ?? "Chart generation failed");
-    } else {
-      await loadMember();
-    }
-    setGenerating(false);
+  if (!member) redirect("/community");
+  if (member.membership_type !== "perennial_mandalism") redirect("/community");
+  if (member.membership_status !== "active") {
+    redirect("/join/community/resubscribe");
   }
 
-  async function sendInvite() {
-    if (!inviteEmail) return;
-    setSendingInvite(true);
-    setInviteError(null);
-    const res = await fetch(`/api/community/family/${id}/invite`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: inviteEmail }),
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      setInviteError(data.error ?? "Failed to send invite");
-    } else {
-      setInviteSuccess(true);
-      setShowInviteInput(false);
-      await loadMember();
-    }
-    setSendingInvite(false);
+  // Ownership-scoped read. Using the admin client to bypass RLS but
+  // constraining BOTH by `member_id` and `id` so we only ever return the
+  // row if it belongs to this member. A forged `id` from another
+  // account's URL will simply return null and 404 here.
+  const admin = createAdminClient();
+  const { data: familyRow } = await admin
+    .from("community_family_members")
+    .select(
+      [
+        "id",
+        "full_name",
+        "date_of_birth",
+        "birth_time",
+        "birth_city",
+        "birth_country",
+        "birth_lat",
+        "birth_lng",
+        "relationship",
+        "age_group",
+        "natal_chart",
+        "chart_updated_at",
+        "notes",
+        "invite_email",
+        "invite_sent_at",
+        "invite_accepted_at",
+        "user_id",
+      ].join(", "),
+    )
+    .eq("member_id", member.id)
+    .eq("id", id)
+    .maybeSingle();
+
+  if (!familyRow) {
+    notFound();
   }
 
-  // ---------------------------------------------------------------------------
-  // Loading / empty guard
-  // ---------------------------------------------------------------------------
+  const familyMember = familyRow as unknown as FamilyMemberRow;
+  const isSelf = (familyMember.relationship ?? "").toLowerCase() === "self";
+  const hasSavedChart = familyMember.natal_chart != null;
 
-  if (loading) {
-    return (
-      <div className="flex justify-center py-20">
-        <Loader2 className="size-6 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
-
-  if (!member) return null;
-
-  const chart = member.natal_chart;
-  const dob = new Date(member.date_of_birth + "T12:00:00");
-  const ageYears = Math.floor(
-    (nowMs - dob.getTime()) / (365.25 * 24 * 3600 * 1000)
-  );
-
-  // Profile completion
+  // Profile completion ring — legacy helper reused verbatim.
   const completion = calcFamilyProfileCompletion({
-    full_name: member.full_name,
-    date_of_birth: member.date_of_birth,
-    birth_time: member.birth_time,
-    birth_city: member.birth_city,
-    birth_country: member.birth_country,
-    relationship: member.relationship,
-    natal_chart: member.natal_chart,
+    full_name: familyMember.full_name,
+    date_of_birth: familyMember.date_of_birth,
+    birth_time: familyMember.birth_time,
+    birth_city: familyMember.birth_city,
+    birth_country: familyMember.birth_country,
+    relationship: familyMember.relationship,
+    // Pass the saved chart object cast to the completion helper's expected
+    // shape; we only need its truthiness for the completion percent.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    natal_chart: familyMember.natal_chart as any,
   });
 
   const ringColor =
@@ -249,17 +170,55 @@ export default function FamilyMemberChartPage() {
       : "hsl(25, 90%, 55%)";
 
   const hasBirthCoordinates =
-    Number.isFinite(Number(member.birth_lat)) &&
-    Number.isFinite(Number(member.birth_lng));
-  const hasBirthDataForChart =
-    Boolean(member.date_of_birth && member.birth_city && member.birth_country) &&
-    hasBirthCoordinates;
+    Number.isFinite(Number(familyMember.birth_lat)) &&
+    Number.isFinite(Number(familyMember.birth_lng));
   const hasBirthPlaceWithoutCoordinates =
-    Boolean(member.birth_city || member.birth_country) && !hasBirthCoordinates;
+    Boolean(familyMember.birth_city || familyMember.birth_country) &&
+    !hasBirthCoordinates;
 
-  // ---------------------------------------------------------------------------
-  // Render
-  // ---------------------------------------------------------------------------
+  // Toolkit chart-ready check — stricter than legacy profile completion.
+  const chartReadyMissing: string[] = [];
+  if (!familyMember.date_of_birth) chartReadyMissing.push("Date of birth");
+  if (!familyMember.birth_time) chartReadyMissing.push("Birth time");
+  if (!familyMember.birth_city) chartReadyMissing.push("Birth city");
+  if (!familyMember.birth_country) chartReadyMissing.push("Birth country");
+  if (!hasBirthCoordinates) chartReadyMissing.push("Birth coordinates (lat / lng)");
+
+  const hasBirthDataForChart = chartReadyMissing.length === 0;
+
+  // Derived display values.
+  const dob = familyMember.date_of_birth
+    ? new Date(familyMember.date_of_birth + "T12:00:00")
+    : null;
+  const ageYears = dob
+    ? Math.floor((Date.now() - dob.getTime()) / (365.25 * 24 * 3600 * 1000))
+    : null;
+
+  // Build the prefill only when chart-ready to avoid unnecessary
+  // Geoapify lookups from the helper.
+  let encodedPrefill: string | null = null;
+  if (hasBirthDataForChart) {
+    const prefill = await buildToolkitPrefillForm({
+      person1: {
+        fullName: familyMember.full_name,
+        dateOfBirth: familyMember.date_of_birth,
+        birthTime: familyMember.birth_time,
+        birthCity: familyMember.birth_city,
+        birthCountry: familyMember.birth_country,
+        birthLat: familyMember.birth_lat,
+        birthLng: familyMember.birth_lng,
+      },
+    });
+    if (prefill.person1.city) {
+      encodedPrefill = encodeURIComponent(JSON.stringify(prefill));
+    } else {
+      // Geoapify failed AND no lat/lng on file — force the missing-data
+      // branch so we don't render a toolkit that can't submit.
+      chartReadyMissing.push("Birth coordinates (lat / lng)");
+    }
+  }
+
+  const canRenderToolkit = encodedPrefill != null;
 
   return (
     <div className="space-y-6">
@@ -274,46 +233,35 @@ export default function FamilyMemberChartPage() {
           </Button>
           <div>
             <h1 className="text-xl font-bold tracking-tight">
-              {member.full_name}
+              {familyMember.full_name}
             </h1>
             <p className="text-sm text-muted-foreground">
-              {member.relationship ? `${member.relationship} · ` : ""}Age {ageYears} ·{" "}
-              {member.age_group === "child" ? "Simplified chart" : "Full natal chart"}
+              {familyMember.relationship ? `${familyMember.relationship} · ` : ""}
+              {ageYears != null ? `Age ${ageYears} · ` : ""}
+              {familyMember.age_group === "child"
+                ? "Simplified chart"
+                : "Full natal chart"}
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <Button size="sm" variant="outline" asChild>
-            <Link href={`/community/family/${id}/edit`}>
-              <Pencil className="mr-1.5 size-4" />
-              Edit Details
-            </Link>
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={generateChart}
-            disabled={generating}
-          >
-            {generating ? (
-              <Loader2 className="mr-2 size-4 animate-spin" />
-            ) : (
-              <RefreshCw className="mr-2 size-4" />
-            )}
-            {chart ? "Regenerate" : "Generate Chart"}
-          </Button>
-        </div>
       </div>
 
-      {error && (
-        <div className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          {error}
-        </div>
-      )}
+      {/* ── Interactive actions + Generate Chart + Invite form ──────────── */}
+      <FamilyMemberActions
+        id={familyMember.id}
+        hasSavedChart={hasSavedChart}
+        hasBirthDataForChart={hasBirthDataForChart}
+        hasBirthPlaceWithoutCoordinates={hasBirthPlaceWithoutCoordinates}
+        isSelf={isSelf}
+        invite={{
+          userId: familyMember.user_id,
+          sentAt: familyMember.invite_sent_at,
+          acceptedAt: familyMember.invite_accepted_at,
+        }}
+      />
 
       {/* ── Profile Details + Completion ───────────────────────────────── */}
       <div className="grid gap-4 sm:grid-cols-2">
-        {/* Birth details card */}
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm">Birth Details</CardTitle>
@@ -322,43 +270,51 @@ export default function FamilyMemberChartPage() {
             <div className="flex justify-between">
               <span className="text-muted-foreground">Date of birth</span>
               <span>
-                {dob.toLocaleDateString("en-US", {
-                  month: "long",
-                  day: "numeric",
-                  year: "numeric",
-                })}
+                {dob
+                  ? dob.toLocaleDateString("en-US", {
+                      month: "long",
+                      day: "numeric",
+                      year: "numeric",
+                    })
+                  : "—"}
               </span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Birth time</span>
-              {member.birth_time ? (
-                <span>{member.birth_time}</span>
+              {familyMember.birth_time ? (
+                <span>{familyMember.birth_time}</span>
               ) : (
-                <span className="text-amber-700 dark:text-amber-300 text-xs">Unknown</span>
+                <span className="text-amber-700 dark:text-amber-300 text-xs">
+                  Unknown
+                </span>
               )}
             </div>
-            {(member.birth_city || member.birth_country) && (
+            {(familyMember.birth_city || familyMember.birth_country) && (
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Birth place</span>
-                <span>{formatBirthPlace(member.birth_city, member.birth_country)}</span>
+                <span>
+                  {formatBirthPlace(
+                    familyMember.birth_city,
+                    familyMember.birth_country,
+                  )}
+                </span>
               </div>
             )}
-            {member.relationship && (
+            {familyMember.relationship && (
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Relationship</span>
-                <span>{member.relationship}</span>
+                <span>{familyMember.relationship}</span>
               </div>
             )}
-            {member.notes && (
+            {familyMember.notes && (
               <div className="pt-1">
                 <p className="text-muted-foreground text-xs mb-0.5">Notes</p>
-                <p className="text-xs">{member.notes}</p>
+                <p className="text-xs">{familyMember.notes}</p>
               </div>
             )}
           </CardContent>
         </Card>
 
-        {/* Profile completion + chart status */}
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm">Profile Status</CardTitle>
@@ -372,7 +328,9 @@ export default function FamilyMemberChartPage() {
                 color={ringColor}
               />
               <div className="min-w-0">
-                <p className="text-sm font-medium">{completion.percent}% complete</p>
+                <p className="text-sm font-medium">
+                  {completion.percent}% complete
+                </p>
                 {completion.missing.length > 0 && (
                   <p className="text-xs text-muted-foreground mt-0.5 leading-snug">
                     Missing:{" "}
@@ -384,9 +342,8 @@ export default function FamilyMemberChartPage() {
               </div>
             </div>
 
-            {/* Chart status chip */}
             <div className="flex items-center gap-2">
-              {chart ? (
+              {hasSavedChart ? (
                 <Badge className="bg-green-500/15 text-green-700 border-green-500/30 hover:bg-green-500/20">
                   Chart Ready ✓
                 </Badge>
@@ -398,99 +355,33 @@ export default function FamilyMemberChartPage() {
                   Chart Pending
                 </Badge>
               )}
-              {chart?.generatedAt && (
+              {familyMember.chart_updated_at && (
                 <span className="text-xs text-muted-foreground">
-                  Generated {formatDate(chart.generatedAt)}
+                  Generated {formatDate(familyMember.chart_updated_at)}
                 </span>
               )}
             </div>
 
-            {!chart && hasBirthDataForChart && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={generateChart}
-                disabled={generating}
-                className="w-full"
-              >
-                {generating ? (
-                  <Loader2 className="mr-2 size-4 animate-spin" />
-                ) : (
-                  <Star className="mr-2 size-4" />
-                )}
-                Generate Chart Now
-              </Button>
-            )}
-            {!chart && hasBirthPlaceWithoutCoordinates && (
-              <div className="rounded-md border border-amber-500/40 bg-amber-500/10 dark:bg-amber-950/20 px-3 py-2 text-xs text-amber-900 dark:text-amber-200">
-                Select the birth city from suggestions before generating a chart.{" "}
-                <Link
-                  href={`/community/family/${id}/edit`}
-                  className="font-medium underline hover:text-amber-800 dark:hover:text-amber-100"
-                >
-                  Edit birth place
-                </Link>
-              </div>
-            )}
-
-            {/* Invite status */}
-            {member.relationship?.toLowerCase() !== "self" && (
-              <div className="border-t pt-2 space-y-2">
-                <InviteStatus member={member} />
-                {!member.user_id && !showInviteInput && (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-7 px-2 text-xs text-primary"
-                    onClick={() => setShowInviteInput(true)}
-                  >
-                    <Mail className="mr-1.5 size-3" />
-                    Send Login Invite
-                  </Button>
-                )}
-                {showInviteInput && (
-                  <div className="space-y-2">
-                    <input
-                      type="email"
-                      className="w-full rounded-md border px-2 py-1.5 text-xs bg-background"
-                      placeholder="Email address"
-                      value={inviteEmail}
-                      onChange={(e) => setInviteEmail(e.target.value)}
-                    />
-                    {inviteError && (
-                      <p className="text-xs text-destructive">{inviteError}</p>
-                    )}
-                    <div className="flex gap-1.5">
-                      <Button
-                        size="sm"
-                        className="h-7 text-xs"
-                        onClick={sendInvite}
-                        disabled={sendingInvite || !inviteEmail}
-                      >
-                        {sendingInvite && (
-                          <Loader2 className="mr-1 size-3 animate-spin" />
-                        )}
-                        Send
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-7 text-xs"
-                        onClick={() => {
-                          setShowInviteInput(false);
-                          setInviteEmail("");
-                          setInviteError(null);
-                        }}
-                      >
-                        Cancel
-                      </Button>
-                    </div>
+            {/* Invite status summary preserved from legacy page. */}
+            {!isSelf && (
+              <div className="border-t pt-2 space-y-1">
+                {familyMember.user_id && familyMember.invite_accepted_at ? (
+                  <div className="flex items-center gap-1.5 text-xs text-green-600">
+                    <CheckCircle2 className="size-3.5" />
+                    Login activated on{" "}
+                    {formatDate(familyMember.invite_accepted_at)}
                   </div>
-                )}
-                {inviteSuccess && (
-                  <p className="text-xs text-green-600">
-                    Invite sent successfully.
-                  </p>
+                ) : familyMember.invite_sent_at ? (
+                  <div className="flex items-center gap-1.5 text-xs text-amber-700 dark:text-amber-300">
+                    <Mail className="size-3.5 text-amber-500" />
+                    Invite sent {formatDate(familyMember.invite_sent_at)}
+                    {familyMember.invite_email &&
+                      ` to ${familyMember.invite_email}`}
+                  </div>
+                ) : (
+                  <div className="text-xs text-muted-foreground">
+                    Not yet invited to log in
+                  </div>
                 )}
               </div>
             )}
@@ -499,7 +390,7 @@ export default function FamilyMemberChartPage() {
       </div>
 
       {/* ── Birth time warning ──────────────────────────────────────────── */}
-      {!member.birth_time && (
+      {!familyMember.birth_time && (
         <Card className="border-amber-500/40 bg-amber-500/10 dark:bg-amber-950/20">
           <CardContent className="flex items-start gap-3 py-4">
             <Info className="size-5 shrink-0 text-amber-500 mt-0.5" />
@@ -511,7 +402,7 @@ export default function FamilyMemberChartPage() {
                 Add a birth time for greater accuracy — the ascendant and house
                 positions cannot be calculated without it.{" "}
                 <Link
-                  href={`/community/family/${id}/edit`}
+                  href={`/community/family/${familyMember.id}/edit`}
                   className="underline hover:text-amber-700 dark:hover:text-amber-100"
                 >
                   Edit profile →
@@ -522,161 +413,58 @@ export default function FamilyMemberChartPage() {
         </Card>
       )}
 
-      {/* ── No chart yet ────────────────────────────────────────────────── */}
-      {!chart && !generating && (
-        <Card>
-          <CardContent className="flex flex-col items-center gap-4 py-16 text-center">
-            <div className="flex size-16 items-center justify-center rounded-full bg-primary/10">
-              <Star className="size-8 text-primary" />
+      {/* ── Chart rendering ─────────────────────────────────────────────── */}
+
+      {/* LEGACY TEMPORARY NATAL CHART UI
+          Kept for reference while replacing this page with the shared
+          HoroscopeToolkitPage renderer. The previous chart-rendering
+          block (NatalWheel + Ascendant/MC cards + Planet Placements
+          grid) has been replaced by HoroscopeToolkitPage below. The
+          full original implementation is preserved in
+          `./_legacy-family-member-page.tsx` in this folder. Do not
+          delete until toolkit-based community natal rendering is fully
+          accepted. */}
+
+      {canRenderToolkit ? (
+        <HoroscopeToolkitPage
+          basePath={`/community/family/${familyMember.id}`}
+          allowedSlugs={[NATAL_TAB_SLUG]}
+          initialPrefill={encodedPrefill}
+        />
+      ) : (
+        <Card className="max-w-2xl border-amber-500/40 bg-amber-500/10 dark:bg-amber-950/20">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-base text-amber-900 dark:text-amber-200">
+              <AlertCircle className="size-4" />
+              Add birth details to render the chart
+            </CardTitle>
+            <CardDescription className="text-amber-800 dark:text-amber-300/90">
+              {familyMember.full_name}&apos;s Nativity Birth Chart needs a
+              complete birth record. Missing:
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <ul className="space-y-1 text-sm text-amber-900 dark:text-amber-200 pl-5 list-disc">
+              {chartReadyMissing.map((f) => (
+                <li key={f}>{f}</li>
+              ))}
+            </ul>
+            <div className="flex flex-wrap gap-2">
+              <Button asChild size="sm">
+                <Link href={`/community/family/${familyMember.id}/edit`}>
+                  <Star className="mr-1.5 size-3.5" />
+                  Edit Birth Details
+                </Link>
+              </Button>
+              <Button asChild size="sm" variant="outline">
+                <Link href="/community/family">
+                  <ChevronLeft className="mr-1.5 size-3.5" />
+                  Back to Family
+                </Link>
+              </Button>
             </div>
-            <div>
-              <h2 className="font-semibold">No chart generated yet</h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Click &quot;Generate Chart&quot; to calculate{" "}
-                {member.full_name}&apos;s natal chart.
-              </p>
-            </div>
-            <Button onClick={generateChart} disabled={generating}>
-              Generate Natal Chart
-            </Button>
           </CardContent>
         </Card>
-      )}
-
-      {generating && (
-        <Card>
-          <CardContent className="flex flex-col items-center gap-3 py-16 text-center">
-            <Loader2 className="size-8 animate-spin text-primary" />
-            <p className="text-sm text-muted-foreground">Calculating positions…</p>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* ── Chart ───────────────────────────────────────────────────────── */}
-      {chart && !generating && (
-        <>
-          {/* Visual wheel */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Natal Chart Wheel</CardTitle>
-              <CardDescription>
-                {member.birth_time
-                  ? `Born ${dob.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })} at ${member.birth_time}`
-                  : `Born ${dob.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })} (time unknown)`}
-                {(member.birth_city || member.birth_country) &&
-                  ` · ${formatBirthPlace(member.birth_city, member.birth_country)}`}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex justify-center">
-              <NatalWheel
-                planets={chart.planets}
-                ascendantLon={chart.ascendant?.longitude ?? null}
-                size={380}
-              />
-            </CardContent>
-          </Card>
-
-          {/* Ascendant & MC — adult only */}
-          {chart.ageGroup === "adult" && (chart.ascendant || chart.mc) && (
-            <div className="grid gap-4 sm:grid-cols-2">
-              {chart.ascendant && (
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardDescription>Rising Sign (Ascendant)</CardDescription>
-                    <CardTitle className="text-2xl">{chart.ascendant.sign}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground">
-                      {chart.ascendant.degree.toFixed(1)}° ·{" "}
-                      {ELEMENT[chart.ascendant.sign]} · {MODALITY[chart.ascendant.sign]}
-                    </p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Your outward expression and first impressions
-                    </p>
-                  </CardContent>
-                </Card>
-              )}
-              {chart.mc && (
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardDescription>Midheaven (MC)</CardDescription>
-                    <CardTitle className="text-2xl">{chart.mc.sign}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground">
-                      {chart.mc.degree.toFixed(1)}° · {ELEMENT[chart.mc.sign]} ·{" "}
-                      {MODALITY[chart.mc.sign]}
-                    </p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Career path and public reputation
-                    </p>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-          )}
-
-          {/* Planet placements */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">
-                Planet Placements
-                {chart.ageGroup === "child" && (
-                  <Badge variant="secondary" className="ml-2 text-xs">
-                    Simplified (age &lt; 14)
-                  </Badge>
-                )}
-              </CardTitle>
-              <CardDescription>
-                Where each planet was at the moment of birth
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-3 sm:grid-cols-2">
-                {chart.planets.map((p) => (
-                  <div
-                    key={p.name}
-                    className="flex items-start gap-3 rounded-lg border px-4 py-3"
-                  >
-                    <span className="text-2xl leading-none mt-0.5">
-                      {PLANET_GLYPHS[p.name] ?? "●"}
-                    </span>
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="font-medium text-sm">{p.name}</span>
-                        <span className="text-sm text-muted-foreground">in</span>
-                        <span className="font-semibold text-sm">{p.sign}</span>
-                        {p.retrograde && (
-                          <Badge variant="outline" className="text-xs px-1 py-0">
-                            ℞
-                          </Badge>
-                        )}
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {p.degree.toFixed(1)}° · {ELEMENT[p.sign]} ·{" "}
-                        {MODALITY[p.sign]}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {PLANET_DESCRIPTIONS[p.name] ?? ""}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          <p className="text-xs text-center text-muted-foreground">
-            Chart generated{" "}
-            {new Date(chart.generatedAt).toLocaleDateString("en-US", {
-              month: "short",
-              day: "numeric",
-              year: "numeric",
-            })}
-            {!member.birth_time &&
-              " · Birth time unknown — ascendant not shown"}
-          </p>
-        </>
       )}
     </div>
   );

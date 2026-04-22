@@ -132,3 +132,39 @@ This task should be done after the shared toolkit routes exist.
 Do not solve dashboard linking by adding another chart renderer. Reuse the routes created in Tasks 02 and 03.
 
 For Codex / AI agents: do this task last. Before editing, verify Tasks 02 and 03 are already implemented and working locally.
+
+---
+
+## Implementation Notes (22.04.2026)
+
+Status: **Done**.
+
+Changes landed:
+
+- `src/components/community/astro-charts-section.tsx`
+  - Ready-state "View Full Chart" link: `/community/family` → `/community/family/${natalChart.id}` (deep-links straight into the per-member toolkit route from Task 03 instead of bouncing through the family list).
+  - Empty-state copy: now reads "No natal chart found yet. Open Horoscope to generate or view your chart." The CTA is a Button → `/community/horoscope` (the shared toolkit from Task 02) instead of "Add Family Member".
+  - Empty vs. pending wording distinction preserved: "Your chart is being prepared..." still only renders when `status === "pending"` from the backend (which today is never emitted — reserved).
+- `src/components/community/chart-quick-actions.tsx`
+  - Natal Chart tile converted from a `<Button onClick={handleGenerate("natal")}>` that opened the birth-data modal into a `<Button asChild><Link href="/community/horoscope">…</Link></Button>`. Dashboard no longer has two natal-chart surfaces.
+  - Monthly Transits and Relationship Charts tiles kept as one-click generators — they have no canonical toolkit route on this surface and aren't duplicated elsewhere, so they don't violate the "no two conflicting experiences" rule.
+  - Inline comment records that `"natal"` remains in the `ChartType` union for API shape reasons but is no longer dispatched from the UI.
+- `src/app/community/page.tsx`
+  - `quickActions[0]` (natal): `ownChartReady ? "/community/family" : "/community/profile"` → `ownChartReady ? "/community/horoscope" : "/community/profile"`. Label: "View Charts" → "View Chart".
+  - `quickActions[1]` (transits): `"/community/family"` → `"/community/transits"`.
+  - Own-natal-chart ready card "View Charts →" link: `/community/family` → `/community/horoscope` (and subcopy tweaked from "ready to generate" → "open your chart" to match the toolkit's render-on-demand behavior).
+- `src/app/api/community/astro-charts/route.ts`
+  - No code change required — already uses `.maybeSingle()` for the family-with-chart lookup and the monthly-transit lookup, so missing rows are not treated as errors. Explicit `status: { natal, transit }` remains the source of truth for the dashboard's poll loop.
+
+Verification:
+
+- Scoped typecheck via `tsconfig.ux-check.json` (includes all four touched files plus prior Task 02 / 03 files and their lib helpers): `tsc --noEmit -p tsconfig.ux-check.json` → EXIT 0.
+- Quick-action hrefs, ready-card hrefs, and AstroChartsSection empty-state copy all point at routes delivered by Tasks 02 (`/community/horoscope`) and 03 (`/community/family/[id]`).
+- `AstroChartsSection` continues to stop polling on `ready`, `empty`, and `failed` (see the existing `stopPolling()` branches) — unchanged by this task. No "Your chart is being prepared..." copy is ever rendered unless the backend emits `status: "pending"`, which today it does not.
+
+Constraints honored:
+
+- No new chart generation is triggered from dashboard load.
+- Admin toolkit behavior is unchanged.
+- Dashboard cards are preserved; only their CTAs and empty-state copy were updated.
+- "Being generated" copy is still gated behind explicit `status === "pending"`.
