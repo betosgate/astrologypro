@@ -192,36 +192,33 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     }
   }
 
+  // Image and HTML blocks can be created empty — the UI flow is "click type,
+  // then fill content in the editor panel". The PATCH handler enforces
+  // non-empty values on save for blocks that need them.
   let safeHtml: string | null = null;
   if (sectionType === "html") {
     const raw = typeof body.body_html === "string" ? body.body_html : "";
-    if (!raw.trim()) {
-      return problem(422, "Missing HTML", "HTML blocks require a non-empty body_html value.");
-    }
-    try {
-      safeHtml = sanitizeDivinerHtmlStrict(raw);
-    } catch (err) {
-      if (err instanceof HtmlSanitizationError) {
-        return problem(
-          422,
-          "Invalid HTML",
-          "Your HTML contains tags or attributes we don't allow. Remove them and resubmit.",
-          { stripped_example: err.strippedExample },
-        );
+    if (raw.trim()) {
+      try {
+        safeHtml = sanitizeDivinerHtmlStrict(raw);
+      } catch (err) {
+        if (err instanceof HtmlSanitizationError) {
+          return problem(
+            422,
+            "Invalid HTML",
+            "Your HTML contains tags or attributes we don't allow. Remove them and resubmit.",
+            { stripped_example: err.strippedExample },
+          );
+        }
+        throw err;
       }
-      throw err;
     }
   }
 
   const primaryImageUrl =
-    typeof body.primary_image_url === "string" ? body.primary_image_url : null;
-  if (sectionType === "image" && !primaryImageUrl) {
-    return problem(
-      422,
-      "Missing image",
-      "Image blocks require a primary_image_url. Upload through /upload first.",
-    );
-  }
+    typeof body.primary_image_url === "string" && body.primary_image_url
+      ? body.primary_image_url
+      : null;
 
   // ── Determine display_order ────────────────────────────────────────────────
   const displayOrder =
