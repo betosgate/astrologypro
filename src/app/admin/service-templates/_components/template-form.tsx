@@ -940,7 +940,6 @@ export function TemplateForm({ initialData, templateId, divinerCount = 0 }: Temp
             embedded
             disableLinks
             diviners={[]}
-            emptyStateMessage="Preview mode: public diviner cards will appear here once practitioners offer this template."
             template={{
               category: form.category || "astrology",
               name: form.name.trim() || "Service Name Preview",
