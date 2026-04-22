@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "src/app/community/profile/page.tsx",
+    "src/components/community/profile-form.tsx",
+    "src/app/api/community/profile/avatar/route.ts",
+    "src/app/api/community/astro-charts/route.ts",
+    "src/components/community/astro-charts-section.tsx",
+    "src/components/community/profile-progress-section.tsx",
+    "src/app/community/page.tsx"
+  ]
+}

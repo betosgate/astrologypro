@@ -174,10 +174,13 @@ export default async function CommunityDashboardPage() {
 
   // Read only columns that exist in the current community_members schema.
   // The removed cancel_* fields were causing valid members to be redirected.
+  // We also pull birth_* fields here so the dashboard Profile Completion
+  // block reads from the same table /community/profile writes to, instead of
+  // the best-effort-synced `clients` row.
   const { data: member } = await supabase
     .from("community_members")
     .select(
-      "id, full_name, email, membership_type, membership_status, plan_type, joined_at, expires_at, pm_tier_id, current_period_end, extra_member_count"
+      "id, full_name, email, membership_type, membership_status, plan_type, joined_at, expires_at, pm_tier_id, current_period_end, extra_member_count, date_of_birth, birth_time, birth_city"
     )
     .eq("user_id", user.id)
     .maybeSingle();
@@ -482,11 +485,39 @@ export default async function CommunityDashboardPage() {
   }
   const daysRemaining = daysUntil(renewalDate);
 
-  // ── Legacy profile completion percentage (birth-data-only ring) ──────────
+  // ── Dashboard birth-data readiness ring ──────────────────────────────────
+  // Canonical source: community_members (what /community/profile saves to).
+  // Falling back to `clients` first caused a dashboard/profile mismatch where
+  // /community/profile showed 100% but /community showed 0% because the
+  // best-effort cross-role sync had not yet populated the `clients` row.
+  const memberBirthFields = {
+    date_of_birth:
+      (member as { date_of_birth?: string | null }).date_of_birth ?? null,
+    birth_time:
+      (member as { birth_time?: string | null }).birth_time ?? null,
+    birth_city:
+      (member as { birth_city?: string | null }).birth_city ?? null,
+  };
+  const hasDob = Boolean(
+    memberBirthFields.date_of_birth &&
+      String(memberBirthFields.date_of_birth).trim() !== ""
+  );
+  const hasBirthTime = Boolean(
+    memberBirthFields.birth_time &&
+      String(memberBirthFields.birth_time).trim() !== ""
+  );
+  const hasBirthCity = Boolean(
+    memberBirthFields.birth_city &&
+      String(memberBirthFields.birth_city).trim() !== ""
+  );
   let profilePct = 0;
-  if (client?.birth_date) profilePct += 34;
-  if (client?.birth_time) profilePct += 33;
-  if (client?.birth_city) profilePct += 33;
+  if (hasDob) profilePct += 34;
+  if (hasBirthTime) profilePct += 33;
+  if (hasBirthCity) profilePct += 33;
+  const profileMissingFields: string[] = [];
+  if (!hasDob) profileMissingFields.push("Date of birth");
+  if (!hasBirthTime) profileMissingFields.push("Birth time");
+  if (!hasBirthCity) profileMissingFields.push("Birth city");
 
   // ── Full profile completion data (weighted, for ProfileCompletionCard) ────
   const hasPhoto = Boolean(
@@ -1026,7 +1057,11 @@ export default async function CommunityDashboardPage() {
         {/* Profile Progress + Astro Charts */}
         <div className="grid gap-4 sm:grid-cols-2">
           {/* Profile Completion Progress Ring */}
-          <ProfileProgressSection profilePct={profilePct} membersCount={otherMembers.length} />
+          <ProfileProgressSection
+            profilePct={profilePct}
+            membersCount={otherMembers.length}
+            missingFields={profileMissingFields}
+          />
 
           {/* Astro Charts polling/display */}
           <AstroChartsSection />
