@@ -525,9 +525,7 @@ export default async function CommunityDashboardPage() {
       String(user.user_metadata.avatar_url).trim() !== ""
   );
   const pcHasFullName = Boolean(member.full_name && member.full_name.trim() !== "");
-  const pcHasBirthData = Boolean(
-    client?.birth_date && client?.birth_time && client?.birth_city
-  );
+  const pcHasBirthData = hasDob && hasBirthTime && hasBirthCity;
   const pcHasNatalChart = pcFamilyMembers.some(
     (fm) =>
       fm.natal_chart != null &&

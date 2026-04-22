@@ -6,9 +6,7 @@
  */
 
 import { createHash } from "crypto";
-// ua-parser-js v2 exports both a namespace and a class; use require to avoid TS import confusion
-// eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-explicit-any
-const { UAParser } = require("ua-parser-js") as { UAParser: new (ua?: string) => any };
+import { UAParser } from "ua-parser-js";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
