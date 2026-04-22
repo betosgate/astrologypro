@@ -73,13 +73,25 @@ interface BookingDetailProps {
    */
   sessionLink?: string | null;
   /**
+   * Use the same slide-over UI for booking-like records that should not
+   * call the standard /api/bookings/* mutation/read APIs. This keeps the
+   * drawer presentation consistent while suppressing booking-specific
+   * actions and follow-up fetches.
+   */
+  detailsOnly?: boolean;
+  /**
+   * Optional alternate base path for cancel/reschedule actions. Used by
+   * admin calendar bookings, which are stored outside the legacy
+   * `bookings` table but should still use the same slide-over controls.
+   */
+  actionBasePath?: string | null;
+  /**
    * Who is viewing the sheet. Defaults to `"diviner"` so the existing
    * diviner dashboard and admin console keep full functionality without
-   * opting in. When set to `"client"` the sheet renders read-only —
-   * mutation actions (reschedule / cancel / refund / session-notes /
-   * send-note / sync-payment / sync-recording / join-session / open-
-   * service) are hidden, and the diviner-private session-notes field is
-   * suppressed. Used by the /trainee "See Details" drawer.
+   * opting in. When set to `"client"` the sheet hides host-only actions
+   * such as refund, notes, sync, join-session, and open-service, but it
+   * still allows self-service reschedule and cancellation for the
+   * trainee/client booking drawer.
    */
   viewerRole?: "diviner" | "admin" | "client";
 }
@@ -216,6 +228,8 @@ export function BookingDetailSheet({
   booking,
   linkedOrder,
   sessionLink,
+  detailsOnly = false,
+  actionBasePath = null,
   viewerRole = "diviner",
 }: BookingDetailProps) {
   const router = useRouter();
@@ -228,14 +242,14 @@ export function BookingDetailSheet({
 
   // Fetch session/recording details when sheet opens
   useEffect(() => {
-    if (!open || sessionDetails) return;
+    if (!open || sessionDetails || detailsOnly) return;
     setLoadingSession(true);
     fetch(`/api/bookings/${booking.id}/session-details`)
       .then((r) => r.json())
       .then((d) => setSessionDetails(d))
       .catch(() => setSessionDetails(null))
       .finally(() => setLoadingSession(false));
-  }, [open, booking.id, sessionDetails]);
+  }, [open, booking.id, sessionDetails, detailsOnly]);
   const [showRefundForm, setShowRefundForm] = useState(false);
   const [refundReason, setRefundReason] = useState("");
   const [refunding, setRefunding] = useState(false);
@@ -324,9 +338,12 @@ export function BookingDetailSheet({
     }
     // Convert datetime-local value (local time) to ISO string
     const isoDate = new Date(newScheduledAt).toISOString();
+    const rescheduleUrl = actionBasePath
+      ? `${actionBasePath}/reschedule`
+      : `/api/bookings/${booking.id}/reschedule`;
     setRescheduling(true);
     try {
-      const res = await fetch(`/api/bookings/${booking.id}/reschedule`, {
+      const res = await fetch(rescheduleUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ scheduled_at: isoDate }),
@@ -355,6 +372,8 @@ export function BookingDetailSheet({
     try {
       // Auto-refund: if paid and not yet refunded, issue refund first
       const shouldRefund =
+        !actionBasePath &&
+        !isClientView &&
         !!booking.payment_intent_id &&
         booking.amount > 0 &&
         !refunded;
@@ -377,7 +396,10 @@ export function BookingDetailSheet({
       }
 
       // Cancel the booking
-      const cancelRes = await fetch(`/api/bookings/${booking.id}/cancel`, {
+      const cancelUrl = actionBasePath
+        ? `${actionBasePath}/cancel`
+        : `/api/bookings/${booking.id}/cancel`;
+      const cancelRes = await fetch(cancelUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ reason: cancelReason.trim() }),
@@ -426,27 +448,25 @@ export function BookingDetailSheet({
     }
   }
 
-  // Mutation capabilities are fully suppressed in the client view —
-  // trainees / clients viewing their own booking can see the details
-  // but cannot reschedule, cancel, refund, sync payment, etc. Those
-  // actions belong to the host on /dashboard/bookings or admin.
   const canReschedule =
-    !isClientView &&
+    (!detailsOnly || !!actionBasePath) &&
     ["pending", "confirmed"].includes(booking.status) &&
     !canceled;
 
   const canCancel =
-    !isClientView &&
+    (!detailsOnly || !!actionBasePath) &&
     ["pending", "confirmed", "in_progress"].includes(booking.status) &&
     !canceled;
 
   const canRefund =
+    !detailsOnly &&
     !isClientView &&
     booking.status === "completed" &&
     booking.amount > 0 &&
     !refunded;
 
   const canSyncPayment =
+    !detailsOnly &&
     !isClientView &&
     booking.status === "pending" &&
     booking.amount > 0 &&
@@ -732,7 +752,11 @@ export function BookingDetailSheet({
           {canReschedule && showRescheduleForm && (
             <div className="space-y-3 rounded-lg border bg-muted/30 p-4">
               <h4 className="text-sm font-semibold">Reschedule Booking</h4>
-              <p className="text-xs text-muted-foreground">Select a new date and time. The client will be notified by email.</p>
+              <p className="text-xs text-muted-foreground">
+                {isClientView
+                  ? "Select your new preferred date and time, then confirm to reschedule this appointment."
+                  : "Select a new date and time. The client will be notified by email."}
+              </p>
               <div className="space-y-1.5">
                 <Label htmlFor="new-datetime">New Date & Time</Label>
                 <input
@@ -758,14 +782,16 @@ export function BookingDetailSheet({
           {canCancel && showCancelForm && (
             <div className="space-y-3 rounded-lg border border-red-500/20 bg-red-500/5 p-4">
               <h4 className="text-sm font-semibold text-red-500">Cancel Booking</h4>
-              {booking.payment_intent_id && booking.amount > 0 && !refunded ? (
+              {!isClientView && booking.payment_intent_id && booking.amount > 0 && !refunded ? (
                 <p className="text-xs text-muted-foreground">
                   This booking has a payment of <strong>{formatCurrency(booking.amount)}</strong>.
                   Cancelling will automatically issue a full refund to {booking.client_name}. This action cannot be undone.
                 </p>
               ) : (
                 <p className="text-xs text-muted-foreground">
-                  The booking will be cancelled and the client will be notified. This action cannot be undone.
+                  {isClientView
+                    ? "This appointment will be cancelled after confirmation. Please add a short reason."
+                    : "The booking will be cancelled and the client will be notified. This action cannot be undone."}
                 </p>
               )}
               <div className="space-y-2">
@@ -774,7 +800,7 @@ export function BookingDetailSheet({
               </div>
               <div className="flex gap-2">
                 <Button size="sm" variant="destructive" onClick={handleCancel} disabled={canceling}>
-                  {canceling ? <><Loader2 className="mr-1.5 size-3.5 animate-spin" />Processing…</> : (booking.payment_intent_id && booking.amount > 0 && !refunded ? "Cancel & Refund" : "Confirm Cancellation")}
+                  {canceling ? <><Loader2 className="mr-1.5 size-3.5 animate-spin" />Processing…</> : (!isClientView && booking.payment_intent_id && booking.amount > 0 && !refunded ? "Cancel & Refund" : "Confirm Cancellation")}
                 </Button>
                 <Button size="sm" variant="outline" onClick={() => { setShowCancelForm(false); setCancelReason(""); }}>Go Back</Button>
               </div>
@@ -885,13 +911,6 @@ export function BookingDetailSheet({
               <p className="text-sm">{booking.notes}</p>
             </div>
           )}
-          {booking.booking_notes && (
-            <div className="rounded-lg bg-amber-500/10 border border-amber-500/20 p-3">
-              <p className="text-xs font-medium text-amber-400 mb-1">Client Notes</p>
-              <p className="text-sm text-muted-foreground">{booking.booking_notes}</p>
-            </div>
-          )}
-
           {/* ── Session Notes (completed only, diviner/admin only) ───── */}
           {!isClientView && booking.status === "completed" && (
             <div className="space-y-2">
@@ -937,18 +956,6 @@ export function BookingDetailSheet({
               <Button size="sm" onClick={handleSendNote} disabled={sendingNote || !clientNote.trim()} className="gap-1.5">
                 {sendingNote ? <><Loader2 className="size-3.5 animate-spin" />Sending…</> : <><Send className="size-3.5" />Send to Client</>}
               </Button>
-            </div>
-          )}
-
-          {/* ── Client-view footer: safe guidance when mutation UI is
-                hidden. ───────────────────────────────────────────────── */}
-          {isClientView && (
-            <div className="rounded-lg border border-border bg-muted/20 p-3">
-              <p className="text-xs text-muted-foreground">
-                Need to reschedule, cancel, or manage this appointment?
-                Reply to your booking confirmation email or contact the
-                host directly.
-              </p>
             </div>
           )}
 
