@@ -29,8 +29,14 @@ export async function POST(
     return NextResponse.json({ error: "source_diviner_id is required" }, { status: 422 });
   }
 
-  const includePrices  = body.include_prices === true;
-  const includePublish = body.include_publish === true;
+  const includePrices = body.include_prices === true;
+  // Task 04 (2026-04-21): `include_publish` is no longer honored. Cloned
+  // assignments always start OFFLINE — the target diviner must publish them
+  // themselves via the dashboard toggle-live endpoint. Silently ignore the
+  // param for backward compat but never propagate publish state.
+  if ("include_publish" in body) {
+    // No-op; swallowed intentionally. Kept as soft-deprecation.
+  }
 
   const admin = createAdminClient();
   const { id: targetDivinerId } = await params;
@@ -78,16 +84,19 @@ export async function POST(
     }
 
     const insertPayload = {
-      diviner_id:     targetDivinerId,
-      template_id:    ss.template_id,
-      price:          includePrices ? ss.price : ss.price, // always copy price for now
-      is_enabled:     true,
-      is_published:   includePublish ? ss.is_published : false,
-      publish_status: includePublish ? ss.publish_status : "draft",
-      enabled_at:     now,
-      enabled_by:     user.id,
-      published_at:   includePublish && ss.is_published ? now : null,
-      notes:          `Cloned from diviner ${sourceDivinerId}`,
+      diviner_id: targetDivinerId,
+      template_id: ss.template_id,
+      // Always copy price for now — `includePrices` reserved for future UI
+      // that lets the admin opt out and keep the global base_price instead.
+      price: includePrices ? ss.price : ss.price,
+      is_enabled: true,
+      // V2: cloned rows are never live. Target diviner publishes themselves.
+      is_published: false,
+      publish_status: "draft",
+      enabled_at: now,
+      enabled_by: user.id,
+      published_at: null,
+      notes: `Cloned from diviner ${sourceDivinerId}`,
     };
 
     const { data: ds, error: insertErr } = await admin

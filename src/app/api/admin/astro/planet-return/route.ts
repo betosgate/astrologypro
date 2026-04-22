@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAdminUser } from "@/lib/admin-auth";
-import { getSystemConfigValue } from "@/lib/astro/system-settings";
+import { requireAstroToolkitAccess } from "@/lib/astro-toolkit-access";
 
 export const dynamic = "force-dynamic";
 
@@ -21,8 +20,8 @@ const ALLOWED_STEPS = [
 ];
 
 export async function POST(req: NextRequest) {
-  const user = await getAdminUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const access = await requireAstroToolkitAccess();
+  if (!access) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
   const { steps } = body as { steps: string };

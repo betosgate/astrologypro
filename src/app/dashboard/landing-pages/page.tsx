@@ -1,23 +1,38 @@
+/**
+ * Diviner dashboard — "Your services" page.
+ *
+ * Rewritten in Task 05 of the 2026-04-21 landing-page-simplification.
+ *
+ * V2 contract:
+ *   - ONE actionable toggle per service: Live / Offline, writes
+ *     diviner_services.is_published via POST
+ *     /api/dashboard/landing-pages/:templateId/toggle-live.
+ *   - Admin state (services.is_active, diviner_services.is_enabled) renders
+ *     as a read-only "Deactivated by admin" notice that disables the toggle.
+ *   - "Customize" always routes to the builder, regardless of live state.
+ *   - "View live page" appears only when the service is Live + not
+ *     admin-disabled — it hides entirely otherwise so the diviner never gets
+ *     a 404 from the dashboard.
+ *   - No Published / Draft / Unpublished / Flagged badges. No Preview button.
+ */
+
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   LayoutTemplate,
   Search,
   ExternalLink,
-  Copy,
-  Eye,
   BarChart3,
-  Globe,
-  AlertTriangle,
   Plus,
   RefreshCw,
+  AlertTriangle,
+  Settings2,
+  Circle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -25,391 +40,369 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { APP_URL } from "@/lib/constants";
 
-interface LandingPageEntry {
-  diviner_service_id: string;
+// ── Types matching the Task 05 API contract ──────────────────────────────────
+
+interface ServiceRow {
   template_id: string;
   template_name: string;
   template_slug: string;
   template_category: string;
   template_icon: string | null;
-  has_landing_page: boolean;
-  landing_page_id: string | null;
-  landing_page_status: "published" | "draft" | "unpublished" | "archived" | null;
-  section_count: number;
-  custom_section_count: number;
-  published_at: string | null;
-  moderation_status: string | null;
-  is_enabled: boolean;
-  is_published: boolean;
-  publish_status: string | null;
-  public_url: string;
-  builder_url: string;
   price: number;
   duration_minutes: number;
-  stats: { views: number; unique_visitors: number; bookings_completed: number; conversion_rate: number };
-  updated_at: string;
+  is_active: boolean;
+  is_enabled: boolean;
+  is_published: boolean;
+  admin_disabled: boolean;
+  block_count: { about_diviner: number; extra: number };
+  last_edited_at: string | null;
+  builder_url: string;
+  public_url: string;
+  analytics_url: string;
 }
 
 interface Summary {
-  total_enabled: number;
-  total_published: number;
-  total_draft: number;
-  total_views_30d: number;
-  total_bookings_30d: number;
+  total: number;
+  live: number;
+  offline: number;
+  admin_disabled: number;
 }
 
-function StatusBadge({
-  status,
-  moderationStatus,
-  hasLandingPage,
-  isPublished,
+// ── Row component ────────────────────────────────────────────────────────────
+
+function ServiceRowCard({
+  row,
+  onToggle,
 }: {
-  status: string | null;
-  moderationStatus: string | null;
-  hasLandingPage: boolean;
-  isPublished: boolean;
+  row: ServiceRow;
+  onToggle: (row: ServiceRow, nextLive: boolean) => Promise<void>;
 }) {
-  if (moderationStatus === "flagged" || moderationStatus === "rejected") {
-    return <Badge className="bg-red-500/15 text-red-400 border-red-500/20">Flagged</Badge>;
-  }
-  // When no custom builder row exists, the template-backed landing page is live
-  // whenever diviner_services.is_published is true.
-  if (!hasLandingPage && isPublished) {
-    return <Badge className="bg-emerald-500/15 text-emerald-400 border-emerald-500/20">Published</Badge>;
-  }
-  switch (status) {
-    case "published":
-      return <Badge className="bg-emerald-500/15 text-emerald-400 border-emerald-500/20">Published</Badge>;
-    case "draft":
-      return <Badge className="bg-amber-500/15 text-amber-400 border-amber-500/20">Draft</Badge>;
-    case "unpublished":
-      return <Badge className="bg-zinc-500/15 text-zinc-400 border-zinc-500/20">Unpublished</Badge>;
-    default:
-      return <Badge className="bg-zinc-500/15 text-zinc-400 border-zinc-500/20">No Page</Badge>;
-  }
-}
+  const [busy, setBusy] = useState(false);
+  const totalBlocks = row.block_count.about_diviner + row.block_count.extra;
 
-function LandingPageCard({ entry, username, onRefresh }: { entry: LandingPageEntry; username: string; onRefresh: () => void }) {
-  const router = useRouter();
-  const [publishing, setPublishing] = useState(false);
-  const [unpublishing, setUnpublishing] = useState(false);
-
-  const publicUrl = `${APP_URL}${entry.public_url}`;
-
-  async function handlePublish() {
-    setPublishing(true);
+  async function handleToggle(v: boolean) {
+    if (row.admin_disabled) return;
+    setBusy(true);
     try {
-      const res = await fetch(`/api/dashboard/landing-pages/${entry.template_id}/publish`, { method: "POST" });
-      if (!res.ok) {
-        const err = await res.json();
-        toast.error(err.detail ?? err.title ?? "Publish failed");
-        return;
-      }
-      toast.success("Landing page published!");
-      onRefresh();
-    } catch {
-      toast.error("Network error");
+      await onToggle(row, v);
     } finally {
-      setPublishing(false);
+      setBusy(false);
     }
   }
-
-  async function handleUnpublish() {
-    setUnpublishing(true);
-    try {
-      const res = await fetch(`/api/dashboard/landing-pages/${entry.template_id}/unpublish`, { method: "POST" });
-      if (!res.ok) {
-        toast.error("Unpublish failed");
-        return;
-      }
-      toast.success("Landing page unpublished");
-      onRefresh();
-    } catch {
-      toast.error("Network error");
-    } finally {
-      setUnpublishing(false);
-    }
-  }
-
-  function handleCopyLink() {
-    navigator.clipboard.writeText(publicUrl).then(() => {
-      toast.success("Link copied to clipboard");
-    });
-  }
-
-  const isFlagged = entry.moderation_status === "flagged" || entry.moderation_status === "rejected";
 
   return (
-    <div className={cn(
-      "rounded-2xl border bg-white/[0.02] p-5 transition-colors",
-      isFlagged ? "border-red-500/20" : "border-white/[0.06]"
-    )}>
-      {/* Header row */}
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-gold/10 text-gold">
-            <LayoutTemplate className="size-5" />
-          </div>
-          <div className="min-w-0">
-            <h3 className="font-semibold text-cream truncate">{entry.template_name}</h3>
-            <p className="text-xs text-silver/50 capitalize">
-              {entry.template_category} &middot; {entry.duration_minutes} min &middot; ${entry.price}
-            </p>
-          </div>
+    <div
+      className={cn(
+        "rounded-2xl border border-white/10 bg-cosmos-900/40 p-5 flex flex-col gap-3 md:flex-row md:items-center md:gap-6",
+        row.admin_disabled && "opacity-80",
+      )}
+    >
+      {/* Icon + text */}
+      <div className="flex items-start gap-4 flex-1 min-w-0">
+        <div className="flex size-10 shrink-0 items-center justify-center rounded-lg border border-gold/20 bg-gold/5">
+          <LayoutTemplate className="size-5 text-gold" />
         </div>
-        <StatusBadge
-          status={entry.landing_page_status}
-          moderationStatus={entry.moderation_status}
-          hasLandingPage={entry.has_landing_page}
-          isPublished={entry.is_published}
-        />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h3 className="text-base font-semibold text-cream truncate">
+              {row.template_name}
+            </h3>
+            <LiveBadge
+              live={row.is_published && !row.admin_disabled}
+              adminDisabled={row.admin_disabled}
+            />
+          </div>
+          <p className="text-xs text-silver/60 mt-0.5 capitalize">
+            {row.template_category} · {row.duration_minutes} min · $
+            {Number(row.price).toFixed(0)}
+          </p>
+          {row.admin_disabled ? (
+            <div className="mt-2 flex items-center gap-1.5 text-xs text-amber-300/85">
+              <AlertTriangle className="size-3.5" />
+              Deactivated by admin — contact support to re-enable
+            </div>
+          ) : (
+            <p className="text-xs text-silver/45 mt-1">
+              {totalBlocks > 0
+                ? `${totalBlocks} custom block${totalBlocks === 1 ? "" : "s"}`
+                : "No custom blocks yet"}
+              {row.last_edited_at ? ` · Last edited ${fmtRelative(row.last_edited_at)}` : ""}
+            </p>
+          )}
+        </div>
       </div>
 
-      {/* Moderation warning */}
-      {isFlagged && (
-        <div className="mt-3 flex items-center gap-2 rounded-lg border border-red-500/20 bg-red-500/8 px-3 py-2 text-xs text-red-400">
-          <AlertTriangle className="size-3.5 shrink-0" />
-          This page has been flagged by our moderation team. Open the builder to review and fix the issue.
-        </div>
-      )}
-
-      {/* Stats (if published) */}
-      {entry.landing_page_status === "published" && (
-        <div className="mt-3 flex gap-6 text-xs text-silver/50">
-          <span>{entry.stats.views.toLocaleString()} views</span>
-          <span>{entry.stats.bookings_completed} bookings</span>
-          {entry.stats.conversion_rate > 0 && <span>{entry.stats.conversion_rate.toFixed(1)}% conversion</span>}
-          {entry.custom_section_count > 0 && <span>{entry.custom_section_count} custom sections</span>}
-        </div>
-      )}
-
-      {/* Draft info */}
-      {entry.has_landing_page && entry.landing_page_status !== "published" && (
-        <p className="mt-3 text-xs text-silver/50">
-          {entry.custom_section_count > 0
-            ? `${entry.custom_section_count} custom sections added`
-            : "No custom sections yet — open builder to start"}
-        </p>
-      )}
-
-      {!entry.has_landing_page && (
-        <p className="mt-3 text-xs text-silver/50">
-          {entry.is_published
-            ? "Using the default template-backed landing page"
-            : "No landing page created yet"}
-        </p>
-      )}
-
       {/* Actions */}
-      <div className="mt-4 flex flex-wrap items-center gap-2">
-        <Link href={entry.builder_url}>
-          <Button size="sm" variant="outline" className="h-8 text-xs border-gold/20 text-gold hover:bg-gold/10">
-            <LayoutTemplate className="mr-1.5 size-3.5" />
-            {entry.has_landing_page ? "Open Builder" : "Start Building"}
+      <div className="flex items-center gap-3 flex-wrap md:flex-nowrap md:justify-end">
+        {/* Live toggle (disabled when admin-disabled) */}
+        <div className="flex items-center gap-2">
+          <Switch
+            checked={row.is_published && !row.admin_disabled}
+            disabled={row.admin_disabled || busy}
+            onCheckedChange={handleToggle}
+            aria-label={
+              row.is_published
+                ? `Take ${row.template_name} offline`
+                : `Take ${row.template_name} live`
+            }
+          />
+          <span className="text-xs uppercase tracking-wider text-silver/60 min-w-[52px]">
+            {row.is_published && !row.admin_disabled ? "Live" : "Offline"}
+          </span>
+        </div>
+
+        {/* Customize — always available */}
+        <Link href={row.builder_url}>
+          <Button
+            variant="outline"
+            size="sm"
+            className="border-white/10 hover:bg-white/5"
+          >
+            <Settings2 className="size-3.5 mr-1.5" />
+            Customize
           </Button>
         </Link>
 
-        {entry.has_landing_page && (
-          <Link href={`${entry.public_url}?preview=true`} target="_blank">
-            <Button size="sm" variant="ghost" className="h-8 text-xs text-silver/60 hover:text-cream">
-              <Eye className="mr-1.5 size-3.5" />
-              Preview
-            </Button>
-          </Link>
-        )}
-
-        {entry.landing_page_status === "published" && (
-          <>
-            <Button size="sm" variant="ghost" className="h-8 text-xs text-silver/60 hover:text-cream" onClick={handleCopyLink}>
-              <Copy className="mr-1.5 size-3.5" />
-              Copy Link
-            </Button>
-            <Link href={`/dashboard/landing-pages/${entry.template_id}/analytics`}>
-              <Button size="sm" variant="ghost" className="h-8 text-xs text-silver/60 hover:text-cream">
-                <BarChart3 className="mr-1.5 size-3.5" />
-                Analytics
-              </Button>
-            </Link>
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-8 text-xs text-silver/50 hover:text-red-400"
-              onClick={handleUnpublish}
-              disabled={unpublishing}
-            >
-              {unpublishing ? "Unpublishing..." : "Unpublish"}
-            </Button>
-          </>
-        )}
-
-        {entry.has_landing_page && entry.landing_page_status !== "published" && !isFlagged && (
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-8 text-xs text-emerald-400 hover:text-emerald-300"
-            onClick={handlePublish}
-            disabled={publishing}
+        {/* View live page — only when actually live */}
+        {row.is_published && !row.admin_disabled ? (
+          <Link
+            href={row.public_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-xs text-gold/80 hover:text-gold transition-colors px-2 py-1"
           >
-            <Globe className="mr-1.5 size-3.5" />
-            {publishing ? "Publishing..." : "Publish"}
+            <ExternalLink className="size-3.5" />
+            View live page
+          </Link>
+        ) : null}
+
+        {/* Analytics */}
+        <Link
+          href={row.analytics_url}
+          className="inline-flex items-center gap-1.5 text-xs text-silver/60 hover:text-silver transition-colors px-2 py-1"
+        >
+          <BarChart3 className="size-3.5" />
+          Analytics
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+function LiveBadge({ live, adminDisabled }: { live: boolean; adminDisabled: boolean }) {
+  if (adminDisabled) {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 text-amber-300 px-2 py-0.5 text-[10px] font-medium">
+        <Circle className="size-2 fill-amber-400 text-amber-400" />
+        Admin-disabled
+      </span>
+    );
+  }
+  return live ? (
+    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 text-emerald-300 px-2 py-0.5 text-[10px] font-medium">
+      <Circle className="size-2 fill-emerald-400 text-emerald-400" />
+      Live
+    </span>
+  ) : (
+    <span className="inline-flex items-center gap-1 rounded-full bg-slate-500/15 text-slate-300 px-2 py-0.5 text-[10px] font-medium">
+      <Circle className="size-2 fill-slate-400 text-slate-400" />
+      Offline
+    </span>
+  );
+}
+
+function fmtRelative(iso: string): string {
+  const d = new Date(iso);
+  const now = new Date();
+  const diffMs = now.getTime() - d.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  if (diffDays < 1) return "today";
+  if (diffDays === 1) return "yesterday";
+  if (diffDays < 7) return `${diffDays} days ago`;
+  const diffWeeks = Math.floor(diffDays / 7);
+  if (diffWeeks < 4) return `${diffWeeks} week${diffWeeks === 1 ? "" : "s"} ago`;
+  const diffMonths = Math.floor(diffDays / 30);
+  if (diffMonths < 12) return `${diffMonths} month${diffMonths === 1 ? "" : "s"} ago`;
+  return d.toLocaleDateString();
+}
+
+// ── Page ─────────────────────────────────────────────────────────────────────
+
+export default function LandingPagesDashboard() {
+  const [rows, setRows] = useState<ServiceRow[]>([]);
+  const [summary, setSummary] = useState<Summary>({
+    total: 0,
+    live: 0,
+    offline: 0,
+    admin_disabled: 0,
+  });
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "live" | "offline">("all");
+  const [category, setCategory] = useState<string>("all");
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const qs = new URLSearchParams();
+      if (search) qs.set("search", search);
+      if (category !== "all") qs.set("category", category);
+      if (statusFilter !== "all") qs.set("status", statusFilter);
+      const res = await fetch(`/api/dashboard/landing-pages?${qs.toString()}`);
+      if (!res.ok) throw new Error(`Failed (${res.status})`);
+      const json = await res.json();
+      setRows(json.services ?? []);
+      setSummary(json.summary ?? { total: 0, live: 0, offline: 0, admin_disabled: 0 });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Load failed");
+    } finally {
+      setLoading(false);
+    }
+  }, [search, category, statusFilter]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  async function handleToggle(row: ServiceRow, nextLive: boolean) {
+    try {
+      const res = await fetch(
+        `/api/dashboard/landing-pages/${row.template_id}/toggle-live`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ is_published: nextLive }),
+        },
+      );
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        if (res.status === 409) {
+          toast.error(json.detail ?? "Admin has disabled this service.");
+        } else {
+          toast.error(json.title ?? "Toggle failed");
+        }
+        return;
+      }
+      toast.success(nextLive ? "Service is now Live" : "Service is now Offline");
+      await load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Toggle failed");
+    }
+  }
+
+  return (
+    <div className="min-h-screen bg-cosmos-950 py-8 px-4">
+      <div className="mx-auto max-w-5xl">
+        {/* Header */}
+        <div className="flex items-center justify-between gap-4 mb-6">
+          <div>
+            <h1 className="font-display text-3xl font-semibold text-cream">Your services</h1>
+            <p className="mt-1 text-sm text-silver/60">
+              Take services live, customize the page blocks, and watch your traffic.
+            </p>
+          </div>
+          <Button variant="outline" size="sm" onClick={load} disabled={loading}>
+            <RefreshCw className={cn("size-3.5 mr-1.5", loading && "animate-spin")} />
+            Refresh
           </Button>
+        </div>
+
+        {/* Summary bar */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+          <SummaryStat label="Total services" value={summary.total} />
+          <SummaryStat label="Live" value={summary.live} tone="emerald" />
+          <SummaryStat label="Offline" value={summary.offline} tone="slate" />
+          <SummaryStat label="Admin-disabled" value={summary.admin_disabled} tone="amber" />
+        </div>
+
+        {/* Filters */}
+        <div className="flex flex-col sm:flex-row gap-3 mb-5">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-silver/50" />
+            <Input
+              placeholder="Search services…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9 bg-cosmos-900/40 border-white/10"
+            />
+          </div>
+          <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}>
+            <SelectTrigger className="w-full sm:w-[160px] bg-cosmos-900/40 border-white/10">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All</SelectItem>
+              <SelectItem value="live">Live</SelectItem>
+              <SelectItem value="offline">Offline</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={category} onValueChange={setCategory}>
+            <SelectTrigger className="w-full sm:w-[180px] bg-cosmos-900/40 border-white/10">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All categories</SelectItem>
+              <SelectItem value="astrology">Astrology</SelectItem>
+              <SelectItem value="tarot">Tarot</SelectItem>
+              <SelectItem value="spiritual_guidance">Spiritual Guidance</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Rows */}
+        {loading ? (
+          <div className="text-center py-16 text-silver/50">Loading…</div>
+        ) : rows.length === 0 ? (
+          <EmptyState />
+        ) : (
+          <div className="space-y-3">
+            {rows.map((r) => (
+              <ServiceRowCard key={r.template_id} row={r} onToggle={handleToggle} />
+            ))}
+          </div>
         )}
       </div>
     </div>
   );
 }
 
-export default function LandingPagesPage() {
-  const [data, setData] = useState<{ landing_pages: LandingPageEntry[]; summary: Summary } | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [username, setUsername] = useState("");
-
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const params = new URLSearchParams();
-      if (search) params.set("search", search);
-      if (categoryFilter !== "all") params.set("category", categoryFilter);
-      if (statusFilter !== "all") params.set("status", statusFilter);
-
-      const [listRes, profileRes] = await Promise.all([
-        fetch(`/api/dashboard/landing-pages?${params}`),
-        fetch("/api/dashboard/profile"),
-      ]);
-
-      if (listRes.ok) {
-        const json = await listRes.json();
-        setData(json);
-      }
-      if (profileRes.ok) {
-        const p = await profileRes.json();
-        setUsername(p.diviner?.username ?? "");
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, [search, categoryFilter, statusFilter]);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-
-  const summary = data?.summary;
-  const entries = data?.landing_pages ?? [];
-
+function SummaryStat({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: number;
+  tone?: "emerald" | "slate" | "amber";
+}) {
+  const toneClass =
+    tone === "emerald"
+      ? "text-emerald-300"
+      : tone === "slate"
+        ? "text-slate-300"
+        : tone === "amber"
+          ? "text-amber-300"
+          : "text-cream";
   return (
-    <div className="min-h-screen bg-cosmos-950 px-4 py-8 md:px-8">
-      {/* Header */}
-      <div className="mb-8 flex items-center justify-between">
-        <div>
-          <h1 className="font-display text-3xl font-bold text-cream">Landing Pages</h1>
-          <p className="mt-1 text-sm text-silver/60">
-            Build and manage your service landing pages
-          </p>
-        </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={fetchData}
-          disabled={loading}
-          className="text-silver/50 hover:text-cream"
-        >
-          <RefreshCw className={cn("size-4", loading && "animate-spin")} />
-        </Button>
-      </div>
+    <div className="rounded-xl border border-white/10 bg-cosmos-900/40 px-4 py-3">
+      <div className="text-xs uppercase tracking-wider text-silver/50">{label}</div>
+      <div className={cn("mt-1 text-2xl font-semibold", toneClass)}>{value}</div>
+    </div>
+  );
+}
 
-      {/* Summary bar */}
-      {summary && (
-        <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {[
-            { label: "Total services", value: summary.total_enabled },
-            { label: "Published", value: summary.total_published, green: true },
-            { label: "Drafts", value: summary.total_draft },
-            { label: "Views (30d)", value: summary.total_views_30d.toLocaleString() },
-          ].map((s) => (
-            <div key={s.label} className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
-              <p className="text-2xl font-bold text-cream">{s.value}</p>
-              <p className="mt-0.5 text-xs text-silver/50">{s.label}</p>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Filters */}
-      <div className="mb-6 flex flex-wrap gap-3">
-        <div className="relative flex-1 min-w-[200px] max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-silver/40" />
-          <Input
-            placeholder="Search services..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 bg-white/[0.04] border-white/10 text-cream placeholder:text-silver/30"
-          />
-        </div>
-        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-          <SelectTrigger className="w-40 bg-white/[0.04] border-white/10 text-cream">
-            <SelectValue placeholder="Category" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Categories</SelectItem>
-            <SelectItem value="astrology">Astrology</SelectItem>
-            <SelectItem value="tarot">Tarot</SelectItem>
-            <SelectItem value="phone">Phone</SelectItem>
-            <SelectItem value="freelance">Freelance</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-40 bg-white/[0.04] border-white/10 text-cream">
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="published">Published</SelectItem>
-            <SelectItem value="draft">Draft / Unpublished</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Cards */}
-      {loading ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="h-44 animate-pulse rounded-2xl border border-white/[0.06] bg-white/[0.02]" />
-          ))}
-        </div>
-      ) : entries.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-24 text-center">
-          <LayoutTemplate className="size-12 text-silver/20 mb-4" />
-          <h3 className="font-display text-xl font-semibold text-cream">
-            {data?.landing_pages.length === 0 && !search && !categoryFilter && statusFilter === "all"
-              ? "No services enabled yet"
-              : "No results found"}
-          </h3>
-          <p className="mt-2 text-sm text-silver/50 max-w-sm">
-            {data?.landing_pages.length === 0 && !search
-              ? "Your account does not have any services enabled. Contact support to get started."
-              : "Try adjusting your search or filters."}
-          </p>
-        </div>
-      ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {entries.map((entry) => (
-            <LandingPageCard
-              key={entry.template_id}
-              entry={entry}
-              username={username}
-              onRefresh={fetchData}
-            />
-          ))}
-        </div>
-      )}
+function EmptyState() {
+  return (
+    <div className="rounded-2xl border border-dashed border-white/10 bg-cosmos-900/30 py-16 text-center">
+      <Plus className="mx-auto size-8 text-silver/40 mb-3" />
+      <p className="text-silver/70">No services match the current filters.</p>
+      <p className="text-xs text-silver/50 mt-1">
+        Clear the filters or ask an admin to assign a service to your account.
+      </p>
     </div>
   );
 }

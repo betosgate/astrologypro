@@ -805,9 +805,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
 ,
 
       
-      // { name: "invitations", label: "System Invitations", description: "Audit trail of pending account invites.", group: "People" },
-      // { name: "social_advocacy", label: "Social Advocacy", description: "Engagement tools for community leaders.", group: "People" },
-      // { name: "deleted_users", label: "Account Deletions", description: "Management of soft-deleted platform users.", group: "People" },
+    
 
       // -----------------Content-------------//
 
@@ -1063,68 +1061,259 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
 ,
 
       // ------------------------------Astrology
-      { name: "wheel_signs_v2", label: "Wheel Signs", description: "Definition and config of zodiac attributes.", group: "Astrology" },
-      { 
-        name: "mundane_dashboard", 
-        label: "Mundane Hub", 
-        description: "Global governance of geopolitical astrology.", 
-        group: "Astrology",
-        purpose: "The command center for world astrology, allowing users to track planetary transits against nations, entities, and global events.",
-        bullets: [
-          "Geo-political entity mapping and NAT charts",
-          "Global transit overlay against major nations",
-          "Historical mundante event search and analysis",
-          "Prophetic dashboard for geopolitical forecasting"
-        ]
-      },
-      { 
-        name: "ingress_charts_v2", 
-        label: "Ingress Charts", 
-        description: "Management of planetary entry charts.", 
-        group: "Astrology",
-        purpose: "A specialized tool for calculating the exact moment a planet enters a new sign (Ingress), used for mundane forecasting.",
-        bullets: [
-          "Precise ingress moment calculations",
-          "Regional chart overlay for world events",
-          "Historical search of past ingress alignments",
-          "Automated alert triggers for major entries"
-        ]
-      },
-      { name: "mundane_entities_v2", label: "Entities", description: "Mapping of nations and locations for charts.", group: "Astrology" },
-      { name: "forecasts_v2", label: "Forecasts", description: "Management of high-level temporal forecasts.", group: "Astrology" },
-      { name: "event_calendar_v2", label: "Event Calendar", description: "Scheduler for major cosmic alignments.", group: "Astrology" },
-      { 
-        name: "chart_studio", 
-        label: "Chart Studio", 
-        description: "Advanced visualization for natal charts.", 
-        group: "Astrology",
-        purpose: "The creative engine for platform-wide chart aesthetics. Admins can configure how astrology charts are rendered for all users.",
-        bullets: [
-          "Custom SVG chart rendering engine settings",
-          "Component-based chart layout configuration",
-          "Visual styling and token management",
-          "Real-time preview of chart generation types"
-        ]
-      },
-      { 
-        name: "world_map", 
-        label: "World Map", 
-        description: "Global mapping of planetary strength.", 
-        group: "Astrology",
-        purpose: "Visualizes the geographic lines of planetary influence (Astro-Cartography) across the physical globe.",
-        bullets: [
-          "Interactive SVG world map overlay",
-          "Planetary line calculations (AC, DC, MC, IC)",
-          "Region-specific influence density mapping",
-          "Exportable locality data for world forecasting"
-        ]
-      },
-      // { name: "research", label: "Astrology Research", description: "Data mining tool for historic chart patterns.", group: "Astrology" },
-      { name: "mundane_search_v2", label: "Mundane Search", description: "Searchable database of planetary positions.", group: "Astrology" },
-      // { name: "mundane_access", label: "Access Control", description: "Permissioning for premium astro data.", group: "Astrology" },
-      // { name: "decan_journals", label: "Decan Wisdom", description: "Granular journals for the 36 decans.", group: "Astrology" },
-      // { name: "decan_media", label: "Decan Media", description: "Visual assets for decan-based studies.", group: "Astrology" },
-      // { name: "quarters", label: "Solar Quarters", description: "Governance of seasonal solar transitions.", group: "Astrology" },
+  
+  {
+    "name": "wheel_signs_s1",
+    "label": "Wheel Signs",
+    "description": "Manage zodiac sign date ranges and display order.",
+    "group": "Astrology",
+    "purpose": "This page is used to manage the 12 zodiac wheel signs. Admins can search signs, filter by start date range, review each sign's start and end date, control priority order, check active status, and open each sign for editing.",
+    "bullets": [
+      "Shows all zodiac signs in one table",
+      "Stores sign start date and end date",
+      "Priority column controls sign ordering",
+      "Status shows whether a sign is active",
+      "Search helps find a sign quickly",
+      "Date filters help narrow results by period",
+      "New Sign button starts sign creation",
+      "Edit action opens a sign for updates"
+    ]
+  },
+  {
+    "name": "mundane_hub",
+    "label": "Mundane Astrology Hub",
+    "description": "Dashboard for ingress charts, entity registry, and forecasts.",
+    "group": "Astrology",
+    "purpose": "This dashboard gives a quick overview of the mundane astrology area. It shows high-level counts for active entities, ingress charts, active forecasts, and pending forecasts, while also giving fast access to the main working sections like Ingress Charts, Entity Registry, and Forecasts.",
+    "bullets": [
+      "Top cards show key activity counts",
+      "Quick access blocks open core mundane sections",
+      "Recent Ingress Charts list recently created chart entries",
+      "Entity Registry panel shows recently added tracked entities",
+      "Forecasts panel shows recently created predictions",
+      "Useful as the daily command center for mundane work",
+      "Helps admins move quickly between research and publishing tasks"
+    ]
+  },
+  {
+    "name": "mundane_dashboard_s1",
+    "label": "Mundane Astrology",
+    "description": "Main command center for entities, leaders, forecasts, charts, and research tools.",
+    "group": "Astrology",
+    "purpose": "This is the large navigation dashboard for the full mundane astrology system. It acts like a launchpad where users can open entity management, leader registry, forecast journal, event calendar, research tools, alerting tools, chart studio, map overlays, scoring, watchlists, and reporting.",
+    "bullets": [
+      "Provides one-click access to all major mundane astrology tools",
+      "Includes entity registry and leader registry",
+      "Includes forecast journal and mundane events",
+      "Includes event calendar and predictive timeline",
+      "Includes research workspace and collaborative workspaces",
+      "Includes watchlist, alert center, and AI brief tools",
+      "Includes chart studio, world map, scoring engine, and report builder",
+      "Top buttons allow quick creation of entity, leader, and forecast records"
+    ]
+  },
+  {
+    "name": "mundane_forecast_create_detailed",
+    "label": "New Forecast",
+    "description": "Create a structured astrological forecast with timing, confidence, and categories.",
+    "group": "Astrology",
+    "purpose": "This form is used to create a detailed mundane forecast entry. It captures the forecast title, related entity, forecast date range, confidence level, astrological basis, narrative summary, event categories, and visibility settings for community publishing.",
+    "bullets": [
+      "Title field stores the forecast name",
+      "Related Entity links the forecast to a country, region, or institution",
+      "Forecast Start and Forecast End define the active prediction window",
+      "Confidence Level helps rate certainty of the forecast",
+      "Astrological Basis records the transit or ingress reasoning",
+      "Narrative Summary explains the predicted outcome in simple words",
+      "Event Categories tag the forecast by theme like political, economic, weather, or social",
+      "Visibility setting controls whether the forecast is admin-only or community-visible"
+    ]
+  },
+  {
+    "name": "mundane_ingress_charts",
+    "label": "Mundane Astrology Charts",
+    "description": "Manage ingress chart publications with filters, status, and publishing controls.",
+    "group": "Astrology",
+    "purpose": "This page lists mundane ingress charts and lets admins review, filter, publish, unpublish, edit, or delete them. It also shows summary counts for total charts, published charts, upcoming charts, and social advocacy usage.",
+    "bullets": [
+      "Top summary cards show chart totals and publishing status",
+      "Search box helps find charts by title or location",
+      "Dropdown filters narrow charts by type, importance, sector, and status",
+      "Each chart card shows title, date range, importance, author, and tags",
+      "Publish and Unpublish buttons control visibility",
+      "Edit and delete actions manage each chart entry",
+      "Social advocacy toggle controls special distribution use",
+      "New Chart button starts chart creation"
+    ]
+  },
+  {
+    "name": "mundane_chart_create_basic",
+    "label": "Create Mundane Chart",
+    "description": "Set up a new mundane ingress chart with event, location, and publishing details.",
+    "group": "Astrology",
+    "purpose": "This form is used to create a mundane chart entry with its main metadata. It captures title, ingress type, importance, short description, event timing, validity period, location details, and publishing settings such as published state and social advocacy mode.",
+    "bullets": [
+      "Basic Info section stores chart title and ingress type",
+      "Importance level marks the expected impact of the chart",
+      "Short Description gives a quick summary for list view",
+      "Event Timestamp records the main chart event time",
+      "Validity Start and End define how long the chart remains relevant",
+      "Location section stores place name, latitude, longitude, and timezone",
+      "Published toggle controls whether the chart is live",
+      "Social Advocacy toggle marks special campaign or public use"
+    ]
+  },
+  {
+    "name": "mundane_ingress_chart_create_full_s1",
+    "label": "New Ingress Chart",
+    "description": "Build a full ingress chart with sectors, author details, tags, and interpretation content.",
+    "group": "Astrology",
+    "purpose": "This is the full extended form for creating an ingress chart. In addition to the basic chart details, it lets the admin assign sectors, tags, author information, intro text, body paragraphs, chart ruler notes, and challenge or strength observations for richer published analysis.",
+    "bullets": [
+      "Includes all basic chart fields such as title, type, timing, and location",
+      "Sector Tags connect the chart to themes like government, weather, public health, or markets",
+      "Tags section stores searchable keywords",
+      "Author Info stores the writer name and email",
+      "System Interpretation area supports intro and body paragraphs",
+      "Chart Ruler Items document important chart rulership notes",
+      "Challenge and Strength section helps structure interpretation points",
+      "Publishing panel controls live status and social advocacy settings"
+    ]
+  },
+  {
+    "name": "entity_registry",
+    "label": "Entity Registry",
+    "description": "Manage countries, institutions, cities, and other tracked mundane entities.",
+    "group": "Astrology",
+    "purpose": "This page is the main list view for tracked mundane entities. It helps admins review how many entities exist, which are active, and what types are stored, while also supporting search, filtering, drill-down access, editing, and deletion.",
+    "bullets": [
+      "Top cards show total entities, active entities, countries, and institutions",
+      "Search helps find entities by name or region",
+      "Type filter narrows results by entity kind",
+      "Each entity card shows short code, name, type, region, and linked chart count",
+      "Arrow action opens deeper entity details",
+      "Edit action updates entity information",
+      "Delete action removes the entity",
+      "Add Entity button opens the entity creation form"
+    ]
+  },
+  {
+    "name": "entity_create_s1",
+    "label": "Add Entity",
+    "description": "Create a new tracked mundane entity with region and location details.",
+    "group": "Astrology",
+    "purpose": "This form is used to add a new entity into the mundane registry. It stores the entity name, type, region, geographic coordinates, timezone, display code or emoji, and internal notes for research tracking.",
+    "bullets": [
+      "Name field stores the entity title",
+      "Type field defines whether it is a country, city, institution, or another type",
+      "Region helps group entities geographically",
+      "Latitude and Longitude store map coordinates",
+      "Timezone keeps event timing accurate",
+      "Flag Emoji or code gives a compact display label",
+      "Notes field stores internal admin comments",
+      "Add Entity button saves the new registry record"
+    ]
+  },
+  {
+    "name": "mundane_forecasts",
+    "label": "Mundane Forecasts",
+    "description": "Manage published and draft forecasts by type, entity, and date range.",
+    "group": "Astrology",
+    "purpose": "This page lists forecast entries so admins can review, filter, publish, unpublish, edit, or delete them. Each forecast shows its title, linked entity, forecast type, active period, and sometimes signal strength or draft state.",
+    "bullets": [
+      "Dropdown filters narrow forecasts by type and state",
+      "Count shows how many forecasts are stored",
+      "Each forecast card shows title and linked entity",
+      "Forecast type badges identify themes such as market, political, weather, or social",
+      "Date range shows when the forecast is active",
+      "Publish or Unpublish buttons control visibility",
+      "Edit and delete actions manage forecast content",
+      "Add Forecast button opens the creation form"
+    ]
+  },
+  {
+    "name": "mundane_forecast_create_quick_s1",
+    "label": "Add Forecast",
+    "description": "Quick form to add a forecast with entity, type, strength, period, and content.",
+    "group": "Astrology",
+    "purpose": "This modal is a faster forecast creation flow for admins. It captures the main forecast title, linked entity, forecast type, signal strength, start and end period, and the core forecast text, with an option to publish immediately.",
+    "bullets": [
+      "Title field stores the forecast headline",
+      "Entity field links the prediction to a tracked entity",
+      "Type field defines the forecast category",
+      "Signal Strength rates the expected intensity",
+      "Period Start and End define the forecast window",
+      "Content field stores the prediction text",
+      "Publish Immediately checkbox makes the forecast live instantly",
+      "Add Forecast button saves the new entry"
+    ]
+  },
+  {
+    "name": "mundane_event_calendar_s1",
+    "label": "Event Calendar",
+    "description": "Calendar view for astrological events such as ingresses, lunations, stations, and eclipses.",
+    "group": "Astrology",
+    "purpose": "This page is the time-based calendar for mundane events. It helps users browse events by month, week, or day, see event counts by type, and filter visible events using category chips like ingress, lunation, eclipse, conjunction, station, retrograde, direct, return, and custom.",
+    "bullets": [
+      "Top counters summarize how many events exist by type",
+      "Filter chips let users show only selected event categories",
+      "Month, Week, and Day modes support different calendar views",
+      "Calendar grid shows events on their exact dates",
+      "Prev and Next navigation moves across time periods",
+      "Back to Hub returns to the main mundane dashboard",
+      "Useful for planning, analysis, and timing-based research",
+      "Makes it easy to see event clusters within a month"
+    ]
+  },
+  {
+    "name": "chart_studio_s1",
+    "label": "Chart Studio",
+    "description": "Interactive workspace for viewing and analyzing mundane charts.",
+    "group": "Astrology",
+    "purpose": "This page is the main visualization and analysis tool for mundane charts. Users can search entities, select chart mode such as Natal, Transit, or Solar Arc, view the wheel chart, inspect planet positions and aspects, and use advanced tools like fixed stars, Arabic parts, snapshots, and export.",
+    "bullets": [
+      "Entity Search panel finds countries or institutions with chart data",
+      "Chart Mode switch changes between Natal, Transit, and Solar Arc views",
+      "Center area displays the actual chart wheel",
+      "Planet Positions panel lists planets, signs, degrees, and houses",
+      "Aspects panel shows major relationships between planets",
+      "Extra tools include Fixed Stars and Arabic Parts",
+      "Save Snapshot stores a chart state for later review",
+      "Export option supports chart output and sharing"
+    ]
+  },
+  {
+    "name": "research_workspace",
+    "label": "Research Workspace",
+    "description": "Manage mundane astrology research projects and linked entities.",
+    "group": "Astrology",
+    "purpose": "This page organizes research projects for mundane analysis. It helps users search projects, filter by status, review linked entity counts, see project dates, and open active research topics such as elections, diplomacy, eclipse cycles, or economic studies.",
+    "bullets": [
+      "Search helps locate a research project by title",
+      "Status filter narrows projects such as active work",
+      "Project cards show title, short description, linked entity count, and date",
+      "Back to Hub returns to the main mundane dashboard",
+      "New Project button opens the research project form",
+      "Useful for managing long-term studies and collaborative analysis",
+      "Helps keep forecasts tied to structured research topics"
+    ]
+  },
+  {
+    "name": "research_project_create",
+    "label": "New Research Project",
+    "description": "Create a research project with title, description, and linked entity.",
+    "group": "Astrology",
+    "purpose": "This form creates a new mundane research project. It stores the project title, a short description of the objective or scope, and an optional linked entity to keep the research connected to a country, institution, or another tracked subject.",
+    "bullets": [
+      "Title field stores the research project name",
+      "Description field explains goals or scope",
+      "Linked Entity connects the project to a tracked registry item",
+      "Create Project button saves the new project",
+      "Cancel button closes the form without saving",
+      "Useful for organizing investigation topics before writing forecasts or reports"
+    ]
+  },
+
 
 
 // ---------------Nativity Birth Chart---------------//
