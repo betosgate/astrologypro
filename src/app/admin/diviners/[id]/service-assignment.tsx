@@ -48,7 +48,6 @@ interface ServiceRow {
   diviner_service_id: string | null;
   is_enabled: boolean;
   is_published: boolean;
-  publish_status: string;
   price: number;
   notes: string | null;
   enabled_at: string | null;

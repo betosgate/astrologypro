@@ -23,7 +23,7 @@ export const metadata = {
 //   - src/app/admin/session/[bookingId]/page.tsx          (smart router)
 //   - src/app/admin/horoscope/session/[bookingId]/page.tsx (single horoscope)
 //   - src/app/admin/tarot/session/[bookingId]/page.tsx    (redirects to reading)
-//   - src/app/admin/tarot/readings/[spreadId]/page.tsx    (tarot redirect target)
+//   - src/app/admin/tarot/readings/[spreadId]/page.tsx    (tarot reading target)
 //
 // Historically this layout gated ALL `/admin/*` behind requireAdmin(), which
 // bounced non-admin diviners to /login before their own page's permissive
@@ -31,19 +31,63 @@ export const metadata = {
 // through for these subroutes; strict authorization still happens at the
 // page level (layer 2 / defense in depth per CLAUDE.md §3).
 //
-// The chrome is also reduced for these routes — a non-admin diviner should
-// never see the admin sidebar.
+// The chrome is reduced for true session routes — a non-admin diviner should
+// never see the admin sidebar. Tarot reading pages are a mixed case: admins
+// should keep the normal admin shell, while non-admin diviners still need the
+// lightweight session chrome after being redirected from their booking page.
 // ────────────────────────────────────────────────────────────────────────────
 const DIVINER_SESSION_PREFIXES = [
   "/admin/session/",
   "/admin/horoscope/session/",
   "/admin/tarot/session/",
-  "/admin/tarot/readings/",
 ];
+
+const DIVINER_TAROT_READING_PREFIX = "/admin/tarot/readings/";
 
 function isDivinerSessionRoute(pathname: string | null): boolean {
   if (!pathname) return false;
   return DIVINER_SESSION_PREFIXES.some((p) => pathname.startsWith(p));
+}
+
+function isDivinerTarotReadingRoute(pathname: string | null): boolean {
+  if (!pathname) return false;
+  return pathname.startsWith(DIVINER_TAROT_READING_PREFIX);
+}
+
+function SessionShell({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="min-h-screen bg-background">
+      <RouteTracker href="/admin" />
+      <main>
+        <SectionContainer size="wide" verticalPadding="md">
+          {children}
+        </SectionContainer>
+      </main>
+    </div>
+  );
+}
+
+async function AdminShell({ children, userId }: { children: React.ReactNode; userId: string }) {
+  const supabase = await createClient();
+  const portals = await getUserPortals(supabase, userId, { isAdmin: true });
+
+  return (
+    <div className="min-h-screen bg-background">
+      <RouteTracker href="/admin" />
+      <AdminSidebar />
+      <main className="lg:pl-60">
+        <div className="hidden lg:flex items-center justify-end gap-2 border-b px-6 h-10 bg-background">
+          <PortalSwitcher portals={portals} currentBase="/admin" />
+          <Suspense fallback={null}>
+            <MundaneAlertBell />
+          </Suspense>
+        </div>
+        <SectionContainer size="wide" verticalPadding="md">
+          {children}
+        </SectionContainer>
+      </main>
+    </div>
+  );
 }
 
 export default async function AdminLayout({
@@ -57,6 +101,7 @@ export default async function AdminLayout({
   const hdrs = await headers();
   const pathname = hdrs.get("x-pathname");
   const sessionRoute = isDivinerSessionRoute(pathname);
+  const tarotReadingRoute = isDivinerTarotReadingRoute(pathname);
 
   if (sessionRoute) {
     // Layer 1: authenticated users only. Layer 2 (page-level
@@ -74,41 +119,33 @@ export default async function AdminLayout({
       redirect(`/login?${qs.toString()}`);
     }
 
-    return (
-      <div className="min-h-screen bg-background">
-        <RouteTracker href="/admin" />
-        <main>
-          <SectionContainer size="wide" verticalPadding="md">
-            {children}
-          </SectionContainer>
-        </main>
-      </div>
-    );
+    return <SessionShell>{children}</SessionShell>;
+  }
+
+  if (tarotReadingRoute) {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      const qs = new URLSearchParams({
+        reason: "admin",
+        ...(pathname ? { redirect: pathname } : {}),
+      });
+      redirect(`/login?${qs.toString()}`);
+    }
+
+    const adminUser = await requireAdmin();
+    if (adminUser && adminUser.id === user.id) {
+      return <AdminShell userId={user.id}>{children}</AdminShell>;
+    }
+
+    return <SessionShell>{children}</SessionShell>;
   }
 
   // Non-session admin route → strict admin gate (historical behavior).
   const user = await requireAdmin();
   if (!user) redirect("/login?reason=admin");
-
-  const supabase = await createClient();
-  const portals = await getUserPortals(supabase, user.id, { isAdmin: true });
-
-  return (
-    <div className="min-h-screen bg-background">
-      <RouteTracker href="/admin" />
-      <AdminSidebar />
-      <main className="lg:pl-60">
-        {/* Top utility bar — desktop only, sits above page content */}
-        <div className="hidden lg:flex items-center justify-end gap-2 border-b px-6 h-10 bg-background">
-          <PortalSwitcher portals={portals} currentBase="/admin" />
-          <Suspense fallback={null}>
-            <MundaneAlertBell />
-          </Suspense>
-        </div>
-        <SectionContainer size="wide" verticalPadding="md">
-          {children}
-        </SectionContainer>
-      </main>
-    </div>
-  );
+  return <AdminShell userId={user.id}>{children}</AdminShell>;
 }

@@ -2,29 +2,27 @@
 
 import { use } from "react";
 import Link from "next/link";
-import { ArrowLeft, Eye, GlobeLock, Loader2, LayoutTemplate } from "lucide-react";
+import { ArrowLeft, Eye, Globe, GlobeLock, Loader2, LayoutTemplate } from "lucide-react";
 import { BuilderProvider, useBuilder } from "@/components/dashboard/builder/builder-context";
 import { SectionList } from "@/components/dashboard/builder/section-list";
 import { SectionEditorPanel } from "@/components/dashboard/builder/section-editor-panel";
 import { AddSectionDialog } from "@/components/dashboard/builder/add-section-dialog";
-import { PublishDialog } from "@/components/dashboard/builder/publish-dialog";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 // ── Status Badge ───────────────────────────────────────────────────────────────
 
-function StatusBadge({ status }: { status: string | undefined }) {
-  const map: Record<string, { label: string; className: string }> = {
-    published:   { label: "Published",   className: "bg-emerald-500/15 text-emerald-400 border-emerald-500/20" },
-    draft:       { label: "Draft",       className: "bg-white/[0.06] text-silver border-white/10" },
-    preview:     { label: "Preview",     className: "bg-blue-500/15 text-blue-400 border-blue-500/20" },
-    unpublished: { label: "Unpublished", className: "bg-amber-500/15 text-amber-400 border-amber-500/20" },
-    archived:    { label: "Archived",    className: "bg-red-500/15 text-red-400 border-red-500/20" },
-  };
-  const cfg = map[status ?? "draft"] ?? map.draft;
+function StatusBadge({ isPublished }: { isPublished: boolean }) {
   return (
-    <span className={cn("inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium", cfg.className)}>
-      {cfg.label}
+    <span
+      className={cn(
+        "inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium",
+        isPublished
+          ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/20"
+          : "bg-white/[0.06] text-silver border-white/10",
+      )}
+    >
+      {isPublished ? "Live" : "Offline"}
     </span>
   );
 }
@@ -32,17 +30,14 @@ function StatusBadge({ status }: { status: string | undefined }) {
 // ── Toolbar ────────────────────────────────────────────────────────────────────
 
 function BuilderToolbar() {
-  const { state, unpublishPage } = useBuilder();
-  const { landingPage, divinerUsername, serviceSlug, isSaving, lastSavedAt, isLoading } = state;
+  const { state, togglePublished } = useBuilder();
+  const { divinerUsername, serviceSlug, isPublished, isSaving, lastSavedAt, isLoading } = state;
 
-  const isPublished = landingPage?.status === "published";
-  const previewHref = divinerUsername && serviceSlug
-    ? `/${divinerUsername}/services/${serviceSlug}?preview=true`
-    : null;
+  const previewHref =
+    divinerUsername && serviceSlug ? `/${divinerUsername}/services/${serviceSlug}?preview=true` : null;
 
   return (
     <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.06] bg-cosmos-900/60 backdrop-blur-sm">
-      {/* Left: back + title */}
       <div className="flex items-center gap-3 min-w-0">
         <Link
           href="/dashboard/landing-pages"
@@ -57,7 +52,8 @@ function BuilderToolbar() {
           </p>
           {lastSavedAt && !isSaving && (
             <p className="text-[11px] text-silver/40">
-              Saved {lastSavedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+              Saved{" "}
+              {lastSavedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
             </p>
           )}
           {isSaving && (
@@ -66,26 +62,14 @@ function BuilderToolbar() {
             </p>
           )}
         </div>
-        <StatusBadge status={landingPage?.status} />
+        <StatusBadge isPublished={isPublished} />
       </div>
 
-      {/* Right: actions */}
       <div className="flex items-center gap-2 flex-shrink-0">
-        {/* Preview link — opens the live route with ?preview=true */}
-        {landingPage && previewHref && (
-          <Button
-            size="sm"
-            variant="ghost"
-            asChild
-            className="text-silver/60 hover:text-cream gap-1.5"
-          >
-            <a
-              href={previewHref}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <Eye className="size-3.5" />
-              Preview
+        {previewHref && (
+          <Button size="sm" variant="ghost" asChild className="text-silver/60 hover:text-cream gap-1.5">
+            <a href={previewHref} target="_blank" rel="noopener noreferrer">
+              <Eye className="size-3.5" /> Preview
             </a>
           </Button>
         )}
@@ -94,15 +78,21 @@ function BuilderToolbar() {
           <Button
             size="sm"
             variant="outline"
-            onClick={unpublishPage}
+            onClick={() => togglePublished(false)}
             disabled={isSaving || isLoading}
             className="border-white/10 text-silver/70 hover:text-red-400 hover:border-red-400/30 gap-1.5"
           >
-            <GlobeLock className="size-3.5" />
-            Unpublish
+            <GlobeLock className="size-3.5" /> Take Offline
           </Button>
         ) : (
-          <PublishDialog />
+          <Button
+            size="sm"
+            onClick={() => togglePublished(true)}
+            disabled={isSaving || isLoading}
+            className="bg-gold hover:bg-gold-light text-cosmos-900 font-semibold gap-1.5"
+          >
+            <Globe className="size-3.5" /> Go Live
+          </Button>
         )}
       </div>
     </div>
@@ -128,18 +118,18 @@ function BuilderLayout() {
 
   return (
     <div className="flex h-[calc(100vh-57px)] overflow-hidden">
-      {/* ── Left: Section List ── */}
       <div className="w-72 flex-shrink-0 border-r border-white/[0.06] flex flex-col overflow-hidden">
         <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.06]">
-          <span className="text-xs font-medium text-silver/60 uppercase tracking-wide">Sections</span>
+          <span className="text-xs font-medium text-silver/60 uppercase tracking-wide">
+            Blocks
+          </span>
           <AddSectionDialog />
         </div>
-        <div className="flex-1 overflow-y-auto p-2">
+        <div className="flex-1 overflow-y-auto p-3">
           <SectionList />
         </div>
       </div>
 
-      {/* ── Right: Editor Panel ── */}
       <div className="flex-1 overflow-y-auto bg-cosmos-950/30">
         <SectionEditorPanel />
       </div>

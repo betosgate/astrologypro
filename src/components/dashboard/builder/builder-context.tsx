@@ -1,28 +1,32 @@
 "use client";
 
 import React, { createContext, useContext, useReducer, useCallback, useEffect, useRef } from "react";
-import type { ServiceLandingPage, LandingPageSection } from "@/types/landing-page-builder";
+import type {
+  BlockSlot,
+  BlockType,
+  DivinerServiceBlock,
+  BlocksBySlot,
+  BlockTypeConfig,
+} from "@/types/landing-page-builder";
 import { toast } from "sonner";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
-interface AvailableSectionType {
-  type: string;
+interface SlotConfig {
+  slot: BlockSlot;
   label: string;
   description: string;
-  icon: string;
-  category: "content" | "media" | "engagement" | "navigation";
-  is_globally_enabled: boolean;
-  remaining_slots: number;
+  max_per_slot: number;
 }
 
 interface BuilderState {
-  landingPage: ServiceLandingPage | null;
-  sections: LandingPageSection[];
-  selectedSectionId: string | null;
-  availableSectionTypes: AvailableSectionType[];
+  blocks: BlocksBySlot;
+  selectedBlockId: string | null;
+  blockTypes: BlockTypeConfig[];
+  slotConfigs: SlotConfig[];
   divinerUsername: string | null;
   serviceSlug: string | null;
+  isPublished: boolean;
   isSaving: boolean;
   hasUnsavedChanges: boolean;
   lastSavedAt: Date | null;
@@ -31,16 +35,34 @@ interface BuilderState {
 
 type BuilderAction =
   | { type: "SET_LOADING"; payload: boolean }
-  | { type: "SET_DATA"; payload: { page: ServiceLandingPage; sections: LandingPageSection[]; available: AvailableSectionType[]; divinerUsername: string | null; serviceSlug: string | null } }
-  | { type: "SELECT_SECTION"; payload: string | null }
+  | {
+      type: "SET_DATA";
+      payload: {
+        blocks: BlocksBySlot;
+        blockTypes: BlockTypeConfig[];
+        slotConfigs: SlotConfig[];
+        divinerUsername: string | null;
+        serviceSlug: string | null;
+        isPublished: boolean;
+      };
+    }
+  | { type: "SELECT_BLOCK"; payload: string | null }
   | { type: "SET_SAVING"; payload: boolean }
   | { type: "SET_SAVED"; payload: Date }
   | { type: "SET_UNSAVED"; payload: boolean }
-  | { type: "UPDATE_SECTION"; payload: LandingPageSection }
-  | { type: "ADD_SECTION"; payload: LandingPageSection }
-  | { type: "DELETE_SECTION"; payload: string }
-  | { type: "REORDER_SECTIONS"; payload: LandingPageSection[] }
-  | { type: "UPDATE_PAGE"; payload: Partial<ServiceLandingPage> };
+  | { type: "UPDATE_BLOCK"; payload: DivinerServiceBlock }
+  | { type: "ADD_BLOCK"; payload: DivinerServiceBlock }
+  | { type: "DELETE_BLOCK"; payload: string }
+  | { type: "REORDER_SLOT"; payload: { slot: BlockSlot; blocks: DivinerServiceBlock[] } }
+  | { type: "SET_PUBLISHED"; payload: boolean };
+
+function insertSorted(list: DivinerServiceBlock[], block: DivinerServiceBlock): DivinerServiceBlock[] {
+  return [...list, block].sort((a, b) => a.display_order - b.display_order);
+}
+
+function replaceBlock(list: DivinerServiceBlock[], block: DivinerServiceBlock): DivinerServiceBlock[] {
+  return list.map((b) => (b.id === block.id ? block : b));
+}
 
 function builderReducer(state: BuilderState, action: BuilderAction): BuilderState {
   switch (action.type) {
@@ -49,59 +71,75 @@ function builderReducer(state: BuilderState, action: BuilderAction): BuilderStat
     case "SET_DATA":
       return {
         ...state,
-        landingPage: action.payload.page,
-        sections: action.payload.sections,
-        availableSectionTypes: action.payload.available,
+        blocks: action.payload.blocks,
+        blockTypes: action.payload.blockTypes,
+        slotConfigs: action.payload.slotConfigs,
         divinerUsername: action.payload.divinerUsername,
         serviceSlug: action.payload.serviceSlug,
+        isPublished: action.payload.isPublished,
         isLoading: false,
       };
-    case "SELECT_SECTION":
-      return { ...state, selectedSectionId: action.payload };
+    case "SELECT_BLOCK":
+      return { ...state, selectedBlockId: action.payload };
     case "SET_SAVING":
       return { ...state, isSaving: action.payload };
     case "SET_SAVED":
       return { ...state, isSaving: false, hasUnsavedChanges: false, lastSavedAt: action.payload };
     case "SET_UNSAVED":
       return { ...state, hasUnsavedChanges: action.payload };
-    case "UPDATE_SECTION":
+    case "ADD_BLOCK": {
+      const b = action.payload;
       return {
         ...state,
-        sections: state.sections.map((s) =>
-          s.id === action.payload.id ? action.payload : s
-        ),
+        blocks:
+          b.slot === "about_diviner"
+            ? { ...state.blocks, about_diviner: insertSorted(state.blocks.about_diviner, b) }
+            : { ...state.blocks, extra: insertSorted(state.blocks.extra, b) },
+        selectedBlockId: b.id,
       };
-    case "ADD_SECTION":
+    }
+    case "UPDATE_BLOCK": {
+      const b = action.payload;
       return {
         ...state,
-        sections: [...state.sections, action.payload].sort((a, b) => a.display_order - b.display_order),
-        selectedSectionId: action.payload.id,
+        blocks: {
+          about_diviner: replaceBlock(state.blocks.about_diviner, b),
+          extra: replaceBlock(state.blocks.extra, b),
+        },
       };
-    case "DELETE_SECTION":
+    }
+    case "DELETE_BLOCK":
       return {
         ...state,
-        sections: state.sections.filter((s) => s.id !== action.payload),
-        selectedSectionId: state.selectedSectionId === action.payload ? null : state.selectedSectionId,
+        blocks: {
+          about_diviner: state.blocks.about_diviner.filter((b) => b.id !== action.payload),
+          extra: state.blocks.extra.filter((b) => b.id !== action.payload),
+        },
+        selectedBlockId: state.selectedBlockId === action.payload ? null : state.selectedBlockId,
       };
-    case "REORDER_SECTIONS":
-      return { ...state, sections: action.payload };
-    case "UPDATE_PAGE":
+    case "REORDER_SLOT":
       return {
         ...state,
-        landingPage: state.landingPage ? { ...state.landingPage, ...action.payload } : null,
+        blocks:
+          action.payload.slot === "about_diviner"
+            ? { ...state.blocks, about_diviner: action.payload.blocks }
+            : { ...state.blocks, extra: action.payload.blocks },
       };
+    case "SET_PUBLISHED":
+      return { ...state, isPublished: action.payload };
     default:
       return state;
   }
 }
 
 const initialState: BuilderState = {
-  landingPage: null,
-  sections: [],
-  selectedSectionId: null,
-  availableSectionTypes: [],
+  blocks: { about_diviner: [], extra: [] },
+  selectedBlockId: null,
+  blockTypes: [],
+  slotConfigs: [],
   divinerUsername: null,
   serviceSlug: null,
+  isPublished: false,
   isSaving: false,
   hasUnsavedChanges: false,
   lastSavedAt: null,
@@ -110,17 +148,21 @@ const initialState: BuilderState = {
 
 // ── Context ────────────────────────────────────────────────────────────────────
 
+interface CreateBlockInput {
+  slot: BlockSlot;
+  section_type: BlockType;
+}
+
 interface BuilderContextValue {
   state: BuilderState;
   templateId: string;
-  selectSection: (id: string | null) => void;
-  addSection: (sectionType: string) => Promise<void>;
-  updateSection: (id: string, data: Record<string, unknown>) => Promise<void>;
-  deleteSection: (id: string) => Promise<void>;
-  toggleSection: (id: string, enabled: boolean) => Promise<void>;
-  reorderSections: (orderedSections: { id: string; display_order: number }[]) => Promise<void>;
-  publishPage: () => Promise<boolean>;
-  unpublishPage: () => Promise<void>;
+  selectBlock: (id: string | null) => void;
+  addBlock: (input: CreateBlockInput) => Promise<void>;
+  updateBlock: (id: string, data: Record<string, unknown>) => Promise<void>;
+  deleteBlock: (id: string) => Promise<void>;
+  toggleBlock: (id: string, enabled: boolean) => Promise<void>;
+  reorderSlot: (slot: BlockSlot, orderedIds: string[]) => Promise<void>;
+  togglePublished: (desired: boolean) => Promise<void>;
   refreshData: () => Promise<void>;
 }
 
@@ -138,7 +180,6 @@ export function BuilderProvider({ templateId, children }: { templateId: string; 
   const [state, dispatch] = useReducer(builderReducer, initialState);
   const unloadRef = useRef<((e: BeforeUnloadEvent) => void) | null>(null);
 
-  // Warn before leaving with unsaved changes
   useEffect(() => {
     const handler = (e: BeforeUnloadEvent) => {
       if (state.hasUnsavedChanges) {
@@ -163,11 +204,15 @@ export function BuilderProvider({ templateId, children }: { templateId: string; 
       dispatch({
         type: "SET_DATA",
         payload: {
-          page: json.landing_page,
-          sections: json.sections,
-          available: json.available_section_types,
+          blocks: {
+            about_diviner: (json.about_diviner ?? []) as DivinerServiceBlock[],
+            extra: (json.extra ?? []) as DivinerServiceBlock[],
+          },
+          blockTypes: (json.block_types ?? []) as BlockTypeConfig[],
+          slotConfigs: (json.slots ?? []) as SlotConfig[],
           divinerUsername: json.diviner?.username ?? null,
           serviceSlug: json.service_template?.slug ?? null,
+          isPublished: json.is_published === true,
         },
       });
     } catch {
@@ -181,171 +226,173 @@ export function BuilderProvider({ templateId, children }: { templateId: string; 
     refreshData();
   }, [refreshData]);
 
-  const selectSection = useCallback((id: string | null) => {
-    dispatch({ type: "SELECT_SECTION", payload: id });
+  const selectBlock = useCallback((id: string | null) => {
+    dispatch({ type: "SELECT_BLOCK", payload: id });
   }, []);
 
-  const addSection = useCallback(async (sectionType: string) => {
-    dispatch({ type: "SET_SAVING", payload: true });
-    try {
-      const res = await fetch(`/api/dashboard/landing-pages/${templateId}/sections`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ section_type: sectionType }),
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        toast.error(err.detail ?? "Failed to add section");
-        return;
+  const addBlock = useCallback(
+    async ({ slot, section_type }: CreateBlockInput) => {
+      dispatch({ type: "SET_SAVING", payload: true });
+      try {
+        const res = await fetch(`/api/dashboard/landing-pages/${templateId}/sections`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ slot, section_type }),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          toast.error(err.detail ?? err.title ?? "Failed to add block");
+          return;
+        }
+        const { block } = await res.json();
+        dispatch({ type: "ADD_BLOCK", payload: block });
+        toast.success("Block added");
+      } catch {
+        toast.error("Network error");
+      } finally {
+        dispatch({ type: "SET_SAVING", payload: false });
       }
-      const { section } = await res.json();
-      dispatch({ type: "ADD_SECTION", payload: section });
-      toast.success(`${sectionType.replace(/_/g, " ")} section added`);
-    } catch {
-      toast.error("Network error");
-    } finally {
-      dispatch({ type: "SET_SAVING", payload: false });
-      // Refresh to get updated available_section_types
-      await refreshData();
-    }
-  }, [templateId, refreshData]);
+    },
+    [templateId],
+  );
 
-  const updateSection = useCallback(async (id: string, data: Record<string, unknown>) => {
-    dispatch({ type: "SET_SAVING", payload: true });
-    try {
-      const res = await fetch(`/api/dashboard/landing-pages/${templateId}/sections/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        toast.error(err.detail ?? "Failed to save section");
-        return;
+  const updateBlock = useCallback(
+    async (id: string, data: Record<string, unknown>) => {
+      dispatch({ type: "SET_SAVING", payload: true });
+      try {
+        const res = await fetch(`/api/dashboard/landing-pages/${templateId}/sections/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          toast.error(err.detail ?? err.title ?? "Failed to save block");
+          return;
+        }
+        const { block } = await res.json();
+        dispatch({ type: "UPDATE_BLOCK", payload: block });
+        dispatch({ type: "SET_SAVED", payload: new Date() });
+      } catch {
+        toast.error("Network error");
+      } finally {
+        dispatch({ type: "SET_SAVING", payload: false });
       }
-      const { section } = await res.json();
-      dispatch({ type: "UPDATE_SECTION", payload: section });
-      dispatch({ type: "SET_SAVED", payload: new Date() });
-      toast.success("Section saved");
-    } catch {
-      toast.error("Network error");
-    } finally {
-      dispatch({ type: "SET_SAVING", payload: false });
-    }
-  }, [templateId]);
+    },
+    [templateId],
+  );
 
-  const deleteSection = useCallback(async (id: string) => {
-    try {
-      const res = await fetch(`/api/dashboard/landing-pages/${templateId}/sections/${id}`, {
-        method: "DELETE",
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        toast.error(err.detail ?? "Cannot delete this section");
-        return;
+  const deleteBlock = useCallback(
+    async (id: string) => {
+      try {
+        const res = await fetch(`/api/dashboard/landing-pages/${templateId}/sections/${id}`, {
+          method: "DELETE",
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          toast.error(err.detail ?? err.title ?? "Cannot delete this block");
+          return;
+        }
+        dispatch({ type: "DELETE_BLOCK", payload: id });
+        toast.success("Block removed");
+      } catch {
+        toast.error("Network error");
       }
-      dispatch({ type: "DELETE_SECTION", payload: id });
-      toast.success("Section removed");
-      await refreshData();
-    } catch {
-      toast.error("Network error");
-    }
-  }, [templateId, refreshData]);
+    },
+    [templateId],
+  );
 
-  const toggleSection = useCallback(async (id: string, enabled: boolean) => {
-    try {
-      const res = await fetch(`/api/dashboard/landing-pages/${templateId}/sections/${id}/toggle`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ is_enabled: enabled }),
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        toast.error(err.detail ?? "Cannot toggle this section");
-        return;
+  const toggleBlock = useCallback(
+    async (id: string, enabled: boolean) => {
+      try {
+        const res = await fetch(`/api/dashboard/landing-pages/${templateId}/sections/${id}/toggle`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ is_enabled: enabled }),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          toast.error(err.detail ?? err.title ?? "Cannot toggle this block");
+          return;
+        }
+        const { block } = await res.json();
+        dispatch({ type: "UPDATE_BLOCK", payload: block });
+      } catch {
+        toast.error("Network error");
       }
-      const { section } = await res.json();
-      dispatch({ type: "UPDATE_SECTION", payload: section });
-    } catch {
-      toast.error("Network error");
-    }
-  }, [templateId]);
+    },
+    [templateId],
+  );
 
-  const reorderSections = useCallback(async (ordered: { id: string; display_order: number }[]) => {
-    // Optimistic update
-    const newSections = [...state.sections];
-    for (const item of ordered) {
-      const idx = newSections.findIndex((s) => s.id === item.id);
-      if (idx >= 0) {
-        newSections[idx] = { ...newSections[idx], display_order: item.display_order };
-      }
-    }
-    newSections.sort((a, b) => a.display_order - b.display_order);
-    dispatch({ type: "REORDER_SECTIONS", payload: newSections });
+  const reorderSlot = useCallback(
+    async (slot: BlockSlot, orderedIds: string[]) => {
+      const current = slot === "about_diviner" ? state.blocks.about_diviner : state.blocks.extra;
+      const byId = new Map(current.map((b) => [b.id, b]));
+      const nextOrder = orderedIds.map((id, idx) => ({ id, display_order: (idx + 1) * 10 }));
+      const optimistic = nextOrder
+        .map(({ id, display_order }) => {
+          const b = byId.get(id);
+          return b ? { ...b, display_order } : null;
+        })
+        .filter((b): b is DivinerServiceBlock => b !== null);
+      dispatch({ type: "REORDER_SLOT", payload: { slot, blocks: optimistic } });
 
-    try {
-      const res = await fetch(`/api/dashboard/landing-pages/${templateId}/sections/reorder`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ section_order: ordered }),
-      });
-      if (!res.ok) {
-        toast.error("Failed to save order — refreshing");
+      try {
+        const res = await fetch(`/api/dashboard/landing-pages/${templateId}/sections/reorder`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ slot, section_order: nextOrder }),
+        });
+        if (!res.ok) {
+          toast.error("Failed to save order — refreshing");
+          await refreshData();
+        }
+      } catch {
+        toast.error("Network error");
         await refreshData();
       }
-    } catch {
-      toast.error("Network error");
-      await refreshData();
-    }
-  }, [templateId, state.sections, refreshData]);
+    },
+    [templateId, state.blocks, refreshData],
+  );
 
-  const publishPage = useCallback(async (): Promise<boolean> => {
-    dispatch({ type: "SET_SAVING", payload: true });
-    try {
-      const res = await fetch(`/api/dashboard/landing-pages/${templateId}/publish`, { method: "POST" });
-      if (!res.ok) {
-        const err = await res.json();
-        toast.error(err.detail ?? "Publish failed");
-        return false;
+  const togglePublished = useCallback(
+    async (desired: boolean) => {
+      dispatch({ type: "SET_SAVING", payload: true });
+      try {
+        const res = await fetch(`/api/dashboard/landing-pages/${templateId}/toggle-live`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ is_published: desired }),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          toast.error(err.detail ?? err.title ?? "Publish toggle failed");
+          return;
+        }
+        const json = await res.json();
+        dispatch({ type: "SET_PUBLISHED", payload: json.is_published === true });
+        toast.success(json.is_published ? "Landing page is now live" : "Landing page is offline");
+      } catch {
+        toast.error("Network error");
+      } finally {
+        dispatch({ type: "SET_SAVING", payload: false });
       }
-      toast.success("Landing page published!");
-      await refreshData();
-      return true;
-    } catch {
-      toast.error("Network error");
-      return false;
-    } finally {
-      dispatch({ type: "SET_SAVING", payload: false });
-    }
-  }, [templateId, refreshData]);
-
-  const unpublishPage = useCallback(async () => {
-    try {
-      const res = await fetch(`/api/dashboard/landing-pages/${templateId}/unpublish`, { method: "POST" });
-      if (!res.ok) {
-        toast.error("Unpublish failed");
-        return;
-      }
-      toast.success("Landing page unpublished");
-      await refreshData();
-    } catch {
-      toast.error("Network error");
-    }
-  }, [templateId, refreshData]);
+    },
+    [templateId],
+  );
 
   return (
     <BuilderContext.Provider
       value={{
         state,
         templateId,
-        selectSection,
-        addSection,
-        updateSection,
-        deleteSection,
-        toggleSection,
-        reorderSections,
-        publishPage,
-        unpublishPage,
+        selectBlock,
+        addBlock,
+        updateBlock,
+        deleteBlock,
+        toggleBlock,
+        reorderSlot,
+        togglePublished,
         refreshData,
       }}
     >
