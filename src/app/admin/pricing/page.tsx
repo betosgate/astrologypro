@@ -8,6 +8,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -129,6 +130,8 @@ export default function AdminPricingPage() {
   const [saving, setSaving] = useState(false);
   const [savedFlash, setSavedFlash] = useState(false);
   const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [deleteItemTarget, setDeleteItemTarget] = useState<PricingItem | null>(null);
+  const [deleteItemLoading, setDeleteItemLoading] = useState(false);
 
   // Plans state
   const [plans, setPlans] = useState<PricingPlan[]>([]);
@@ -521,7 +524,8 @@ export default function AdminPricingPage() {
 
   /* ---- Delete item ---- */
   async function handleDeleteItem(item: PricingItem) {
-    if (!confirm(`Delete item "${item.item_name}" and ALL its plans? This cannot be undone.`)) return;
+    if (!item) return;
+    setDeleteItemLoading(true);
     setError(null);
     try {
       const r = await fetch(`/api/admin/pricing/${item.id}`, { method: "DELETE" });
@@ -535,8 +539,11 @@ export default function AdminPricingPage() {
       // Clean up cache
       setItemPlansCache((prev) => { const n = { ...prev }; delete n[item.id]; return n; });
       setExpandedItems((prev) => { const n = new Set(prev); n.delete(item.id); return n; });
+      setDeleteItemTarget(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setDeleteItemLoading(false);
     }
   }
 
@@ -1253,6 +1260,21 @@ export default function AdminPricingPage() {
 
   return (
     <div className="space-y-6 w-full">
+      <ConfirmDialog
+        open={!!deleteItemTarget}
+        title="Delete Pricing Item"
+        description={`Are you sure you want to delete item "${deleteItemTarget?.item_name ?? "this item"}" and all its plans? This cannot be undone.`}
+        confirmLabel="Delete"
+        loading={deleteItemLoading}
+        variant="destructive"
+        onOpenChange={(open) => {
+          if (!open && !deleteItemLoading) setDeleteItemTarget(null);
+        }}
+        onConfirm={() => {
+          if (deleteItemTarget) void handleDeleteItem(deleteItemTarget);
+        }}
+      />
+
       {/* Header */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-start gap-3">
@@ -1512,7 +1534,7 @@ export default function AdminPricingPage() {
                       <td className="py-2 text-center" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-center gap-1">
                           <Button variant="ghost" size="sm" onClick={() => handleEditItem(item)} title="Edit item"><Pencil className="size-4" /></Button>
-                          <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => handleDeleteItem(item)}><Trash2 className="size-4" /></Button>
+                          <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => setDeleteItemTarget(item)}><Trash2 className="size-4" /></Button>
                         </div>
                       </td>
                     </tr>
