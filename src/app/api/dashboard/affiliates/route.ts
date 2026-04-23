@@ -1,12 +1,16 @@
+// migrated-to-canonical-accounts: 2026-04-23
+// Task 02 — direct-add POST removed. Every affiliate relationship now requires
+// an explicit invite + accept flow. See POST /api/dashboard/affiliates/invite.
+// Sprint: docs/tasks/2026-04-23/affiliate-identity-refactor/02-invite-flow-refactor.md
+
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { assertAffiliateShareWithinCap } from "@/lib/affiliate-share-cap";
 
 export const dynamic = "force-dynamic";
 
 // GET /api/dashboard/affiliates
-// Returns the authenticated diviner's affiliates, paginated
+// Returns the authenticated diviner's affiliates, paginated.
 export async function GET(request: Request) {
   const supabase = await createClient();
   const {
@@ -65,101 +69,6 @@ export async function GET(request: Request) {
   return NextResponse.json({ data: items, nextCursor, hasMore });
 }
 
-// POST /api/dashboard/affiliates
-// Body: { name, email, phone?, notes?, default_commission_type?, default_commission_value? }
-export async function POST(request: Request) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json(
-      { type: "https://httpstatuses.io/422", title: "Invalid JSON body" },
-      { status: 422 }
-    );
-  }
-
-  const {
-    name,
-    email,
-    phone,
-    notes,
-    default_commission_type,
-    default_commission_value,
-  } = body as Record<string, unknown>;
-
-  if (
-    typeof name !== "string" || name.trim() === "" ||
-    typeof email !== "string" || email.trim() === ""
-  ) {
-    return NextResponse.json(
-      { type: "https://httpstatuses.io/422", title: "Validation error", detail: "name and email are required." },
-      { status: 422 }
-    );
-  }
-
-  try {
-    await assertAffiliateShareWithinCap({
-      commissionType: default_commission_type,
-      commissionValue: default_commission_value,
-    });
-  } catch (error) {
-    return NextResponse.json(
-      { type: "https://httpstatuses.io/422", title: "Validation error", detail: error instanceof Error ? error.message : "Affiliate share exceeds allowed cap." },
-      { status: 422 }
-    );
-  }
-
-  const admin = createAdminClient();
-
-  // Resolve diviner record
-  const { data: diviner } = await admin
-    .from("diviners")
-    .select("id")
-    .eq("user_id", user.id)
-    .single();
-
-  if (!diviner) {
-    return NextResponse.json(
-      { type: "https://httpstatuses.io/403", title: "Not a diviner" },
-      { status: 403 }
-    );
-  }
-
-  const insertPayload: Record<string, unknown> = {
-    diviner_id: diviner.id,
-    name: (name as string).trim(),
-    email: (email as string).trim().toLowerCase(),
-    status: "active",
-    created_by: user.id,
-  };
-  if (typeof phone === "string" && phone.trim()) insertPayload.phone = phone.trim();
-  if (typeof notes === "string" && notes.trim()) insertPayload.notes = notes.trim();
-  if (typeof default_commission_type === "string") insertPayload.default_commission_type = default_commission_type;
-  if (typeof default_commission_value === "number") insertPayload.default_commission_value = default_commission_value;
-
-  const { data, error } = await admin
-    .from("diviner_affiliates")
-    .insert(insertPayload)
-    .select("id, diviner_id, name, email, phone, status, default_commission_type, default_commission_value, created_at")
-    .single();
-
-  if (error) {
-    const httpStatus = error.code === "23505" ? 409 : 500;
-    return NextResponse.json(
-      {
-        type: `https://httpstatuses.io/${httpStatus}`,
-        title: httpStatus === 409 ? "Affiliate with this email already exists under your account" : "Database error",
-        detail: error.message,
-      },
-      { status: httpStatus }
-    );
-  }
-
-  return NextResponse.json({ data }, { status: 201 });
-}
+// NOTE: Task 06 will rewrite GET to JOIN affiliate_accounts for canonical
+// identity (name/email/phone/avatar/status). For Task 02 the GET shape is
+// preserved — existing UI keeps working against legacy columns.
