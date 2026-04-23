@@ -66,6 +66,7 @@ import { MIGRATION_SQL as MIG_20260423000002 } from "@/data/migrations/202604230
 import { MIGRATION_SQL as MIG_20260428000100 } from "@/data/migrations/20260428000100_fix_diviner_fields_length";
 import { MIGRATION_SQL as MIG_20260423000001_AIR } from "@/data/migrations/20260423000001_affiliate_identity_refactor";
 import { MIGRATION_SQL as MIG_20260423000002_RLS } from "@/data/migrations/20260423000002_fix_diviner_affiliates_rls";
+import { MIGRATION_SQL as MIG_20260423000003_INV } from "@/data/migrations/20260423000003_affiliate_invite_rpc";
 
 /**
  * Allowlisted migrations that the admin migration runner can execute.
@@ -618,6 +619,14 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Increases the length of plan_id, subscription_status, phone, and username columns in the diviners table to TEXT or VARCHAR(50). Resolves 'value too long for type character varying(20)' errors during trainee-to-diviner upgrade.",
     sortKey: "20260428000100",
     sql: MIG_20260428000100,
+  },
+  "20260423000003_affiliate_invite_rpc": {
+    id: "20260423000003_affiliate_invite_rpc",
+    title: "Affiliate invite RPCs (create/resend/resend-by-junction/revoke) — Task 02",
+    description:
+      "Adds four SECURITY DEFINER functions backing the invite flow: create_affiliate_invite (upsert canonical account + insert pending junction + issue hashed token), resend_affiliate_invite (revoke prior + issue new, bump resent_count), resend_affiliate_invite_by_junction (first-invite for legacy-pending junctions predating the 2026-04-23 flow), revoke_affiliate_invite (mark revoked + delete junction if zero commissions else suspend). All enforce caller ownership (diviner_id = caller) and raise specific SQLSTATE codes: P0001 (blocked or missing required field), P0002 (junction_exists), P0003 (not_found_or_not_owned), P0004 (already_consumed), P0006 (legacy-pending-invalid). Dual-writes legacy diviner_affiliates.{name,email,phone} for pre-Task-06 readers. Runs AFTER 20260423000001 + 20260423000002. Idempotent via CREATE OR REPLACE.",
+    sortKey: "20260423000003",
+    sql: MIG_20260423000003_INV,
   },
   "20260423000002_fix_diviner_affiliates_rls": {
     id: "20260423000002_fix_diviner_affiliates_rls",
