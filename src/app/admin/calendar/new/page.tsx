@@ -73,7 +73,7 @@ export default function NewCalendarEventPage() {
         <h1 className="mt-2 text-2xl font-bold tracking-tight">New Event</h1>
       </div>
 
-      <Card className="max-w-2xl">
+      <Card>
         <CardHeader>
           <CardTitle>Event Details</CardTitle>
         </CardHeader>

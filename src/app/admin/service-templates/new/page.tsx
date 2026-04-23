@@ -4,7 +4,7 @@ export const metadata = { title: "New Service Template | Admin" };
 
 export default function NewServiceTemplatePage() {
   return (
-    <div className="w-full max-w-[1600px] mx-auto space-y-6 px-4 sm:px-6 lg:px-8">
+    <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">New Service Template</h1>
         <p className="text-sm text-muted-foreground mt-0.5">
