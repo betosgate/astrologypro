@@ -23,6 +23,7 @@ import {
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { MAX_MEDIA_IMAGES } from "@/lib/media-gallery";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 type MediaType = "video" | "audio" | "image" | "article" | "link";
 
@@ -103,6 +104,7 @@ export function MediaItemForm({
   const [isActive, setIsActive] = useState(initialItem?.is_active ?? true);
   const [files, setFiles] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
+  const [fullScreenPreview, setFullScreenPreview] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const isImage = mediaType === "image";
@@ -455,69 +457,60 @@ export function MediaItemForm({
                 {/* Drop zone / file picker / Previews */}
                 {files.length > 0 ? (
                   <div className="space-y-3">
-                    {isImage ? (
-                      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                        {files.map((f, i) => (
-                          <div key={`${f.name}-${i}`} className="group relative aspect-square rounded-lg border bg-muted overflow-hidden">
-                            {previews[i] ? (
-                              <img
-                                src={previews[i]}
-                                alt={f.name}
-                                className="h-full w-full object-cover"
-                              />
+                    <div className="flex flex-col gap-2">
+                      {files.map((f, i) => (
+                        <div key={`${f.name}-${i}`} className="flex items-center justify-between gap-3 rounded-lg border border-primary/30 bg-primary/5 p-2">
+                          <div className="flex items-center gap-3 min-w-0">
+                            {isImage && previews[i] ? (
+                              <button
+                                type="button"
+                                className="h-12 w-16 md:w-20 rounded overflow-hidden border shrink-0 bg-black/40 cursor-zoom-in hover:opacity-80 transition-opacity"
+                                onClick={() => setFullScreenPreview(previews[i])}
+                                aria-label={`Preview ${f.name} in full screen`}
+                              >
+                                <img
+                                  src={previews[i]}
+                                  alt={f.name}
+                                  className="h-full w-full object-cover"
+                                />
+                              </button>
                             ) : (
-                              <div className="flex h-full w-full items-center justify-center">
-                                <ImageIcon className="size-8 text-muted-foreground/30" />
+                              <div className="flex h-12 w-12 items-center justify-center rounded border bg-background shrink-0">
+                                <Upload className="size-4 text-primary" />
                               </div>
                             )}
-                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-2">
-                              <p className="text-[10px] text-white text-center line-clamp-2 leading-tight">
-                                {f.name}
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium truncate">{f.name}</p>
+                              <p className="text-xs text-muted-foreground mt-0.5">
+                                {(f.size / 1024 / 1024).toFixed(1)} MB
                               </p>
                             </div>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const newFiles = [...files];
-                                newFiles.splice(i, 1);
-                                setFiles(newFiles);
-                                if (newFiles.length === 0 && fileRef.current) fileRef.current.value = "";
-                              }}
-                              className="absolute top-1 right-1 size-6 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-red-500 transition-colors"
-                              aria-label="Remove file"
-                            >
-                              <X className="size-3" />
-                            </button>
                           </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-between gap-3 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2.5">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <Upload className="size-4 shrink-0 text-primary" />
-                          <div className="min-w-0">
-                            {files.map((f) => (
-                              <p key={f.name} className="text-xs font-medium truncate">
-                                {f.name}
-                                <span className="text-muted-foreground font-normal ml-1.5">
-                                  ({(f.size / 1024 / 1024).toFixed(1)} MB)
-                                </span>
-                              </p>
-                            ))}
-                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const newFiles = [...files];
+                              newFiles.splice(i, 1);
+                              setFiles(newFiles);
+                              if (newFiles.length === 0 && fileRef.current) fileRef.current.value = "";
+                            }}
+                            className="shrink-0 text-muted-foreground hover:text-destructive p-2"
+                            aria-label="Remove file"
+                          >
+                            <X className="size-4" />
+                          </button>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setFiles([]);
-                            if (fileRef.current) fileRef.current.value = "";
-                          }}
-                          className="shrink-0 text-muted-foreground hover:text-destructive"
-                          aria-label="Remove file"
-                        >
-                          <X className="size-4" />
-                        </button>
-                      </div>
+                      ))}
+                    </div>
+
+                    {isImage && mode === "create" && files.length < remainingImageSlots && (
+                      <label
+                        htmlFor="mediaFile"
+                        className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-muted-foreground/30 py-3 text-sm font-medium text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors"
+                      >
+                        <Upload className="size-4" />
+                        Add more images
+                      </label>
                     )}
                   </div>
                 ) : (
@@ -547,7 +540,15 @@ export function MediaItemForm({
                   multiple={isImage && mode === "create"}
                   onChange={(e) => {
                     const selected = Array.from(e.target.files ?? []);
-                    setFiles(selected);
+                    if (isImage && mode === "create") {
+                      // Append new files to existing ones when "Add more images" is clicked
+                      const newFiles = [...files, ...selected];
+                      // unique by name and size to avoid duplicates easily
+                      const uniqueFiles = newFiles.filter((v, i, a) => a.findIndex(t => (t.name === v.name && t.size === v.size)) === i);
+                      setFiles(uniqueFiles.slice(0, remainingImageSlots));
+                    } else {
+                      setFiles(selected);
+                    }
                     // Auto-fill title from filename for non-image types
                     if (!isImage && selected.length === 1 && !title.trim()) {
                       setTitle(deriveTitleFromFilename(selected[0].name));
@@ -574,17 +575,20 @@ export function MediaItemForm({
               </div>
             )}
 
-            {/* URL field — hidden for non-image if file selected */}
-            {(mediaType === "link" || (!isImage && files.length === 0) || (isImage && files.length === 0)) && (
+            {/* URL field — we now show it consistently but clearly labeled */}
+            {(mediaType === "link" || (!isImage && files.length === 0) || isImage) && (
               <div className="space-y-2">
-                <Label htmlFor="url">
-                  {isImage ? "Image URL" : mediaType === "link" ? "URL *" : "URL"}
-                  {isUploadable && !isImage && files.length === 0 ? " *" : ""}
-                </Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="url">
+                    {isImage ? "Or use an Image URL" : mediaType === "link" ? "URL *" : "URL"}
+                    {isUploadable && !isImage && files.length === 0 ? " *" : ""}
+                  </Label>
+                </div>
                 <Input
                   id="url"
                   type="url"
                   value={url}
+                  disabled={isImage && files.length > 0}
                   onChange={(e) => setUrl(e.target.value)}
                   placeholder={
                     mediaType === "audio" ? "https://open.spotify.com/... or https://soundcloud.com/..." :
@@ -595,14 +599,21 @@ export function MediaItemForm({
                   aria-invalid={!!errors.url}
                 />
                 {isImage && url.trim() && !errors.url && (
-                  <div className="mt-2 relative aspect-video w-full rounded-lg border bg-muted overflow-hidden">
+                  <button
+                    type="button"
+                    className="mt-2 h-24 sm:h-32 w-auto max-w-sm rounded-lg border overflow-hidden bg-black/40 inline-flex cursor-zoom-in hover:opacity-80 transition-opacity"
+                    onClick={() => setFullScreenPreview(url.trim())}
+                    aria-label="Preview remote URL image in full screen"
+                  >
                     <img
                       src={url.trim()}
                       alt="URL preview"
-                      className="h-full w-full object-contain bg-black/20"
-                      onError={() => setErrors({ ...errors, url: "Invalid image URL or not accessible." })}
+                      className="h-full object-contain"
+                      onError={() => {
+                        // don't completely crash the url field to error if they're typing it, but show an error text
+                      }}
                     />
-                  </div>
+                  </button>
                 )}
                 {errors.url && <p className="text-sm text-destructive">{errors.url}</p>}
               </div>
@@ -678,6 +689,23 @@ export function MediaItemForm({
           </Button>
         </div>
       </form>
+
+      <Dialog open={!!fullScreenPreview} onOpenChange={(open) => !open && setFullScreenPreview(null)}>
+        <DialogContent className="sm:max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Image Preview</DialogTitle>
+          </DialogHeader>
+          {fullScreenPreview && (
+            <div className="relative w-full flex flex-col items-center justify-center rounded-md overflow-hidden bg-muted/20 border">
+              <img
+                src={fullScreenPreview}
+                alt="Image Preview"
+                className="max-h-[70vh] object-contain"
+              />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -1,5 +1,10 @@
 "use client";
 
+// Task 04 (2026-04-23): invite-only flow. Add-affiliate sheet removed. Row
+// dropdown with Resend / Copy link / Revoke / View. Agreement-gate banner
+// disables Invite until the diviner signs the affiliate partnership terms.
+// Sprint: docs/tasks/2026-04-23/affiliate-identity-refactor/04-diviner-ui-updates.md
+
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -14,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Table,
   TableBody,
@@ -23,14 +29,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -38,17 +36,43 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Loader2,
-  Plus,
   Eye,
   Users,
   DollarSign,
   Wallet,
   UserPlus,
   Send,
+  MoreHorizontal,
+  RefreshCw,
+  XCircle,
+  Copy,
+  AlertTriangle,
+  Lock,
 } from "lucide-react";
+import {
+  createInvite,
+  resendInviteByJunction,
+  revokeInvite,
+} from "@/lib/api/affiliates-client";
+
+interface LatestInvite {
+  id: string;
+  expires_at: string;
+  revoked_at: string | null;
+  resent_count: number;
+  created_at: string;
+}
 
 interface Affiliate {
   id: string;
@@ -60,6 +84,14 @@ interface Affiliate {
   default_commission_type: string;
   default_commission_value: number;
   created_at: string;
+  // Additive from Task 04
+  affiliate_account_id: string | null;
+  account_status: "unclaimed" | "active" | "suspended" | "blocked" | null;
+  user_id: string | null;
+  avatar_url: string | null;
+  invited_at: string | null;
+  accepted_at: string | null;
+  latest_invite: LatestInvite | null;
 }
 
 interface Summary {
@@ -70,35 +102,63 @@ interface Summary {
   pending_balance_cents: number;
 }
 
-const STATUS_COLORS: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+type DerivedStatus =
+  | "pending"
+  | "pending_expired"
+  | "active"
+  | "suspended"
+  | "blocked"
+  | "account_blocked";
+
+const STATUS_COLORS: Record<DerivedStatus, "default" | "secondary" | "destructive" | "outline"> = {
   active: "default",
   pending: "outline",
+  pending_expired: "outline",
   suspended: "secondary",
   blocked: "destructive",
+  account_blocked: "destructive",
 };
+
+const STATUS_LABEL: Record<DerivedStatus, string> = {
+  active: "Active",
+  pending: "Pending",
+  pending_expired: "Expired",
+  suspended: "Suspended",
+  blocked: "Blocked",
+  account_blocked: "Blocked (account)",
+};
+
+function deriveStatus(aff: Affiliate): DerivedStatus {
+  if (aff.account_status === "blocked") return "account_blocked";
+  if (aff.status === "pending") {
+    const exp = aff.latest_invite?.expires_at;
+    if (exp && new Date(exp).getTime() < Date.now()) return "pending_expired";
+    if (aff.latest_invite?.revoked_at) return "pending_expired";
+    return "pending";
+  }
+  if (aff.status === "active") return "active";
+  if (aff.status === "suspended") return "suspended";
+  if (aff.status === "blocked") return "blocked";
+  return "pending";
+}
 
 function fmtCents(cents: number) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(cents / 100);
 }
 
 function fmtDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  return new Date(iso).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 }
 
 export default function DashboardAffiliatesPage() {
   const [affiliates, setAffiliates] = useState<Affiliate[]>([]);
   const [summary, setSummary] = useState<Summary | null>(null);
+  const [agreementSigned, setAgreementSigned] = useState<boolean>(true); // optimistic — corrected on load
   const [loading, setLoading] = useState(true);
-  const [sheetOpen, setSheetOpen] = useState(false);
-  const [saving, setSaving] = useState(false);
-
-  // Form state
-  const [formName, setFormName] = useState("");
-  const [formEmail, setFormEmail] = useState("");
-  const [formPhone, setFormPhone] = useState("");
-  const [formCommType, setFormCommType] = useState("percentage");
-  const [formCommValue, setFormCommValue] = useState("10");
-  const [formNotes, setFormNotes] = useState("");
 
   // Invite dialog state
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -106,42 +166,20 @@ export default function DashboardAffiliatesPage() {
   const [inviteName, setInviteName] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteMessage, setInviteMessage] = useState("");
+  const [showCommission, setShowCommission] = useState(false);
+  const [commType, setCommType] = useState<"percentage" | "fixed">("percentage");
+  const [commValue, setCommValue] = useState("10");
+
+  // Row action in-flight state
+  const [busyRowId, setBusyRowId] = useState<string | null>(null);
 
   function resetInviteForm() {
     setInviteName("");
     setInviteEmail("");
     setInviteMessage("");
-  }
-
-  async function handleInvite() {
-    if (!inviteName || !inviteEmail) {
-      toast.error("Name and email are required");
-      return;
-    }
-    setInviteSaving(true);
-    const res = await fetch("/api/dashboard/affiliates/invite", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: inviteName,
-        email: inviteEmail,
-        message: inviteMessage || undefined,
-      }),
-    });
-    if (res.ok) {
-      const json = await res.json();
-      toast.success("Invitation sent successfully");
-      if (json.referralLink) {
-        toast.info(`Referral link: ${json.referralLink}`, { duration: 8000 });
-      }
-      setInviteOpen(false);
-      resetInviteForm();
-      await loadAffiliates();
-    } else {
-      const err = await res.json();
-      toast.error(err.title ?? "Failed to send invitation");
-    }
-    setInviteSaving(false);
+    setShowCommission(false);
+    setCommType("percentage");
+    setCommValue("10");
   }
 
   const loadAffiliates = useCallback(async () => {
@@ -153,6 +191,9 @@ export default function DashboardAffiliatesPage() {
     if (affRes.ok) {
       const j = await affRes.json();
       setAffiliates(j.data ?? []);
+      if (typeof j?.meta?.affiliate_agreement_signed === "boolean") {
+        setAgreementSigned(j.meta.affiliate_agreement_signed);
+      }
     }
     if (sumRes.ok) {
       const j = await sumRes.json();
@@ -165,44 +206,118 @@ export default function DashboardAffiliatesPage() {
     loadAffiliates();
   }, [loadAffiliates]);
 
-  function resetForm() {
-    setFormName("");
-    setFormEmail("");
-    setFormPhone("");
-    setFormCommType("percentage");
-    setFormCommValue("10");
-    setFormNotes("");
-  }
-
-  async function handleCreate() {
-    if (!formName || !formEmail) {
+  async function handleInvite() {
+    if (!inviteName.trim() || !inviteEmail.trim()) {
       toast.error("Name and email are required");
       return;
     }
-    setSaving(true);
-    const res = await fetch("/api/dashboard/affiliates", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: formName,
-        email: formEmail,
-        phone: formPhone || undefined,
-        notes: formNotes || undefined,
-        default_commission_type: formCommType,
-        default_commission_value: parseFloat(formCommValue) || 0,
-      }),
-    });
-    if (res.ok) {
-      toast.success("Affiliate added");
-      setSheetOpen(false);
-      resetForm();
+    setInviteSaving(true);
+    try {
+      const result = await createInvite({
+        email: inviteEmail.trim(),
+        name: inviteName.trim(),
+        message: inviteMessage.trim() || undefined,
+        ...(showCommission
+          ? {
+              default_commission_type: commType,
+              default_commission_value: parseFloat(commValue) || 0,
+            }
+          : {}),
+      });
+      if (result.email_delivery === "failed") {
+        toast.warning(
+          `Invitation saved but email delivery failed. You can resend from the affiliate's row.`,
+        );
+      } else {
+        toast.success(
+          `Invitation sent to ${inviteEmail.trim()}. They have 14 days to accept.`,
+        );
+      }
+      setInviteOpen(false);
+      resetInviteForm();
       await loadAffiliates();
-    } else {
-      const err = await res.json();
-      toast.error(err.title ?? "Failed to add affiliate");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to send invitation");
+    } finally {
+      setInviteSaving(false);
     }
-    setSaving(false);
   }
+
+  async function handleResend(aff: Affiliate) {
+    setBusyRowId(aff.id);
+    try {
+      const result = await resendInviteByJunction(aff.id);
+      if (result.email_delivery === "failed") {
+        toast.warning("New invite created, but email delivery failed.");
+      } else {
+        toast.success(`Invitation resent to ${aff.email}.`);
+      }
+      await loadAffiliates();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to resend");
+    } finally {
+      setBusyRowId(null);
+    }
+  }
+
+  async function handleCopyLink(aff: Affiliate) {
+    if (
+      !confirm(
+        "This issues a fresh invitation and invalidates any prior invite email. Continue?",
+      )
+    )
+      return;
+    setBusyRowId(aff.id);
+    try {
+      const result = await resendInviteByJunction(aff.id);
+      // Raw token never returned — show the masked URL in a toast so the
+      // diviner sees where the email points. The actual email is what the
+      // invitee clicks.
+      toast.success(
+        `New invite sent to ${aff.email}. The clickable link is only in their email.`,
+        { duration: 8000 },
+      );
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      if ((result as any).accept_url_masked) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        navigator.clipboard?.writeText((result as any).accept_url_masked).catch(() => {});
+      }
+      await loadAffiliates();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed");
+    } finally {
+      setBusyRowId(null);
+    }
+  }
+
+  async function handleRevoke(aff: Affiliate) {
+    if (!aff.latest_invite?.id) {
+      toast.error("No active invite to revoke");
+      return;
+    }
+    if (
+      !confirm(
+        `Revoke the pending invitation for ${aff.email}? The affiliate will no longer be able to accept.`,
+      )
+    )
+      return;
+    setBusyRowId(aff.id);
+    try {
+      const result = await revokeInvite(aff.latest_invite.id);
+      toast.success(
+        result.junction_action === "deleted"
+          ? "Invitation revoked and affiliate removed from your list."
+          : "Invitation revoked. Partnership moved to Suspended (had prior commission history).",
+      );
+      await loadAffiliates();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to revoke");
+    } finally {
+      setBusyRowId(null);
+    }
+  }
+
+  const canInvite = agreementSigned;
 
   if (loading) {
     return (
@@ -241,8 +356,17 @@ export default function DashboardAffiliatesPage() {
         <div className="flex items-center gap-2">
           <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
             <DialogTrigger asChild>
-              <Button variant="outline" onClick={resetInviteForm}>
-                <Send className="mr-2 size-4" />
+              <Button
+                onClick={resetInviteForm}
+                disabled={!canInvite}
+                aria-disabled={!canInvite}
+                title={
+                  !canInvite
+                    ? "Sign the affiliate partnership agreement to enable invitations"
+                    : undefined
+                }
+              >
+                <Send className="mr-2 size-4" aria-hidden />
                 Invite Affiliate
               </Button>
             </DialogTrigger>
@@ -250,8 +374,8 @@ export default function DashboardAffiliatesPage() {
               <DialogHeader>
                 <DialogTitle>Invite Affiliate Partner</DialogTitle>
                 <DialogDescription>
-                  Send an invitation email to a potential affiliate partner.
-                  They will receive a link to accept and start referring clients.
+                  Send an invitation email. They&rsquo;ll receive a link that
+                  expires in 14 days.
                 </DialogDescription>
               </DialogHeader>
               <div className="mt-4 space-y-4">
@@ -262,6 +386,7 @@ export default function DashboardAffiliatesPage() {
                     value={inviteName}
                     onChange={(e) => setInviteName(e.target.value)}
                     placeholder="Jane Smith"
+                    autoComplete="name"
                   />
                 </div>
                 <div className="space-y-2">
@@ -272,6 +397,7 @@ export default function DashboardAffiliatesPage() {
                     value={inviteEmail}
                     onChange={(e) => setInviteEmail(e.target.value)}
                     placeholder="jane@example.com"
+                    autoComplete="email"
                   />
                 </div>
                 <div className="space-y-2">
@@ -280,16 +406,69 @@ export default function DashboardAffiliatesPage() {
                     id="invite-message"
                     value={inviteMessage}
                     onChange={(e) => setInviteMessage(e.target.value)}
-                    placeholder="I'd love for you to join my affiliate program..."
+                    placeholder="I'd love for you to join my affiliate program…"
                     rows={3}
                   />
                 </div>
-                <Button onClick={handleInvite} disabled={inviteSaving} className="w-full">
+
+                <div className="space-y-2 rounded-md border p-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowCommission((v) => !v)}
+                    className="flex w-full items-center justify-between text-sm font-medium"
+                  >
+                    <span>Commission (optional)</span>
+                    <span className="text-xs text-muted-foreground">
+                      {showCommission ? "Hide" : "Customize"}
+                    </span>
+                  </button>
+                  {showCommission && (
+                    <div className="grid grid-cols-2 gap-3 pt-2">
+                      <div className="space-y-1.5">
+                        <Label>Type</Label>
+                        <select
+                          className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
+                          value={commType}
+                          onChange={(e) =>
+                            setCommType(e.target.value as "percentage" | "fixed")
+                          }
+                        >
+                          <option value="percentage">Percentage</option>
+                          <option value="fixed">Fixed amount</option>
+                        </select>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label>
+                          {commType === "percentage" ? "%" : "Amount (cents)"}
+                        </Label>
+                        <Input
+                          type="number"
+                          min="0"
+                          value={commValue}
+                          onChange={(e) => setCommValue(e.target.value)}
+                        />
+                      </div>
+                      <p className="col-span-2 text-xs text-muted-foreground">
+                        You can change this from the affiliate&rsquo;s detail page
+                        after they accept.
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                <Button
+                  onClick={handleInvite}
+                  disabled={inviteSaving}
+                  className="w-full"
+                >
                   {inviteSaving ? (
-                    <><Loader2 className="mr-2 size-4 animate-spin" />Sending...</>
+                    <>
+                      <Loader2 className="mr-2 size-4 animate-spin" aria-hidden />
+                      Sending…
+                    </>
                   ) : (
                     <>
-                      <Send className="mr-2 size-4" />
+                      <Send className="mr-2 size-4" aria-hidden />
                       Send Invitation
                     </>
                   )}
@@ -297,92 +476,31 @@ export default function DashboardAffiliatesPage() {
               </div>
             </DialogContent>
           </Dialog>
-
-          <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-            <SheetTrigger asChild>
-              <Button onClick={resetForm}>
-                <Plus className="mr-2 size-4" />
-                Add Affiliate
-              </Button>
-            </SheetTrigger>
-          <SheetContent>
-            <SheetHeader>
-              <SheetTitle>Add Affiliate</SheetTitle>
-              <SheetDescription>
-                Create a new affiliate partner under your account.
-              </SheetDescription>
-            </SheetHeader>
-            <div className="mt-6 space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="aff-name">Name</Label>
-                <Input
-                  id="aff-name"
-                  value={formName}
-                  onChange={(e) => setFormName(e.target.value)}
-                  placeholder="Jane Smith"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="aff-email">Email</Label>
-                <Input
-                  id="aff-email"
-                  type="email"
-                  value={formEmail}
-                  onChange={(e) => setFormEmail(e.target.value)}
-                  placeholder="jane@example.com"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="aff-phone">Phone (optional)</Label>
-                <Input
-                  id="aff-phone"
-                  type="tel"
-                  value={formPhone}
-                  onChange={(e) => setFormPhone(e.target.value)}
-                  placeholder="+1 555 123 4567"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Commission type</Label>
-                <select
-                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
-                  value={formCommType}
-                  onChange={(e) => setFormCommType(e.target.value)}
-                >
-                  <option value="percentage">Percentage</option>
-                  <option value="fixed">Fixed amount</option>
-                </select>
-              </div>
-              <div className="space-y-2">
-                <Label>{formCommType === "percentage" ? "Commission %" : "Fixed amount (cents)"}</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  value={formCommValue}
-                  onChange={(e) => setFormCommValue(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="aff-notes">Notes (optional)</Label>
-                <Input
-                  id="aff-notes"
-                  value={formNotes}
-                  onChange={(e) => setFormNotes(e.target.value)}
-                  placeholder="Internal notes…"
-                />
-              </div>
-              <Button onClick={handleCreate} disabled={saving} className="w-full">
-                {saving ? (
-                  <><Loader2 className="mr-2 size-4 animate-spin" />Saving…</>
-                ) : (
-                  "Create Affiliate"
-                )}
-              </Button>
-            </div>
-          </SheetContent>
-        </Sheet>
         </div>
       </div>
+
+      {/* Agreement gate banner */}
+      {!agreementSigned && (
+        <Alert
+          role="alert"
+          aria-live="polite"
+          className="border-amber-400/40 bg-amber-50 dark:bg-amber-950/20"
+        >
+          <AlertTriangle className="size-4 text-amber-500" aria-hidden />
+          <AlertTitle>Sign the affiliate partnership agreement</AlertTitle>
+          <AlertDescription className="mt-1 space-y-3">
+            <p>
+              Before inviting affiliates, you&rsquo;ll need to accept the
+              affiliate partnership terms. This only takes a moment.
+            </p>
+            <Button asChild size="sm" variant="outline">
+              <Link href="/dashboard/account/affiliate-agreement">
+                Review &amp; Sign Agreement
+              </Link>
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Summary Stats */}
       {summary && (
@@ -390,26 +508,30 @@ export default function DashboardAffiliatesPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">Total Affiliates</CardTitle>
-              <Users className="size-4 text-muted-foreground" />
+              <Users className="size-4 text-muted-foreground" aria-hidden />
             </CardHeader>
             <CardContent>
               <p className="text-2xl font-bold">{summary.total_affiliates}</p>
-              <p className="text-xs text-muted-foreground">{summary.active_affiliates} active</p>
+              <p className="text-xs text-muted-foreground">
+                {summary.active_affiliates} active
+              </p>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">Commissions Earned</CardTitle>
-              <DollarSign className="size-4 text-muted-foreground" />
+              <DollarSign className="size-4 text-muted-foreground" aria-hidden />
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-bold">{fmtCents(summary.total_commissions_earned_cents)}</p>
+              <p className="text-2xl font-bold">
+                {fmtCents(summary.total_commissions_earned_cents)}
+              </p>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">Total Paid</CardTitle>
-              <DollarSign className="size-4 text-muted-foreground" />
+              <DollarSign className="size-4 text-muted-foreground" aria-hidden />
             </CardHeader>
             <CardContent>
               <p className="text-2xl font-bold">{fmtCents(summary.total_paid_cents)}</p>
@@ -418,10 +540,12 @@ export default function DashboardAffiliatesPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">Pending Balance</CardTitle>
-              <Wallet className="size-4 text-muted-foreground" />
+              <Wallet className="size-4 text-muted-foreground" aria-hidden />
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-bold text-amber-600">{fmtCents(summary.pending_balance_cents)}</p>
+              <p className="text-2xl font-bold text-amber-600">
+                {fmtCents(summary.pending_balance_cents)}
+              </p>
               <p className="text-xs text-muted-foreground">Owed to affiliates</p>
             </CardContent>
           </Card>
@@ -440,17 +564,23 @@ export default function DashboardAffiliatesPage() {
           {affiliates.length === 0 ? (
             <div className="flex flex-col items-center gap-4 py-16 text-center">
               <div className="flex size-14 items-center justify-center rounded-full bg-muted">
-                <UserPlus className="size-7 text-muted-foreground" />
+                <UserPlus className="size-7 text-muted-foreground" aria-hidden />
               </div>
               <div>
                 <h3 className="text-lg font-medium">No affiliates yet</h3>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Add affiliate partners to track referral commissions and grow your practice.
+                  Send an invitation to start tracking referrals.
                 </p>
               </div>
-              <Button onClick={() => { setSheetOpen(true); resetForm(); }}>
-                <Plus className="mr-2 size-4" />
-                Add Your First Affiliate
+              <Button
+                onClick={() => {
+                  resetInviteForm();
+                  setInviteOpen(true);
+                }}
+                disabled={!canInvite}
+              >
+                <Send className="mr-2 size-4" aria-hidden />
+                Invite Your First Affiliate
               </Button>
             </div>
           ) : (
@@ -467,28 +597,106 @@ export default function DashboardAffiliatesPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {affiliates.map((aff) => (
-                    <TableRow key={aff.id}>
-                      <TableCell className="font-medium">{aff.name}</TableCell>
-                      <TableCell className="text-muted-foreground">{aff.email}</TableCell>
-                      <TableCell>
-                        {aff.default_commission_type === "percentage"
-                          ? `${aff.default_commission_value}%`
-                          : `$${(aff.default_commission_value / 100).toFixed(2)}`}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={STATUS_COLORS[aff.status] ?? "outline"}>{aff.status}</Badge>
-                      </TableCell>
-                      <TableCell>{fmtDate(aff.created_at)}</TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" className="size-8" asChild title="View details">
-                          <Link href={`/dashboard/affiliates/${aff.id}`}>
-                            <Eye className="size-3.5" />
-                          </Link>
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {affiliates.map((aff) => {
+                    const derived = deriveStatus(aff);
+                    const isBusy = busyRowId === aff.id;
+                    const isAccountBlocked = aff.account_status === "blocked";
+                    const isPending = aff.status === "pending";
+                    return (
+                      <TableRow key={aff.id}>
+                        <TableCell className="font-medium">{aff.name}</TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {aff.email}
+                        </TableCell>
+                        <TableCell>
+                          {aff.default_commission_type === "percentage"
+                            ? `${aff.default_commission_value}%`
+                            : `$${(aff.default_commission_value / 100).toFixed(2)}`}
+                        </TableCell>
+                        <TableCell>
+                          <span className="inline-flex items-center gap-1.5">
+                            {isAccountBlocked && (
+                              <Lock className="size-3 text-destructive" aria-hidden />
+                            )}
+                            <Badge variant={STATUS_COLORS[derived]}>
+                              {STATUS_LABEL[derived]}
+                            </Badge>
+                          </span>
+                        </TableCell>
+                        <TableCell>{fmtDate(aff.created_at)}</TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="size-8"
+                              asChild
+                              title="View details"
+                            >
+                              <Link
+                                href={`/dashboard/affiliates/${aff.id}`}
+                                aria-label={`View details for ${aff.name}`}
+                              >
+                                <Eye className="size-3.5" aria-hidden />
+                              </Link>
+                            </Button>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="size-8"
+                                  disabled={isBusy || isAccountBlocked}
+                                  aria-label="More actions"
+                                >
+                                  {isBusy ? (
+                                    <Loader2 className="size-3.5 animate-spin" aria-hidden />
+                                  ) : (
+                                    <MoreHorizontal className="size-3.5" aria-hidden />
+                                  )}
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuLabel>Row actions</DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                {isPending && (
+                                  <>
+                                    <DropdownMenuItem onClick={() => handleResend(aff)}>
+                                      <RefreshCw className="mr-2 size-4" aria-hidden />
+                                      {derived === "pending_expired"
+                                        ? "Resend (fresh token)"
+                                        : "Resend invitation"}
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleCopyLink(aff)}>
+                                      <Copy className="mr-2 size-4" aria-hidden />
+                                      Copy accept link
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem
+                                      className="text-destructive focus:text-destructive"
+                                      onClick={() => handleRevoke(aff)}
+                                      disabled={!aff.latest_invite?.id}
+                                    >
+                                      <XCircle className="mr-2 size-4" aria-hidden />
+                                      Revoke invitation
+                                    </DropdownMenuItem>
+                                  </>
+                                )}
+                                {!isPending && (
+                                  <DropdownMenuItem asChild>
+                                    <Link href={`/dashboard/affiliates/${aff.id}`}>
+                                      <Eye className="mr-2 size-4" aria-hidden />
+                                      Open detail page
+                                    </Link>
+                                  </DropdownMenuItem>
+                                )}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>

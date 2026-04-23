@@ -91,6 +91,19 @@ interface BookingWizardProps {
   availabilityServiceId?: string | null;
   bookingLabel?: string;
   hideServiceName?: boolean;
+  /**
+   * Optional `service_template_intake_submissions` id — set by the shared
+   * `/book/template/[slug]` flow so the final booking row keeps a link
+   * back to the saved intake. Forwarded to the booking-payment POST,
+   * which persists it in `bookings.metadata.intake_submission_id`.
+   */
+  submissionId?: string | null;
+  /**
+   * Optional preselected date (YYYY-MM-DD) carried from the shared
+   * calendar flow so the wizard opens on the correct month. Purely a
+   * UX hint — does not skip slot selection.
+   */
+  preselectedDate?: string | null;
 }
 
 const STEPS = [
@@ -266,6 +279,8 @@ export function BookingWizard({
   availabilityServiceId,
   bookingLabel,
   hideServiceName = false,
+  submissionId = null,
+  preselectedDate = null,
 }: BookingWizardProps) {
   // Start on the Contact step when the URL already carries a chosen date + time
   // (deep-link from the profile's "Next Available" picker) so users don't see a
@@ -276,7 +291,17 @@ export function BookingWizard({
     const p = new URLSearchParams(window.location.search);
     return p.get("date") && p.get("time") ? 1 : 0;
   });
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>();
+  // Seed from the optional preselectedDate hint (shared `/book/template/[slug]`
+  // flow). Strictly a UX nudge so the calendar opens on the right month — the
+  // user still has to pick a slot.
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(() => {
+    if (!preselectedDate) return undefined;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(preselectedDate)) return undefined;
+    const [y, m, d] = preselectedDate.split("-").map(Number);
+    // Use noon local time so timezone DST edges don't flip the calendar day.
+    const date = new Date(y, m - 1, d, 12, 0, 0);
+    return Number.isNaN(date.getTime()) ? undefined : date;
+  });
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
@@ -524,6 +549,9 @@ export function BookingWizard({
           policyAcknowledgedAt: policyAcknowledged ? new Date().toISOString() : undefined,
           // Signal that this slot is not linked to any service — the API will skip charging.
           freeSlot: slotIsUnscoped ? true : undefined,
+          // Shared-calendar flow carries the saved intake id so the booking
+          // row keeps the link (persisted to bookings.metadata.intake_submission_id).
+          submissionId: submissionId ?? undefined,
         }),
       });
       clearTimeout(timeout);

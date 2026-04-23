@@ -61,18 +61,34 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "bookingId required" }, { status: 400 });
   }
 
-  // Verify the diviner owns this booking
-  const { data: booking } = await admin
+  // Verify the booking exists and caller has access
+  let bookingSource: "bookings" | "admin_bookings" = "bookings";
+  let { data: booking } = await admin
     .from("bookings")
     .select("id, diviner_id, chime_meeting_id, recording_url")
     .eq("id", bookingId)
     .maybeSingle();
 
   if (!booking) {
+    const { data: adminBooking } = await admin
+      .from("admin_bookings")
+      .select("id, chime_meeting_id, recording_url")
+      .eq("id", bookingId)
+      .maybeSingle();
+    
+    if (adminBooking) {
+      booking = adminBooking as any;
+      bookingSource = "admin_bookings";
+    }
+  }
+
+  if (!booking) {
     return NextResponse.json({ error: "Booking not found" }, { status: 404 });
   }
 
-  if (!adminUser && booking.diviner_id !== diviner?.id) {
+  // Diviners can only sync their own standard bookings. 
+  // Admins can sync anything.
+  if (!adminUser && (bookingSource !== "bookings" || booking.diviner_id !== diviner?.id)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -134,7 +150,7 @@ export async function POST(request: NextRequest) {
   const shareId = generateShareId();
 
   await admin
-    .from("bookings")
+    .from(bookingSource)
     .update({ recording_url: recordingUrl, recording_share_id: shareId })
     .eq("id", bookingId);
 
