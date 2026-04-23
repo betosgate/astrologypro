@@ -173,6 +173,38 @@ function parseAiJsonResponse(raw: unknown): unknown {
   return raw;
 }
 
+function formatInterpretationText(value: unknown): string {
+  if (value == null) return "";
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+
+  if (Array.isArray(value)) {
+    return value
+      .map((entry) => formatInterpretationText(entry))
+      .filter(Boolean)
+      .join("\n\n");
+  }
+
+  if (typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    if ("interpretation" in record) return formatInterpretationText(record.interpretation);
+    if ("data" in record) return formatInterpretationText(record.data);
+    if ("forecast" in record) return formatInterpretationText(record.forecast);
+    if ("text" in record) return formatInterpretationText(record.text);
+
+    return Object.entries(record)
+      .filter(([key]) => key !== "index")
+      .map(([key, entry]) => {
+        const text = formatInterpretationText(entry);
+        return text ? `${key}: ${text}` : "";
+      })
+      .filter(Boolean)
+      .join("\n\n");
+  }
+
+  return "";
+}
+
 function formatPlanetReturnDate(value: string | null): string | null {
   if (!value) return null;
 
@@ -2178,7 +2210,7 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
               </div>
             </div>
             <div className="interp-gradient-default px-4 py-3 pb-8" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 400, lineHeight: '26px', color: '#000' }}>
-              <p className="leading-relaxed">{interpretation}</p>
+              <p className="leading-relaxed whitespace-pre-line">{interpretation}</p>
               <div className="mt-2 flex justify-center pt-2 border-t border-black/10">
                 <button
                   onClick={() => trigger(title || `${label} ${i + 1}`, interpretation, item, areaOfInquiry)}

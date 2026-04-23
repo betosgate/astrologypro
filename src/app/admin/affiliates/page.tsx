@@ -217,7 +217,7 @@ export default function AdminAffiliatesPage() {
               <SheetTitle>Add Affiliate</SheetTitle>
               <SheetDescription>Create an affiliate and assign them to a diviner.</SheetDescription>
             </SheetHeader>
-            <div className="mt-6 space-y-4">
+            <div className="mt-2 space-y-4">
               <div className="space-y-2">
                 <Label>Diviner</Label>
                 <select
