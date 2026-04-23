@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "cross-env NEXT_TELEMETRY_DISABLED=1 NODE_OPTIONS=\"--max-old-space-size=8192\" next build --webpack",
+    "build": "cross-env NEXT_TELEMETRY_DISABLED=1 NODE_OPTIONS=\"--max-old-space-size=12288\" next build --webpack",
     "start": "next start",
     "lint": "eslint",
     "test:ms-webhooks": "tsx --test tests/unit/mystery-school-subscription-lifecycle.test.ts",

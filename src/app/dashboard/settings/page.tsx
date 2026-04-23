@@ -36,8 +36,16 @@ import {
   Pencil,
   Trash2,
   Phone,
+  Sparkles,
 } from "lucide-react";
-import { formatCurrency } from "@/lib/format";
+
+function formatCurrency(amount: number, currency = "usd"): string {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: currency.toUpperCase(),
+    minimumFractionDigits: 2,
+  }).format(amount);
+}
 
 interface DivinerSettings {
   id: string;
@@ -61,6 +69,21 @@ interface DivinerSettings {
   phone_dialin_enabled: boolean;
   phone_mobile: string | null;
   phone_answer_mode: "mobile" | "browser" | "both";
+  created_at: string | null;
+  service_package_code: string | null;
+}
+
+interface StripeSubscriptionDetails {
+  id: string;
+  status: string;
+  current_period_end: string;
+  cancel_at_period_end: boolean;
+  amount: number;
+  currency: string;
+  interval: string;
+  plan_name: string;
+  one_time_fee: number;
+  one_time_fee_currency: string;
 }
 
 interface PhoneSession {
@@ -170,6 +193,8 @@ function SettingsContent() {
     recentPayouts?: { id: string; amount: number; currency: string; status: string; arrivalDate: string }[];
   } | null>(null);
   const [stripeStatusLoading, setStripeStatusLoading] = useState(false);
+  const [subscriptionDetails, setSubscriptionDetails] = useState<StripeSubscriptionDetails | null>(null);
+  const [subscriptionLoading, setSubscriptionLoading] = useState(false);
 
   // Phone state
   // phoneProvisioning state removed — admin manages phone number provisioning
@@ -250,7 +275,7 @@ function SettingsContent() {
       const { data } = await supabase
         .from("diviners")
         .select(
-          "id, subscription_status, plan_id, stripe_subscription_id, stripe_account_id, charges_enabled, payouts_enabled, paypal_onboarded, paypal_merchant_id, youtube_channel_id, notification_email, notification_sms, notification_booking_confirmed, notification_booking_cancelled, notification_payout, twilio_phone_number, twilio_phone_sid, chime_phone_number, phone_dialin_enabled, phone_mobile, phone_answer_mode"
+          "id, subscription_status, plan_id, stripe_subscription_id, stripe_account_id, charges_enabled, payouts_enabled, paypal_onboarded, paypal_merchant_id, youtube_channel_id, notification_email, notification_sms, notification_booking_confirmed, notification_booking_cancelled, notification_payout, twilio_phone_number, twilio_phone_sid, chime_phone_number, phone_dialin_enabled, phone_mobile, phone_answer_mode, created_at, service_package_code"
         )
         .eq("user_id", user.id)
         .single();
@@ -316,7 +341,21 @@ function SettingsContent() {
           phone_dialin_enabled: data.phone_dialin_enabled ?? false,
           phone_mobile: data.phone_mobile ?? null,
           phone_answer_mode: data.phone_answer_mode ?? "both",
+          created_at: data.created_at ?? null,
+          service_package_code: data.service_package_code ?? null,
         });
+
+        // Fetch subscription details if applicable
+        if (data.stripe_subscription_id) {
+          setSubscriptionLoading(true);
+          fetch("/api/diviner/subscription")
+            .then((r) => r.json())
+            .then((res) => {
+              if (res.subscription) setSubscriptionDetails(res.subscription);
+            })
+            .catch(() => {})
+            .finally(() => setSubscriptionLoading(false));
+        }
 
         // Load discount rules
         const { data: rules } = await supabase
@@ -648,67 +687,133 @@ function SettingsContent() {
 
         {/* Account Tab */}
         <TabsContent value="account" className="mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Subscription</CardTitle>
-              <CardDescription>
-                Your current plan and billing information.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium">Status</p>
-                  <p className="text-xs text-muted-foreground">
-                    Your subscription status
-                  </p>
-                </div>
-                <Badge
-                  variant={
-                    settings.subscription_status === "active"
-                      ? "default"
-                      : "secondary"
-                  }
-                >
-                  {settings.subscription_status ?? "No subscription"}
-                </Badge>
+          <div className="relative rounded-xl overflow-hidden border border-yellow-500/20 bg-gradient-to-br from-yellow-950/30 via-background to-background px-6 py-8 shadow-sm">
+            {/* Radial glow overlay */}
+            <div
+              className="pointer-events-none absolute inset-0"
+              style={{
+                background:
+                  "radial-gradient(ellipse 60% 60% at 10% 20%, rgba(234,179,8,0.07) 0%, transparent 70%)",
+              }}
+            />
+            <div className="relative space-y-6">
+              {/* Branding badge */}
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-yellow-500/30 bg-yellow-500/10 px-3 py-1 text-xs font-semibold text-yellow-500 uppercase tracking-wider">
+                  <Sparkles className="size-3" />
+                  Diviner Account
+                </span>
+                {settings.subscription_status === "active" && (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-green-500/30 bg-green-500/10 px-2.5 py-1 text-[10px] font-semibold text-green-500 uppercase tracking-wider">
+                    <CheckCircle2 className="size-3" />
+                    Verified Partner
+                  </span>
+                )}
               </div>
-              {settings.plan_id && (
-                <>
-                  <Separator />
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium">Current Plan</p>
-                      <p className="text-xs text-muted-foreground capitalize">
-                        {currentPlanName ?? settings.plan_id}
+
+              {/* Title + sub-title */}
+              <div>
+                <h2 className="text-2xl font-bold tracking-tight">
+                  Your Subscription
+                </h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Keep your platform billing and membership details in view while you grow your practice.
+                </p>
+              </div>
+
+              <Separator className="opacity-20" />
+
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <Card className="border-yellow-500/20 bg-black/10">
+                  <CardContent className="px-4 py-4">
+                    <p className="text-[11px] uppercase tracking-[0.14em] text-yellow-500/70">Status</p>
+                    <p className="mt-1 text-sm font-semibold capitalize">
+                      {settings.subscription_status === "cancelled" || subscriptionDetails?.cancel_at_period_end
+                        ? "Cancelled · Access Active"
+                        : settings.subscription_status ?? "No Subscription"}
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card className="border-yellow-500/20 bg-black/10">
+                  <CardContent className="px-4 py-4">
+                    <p className="text-[11px] uppercase tracking-[0.14em] text-yellow-500/70">Enrolled</p>
+                    <p className="mt-1 text-sm font-semibold">
+                      {settings.created_at ? new Date(settings.created_at).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) : "Recently"}
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card className="border-yellow-500/20 bg-black/10">
+                  <CardContent className="px-4 py-4">
+                    <p className="text-[11px] uppercase tracking-[0.14em] text-yellow-500/70">Billing</p>
+                    {subscriptionLoading ? (
+                      <Loader2 className="mt-1 size-4 animate-spin text-muted-foreground" />
+                    ) : subscriptionDetails ? (
+                      <>
+                        <p className="mt-1 text-sm font-semibold">
+                          {formatCurrency(subscriptionDetails.amount / 100, subscriptionDetails.currency)}/{subscriptionDetails.interval}
+                        </p>
+                        {subscriptionDetails.one_time_fee > 0 && (
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            Enrollment paid {formatCurrency(subscriptionDetails.one_time_fee, subscriptionDetails.one_time_fee_currency)}
+                          </p>
+                        )}
+                      </>
+                    ) : (
+                      <p className="mt-1 text-sm font-semibold">Managed in Stripe</p>
+                    )}
+                  </CardContent>
+                </Card>
+                <Card className="border-yellow-500/20 bg-black/10">
+                  <CardContent className="px-4 py-4">
+                    <p className="text-[11px] uppercase tracking-[0.14em] text-yellow-500/70">
+                      {subscriptionDetails?.cancel_at_period_end ? "Access Until" : "Next Renewal"}
+                    </p>
+                    {subscriptionLoading ? (
+                      <Loader2 className="mt-1 size-4 animate-spin text-muted-foreground" />
+                    ) : subscriptionDetails ? (
+                      <p className="mt-1 text-sm font-semibold">
+                        {new Date(subscriptionDetails.current_period_end).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
                       </p>
-                    </div>
-                    {upgradeTargetPlanId &&
-                      upgradeTargetLabel &&
-                      settings.subscription_status === "active" && (
-                        <UpgradePlanButton
-                          newPlanId={upgradeTargetPlanId}
-                          label={upgradeTargetLabel}
-                        />
-                      )}
-                  </div>
-                </>
-              )}
-              <Separator />
-              {settings.subscription_status === "active" && (
+                    ) : (
+                      <p className="mt-1 text-sm font-semibold">Cycle Pending</p>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3">
                 <Button
-                  variant="destructive"
-                  onClick={() => {
-                    toast.info(
-                      "Cancellation flow will be handled via Stripe Customer Portal"
-                    );
+                  variant="outline"
+                  className="border-yellow-500/30 bg-black/10 text-yellow-50 hover:bg-yellow-500/10"
+                  onClick={async () => {
+                    const popup = window.open("", "_blank");
+                    try {
+                      const res = await fetch("/api/dashboard/billing/portal", { method: "POST" });
+                      const data = await res.json();
+                      if (data.url && popup) {
+                        popup.location.href = data.url;
+                      } else {
+                        popup?.close();
+                        toast.error("Failed to open billing portal");
+                      }
+                    } catch {
+                      popup?.close();
+                      toast.error("Failed to open billing portal");
+                    }
                   }}
                 >
-                  Cancel Subscription
+                  Manage Subscription
                 </Button>
-              )}
-            </CardContent>
-          </Card>
+                
+                {upgradeTargetPlanId && (
+                  <UpgradePlanButton
+                    newPlanId={upgradeTargetPlanId}
+                    label={upgradeTargetLabel!}
+                  />
+                )}
+              </div>
+            </div>
+          </div>
         </TabsContent>
 
         {/* Payments Tab */}

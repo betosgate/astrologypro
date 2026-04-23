@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   Select,
   SelectContent,
@@ -71,6 +72,7 @@ export default function AstroSystemSettingsPage() {
   const [error, setError] = useState<string | null>(null);
   const [revealed, setRevealed] = useState<Record<string, boolean>>({});
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Setting | null>(null);
 
   // Add form state
   const [showAdd, setShowAdd] = useState(false);
@@ -124,23 +126,25 @@ export default function AstroSystemSettingsPage() {
     }
   }
 
-  async function deleteSetting(s: Setting) {
-    if (
-      !confirm(
-        `Delete ${s.type} / ${s.key_name}? This cannot be undone.`,
-      )
-    )
-      return;
-    setSavingId(s.id);
+  async function deleteSetting() {
+    if (!deleteTarget) return;
+
+    setSavingId(deleteTarget.id);
     try {
-      const r = await fetch(`/api/admin/astro-system-settings/${s.id}`, {
+      const r = await fetch(
+        `/api/admin/astro-system-settings/${deleteTarget.id}`,
+        {
         method: "DELETE",
-      });
+        },
+      );
       if (!r.ok) {
         const body = await r.json().catch(() => ({}));
         throw new Error(body.error ?? `HTTP ${r.status}`);
       }
-      setSettings((prev) => prev.filter((item) => item.id !== s.id));
+      setSettings((prev) =>
+        prev.filter((item) => item.id !== deleteTarget.id),
+      );
+      setDeleteTarget(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -192,7 +196,28 @@ export default function AstroSystemSettingsPage() {
   for (const s of settings) grouped[s.type].push(s);
 
   return (
-    <div className="space-y-6 max-w-5xl">
+    <div className="space-y-6">
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title="Delete Astro System Setting"
+        description={
+          deleteTarget
+            ? `Are you sure you want to delete ${deleteTarget.type} / ${deleteTarget.key_name}? This cannot be undone.`
+            : "Are you sure you want to delete this setting?"
+        }
+        confirmLabel="Delete"
+        loading={!!deleteTarget && savingId === deleteTarget.id}
+        variant="destructive"
+        onOpenChange={(open) => {
+          if (!open && (!deleteTarget || savingId !== deleteTarget.id)) {
+            setDeleteTarget(null);
+          }
+        }}
+        onConfirm={() => {
+          void deleteSetting();
+        }}
+      />
+
       {/* Header */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-start gap-3">
@@ -459,7 +484,7 @@ export default function AstroSystemSettingsPage() {
                                 size="icon"
                                 className="size-7 text-destructive hover:text-destructive"
                                 disabled={savingId === s.id}
-                                onClick={() => void deleteSetting(s)}
+                                onClick={() => setDeleteTarget(s)}
                                 aria-label="Delete"
                               >
                                 <Trash2 className="size-3.5" />

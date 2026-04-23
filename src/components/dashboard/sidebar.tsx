@@ -101,7 +101,7 @@ const navItems: NavItem[] = [
   { label: "Media Gallery", href: "/dashboard/media", icon: Image },
   { label: "My Rituals", href: "/dashboard/rituals", icon: Flame },
   { label: "Mundane Astrology", href: "/dashboard/mundane", icon: Globe },
-  { label: "Subscriptions", href: "/dashboard/subscriptions", icon: Rss },
+  // { label: "Subscriptions", href: "/dashboard/subscriptions", icon: Rss },
   { label: "Intake Builder", href: "/dashboard/intake-builder", icon: ListChecks },
   { label: "Discounts", href: "/dashboard/discounts", icon: Tag },
   { label: "Gift Certificates", href: "/dashboard/gift-certificates", icon: Gift },
