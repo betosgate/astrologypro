@@ -62,6 +62,7 @@ import { MIGRATION_SQL as MIG_20260422000005 } from "@/data/migrations/202604220
 import { MIGRATION_SQL as MIG_20260422000006 } from "@/data/migrations/20260422000006_add_birth_country_to_community_members";
 import { MIGRATION_SQL as MIG_20260422000007 } from "@/data/migrations/20260422000007_repair_community_members_birth_country";
 import { MIGRATION_SQL as MIG_20260428000100 } from "@/data/migrations/20260428000100_fix_diviner_fields_length";
+import { MIGRATION_SQL as MIG_20260423000001_AIR } from "@/data/migrations/20260423000001_affiliate_identity_refactor";
 
 /**
  * Allowlisted migrations that the admin migration runner can execute.
@@ -598,6 +599,14 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Increases the length of plan_id, subscription_status, phone, and username columns in the diviners table to TEXT or VARCHAR(50). Resolves 'value too long for type character varying(20)' errors during trainee-to-diviner upgrade.",
     sortKey: "20260428000100",
     sql: MIG_20260428000100,
+  },
+  "20260423000001_affiliate_identity_refactor": {
+    id: "20260423000001_affiliate_identity_refactor",
+    title: "Affiliate Identity Refactor — canonical affiliate_accounts + invites + junction reshape",
+    description:
+      "Introduces canonical affiliate_accounts identity table (email CITEXT UNIQUE, user_id UUID UNIQUE, platform-wide status, profile + payout fields). Adds affiliate_invites (hashed SHA-256 tokens, 14d expiry). Reshapes diviner_affiliates into a junction via additive ALTER (affiliate_account_id FK + invited_at + accepted_at). Backfills the 14 existing diviner_affiliates rows into the new model: one canonical account per unique email, auth.users link attempted by email match, decisions logged in _affiliate_backfill_audit. RLS on both new tables (service_role all + self-select/update + diviner-linked). Reuses aff_updated_at() trigger. Strictly additive — no DROPs, no FK rewiring; all downstream FKs on diviner_affiliates.id remain untouched. End-of-migration assertion fails loudly if any junction row is left without affiliate_account_id. Idempotent: IF NOT EXISTS guards + WHERE affiliate_account_id IS NULL on the backfill UPDATEs. Sprint plan: docs/tasks/2026-04-23/affiliate-identity-refactor/. Task 02 adds create_affiliate_invite RPC, Task 03 adds consume_invite_and_activate_junction RPC + user-link trigger guard.",
+    sortKey: "20260423000001",
+    sql: MIG_20260423000001_AIR,
   },
 };
 
