@@ -2639,12 +2639,14 @@ export interface HoroscopeToolkitPageProps {
   basePath?: string;
   allowedSlugs?: string[];
   initialPrefill?: string | null;
+  readOnlyBirthData?: boolean;
 }
 
 export function HoroscopeToolkitPage({
   basePath = "/admin/horoscope",
   allowedSlugs,
   initialPrefill = null,
+  readOnlyBirthData = false,
 }: HoroscopeToolkitPageProps = {}) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -3543,7 +3545,7 @@ export function HoroscopeToolkitPage({
 
       {/* Main panel */}
       <div className="flex-1 overflow-y-auto result-scroll-container" onScroll={(e) => setShowScrollTop((e.currentTarget.scrollTop) > 400)}>
-        <div className="max-w-5xl mx-auto px-6 py-6 space-y-6" ref={resultRef}>
+        <div className="max-w-none px-6 py-6 space-y-6" ref={resultRef}>
 
           {/* Header */}
           <div>
@@ -3562,10 +3564,10 @@ export function HoroscopeToolkitPage({
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-5">
                 {currentTab.type === "single" ? (
-                  <BirthBlock value={form.person1} onChange={(v) => setForm((f) => ({ ...f, person1: v }))} disabled={loading} />
+                  <BirthBlock value={form.person1} onChange={(v) => setForm((f) => ({ ...f, person1: v }))} disabled={loading || readOnlyBirthData} />
                 ) : (
                   <div className="flex flex-col gap-6">
-                    <BirthBlock title="Person 1 (Self)" value={form.person1} onChange={(v) => setForm((f) => ({ ...f, person1: v }))} disabled={loading} />
+                    <BirthBlock title="Person 1 (Self)" value={form.person1} onChange={(v) => setForm((f) => ({ ...f, person1: v }))} disabled={loading || readOnlyBirthData} />
                     <BirthBlock title="Person 2 (Partner)" value={form.person2} onChange={(v) => setForm((f) => ({ ...f, person2: v }))} disabled={loading} />
                   </div>
                 )}
@@ -3588,14 +3590,14 @@ export function HoroscopeToolkitPage({
                 {currentTab.extras?.includes("question") && (
                   <div>
                     <Label className="text-xs font-medium text-muted-foreground mb-1 block">Your Question (required for Horary)</Label>
-                    <Textarea value={form.question} onChange={(e) => setForm((f) => ({ ...f, question: e.target.value }))} placeholder="e.g. Will I get the job I applied for this month?" rows={3} disabled={loading} className="text-sm resize-none" />
+                    <Textarea value={form.question} onChange={(e) => setForm((f) => ({ ...f, question: e.target.value }))} placeholder="e.g. Will I get the job I applied for this month?" rows={3} disabled={loading || readOnlyBirthData} className="text-sm resize-none" />
                   </div>
                 )}
                 {/* Area of inquiry */}
                 {currentTab.extras?.includes("area_of_inquiry") && (
                   <div>
                     <Label className="text-xs font-medium text-muted-foreground mb-1 block">Area of Inquiry (optional)</Label>
-                    <Textarea value={form.areaOfInquiry} onChange={(e) => setForm((f) => ({ ...f, areaOfInquiry: e.target.value }))} placeholder="What would you like to gain clarity on? e.g., Career and purpose, a specific relationship…" rows={3} disabled={loading} className="text-sm resize-none" />
+                    <Textarea value={form.areaOfInquiry} onChange={(e) => setForm((f) => ({ ...f, areaOfInquiry: e.target.value }))} placeholder="What would you like to gain clarity on? e.g., Career and purpose, a specific relationship…" rows={3} disabled={loading || readOnlyBirthData} className="text-sm resize-none" />
                   </div>
                 )}
 
@@ -3603,10 +3605,10 @@ export function HoroscopeToolkitPage({
 
                 <Button
                   type="submit"
-                  disabled={loading || !isFormValid}
+                  disabled={loading || !isFormValid || readOnlyBirthData}
                   className={cn(
                     "w-full md:w-auto h-10 px-8 font-semibold transition-all shadow-md",
-                    loading || !isFormValid
+                    loading || !isFormValid || readOnlyBirthData
                       ? "bg-muted text-muted-foreground cursor-not-allowed opacity-70"
                       : "bg-amber-500 hover:bg-amber-600 text-white hover:shadow-lg active:scale-95"
                   )}
