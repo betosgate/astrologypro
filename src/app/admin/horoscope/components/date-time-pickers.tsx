@@ -41,12 +41,12 @@ export function TimePicker({ value, onChange, disabled = false }: { value: strin
     <div className="flex items-center gap-1.5">
       <Clock className="size-4 shrink-0 text-muted-foreground" />
       <Select value={hh} onValueChange={(v) => update(v, mm)} disabled={disabled}>
-        <SelectTrigger className="h-9 w-[72px] text-sm"><SelectValue placeholder="HH" /></SelectTrigger>
+        <SelectTrigger className="h-9 w-[40%] text-sm"><SelectValue placeholder="HH" /></SelectTrigger>
         <SelectContent className="max-h-52">{HOURS.map((h) => <SelectItem key={h} value={h}>{h}</SelectItem>)}</SelectContent>
       </Select>
       <span className="text-muted-foreground font-semibold select-none">:</span>
       <Select value={mm} onValueChange={(v) => update(hh, v)} disabled={disabled}>
-        <SelectTrigger className="h-9 w-[72px] text-sm"><SelectValue placeholder="MM" /></SelectTrigger>
+        <SelectTrigger className="h-9 w-[40%] text-sm"><SelectValue placeholder="MM" /></SelectTrigger>
         <SelectContent className="max-h-52">{MINUTES.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent>
       </Select>
       <span className="text-xs text-muted-foreground ml-0.5">24h</span>
