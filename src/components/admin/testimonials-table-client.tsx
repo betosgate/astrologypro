@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import {
   Dialog,
@@ -197,6 +198,8 @@ export function TestimonialsTableClient({
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [previewRow, setPreviewRow] = useState<TestimonialRow | null>(null);
+  const [deleteRow, setDeleteRow] = useState<TestimonialRow | null>(null);
+  const [deleteBusy, setDeleteBusy] = useState(false);
 
   const currentStatus = searchParams.status ?? "all";
   const currentClient = searchParams.client ?? "";
@@ -268,11 +271,11 @@ export function TestimonialsTableClient({
     }
   }
 
-  async function handleDelete(id: string) {
-    if (!window.confirm("Delete this testimonial? This cannot be undone."))
-      return;
+  async function handleDelete() {
+    if (!deleteRow) return;
     try {
-      const res = await fetch(`/api/admin/testimonials/${id}`, {
+      setDeleteBusy(true);
+      const res = await fetch(`/api/admin/testimonials/${deleteRow.id}`, {
         method: "DELETE",
       });
       if (!res.ok) {
@@ -283,12 +286,15 @@ export function TestimonialsTableClient({
       toast.success("Testimonial deleted.");
       setSelectedIds((prev) => {
         const next = new Set(prev);
-        next.delete(id);
+        next.delete(deleteRow.id);
         return next;
       });
+      setDeleteRow(null);
       pushParams({ page: String(currentPage) });
     } catch {
       toast.error("Failed to delete.");
+    } finally {
+      setDeleteBusy(false);
     }
   }
 
@@ -328,6 +334,19 @@ export function TestimonialsTableClient({
 
   return (
     <>
+      <ConfirmDialog
+        open={!!deleteRow}
+        title="Delete Testimonial"
+        description="Are you sure you want to delete this testimonial? This cannot be undone."
+        confirmLabel="Delete"
+        loading={deleteBusy}
+        variant="destructive"
+        onOpenChange={(open) => {
+          if (!open && !deleteBusy) setDeleteRow(null);
+        }}
+        onConfirm={handleDelete}
+      />
+
       {/* Preview Dialog */}
       <Dialog open={!!previewRow} onOpenChange={(o) => !o && setPreviewRow(null)}>
         <DialogContent className="max-w-lg">
@@ -687,7 +706,7 @@ export function TestimonialsTableClient({
                               )}
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
-                                onClick={() => handleDelete(t.id)}
+                                onClick={() => setDeleteRow(t)}
                                 className="flex items-center gap-2 text-red-600 focus:text-red-600"
                               >
                                 <Trash2 className="size-3.5" />
