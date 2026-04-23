@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useBuilder } from "./builder-context";
 import type { BlockType, DivinerServiceBlock } from "@/types/landing-page-builder";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 const TYPE_LABEL: Record<BlockType, string> = {
   text: "Text block",
@@ -315,6 +316,7 @@ function EditorByType({ block }: { block: DivinerServiceBlock }) {
 export function SectionEditorPanel() {
   const { state, selectBlock, deleteBlock } = useBuilder();
   const { selectedBlockId } = state;
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   if (!selectedBlockId) {
     return (
@@ -343,11 +345,7 @@ export function SectionEditorPanel() {
             size="sm"
             variant="ghost"
             className="h-7 w-7 p-0 text-silver/40 hover:text-red-400"
-            onClick={() => {
-              if (confirm(`Remove this ${TYPE_LABEL[block.section_type].toLowerCase()}?`)) {
-                deleteBlock(block.id);
-              }
-            }}
+            onClick={() => setShowDeleteConfirm(true)}
           >
             <Trash2 className="size-3.5" />
           </Button>
@@ -370,6 +368,18 @@ export function SectionEditorPanel() {
         )}
         <EditorByType block={block} />
       </div>
+
+      <ConfirmDialog
+        open={showDeleteConfirm}
+        onOpenChange={setShowDeleteConfirm}
+        title={`Remove this ${TYPE_LABEL[block.section_type].toLowerCase()}?`}
+        description="Are you sure you want to remove this block? This action cannot be undone."
+        confirmLabel="Remove"
+        onConfirm={() => {
+          deleteBlock(block.id);
+          setShowDeleteConfirm(false);
+        }}
+      />
     </div>
   );
 }

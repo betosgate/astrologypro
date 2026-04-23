@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { ArrowRight, X, Check, Loader2, GraduationCap, Star, Users, BookOpen, Video, Award, Clock, Infinity, Sparkles, Calendar, Music2, Globe, Lock } from "lucide-react";
 import {
   Dialog,
@@ -11,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { DivinerUpgradeModal } from "@/components/trainee/diviner-upgrade-modal";
 
 interface RoleUpgradeBannersProps {
   isDiviner: boolean;
@@ -74,10 +76,10 @@ function TraineeUpgradeModal({ open, onClose }: { open: boolean; onClose: () => 
             asChild
             className="shrink-0 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white font-bold shadow-lg shadow-emerald-500/30"
           >
-            <a href="/join/trainee">
+            <Link href="/join/trainee">
               Apply Now
               <ArrowRight className="ml-1.5 size-3.5" />
-            </a>
+            </Link>
           </Button>
         </div>
       </DialogContent>
@@ -399,6 +401,10 @@ export function RoleUpgradeBanners({
       {/* Modals */}
       <TraineeUpgradeModal
         open={openModal === "trainee"}
+        onClose={() => setOpenModal(null)}
+      />
+      <DivinerUpgradeModal
+        open={openModal === "diviner"}
         onClose={() => setOpenModal(null)}
       />
       <PmUpgradeModal
