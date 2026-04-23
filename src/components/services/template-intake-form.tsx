@@ -259,10 +259,20 @@ export function TemplateIntakeForm({
         throw new Error(typeof json.error === "string" ? json.error : "Failed to save intake submission.");
       }
 
+      // The intake API's `next_url` points at the real shared calendar flow
+      // (`/book/template/[slug]?submission=...`). We keep a client-side
+      // fallback in the same shape so a stale API response still routes to
+      // a working page — never back to `/book/demo`.
+      const fallbackSubmissionId =
+        typeof json.submission?.id === "string" ? json.submission.id : "";
       const bookingUrl =
         typeof json.next_url === "string"
           ? json.next_url
-          : `/book/demo?template=${encodeURIComponent(templateSlug)}`;
+          : `/book/template/${encodeURIComponent(templateSlug)}${
+              fallbackSubmissionId
+                ? `?submission=${encodeURIComponent(fallbackSubmissionId)}`
+                : ""
+            }`;
 
       if (isGeneralTemplate) {
         const search = new URLSearchParams();
