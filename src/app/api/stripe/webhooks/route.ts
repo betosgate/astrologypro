@@ -37,6 +37,9 @@ import {
 import { PRICING } from "@/lib/constants";
 import { calculateMoneySplit } from "@/lib/money-split";
 import { provisionNatalReadiness } from "@/lib/community/provision-natal-readiness";
+import { tierToPlanType } from "@/lib/community/pm-entitlement";
+import { ensureUserContractRequirements } from "@/lib/contract-orchestration";
+import { provisionTraineeDivinerUpgradeFromSession } from "@/lib/trainee-diviner-upgrade";
 
 export const dynamic = "force-dynamic";
 
@@ -167,10 +170,12 @@ async function handleCommunityPlanConversionCompleted(
     return;
   }
 
-  // Verify target tier still exists and is active
+  // Verify target tier still exists and is active. Also fetch `name` so we
+  // can sync the legacy `plan_type` column alongside `pm_tier_id`
+  // (audit note §2 + §5 risk #1).
   const { data: tier } = await supabase
     .from("pm_plan_tiers")
-    .select("id, is_active")
+    .select("id, name, is_active")
     .eq("id", targetTierId)
     .maybeSingle();
   if (!tier || !tier.is_active) {
@@ -190,10 +195,13 @@ async function handleCommunityPlanConversionCompleted(
       ? session.subscription
       : session.subscription?.id ?? null;
 
+  const canonicalPlanType = tierToPlanType({ name: tier.name as string });
+
   const { error: updateErr } = await supabase
     .from("community_members")
     .update({
       pm_tier_id: targetTierId,
+      plan_type: canonicalPlanType,
       stripe_customer_id: customerId,
       stripe_subscription_id: subscriptionId,
       membership_status: "active",
@@ -247,22 +255,51 @@ async function handleCommunityCheckoutCompleted(session: Stripe.Checkout.Session
   if (!isMysterySchool) {
     // Resolve pm_tier_id: prefer explicit metadata (new conversion flow),
     // otherwise map planType → tier name (Individual/couple → Individual, family → Family).
+    // Fetch the tier's `name` in both branches so we can derive the canonical
+    // `plan_type` per audit note §2. If tier and metadata disagree, trust the
+    // tier and log.
     const explicitTargetTierId = session.metadata?.target_tier_id ?? null;
     let resolvedTierId: string | null = explicitTargetTierId;
-    if (!resolvedTierId) {
+    let resolvedTierName: string | null = null;
+
+    if (resolvedTierId) {
+      const { data: tierRow } = await supabase
+        .from("pm_plan_tiers")
+        .select("id, name")
+        .eq("id", resolvedTierId)
+        .maybeSingle();
+      resolvedTierName = (tierRow?.name as string | undefined) ?? null;
+    } else {
       const desiredTierName = planType === "family" ? "Family" : "Individual";
       const { data: tierRow } = await supabase
         .from("pm_plan_tiers")
-        .select("id")
+        .select("id, name")
         .eq("is_active", true)
         .ilike("name", desiredTierName)
         .maybeSingle();
       resolvedTierId = (tierRow?.id as string | undefined) ?? null;
+      resolvedTierName = (tierRow?.name as string | undefined) ?? null;
       if (!resolvedTierId) {
         console.warn(
           `[webhook/community] Could not resolve pm_tier_id for planType=${planType} — member will default to lowest-order tier on read`
         );
       }
+    }
+
+    // Canonical plan_type: derive from the resolved tier when possible; fall
+    // back to the Stripe metadata value only when no tier resolved.
+    const canonicalPlanType = resolvedTierName
+      ? tierToPlanType({ name: resolvedTierName })
+      : (planType === "family" ? "family" : "individual");
+
+    if (
+      resolvedTierName &&
+      canonicalPlanType !== (planType === "family" ? "family" : "individual")
+    ) {
+      console.warn(
+        `[webhook/community] plan_type metadata (${planType}) disagrees with canonical tier '${resolvedTierName}' (${canonicalPlanType}). Trusting tier.`,
+        { session_id: session.id, user_id: userId }
+      );
     }
 
     // PM checkout — upsert community_members as the PM record
@@ -275,7 +312,7 @@ async function handleCommunityCheckoutCompleted(session: Stripe.Checkout.Session
           full_name: fullName,
           membership_type: membershipType,
           membership_status: "active",
-          plan_type: planType,
+          plan_type: canonicalPlanType,
           stripe_subscription_id: subscriptionId ?? null,
           joined_at: new Date().toISOString(),
           ...(resolvedTierId ? { pm_tier_id: resolvedTierId } : {}),
@@ -769,6 +806,63 @@ async function handleComboBundleCheckoutCompleted(
   );
 }
 
+async function provisionDivinerFromCheckoutSession(
+  session: Stripe.Checkout.Session,
+  options?: { markTraineePaid?: boolean },
+) {
+  const result = await provisionTraineeDivinerUpgradeFromSession(session, {
+    markTraineePaid: options?.markTraineePaid,
+  });
+
+  if (result) {
+    return result;
+  }
+
+  return { email: "", username: "", displayName: "", planId: session.metadata?.planId ?? null };
+}
+
+async function handleTraineeDivinerUpgradeCheckoutCompleted(
+  session: Stripe.Checkout.Session,
+) {
+  const planName =
+    session.metadata?.planName ?? "Professional Divination Course";
+  const provisioned = await provisionDivinerFromCheckoutSession(session, {
+    markTraineePaid: true,
+  });
+  const userId = session.metadata?.userId;
+
+  if (userId) {
+    try {
+      await ensureUserContractRequirements(userId, "post_login");
+    } catch (error) {
+      console.error(
+        "[Webhook] Trainee diviner upgrade failed to ensure contract requirements:",
+        error,
+      );
+    }
+  }
+
+  if (userId) {
+    logActivity({
+      userId,
+      eventCategory: "subscription",
+      eventType: "subscription.created",
+      metadata: {
+        itemKey: "professional_divination_course",
+        planName,
+        planId: provisioned.planId,
+        source: session.metadata?.type ?? "professional_divination_course",
+        status: "active",
+        portals_after_upgrade: ["/dashboard", "/trainee"],
+      },
+    });
+  }
+
+  console.log(
+    `[Webhook] Trainee diviner upgrade provisioned: userId=${userId ?? "?"} username=${provisioned.username} plan=${planName}`,
+  );
+}
+
 async function handleTraineeSignupCheckoutCompleted(
   session: Stripe.Checkout.Session
 ) {
@@ -1113,6 +1207,10 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     return handlePerennialCommunitySignupCheckoutCompleted(session);
   }
 
+  if (session.metadata?.type === "trainee_diviner_upgrade") {
+    return handleTraineeDivinerUpgradeCheckoutCompleted(session);
+  }
+
   // Route combo bundle (trainee + diviner) checkouts
   if (session.metadata?.itemKey === "trainee_diviner_bundle") {
     return handleComboBundleCheckoutCompleted(session);
@@ -1120,6 +1218,10 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
   if (session.metadata?.type === "trainee_signup") {
     return handleTraineeSignupCheckoutCompleted(session);
+  }
+
+  if (session.metadata?.itemKey === "professional_divination_course") {
+    return handleTraineeDivinerUpgradeCheckoutCompleted(session);
   }
 
   // Handle manual booking payment link checkout

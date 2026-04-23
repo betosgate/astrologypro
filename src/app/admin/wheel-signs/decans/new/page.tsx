@@ -80,7 +80,7 @@ export default function NewDecanPage() {
         <h1 className="mt-2 text-2xl font-bold tracking-tight">New Astro Decan Info</h1>
       </div>
 
-      <Card className="max-w-2xl">
+      <Card>
         <CardHeader>
           <CardTitle>Decan Details</CardTitle>
         </CardHeader>

@@ -55,7 +55,7 @@ export default function NewBlogPostPage() {
   }
 
   return (
-    <div className="max-w-lg space-y-6">
+    <div className="space-y-6">
       <div className="flex items-center gap-3">
         <Button asChild variant="ghost" size="sm">
           <Link href="/admin/blog"><ArrowLeft className="size-4" /></Link>

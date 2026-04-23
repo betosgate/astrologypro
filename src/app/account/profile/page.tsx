@@ -10,7 +10,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowLeft, Loader2, Save } from "lucide-react";
+import { ArrowLeft, Loader2, Save, Upload, Trash2 } from "lucide-react";
+import { toast } from "sonner";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const ALLOWED_SPECIALTIES = [
   "Astrology",
@@ -70,6 +73,8 @@ export default function UnifiedProfilePage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [showAvatarConfirm, setShowAvatarConfirm] = useState(false);
 
   const [roles, setRoles] = useState<string[]>([]);
   const [email, setEmail] = useState("");
@@ -168,6 +173,45 @@ export default function UnifiedProfilePage() {
     }
   }
 
+  async function handleAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    if (!e.target.files?.[0]) return;
+    const file = e.target.files[0];
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("File must be under 2MB");
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("folder", "avatars");
+
+      const res = await fetch("/api/upload/avatar", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Upload failed");
+      }
+
+      setAvatarUrl(data.publicUrl);
+      toast.success("Avatar uploaded. Don't forget to save changes!");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to upload avatar");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function handleRemoveAvatar() {
+    setAvatarUrl("");
+    setShowAvatarConfirm(false);
+    toast.success("Avatar URL cleared. Don't forget to save changes!");
+  }
+
   // Determine which sections to show based on roles
   const hasDivinerOrTrainee = roles.includes("diviner") || roles.includes("trainee");
   const hasClientOrCommunity = roles.includes("client") || roles.includes("community");
@@ -237,13 +281,69 @@ export default function UnifiedProfilePage() {
             </p>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-3">
             <Label htmlFor="avatar_url">Avatar URL</Label>
-            <Input
-              id="avatar_url"
-              value={avatarUrl}
-              onChange={(e) => setAvatarUrl(e.target.value)}
-              placeholder="https://example.com/avatar.jpg"
+            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+              <Avatar className="size-16 shadow-sm">
+                <AvatarImage src={avatarUrl || undefined} />
+                <AvatarFallback className="text-lg">
+                  {displayName
+                    ? displayName
+                      .split(" ")
+                      .map((n) => n[0])
+                      .join("")
+                      .toUpperCase()
+                      .slice(0, 2)
+                    : "U"}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex flex-col gap-2 flex-1 w-full">
+                <div className="flex gap-2 w-full">
+                  <div className="relative flex-1">
+                    <Input
+                      id="avatar_url"
+                      value={avatarUrl}
+                      onChange={(e) => setAvatarUrl(e.target.value)}
+                      placeholder="https://example.com/avatar.jpg"
+                      className="pr-10"
+                    />
+                    {uploading && (
+                      <div className="absolute inset-y-0 right-3 flex items-center">
+                        <Loader2 className="size-4 animate-spin text-muted-foreground" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex shrink-0 gap-2">
+                    <Label
+                      htmlFor="avatar-upload"
+                      className="flex h-9 cursor-pointer items-center gap-2 rounded-md border bg-background px-3 text-sm font-medium transition-colors hover:bg-muted"
+                    >
+                      <Upload className="size-4" />
+                      Upload
+                    </Label>
+                    {avatarUrl && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-9 px-3 text-destructive hover:bg-destructive/10"
+                        onClick={() => setShowAvatarConfirm(true)}
+                      >
+                        <Trash2 className="size-4 mr-1" />
+                        Remove
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <input
+              id="avatar-upload"
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleAvatarUpload}
+              disabled={uploading}
             />
           </div>
 
@@ -429,6 +529,15 @@ export default function UnifiedProfilePage() {
           )}
         </Button>
       </div>
+
+      <ConfirmDialog
+        open={showAvatarConfirm}
+        onOpenChange={setShowAvatarConfirm}
+        title="Remove avatar?"
+        description="Are you sure you want to clear your avatar URL? This will remove your profile picture across all services."
+        onConfirm={handleRemoveAvatar}
+        confirmLabel="Remove"
+      />
     </div>
   );
 }

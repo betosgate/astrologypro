@@ -156,7 +156,7 @@ export default function AdminMundaneImportNewPage() {
   const preview = importRecord?.raw_preview ?? [];
 
   return (
-    <div className="space-y-6 max-w-3xl">
+    <div className="space-y-6">
       <Link
         href="/admin/mundane/imports"
         className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"

@@ -359,6 +359,7 @@ export default async function AdminBookingSessionPage({ params }: PageProps) {
         overageRate={0}
         username={adminRow.username}
         joinApiPath="/api/chime/admin-bookings/join"
+        endApiPath="/api/chime/admin-bookings/end"
         disableBillingAndNotes
       />
     </div>

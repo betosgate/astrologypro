@@ -20,15 +20,127 @@ function getS3Client() {
 }
 
 /**
- * Polls S3 for completed Chime recordings and writes recording_url back to
- * Supabase. This replaces the need for an AWS EventBridge rule — just run
- * this cron every 15 minutes via Vercel cron or external scheduler.
+ * Polls S3 for completed Chime recordings across all three session tables
+ * (`bookings`, `admin_bookings`, `phone_sessions`) and writes `recording_url`
+ * back to Supabase. Run this cron every 10–15 minutes.
  *
- * Picks up any Chime booking where:
- *   - chime_meeting_id is set (session happened on Chime)
- *   - recording_url is still null (not yet synced)
- *   - session ended at least 5 minutes ago (pipeline needs time to finalize)
+ * For each row we:
+ *   - list S3 objects under `recordings/{sessionId}/`
+ *   - prefer the final/ concatenated mp4; fall back to the largest segment
+ *   - generate a 7-day presigned URL
+ *   - persist `recording_url` (+ `recording_share_id`) back to the row
+ *
+ * The S3 layout is the same for all three tables (they all pass their own
+ * uuid as the S3 key prefix when creating the capture pipeline), so a
+ * single loop handles them.
  */
+
+type SessionKind = "booking" | "admin_booking" | "phone_session";
+
+interface SessionCandidate {
+  kind: SessionKind;
+  id: string;
+  chimeMeetingId: string | null;
+  updatedAt: string | null;
+}
+
+async function loadCandidates(
+  admin: ReturnType<typeof createAdminClient>,
+  cutoff: string,
+): Promise<SessionCandidate[]> {
+  const out: SessionCandidate[] = [];
+
+  // ── Legacy diviner `bookings` ────────────────────────────────────────────
+  const { data: bookings, error: bookingsErr } = await admin
+    .from("bookings")
+    .select("id, chime_meeting_id, confirmed_at, updated_at")
+    .not("chime_meeting_id", "is", null)
+    .is("recording_url", null)
+    .or(
+      `and(confirmed_at.not.is.null,confirmed_at.lt.${cutoff}),` +
+      `and(status.eq.completed,updated_at.lt.${cutoff})`,
+    )
+    .limit(20);
+  if (bookingsErr) {
+    console.error("[sync-recordings] bookings query failed:", bookingsErr.message);
+  }
+  for (const b of bookings ?? []) {
+    out.push({
+      kind: "booking",
+      id: b.id as string,
+      chimeMeetingId: (b.chime_meeting_id as string | null) ?? null,
+      updatedAt: (b.updated_at as string | null) ?? (b.confirmed_at as string | null),
+    });
+  }
+
+  // ── Admin↔trainee `admin_bookings` ───────────────────────────────────────
+  // admin_bookings uses `ended_at` to signal a finished session (added in
+  // migration 20260423000001). If the column is missing on older DBs the
+  // query returns an error — we swallow it so the cron still processes the
+  // other tables.
+  try {
+    const { data: adminBookings, error: adminErr } = await admin
+      .from("admin_bookings")
+      .select("id, chime_meeting_id, ended_at, updated_at")
+      .not("chime_meeting_id", "is", null)
+      .is("recording_url", null)
+      .lt("ended_at", cutoff)
+      .limit(20);
+    if (adminErr) {
+      console.error("[sync-recordings] admin_bookings query failed:", adminErr.message);
+    } else {
+      for (const b of adminBookings ?? []) {
+        out.push({
+          kind: "admin_booking",
+          id: b.id as string,
+          chimeMeetingId: (b.chime_meeting_id as string | null) ?? null,
+          updatedAt: (b.ended_at as string | null) ?? (b.updated_at as string | null),
+        });
+      }
+    }
+  } catch (err) {
+    console.error("[sync-recordings] admin_bookings scan threw:", err);
+  }
+
+  // ── Phone / voice `phone_sessions` ───────────────────────────────────────
+  try {
+    const { data: phones, error: phonesErr } = await admin
+      .from("phone_sessions")
+      .select("id, chime_meeting_id, ended_at, updated_at")
+      .not("chime_meeting_id", "is", null)
+      .is("recording_url", null)
+      .lt("ended_at", cutoff)
+      .limit(20);
+    if (phonesErr) {
+      console.error("[sync-recordings] phone_sessions query failed:", phonesErr.message);
+    } else {
+      for (const p of phones ?? []) {
+        out.push({
+          kind: "phone_session",
+          id: p.id as string,
+          chimeMeetingId: (p.chime_meeting_id as string | null) ?? null,
+          updatedAt: (p.ended_at as string | null) ?? (p.updated_at as string | null),
+        });
+      }
+    }
+  } catch (err) {
+    console.error("[sync-recordings] phone_sessions scan threw:", err);
+  }
+
+  return out;
+}
+
+function tableForKind(kind: SessionKind): string {
+  switch (kind) {
+    case "booking":
+      return "bookings";
+    case "admin_booking":
+      return "admin_bookings";
+    case "phone_session":
+      return "phone_sessions";
+  }
+}
+
 export async function GET(request: NextRequest) {
   const authError = verifyCronAuth(request);
   if (authError) return authError;
@@ -40,88 +152,58 @@ export async function GET(request: NextRequest) {
   const admin = createAdminClient();
   const s3 = getS3Client();
 
-  // Find bookings that need recording URL synced.
-  // Two cases:
-  //   1. confirmed_at is set (both parties joined) — standard flow
-  //   2. status = 'completed' — session ended even if participant webhook missed
-  // In both cases require at least 5 min to have passed so Chime can finalize.
+  // Require at least 5 min between session end and cron sync so Chime has
+  // time to finalize the concatenation pipeline.
   const cutoff = new Date(Date.now() - 5 * 60 * 1000).toISOString();
 
-  const { data: bookings, error } = await admin
-    .from("bookings")
-    .select("id, chime_meeting_id, confirmed_at, updated_at")
-    .not("chime_meeting_id", "is", null)
-    .is("recording_url", null)
-    .or(
-      `and(confirmed_at.not.is.null,confirmed_at.lt.${cutoff}),` +
-      `and(status.eq.completed,updated_at.lt.${cutoff})`
-    )
-    .limit(20);
+  const candidates = await loadCandidates(admin, cutoff);
 
-  if (error) {
-    console.error("[sync-recordings] DB query failed:", error.message);
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
-  if (!bookings?.length) {
+  if (!candidates.length) {
     return NextResponse.json({ synced: 0, message: "No pending recordings" });
   }
 
-  const results: { bookingId: string; status: string }[] = [];
+  const results: { kind: SessionKind; id: string; status: string }[] = [];
 
-  for (const booking of bookings) {
-    const bookingId = booking.id as string;
+  for (const candidate of candidates) {
+    const { kind, id, chimeMeetingId, updatedAt } = candidate;
 
     try {
-      // List objects Chime wrote under recordings/{bookingId}/
       const list = await s3.send(
         new ListObjectsV2Command({
           Bucket: RECORDING_BUCKET,
-          Prefix: `recordings/${bookingId}/`,
-        })
+          Prefix: `recordings/${id}/`,
+        }),
       );
 
       const objects = list.Contents ?? [];
       if (!objects.length) {
-        results.push({ bookingId, status: "no_files_yet" });
+        results.push({ kind, id, status: "no_files_yet" });
         continue;
       }
 
-      // Priority order for finding the best recording file:
-      // 1. final/*.mp4 — concatenated single file (best, full session)
-      // 2. Largest composited-video/*.mp4 — best available segment
-      // 3. Largest MP4 > 500KB (skip tiny segment stubs)
-      // 4. Any WebM
-      // 5. Any non-empty file as last resort
-      //
-      // IMPORTANT: If only small segments exist (no /final/ file), the
-      // concatenation pipeline may still be running. Skip this booking and
-      // let the next cron run pick it up once concatenation completes.
-      const finalFile = objects.find((o) => o.Key?.includes("/final/") && o.Key.endsWith(".mp4"));
-
-      // Sort composited-video files by size descending to get the largest segment
+      // Prefer the concatenated single file, fall back to the largest segment.
+      const finalFile = objects.find(
+        (o) => o.Key?.includes("/final/") && o.Key.endsWith(".mp4"),
+      );
       const compositedFiles = objects
-        .filter((o) => o.Key?.includes("composited-video") && o.Key.endsWith(".mp4"))
+        .filter(
+          (o) => o.Key?.includes("composited-video") && o.Key.endsWith(".mp4"),
+        )
         .sort((a, b) => (b.Size ?? 0) - (a.Size ?? 0));
-
       const allMp4sBySize = objects
         .filter((o) => o.Key?.endsWith(".mp4") && (o.Size ?? 0) > 500_000)
         .sort((a, b) => (b.Size ?? 0) - (a.Size ?? 0));
 
-      // If there are segment files but no /final/ file, and the booking was
-      // completed less than 30 minutes ago, skip — concatenation may still be running.
-      const updatedAt = booking.updated_at ?? booking.confirmed_at;
+      // Give concatenation 10 minutes to finish before falling back to the
+      // largest segment — otherwise we'd publish a partial recording.
       const ageMinutes = updatedAt
-        ? (Date.now() - new Date(updatedAt as string).getTime()) / 60_000
+        ? (Date.now() - new Date(updatedAt).getTime()) / 60_000
         : Infinity;
-
       if (!finalFile && compositedFiles.length > 0 && ageMinutes < 10) {
-        results.push({ bookingId, status: "waiting_for_concatenation" });
+        results.push({ kind, id, status: "waiting_for_concatenation" });
         continue;
       }
 
-      // Pick best single file: /final/ > largest segment > any MP4 > any file
-      // Full multi-segment playback is handled by the segment player in the UI.
       const recordingKey =
         finalFile?.Key ??
         compositedFiles[0]?.Key ??
@@ -130,39 +212,46 @@ export async function GET(request: NextRequest) {
         objects.find((o) => (o.Size ?? 0) > 0)?.Key;
 
       if (!recordingKey) {
-        results.push({ bookingId, status: "no_playable_file" });
+        results.push({ kind, id, status: "no_playable_file" });
         continue;
       }
 
-      // Generate a 7-day presigned URL
       const recordingUrl = await getSignedUrl(
         s3,
         new GetObjectCommand({ Bucket: RECORDING_BUCKET, Key: recordingKey }),
-        { expiresIn: 7 * 24 * 60 * 60 }
+        { expiresIn: 7 * 24 * 60 * 60 },
       );
 
       const shareId = generateShareId();
 
+      const table = tableForKind(kind);
       await admin
-        .from("bookings")
+        .from(table)
         .update({ recording_url: recordingUrl, recording_share_id: shareId })
-        .eq("id", bookingId);
+        .eq("id", id);
 
-      // Also update video_sessions if it exists
-      await admin
-        .from("video_sessions")
-        .update({ recording_url: recordingUrl })
-        .eq("chime_meeting_id", booking.chime_meeting_id);
+      // Also update the legacy video_sessions mirror table for diviner
+      // bookings. Admin_bookings and phone_sessions don't use it.
+      if (kind === "booking" && chimeMeetingId) {
+        await admin
+          .from("video_sessions")
+          .update({ recording_url: recordingUrl })
+          .eq("chime_meeting_id", chimeMeetingId);
+      }
 
-      results.push({ bookingId, status: "synced" });
+      results.push({ kind, id, status: "synced" });
     } catch (err) {
-      console.error(`[sync-recordings] Failed for booking ${bookingId}:`, err);
-      results.push({ bookingId, status: "error" });
+      console.error(`[sync-recordings] Failed for ${kind} ${id}:`, err);
+      results.push({ kind, id, status: "error" });
     }
   }
 
   const synced = results.filter((r) => r.status === "synced").length;
-  console.log(`[sync-recordings] Processed ${results.length} bookings, synced ${synced}`);
+  console.log(
+    `[sync-recordings] Processed ${results.length}, synced ${synced} (${results
+      .map((r) => `${r.kind}:${r.status}`)
+      .join(", ")})`,
+  );
 
   return NextResponse.json({ synced, total: results.length, results });
 }
