@@ -231,7 +231,7 @@ export function DivinerUpgradeModal({
 
   return (
     <Dialog open={open} onOpenChange={(nextOpen) => !nextOpen && !submitting && onClose()}>
-      <DialogContent className="w-[98vw] max-w-[min(98vw,1400px)] overflow-hidden border-amber-500/20 bg-gradient-to-b from-amber-950/95 to-slate-950/95 p-0 backdrop-blur-xl sm:w-[96vw]">
+      <DialogContent className="!w-[calc(100vw-2rem)] sm:!w-[calc(100vw-4rem)] !max-w-[820px] overflow-hidden border-amber-500/20 bg-gradient-to-b from-amber-950/95 to-slate-950/95 p-0 backdrop-blur-xl">
         <div className="flex max-h-[90vh] flex-col overflow-hidden">
         <div className="relative shrink-0 overflow-hidden border-b border-amber-500/15 bg-gradient-to-r from-amber-900/95 to-yellow-900/80 px-6 py-6 backdrop-blur-xl">
           <div className="pointer-events-none absolute -right-10 -top-10 size-40 rounded-full bg-amber-400/10 blur-3xl" />
@@ -252,8 +252,8 @@ export function DivinerUpgradeModal({
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
-        <div className="grid gap-0 xl:grid-cols-[1.2fr_0.8fr]">
-          <div className="border-b border-white/10 px-6 py-5 md:border-b-0 md:border-r">
+        <div className="flex flex-col">
+          <div className="min-w-0 border-b border-white/10 px-6 py-5">
             <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-amber-300/80">
               Choose your option
             </p>
@@ -316,7 +316,7 @@ export function DivinerUpgradeModal({
             )}
           </div>
 
-          <div className="px-6 py-5">
+          <div className="min-w-0 border-b border-white/10 px-6 py-5">
             <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-amber-300/80">
               What you’re unlocking
             </p>
@@ -359,7 +359,10 @@ export function DivinerUpgradeModal({
               </div>
             )}
 
-            <div className="mt-6 border-t border-amber-500/15 pt-4">
+          </div>
+
+          <div className="min-w-0 px-6 py-5">
+            <div className="rounded-xl border border-amber-500/15 bg-white/[0.04] p-4">
               {error && (
                 <p className="mb-3 text-sm text-red-300">{error}</p>
               )}

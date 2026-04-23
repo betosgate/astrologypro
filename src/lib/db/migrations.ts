@@ -61,6 +61,7 @@ import { MIGRATION_SQL as MIG_20260422000004 } from "@/data/migrations/202604220
 import { MIGRATION_SQL as MIG_20260422000005 } from "@/data/migrations/20260422000005_admin_bookings_chime_fields";
 import { MIGRATION_SQL as MIG_20260422000006 } from "@/data/migrations/20260422000006_add_birth_country_to_community_members";
 import { MIGRATION_SQL as MIG_20260422000007 } from "@/data/migrations/20260422000007_repair_community_members_birth_country";
+import { MIGRATION_SQL as MIG_20260428000100 } from "@/data/migrations/20260428000100_fix_diviner_fields_length";
 
 /**
  * Allowlisted migrations that the admin migration runner can execute.
@@ -589,6 +590,14 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Follow-up to 20260428000001. Drops the legacy FK diviner_service_blocks.section_type → section_type_config.type (left behind by the rename — it still referenced the V1 registry seeded with hero/bio/pricing/etc, which blocked inserts of the V2 types text/image/html). Also drops the now-orphan section_type_config table (no live code references it). Idempotent.",
     sortKey: "20260428000002",
     sql: MIG_20260428000002_FK,
+  },
+  "20260428000100_fix_diviner_fields_length": {
+    id: "20260428000100_fix_diviner_fields_length",
+    title: "Fix diviners field length (plan_id, status, phone)",
+    description:
+      "Increases the length of plan_id, subscription_status, phone, and username columns in the diviners table to TEXT or VARCHAR(50). Resolves 'value too long for type character varying(20)' errors during trainee-to-diviner upgrade.",
+    sortKey: "20260428000100",
+    sql: MIG_20260428000100,
   },
 };
 

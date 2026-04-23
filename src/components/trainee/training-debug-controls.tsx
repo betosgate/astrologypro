@@ -57,6 +57,9 @@ export function TrainingDebugControls() {
       }
 
       toast.success("Training progress reset!");
+      if (Array.isArray(data.warnings) && data.warnings.length > 0) {
+        toast.warning(data.warnings.join(" "));
+      }
       router.refresh();
       router.push("/trainee");
     } catch (err: any) {

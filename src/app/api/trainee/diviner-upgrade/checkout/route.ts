@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
-import { APP_URL } from "@/lib/constants";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { stripe } from "@/lib/stripe/client";
@@ -33,6 +32,7 @@ const COURSE_ITEM_KEY = "professional_divination_course";
 
 export async function POST(request: NextRequest) {
   try {
+    const origin = request.nextUrl.origin;
     const supabase = await createClient();
     const {
       data: { user },
@@ -173,8 +173,8 @@ export async function POST(request: NextRequest) {
         type: "trainee_diviner_upgrade",
         traineeId: trainee.id,
       },
-      success_url: `${APP_URL}/onboarding?session_id={CHECKOUT_SESSION_ID}&source=trainee-upgrade`,
-      cancel_url: `${APP_URL}/trainee?upgrade=cancelled`,
+      success_url: `${origin}/trainee/diviner-upgrade/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${origin}/trainee?upgrade=cancelled`,
     });
 
     return NextResponse.json({ checkout_url: session.url });
