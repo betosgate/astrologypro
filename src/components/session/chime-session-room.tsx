@@ -95,6 +95,15 @@ interface ChimeSessionRoomProps {
    */
   joinApiPath?: string;
   /**
+   * Override for the session-teardown endpoint called when the host clicks
+   * "End Session". Defaults to `/api/chime/end-meeting` (legacy `bookings`
+   * table). Admin-hosted sessions point this at `/api/chime/admin-bookings/end`
+   * so the teardown reads/writes `admin_bookings`. Both endpoints perform
+   * the same teardown sequence: stop capture pipeline → wait → concat → delete
+   * Chime meeting.
+   */
+  endApiPath?: string;
+  /**
    * When true, the in-session billing / overage / session-notes
    * integrations are suppressed — admin-hosted bookings have no price,
    * no overage, and no `bookings.session_notes` column to write to.
@@ -120,6 +129,7 @@ export function ChimeSessionRoom({
   clientBirthData,
   sessionLink,
   joinApiPath = "/api/chime/join-meeting",
+  endApiPath = "/api/chime/end-meeting",
   disableBillingAndNotes = false,
 }: ChimeSessionRoomProps) {
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -790,7 +800,7 @@ export function ChimeSessionRoom({
     }
 
     try {
-      await fetch("/api/chime/end-meeting", {
+      await fetch(endApiPath, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -804,7 +814,7 @@ export function ChimeSessionRoom({
     } catch {
       toast.error("Failed to save session data. Please contact support.");
     }
-  }, [bookingId, elapsedMinutes, sessionNotes, chatMessages]);
+  }, [bookingId, elapsedMinutes, sessionNotes, chatMessages, endApiPath]);
 
   const handleSendChat = () => {
     const text = chatInput.trim();

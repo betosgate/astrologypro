@@ -51,7 +51,7 @@ export default function NewWorkspacePage() {
   }
 
   return (
-    <div className="max-w-lg space-y-6">
+    <div className="space-y-6">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">

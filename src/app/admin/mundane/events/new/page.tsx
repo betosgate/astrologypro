@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Loader2 } from "lucide-react";
-import { SectionContainer } from "@/components/shared/section-container";
 
 const EVENT_TYPES = [
   "historical", "forecast", "ingress", "eclipse", "return", "transit_hit",
@@ -107,7 +106,7 @@ function NewEventForm() {
   }
 
   return (
-    <SectionContainer verticalPadding="none" className="space-y-6">
+    <div className="space-y-6">
       <Link href="/admin/mundane" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
         <ArrowLeft className="size-4" /> Back to Mundane
       </Link>
@@ -287,7 +286,7 @@ function NewEventForm() {
           </Button>
         </div>
       </form>
-    </SectionContainer>
+    </div>
   );
 }
 

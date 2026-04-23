@@ -67,7 +67,7 @@ export default function NewWheelSignPage() {
         <h1 className="mt-2 text-2xl font-bold tracking-tight">New Wheel Sign</h1>
       </div>
 
-      <Card className="max-w-2xl">
+      <Card>
         <CardHeader>
           <CardTitle>Wheel Sign Details</CardTitle>
         </CardHeader>

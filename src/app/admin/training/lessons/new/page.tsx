@@ -22,7 +22,6 @@ import {
   getDurationMinsFromFile,
   getDurationMinsFromUrl,
 } from "@/lib/training/video-duration";
-import { SectionContainer } from "@/components/shared/section-container";
 import { FileText, X, Eye, Download, FilePlus } from "lucide-react";
 import { PdfPreviewModal } from "@/components/trainee/pdf-preview-modal";
 import { cn } from "@/lib/utils";
@@ -332,7 +331,7 @@ export default function NewLessonPage() {
   }
 
   return (
-    <SectionContainer size="wide" verticalPadding="none" className="space-y-6">
+    <div className="space-y-6">
       {pdfPreview && (
         <PdfPreviewModal
           url={pdfPreview.url}
@@ -718,6 +717,6 @@ export default function NewLessonPage() {
           </form>
         </CardContent>
       </Card>
-    </SectionContainer>
+    </div>
   );
 }
