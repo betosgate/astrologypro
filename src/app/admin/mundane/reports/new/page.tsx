@@ -154,7 +154,7 @@ export default function NewReportPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-2xl">
+    <div className="space-y-6">
       {/* Header */}
       <div>
         <Button variant="ghost" size="sm" asChild className="mb-3 -ml-2 text-muted-foreground">

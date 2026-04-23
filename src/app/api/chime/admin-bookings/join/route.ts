@@ -6,6 +6,7 @@ import {
   createChimeMeeting,
   getChimeMeeting,
   listChimeAttendees,
+  startChimeRecording,
 } from "@/lib/chime-meetings";
 
 export const dynamic = "force-dynamic";
@@ -25,6 +26,13 @@ export const dynamic = "force-dynamic";
  *
  * Response shape matches /api/chime/join-meeting so ChimeSessionRoom can
  * reuse the same data shape with `joinApiPath` pointing here.
+ *
+ * Recording policy (23.04.2026): admin↔trainee sessions ARE recorded by
+ * default, matching diviner-booking behavior. The capture pipeline starts
+ * the first time the host admin joins (role === "diviner" and no
+ * chime_pipeline_id yet). The pipeline ARN is persisted to
+ * `admin_bookings.chime_pipeline_id` so `/api/chime/admin-bookings/end`
+ * can stop it and trigger concatenation on session end.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -48,7 +56,7 @@ export async function POST(request: NextRequest) {
     const { data: booking, error: bookingError } = await admin
       .from("admin_bookings")
       .select(
-        "id, admin_user_id, client_name, client_email, scheduled_at, duration_minutes, status, chime_meeting_id, chime_external_meeting_id, video_provider",
+        "id, admin_user_id, client_name, client_email, scheduled_at, duration_minutes, status, chime_meeting_id, chime_external_meeting_id, chime_pipeline_id, video_provider, session_started_at",
       )
       .eq("id", bookingId)
       .maybeSingle();
@@ -117,7 +125,45 @@ export async function POST(request: NextRequest) {
       meeting = await getChimeMeeting(activeMeetingId);
     }
 
+    // ── Start recording when the host joins for the first time ──────────────
+    // Idempotent: only start if no pipeline exists yet on this booking. Runs
+    // in parallel with the rest of the join flow so we don't block the
+    // attendee response on the AWS pipeline create call.
+    const recordingPromise =
+      role === "diviner" && !booking.chime_pipeline_id
+        ? startChimeRecording(
+            activeMeetingId,
+            `recordings/${bookingId}`,
+          ).catch((err: unknown) => {
+            const name = (err as { name?: string }).name ?? "Error";
+            const msg = err instanceof Error ? err.message : String(err);
+            console.error(
+              `[admin-bookings/join] Failed to start recording: ${name}: ${msg}`,
+            );
+            return null;
+          })
+        : Promise.resolve(null);
+
     const attendee = await createChimeAttendee(activeMeetingId!, externalUserId);
+
+    const recording = await recordingPromise;
+    if (recording?.pipelineArn) {
+      console.log(
+        `[admin-bookings/join] Recording pipeline started: id=${recording.pipelineId} arn=${recording.pipelineArn}`,
+      );
+      // Fire-and-forget — if this fails (e.g. transient supabase error), the
+      // pipeline is still alive and we'll retry persisting on the next join.
+      // Use the two-argument form of `.then` to satisfy supabase-js's
+      // PromiseLike return type which doesn't expose `.catch`.
+      void admin
+        .from("admin_bookings")
+        .update({ chime_pipeline_id: recording.pipelineArn })
+        .eq("id", bookingId)
+        .then(
+          () => {},
+          () => {},
+        );
+    }
 
     // Client side: detect whether the host is already in the meeting so the
     // "waiting for host" state can resolve without a second fetch.
@@ -135,10 +181,24 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // admin_bookings has no `session_started_at` column — return the
-    // current timestamp so the client-side timer has a deterministic start
-    // (the server-persisted value is a diviner-table concept).
-    const sessionStartedAt = new Date().toISOString();
+    // Persist session_started_at the first time we see anyone join so the
+    // duration the end-meeting endpoint calculates is consistent across page
+    // reloads. We only write if it hasn't been set yet to preserve the true
+    // first-join timestamp.
+    let sessionStartedAt: string =
+      (booking.session_started_at as string | null) ??
+      new Date().toISOString();
+    if (!booking.session_started_at) {
+      void admin
+        .from("admin_bookings")
+        .update({ session_started_at: sessionStartedAt })
+        .eq("id", bookingId)
+        .is("session_started_at", null)
+        .then(
+          () => {},
+          () => {},
+        );
+    }
 
     return NextResponse.json({
       meeting: {

@@ -144,8 +144,10 @@ export async function POST(request: NextRequest) {
       .select("session_started_at")
       .eq("id", bookingId)
       .single()
-      .then(({ data: sessionRow }) => sessionRow?.session_started_at ?? null)
-      .catch(() => null);
+      .then(
+        ({ data: sessionRow }) => sessionRow?.session_started_at ?? null,
+        () => null,
+      );
 
     // Diviner presence check (client only)
     const presencePromise =
@@ -167,24 +169,29 @@ export async function POST(request: NextRequest) {
       console.log(
         `[join-meeting] Recording pipeline started: id=${recording.pipelineId} arn=${recording.pipelineArn}`
       );
-      admin
+      void admin
         .from("bookings")
         .update({ chime_pipeline_id: recording.pipelineArn })
         .eq("id", bookingId)
-        .then(() => {})
-        .catch(() => {});
+        .then(
+          () => {},
+          () => {},
+        );
     }
 
     // Session start time — persist if first join
-    let sessionStartedAt: string = existingStartedAt ?? new Date().toISOString();
+    const sessionStartedAt: string =
+      existingStartedAt ?? new Date().toISOString();
     if (!existingStartedAt) {
-      admin
+      void admin
         .from("bookings")
         .update({ session_started_at: sessionStartedAt })
         .eq("id", bookingId)
         .is("session_started_at", null)
-        .then(() => {})
-        .catch(() => {});
+        .then(
+          () => {},
+          () => {},
+        );
     }
 
     // Diviner presence

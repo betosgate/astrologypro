@@ -43,6 +43,7 @@ const DIVINER_SESSION_PREFIXES = [
 ];
 
 const DIVINER_TAROT_READING_PREFIX = "/admin/tarot/readings/";
+const ADMIN_CREATE_ROUTE_SUFFIXES = ["/new", "/create", "/add"];
 
 function isDivinerSessionRoute(pathname: string | null): boolean {
   if (!pathname) return false;
@@ -52,6 +53,11 @@ function isDivinerSessionRoute(pathname: string | null): boolean {
 function isDivinerTarotReadingRoute(pathname: string | null): boolean {
   if (!pathname) return false;
   return pathname.startsWith(DIVINER_TAROT_READING_PREFIX);
+}
+
+function isAdminCreateRoute(pathname: string | null): boolean {
+  if (!pathname) return false;
+  return ADMIN_CREATE_ROUTE_SUFFIXES.some((suffix) => pathname.endsWith(suffix));
 }
 
 function SessionShell({ children }: { children: React.ReactNode }) {
@@ -67,7 +73,15 @@ function SessionShell({ children }: { children: React.ReactNode }) {
   );
 }
 
-async function AdminShell({ children, userId }: { children: React.ReactNode; userId: string }) {
+async function AdminShell({
+  children,
+  userId,
+  isCreateRoute,
+}: {
+  children: React.ReactNode;
+  userId: string;
+  isCreateRoute?: boolean;
+}) {
   const supabase = await createClient();
   const portals = await getUserPortals(supabase, userId, { isAdmin: true });
 
@@ -82,7 +96,10 @@ async function AdminShell({ children, userId }: { children: React.ReactNode; use
             <MundaneAlertBell />
           </Suspense>
         </div>
-        <SectionContainer size="wide" verticalPadding="md">
+        <SectionContainer
+          size={isCreateRoute ? "default" : "wide"}
+          verticalPadding="md"
+        >
           {children}
         </SectionContainer>
       </main>
@@ -102,6 +119,7 @@ export default async function AdminLayout({
   const pathname = hdrs.get("x-pathname");
   const sessionRoute = isDivinerSessionRoute(pathname);
   const tarotReadingRoute = isDivinerTarotReadingRoute(pathname);
+  const createRoute = isAdminCreateRoute(pathname);
 
   if (sessionRoute) {
     // Layer 1: authenticated users only. Layer 2 (page-level
@@ -138,7 +156,7 @@ export default async function AdminLayout({
 
     const adminUser = await requireAdmin();
     if (adminUser && adminUser.id === user.id) {
-      return <AdminShell userId={user.id}>{children}</AdminShell>;
+      return <AdminShell userId={user.id} isCreateRoute={createRoute}>{children}</AdminShell>;
     }
 
     return <SessionShell>{children}</SessionShell>;
@@ -147,5 +165,5 @@ export default async function AdminLayout({
   // Non-session admin route → strict admin gate (historical behavior).
   const user = await requireAdmin();
   if (!user) redirect("/login?reason=admin");
-  return <AdminShell userId={user.id}>{children}</AdminShell>;
+  return <AdminShell userId={user.id} isCreateRoute={createRoute}>{children}</AdminShell>;
 }

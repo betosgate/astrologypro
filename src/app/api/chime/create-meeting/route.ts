@@ -4,7 +4,6 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import {
   createChimeMeeting,
   createChimeAttendee,
-  startChimeRecording,
 } from "@/lib/chime-meetings";
 
 export const dynamic = "force-dynamic";
@@ -82,39 +81,20 @@ export async function POST(request: NextRequest) {
       `diviner-${diviner.id}`
     );
 
-    // Start recording (non-blocking if bucket not configured)
-    let pipelineId = "";
-    let pipelineArn = "";
-    let recordingError = "";
-    try {
-      const recording = await startChimeRecording(
-        meeting.meetingId,
-        `recordings/${bookingId}`
-      );
-      pipelineId = recording.pipelineId;
-      pipelineArn = recording.pipelineArn;
-      if (pipelineArn) {
-        console.log(`[create-meeting] Recording pipeline started: id=${pipelineId} arn=${pipelineArn}`);
-      } else {
-        recordingError = "startChimeRecording returned empty pipelineArn";
-        console.warn("[create-meeting]", recordingError);
-      }
-    } catch (err: unknown) {
-      const name = (err as { name?: string }).name ?? "Error";
-      const msg = err instanceof Error ? err.message : String(err);
-      recordingError = `${name}: ${msg}`;
-      console.error("[create-meeting] Failed to start Chime recording:", recordingError);
-    }
-
-    // Update booking with Chime meeting details + pipeline ARN
-    // (pipeline ARN is needed to trigger concatenation when session ends)
+    // Recording is NO LONGER started here. Starting the capture pipeline
+    // before anyone joins means AWS writes silence segments from the moment
+    // the diviner clicks "Create Room" until the actual session begins —
+    // which inflates S3 cost and makes concatenation finish with a bunch
+    // of empty front-padding. Recording is now started lazily inside
+    // `/api/chime/join-meeting` the first time the diviner actually joins
+    // (see `startChimeRecording` call guarded by `!booking.chime_pipeline_id`
+    // in join-meeting/route.ts).
     const baseUpdate: Record<string, unknown> = {
       chime_meeting_id: meeting.meetingId,
       chime_external_meeting_id: meeting.externalMeetingId,
       video_provider: "chime",
       status: "confirmed",
     };
-    if (pipelineArn) baseUpdate.chime_pipeline_id = pipelineArn;
 
     const { error: updateError } = await admin
       .from("bookings")
@@ -192,8 +172,10 @@ export async function POST(request: NextRequest) {
       attendeeId: divinerAttendee.attendeeId,
       joinToken: divinerAttendee.joinToken,
       mediaRegion: meeting.mediaRegion,
-      pipelineId,
-      recordingError: recordingError || null,
+      // Recording pipeline starts lazily on first diviner join — no longer
+      // kicked off here. See join-meeting/route.ts for the start logic.
+      pipelineId: "",
+      recordingError: null,
     });
   } catch (error) {
     console.error("Chime create meeting error:", error);
