@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -104,6 +105,8 @@ export function DashboardContentClient({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
+  const [deleteItem, setDeleteItem] = useState<DashboardContentItemRow | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const availableSources = useMemo(() => {
     return sourceOptions.filter((option) => option.category === form.category);
@@ -201,13 +204,11 @@ export function DashboardContentClient({
     }
   }
 
-  async function handleDelete(id: string) {
-    if (!window.confirm("Delete this dashboard item?")) {
-      return;
-    }
-
+  async function handleDelete() {
+    if (!deleteItem) return;
+    setDeleting(true);
     try {
-      const res = await fetch(`/api/admin/dashboard-content/${id}`, {
+      const res = await fetch(`/api/admin/dashboard-content/${deleteItem.id}`, {
         method: "DELETE",
       });
 
@@ -216,13 +217,16 @@ export function DashboardContentClient({
         throw new Error(data.error ?? "Delete failed");
       }
 
-      setItems((current) => current.filter((item) => item.id !== id));
-      if (editingId === id) {
+      setItems((current) => current.filter((item) => item.id !== deleteItem.id));
+      if (editingId === deleteItem.id) {
         resetForm();
       }
+      setDeleteItem(null);
       toast.success("Dashboard item deleted");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Delete failed");
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -485,6 +489,18 @@ export function DashboardContentClient({
           <CardTitle>Scheduled Feed</CardTitle>
         </CardHeader>
         <CardContent>
+          <ConfirmDialog
+            open={!!deleteItem}
+            title="Delete Dashboard Item"
+            description="Are you sure you want to delete this dashboard item?"
+            confirmLabel="Delete"
+            loading={deleting}
+            variant="destructive"
+            onOpenChange={(open) => {
+              if (!open && !deleting) setDeleteItem(null);
+            }}
+            onConfirm={handleDelete}
+          />
           <Table>
             <TableHeader>
               <TableRow>
@@ -535,7 +551,7 @@ export function DashboardContentClient({
                       <Button variant="outline" size="sm" onClick={() => loadFormFromItem(item)}>
                         Edit
                       </Button>
-                      <Button variant="destructive" size="sm" onClick={() => handleDelete(item.id)}>
+                      <Button variant="destructive" size="sm" onClick={() => setDeleteItem(item)}>
                         Delete
                       </Button>
                     </div>
