@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { resolveTemplateMatches } from "@/lib/booking/template-matched-services";
+import { getBaseServiceTemplateSlug } from "@/lib/service-template-form";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -18,10 +19,10 @@ export const runtime = "nodejs";
  *     compatibleDivinerCount: number,
  *   }
  *
- * Submission param (`submission=<uuid>`) is optional — when present we
- * validate it belongs to the template slug so the URL can't be forged past
- * a mismatched submission. We do NOT fail when the submission is missing;
- * the page can still render without a saved submission.
+ * Submission param (`submission=<uuid>`) is optional at the API layer so the
+ * shared calendar client can degrade safely, but page entry points should
+ * treat it as required. When present we validate it belongs to the same
+ * canonical template family (`general-*` and base slug are treated as one).
  */
 export async function GET(
   request: NextRequest,
@@ -60,7 +61,7 @@ export async function GET(
     }
     // Accept the raw slug or the canonical base slug — caller may pass either.
     const storedSlug = (sub.template_slug as string | null) ?? "";
-    if (storedSlug !== slug && storedSlug !== match.baseSlug) {
+    if (getBaseServiceTemplateSlug(storedSlug) !== match.baseSlug) {
       return NextResponse.json(
         { error: "Submission does not belong to this template" },
         { status: 403 },
