@@ -9,9 +9,16 @@ export default async function CommunityProfilePage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
+  // Task 04 (community-horoscope-birth-country):
+  // `birth_country` is required for the shared Horoscope Toolkit but was
+  // previously not loaded from `community_members`, so the profile form
+  // could not hydrate or save it. The column is provisioned by migration
+  // `20260422000006_add_birth_country_to_community_members.sql` and the
+  // `/api/community/onboarding/complete` route already persists it — we
+  // just need to select + pass it through.
   const { data: member } = await supabase
     .from("community_members")
-    .select("id, full_name, first_name, last_name, email, phone, gender, date_of_birth, birth_time, birth_city, address, city, state, zip, relationship_status, intake_data, membership_type, membership_status, joined_at, expires_at")
+    .select("id, full_name, first_name, last_name, email, phone, gender, date_of_birth, birth_time, birth_city, birth_country, address, city, state, zip, relationship_status, intake_data, membership_type, membership_status, joined_at, expires_at")
     .eq("user_id", user.id)
     .single();
 

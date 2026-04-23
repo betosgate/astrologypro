@@ -157,7 +157,11 @@ export default async function AdminMyBookingsPage() {
           </CardHeader>
           <CardContent className="space-y-3">
             {upcoming.map((b) => (
-              <BookingRow key={b.id} booking={b} />
+              <BookingRow
+                key={b.id}
+                booking={b}
+                adminUsername={adminRow?.username ?? null}
+              />
             ))}
           </CardContent>
         </Card>
@@ -171,7 +175,12 @@ export default async function AdminMyBookingsPage() {
           </CardHeader>
           <CardContent className="space-y-3">
             {past.map((b) => (
-              <BookingRow key={b.id} booking={b} faded />
+              <BookingRow
+                key={b.id}
+                booking={b}
+                faded
+                adminUsername={adminRow?.username ?? null}
+              />
             ))}
           </CardContent>
         </Card>
@@ -183,9 +192,11 @@ export default async function AdminMyBookingsPage() {
 function BookingRow({
   booking,
   faded,
+  adminUsername,
 }: {
   booking: AdminBookingRow;
   faded?: boolean;
+  adminUsername: string | null;
 }) {
   return (
     <div
@@ -245,7 +256,11 @@ function BookingRow({
           }}
           detailsOnly
           actionBasePath={`/api/admin/my-bookings/${booking.id}`}
-          joinHref={`/api/admin/my-bookings/${booking.id}/join`}
+          joinHref={
+            adminUsername
+              ? `/book/${adminUsername}/session/${booking.id}`
+              : null
+          }
           viewerRole="admin"
         />
       </div>

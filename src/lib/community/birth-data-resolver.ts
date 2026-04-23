@@ -4,10 +4,19 @@
  * Priority fallback to find a user's birth data without re-prompting:
  *   1. community_family_members where relationship = 'self' (or matching full_name)
  *   2. clients row from any past booking under this user_id
- *   3. community_members own fields (date_of_birth, birth_time, birth_city)
+ *   3. community_members own fields (date_of_birth, birth_time, birth_city,
+ *      birth_country)
  *
  * Returns a normalized shape + the source label so UI can show
  * "Using data from past booking" etc.
+ *
+ * Note on birth_country (22.04.2026 birth-country bundle):
+ *   The full location record is {birth_city, birth_country, birth_lat,
+ *   birth_lng} — city alone is not sufficient. The shared Horoscope Toolkit
+ *   (`/community/horoscope`) requires birth_country, so it is selected,
+ *   tracked in `missing`, and back-filled from `community_members.birth_country`
+ *   whenever the winning family_self row's country is null. See
+ *   `tasks/22.04.2026/community-horoscope-birth-country`.
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -43,7 +52,10 @@ function emptyResult(): ResolvedBirthData {
     birthLng: null,
     birthTimezone: null,
     selfFamilyMemberId: null,
-    missing: ["dateOfBirth", "birthTime", "birthCity"],
+    // Keep this list aligned with `computeMissing()` — `/community/horoscope`
+    // renders its amber card using the same field keys, so any field the
+    // toolkit gates on must be reported here too.
+    missing: ["dateOfBirth", "birthTime", "birthCity", "birthCountry"],
   };
 }
 
@@ -52,6 +64,11 @@ function computeMissing(data: Partial<ResolvedBirthData>): string[] {
   if (!data.dateOfBirth) missing.push("dateOfBirth");
   if (!data.birthTime) missing.push("birthTime");
   if (!data.birthCity) missing.push("birthCity");
+  // Required for the shared HoroscopeToolkitPage (`/community/horoscope`)
+  // to render. The profile form + onboarding both persist this on
+  // `community_members.birth_country`; resolver must check it here so
+  // consumers see a consistent contract.
+  if (!data.birthCountry) missing.push("birthCountry");
   // Coordinates are not user-visible but required for compute
   if (data.birthLat == null || data.birthLng == null) missing.push("coordinates");
   return missing;
@@ -101,13 +118,39 @@ export async function resolveUserBirthData(
       : undefined);
 
   if (selfRow && selfRow.date_of_birth) {
+    // Stale-self-row fallback (22.04.2026 birth-country bundle):
+    // A `community_family_members` self-row created before the
+    // `birth_country` column existed (or imported from a source that
+    // didn't populate it) can win priority 1 with every other field
+    // filled but `birth_country IS NULL`. That would leave
+    // `/community/horoscope` stuck on "missing Birth country" even
+    // after the user has saved their country on `/community/profile`.
+    //
+    // Rule: ONLY fill the missing country from `community_members.birth_country`
+    // when the winning self-row has no country. Never overwrite a
+    // non-null family country — the family record remains the source
+    // of truth for that member's location.
+    let resolvedCountry: string | null = selfRow.birth_country ?? null;
+    if (!resolvedCountry) {
+      const { data: memberCountry } = await admin
+        .from("community_members")
+        .select("birth_country")
+        .eq("id", memberId)
+        .maybeSingle();
+      const fromProfile = (memberCountry as { birth_country?: string | null } | null)
+        ?.birth_country;
+      if (typeof fromProfile === "string" && fromProfile.trim().length > 0) {
+        resolvedCountry = fromProfile.trim();
+      }
+    }
+
     const data = {
       source: "family_self" as const,
       fullName: selfRow.full_name ?? memberName ?? null,
       dateOfBirth: selfRow.date_of_birth,
       birthTime: selfRow.birth_time,
       birthCity: selfRow.birth_city,
-      birthCountry: selfRow.birth_country,
+      birthCountry: resolvedCountry,
       birthLat: selfRow.birth_lat,
       birthLng: selfRow.birth_lng,
       birthTimezone: null,
@@ -117,34 +160,73 @@ export async function resolveUserBirthData(
   }
 
   // ── 2. Try clients row from past booking ──────────────────────────────────
-  const { data: booking } = await admin
-    .from("bookings")
-    .select("clients(id, full_name, birth_date, birth_time, birth_city, birth_lat, birth_lng, birth_timezone)")
-    .eq("user_id", userId)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  //
+  // `bookings` does not have a user_id column; the user link lives on
+  // `clients.user_id`, while bookings point to clients via `client_id`.
+  // Resolve the user's client rows first, then pick the most recent booking
+  // for any of those clients.
+  const { data: clientRows } = await admin
+    .from("clients")
+    .select("id, full_name, birth_date, birth_time, birth_city, birth_lat, birth_lng, birth_timezone")
+    .eq("user_id", userId);
 
-  const client = (booking as unknown as {
-    clients?: {
-      full_name: string | null;
-      birth_date: string | null;
-      birth_time: string | null;
-      birth_city: string | null;
-      birth_lat: number | null;
-      birth_lng: number | null;
-      birth_timezone: string | null;
-    } | null;
-  })?.clients;
+  const clients = (clientRows ?? []) as Array<{
+    id: string;
+    full_name: string | null;
+    birth_date: string | null;
+    birth_time: string | null;
+    birth_city: string | null;
+    birth_lat: number | null;
+    birth_lng: number | null;
+    birth_timezone: string | null;
+  }>;
+
+  let client:
+    | {
+        full_name: string | null;
+        birth_date: string | null;
+        birth_time: string | null;
+        birth_city: string | null;
+        birth_lat: number | null;
+        birth_lng: number | null;
+        birth_timezone: string | null;
+      }
+    | undefined;
+
+  if (clients.length > 0) {
+    const { data: booking } = await admin
+      .from("bookings")
+      .select("client_id")
+      .in(
+        "client_id",
+        clients.map((c) => c.id),
+      )
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const bookingClientId = (booking as { client_id?: string | null } | null)?.client_id;
+    client = clients.find((c) => c.id === bookingClientId);
+  }
 
   if (client && client.birth_date) {
+    const { data: memberCountry } = await admin
+      .from("community_members")
+      .select("birth_country")
+      .eq("id", memberId)
+      .maybeSingle();
+    const profileCountry = (memberCountry as { birth_country?: string | null } | null)
+      ?.birth_country;
     const data = {
       source: "past_booking" as const,
       fullName: client.full_name ?? memberName ?? null,
       dateOfBirth: client.birth_date,
       birthTime: client.birth_time,
       birthCity: client.birth_city,
-      birthCountry: null,
+      birthCountry:
+        typeof profileCountry === "string" && profileCountry.trim().length > 0
+          ? profileCountry.trim()
+          : null,
       birthLat: client.birth_lat,
       birthLng: client.birth_lng,
       birthTimezone: client.birth_timezone,
@@ -154,9 +236,13 @@ export async function resolveUserBirthData(
   }
 
   // ── 3. Try community_members own fields ───────────────────────────────────
+  //
+  // birth_country is selected here so the profile fallback can satisfy the
+  // Horoscope Toolkit's country requirement. The column is provisioned by
+  // migration `20260422000006_add_birth_country_to_community_members.sql`.
   const { data: member } = await admin
     .from("community_members")
-    .select("full_name, date_of_birth, birth_time, birth_city")
+    .select("full_name, date_of_birth, birth_time, birth_city, birth_country")
     .eq("id", memberId)
     .maybeSingle();
 
@@ -167,7 +253,7 @@ export async function resolveUserBirthData(
       dateOfBirth: member.date_of_birth,
       birthTime: member.birth_time,
       birthCity: member.birth_city,
-      birthCountry: null,
+      birthCountry: (member as { birth_country?: string | null }).birth_country ?? null,
       birthLat: null,
       birthLng: null,
       birthTimezone: null,

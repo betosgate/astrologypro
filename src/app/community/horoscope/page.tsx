@@ -119,16 +119,11 @@ export default async function CommunityNativityChartPage() {
     member.full_name ?? null,
   );
 
-  const hasFiniteCoords =
-    Number.isFinite(Number(resolved.birthLat)) &&
-    Number.isFinite(Number(resolved.birthLng));
-
   const missingForChart: string[] = [];
   if (!resolved.dateOfBirth) missingForChart.push("dateOfBirth");
   if (!resolved.birthTime) missingForChart.push("birthTime");
   if (!resolved.birthCity) missingForChart.push("birthCity");
   if (!resolved.birthCountry) missingForChart.push("birthCountry");
-  if (!hasFiniteCoords) missingForChart.push("coordinates");
 
   const header = (
     <div className="space-y-1">
@@ -171,10 +166,9 @@ export default async function CommunityNativityChartPage() {
     },
   });
 
-  // buildToolkitPrefillForm can still yield a null city if Geoapify
-  // cannot resolve the label and no lat/lng was on file. In that case
-  // we fall back to the missing-data state rather than render a toolkit
-  // that cannot submit.
+  // community_members does not store birth_lat/birth_lng. Let the shared
+  // prefill builder geocode birth_city + birth_country before falling back
+  // to the coordinates missing state.
   if (!prefill.person1.city) {
     return (
       <div className="space-y-6">
