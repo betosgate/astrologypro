@@ -453,17 +453,37 @@ export default async function TraineeSessionsPage() {
                         {booking.durationMinutes} min
                       </span>
                     </div>
-                    {joinable && booking.joinHref && (
-                      <Button size="sm" asChild>
-                        <a
-                          href={booking.joinHref}
-                          aria-label="Join video session"
-                        >
-                          <Video className="mr-1.5 size-3.5" aria-hidden="true" />
-                          Join
-                        </a>
-                      </Button>
-                    )}
+                    <div className="flex shrink-0 items-center gap-2">
+                      <BookingDetailSheet
+                        booking={{
+                          id: booking.id,
+                          scheduled_at: booking.scheduledAt,
+                          status: booking.status,
+                          duration: booking.durationMinutes,
+                          amount: 0,
+                          notes: null,
+                          client_name: booking.clientName,
+                          client_email: booking.clientEmail,
+                          service_name: booking.serviceName ?? "Practice Session",
+                          username: booking.hostUsername ?? undefined,
+                        }}
+                        viewerRole="client"
+                        detailsOnly
+                        actionBasePath={booking.actionBasePath}
+                        joinHref={booking.joinHref ?? null}
+                      />
+                      {joinable && booking.joinHref && (
+                        <Button size="sm" asChild>
+                          <a
+                            href={booking.joinHref}
+                            aria-label="Join video session"
+                          >
+                            <Video className="mr-1.5 size-3.5" aria-hidden="true" />
+                            Join
+                          </a>
+                        </Button>
+                      )}
+                    </div>
                   </CardContent>
                 </Card>
               );
