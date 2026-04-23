@@ -1,97 +1,115 @@
+// migrated-to-canonical-accounts: 2026-04-23
+// GET /api/affiliate/dashboard — KPI summary for the authenticated affiliate.
+// Aggregates across ALL their diviner partnerships (Task 05).
+//
+// Sprint: docs/tasks/2026-04-23/affiliate-identity-refactor/05-affiliate-portal.md
+
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { resolveAffiliateForCaller } from "@/lib/affiliate-accounts";
+import { isAffiliateIdentityV2Enabled } from "@/lib/feature-flags";
 
 export const dynamic = "force-dynamic";
 
-// GET /api/affiliate/dashboard
-// Returns KPI stats for the authenticated affiliate user
-// Looks up diviner_affiliates.user_id = auth.uid()
+function problem(status: number, title: string, detail?: string) {
+  return NextResponse.json(
+    {
+      type: `https://httpstatuses.io/${status}`,
+      title,
+      status,
+      ...(detail ? { detail } : {}),
+    },
+    { status },
+  );
+}
+
 export async function GET() {
+  if (!isAffiliateIdentityV2Enabled()) return problem(503, "Feature not available");
+
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json(
-      { type: "https://httpstatuses.io/401", title: "Unauthorized", status: 401 },
-      { status: 401 }
-    );
-  }
+  if (!user) return problem(401, "Unauthorized");
 
   const admin = createAdminClient();
+  const ctx = await resolveAffiliateForCaller(admin, user.id);
+  if (!ctx) return problem(403, "Not an active affiliate");
 
-  // Look up affiliate record
-  const { data: affiliate, error: affError } = await admin
-    .from("diviner_affiliates")
-    .select("id, name, email, diviner_id, status")
-    .eq("user_id", user.id)
-    .maybeSingle();
+  const { account, junctionIds } = ctx;
 
-  if (affError) {
-    return NextResponse.json(
-      { type: "https://httpstatuses.io/500", title: "Database error", status: 500, detail: affError.message },
-      { status: 500 }
-    );
+  // Zero-partnership affiliate: short-circuit with empty KPIs
+  if (junctionIds.length === 0) {
+    return NextResponse.json({
+      affiliate: {
+        id: account.id,
+        name: account.name,
+        email: account.email,
+        status: account.status,
+      },
+      kpis: {
+        total_clicks: 0,
+        total_conversions: 0,
+        pending_commission_cents: 0,
+        approved_commission_cents: 0,
+        total_paid_cents: 0,
+      },
+      partnership_count: 0,
+      top_links: [],
+    });
   }
 
-  if (!affiliate) {
-    return NextResponse.json(
-      { type: "https://httpstatuses.io/404", title: "Affiliate record not found", status: 404 },
-      { status: 404 }
-    );
-  }
+  // Aggregate clicks + commissions + links across all junctions
+  const [{ data: linkRows }, { data: commissionRows }, { data: topLinks }] = await Promise.all([
+    admin
+      .from("affiliate_referral_links")
+      .select("clicks")
+      .in("affiliate_id", junctionIds),
+    admin
+      .from("affiliate_commissions")
+      .select("commission_amount_cents, status")
+      .in("affiliate_id", junctionIds),
+    admin
+      .from("affiliate_referral_links")
+      .select("id, slug, clicks, conversions, is_active, affiliate_id")
+      .in("affiliate_id", junctionIds)
+      .order("clicks", { ascending: false })
+      .limit(5),
+  ]);
 
-  // Aggregate clicks from the denormalized counts on referral links
-  const { data: linkRows } = await admin
-    .from("affiliate_referral_links")
-    .select("clicks")
-    .eq("affiliate_id", affiliate.id);
+  const totalClicks = (linkRows ?? []).reduce(
+    (sum, l) => sum + Number(l.clicks ?? 0),
+    0,
+  );
 
-  const totalClicks = (linkRows ?? []).reduce((sum, l) => sum + Number(l.clicks ?? 0), 0);
-
-  // Aggregate commissions
-  const { data: commissionRows } = await admin
-    .from("affiliate_commissions")
-    .select("commission_amount_cents, status")
-    .eq("affiliate_id", affiliate.id);
-
-  let pendingCommissionCents = 0;
-  let approvedCommissionCents = 0;
-  let totalPaidCents = 0;
+  let pendingCents = 0;
+  let approvedCents = 0;
+  let paidCents = 0;
   let totalConversions = 0;
-
-  (commissionRows ?? []).forEach((row) => {
-    const amount = Number(row.commission_amount_cents);
+  for (const row of commissionRows ?? []) {
+    const amount = Number(row.commission_amount_cents ?? 0);
     totalConversions++;
-    if (row.status === "pending" || row.status === "on_hold") pendingCommissionCents += amount;
-    else if (row.status === "approved") approvedCommissionCents += amount;
-    else if (row.status === "paid") totalPaidCents += amount;
-  });
-
-  // Top 3 performing links (by click count)
-  const { data: topLinks } = await admin
-    .from("affiliate_referral_links")
-    .select("id, slug, clicks, conversions, is_active")
-    .eq("affiliate_id", affiliate.id)
-    .order("clicks_count", { ascending: false })
-    .limit(3);
+    if (row.status === "pending" || row.status === "on_hold") pendingCents += amount;
+    else if (row.status === "approved") approvedCents += amount;
+    else if (row.status === "paid") paidCents += amount;
+  }
 
   return NextResponse.json({
     affiliate: {
-      id: affiliate.id,
-      name: affiliate.name,
-      email: affiliate.email,
-      status: affiliate.status,
+      id: account.id,
+      name: account.name,
+      email: account.email,
+      status: account.status,
     },
     kpis: {
       total_clicks: totalClicks,
       total_conversions: totalConversions,
-      pending_commission_cents: pendingCommissionCents,
-      approved_commission_cents: approvedCommissionCents,
-      total_paid_cents: totalPaidCents,
+      pending_commission_cents: pendingCents,
+      approved_commission_cents: approvedCents,
+      total_paid_cents: paidCents,
     },
+    partnership_count: junctionIds.length,
     top_links: topLinks ?? [],
   });
 }
