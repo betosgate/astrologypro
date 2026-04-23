@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Plus, Pencil, Trash2, Eye } from "lucide-react";
 
 type Broadcast = {
@@ -40,6 +41,8 @@ export default function AdminBroadcastingPage() {
   const [form, setForm] = useState<FormState>({ ...EMPTY });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [deleteItem, setDeleteItem] = useState<Broadcast | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   // Filters
   const [search, setSearch] = useState("");
@@ -115,11 +118,14 @@ export default function AdminBroadcastingPage() {
     setItems((prev) => prev.map((b) => b.id === item.id ? { ...b, status: newStatus } : b));
   }
 
-  async function handleDelete(id: string) {
-    if (!confirm("Delete this broadcast?")) return;
-    await fetch(`/api/admin/broadcasting/${id}`, { method: "DELETE" });
-    setItems((prev) => prev.filter((b) => b.id !== id));
+  async function handleDelete() {
+    if (!deleteItem) return;
+    setDeleting(true);
+    await fetch(`/api/admin/broadcasting/${deleteItem.id}`, { method: "DELETE" });
+    setItems((prev) => prev.filter((b) => b.id !== deleteItem.id));
     setCount((c) => c - 1);
+    setDeleteItem(null);
+    setDeleting(false);
   }
 
   const fmt = (d: string) => d ? new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—";
@@ -228,6 +234,19 @@ export default function AdminBroadcastingPage() {
         </div>
       )}
 
+      <ConfirmDialog
+        open={!!deleteItem}
+        title="Delete Broadcast"
+        description="Are you sure you want to delete this broadcast?"
+        confirmLabel="Delete"
+        loading={deleting}
+        variant="destructive"
+        onOpenChange={(open) => {
+          if (!open && !deleting) setDeleteItem(null);
+        }}
+        onConfirm={handleDelete}
+      />
+
       {/* List */}
       {loading ? (
         <p className="text-sm text-muted-foreground">Loading…</p>
@@ -251,7 +270,7 @@ export default function AdminBroadcastingPage() {
                     <Button size="sm" variant="ghost" onClick={() => setPreview(item)}><Eye className="size-3.5" /></Button>
                     <Button size="sm" variant="outline" onClick={() => toggleStatus(item)}>{item.status === "active" ? "Deactivate" : "Activate"}</Button>
                     <Button size="sm" variant="ghost" onClick={() => openEdit(item.id)}><Pencil className="size-3.5" /></Button>
-                    <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => handleDelete(item.id)}><Trash2 className="size-3.5" /></Button>
+                    <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => setDeleteItem(item)}><Trash2 className="size-3.5" /></Button>
                   </div>
                 </div>
               </CardContent>

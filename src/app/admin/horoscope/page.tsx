@@ -46,6 +46,7 @@ import {
   parseDecimalTz, parseBirth, freeWheelBody, pad, getPlanetDegree,
   getAspectOrbColor, getPlanetInterpClass, getRelationshipBgClass, parseAspectTitle,
   getMonthName, convertTo12HourFormat, emptyBirth, defaultForm, orderPlanetEntries,
+  normalizeInterpretationText,
 } from "./utils";
 import {
   fetchWithRetry, callCompute, callAI, callPlanetReturn,
@@ -555,7 +556,7 @@ function PlanetsSection({ planets, aiData, areaOfInquiry, checkDacen, onDecanCli
   const aiMap: Record<string, string> = {};
   if (Array.isArray(aiData)) {
     for (const item of aiData) {
-      if (item?.name) aiMap[item.name] = formatInterpretationText(item.interpretation);
+      if (item?.name) aiMap[item.name] = normalizeInterpretationText(item.interpretation);
     }
   }
 
@@ -672,6 +673,50 @@ function HousesSection({ houses, planets, aiData, areaOfInquiry }: { houses: any
 
   if (!houses) return null;
 
+  function extractHouseInterpretationEntries(input: unknown) {
+    const parsedInput = parseAiJsonResponse(input);
+    const baseItems = Array.isArray(parsedInput)
+      ? parsedInput
+      : parsedInput && typeof parsedInput === "object"
+        ? Object.entries(parsedInput as Record<string, unknown>).map(([houseKey, value]) => ({
+          house: houseKey,
+          value,
+        }))
+        : [];
+
+    return baseItems
+      .map((entry: any, index: number) => {
+        let rawItem = entry;
+        let fallbackHouse: string | number | null = entry?.house ?? null;
+
+        if (entry && typeof entry === "object" && !Array.isArray(entry)) {
+          const keys = Object.keys(entry);
+          if (keys.length === 1 && /^\d+$/.test(keys[0] ?? "")) {
+            fallbackHouse = keys[0];
+            rawItem = entry[keys[0]];
+          } else if ("value" in entry && entry.value && typeof entry.value === "object" && !Array.isArray(entry.value)) {
+            rawItem = entry.value;
+          }
+        }
+
+        const item = rawItem && typeof rawItem === "object" ? rawItem as Record<string, unknown> : {};
+        const houseSource = item.house ?? fallbackHouse;
+        const houseMatch = String(houseSource ?? "").match(/\d+/);
+        const houseNumber = houseMatch ? Number(houseMatch[0]) : null;
+        const text = normalizeInterpretationText(
+          item.interpretation ?? item.data ?? item.forecast ?? rawItem,
+        );
+
+        return {
+          item,
+          index,
+          houseNumber: Number.isFinite(houseNumber) ? houseNumber : null,
+          text,
+        };
+      })
+      .filter(({ text }) => Boolean(text));
+  }
+
   // Map house number → planets in that house
   const houseMap: Record<number, string[]> = {};
   if (planets) {
@@ -685,9 +730,11 @@ function HousesSection({ houses, planets, aiData, areaOfInquiry }: { houses: any
   const aiMap: Record<string | number, string> = {};
   if (Array.isArray(aiData)) {
     for (const item of aiData) {
-      if (item?.house !== undefined) aiMap[item.house] = formatInterpretationText(item.interpretation);
+      if (item?.house !== undefined) aiMap[item.house] = normalizeInterpretationText(item.interpretation);
     }
   }
+
+  const houseInterpretations = extractHouseInterpretationEntries(aiData);
 
   return (
     <div className="space-y-4">
@@ -709,7 +756,7 @@ function HousesSection({ houses, planets, aiData, areaOfInquiry }: { houses: any
             </thead>
             <tbody>
               {houses.map((h: any, i: number) => (
-                <tr key={h.house}>
+                <tr key={`house-row-${h.house ?? i}-${i}`}>
                   <td className="font-semibold text-center">House {h.house}</td>
                   <td>
                     <div className="flex justify-center">
@@ -729,7 +776,7 @@ function HousesSection({ houses, planets, aiData, areaOfInquiry }: { houses: any
         <div className="p-8 overflow-x-auto">
           <div className="flex flex-col gap-1 min-w-[850px] font-sans">
 
-            {houses.map((h: any) => {
+            {houses.map((h: any, houseIndex: number) => {
               const hNum = Number(h.house);
               const gridPlanets = ["Sun", "Moon", "Mercury", "Venus", "Mars", "Saturn", "Jupiter", "Uranus", "Neptune", "Pluto", "Node", "Part of Fortune", "Chiron"];
 
@@ -750,7 +797,7 @@ function HousesSection({ houses, planets, aiData, areaOfInquiry }: { houses: any
               const forcedIconIdx = skipBlocks ? 0 : (hNum - 1);
 
               return (
-                <div key={h.house} className="flex items-center gap-4 py-0 border-b border-slate-100 last:border-0 hover:bg-slate-50 transition-colors">
+                <div key={`house-track-${h.house ?? houseIndex}-${houseIndex}`} className="flex items-center gap-4 py-0 border-b border-slate-100 last:border-0 hover:bg-slate-50 transition-colors">
                   {/* Mockup-style House Header: [House N] [Sign Icon] [Degree] */}
                   <div className="flex items-center gap-4 w-40 shrink-0 h-8">
                     <div className="w-12">
@@ -817,20 +864,21 @@ function HousesSection({ houses, planets, aiData, areaOfInquiry }: { houses: any
       {/* AI interpretations */}
       {!aiData && <SectionSkeleton title="House Interpretations" />}
       {aiData === "error" && <SectionError title="House Interpretations" />}
-      {Array.isArray(aiData) && aiData.length > 0 && (
+      {houseInterpretations.length > 0 && (
         <div className="space-y-3">
-          {aiData.map((item: any) => {
-            const hRaw = houses.find((h: any) => Number(h.house) === Number(item.house));
+          {houseInterpretations.map(({ item, index, houseNumber, text }) => {
+            const hRaw = houses.find((h: any) => Number(h.house) === houseNumber);
             const sign = hRaw?.sign ?? "";
+            const houseLabel = houseNumber ?? index + 1;
             return (
-              <div key={item.house} className="rounded-lg overflow-hidden" style={{ border: '1px solid rgba(182, 199, 227, 0.17)' }}>
+              <div key={`house-interpretation-${houseLabel}-${index}`} className="rounded-lg overflow-hidden" style={{ border: '1px solid rgba(182, 199, 227, 0.17)' }}>
                 <div className="horoscope-interp-header px-4 py-2.5 flex justify-center" style={{ borderBottom: '1px solid rgba(182, 199, 227, 0.17)' }}>
-                  <h4 className="uppercase tracking-wide text-center w-full" style={{ fontFamily: "'Roboto', sans-serif", color: '#232c3c' }}>House {item.house}</h4>
+                  <h4 className="uppercase tracking-wide text-center w-full" style={{ fontFamily: "'Roboto', sans-serif", color: '#232c3c' }}>House {houseLabel}</h4>
                 </div>
                 <div className="interp-gradient-default px-4 py-3">
-                  <p className="text-[20px] leading-relaxed whitespace-pre-line" style={{ fontFamily: "'Roboto', sans-serif", fontWeight: 400, lineHeight: '26px' }}>{formatInterpretationText(item.interpretation)}</p>
+                  <p className="text-[20px] leading-relaxed" style={{ fontFamily: "'Roboto', sans-serif", fontWeight: 400, lineHeight: '26px' }}>{text}</p>
                   <div className="mt-3 flex justify-center">
-                    <button onClick={() => trigger(`House ${item.house}`, formatInterpretationText(item.interpretation), { ...item, sign }, areaOfInquiry, undefined, false, "house")} className="horoscope-show-more">Show More</button>
+                    <button onClick={() => trigger(`House ${houseLabel}`, text, { ...item, sign }, areaOfInquiry, undefined, false, "house")} className="horoscope-show-more">Show More</button>
                   </div>
                 </div>
               </div>
@@ -848,6 +896,40 @@ function AspectsSection({ aspects, planets, aiData, areaOfInquiry, isSolarReturn
   const { modal, trigger, close } = useShowMore();
 
   if (!aspects) return null;
+
+  const parsedAiData = parseAiJsonResponse(aiData);
+  const aspectInterpretations = (
+    Array.isArray(parsedAiData)
+      ? parsedAiData
+      : parsedAiData && typeof parsedAiData === "object"
+        ? Object.values(parsedAiData as Record<string, unknown>)
+        : []
+  )
+    .map((entry: any, index: number) => {
+      let item = entry;
+
+      if (entry && typeof entry === "object" && !Array.isArray(entry)) {
+        const keys = Object.keys(entry);
+        if (keys.length === 1 && entry[keys[0]] && typeof entry[keys[0]] === "object") {
+          item = entry[keys[0]];
+        }
+      }
+
+      const title = typeof item?.title === "string" && item.title.trim()
+        ? item.title.trim()
+        : `Aspect ${index + 1}`;
+      const interpretation = normalizeInterpretationText(
+        item?.interpretation ?? item?.data ?? item?.forecast ?? item,
+      );
+
+      return {
+        item,
+        index,
+        title,
+        interpretation,
+      };
+    })
+    .filter(({ interpretation }) => Boolean(interpretation));
 
   // Enrich aspects with planet degrees
   const degMap: Record<string, number> = {};
@@ -908,23 +990,23 @@ function AspectsSection({ aspects, planets, aiData, areaOfInquiry, isSolarReturn
       {/* AI aspect interpretations with word association */}
       {!aiData && <SectionSkeleton title="Aspect Interpretations" />}
       {aiData === "error" && <SectionError title="Aspect Interpretations" />}
-      {Array.isArray(aiData) && aiData.length > 0 && (
+      {aspectInterpretations.length > 0 && (
         <div className="space-y-3">
-          {aiData.map((item: any, i: number) => {
+          {aspectInterpretations.map(({ item, index, title, interpretation }) => {
             // Parse planet/aspect names directly from the AI title — no fuzzy rawAspect lookup
             // e.g. "Moon Conjunction Venus" → p1="Moon", aspectType="Conjunction", p2="Venus"
-            const { p1, aspectType: _at, p2 } = parseAspectTitle(item.title);
+            const { p1, aspectType: _at, p2 } = parseAspectTitle(title);
             return (
-              <div key={i} className="rounded-lg overflow-hidden" style={{ border: '1px solid rgba(182, 199, 227, 0.17)' }}>
+              <div key={`aspect-interpretation-${index}`} className="rounded-lg overflow-hidden" style={{ border: '1px solid rgba(182, 199, 227, 0.17)' }}>
                 {/* Header — white bg with dark text, Angular astroHeaderModifierPipe icon pattern */}
                 <div className="horoscope-interp-header px-4 py-2.5 text-center" style={{ borderBottom: '1px solid rgba(182, 199, 227, 0.17)' }}>
-                  <AstroHeaderParts title={item.title ?? `Aspect ${i + 1}`} />
+                  <AstroHeaderParts title={title} />
                 </div>
                 {/* Golden-orange gradient interpretation */}
                 <div className="interp-gradient-default px-4 py-3">
-                  <p className="text-[20px] leading-relaxed whitespace-pre-line" style={{ fontFamily: "'Roboto', sans-serif", fontWeight: 400, lineHeight: '26px', color: '#000' }}>{formatInterpretationText(item.interpretation)}</p>
+                  <p className="text-[20px] leading-relaxed" style={{ fontFamily: "'Roboto', sans-serif", fontWeight: 400, lineHeight: '26px', color: '#000' }}>{interpretation}</p>
                   <div className="mt-3 flex justify-center">
-                    <button onClick={() => trigger(item.title ?? `Aspect ${i + 1}`, formatInterpretationText(item.interpretation), item, areaOfInquiry, item.title)} className="horoscope-show-more">Show More</button>
+                    <button onClick={() => trigger(title, interpretation, item, areaOfInquiry, title)} className="horoscope-show-more">Show More</button>
                   </div>
                 </div>
               </div>
@@ -950,21 +1032,22 @@ function DharmaKarmaSection({ data, rawData, areaOfInquiry, isSolarReturn }: { d
   return (
     <div className="space-y-3">
       <ShowMoreModal title={modal?.title ?? ""} content={modal?.content ?? ""} loading={modal?.loading ?? false} open={!!modal} onClose={close} aspectTitle={modal?.aspectTitle} promptType={modal?.promptType} planetEntries={modal?.planetEntries} relationshipEntries={modal?.relationshipEntries} bgClass={modal?.bgClass} pictureUrl={modal?.pictureUrl} />
-      {[{ key: "dharma", label: "Dharma", text: dharma }, { key: "karma", label: "Karma", text: karma }].map(({ key, label, text }) => (
-        text ? (
+      {[{ key: "dharma", label: "Dharma", text: dharma }, { key: "karma", label: "Karma", text: karma }].map(({ key, label, text }) => {
+        const textContent = normalizeInterpretationText(text);
+        return textContent ? (
           <div key={key} className="rounded-lg overflow-hidden" style={{ border: '1px solid rgba(182, 199, 227, 0.17)' }}>
             <div className="horoscope-interp-header px-4 py-2.5 flex justify-center bg-white" style={{ borderBottom: '1px solid rgba(182, 199, 227, 0.17)' }}>
               <h4 className="text-center w-full text-black font-semibold" style={{ fontFamily: "'Roboto', sans-serif" }}>{label}</h4>
             </div>
             <div className="interp-gradient-default px-4 py-3">
-              <p className="text-[20px] leading-relaxed" style={{ fontFamily: "'Roboto', sans-serif", fontWeight: 400, lineHeight: '26px', color: '#000' }}>{text}</p>
+              <p className="text-[20px] leading-relaxed" style={{ fontFamily: "'Roboto', sans-serif", fontWeight: 400, lineHeight: '26px', color: '#000' }}>{textContent}</p>
               <div className="mt-3 flex justify-center">
-                <button onClick={() => trigger(label, text, rawData ?? data, areaOfInquiry)} className="horoscope-show-more">Show More</button>
+                <button onClick={() => trigger(label, textContent, rawData ?? data, areaOfInquiry)} className="horoscope-show-more">Show More</button>
               </div>
             </div>
           </div>
-        ) : null
-      ))}
+        ) : null;
+      })}
       {typeof data === "string" && <p className="text-sm text-muted-foreground px-4 py-3">{data}</p>}
     </div>
   );
@@ -980,7 +1063,9 @@ function LilithSection({ lilith, aiData, areaOfInquiry, checkDacen, onDecanClick
   const { modal, trigger, close } = useShowMore();
   if (!lilith) return null;
 
-  const interp = Array.isArray(aiData) ? aiData[0]?.interpretation : null;
+  const interp = Array.isArray(aiData)
+    ? normalizeInterpretationText(aiData[0]?.interpretation ?? aiData[0]?.data ?? aiData[0])
+    : "";
 
   return (
     <div className="space-y-4">
@@ -1058,7 +1143,8 @@ function AscMidheavenVertexSection({ natalData, aiData, areaOfInquiry, isSolarRe
   if (Array.isArray(aiData)) {
     for (const item of aiData) {
       for (const k of keys) {
-        if (item[k]) aiMap[k] = formatInterpretationText(item[k]);
+        const normalized = normalizeInterpretationText(item?.[k]);
+        if (normalized) aiMap[k] = normalized;
       }
     }
   }
@@ -1149,10 +1235,10 @@ function NatalChartsRow({ svgs, labels, onExpandImg }: {
   };
 
   return (
-      <div className="flex flex-wrap gap-4">
+    <div className="flex flex-wrap gap-4">
       {activeItems.map((item, i) => (
-        <div key={`${item.l}-${i}`} className="contents">
-          {renderImg(item.s!, item.l)}
+        <div key={`${String(item.l)}-${i}`} className="contents">
+          {renderImg(item.s!, String(item.l))}
         </div>
       ))}
     </div>
@@ -1177,7 +1263,7 @@ function PlanetReturnSummaryTable({ tab, birth, returnDate, natalData, responseD
   return (
     <div className="horoscope-table-container">
       <div className="horoscope-table-header">
-        <h3>{label} Return</h3>
+        <h3>z{label} Return</h3>
       </div>
       <div className="horoscope-table-wrapper">
         <table className="horoscope-table">
@@ -1406,7 +1492,7 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
               return typeof value === "string";
             });
             const cardTitle = item.title ?? item.name ?? derivedEntry?.[0] ?? `${title} ${i + 1}`;
-            const cardText = formatInterpretationText(item.interpretation ?? item.data ?? item.forecast ?? derivedEntry?.[1] ?? "");
+            const cardText = normalizeInterpretationText(item.interpretation ?? item.data ?? item.forecast ?? derivedEntry?.[1] ?? "");
 
             return (
               <div key={i} className="rounded-lg border overflow-hidden">
@@ -2073,7 +2159,7 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
       {aiData === "error" && <SectionError title={`${label} Interpretation`} />}
       {Array.isArray(aiData) && aiData.map((item: any, i: number) => {
         const title = item.aspecttitle ?? item.title ?? item.aspect ?? "";
-        const interpretation = formatInterpretationText(item.interpretation ?? item.data ?? "");
+        const interpretation = normalizeInterpretationText(item.interpretation ?? item.data ?? "");
         if (!interpretation) return null;
 
         const RelationshipHeading = () => {
@@ -2181,9 +2267,9 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
                   })()}
                 </div>
                 <div className="interp-gradient-default px-4 py-3" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 400, lineHeight: '26px', color: '#000' }}>
-                  <p className="leading-relaxed whitespace-pre-line">{formatInterpretationText(item.interpretation ?? item.data ?? item)}</p>
+                  <p className="leading-relaxed">{normalizeInterpretationText(item.interpretation ?? item.data ?? item)}</p>
                   <div className="mt-2 flex justify-center">
-                    <button onClick={() => trigger(item.title ?? "Lunar Return", formatInterpretationText(item.interpretation), item, areaOfInquiry)} className="horoscope-show-more">Show More</button>
+                    <button onClick={() => trigger(item.title ?? "Lunar Return", normalizeInterpretationText(item.interpretation ?? item.data ?? item), item, areaOfInquiry)} className="horoscope-show-more">Show More</button>
                   </div>
                 </div>
               </div>
@@ -2553,12 +2639,14 @@ export interface HoroscopeToolkitPageProps {
   basePath?: string;
   allowedSlugs?: string[];
   initialPrefill?: string | null;
+  readOnlyBirthData?: boolean;
 }
 
 export function HoroscopeToolkitPage({
   basePath = "/admin/horoscope",
   allowedSlugs,
   initialPrefill = null,
+  readOnlyBirthData = false,
 }: HoroscopeToolkitPageProps = {}) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -3457,7 +3545,7 @@ export function HoroscopeToolkitPage({
 
       {/* Main panel */}
       <div className="flex-1 overflow-y-auto result-scroll-container" onScroll={(e) => setShowScrollTop((e.currentTarget.scrollTop) > 400)}>
-        <div className="max-w-5xl mx-auto px-6 py-6 space-y-6" ref={resultRef}>
+        <div className="max-w-none px-6 py-6 space-y-6" ref={resultRef}>
 
           {/* Header */}
           <div>
@@ -3476,10 +3564,10 @@ export function HoroscopeToolkitPage({
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-5">
                 {currentTab.type === "single" ? (
-                  <BirthBlock value={form.person1} onChange={(v) => setForm((f) => ({ ...f, person1: v }))} disabled={loading} />
+                  <BirthBlock value={form.person1} onChange={(v) => setForm((f) => ({ ...f, person1: v }))} disabled={loading || readOnlyBirthData} />
                 ) : (
                   <div className="flex flex-col gap-6">
-                    <BirthBlock title="Person 1 (Self)" value={form.person1} onChange={(v) => setForm((f) => ({ ...f, person1: v }))} disabled={loading} />
+                    <BirthBlock title="Person 1 (Self)" value={form.person1} onChange={(v) => setForm((f) => ({ ...f, person1: v }))} disabled={loading || readOnlyBirthData} />
                     <BirthBlock title="Person 2 (Partner)" value={form.person2} onChange={(v) => setForm((f) => ({ ...f, person2: v }))} disabled={loading} />
                   </div>
                 )}
@@ -3502,14 +3590,14 @@ export function HoroscopeToolkitPage({
                 {currentTab.extras?.includes("question") && (
                   <div>
                     <Label className="text-xs font-medium text-muted-foreground mb-1 block">Your Question (required for Horary)</Label>
-                    <Textarea value={form.question} onChange={(e) => setForm((f) => ({ ...f, question: e.target.value }))} placeholder="e.g. Will I get the job I applied for this month?" rows={3} disabled={loading} className="text-sm resize-none" />
+                    <Textarea value={form.question} onChange={(e) => setForm((f) => ({ ...f, question: e.target.value }))} placeholder="e.g. Will I get the job I applied for this month?" rows={3} disabled={loading || readOnlyBirthData} className="text-sm resize-none" />
                   </div>
                 )}
                 {/* Area of inquiry */}
                 {currentTab.extras?.includes("area_of_inquiry") && (
                   <div>
                     <Label className="text-xs font-medium text-muted-foreground mb-1 block">Area of Inquiry (optional)</Label>
-                    <Textarea value={form.areaOfInquiry} onChange={(e) => setForm((f) => ({ ...f, areaOfInquiry: e.target.value }))} placeholder="What would you like to gain clarity on? e.g., Career and purpose, a specific relationship…" rows={3} disabled={loading} className="text-sm resize-none" />
+                    <Textarea value={form.areaOfInquiry} onChange={(e) => setForm((f) => ({ ...f, areaOfInquiry: e.target.value }))} placeholder="What would you like to gain clarity on? e.g., Career and purpose, a specific relationship…" rows={3} disabled={loading || readOnlyBirthData} className="text-sm resize-none" />
                   </div>
                 )}
 
@@ -3517,10 +3605,10 @@ export function HoroscopeToolkitPage({
 
                 <Button
                   type="submit"
-                  disabled={loading || !isFormValid}
+                  disabled={loading || !isFormValid || readOnlyBirthData}
                   className={cn(
                     "w-full md:w-auto h-10 px-8 font-semibold transition-all shadow-md",
-                    loading || !isFormValid
+                    loading || !isFormValid || readOnlyBirthData
                       ? "bg-muted text-muted-foreground cursor-not-allowed opacity-70"
                       : "bg-amber-500 hover:bg-amber-600 text-white hover:shadow-lg active:scale-95"
                   )}

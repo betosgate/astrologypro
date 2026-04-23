@@ -217,7 +217,7 @@ function NewSessionModal({ open, onClose, onCreated, diviners }: NewSessionModal
           <div className="space-y-1.5">
             <Label htmlFor="ns-diviner">Diviner *</Label>
             <Select value={divinerId} onValueChange={setDivinerId}>
-              <SelectTrigger id="ns-diviner" className="text-sm">
+              <SelectTrigger id="ns-diviner" className="text-sm w-full">
                 <SelectValue placeholder="Select diviner…" />
               </SelectTrigger>
               <SelectContent>
@@ -233,7 +233,7 @@ function NewSessionModal({ open, onClose, onCreated, diviners }: NewSessionModal
           <div className="space-y-1.5">
             <Label htmlFor="ns-platform">Platform *</Label>
             <Select value={platform} onValueChange={setPlatform}>
-              <SelectTrigger id="ns-platform" className="text-sm">
+              <SelectTrigger id="ns-platform" className="text-sm w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

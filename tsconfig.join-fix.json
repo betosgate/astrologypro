@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "src/app/book/[username]/session/[bookingId]/page.tsx",
+    "src/app/api/admin/my-bookings/[id]/join/route.ts",
+    "src/app/api/trainee/appointments/admin-bookings/[id]/join/route.ts",
+    "src/lib/supabase/admin.ts",
+    "src/lib/supabase/server.ts",
+    "src/lib/admin-auth.ts",
+    "src/lib/google-calendar.ts",
+    "src/components/session/chime-session-room.tsx"
+  ]
+}

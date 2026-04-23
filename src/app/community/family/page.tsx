@@ -29,6 +29,7 @@ import {
   extractCountryFromCityLabel,
 } from "@/components/community/birth-city-autocomplete";
 import { formatBirthPlace } from "@/lib/community/birth-location";
+import { SectionContainer } from "@/components/shared/section-container";
 
 type FamilyMember = {
   id: string;
@@ -148,7 +149,8 @@ export default function CommunityFamilyPage() {
   const atLimit = members.length >= FAMILY_LIMIT;
 
   return (
-    <div className="space-y-6">
+    <SectionContainer verticalPadding="none" className="px-0 sm:px-0 lg:px-0">
+      <div className="space-y-6">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <div className="flex items-center gap-2">
@@ -519,5 +521,6 @@ export default function CommunityFamilyPage() {
         </div>
       )}
     </div>
+    </SectionContainer>
   );
 }
