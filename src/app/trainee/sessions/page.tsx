@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { BookingDetailSheet } from "@/components/dashboard/booking-detail-sheet";
 import { Separator } from "@/components/ui/separator";
 import {
   Calendar,
@@ -365,11 +366,21 @@ export default async function TraineeSessionsPage() {
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
                       <StatusBadge status={booking.status} />
-                      {booking.status === "completed" ? (
-                        <CheckCircle2 className="size-4 text-green-500" aria-hidden="true" />
-                      ) : booking.status === "canceled" || booking.status === "no_show" ? (
-                        <XCircle className="size-4 text-destructive" aria-hidden="true" />
-                      ) : null}
+                      <BookingDetailSheet
+                        booking={{
+                          id: booking.id,
+                          scheduled_at: booking.scheduled_at,
+                          status: booking.status,
+                          duration: booking.duration_minutes,
+                          amount: 0,
+                          notes: null,
+                          client_name: trainee?.name ?? "Trainee",
+                          client_email: trainee?.email ?? "",
+                          service_name: booking.service?.name ?? "Practice Session",
+                        }}
+                        viewerRole="client"
+                        detailsOnly
+                      />
                     </div>
                   </CardContent>
                 </Card>
