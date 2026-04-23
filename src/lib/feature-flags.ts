@@ -39,3 +39,25 @@ export function isLandingPageV2Enabled(): boolean {
   if (raw === "off") return false;
   return process.env.NODE_ENV !== "production";
 }
+
+/**
+ * NEXT_PUBLIC_AFFILIATE_IDENTITY_V2 ("on" | "off", default "off" in prod)
+ *   Gates the 2026-04-23 affiliate-identity-refactor. When "off":
+ *     - new routes created by this sprint return 503 (invite/accept/portal APIs)
+ *     - `getUserPortals()` does not emit an Affiliate tile
+ *     - the `/affiliate/*` middleware guard returns 404 for the portal (the
+ *       existing broken scaffolding stays hidden)
+ *   When "on":
+ *     - canonical `affiliate_accounts` is the identity source of truth
+ *     - `/dashboard/affiliates` shows the invite-only flow
+ *     - `/affiliate/*` portal routes via `affiliate_accounts.user_id`
+ *
+ * Sprint plan: docs/tasks/2026-04-23/affiliate-identity-refactor/
+ */
+export function isAffiliateIdentityV2Enabled(): boolean {
+  const raw = process.env.NEXT_PUBLIC_AFFILIATE_IDENTITY_V2;
+  if (raw === "on") return true;
+  if (raw === "off") return false;
+  // Default: dev/preview → on, prod → off
+  return process.env.NODE_ENV !== "production";
+}
