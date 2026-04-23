@@ -88,7 +88,7 @@ function MetaCell({ metadata }: { metadata?: Record<string, unknown> }) {
     <div className="space-y-1">
       <button
         onClick={() => setOpen((x) => !x)}
-        className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+        className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors whitespace-normal text-left"
       >
         {open ? <ChevronDown className="size-3" /> : <ChevronRight className="size-3" />}
         {open ? "collapse" : summary}
