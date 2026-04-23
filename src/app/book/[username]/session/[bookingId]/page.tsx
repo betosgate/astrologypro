@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { getAdminUser } from "@/lib/admin-auth";
@@ -30,24 +30,57 @@ export default async function AdminBookingSessionPage({ params }: PageProps) {
   const { username, bookingId } = await params;
   const admin = createAdminClient();
 
-  const { data: adminRow } = await admin
-    .from("admin_users")
-    .select("user_id, username, display_name")
-    .ilike("username", username)
-    .maybeSingle();
-
-  if (!adminRow?.user_id) notFound();
-
+  // Look the booking up by id alone — it is the source of truth. The URL
+  // username is a vanity segment, not a join condition. This avoids a spurious
+  // 404 when the URL's username doesn't match the booking's host admin (e.g.,
+  // the admin renamed their username after the booking was created, or the
+  // link was hand-crafted with the wrong prefix).
   const { data: booking } = await admin
     .from("admin_bookings")
     .select(
       "id, admin_user_id, client_name, client_email, scheduled_at, duration_minutes, timezone, status, chime_meeting_id, video_provider",
     )
     .eq("id", bookingId)
-    .eq("admin_user_id", adminRow.user_id)
     .maybeSingle();
 
-  if (!booking) notFound();
+  if (!booking) {
+    console.warn(
+      `[session-page] no admin_bookings row for id=${bookingId} (url username=${username})`,
+    );
+    notFound();
+  }
+
+  // Resolve the actual host admin from the booking row, NOT from the URL
+  // username. That way a username change (or a bad URL segment) doesn't
+  // 404 the page.
+  const { data: hostAdminRow } = await admin
+    .from("admin_users")
+    .select("user_id, username, display_name")
+    .eq("user_id", booking.admin_user_id)
+    .maybeSingle();
+
+  if (!hostAdminRow?.user_id) {
+    console.warn(
+      `[session-page] no admin_users row for admin_user_id=${booking.admin_user_id} (booking=${bookingId})`,
+    );
+    notFound();
+  }
+
+  // If the URL username is stale/wrong, redirect to the canonical one so the
+  // address bar matches the host admin. Only redirect when we have a canonical
+  // username to send them to.
+  const canonicalUsername = (hostAdminRow.username as string | null) ?? null;
+  if (
+    canonicalUsername &&
+    canonicalUsername.toLowerCase() !== username.toLowerCase()
+  ) {
+    redirect(
+      `/book/${encodeURIComponent(canonicalUsername)}/session/${bookingId}`,
+    );
+  }
+
+  // Alias so the rest of the file continues to read `adminRow`.
+  const adminRow = hostAdminRow;
 
   // Canceled sessions have no room. Send the caller back to their home.
   if (booking.status === "canceled") notFound();
@@ -64,7 +97,22 @@ export default async function AdminBookingSessionPage({ params }: PageProps) {
   const isClient =
     !!authEmail && !!bookingEmail && authEmail === bookingEmail;
 
-  if (!isOwnerAdmin && !isClient) notFound();
+  if (!isOwnerAdmin && !isClient) {
+    // Not logged in at all → bounce through login and return here. Matches the
+    // /book/<username>/reschedule/<id> behavior so admin + trainee flows stay
+    // consistent.
+    if (!user) {
+      redirect(
+        `/login?reason=session&next=${encodeURIComponent(
+          `/book/${username}/session/${bookingId}`,
+        )}`,
+      );
+    }
+    // Logged in, but the email on the auth session doesn't match the booking
+    // and the viewer isn't the host admin either. Show a 404 so we don't leak
+    // the booking's existence.
+    notFound();
+  }
 
   const role: "diviner" | "client" = isOwnerAdmin ? "diviner" : "client";
   const hostName = adminRow.display_name ?? adminRow.username ?? "Host";

@@ -420,7 +420,7 @@ export default function NewMandalismContentPage() {
                 max="100"
                 value={form.priority}
                 onChange={(e) => setForm({ ...form, priority: e.target.value })}
-                className="w-28"
+                className="w-full"
               />
             </div>
 

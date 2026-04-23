@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Plus, Trash2, Pencil, BookOpen, PlayCircle, Eye } from "lucide-react";
 
 type Wisdom = {
@@ -34,6 +35,8 @@ export default function AdminSpiritualWisdomPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [previewItem, setPreviewItem] = useState<Wisdom | null>(null);
+  const [deleteItem, setDeleteItem] = useState<Wisdom | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   // Filters
   const [createdFrom, setCreatedFrom] = useState("");
@@ -84,10 +87,13 @@ export default function AdminSpiritualWisdomPage() {
     setShowForm(true);
   }
 
-  async function handleDelete(id: string) {
-    if (!confirm("Delete this wisdom entry?")) return;
-    await fetch(`/api/admin/spiritual-wisdom/${id}`, { method: "DELETE" });
-    setItems((prev) => prev.filter((i) => i.id !== id));
+  async function handleDelete() {
+    if (!deleteItem) return;
+    setDeleting(true);
+    await fetch(`/api/admin/spiritual-wisdom/${deleteItem.id}`, { method: "DELETE" });
+    setItems((prev) => prev.filter((i) => i.id !== deleteItem.id));
+    setDeleteItem(null);
+    setDeleting(false);
   }
 
   function F(field: string) { return (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => setForm((f) => ({ ...f, [field]: e.target.value })); }
@@ -152,6 +158,19 @@ export default function AdminSpiritualWisdomPage() {
           </Card>
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!deleteItem}
+        title="Delete Wisdom Entry"
+        description="Are you sure you want to delete this wisdom entry?"
+        confirmLabel="Delete"
+        loading={deleting}
+        variant="destructive"
+        onOpenChange={(open) => {
+          if (!open && !deleting) setDeleteItem(null);
+        }}
+        onConfirm={handleDelete}
+      />
 
       {showForm && (
         <Card>
@@ -231,7 +250,7 @@ export default function AdminSpiritualWisdomPage() {
                   <div className="flex items-center gap-2">
                     <Button size="sm" variant="ghost" onClick={() => setPreviewItem(item)}><Eye className="size-4" /></Button>
                     <Button size="sm" variant="outline" onClick={() => openEdit(item)}><Pencil className="size-4" /></Button>
-                    <Button size="sm" variant="ghost" onClick={() => handleDelete(item.id)} className="text-destructive hover:text-destructive"><Trash2 className="size-4" /></Button>
+                    <Button size="sm" variant="ghost" onClick={() => setDeleteItem(item)} className="text-destructive hover:text-destructive"><Trash2 className="size-4" /></Button>
                   </div>
                 </div>
               </CardHeader>

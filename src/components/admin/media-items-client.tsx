@@ -292,7 +292,7 @@ function MediaForm({ open, onClose, onSaved, diviners, editItem }: MediaFormProp
             <div className="space-y-1.5">
               <Label htmlFor="mi-diviner">Diviner *</Label>
               <Select value={form.diviner_id} onValueChange={(v) => set("diviner_id", v)}>
-                <SelectTrigger id="mi-diviner">
+                <SelectTrigger id="mi-diviner" className="w-full">
                   <SelectValue placeholder="Select diviner" />
                 </SelectTrigger>
                 <SelectContent>
@@ -323,7 +323,7 @@ function MediaForm({ open, onClose, onSaved, diviners, editItem }: MediaFormProp
           <div className="space-y-1.5">
             <Label htmlFor="mi-type">Type *</Label>
             <Select value={form.type} onValueChange={(v) => set("type", v as MediaType)}>
-              <SelectTrigger id="mi-type">
+              <SelectTrigger id="mi-type" className="w-full">
                 <SelectValue placeholder="Select type" />
               </SelectTrigger>
               <SelectContent>
@@ -388,7 +388,7 @@ function MediaForm({ open, onClose, onSaved, diviners, editItem }: MediaFormProp
               value={form.platform || "none"}
               onValueChange={(v) => set("platform", v === "none" ? "" : v as Platform)}
             >
-              <SelectTrigger id="mi-platform">
+              <SelectTrigger id="mi-platform" className="w-full">
                 <SelectValue placeholder="Select platform" />
               </SelectTrigger>
               <SelectContent>
@@ -442,7 +442,7 @@ function MediaForm({ open, onClose, onSaved, diviners, editItem }: MediaFormProp
               value={form.moderation_status || "pending"}
               onValueChange={(v) => set("moderation_status", v as MediaFormData["moderation_status"])}
             >
-              <SelectTrigger id="mi-moderation">
+              <SelectTrigger id="mi-moderation" className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
