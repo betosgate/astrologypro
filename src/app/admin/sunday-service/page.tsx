@@ -13,6 +13,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Plus, Trash2, Radio, Tv, Eye } from "lucide-react";
 
 type Session = {
@@ -50,6 +51,8 @@ export default function AdminSundayServicePage() {
   const [createdFrom, setCreatedFrom] = useState("");
   const [createdTo, setCreatedTo] = useState("");
   const [previewSession, setPreviewSession] = useState<Session | null>(null);
+  const [deleteSession, setDeleteSession] = useState<Session | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   function loadSessions(overrides?: { createdFrom?: string; createdTo?: string }) {
     const params = new URLSearchParams();
@@ -127,10 +130,15 @@ export default function AdminSundayServicePage() {
     }
   }
 
-  async function handleDelete(id: string) {
-    if (!confirm("Delete this session?")) return;
-    const res = await fetch(`/api/admin/sunday-service/${id}`, { method: "DELETE" });
-    if (res.ok) setSessions((prev) => prev.filter((s) => s.id !== id));
+  async function handleDelete() {
+    if (!deleteSession) return;
+    setDeleting(true);
+    const res = await fetch(`/api/admin/sunday-service/${deleteSession.id}`, { method: "DELETE" });
+    if (res.ok) {
+      setSessions((prev) => prev.filter((s) => s.id !== deleteSession.id));
+      setDeleteSession(null);
+    }
+    setDeleting(false);
   }
 
   return (
@@ -153,6 +161,19 @@ export default function AdminSundayServicePage() {
           </Card>
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!deleteSession}
+        title="Delete Session"
+        description="Are you sure you want to delete this session?"
+        confirmLabel="Delete"
+        loading={deleting}
+        variant="destructive"
+        onOpenChange={(open) => {
+          if (!open && !deleting) setDeleteSession(null);
+        }}
+        onConfirm={handleDelete}
+      />
 
       <div className="flex items-center justify-between">
         <div>
@@ -309,7 +330,7 @@ export default function AdminSundayServicePage() {
                     <Button
                       size="sm"
                       variant="ghost"
-                      onClick={() => handleDelete(s.id)}
+                      onClick={() => setDeleteSession(s)}
                       className="text-destructive hover:text-destructive"
                     >
                       <Trash2 className="size-4" />
