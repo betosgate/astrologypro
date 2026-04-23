@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -115,6 +116,8 @@ export default function TarotSpreadsListPage() {
   const [loading, setLoading] = useState(true);
   const [isRefreshing, startRefreshing] = useTransition();
   const [previewSpread, setPreviewSpread] = useState<TarotSpread | null>(null);
+  const [deleteSpread, setDeleteSpread] = useState<TarotSpread | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   // Filters
   const [search, setSearch] = useState("");
@@ -157,16 +160,20 @@ export default function TarotSpreadsListPage() {
     setPage(1);
   }
 
-  async function handleDelete(id: string, name: string) {
-    if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
-    const res = await fetch(`/api/admin/tarot/spreads/${id}`, { method: "DELETE" });
+  async function handleDelete() {
+    if (!deleteSpread) return;
+    setDeleteLoading(true);
+    const res = await fetch(`/api/admin/tarot/spreads/${deleteSpread.id}`, { method: "DELETE" });
     if (!res.ok) {
       const body = await res.json();
       toast.error(body.error ?? "Failed to delete spread");
+      setDeleteLoading(false);
       return;
     }
     toast.success("Spread deleted");
-    setAllSpreads((prev) => prev.filter((s) => s.id !== id));
+    setAllSpreads((prev) => prev.filter((s) => s.id !== deleteSpread.id));
+    setDeleteSpread(null);
+    setDeleteLoading(false);
   }
 
   async function handleToggleStatus(spread: TarotSpread) {
@@ -337,6 +344,19 @@ export default function TarotSpreadsListPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={!!deleteSpread}
+        title="Delete Spread"
+        description={`Are you sure you want to delete "${deleteSpread?.name ?? "this spread"}"? This cannot be undone.`}
+        confirmLabel="Delete"
+        loading={deleteLoading}
+        variant="destructive"
+        onOpenChange={(open) => {
+          if (!open && !deleteLoading) setDeleteSpread(null);
+        }}
+        onConfirm={handleDelete}
+      />
 
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -576,7 +596,7 @@ export default function TarotSpreadsListPage() {
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
-                                onClick={() => handleDelete(s.id, s.name)}
+                                onClick={() => setDeleteSpread(s)}
                                 className="text-destructive focus:text-destructive"
                               >
                                 <Trash2 className="mr-2 h-4 w-4" />
