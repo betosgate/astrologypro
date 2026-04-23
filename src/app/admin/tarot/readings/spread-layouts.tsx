@@ -175,7 +175,7 @@ export function FiveCardLayout({ positionLabels, drawnCards, onReveal, onCardCli
         {/* INSIDE group: cards 1 & 2 */}
         <div className="flex flex-col items-center gap-3">
           <h3 className="text-sm font-bold uppercase tracking-widest text-emerald-400 border-b border-emerald-500/40 pb-1 px-4">Inside</h3>
-          <div className="flex gap-4 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4">
+          <div className="flex gap-4 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4 max-[599px]:flex-col">
             {[0, 1].map((i) => (
               <CardSlot key={i} index={i} label={positionLabels[i]} drawn={drawnCards[i]} onReveal={onReveal} onCardClick={onCardClick} cardBackUrl={cardBackUrl} cardWidth={CW} cardHeight={CH} />
             ))}
@@ -185,7 +185,7 @@ export function FiveCardLayout({ positionLabels, drawnCards, onReveal, onCardCli
         {/* OUTSIDE group: cards 3 & 4 */}
         <div className="flex flex-col items-center gap-3">
           <h3 className="text-sm font-bold uppercase tracking-widest text-amber-400 border-b border-amber-500/40 pb-1 px-4">Outside</h3>
-          <div className="flex gap-4 rounded-xl border border-amber-500/20 bg-amber-500/5 p-4">
+          <div className="flex gap-4 rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 max-[599px]:flex-col">
             {[2, 3].map((i) => (
               <CardSlot key={i} index={i} label={positionLabels[i]} drawn={drawnCards[i]} onReveal={onReveal} onCardClick={onCardClick} cardBackUrl={cardBackUrl} cardWidth={CW} cardHeight={CH} />
             ))}
@@ -222,15 +222,15 @@ export function HorseshoeLayout({ positionLabels, drawnCards, onReveal, onCardCl
   //       [1]                  [5]
   //            [2]        [4]
   //                 [3]
-  const CW = 160;
-  const CH = 230;
+  const CW = 180;
+  const CH = 260;
   // Total card height = image + label (~40%) + borders
-  const totalH = CH + Math.round(CH * 0.4) + 10;
-  const ROW_GAP = totalH + 20; // each row starts after previous card fully ends + 20px spacing
+  const totalH = CH + Math.round(CH * 0.2) + 0;
+  const ROW_GAP = totalH + 0; // each row starts after previous card fully ends + 20px spacing
   return (
-    <div className="relative mx-auto" style={{ width: 1000, minHeight: ROW_GAP * 3 + totalH }}>
+    <div className="relative mx-auto max-[1445px]:!w-full max-[1199px]:!min-h-auto" style={{ width: 1000, minHeight: ROW_GAP * 2.85 + totalH }}>
       {/* Desktop: absolute positioning */}
-      <div className="hidden lg:block relative" style={{ height: ROW_GAP * 3 + totalH }}>
+      <div className="block max-[1199px]:hidden relative max-[1199px]:!h-auto" style={{ height: ROW_GAP * 2.85 + totalH }}>
         {/* Row 0: top — far left and far right */}
         <div className="absolute" style={{ left: 0, top: 0 }}>
           <CardSlot index={0} label={positionLabels[0]} drawn={drawnCards[0]} onReveal={onReveal} onCardClick={onCardClick} cardBackUrl={cardBackUrl} cardWidth={CW} cardHeight={CH} />
@@ -258,13 +258,13 @@ export function HorseshoeLayout({ positionLabels, drawnCards, onReveal, onCardCl
         </div>
       </div>
       {/* Tablet */}
-      <div className="hidden md:flex lg:hidden flex-wrap justify-center gap-6">
+      <div className="hidden max-[1199px]:flex max-[768px]:hidden flex-wrap justify-center gap-6">
         {positionLabels.map((label, i) => (
           <CardSlot key={i} index={i} label={label} drawn={drawnCards[i]} onReveal={onReveal} onCardClick={onCardClick} cardBackUrl={cardBackUrl} cardWidth={140} cardHeight={200} />
         ))}
       </div>
       {/* Mobile */}
-      <div className="flex md:hidden flex-wrap justify-center gap-4">
+      <div className=" hidden max-[768px]:flex flex-wrap justify-center gap-4">
         {positionLabels.map((label, i) => (
           <CardSlot key={i} index={i} label={label} drawn={drawnCards[i]} onReveal={onReveal} onCardClick={onCardClick} cardBackUrl={cardBackUrl} cardWidth={120} cardHeight={170} />
         ))}
@@ -286,8 +286,8 @@ export function ForwardReviewLayout({ positionLabels, drawnCards, onReveal, onCa
   //   3 (Strength): top-right area, rotated 40deg
   //   5 (Navigation): bottom-left area, rotated 135deg
   //   4 (Advice): bottom-right area, rotated 133deg
-  const CW = 160;
-  const CH = 230;
+  const CW = 180;
+  const CH = 260;
 
   // Card positions: [left%, top%, rotation]
   const positions: [number, number, number][] = [
@@ -303,7 +303,7 @@ export function ForwardReviewLayout({ positionLabels, drawnCards, onReveal, onCa
   return (
     <div className="flex flex-col items-center">
       {/* Desktop: radial/star layout */}
-      <div className="hidden lg:block relative mx-auto" style={{ width: 1000, height: 1200 }}>
+      <div className="block max-[1400px]:hidden relative mx-auto max-[1445px]:!w-full" style={{ width: 1000, height: 1200 }}>
         {positionLabels.map((label, i) => {
           const pos = positions[i];
           if (!pos) return null;
@@ -325,7 +325,7 @@ export function ForwardReviewLayout({ positionLabels, drawnCards, onReveal, onCa
       </div>
 
       {/* Tablet / Mobile: simple grid fallback */}
-      <div className="flex lg:hidden flex-wrap justify-center gap-4">
+      <div className="hidden max-[1400px]:flex flex-wrap justify-center gap-4">
         {positionLabels.map((label, i) => (
           <CardSlot key={i} index={i} label={label} drawn={drawnCards[i]} onReveal={onReveal} onCardClick={onCardClick} cardBackUrl={cardBackUrl} cardWidth={130} cardHeight={190} />
         ))}
