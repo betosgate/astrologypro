@@ -286,8 +286,8 @@ export function ForwardReviewLayout({ positionLabels, drawnCards, onReveal, onCa
   //   3 (Strength): top-right area, rotated 40deg
   //   5 (Navigation): bottom-left area, rotated 135deg
   //   4 (Advice): bottom-right area, rotated 133deg
-  const CW = 160;
-  const CH = 230;
+  const CW = 180;
+  const CH = 260;
 
   // Card positions: [left%, top%, rotation]
   const positions: [number, number, number][] = [
@@ -303,7 +303,7 @@ export function ForwardReviewLayout({ positionLabels, drawnCards, onReveal, onCa
   return (
     <div className="flex flex-col items-center">
       {/* Desktop: radial/star layout */}
-      <div className="hidden lg:block relative mx-auto" style={{ width: 1000, height: 1200 }}>
+      <div className="block max-[1400px]:hidden relative mx-auto max-[1445px]:!w-full" style={{ width: 1000, height: 1200 }}>
         {positionLabels.map((label, i) => {
           const pos = positions[i];
           if (!pos) return null;
@@ -325,7 +325,7 @@ export function ForwardReviewLayout({ positionLabels, drawnCards, onReveal, onCa
       </div>
 
       {/* Tablet / Mobile: simple grid fallback */}
-      <div className="flex lg:hidden flex-wrap justify-center gap-4">
+      <div className="hidden max-[1400px]:flex flex-wrap justify-center gap-4">
         {positionLabels.map((label, i) => (
           <CardSlot key={i} index={i} label={label} drawn={drawnCards[i]} onReveal={onReveal} onCardClick={onCardClick} cardBackUrl={cardBackUrl} cardWidth={130} cardHeight={190} />
         ))}
