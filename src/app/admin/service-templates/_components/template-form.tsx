@@ -474,7 +474,7 @@ export function TemplateForm({ initialData, templateId, divinerCount = 0 }: Temp
               value={form.category}
               onValueChange={(v) => setForm((f) => ({ ...f, category: v as "astrology" | "tarot" }))}
             >
-              <SelectTrigger>
+              <SelectTrigger className="w-full">
                 <SelectValue placeholder="Select category" />
               </SelectTrigger>
               <SelectContent>
@@ -496,7 +496,7 @@ export function TemplateForm({ initialData, templateId, divinerCount = 0 }: Temp
                 }))
               }
             >
-              <SelectTrigger>
+              <SelectTrigger className="w-full">
                 <SelectValue placeholder="None" />
               </SelectTrigger>
               <SelectContent>
