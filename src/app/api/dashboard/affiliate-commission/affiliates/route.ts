@@ -41,10 +41,13 @@ export async function GET(request: Request) {
     );
   }
 
+  // migrated-to-canonical-accounts: 2026-04-23 (Task 06) — join canonical
   let query = admin
     .from("diviner_affiliates")
     .select(
-      "id, diviner_id, user_id, name, email, phone, status, notes, default_commission_type, default_commission_value, created_at, updated_at"
+      `id, diviner_id, user_id, name, email, phone, status, notes,
+       default_commission_type, default_commission_value, created_at, updated_at,
+       account:affiliate_accounts ( id, user_id, name, email, phone, avatar_url, status )`
     )
     .eq("diviner_id", diviner.id)
     .order("created_at", { ascending: false })
@@ -55,7 +58,39 @@ export async function GET(request: Request) {
   if (q) query = query.or(`name.ilike.%${q}%,email.ilike.%${q}%`);
   if (cursor) query = query.lt("id", cursor);
 
-  const { data: affiliates, error } = await query;
+  const { data: rawAff, error } = await query;
+  type JRow = {
+    id: string;
+    diviner_id: string;
+    user_id: string | null;
+    name: string | null;
+    email: string | null;
+    phone: string | null;
+    status: string;
+    notes: string | null;
+    default_commission_type: string | null;
+    default_commission_value: number | null;
+    created_at: string;
+    updated_at: string;
+    account: {
+      id: string;
+      user_id: string | null;
+      name: string;
+      email: string;
+      phone: string | null;
+      avatar_url: string | null;
+      status: string;
+    } | null;
+  };
+  const affiliates = ((rawAff ?? []) as unknown as JRow[]).map((r) => ({
+    ...r,
+    name: r.account?.name ?? r.name,
+    email: r.account?.email ?? r.email,
+    phone: r.account?.phone ?? r.phone,
+    user_id: r.account?.user_id ?? r.user_id,
+    avatar_url: r.account?.avatar_url ?? null,
+    account_status: r.account?.status ?? null,
+  }));
   if (error) {
     return NextResponse.json(
       { type: "https://httpstatuses.io/500", title: "Database error", detail: error.message, status: 500 },

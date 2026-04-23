@@ -1,16 +1,21 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Heart, RefreshCw, Loader2, AlertCircle, ChevronDown, ChevronUp, Star } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Heart, RefreshCw, Loader2, ChevronDown, ChevronUp, Star } from "lucide-react";
 import Link from "next/link";
 
 type FamilyMember = {
@@ -43,12 +48,19 @@ type RelationshipChart = {
   generated_at: string;
 };
 
+const RELATIONSHIP_MODES = [
+  { value: "romantic", label: "Romantic" },
+  { value: "friendship", label: "Friendship" },
+  { value: "business", label: "Business" },
+] as const;
+
+type RelationshipMode = (typeof RELATIONSHIP_MODES)[number]["value"];
+
 export default function ChartsPage() {
+  const router = useRouter();
   const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
   const [charts, setCharts] = useState<RelationshipChart[]>([]);
   const [loading, setLoading] = useState(true);
-  const [generating, setGenerating] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   async function load() {
@@ -62,7 +74,28 @@ export default function ChartsPage() {
     setLoading(false);
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadInitial() {
+      const res = await fetch("/api/community/relationship-charts");
+      if (cancelled) return;
+
+      if (res.ok) {
+        const data = await res.json();
+        if (cancelled) return;
+        setFamilyMembers(data.familyMembers ?? []);
+        setCharts(data.charts ?? []);
+      }
+      setLoading(false);
+    }
+
+    void loadInitial();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   function getChartForPair(aId: string, bId: string) {
     const [a, b] = [aId, bId].sort();
@@ -71,24 +104,14 @@ export default function ChartsPage() {
     );
   }
 
-  async function generateChart(personAId: string, personBId: string) {
-    const key = [personAId, personBId].sort().join("-");
-    setGenerating(key);
-    setError(null);
-
-    const res = await fetch("/api/community/relationship-charts", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ personAId, personBId }),
-    });
-    const data = await res.json();
-
-    if (!res.ok) {
-      setError(data.error ?? "Failed to generate chart");
-    } else {
-      await load();
-    }
-    setGenerating(null);
+  function openDetailedReport(
+    personAId: string,
+    personBId: string,
+    mode: RelationshipMode,
+  ) {
+    router.push(
+      `/community/charts/detailed?personAId=${encodeURIComponent(personAId)}&personBId=${encodeURIComponent(personBId)}&mode=${mode}`,
+    );
   }
 
   // Build all unique pairings
@@ -118,13 +141,6 @@ export default function ChartsPage() {
           Refresh
         </Button>
       </div>
-
-      {error && (
-        <div className="flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          <AlertCircle className="size-4 shrink-0" />
-          {error}
-        </div>
-      )}
 
       {/* Prereq notice */}
       {membersWithoutCharts.length > 0 && (
@@ -174,32 +190,39 @@ export default function ChartsPage() {
             const pairKey = [a.id, b.id].sort().join("-");
             const chart = getChartForPair(a.id, b.id);
             const synastry = chart?.chart_data;
-            const isLoading = generating === pairKey;
             const bothHaveCharts = !!a.natal_chart && !!b.natal_chart;
             const isOpen = expandedId === pairKey;
 
             return (
               <Card key={pairKey}>
-                <button
-                  type="button"
-                  className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left hover:bg-muted/30 transition-colors"
-                  onClick={() => synastry && setExpandedId(isOpen ? null : pairKey)}
-                >
-                  <div className="flex items-center gap-3 min-w-0">
+                <div className="flex w-full items-center justify-between gap-4 px-5 py-4">
+                  <button
+                    type="button"
+                    className={`flex min-w-0 flex-1 items-center gap-3 text-left transition-colors ${
+                      synastry ? "hover:text-foreground" : "cursor-default"
+                    }`}
+                    onClick={() => synastry && setExpandedId(isOpen ? null : pairKey)}
+                  >
                     <Heart className="size-5 text-rose-400 shrink-0" />
-                    <div>
+                    <div className="min-w-0">
                       <p className="font-medium text-sm">
                         {a.full_name} &amp; {b.full_name}
                       </p>
-                      {synastry && (
+                      {synastry ? (
                         <p className="text-xs text-muted-foreground">
                           {synastry.aspects.length} aspects ·{" "}
                           {synastry.aspects.filter((x) => x.isHarmonious).length} harmonious ·{" "}
                           {synastry.aspects.filter((x) => !x.isHarmonious).length} challenging
                         </p>
+                      ) : (
+                        <p className="text-xs text-muted-foreground">
+                          {bothHaveCharts
+                            ? "Choose a relationship type to open the detailed report"
+                            : "Natal charts required for both people"}
+                        </p>
                       )}
                     </div>
-                  </div>
+                  </button>
 
                   <div className="flex items-center gap-2 shrink-0">
                     {synastry && (
@@ -219,42 +242,41 @@ export default function ChartsPage() {
                         </span>
                       </div>
                     )}
-                    {!synastry && bothHaveCharts && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="text-xs"
-                        disabled={isLoading}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          generateChart(a.id, b.id);
-                        }}
+
+                    {bothHaveCharts && (
+                      <Select
+                        value=""
+                        onValueChange={(value) =>
+                          openDetailedReport(a.id, b.id, value as RelationshipMode)
+                        }
                       >
-                        {isLoading ? (
-                          <Loader2 className="size-3 animate-spin" />
-                        ) : (
-                          "Generate"
-                        )}
-                      </Button>
+                        <SelectTrigger
+                          size="sm"
+                          className="w-[150px]"
+                          aria-label={`Select relationship type for ${a.full_name} and ${b.full_name}`}
+                        >
+                          <SelectValue placeholder="Select type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {RELATIONSHIP_MODES.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     )}
+
+                    {/*
+                      Legacy quick-generate/regenerate behavior bypassed:
+                      this screen no longer calls POST /api/community/relationship-charts
+                      directly. Eligible pairs must first choose Romantic,
+                      Friendship, or Business, then the detailed toolkit flow
+                      uses the selected type plus pre-populated birth data.
+                    */}
+
                     {synastry && (
                       <>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="text-xs h-7 px-2"
-                          disabled={isLoading}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            generateChart(a.id, b.id);
-                          }}
-                        >
-                          {isLoading ? (
-                            <Loader2 className="size-3 animate-spin" />
-                          ) : (
-                            <RefreshCw className="size-3" />
-                          )}
-                        </Button>
                         {isOpen ? (
                           <ChevronUp className="size-4 text-muted-foreground" />
                         ) : (
@@ -263,7 +285,7 @@ export default function ChartsPage() {
                       </>
                     )}
                   </div>
-                </button>
+                </div>
 
                 {isOpen && synastry && (() => {
                   const harmonious = synastry.aspects.filter((a) => a.isHarmonious);
@@ -277,23 +299,27 @@ export default function ChartsPage() {
                         <p className="mt-1 text-sm text-muted-foreground">
                           Reuse the saved birth data for this pair and load the same detailed relationship toolkit used in practitioner sessions.
                         </p>
-                        <div className="mt-3 flex flex-wrap gap-2">
-                          <Button asChild size="sm">
-                            <Link href={`/community/charts/detailed?personAId=${encodeURIComponent(a.id)}&personBId=${encodeURIComponent(b.id)}&mode=romantic`}>
-                              Romantic
-                            </Link>
-                          </Button>
-                          <Button asChild size="sm" variant="outline">
-                            <Link href={`/community/charts/detailed?personAId=${encodeURIComponent(a.id)}&personBId=${encodeURIComponent(b.id)}&mode=friendship`}>
-                              Friendship
-                            </Link>
-                          </Button>
-                          <Button asChild size="sm" variant="outline">
-                            <Link href={`/community/charts/detailed?personAId=${encodeURIComponent(a.id)}&personBId=${encodeURIComponent(b.id)}&mode=business`}>
-                              Business
-                            </Link>
-                          </Button>
-                        </div>
+                        <Select
+                          value=""
+                          onValueChange={(value) =>
+                            openDetailedReport(a.id, b.id, value as RelationshipMode)
+                          }
+                        >
+                          <SelectTrigger
+                            size="sm"
+                            className="mt-3 w-[180px]"
+                            aria-label={`Select detailed report type for ${a.full_name} and ${b.full_name}`}
+                          >
+                            <SelectValue placeholder="Select report type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {RELATIONSHIP_MODES.map((option) => (
+                              <SelectItem key={option.value} value={option.value}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
 
                       {/* Summary */}

@@ -159,16 +159,14 @@ export default async function AffiliateDashboardPage() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Pending Earnings</CardTitle>
-            <Clock className="size-4 text-amber-500" aria-hidden />
+            <CardTitle className="text-sm font-medium">Pending</CardTitle>
+            <Clock className="size-4 text-muted-foreground" aria-hidden />
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold text-amber-600">
-              {formatCents(pendingCents + approvedCents)}
+              {formatCents(pendingCents)}
             </p>
-            <p className="text-xs text-muted-foreground">
-              Approved: {formatCents(approvedCents)}
-            </p>
+            <p className="text-xs text-muted-foreground">awaiting approval</p>
           </CardContent>
         </Card>
         <Card>
@@ -177,7 +175,12 @@ export default async function AffiliateDashboardPage() {
             <DollarSign className="size-4 text-muted-foreground" aria-hidden />
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold">{formatCents(paidCents)}</p>
+            <p className="text-2xl font-bold text-sky-600">{formatCents(paidCents)}</p>
+            {approvedCents > 0 && (
+              <p className="text-xs text-green-600">
+                +{formatCents(approvedCents)} approved
+              </p>
+            )}
           </CardContent>
         </Card>
       </div>

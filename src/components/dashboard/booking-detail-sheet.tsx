@@ -279,7 +279,7 @@ export function BookingDetailSheet({
 
   // Fetch session/recording details when sheet opens
   useEffect(() => {
-    if (!open || sessionDetails || detailsOnly) return;
+    if (!open || sessionDetails) return;
     setLoadingSession(true);
     fetch(`/api/bookings/${booking.id}/session-details`)
       .then((r) => r.json())

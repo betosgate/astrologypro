@@ -140,19 +140,39 @@ export async function GET(req: NextRequest) {
     .filter((e) => e.affiliate_type === "diviner_affiliate")
     .map((e) => e.affiliate_id);
 
+  // migrated-to-canonical-accounts: 2026-04-23 (Task 06)
   const [advRes, divAffRes] = await Promise.all([
     advIds.length > 0
       ? admin.from("social_advocates").select("id, name, email").in("id", advIds)
       : Promise.resolve({ data: [] as Array<{ id: string; name: string | null; email: string | null }> }),
     divAffIds.length > 0
-      ? admin.from("diviner_affiliates").select("id, name, email").in("id", divAffIds)
-      : Promise.resolve({ data: [] as Array<{ id: string; name: string | null; email: string | null }> }),
+      ? admin
+          .from("diviner_affiliates")
+          .select("id, name, email, account:affiliate_accounts(name, email)")
+          .in("id", divAffIds)
+      : Promise.resolve({
+          data: [] as Array<{
+            id: string;
+            name: string | null;
+            email: string | null;
+            account?: { name?: string; email?: string } | null;
+          }>,
+        }),
   ]);
   const nameByKey = new Map<string, { name: string; email: string | null }>();
   for (const a of (advRes.data ?? []) as Array<{ id: string; name: string | null; email: string | null }>)
     nameByKey.set(`social_advocate:${a.id}`, { name: a.name ?? "(unknown)", email: a.email });
-  for (const a of (divAffRes.data ?? []) as Array<{ id: string; name: string | null; email: string | null }>)
-    nameByKey.set(`diviner_affiliate:${a.id}`, { name: a.name ?? "(unknown)", email: a.email });
+  for (const a of (divAffRes.data ?? []) as Array<{
+    id: string;
+    name: string | null;
+    email: string | null;
+    account?: { name?: string; email?: string } | null;
+  }>) {
+    nameByKey.set(`diviner_affiliate:${a.id}`, {
+      name: a.account?.name ?? a.name ?? "(unknown)",
+      email: a.account?.email ?? a.email,
+    });
+  }
 
   const rows = [...everyone.values()]
     .filter((e) => !typeFilter || e.affiliate_type === typeFilter)

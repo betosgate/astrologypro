@@ -135,17 +135,35 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Mark booking as done. We DO NOT flip status to "canceled" — that's a
-    // CHECK-constrained enum that currently only allows 'confirmed' | 'canceled'.
-    // Until we have a migration for a "completed" state, keep status=confirmed
-    // and record the lifecycle in ended_at + actual_duration_minutes.
-    await admin
+    // Mark booking as done. Migration `20260423000003_admin_bookings_status_completed`
+    // extends the status CHECK constraint to allow 'completed' / 'no_show' /
+    // 'in_progress', so we can now flip the row's status past 'confirmed'.
+    //
+    // Guard: never promote a canceled booking to completed. If the row was
+    // canceled while the user was still in the room (edge race), leave it
+    // canceled and just record the lifecycle timestamps.
+    const updatePayload: Record<string, unknown> = {
+      ended_at: new Date().toISOString(),
+      actual_duration_minutes: Math.round(actualDurationMinutes),
+    };
+    if (booking.status !== "canceled") {
+      updatePayload.status = "completed";
+    }
+
+    const { error: updateErr } = await admin
       .from("admin_bookings")
-      .update({
-        ended_at: new Date().toISOString(),
-        actual_duration_minutes: Math.round(actualDurationMinutes),
-      })
+      .update(updatePayload)
       .eq("id", bookingId);
+
+    if (updateErr) {
+      // Common failure mode before the migration runs: the CHECK constraint
+      // rejects 'completed'. Surface it clearly in logs so the operator
+      // knows to apply migration 20260423000003.
+      console.error(
+        "[admin-bookings/end] admin_bookings update failed:",
+        updateErr.message,
+      );
+    }
 
     return NextResponse.json({
       ok: true,

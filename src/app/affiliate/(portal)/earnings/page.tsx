@@ -173,6 +173,7 @@ export default async function AffiliateEarningsPage() {
                     <TableHead className="text-right">Order amount</TableHead>
                     <TableHead className="text-right">Commission</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Description</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -189,6 +190,9 @@ export default async function AffiliateEarningsPage() {
                         {formatCents(Number(c.commission_amount_cents ?? 0))}
                       </TableCell>
                       <TableCell>{statusBadge(c.status as string)}</TableCell>
+                      <TableCell className="max-w-[200px] truncate text-sm text-muted-foreground">
+                        {c.notes ?? "—"}
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

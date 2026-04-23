@@ -97,19 +97,33 @@ export async function GET(req: NextRequest) {
     .filter((e) => e.affiliate_type === "diviner_affiliate")
     .map((e) => e.affiliate_id);
 
+  // migrated-to-canonical-accounts: 2026-04-23 (Task 06)
+  // diviner_affiliates prefers affiliate_accounts.{name,email} when joined;
+  // social_advocates keeps its own identity table.
   const [advRes, divAffRes] = await Promise.all([
     advIds.length > 0
       ? admin.from("social_advocates").select("id, name, email").in("id", advIds)
       : Promise.resolve({ data: [] }),
     divAffIds.length > 0
-      ? admin.from("diviner_affiliates").select("id, name, email").in("id", divAffIds)
+      ? admin
+          .from("diviner_affiliates")
+          .select("id, name, email, account:affiliate_accounts(name, email)")
+          .in("id", divAffIds)
       : Promise.resolve({ data: [] }),
   ]);
   const nameByKey = new Map<string, { name: string; email: string }>();
   for (const a of (advRes.data ?? []) as Array<{ id: string; name: string; email: string }>)
     nameByKey.set(`social_advocate:${a.id}`, a);
-  for (const a of (divAffRes.data ?? []) as Array<{ id: string; name: string; email: string }>)
-    nameByKey.set(`diviner_affiliate:${a.id}`, a);
+  for (const a of (divAffRes.data ?? []) as Array<{
+    id: string;
+    name: string;
+    email: string;
+    account?: { name?: string; email?: string } | null;
+  }>)
+    nameByKey.set(`diviner_affiliate:${a.id}`, {
+      name: a.account?.name ?? a.name,
+      email: a.account?.email ?? a.email,
+    });
 
   // Aggregate
   const rows = [...everyone.values()].map((e) => {

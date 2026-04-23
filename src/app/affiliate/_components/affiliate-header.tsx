@@ -21,6 +21,7 @@ import { SectionContainer } from "@/components/shared/section-container";
 const navItems = [
   { href: "/affiliate", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { href: "/affiliate/partnerships", label: "Partnerships", icon: Users },
+  { href: "/affiliate/earnings", label: "Earnings", icon: DollarSign },
   { href: "/affiliate/commissions", label: "Commissions", icon: DollarSign },
   { href: "/affiliate/links", label: "Links", icon: LinkIcon },
   { href: "/affiliate/campaigns", label: "Campaigns", icon: Megaphone },
