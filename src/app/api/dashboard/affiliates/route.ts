@@ -1,16 +1,47 @@
 // migrated-to-canonical-accounts: 2026-04-23
-// Task 02 — direct-add POST removed. Every affiliate relationship now requires
-// an explicit invite + accept flow. See POST /api/dashboard/affiliates/invite.
-// Sprint: docs/tasks/2026-04-23/affiliate-identity-refactor/02-invite-flow-refactor.md
+// Task 02 removed the direct-add POST; Task 04 extends GET to include the
+// canonical affiliate_accounts join + latest invite per pending row + the
+// diviner's affiliate-agreement flag.
+//
+// Sprint: docs/tasks/2026-04-23/affiliate-identity-refactor/
 
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  DIVINER_AFFILIATE_WITH_ACCOUNT_SELECT,
+  flattenDivinerAffiliate,
+  type DivinerAffiliateWithAccount,
+  type FlatDivinerAffiliate,
+} from "@/lib/affiliate-queries";
 
 export const dynamic = "force-dynamic";
 
-// GET /api/dashboard/affiliates
-// Returns the authenticated diviner's affiliates, paginated.
+type LatestInvite = {
+  id: string;
+  expires_at: string;
+  revoked_at: string | null;
+  resent_count: number;
+  created_at: string;
+};
+
+type FlatWithInvite = FlatDivinerAffiliate & {
+  latest_invite: LatestInvite | null;
+};
+
+/**
+ * GET /api/dashboard/affiliates
+ *
+ * Returns this diviner's affiliates (paginated) with:
+ *   - Flat identity fields (name/email/phone/user_id) preferring canonical
+ *     account over legacy columns (Task 06 convention).
+ *   - Additive canonical fields (affiliate_account_id, account_status,
+ *     avatar_url, tax_form_status, invited_at, accepted_at).
+ *   - latest_invite: latest non-consumed invite for pending junctions; null
+ *     otherwise. Lets the UI drive Resend / Revoke / Copy Link actions
+ *     without a second fetch.
+ *   - meta.affiliate_agreement_signed for the agreement gate banner.
+ */
 export async function GET(request: Request) {
   const supabase = await createClient();
   const {
@@ -26,25 +57,22 @@ export async function GET(request: Request) {
 
   const admin = createAdminClient();
 
-  // Resolve diviner record for this user
   const { data: diviner } = await admin
     .from("diviners")
-    .select("id")
+    .select("id, affiliate_agreement_signed")
     .eq("user_id", user.id)
     .single();
 
   if (!diviner) {
     return NextResponse.json(
       { type: "https://httpstatuses.io/403", title: "Not a diviner" },
-      { status: 403 }
+      { status: 403 },
     );
   }
 
   let query = admin
     .from("diviner_affiliates")
-    .select(
-      "id, diviner_id, user_id, name, email, phone, status, notes, default_commission_type, default_commission_value, created_at, updated_at"
-    )
+    .select(DIVINER_AFFILIATE_WITH_ACCOUNT_SELECT + ", name, email, phone, user_id")
     .eq("diviner_id", diviner.id)
     .order("created_at", { ascending: false })
     .order("id", { ascending: false })
@@ -54,21 +82,70 @@ export async function GET(request: Request) {
   if (q) query = query.or(`name.ilike.%${q}%,email.ilike.%${q}%`);
   if (cursor) query = query.lt("id", cursor);
 
-  const { data, error } = await query;
+  const { data: rawRows, error } = await query;
   if (error) {
     return NextResponse.json(
-      { type: "https://httpstatuses.io/500", title: "Database error", detail: error.message },
-      { status: 500 }
+      {
+        type: "https://httpstatuses.io/500",
+        title: "Database error",
+        detail: error.message,
+      },
+      { status: 500 },
     );
   }
 
-  const hasMore = (data ?? []).length > limit;
-  const items = hasMore ? (data ?? []).slice(0, limit) : (data ?? []);
+  const rows = (rawRows ?? []) as unknown as Array<
+    DivinerAffiliateWithAccount & {
+      name: string | null;
+      email: string | null;
+      phone: string | null;
+      user_id: string | null;
+    }
+  >;
+
+  const hasMore = rows.length > limit;
+  const page = hasMore ? rows.slice(0, limit) : rows;
+
+  // Attach latest non-consumed invite to each pending row (batched lookup)
+  const pendingIds = page
+    .filter((r) => r.status === "pending")
+    .map((r) => r.id);
+
+  const invitesByJunction = new Map<string, LatestInvite>();
+  if (pendingIds.length > 0) {
+    const { data: invites } = await admin
+      .from("affiliate_invites")
+      .select("id, junction_id, expires_at, revoked_at, resent_count, created_at")
+      .in("junction_id", pendingIds)
+      .is("consumed_at", null)
+      .order("created_at", { ascending: false });
+
+    for (const inv of invites ?? []) {
+      if (!invitesByJunction.has(inv.junction_id)) {
+        invitesByJunction.set(inv.junction_id, {
+          id: inv.id,
+          expires_at: inv.expires_at,
+          revoked_at: inv.revoked_at,
+          resent_count: inv.resent_count ?? 0,
+          created_at: inv.created_at,
+        });
+      }
+    }
+  }
+
+  const items: FlatWithInvite[] = page.map((row) => ({
+    ...flattenDivinerAffiliate(row),
+    latest_invite: invitesByJunction.get(row.id) ?? null,
+  }));
+
   const nextCursor = hasMore ? items[items.length - 1]?.id : null;
 
-  return NextResponse.json({ data: items, nextCursor, hasMore });
+  return NextResponse.json({
+    data: items,
+    nextCursor,
+    hasMore,
+    meta: {
+      affiliate_agreement_signed: Boolean(diviner.affiliate_agreement_signed),
+    },
+  });
 }
-
-// NOTE: Task 06 will rewrite GET to JOIN affiliate_accounts for canonical
-// identity (name/email/phone/avatar/status). For Task 02 the GET shape is
-// preserved — existing UI keeps working against legacy columns.

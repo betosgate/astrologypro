@@ -1,6 +1,15 @@
+// migrated-to-canonical-accounts: 2026-04-23
+// Task 05: resolves the caller via affiliate_accounts (not the legacy
+// diviner_affiliates.user_id = auth.uid() lookup). Supports multi-diviner
+// affiliates — aggregates across every junction the caller owns.
+//
+// Sprint: docs/tasks/2026-04-23/affiliate-identity-refactor/05-affiliate-portal.md
+
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { resolveAffiliateForCaller } from "@/lib/affiliate-accounts";
+import { isAffiliateIdentityV2Enabled } from "@/lib/feature-flags";
 
 export const dynamic = "force-dynamic";
 
@@ -25,27 +34,48 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const db = createAdminClient();
-
-  // Resolve affiliate record
-  const { data: affiliate, error: affErr } = await db
-    .from("diviner_affiliates")
-    .select("id, name")
-    .eq("user_id", user.id)
-    .maybeSingle();
-
-  if (affErr) {
+  if (!isAffiliateIdentityV2Enabled()) {
     return NextResponse.json(
-      { type: "https://httpstatuses.io/500", title: "Database error", status: 500, detail: affErr.message },
-      { status: 500 }
+      { type: "https://httpstatuses.io/503", title: "Feature not available", status: 503 },
+      { status: 503 }
     );
   }
 
-  if (!affiliate) {
+  const db = createAdminClient();
+
+  // Resolve caller via canonical account + collect their junction IDs.
+  // Multi-diviner affiliates have multiple junctions; every downstream query
+  // below filters by the full set.
+  const ctx = await resolveAffiliateForCaller(db, user.id);
+  if (!ctx) {
     return NextResponse.json(
-      { type: "https://httpstatuses.io/404", title: "Affiliate record not found", status: 404 },
-      { status: 404 }
+      { type: "https://httpstatuses.io/403", title: "Not an active affiliate", status: 403 },
+      { status: 403 }
     );
+  }
+
+  // Map diviner_id → junction_id so shareable links use the right ref token.
+  const { data: junctionRows } = await db
+    .from("diviner_affiliates")
+    .select("id, diviner_id")
+    .eq("affiliate_account_id", ctx.account.id);
+  const junctionByDiviner = new Map<string, string>(
+    (junctionRows ?? []).map((j) => [j.diviner_id, j.id]),
+  );
+
+  if (ctx.junctionIds.length === 0) {
+    return NextResponse.json({
+      summary: {
+        campaignsJoined: 0,
+        activeCampaigns: 0,
+        totalConversions: 0,
+        totalEarned: 0,
+        pendingEarnings: 0,
+      },
+      campaigns: [],
+      monthly: [],
+      affiliateId: ctx.account.id,
+    });
   }
 
   const { searchParams } = req.nextUrl;
@@ -53,11 +83,11 @@ export async function GET(req: NextRequest) {
   const since = periodToDate(period);
 
   try {
-    // Fetch campaigns this affiliate is enrolled in
+    // Fetch campaigns this affiliate is enrolled in (across all junctions)
     const { data: campaignLinks, error: linkErr } = await db
       .from("campaign_affiliates")
       .select("campaign_id, custom_commission_value")
-      .eq("affiliate_id", affiliate.id)
+      .in("affiliate_id", ctx.junctionIds)
       .eq("affiliate_type", "diviner_affiliate");
 
     if (linkErr) throw linkErr;
@@ -76,7 +106,7 @@ export async function GET(req: NextRequest) {
         },
         campaigns: [],
         monthly: [],
-        affiliateId: affiliate.id,
+        affiliateId: ctx.account.id,
       });
     }
 
@@ -91,7 +121,7 @@ export async function GET(req: NextRequest) {
       db
         .from("campaign_conversions")
         .select("id, campaign_id, order_amount_cents, commission_amount_cents, converted_at")
-        .eq("affiliate_id", affiliate.id)
+        .in("affiliate_id", ctx.junctionIds)
         .eq("affiliate_type", "diviner_affiliate"),
     ]);
 
@@ -164,8 +194,13 @@ export async function GET(req: NextRequest) {
       const customComm = customCommMap.get(camp.id);
       const commissionRate = customComm ?? Number(camp.commission_value ?? 0);
 
-      // Build unique share link: base URL + affiliate ref + UTM params
-      const utmParams = new URLSearchParams({ ref: affiliate.id });
+      // Build unique share link: base URL + junction-scoped ref + UTM params.
+      // For campaigns tied to a specific diviner, use that diviner's junction;
+      // otherwise fall back to the first junction (for platform campaigns).
+      const refJunctionId = camp.diviner_id
+        ? junctionByDiviner.get(camp.diviner_id) ?? ctx.junctionIds[0]
+        : ctx.junctionIds[0];
+      const utmParams = new URLSearchParams({ ref: refJunctionId });
       if (camp.utm_campaign) utmParams.set("utm_campaign", camp.utm_campaign);
       if (camp.utm_source) utmParams.set("utm_source", camp.utm_source);
       if (camp.utm_medium) utmParams.set("utm_medium", camp.utm_medium);
@@ -219,7 +254,7 @@ export async function GET(req: NextRequest) {
       }))
       .sort((a, b) => a.month.localeCompare(b.month));
 
-    return NextResponse.json({ summary, campaigns, monthly, affiliateId: affiliate.id });
+    return NextResponse.json({ summary, campaigns, monthly, affiliateId: ctx.account.id });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Internal error";
     return NextResponse.json(

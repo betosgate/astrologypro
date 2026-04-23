@@ -39,7 +39,19 @@ import {
   Plus,
   Wallet,
   Download,
+  Mail,
+  Clock,
+  RefreshCw,
+  XCircle,
+  User as UserIcon,
+  Users as UsersIcon,
+  Lock,
 } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  resendInviteByJunction,
+  revokeInvite,
+} from "@/lib/api/affiliates-client";
 
 interface Affiliate {
   id: string;
@@ -51,6 +63,21 @@ interface Affiliate {
   default_commission_type: string;
   default_commission_value: number;
   created_at: string;
+  // Task 04 additive fields — canonical account + latest invite + partnerships
+  affiliate_account_id: string | null;
+  user_id: string | null;
+  avatar_url: string | null;
+  account_status: "unclaimed" | "active" | "suspended" | "blocked" | null;
+  partnership_count: number;
+  invited_at: string | null;
+  accepted_at: string | null;
+  latest_invite: {
+    id: string;
+    expires_at: string;
+    revoked_at: string | null;
+    resent_count: number;
+    created_at: string;
+  } | null;
 }
 
 interface ReferralLink {
@@ -168,6 +195,65 @@ export default function DashboardAffiliateDetailPage({
 
     return () => window.clearTimeout(timeoutId);
   }, [loadData]);
+
+  // ── Task 04 row actions for pending invites ───────────────────────────────
+  const [invitationBusy, setInvitationBusy] = useState(false);
+
+  async function handleResendInvite() {
+    if (!affiliate) return;
+    setInvitationBusy(true);
+    try {
+      const result = await resendInviteByJunction(affiliate.id);
+      if (result.email_delivery === "failed") {
+        toast.warning("New invite created, but email delivery failed.");
+      } else {
+        toast.success(`Invitation resent to ${affiliate.email}.`);
+      }
+      await loadData();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to resend");
+    } finally {
+      setInvitationBusy(false);
+    }
+  }
+
+  async function handleRevokeInvite() {
+    if (!affiliate?.latest_invite?.id) {
+      toast.error("No active invite to revoke");
+      return;
+    }
+    if (
+      !confirm(
+        `Revoke the pending invitation for ${affiliate.email}? The affiliate will no longer be able to accept.`,
+      )
+    )
+      return;
+    setInvitationBusy(true);
+    try {
+      const result = await revokeInvite(affiliate.latest_invite.id);
+      if (result.junction_action === "deleted") {
+        toast.success("Invitation revoked. Returning to affiliates list.");
+        window.location.href = "/dashboard/affiliates";
+      } else {
+        toast.success("Invitation revoked. Partnership moved to Suspended (had commission history).");
+        await loadData();
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to revoke");
+    } finally {
+      setInvitationBusy(false);
+    }
+  }
+
+  function avatarInitials(name: string | null) {
+    if (!name) return "?";
+    return name
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((p) => p[0]?.toUpperCase() ?? "")
+      .join("");
+  }
 
   async function handleGenerateLink() {
     setGeneratingLink(true);
@@ -294,6 +380,113 @@ export default function DashboardAffiliateDetailPage({
           </Button>
         </div>
       </div>
+
+      {/* Identity card */}
+      <Card>
+        <CardHeader className="flex flex-row items-center gap-4 pb-4">
+          <Avatar className="size-12">
+            {affiliate.avatar_url && <AvatarImage src={affiliate.avatar_url} alt="" />}
+            <AvatarFallback>{avatarInitials(affiliate.name)}</AvatarFallback>
+          </Avatar>
+          <div className="flex-1 space-y-1">
+            <CardTitle className="text-base">{affiliate.name}</CardTitle>
+            <CardDescription className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+              <span className="inline-flex items-center gap-1">
+                <Mail className="size-3" aria-hidden /> {affiliate.email}
+              </span>
+              {affiliate.user_id ? (
+                <Badge variant="default" className="text-[10px]">Claimed</Badge>
+              ) : (
+                <Badge variant="outline" className="text-[10px]">Unclaimed</Badge>
+              )}
+              {affiliate.account_status === "blocked" && (
+                <span className="inline-flex items-center gap-1 text-destructive">
+                  <Lock className="size-3" aria-hidden />
+                  Blocked platform-wide
+                </span>
+              )}
+            </CardDescription>
+          </div>
+          {affiliate.partnership_count > 0 && (
+            <div
+              className="flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs text-muted-foreground"
+              title="This person is also partnered with other diviners"
+            >
+              <UsersIcon className="size-3.5" aria-hidden />
+              <span>
+                Also partners with {affiliate.partnership_count} other diviner
+                {affiliate.partnership_count !== 1 ? "s" : ""}
+              </span>
+            </div>
+          )}
+        </CardHeader>
+      </Card>
+
+      {/* Invitation card — only when junction is pending */}
+      {affiliate.status === "pending" && (
+        <Card className="border-amber-400/40 bg-amber-50/50 dark:bg-amber-950/10">
+          <CardHeader className="flex flex-row items-start justify-between pb-3">
+            <div>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Clock className="size-4 text-amber-500" aria-hidden />
+                Pending invitation
+              </CardTitle>
+              <CardDescription className="mt-1">
+                {affiliate.latest_invite ? (
+                  <>
+                    Invited{" "}
+                    {affiliate.invited_at
+                      ? fmtDate(affiliate.invited_at)
+                      : fmtDate(affiliate.latest_invite.created_at)}{" "}
+                    · expires {fmtDate(affiliate.latest_invite.expires_at)}
+                    {affiliate.latest_invite.resent_count > 0 && (
+                      <> · resent {affiliate.latest_invite.resent_count}×</>
+                    )}
+                    {new Date(affiliate.latest_invite.expires_at).getTime() <
+                      Date.now() && (
+                      <>
+                        {" "}
+                        ·{" "}
+                        <span className="font-medium text-amber-700">
+                          Expired
+                        </span>
+                      </>
+                    )}
+                  </>
+                ) : (
+                  <>Legacy invite — send a fresh token to reach this contact.</>
+                )}
+              </CardDescription>
+            </div>
+          </CardHeader>
+          <CardContent className="flex flex-wrap gap-2 pt-0">
+            <Button
+              size="sm"
+              onClick={handleResendInvite}
+              disabled={invitationBusy || affiliate.account_status === "blocked"}
+            >
+              {invitationBusy ? (
+                <Loader2 className="mr-2 size-3.5 animate-spin" aria-hidden />
+              ) : (
+                <RefreshCw className="mr-2 size-3.5" aria-hidden />
+              )}
+              {affiliate.latest_invite ? "Resend invitation" : "Send first invite"}
+            </Button>
+            {affiliate.latest_invite?.id && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-destructive hover:text-destructive"
+                onClick={handleRevokeInvite}
+                disabled={invitationBusy}
+              >
+                <XCircle className="mr-2 size-3.5" aria-hidden />
+                Revoke
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Summary */}
       <div className="grid gap-4 sm:grid-cols-3">
