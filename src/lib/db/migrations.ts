@@ -62,6 +62,7 @@ import { MIGRATION_SQL as MIG_20260422000005 } from "@/data/migrations/202604220
 import { MIGRATION_SQL as MIG_20260422000006 } from "@/data/migrations/20260422000006_add_birth_country_to_community_members";
 import { MIGRATION_SQL as MIG_20260422000007 } from "@/data/migrations/20260422000007_repair_community_members_birth_country";
 import { MIGRATION_SQL as MIG_20260423000001 } from "@/data/migrations/20260423000001_chime_recording_extras";
+import { MIGRATION_SQL as MIG_20260423000002 } from "@/data/migrations/20260423000002_backfill_plan_type_from_pm_tier";
 import { MIGRATION_SQL as MIG_20260428000100 } from "@/data/migrations/20260428000100_fix_diviner_fields_length";
 import { MIGRATION_SQL as MIG_20260423000001_AIR } from "@/data/migrations/20260423000001_affiliate_identity_refactor";
 import { MIGRATION_SQL as MIG_20260423000002_RLS } from "@/data/migrations/20260423000002_fix_diviner_affiliates_rls";
@@ -585,6 +586,14 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Adds chime_pipeline_id, recording_url, recording_share_id, session_started_at, ended_at, actual_duration_minutes to admin_bookings; chime_pipeline_id + recording_share_id to phone_sessions. Required so the admin↔trainee video flow and the voice (PSTN) flow can persist the Chime Media Capture Pipeline ARN and the S3 recording URL — without these, the end-meeting concatenation has nowhere to write the pipeline ARN and the sync-recordings cron can't publish the final URL. Safe to re-run.",
     sortKey: "20260423000001",
     sql: MIG_20260423000001,
+  },
+  "20260423000002_backfill_plan_type_from_pm_tier": {
+    id: "20260423000002_backfill_plan_type_from_pm_tier",
+    title: "Backfill legacy plan_type from canonical pm_tier_id",
+    description:
+      "Task 04 of the community-pm-entitlement-state-sync bundle. Updates community_members.plan_type to match the canonical pm_plan_tiers.name mapping (Family → 'family', everything else → 'individual') ONLY for rows where pm_tier_id is set and the stored plan_type disagrees. Rows with NULL pm_tier_id or an unresolved tier id are skipped and logged via RAISE NOTICE. Idempotent — safe to re-run after every deploy. Does not delete or schema-alter any columns.",
+    sortKey: "20260423000002",
+    sql: MIG_20260423000002,
   },
   "20260428000001_landing_page_cleanup_destructive": {
     id: "20260428000001_landing_page_cleanup_destructive",
