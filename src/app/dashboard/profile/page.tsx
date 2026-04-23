@@ -18,9 +18,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Loader2, Upload, ChevronDown, Search, Check, Plus } from "lucide-react";
+import { Loader2, Upload, ChevronDown, Search, Check, Plus, Trash2 } from "lucide-react";
 import { ProfileCompletionBar } from "@/components/ui/profile-completion-bar";
 import { calculateProfileCompletion } from "@/lib/profile-completion";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 // ─── Timezone data ────────────────────────────────────────────────────────────
 const TIMEZONES: { zone: string; label: string }[] = [
@@ -249,6 +250,8 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadingCover, setUploadingCover] = useState(false);
+  const [showAvatarConfirm, setShowAvatarConfirm] = useState(false);
+  const [showCoverConfirm, setShowCoverConfirm] = useState(false);
   const [profile, setProfile] = useState<DivinerProfile | null>(null);
 
   useEffect(() => {
@@ -363,6 +366,48 @@ export default function ProfilePage() {
       toast.success("Cover image updated");
     }
     setUploadingCover(false);
+  }
+
+  async function handleRemoveAvatar() {
+    if (!profile) return;
+    try {
+      const res = await fetch("/api/dashboard/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ avatar_url: null }),
+      });
+      if (res.ok) {
+        setProfile({ ...profile, avatar_url: null });
+        toast.success("Profile photo removed");
+      } else {
+        toast.error("Failed to remove profile photo");
+      }
+    } catch {
+      toast.error("Network error");
+    } finally {
+      setShowAvatarConfirm(false);
+    }
+  }
+
+  async function handleRemoveCover() {
+    if (!profile) return;
+    try {
+      const res = await fetch("/api/dashboard/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cover_image_url: null }),
+      });
+      if (res.ok) {
+        setProfile({ ...profile, cover_image_url: null });
+        toast.success("Cover image removed");
+      } else {
+        toast.error("Failed to remove cover image");
+      }
+    } catch {
+      toast.error("Network error");
+    } finally {
+      setShowCoverConfirm(false);
+    }
   }
 
   async function handleSave() {
@@ -498,17 +543,30 @@ export default function ProfilePage() {
               <AvatarImage src={profile.avatar_url ?? undefined} />
               <AvatarFallback className="text-xl">{initials}</AvatarFallback>
             </Avatar>
-            <Label
-              htmlFor="avatar-upload"
-              className="flex cursor-pointer items-center gap-2 rounded-md border px-4 py-2 text-sm font-medium transition-colors hover:bg-muted"
-            >
-              {uploading ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <Upload className="size-4" />
+            <div className="flex w-full items-center gap-2">
+              <Label
+                htmlFor="avatar-upload"
+                className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-md border px-4 py-2 text-sm font-medium transition-colors hover:bg-muted"
+              >
+                {uploading ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Upload className="size-4" />
+                )}
+                {uploading ? "Uploading..." : "Upload Photo"}
+              </Label>
+              {profile.avatar_url && (
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="size-9 text-destructive hover:bg-destructive/10"
+                  onClick={() => setShowAvatarConfirm(true)}
+                  disabled={uploading}
+                >
+                  <Trash2 className="size-4" />
+                </Button>
               )}
-              {uploading ? "Uploading..." : "Upload Photo"}
-            </Label>
+            </div>
             <input
               id="avatar-upload"
               type="file"
@@ -542,17 +600,31 @@ export default function ProfilePage() {
                 <p className="text-sm text-muted-foreground">No cover image set</p>
               </div>
             )}
-            <Label
-              htmlFor="cover-upload"
-              className="inline-flex cursor-pointer items-center gap-2 rounded-md border px-4 py-2 text-sm font-medium transition-colors hover:bg-muted"
-            >
-              {uploadingCover ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <Upload className="size-4" />
+            <div className="flex items-center gap-3">
+              <Label
+                htmlFor="cover-upload"
+                className="inline-flex cursor-pointer items-center gap-2 rounded-md border px-4 py-2 text-sm font-medium transition-colors hover:bg-muted"
+              >
+                {uploadingCover ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Upload className="size-4" />
+                )}
+                {uploadingCover ? "Uploading..." : profile.cover_image_url ? "Change Cover" : "Upload Cover"}
+              </Label>
+              {profile.cover_image_url && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 text-destructive hover:bg-destructive/10"
+                  onClick={() => setShowCoverConfirm(true)}
+                  disabled={uploadingCover}
+                >
+                  <Trash2 className="size-4" />
+                  Remove
+                </Button>
               )}
-              {uploadingCover ? "Uploading..." : profile.cover_image_url ? "Change Cover" : "Upload Cover"}
-            </Label>
+            </div>
             <input
               id="cover-upload"
               type="file"
@@ -810,16 +882,34 @@ export default function ProfilePage() {
         </CardContent>
       </Card>
 
-      <Button onClick={handleSave} disabled={saving} size="lg">
+      <Button onClick={handleSave} disabled={saving} className="fixed bottom-6 right-6 shadow-xl lg:static lg:w-full lg:shadow-none">
         {saving ? (
           <>
             <Loader2 className="mr-2 size-4 animate-spin" />
             Saving...
           </>
         ) : (
-          "Save Profile"
+          "Save Changes"
         )}
       </Button>
+
+      <ConfirmDialog
+        open={showAvatarConfirm}
+        onOpenChange={setShowAvatarConfirm}
+        title="Remove profile photo?"
+        description="Are you sure you want to remove your profile photo? This will reset your avatar to show your initials."
+        onConfirm={handleRemoveAvatar}
+        confirmLabel="Remove"
+      />
+
+      <ConfirmDialog
+        open={showCoverConfirm}
+        onOpenChange={setShowCoverConfirm}
+        title="Remove cover image?"
+        description="Are you sure you want to remove your cover image? Your profile will show the default background."
+        onConfirm={handleRemoveCover}
+        confirmLabel="Remove"
+      />
     </div>
   );
 }
