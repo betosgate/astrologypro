@@ -61,12 +61,9 @@ import { MIGRATION_SQL as MIG_20260422000004 } from "@/data/migrations/202604220
 import { MIGRATION_SQL as MIG_20260422000005 } from "@/data/migrations/20260422000005_admin_bookings_chime_fields";
 import { MIGRATION_SQL as MIG_20260422000006 } from "@/data/migrations/20260422000006_add_birth_country_to_community_members";
 import { MIGRATION_SQL as MIG_20260422000007 } from "@/data/migrations/20260422000007_repair_community_members_birth_country";
-<<<<<<< HEAD
 import { MIGRATION_SQL as MIG_20260423000001 } from "@/data/migrations/20260423000001_chime_recording_extras";
-=======
 import { MIGRATION_SQL as MIG_20260428000100 } from "@/data/migrations/20260428000100_fix_diviner_fields_length";
 import { MIGRATION_SQL as MIG_20260423000001_AIR } from "@/data/migrations/20260423000001_affiliate_identity_refactor";
->>>>>>> 267df7721a26ae1c816abbee6d1c0998e4e9685b
 
 /**
  * Allowlisted migrations that the admin migration runner can execute.
