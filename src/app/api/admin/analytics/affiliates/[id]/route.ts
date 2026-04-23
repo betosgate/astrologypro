@@ -45,13 +45,32 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
   const period = url.searchParams.get("period") ?? "30d";
   const fromTs = getPeriodFrom(period);
 
+  // migrated-to-canonical-accounts: 2026-04-23 (Task 06)
+  // For diviner_affiliate identities we join affiliate_accounts for the
+  // canonical name/email; social_advocate rows keep their own identity.
   const table = type === "social_advocate" ? "social_advocates" : "diviner_affiliates";
-  const { data: aff } = await admin
+  const selectStr =
+    type === "diviner_affiliate"
+      ? "id, name, email, created_at, account:affiliate_accounts(name, email)"
+      : "id, name, email, created_at";
+  const { data: affRaw } = await admin
     .from(table)
-    .select("id, name, email, created_at")
+    // Dynamic select string across two tables; Supabase's PostgREST type
+    // parser can't statically verify this. Cast via unknown.
+    .select(selectStr as string)
     .eq("id", id)
     .maybeSingle();
-  if (!aff) return NextResponse.json({ error: "Affiliate not found" }, { status: 404 });
+  if (!affRaw) return NextResponse.json({ error: "Affiliate not found" }, { status: 404 });
+  const aff = affRaw as unknown as {
+    id: string;
+    name: string | null;
+    email: string | null;
+    created_at: string;
+    account?: { name?: string; email?: string } | null;
+  };
+  // Normalise identity fields: prefer canonical account when present.
+  aff.name = aff.account?.name ?? aff.name;
+  aff.email = aff.account?.email ?? aff.email;
 
   const [assignmentsRes, campaignsRes, clicksRes, conversionsRes] = await Promise.all([
     admin

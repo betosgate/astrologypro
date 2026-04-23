@@ -51,24 +51,36 @@ export async function GET() {
     .eq("user_id", user.id)
     .single();
 
-  // Fetch affiliate list so we have names — select user_id for the commission system lookup
-  // diviner_affiliates uses diviner_id = diviners.id (UUID), not auth user.id
+  // migrated-to-canonical-accounts: 2026-04-23 (Task 06)
+  // Join affiliate_accounts so canonical identity is used when available.
+  // The auth-user → affiliate lookup also preferably uses account.user_id
+  // (canonical) and falls back to legacy diviner_affiliates.user_id.
   const { data: affiliateRows, error: affiliateError } = diviner
     ? await admin
         .from("diviner_affiliates")
-        .select("id, name, email, user_id")
+        .select(
+          `id, name, email, user_id,
+           account:affiliate_accounts ( user_id, name, email )`
+        )
         .eq("diviner_id", diviner.id)
     : { data: [], error: null };
 
   if (affiliateError) return NextResponse.json({ error: affiliateError.message }, { status: 500 });
 
-  // Build lookup: auth user id -> affiliate name/email
+  type AffRow = {
+    id: string;
+    name: string | null;
+    email: string | null;
+    user_id: string | null;
+    account: { user_id: string | null; name: string; email: string } | null;
+  };
   const affiliateNameMap: Record<string, { name: string; email: string }> = {};
-  (affiliateRows ?? []).forEach((a: { user_id?: string | null; name?: string | null; email?: string | null }) => {
-    if (a.user_id) {
-      affiliateNameMap[a.user_id] = {
-        name: a.name ?? "",
-        email: a.email ?? "",
+  ((affiliateRows ?? []) as unknown as AffRow[]).forEach((a) => {
+    const uid = a.account?.user_id ?? a.user_id;
+    if (uid) {
+      affiliateNameMap[uid] = {
+        name: a.account?.name ?? a.name ?? "",
+        email: a.account?.email ?? a.email ?? "",
       };
     }
   });

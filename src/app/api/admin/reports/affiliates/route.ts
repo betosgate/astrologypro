@@ -145,9 +145,15 @@ export async function GET(req: NextRequest) {
     }
 
     // ── 2. Diviner Affiliates ───────────────────────────────────────────────
+    // migrated-to-canonical-accounts: 2026-04-23 (Task 06)
+    // Join affiliate_accounts for canonical identity; code below reads
+    // a.name/a.email through the flattened helper.
     let affQuery = db
       .from("diviner_affiliates")
-      .select("id, diviner_id, name, email, status, default_commission_value, created_at");
+      .select(
+        `id, diviner_id, name, email, status, default_commission_value, created_at,
+         account:affiliate_accounts ( name, email )`
+      );
     if (since) {
       affQuery = affQuery.gte("created_at", since.toISOString());
     }
@@ -269,14 +275,24 @@ export async function GET(req: NextRequest) {
       })
       .sort((a, b) => b.totalCommissions - a.totalCommissions);
 
-    // Build top affiliates
-    const affLookup = new Map(dAffRows.map((a) => [a.id, a]));
+    // Build top affiliates — prefer canonical account identity where present
+    type AffRow = {
+      id: string;
+      diviner_id: string;
+      name: string | null;
+      email: string | null;
+      status: string;
+      default_commission_value: number | null;
+      created_at: string;
+      account?: { name?: string; email?: string } | null;
+    };
+    const affLookup = new Map((dAffRows as unknown as AffRow[]).map((a) => [a.id, a]));
     const topAffiliates: TopAffiliate[] = Array.from(affAggMap.entries())
       .map(([affId, agg]) => {
         const info = affLookup.get(affId);
         return {
           id: affId,
-          name: info?.name ?? "Unknown",
+          name: info?.account?.name ?? info?.name ?? "Unknown",
           divinerName: divinerNameMap.get(agg.divinerId) ?? "Unknown",
           commissions: round2(agg.totalCents / 100),
           conversions: agg.count,
