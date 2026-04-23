@@ -222,15 +222,15 @@ export function HorseshoeLayout({ positionLabels, drawnCards, onReveal, onCardCl
   //       [1]                  [5]
   //            [2]        [4]
   //                 [3]
-  const CW = 160;
-  const CH = 230;
+  const CW = 180;
+  const CH = 260;
   // Total card height = image + label (~40%) + borders
-  const totalH = CH + Math.round(CH * 0.4) + 10;
-  const ROW_GAP = totalH + 20; // each row starts after previous card fully ends + 20px spacing
+  const totalH = CH + Math.round(CH * 0.2) + 0;
+  const ROW_GAP = totalH + 0; // each row starts after previous card fully ends + 20px spacing
   return (
-    <div className="relative mx-auto" style={{ width: 1000, minHeight: ROW_GAP * 3 + totalH }}>
+    <div className="relative mx-auto max-[1445px]:!w-full max-[1199px]:!min-h-auto" style={{ width: 1000, minHeight: ROW_GAP * 2.85 + totalH }}>
       {/* Desktop: absolute positioning */}
-      <div className="hidden lg:block relative" style={{ height: ROW_GAP * 3 + totalH }}>
+      <div className="block max-[1199px]:hidden relative max-[1199px]:!h-auto" style={{ height: ROW_GAP * 2.85 + totalH }}>
         {/* Row 0: top — far left and far right */}
         <div className="absolute" style={{ left: 0, top: 0 }}>
           <CardSlot index={0} label={positionLabels[0]} drawn={drawnCards[0]} onReveal={onReveal} onCardClick={onCardClick} cardBackUrl={cardBackUrl} cardWidth={CW} cardHeight={CH} />
@@ -258,13 +258,13 @@ export function HorseshoeLayout({ positionLabels, drawnCards, onReveal, onCardCl
         </div>
       </div>
       {/* Tablet */}
-      <div className="hidden md:flex lg:hidden flex-wrap justify-center gap-6">
+      <div className="hidden max-[1199px]:flex max-[768px]:hidden flex-wrap justify-center gap-6">
         {positionLabels.map((label, i) => (
           <CardSlot key={i} index={i} label={label} drawn={drawnCards[i]} onReveal={onReveal} onCardClick={onCardClick} cardBackUrl={cardBackUrl} cardWidth={140} cardHeight={200} />
         ))}
       </div>
       {/* Mobile */}
-      <div className="flex md:hidden flex-wrap justify-center gap-4">
+      <div className=" hidden max-[768px]:flex flex-wrap justify-center gap-4">
         {positionLabels.map((label, i) => (
           <CardSlot key={i} index={i} label={label} drawn={drawnCards[i]} onReveal={onReveal} onCardClick={onCardClick} cardBackUrl={cardBackUrl} cardWidth={120} cardHeight={170} />
         ))}
