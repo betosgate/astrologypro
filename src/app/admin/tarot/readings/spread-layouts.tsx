@@ -175,7 +175,7 @@ export function FiveCardLayout({ positionLabels, drawnCards, onReveal, onCardCli
         {/* INSIDE group: cards 1 & 2 */}
         <div className="flex flex-col items-center gap-3">
           <h3 className="text-sm font-bold uppercase tracking-widest text-emerald-400 border-b border-emerald-500/40 pb-1 px-4">Inside</h3>
-          <div className="flex gap-4 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4">
+          <div className="flex gap-4 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4 max-[599px]:flex-col">
             {[0, 1].map((i) => (
               <CardSlot key={i} index={i} label={positionLabels[i]} drawn={drawnCards[i]} onReveal={onReveal} onCardClick={onCardClick} cardBackUrl={cardBackUrl} cardWidth={CW} cardHeight={CH} />
             ))}
@@ -185,7 +185,7 @@ export function FiveCardLayout({ positionLabels, drawnCards, onReveal, onCardCli
         {/* OUTSIDE group: cards 3 & 4 */}
         <div className="flex flex-col items-center gap-3">
           <h3 className="text-sm font-bold uppercase tracking-widest text-amber-400 border-b border-amber-500/40 pb-1 px-4">Outside</h3>
-          <div className="flex gap-4 rounded-xl border border-amber-500/20 bg-amber-500/5 p-4">
+          <div className="flex gap-4 rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 max-[599px]:flex-col">
             {[2, 3].map((i) => (
               <CardSlot key={i} index={i} label={positionLabels[i]} drawn={drawnCards[i]} onReveal={onReveal} onCardClick={onCardClick} cardBackUrl={cardBackUrl} cardWidth={CW} cardHeight={CH} />
             ))}
