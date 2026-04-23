@@ -48,6 +48,7 @@ import { DashboardFeedPreview } from "@/components/community/dashboard-feed-prev
 import { getCommunityDashboardFeed } from "@/lib/dashboard-content";
 import { calcFamilyProfileCompletion } from "@/lib/community/family-profile-completion";
 import { formatBirthPlace } from "@/lib/community/birth-location";
+import { SectionContainer } from "@/components/shared/section-container";
 
 export const metadata = { title: "Community - AstrologyPro" };
 export const dynamic = "force-dynamic";
@@ -707,7 +708,8 @@ export default async function CommunityDashboardPage() {
   ];
 
   return (
-    <div className="space-y-8">
+    <SectionContainer verticalPadding="none" className="px-0 sm:px-0 lg:px-0">
+      <div className="space-y-8">
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
@@ -1807,6 +1809,7 @@ export default async function CommunityDashboardPage() {
           </a>
         </Button>
       </div>
-    </div>
+      </div>
+    </SectionContainer>
   );
 }

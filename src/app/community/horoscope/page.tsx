@@ -10,6 +10,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { SectionContainer } from "@/components/shared/section-container";
 
 import { HoroscopeToolkitPage } from "@/app/admin/horoscope/page";
 import { buildToolkitPrefillForm } from "@/lib/horoscope-toolkit-prefill";
@@ -185,6 +186,7 @@ export default async function CommunityNativityChartPage() {
         basePath="/community/horoscope"
         allowedSlugs={[NATAL_TAB_SLUG]}
         initialPrefill={encodeURIComponent(JSON.stringify(prefill))}
+        readOnlyBirthData={true}
       />
     </div>
   );
