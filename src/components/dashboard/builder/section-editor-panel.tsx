@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { X, Trash2, Plus } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { X, Trash2, Plus, UploadCloud, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -108,22 +108,50 @@ function TextBlockEditor({ block }: { block: DivinerServiceBlock }) {
 }
 
 function ImageBlockEditor({ block }: { block: DivinerServiceBlock }) {
-  const { updateBlock } = useBuilder();
+  const { updateBlock, templateId } = useBuilder();
   const [title, setTitle] = useState(block.title ?? "");
   const [url, setUrl] = useState(block.primary_image_url ?? "");
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setTitle(block.title ?? "");
     setUrl(block.primary_image_url ?? "");
   }, [block.id, block.title, block.primary_image_url]);
 
+  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadError(null);
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch(`/api/dashboard/landing-pages/${templateId}/upload`, {
+        method: "POST",
+        body: fd,
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setUploadError(json.detail ?? json.title ?? "Upload failed");
+      } else {
+        setUrl(json.url);
+      }
+    } catch {
+      setUploadError("Network error during upload");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
+
   async function save() {
-    if (!url.trim()) return;
     setSaving(true);
     await updateBlock(block.id, {
       title: title || null,
-      primary_image_url: url.trim(),
+      primary_image_url: url.trim() || null,
     });
     setSaving(false);
   }
@@ -139,23 +167,77 @@ function ImageBlockEditor({ block }: { block: DivinerServiceBlock }) {
           maxLength={140}
         />
       </div>
-      <div className="space-y-1.5">
-        <label className="text-xs font-medium text-silver/70">Image URL</label>
-        <Input
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          placeholder="https://…"
-        />
-        {url && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={url}
-            alt={title || "Preview"}
-            className="mt-2 max-h-48 rounded-lg border border-white/[0.06] object-cover"
+
+      <div className="space-y-3">
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium text-silver/70">External Image URL</label>
+          <Input
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            placeholder="https://…"
           />
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium text-silver/70">Or Upload Image</label>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            className="hidden"
+            onChange={handleFileUpload}
+          />
+          <div className="flex items-center gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={uploading}
+              onClick={() => fileInputRef.current?.click()}
+              className="border-white/10 text-cream h-8"
+            >
+              {uploading ? (
+                <><Loader2 className="mr-1.5 size-3.5 animate-spin" /> Uploading…</>
+              ) : url ? (
+                <><UploadCloud className="mr-1.5 size-3.5" /> Change image</>
+              ) : (
+                <><UploadCloud className="mr-1.5 size-3.5" /> Upload image</>
+              )}
+            </Button>
+
+            {url && (
+              <button
+                type="button"
+                onClick={() => setUrl("")}
+                className="text-xs font-medium text-red-400 hover:text-red-300 transition-colors"
+              >
+                Remove
+              </button>
+            )}
+
+            <span className="text-[10px] text-silver/30">
+              JPEG, PNG, WebP up to 5MB
+            </span>
+          </div>
+        </div>
+
+        {uploadError && (
+          <p className="text-xs text-red-400">{uploadError}</p>
+        )}
+
+        {url && (
+          <div className="mt-2 overflow-hidden rounded-lg border border-white/[0.06] bg-black/20">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={url}
+              alt={title || "Preview"}
+              className="max-h-64 h-auto w-full object-contain"
+            />
+          </div>
         )}
       </div>
-      <Button onClick={save} disabled={saving || !url.trim()} className="w-full">
+
+      <Button onClick={save} disabled={saving || uploading} className="w-full">
         {saving ? "Saving…" : "Save"}
       </Button>
     </div>
