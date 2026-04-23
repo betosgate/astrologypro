@@ -547,7 +547,7 @@ function ServiceDialog({
             <div className="space-y-1.5">
               <Label>Category</Label>
               <Select value={category} onValueChange={setCategory}>
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -559,7 +559,7 @@ function ServiceDialog({
             <div className="space-y-1.5">
               <Label>Assigned Diviner *</Label>
               <Select value={divinerId} onValueChange={setDivinerId}>
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select diviner" />
                 </SelectTrigger>
                 <SelectContent>

@@ -9681,7 +9681,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
       "Build custom ritual sequences",
       "Track graduation progress",
     ],
-    keyPages: ["Decans Grid", "Training Center", "Ritual Builder", "Graduation"],
+    keyPages: ["Decans", "Foundation Training", "Graduation", "Ritual Builder"],
     groups: [
       {
         groupLabel: "Mastery",
@@ -9691,286 +9691,213 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
       },
     ],
     screens: [
-      { 
-        name: "decans", 
-        label: "Decans Grid", 
-        description: "Visual map of the 36 decans.", 
-        group: "Mastery",
-        purpose: "A comprehensive esoteric dashboard visualizing the Egyptian decan system and their corresponding spiritual hierarchies.",
-        bullets: [
-          "Interactive 36-decan mastery grid interface",
-          "Detailed decan mythology and correspondences",
-          "Temporal decan-hour tracking and ritual timing",
-          "Student-level decan mastery progress visualization"
-        ]
-      },
-      { 
-        name: "center", 
-        label: "Training Center", 
-        description: "Learning management.", 
-        group: "Curriculum",
-        purpose: "The central hub for students to manage their advancement through the platform's esoteric curriculum.",
-        bullets: [
-          "Curriculum-level progress tracking and analytics",
-          "Lesson repository with status and grading logs",
-          "Mentor feedback and review communication panel",
-          "Self-paced learning path and milestone roadmap"
-        ]
-      },
-      { 
-        name: "lesson", 
-        label: "Lesson View", 
-        description: "Structured lesson content.", 
-        group: "Curriculum",
-        purpose: "An immersive learning environment for absorbing specific spiritual doctrines and technical esoteric training.",
-        bullets: [
-          "Multimedia-rich lesson delivery (Text, Video, PDF)",
-          "Integrated student note-taking and journaling",
-          "Knowledge-check quizzes and examination modules",
-          "Discussion board integration for specific lessons"
-        ]
-      },
-      { 
-        name: "builder", 
-        label: "Ritual Builder", 
-        description: "Drag-and-drop ritual designer.", 
-        group: "Mastery",
-        purpose: "A sophisticated technical tool that allows students to construct their own astrological and spiritual ritual sequences.",
-        bullets: [
-          "Drag-and-drop ritual component architecture",
-          "Astrological timing engine for precise rituals",
-          "Ritual sequence validation and error checking",
-          "Personalized ritual template export and sharing"
-        ]
-      },
-      {
-        name: "ms-dashboard",
-        label: "Mystery School Dashboard",
-        description: "Your home screen after login as a Mystery School student — current decan status, foundation week progress, and upcoming decan windows.",
-        group: "Overview",
-        purpose: "Provides the student an at-a-glance summary of where they are in the curriculum and what is active right now.",
-        bullets: [
-          "Active decan card showing current window open/close dates",
-          "Foundation quarter progress with weeks completed out of 12",
-          "Quick-links to this week's foundation audio and ritual"
-        ]
-      },
-      {
-        name: "ms-subscription",
-        label: "Subscription & Billing",
-        description: "Manage your Mystery School subscription — view billing date, plan amount, and cancel or resume access.",
-        group: "Account",
-        purpose: "Full transparency on what you pay and when, with self-serve cancel and resume controls.",
-        bullets: [
-          "Monthly subscription amount and next billing date",
-          "One-time initiation fee receipt for your records",
-          "Cancel subscription with retained access until period end"
-        ]
-      },
-      {
-        name: "ms-settings",
-        label: "MS Account Settings",
-        description: "Update your display name, timezone, and notification preferences for Mystery School content.",
-        group: "Account",
-        purpose: "Personalise your experience so decan window reminders fire at the right local time.",
-        bullets: [
-          "Timezone picker so window open/close times display correctly",
-          "Email notification toggle for decan preview and grace period alerts",
-          "Display name shown on your graduation certificate"
-        ]
-      },
-      {
-        name: "ms-foundation-audio",
-        label: "Foundation Week Audio Player",
-        description: "Each of the 12 foundation weeks includes an audio teaching by Beto — listen directly in the portal.",
-        group: "Training",
-        purpose: "Guided audio instruction makes the curriculum accessible without requiring a video setup.",
-        bullets: [
-          "Embedded audio player with playback speed control",
-          "Beto photo card displayed alongside the audio for context",
-          "Progress saved — resume from where you left off on any device"
-        ]
-      },
-      {
-        name: "ms-decan-grid",
-        label: "36 Decan Mastery Grid",
-        description: "The full 36-decan grid showing which decans you have completed, which are active now, and which are upcoming.",
-        group: "Training",
-        purpose: "A birds-eye view of the entire year's curriculum mapped to zodiac sign and ruling planet.",
-        bullets: [
-          "36 cards arranged by zodiac order — green for complete, amber for active, grey for upcoming",
-          "Click any active or completed decan to view its detail page",
-          "Your completion count shown prominently above the grid"
-        ]
-      },
-      {
-        name: "ms-journal",
-        label: "Decan Journal",
-        description: "After completing the ritual and scrying session, record your personal observations and insights in the structured journal.",
-        group: "Training",
-        purpose: "Journalling is required as the final step of each decan completion and becomes part of your permanent record.",
-        bullets: [
-          "Prompted fields: themes observed, entities encountered, insights received",
-          "Private entry — only visible to you and assigned admin",
-          "Once submitted, marks the decan as fully complete"
-        ]
-      },
-      {
-        name: "decan-ritual-page",
-        label: "Decan Ritual Page",
-        description: "Guided ritual page for the current active decan. Presents the full ritual sequence: opening invocation, planetary working, contemplative practice, and closing. Students mark each step complete as they go.",
-        group: "Decans",
-        purpose: "Structures the ritual component of each decan study so students engage with it as a living practice rather than a reading exercise.",
-        bullets: [
-          "Step-by-step ritual sequence with instructional text for each phase",
-          "Materials and preparation checklist displayed before the ritual begins",
-          "Step completion checkboxes — all steps must be checked to enable journal submission"
-        ]
-      },
-      {
-        name: "decan-scrying-page",
-        label: "Decan Scrying Page",
-        description: "Guided scrying exercise tied to the active decan's planetary intelligence. Provides a timed meditation prompt, a visual focal point, and a free-text field for recording visions and impressions received during the practice.",
-        group: "Decans",
-        purpose: "Integrates a contemplative inner-work component into the decan curriculum to balance textual study with direct experiential practice.",
-        bullets: [
-          "Timed meditation countdown (configurable 5, 10, or 20 minutes) with ambient sound option",
-          "Decan sigil or symbol displayed as the visual focal point during the session",
-          "Impression recording field — auto-saves every 30 seconds and feeds into the journal"
-        ]
-      },
-      {
-        name: "decan-journal-write",
-        label: "Decan Journal Write",
-        description: "Journal submission page for the current decan. Students record their ritual observations, scrying impressions, and personal reflections. On submit the decan is marked complete and submitted for admin review if graduation-eligible.",
-        group: "Decans",
-        purpose: "Creates the formal record of the student's decan work, which is reviewed during the graduation process to assess depth of engagement.",
-        bullets: [
-          "Prompted journal structure: Ritual observations, Scrying impressions, Personal insights",
-          "Rich-text editor with minimum word guidance (not enforced, but recommended 200 words)",
-          "Submit button with confirmation modal explaining that entries cannot be edited after submission"
-        ]
-      },
-      {
-        name: "foundation-task-complete",
-        label: "Foundation Task Complete",
-        description: "Completion screen shown after a student finishes a Foundation Week task. Displays a congratulatory message, the task they completed, their updated Foundation progress bar, and the next task to unlock.",
-        group: "Foundation",
-        purpose: "Provides positive reinforcement at each Foundation milestone to build momentum and reduce early-stage drop-off.",
-        bullets: [
-          "Task title and completion checkmark with a congratulatory headline",
-          "Foundation progress bar updated to reflect the newly completed task",
-          "Next task preview card with a CTA to begin it immediately"
-        ]
-      },
-      {
-        name: "ms-subscription-manage",
-        label: "Mystery School Subscription Management",
-        description: "Self-service subscription management page for Mystery School students. Shows the current plan, billing date, payment method on file, and options to pause, cancel, or upgrade to an annual plan.",
-        group: "Settings",
-        purpose: "Gives students control over their subscription without needing to contact support, reducing churn caused by friction in the cancellation process.",
-        bullets: [
-          "Current plan, price, and next billing date displayed prominently",
-          "Payment method card with update button (opens Stripe hosted form)",
-          "Pause and Cancel options with clear impact explanation for each action"
-        ]
-      },
-      {
-        name: "decans-by-sign",
-        label: "Decans by Sign",
-        description: "Reference page showing all 36 decans organised by zodiac sign. Each sign has three decan cards with the ruling planet, associated symbolism, and the student's completion status. Acts as a curriculum map.",
-        group: "Decans",
-        purpose: "Helps students navigate the full decan curriculum at a glance and understand how their progress maps across the zodiac.",
-        bullets: [
-          "Sign sections with three decan cards each, colour-coded by completion status",
-          "Decan card: number, name, ruling planet, brief description, and locked/active/complete badge",
-          "Progress summary: X of 36 decans complete, shown at the top of the page"
-        ]
-      },
-      {
-        name: "ritual-builder-step-1",
-        label: "Ritual Builder Step 1 — Intent",
-        description: "First step of the student-facing ritual builder. The student selects a planetary intelligence to work with, states their ritual intention, and chooses a working type (petition, gratitude, banishing, or invocation).",
-        group: "Builder",
-        purpose: "Guides students through building a personalised ritual by starting with clear intent, ensuring the working has a defined purpose before the structure is assembled.",
-        bullets: [
-          "Planetary selector with glyph and brief description of each planet's domain",
-          "Intent text field with guidance prompts to help students articulate their working clearly",
-          "Working type selector with a plain-English explanation of each type"
-        ]
-      },
-      {
-        name: "ritual-builder-step-2",
-        label: "Ritual Builder Step 2 — Structure",
-        description: "Second step of the ritual builder where the student assembles the ritual sequence from a library of components: invocations, correspondences, actions, and closings. The assembled ritual can be saved and used later.",
-        group: "Builder",
-        purpose: "Teaches students to construct rituals structurally rather than following a script, deepening their practical understanding of planetary magic.",
-        bullets: [
-          "Component library sorted by ritual phase: Opening, Working, Closing",
-          "Drag-and-drop builder canvas where students sequence their chosen components",
-          "Save as personal ritual button — stores the built ritual in the student's private library"
-        ]
-      },
-      {
-        name: "ms-center",
-        label: "Mystery School Center",
-        description: "The main navigation hub for Mystery School students. Displays the current decan, foundation progress, upcoming Sunday Service, and quick links to the decan study, ritual, builder, and journal pages.",
-        group: "Dashboard",
-        purpose: "Orients students each time they log in by surfacing where they are in the curriculum and what action to take next.",
-        bullets: [
-          "Current decan card with active status and a Go to Decan CTA",
-          "Foundation progress bar and next unlocking milestone",
-          "Upcoming Sunday Service countdown with RSVP button"
-        ]
-      },
-      {
-        name: "ms-community",
-        label: "Mystery School Community",
-        description: "Community discussion space exclusive to Mystery School students. Organised by topic channels including general, decan-by-decan discussions, ritual questions, and graduation support. Moderated by admin and senior students.",
-        group: "Community",
-        purpose: "Creates a peer support environment where students at similar stages can share observations and support each other through the curriculum.",
-        bullets: [
-          "Channel list with unread message counts",
-          "Threaded discussion view within each channel",
-          "Mention and direct message capabilities for student-to-student interaction"
-        ]
-      },
-      {
-        name: "ms-help",
-        label: "Mystery School Help",
-        description: "Help centre specific to Mystery School students. Contains FAQs about the curriculum, decan progression rules, graduation requirements, and subscription billing. Includes a contact form for escalation.",
-        group: "Settings",
-        purpose: "Reduces admin support burden by providing structured answers to the most common Mystery School student questions.",
-        bullets: [
-          "Curriculum FAQ covering decan unlocking, journal requirements, and graduation eligibility",
-          "Subscription FAQ covering billing, pausing, and cancellation impact on progress",
-          "Contact form pre-populated with the student's account and current decan for faster support triage"
-        ]
-      },
-      {
-        name: "ms-decan-progress-chart",
-        label: "Decan Progress Chart",
-        description: "Visual chart showing the student's completion progress across all 36 decans. Displays a wheel or grid view with completed, active, and locked decans marked. Highlights the graduation milestone decans.",
-        group: "Dashboard",
-        purpose: "Gives students a motivating visual representation of their long-term progress to sustain engagement across the multi-year curriculum.",
-        bullets: [
-          "36-segment wheel or grid with colour coding: complete (filled), active (highlighted), locked (dim)",
-          "Graduation milestone markers at decan 12, 24, and 36",
-          "Estimated completion date based on current average completion pace"
-        ]
-      },
-      {
-        name: "ms-profile",
-        label: "Mystery School Profile",
-        description: "Student profile page within the Mystery School portal showing their display name, avatar, current decan, completed decan count, and any badges earned. Editable by the student for name and avatar.",
-        group: "Settings",
-        purpose: "Gives students an identity within the Mystery School community that reflects their progress and encourages continued engagement.",
-        bullets: [
-          "Avatar upload and display name editor",
-          "Progress summary: decans complete, current active decan, graduation status",
-          "Earned badges displayed as a trophy shelf — hover shows the criteria for each badge"
-        ]
-      },
+    {
+  "name": "ms-dashboard",
+  "label": "Mystery School Decan Dashboard",
+  "description": "The main Mystery School home screen where students track their decan journey, subscription details, active decan, next decan, and full 36-decan progression.",
+  "group": "Overview",
+  "purpose": "This screen is used as the student's main entry point into the Mystery School experience. It helps the student immediately understand where they are in the program, how many decans are completed, which decan is currently active, what is coming next, and how their full 36-decan path is structured across the zodiac wheel.",
+  "bullets": [
+    "Journey header shows the main Mystery School identity and the student's current decan progress",
+    "Progress summary displays completed decans count and overall percentage completed",
+    "Subscription section shows important membership details such as current status, enrolled date, billing amount, next renewal date, and assigned cohort",
+    "Manage Subscription button gives quick access to billing or membership control actions",
+    "Current Decan card highlights the student's active decan with zodiac sign, decan title, tarot/planet reference, active date range, and current work status",
+    "Continue Work action helps the student jump directly back into the active decan experience",
+    "Coming Up section previews the next decan so the student knows what unlocks next",
+    "All 36 Decans grid shows the complete full-path curriculum across all zodiac signs",
+    "Grid layout groups decans sign by sign, making the full journey easier to understand visually",
+    "Each decan cell uses status indicators so the student can quickly see whether a decan is active, in grace, preview, upcoming, completed, missed, or locked",
+    "Legend at the bottom explains each progress color and icon so the status system is easy to understand",
+    "Left sidebar navigation provides access to major Mystery School areas such as Decans, Training, and Graduation",
+    "This screen is useful because it gives the student one simple dashboard to understand progress, current focus, upcoming study, and long-term curriculum structure without opening multiple pages"
+  ]
+},
+     {
+  "name": "ms-subscription",
+  "label": "Subscription & Billing",
+  "description": "The subscription section inside the Mystery School dashboard that shows the student's billing status, enrollment details, renewal date, cohort, and account access summary.",
+  "group": "Account",
+  "purpose": "This section is used to keep important membership and billing information visible while the student works through the Mystery School decan curriculum. It helps the student quickly confirm whether the subscription is active, when they enrolled, what they are paying, when the next renewal happens, and which cohort they belong to. It also gives direct access to subscription management without leaving the dashboard.",
+  "bullets": [
+    "Subscription header clearly separates billing and membership details from learning progress details",
+    "Status field shows the current membership state, such as Active, so the student knows whether access is valid",
+    "Enrolled field shows the original join date of the student's Mystery School subscription",
+    "Billing field shows the recurring monthly plan amount and can also display an enrollment payment or one-time starting fee",
+    "Next Renewal field tells the student when the next billing or renewal date will happen",
+    "Cohort field shows the assigned learning batch or intake group, such as Spring 2027",
+    "Card layout makes each billing detail easy to scan quickly without opening account settings",
+    "Manage Subscription button gives the student a direct action to open billing management or self-service subscription controls",
+    "This section is useful because students often need quick access to membership information while studying, especially for checking active access, payment schedule, and cohort placement"
+  ]
+},
+      
+  {
+    "name": "ms-decan-grid",
+    "label": "36 Decan Grid",
+    "description": "The full Mystery School decan progress map, showing all 36 decans grouped under the 12 zodiac signs with visible status markers and navigation states.",
+    "group": "Decans",
+    "purpose": "This section helps students understand where they are in the full decan journey at a glance. It shows which decan is active now, which one is coming next, and which future decans are still locked. It works like a roadmap of the entire Mystery School cycle so the student can clearly see progress sign by sign and decan by decan.",
+    "bullets": [
+      "All 36 decans are arranged under the 12 zodiac signs, with 3 decans shown for each sign",
+      "The currently active decan is highlighted clearly so the student knows where to focus now",
+      "Preview and upcoming states help the student see what is next before it becomes active",
+      "Locked decans visually show content that cannot be opened yet",
+      "The grid gives a full-program view instead of forcing the student to open each decan one by one",
+      "Color and icon states make it easier to understand progress without reading extra text",
+      "The layout supports long-term planning because the student can see the full yearly structure",
+      "This section is useful because it turns the full Mystery School curriculum into a simple visual journey map"
+    ]
+  },
+  {
+    "name": "decan-detail_v1",
+    "label": "Decan Detail",
+    "description": "The main page for one specific decan, where the student sees the active decan identity, timing, work items, and learning actions connected to that decan.",
+    "group": "Decans",
+    "purpose": "This page is used to bring the student's current decan work into one focused place. It explains what decan is active, how long it remains active, and what required tasks belong to it. It helps the student move from general dashboard progress into actual learning and completion work.",
+    "bullets": [
+      "Shows the decan name, sign, ruling planet, and tarot correspondence for the selected decan",
+      "Displays the active date range so the student knows the current study window",
+      "Can show remaining time or countdown for the active decan period",
+      "Provides access to the required work items linked to the decan, such as ritual, scrying, and journal",
+      "Acts as the main entry point for completing that decan's practice tasks",
+      "Helps the student stay focused on one decan instead of the full curriculum at once",
+      "Can reflect status information such as active, preview, completed, missed, or locked depending on access state",
+      "This page is useful because it converts the decan from a simple grid item into a working study page with actionable content"
+    ]
+  },
+  {
+    "name": "decan-ritual-page_v1",
+    "label": "Decan Ritual Runner",
+    "description": "The guided ritual experience for a single decan, where the student moves through ritual work in a structured step-by-step format.",
+    "group": "Decans",
+    "purpose": "This page is used to help the student complete the ritual part of the decan in a calm, focused, guided way. Instead of mixing ritual instructions with all other decan content, it creates a dedicated ritual flow so the student can concentrate on one step at a time and mark that work as completed.",
+    "bullets": [
+      "Provides a separate ritual-focused experience connected to the selected decan",
+      "Can break the ritual into ordered steps so the student knows what to do next",
+      "Supports guided progression instead of showing the whole ritual as one large block",
+      "Helps reduce distraction by isolating ritual practice from other journal tasks",
+      "Ritual completion can update the student's decan progress status",
+      "The flow makes the ritual easier to follow, especially for first-time students",
+      "Can act as a structured learning tool rather than just a text instruction page",
+      "This page is useful because ritual work is often better completed in sequence, not in a general dashboard layout"
+    ]
+  },
+  // {
+  //   "name": "decan-scrying-page",
+  //   "label": "Scrying Journal",
+  //   "description": "The journal section where the student records symbolic impressions, visions, or reflective observations connected to the active decan and its tarot relationship.",
+  //   "group": "Decans",
+  //   "purpose": "This page is used to capture the student's inner symbolic experience during the decan. It supports reflective and intuitive work by giving the student a place to write down impressions, card-based observations, and personal meaning connected to the practice. It serves as one of the required decan completion steps.",
+  //   "bullets": [
+  //     "Gives the student a dedicated space to write scrying or symbolic reflection notes",
+  //     "Connects the student's experience with the assigned tarot card or decan symbolism",
+  //     "Supports reflective practice rather than only ritual action",
+  //     "Can be used to submit a required journal entry for decan completion",
+  //     "Encourages students to record subtle experiences that may otherwise be forgotten",
+  //     "Helps build continuity between tarot symbolism and personal insight",
+  //     "Can validate submission requirements before allowing completion",
+  //     "This page is useful because it turns private symbolic experience into a trackable part of the student's decan work"
+  //   ]
+  // },
+  // {
+  //   "name": "decan-journal-write",
+  //   "label": "Mundane Impact Journal",
+  //   "description": "The written reflection area where the student records how the current decan is showing up in real life through events, relationships, work, or personal perception.",
+  //   "group": "Decans",
+  //   "purpose": "This page is used to connect the spiritual and symbolic decan work with everyday lived experience. It encourages the student to notice how the decan influences outer life, not only inner ritual or tarot work. This helps complete the decan as an applied practice instead of only a theoretical lesson.",
+  //   "bullets": [
+  //     "Provides a structured writing space for real-world decan reflections",
+  //     "Helps students record how the decan appears in daily life, work, relationships, or inner shifts",
+  //     "Balances symbolic practice with practical life observation",
+  //     "Acts as one of the required completion items for the decan journey",
+  //     "Encourages students to connect astrology with lived experience",
+  //     "Can include multiple reflection prompts or required sections before submission",
+  //     "Supports deeper integration of the decan beyond the ritual itself",
+  //     "This page is useful because it helps the student understand not just what the decan means, but how it is actually being lived"
+  //   ]
+  // },
+
+   
+  {
+    "name": "ms-foundation-training",
+    "label": "Foundation Training",
+    "description": "The /mystery-school/training page showing the Foundation Q1 learning journey with a 12-week sequence, current progress, weekly unlock flow, and per-week task completion summary.",
+    "group": "Foundation",
+    "purpose": "Helps students move through the Mystery School foundation program in the correct order by showing which week is active now, which weeks are locked, and how much of the 12-week training has been completed.",
+    "bullets": [
+      "Header block shows the Foundation Training title, quarter name, current week indicator, total completed weeks, and the overall training progress bar",
+      "Week cards are displayed from Week 1 through Week 12 so students can clearly see the full structure of the foundation journey",
+      "The currently available week appears expanded and shows its title, subtitle, and task progress summary such as how many tasks are complete",
+      "Future weeks appear locked, helping students understand that the program opens in sequence rather than all at once",
+      "Each week card represents a specific learning theme, making the curriculum easier to follow step by step",
+      "The progress bar at the top gives a quick visual summary of overall completion across all 12 weeks",
+      "The design keeps the student focused on the current week while still showing what is coming later in the program",
+      "This screen is useful because it combines roadmap, progress tracking, and weekly access control in one place"
+    ]
+  },
+  {
+    "name": "ms-foundation-audio",
+    "label": "Foundation Week Audio",
+    "description": "Audio teaching content can be presented inside an expanded foundation week so students can listen to the lesson as part of that week's learning flow.",
+    "group": "Foundation",
+    "purpose": "Allows weekly teaching material to be delivered in an easy-to-follow format directly inside the active foundation week without forcing students to leave the training page.",
+    "bullets": [
+      "Audio content belongs inside an expanded unlocked week rather than on a separate screen",
+      "The audio teaching is tied to a specific foundation week so students can listen in the right order",
+      "Audio can support the written week topic and task flow as part of one guided learning experience",
+      "When present, the weekly lesson area helps students study the teaching before completing their week tasks",
+      "This image mainly shows the expanded week area where audio would appear, even though the audio player itself is not visible in this screenshot",
+      "This section is useful because it keeps teaching content connected to the weekly training structure"
+    ]
+  },
+
+      // {
+      //   name: "foundation-task-complete",
+      //   label: "Foundation Task Completion",
+      //   description: "Inline task completion inside expanded foundation week cards. The selected task is marked done and the week/foundation progress updates immediately.",
+      //   group: "Foundation",
+      //   purpose: "Keeps students moving through the foundation program without leaving the training page.",
+      //   bullets: [
+      //     "Checklist button marks individual tasks complete",
+      //     "Completed tasks show check icon, completion date, and struck-through title",
+      //     "When all tasks in a week are done, the next week unlocks"
+      //   ]
+      // },
+     
+     
+  {
+    "name": "ms-graduation",
+    "label": "Graduation",
+    "description": "The Mystery School graduation page that shows overall completion, foundation progress, decan progress, remaining requirements, and the next actions a student can take before graduating.",
+    "group": "Graduation",
+    "purpose": "Helps the student clearly understand what is still required before earning graduation status by showing progress across Foundation Q1 and the 36 Decans in one place.",
+    "bullets": [
+      "Header section explains the graduation goal: complete all 12 foundation weeks and all 36 decans to receive the Priest or Priestess title",
+      "Overall completion progress bar gives a quick visual summary of total graduation progress",
+      "Your Progress card separates the two major requirements: Foundation Q1 progress and 36 Decans progress",
+      "Requirement counters show exact numbers completed out of the total, such as 0/12 weeks and 0/36 decans",
+      "Remaining Requirements section makes unfinished items easy to understand at a glance",
+      "Foundation Training button gives a direct path back to the foundation learning flow",
+      "Decan Training button gives a direct path back to the decan learning flow",
+      "This page is useful because it acts like a graduation checklist and prevents confusion about what still needs to be finished"
+    ]
+  },
+  {
+    "name": "ritual-builder",
+    "label": "Post-Graduation Ritual Builder",
+    "description": "A locked post-graduation feature preview shown on the graduation page, explaining that the Ritual Builder becomes available only after the student completes all graduation requirements.",
+    "group": "Graduation",
+    "purpose": "Shows students that an advanced ritual-building tool will unlock after graduation and gives them a clear incentive to complete the full Mystery School curriculum.",
+    "bullets": [
+      "The feature appears as a locked teaser card on the graduation page",
+      "The card clearly states that access unlocks only after graduation",
+      "The description explains that graduates will be able to design personal rituals using a larger ritual component library",
+      "The preview mentions examples such as planetary invocations, decan workings, seasonal rites, and custom steps",
+      "This section is useful because it shows the reward that becomes available after completing the program"
+    ]
+  },
+   
     ],
   },
   {
