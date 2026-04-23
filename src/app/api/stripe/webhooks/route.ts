@@ -37,6 +37,10 @@ import {
 import { PRICING } from "@/lib/constants";
 import { calculateMoneySplit } from "@/lib/money-split";
 import { provisionNatalReadiness } from "@/lib/community/provision-natal-readiness";
+import {
+  getDefaultRoleServicePackageCode,
+  getRoleServicePackages,
+} from "@/lib/role-service-packages";
 
 export const dynamic = "force-dynamic";
 
@@ -769,6 +773,147 @@ async function handleComboBundleCheckoutCompleted(
   );
 }
 
+async function provisionDivinerFromCheckoutSession(
+  session: Stripe.Checkout.Session,
+  options?: { markTraineePaid?: boolean },
+) {
+  const supabase = createAdminClient();
+  const userId = session.metadata?.userId;
+  const planId = session.metadata?.planId;
+
+  if (!userId) {
+    console.error("[Webhook] Diviner provisioning missing userId", session.metadata);
+    return { email: "", username: "", planId: planId ?? null };
+  }
+
+  const subscriptionId =
+    typeof session.subscription === "string"
+      ? session.subscription
+      : session.subscription?.id ?? null;
+  const paymentIntentId =
+    typeof session.payment_intent === "string"
+      ? session.payment_intent
+      : session.payment_intent?.id ?? null;
+
+  const [
+    {
+      data: { user: authUser },
+    },
+    { data: trainee },
+    roleServicePackages,
+  ] = await Promise.all([
+    supabase.auth.admin.getUserById(userId),
+    supabase
+      .from("trainees")
+      .select("id, name, email, username, service_package_code")
+      .eq("user_id", userId)
+      .maybeSingle(),
+    getRoleServicePackages(),
+  ]);
+
+  const email = trainee?.email ?? authUser?.email ?? "";
+  const username =
+    trainee?.username ??
+    (authUser?.user_metadata?.username as string | undefined) ??
+    authUser?.email?.split("@")[0]?.replace(/[^a-z0-9-]/gi, "-") ??
+    "";
+  const displayName =
+    trainee?.name ??
+    (authUser?.user_metadata?.name as string | undefined) ??
+    email.split("@")[0] ??
+    "Diviner";
+
+  if (!username) {
+    console.error(
+      "[Webhook] Diviner provisioning missing username in auth/trainee data for userId:",
+      userId,
+    );
+    return { email, username: "", planId: planId ?? null };
+  }
+
+  const servicePackageCode =
+    trainee?.service_package_code ??
+    getDefaultRoleServicePackageCode(roleServicePackages, "diviner");
+
+  const divinerPayload: Record<string, unknown> = {
+    user_id: userId,
+    username,
+    display_name: displayName,
+    onboarding_completed: false,
+    onboarding_step: 1,
+    is_active: true,
+    service_package_code: servicePackageCode,
+    ...(planId ? { plan_id: planId } : {}),
+  };
+
+  if (subscriptionId) {
+    divinerPayload.stripe_subscription_id = subscriptionId;
+    divinerPayload.subscription_status = "active";
+  } else {
+    divinerPayload.subscription_status = "active";
+  }
+
+  const { error: divinerError } = await supabase.from("diviners").upsert(
+    divinerPayload,
+    { onConflict: "user_id" },
+  );
+
+  if (divinerError) {
+    console.error("[Webhook] Failed to upsert diviner record:", divinerError);
+  }
+
+  if (options?.markTraineePaid) {
+    const traineeUpdate: Record<string, unknown> = {
+      paid_at: new Date().toISOString(),
+    };
+
+    if (paymentIntentId) traineeUpdate.payment_intent_id = paymentIntentId;
+
+    const { error: traineeError } = await supabase
+      .from("trainees")
+      .update(traineeUpdate)
+      .eq("user_id", userId);
+
+    if (traineeError) {
+      console.warn(
+        "[Webhook] Diviner provisioning trainee update warning:",
+        traineeError.message,
+      );
+    }
+  }
+
+  return { email, username, planId: planId ?? null };
+}
+
+async function handleTraineeDivinerUpgradeCheckoutCompleted(
+  session: Stripe.Checkout.Session,
+) {
+  const planName =
+    session.metadata?.planName ?? "Professional Divination Course";
+  const provisioned = await provisionDivinerFromCheckoutSession(session, {
+    markTraineePaid: true,
+  });
+
+  if (session.metadata?.userId) {
+    logActivity({
+      userId: session.metadata.userId,
+      eventCategory: "subscription",
+      eventType: "subscription.created",
+      metadata: {
+        itemKey: "professional_divination_course",
+        planName,
+        planId: provisioned.planId,
+        source: session.metadata?.type ?? "professional_divination_course",
+        status: "active",
+      },
+    });
+  }
+
+  console.log(
+    `[Webhook] Trainee diviner upgrade provisioned: userId=${session.metadata?.userId ?? "?"} username=${provisioned.username} plan=${planName}`,
+  );
+}
+
 async function handleTraineeSignupCheckoutCompleted(
   session: Stripe.Checkout.Session
 ) {
@@ -1113,6 +1258,10 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     return handlePerennialCommunitySignupCheckoutCompleted(session);
   }
 
+  if (session.metadata?.type === "trainee_diviner_upgrade") {
+    return handleTraineeDivinerUpgradeCheckoutCompleted(session);
+  }
+
   // Route combo bundle (trainee + diviner) checkouts
   if (session.metadata?.itemKey === "trainee_diviner_bundle") {
     return handleComboBundleCheckoutCompleted(session);
@@ -1120,6 +1269,10 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
   if (session.metadata?.type === "trainee_signup") {
     return handleTraineeSignupCheckoutCompleted(session);
+  }
+
+  if (session.metadata?.itemKey === "professional_divination_course") {
+    return handleTraineeDivinerUpgradeCheckoutCompleted(session);
   }
 
   // Handle manual booking payment link checkout
