@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { CommunityProfileForm } from "@/components/community/profile-form";
+import { SectionContainer } from "@/components/shared/section-container";
 
 export const metadata = { title: "Profile - AstrologyPro" };
 
@@ -33,18 +34,20 @@ export default async function CommunityProfilePage() {
       : null;
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">My Profile</h1>
-        <p className="text-muted-foreground">Manage your membership details</p>
+    <SectionContainer verticalPadding="none" className="px-0 sm:px-0 lg:px-0">
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">My Profile</h1>
+          <p className="text-muted-foreground">Manage your membership details</p>
+        </div>
+
+
+        <CommunityProfileForm
+          member={member}
+          userId={user.id}
+          initialAvatarUrl={initialAvatarUrl}
+        />
       </div>
-
-
-      <CommunityProfileForm
-        member={member}
-        userId={user.id}
-        initialAvatarUrl={initialAvatarUrl}
-      />
-    </div>
+    </SectionContainer>
   );
 }
