@@ -76,6 +76,8 @@ export function TabbieAppointmentSection({ trainingCompleted }: { trainingComple
   useEffect(() => {
     if (!trainingCompleted) {
       setIsLoading(false);
+      setConfig(null);
+      setHasAppointments(false);
       return;
     }
 
@@ -117,8 +119,25 @@ export function TabbieAppointmentSection({ trainingCompleted }: { trainingComple
 
     void loadConfig();
 
+    function handlePageShow() {
+      void loadConfig();
+    }
+
+    function handleVisibilityChange() {
+      if (document.visibilityState === "visible") {
+        void loadConfig();
+      }
+    }
+
+    window.addEventListener("pageshow", handlePageShow);
+    window.addEventListener("focus", handlePageShow);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
     return () => {
       cancelled = true;
+      window.removeEventListener("pageshow", handlePageShow);
+      window.removeEventListener("focus", handlePageShow);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [trainingCompleted]);
 

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Eye, Archive, CheckCircle2, Trash2, RefreshCw } from "lucide-react";
+import { Eye, Archive, CheckCircle2, Trash2, RefreshCw, MoreHorizontal } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -46,6 +46,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export const dynamic = "force-dynamic";
 
@@ -506,35 +512,43 @@ export default function ServiceTemplateIntakesPage() {
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right">
-                    <div className="flex justify-end gap-1" onClick={(event) => event.stopPropagation()}>
-                      <Button variant="ghost" size="sm" onClick={() => setSelected(submission)} title="View details">
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        disabled={mutatingId === submission.id || submission.submission_status === "reviewed"}
-                        onClick={() => void patchStatus(submission.id, "reviewed")}
-                      >
-                        <CheckCircle2 className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        disabled={mutatingId === submission.id || submission.submission_status === "archived"}
-                        onClick={() => void patchStatus(submission.id, "archived")}
-                      >
-                        <Archive className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-destructive hover:text-destructive"
-                        disabled={mutatingId === submission.id}
-                        onClick={() => setDeleteTarget(submission)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                    <div className="flex justify-end" onClick={(event) => event.stopPropagation()}>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreHorizontal className="h-4 w-4" />
+                            <span className="sr-only">Actions</span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => setSelected(submission)}>
+                            <Eye className="mr-2 h-4 w-4" />
+                            View details
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            disabled={mutatingId === submission.id || submission.submission_status === "reviewed"}
+                            onClick={() => void patchStatus(submission.id, "reviewed")}
+                          >
+                            <CheckCircle2 className="mr-2 h-4 w-4" />
+                            Mark reviewed
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            disabled={mutatingId === submission.id || submission.submission_status === "archived"}
+                            onClick={() => void patchStatus(submission.id, "archived")}
+                          >
+                            <Archive className="mr-2 h-4 w-4" />
+                            Archive
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="text-destructive focus:text-destructive"
+                            disabled={mutatingId === submission.id}
+                            onClick={() => setDeleteTarget(submission)}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </TableCell>
                 </TableRow>
