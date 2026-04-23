@@ -9151,7 +9151,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
         ]
       },
       { 
-        name: "natal", 
+        name: "natal_community", 
         label: "Natal Chart Studio", 
         description: "Aesthetic birth chart visualization.", 
         group: "Astrology Tools",

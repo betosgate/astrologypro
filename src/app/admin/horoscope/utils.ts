@@ -155,6 +155,48 @@ export function convertTo12HourFormat(hour: number, min: number): string {
   return `${h12}:${String(m).padStart(2, "0")} ${period}`;
 }
 
+export function normalizeInterpretationText(value: unknown): string {
+  if (value == null) return "";
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+
+  if (Array.isArray(value)) {
+    return value
+      .map((entry) => normalizeInterpretationText(entry))
+      .filter(Boolean)
+      .join("\n\n");
+  }
+
+  if (typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    const preferredKeys = [
+      "interpretation",
+      "data",
+      "description",
+      "forecast",
+      "summary",
+      "text",
+      "content",
+      "value",
+    ];
+
+    for (const key of preferredKeys) {
+      if (key in record) {
+        const normalized = normalizeInterpretationText(record[key]);
+        if (normalized) return normalized;
+      }
+    }
+
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return String(value);
+    }
+  }
+
+  return String(value);
+}
+
 export const emptyBirth = (): BirthInput => ({ dob: "", tob: "", city: null });
 export const defaultForm = () => ({
   person1: emptyBirth(), person2: emptyBirth(),
