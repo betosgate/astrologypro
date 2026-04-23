@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { getAdminUser } from "@/lib/admin-auth";
@@ -64,7 +64,22 @@ export default async function AdminBookingSessionPage({ params }: PageProps) {
   const isClient =
     !!authEmail && !!bookingEmail && authEmail === bookingEmail;
 
-  if (!isOwnerAdmin && !isClient) notFound();
+  if (!isOwnerAdmin && !isClient) {
+    // Not logged in at all → bounce through login and return here. Matches the
+    // /book/<username>/reschedule/<id> behavior so admin + trainee flows stay
+    // consistent.
+    if (!user) {
+      redirect(
+        `/login?reason=session&next=${encodeURIComponent(
+          `/book/${username}/session/${bookingId}`,
+        )}`,
+      );
+    }
+    // Logged in, but the email on the auth session doesn't match the booking
+    // and the viewer isn't the host admin either. Show a 404 so we don't leak
+    // the booking's existence.
+    notFound();
+  }
 
   const role: "diviner" | "client" = isOwnerAdmin ? "diviner" : "client";
   const hostName = adminRow.display_name ?? adminRow.username ?? "Host";
