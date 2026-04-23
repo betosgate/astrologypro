@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -39,16 +39,16 @@ const MAX_FILE_SIZE_MB = 100;
 const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 
 const FILE_ACCEPT: Partial<Record<MediaType, string>> = {
-  video:   "video/mp4,video/webm,video/quicktime,video/x-msvideo",
-  audio:   "audio/mpeg,audio/wav,audio/mp4,audio/ogg,audio/aac,audio/x-m4a",
-  image:   "image/jpeg,image/png,image/webp,image/gif",
+  video: "video/mp4,video/webm,video/quicktime,video/x-msvideo",
+  audio: "audio/mpeg,audio/wav,audio/mp4,audio/ogg,audio/aac,audio/x-m4a",
+  image: "image/jpeg,image/png,image/webp,image/gif",
   article: "application/pdf",
 };
 
 const UPLOAD_FOLDER: Partial<Record<MediaType, string>> = {
-  video:   "media-video",
-  audio:   "media-audio",
-  image:   "media-gallery",
+  video: "media-video",
+  audio: "media-audio",
+  image: "media-gallery",
   article: "media-articles",
 };
 
@@ -102,9 +102,10 @@ export function MediaItemForm({
   const [featured, setFeatured] = useState(initialItem?.is_featured ?? false);
   const [isActive, setIsActive] = useState(initialItem?.is_active ?? true);
   const [files, setFiles] = useState<File[]>([]);
+  const [previews, setPreviews] = useState<string[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const isImage    = mediaType === "image";
+  const isImage = mediaType === "image";
   const isUploadable = mediaType === "image" || mediaType === "audio" || mediaType === "video" || mediaType === "article";
 
   const remainingImageSlots = useMemo(() => {
@@ -113,6 +114,21 @@ export function MediaItemForm({
     }
     return Math.max(0, MAX_MEDIA_IMAGES - currentImageCount);
   }, [currentImageCount, initialItem?.type, mode]);
+
+  // Manage object URLs for local image previews to avoid memory leaks
+  useEffect(() => {
+    if (!isImage || files.length === 0) {
+      setPreviews([]);
+      return;
+    }
+
+    const urls = files.map((file) => URL.createObjectURL(file));
+    setPreviews(urls);
+
+    return () => {
+      urls.forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, [files, isImage]);
 
   function validate(): boolean {
     const errs: Record<string, string> = {};
@@ -436,33 +452,73 @@ export function MediaItemForm({
                   )}
                 </div>
 
-                {/* Drop zone / file picker */}
+                {/* Drop zone / file picker / Previews */}
                 {files.length > 0 ? (
-                  <div className="flex items-center justify-between gap-3 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2.5">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <Upload className="size-4 shrink-0 text-primary" />
-                      <div className="min-w-0">
-                        {files.map((f) => (
-                          <p key={f.name} className="text-xs font-medium truncate">
-                            {f.name}
-                            <span className="text-muted-foreground font-normal ml-1.5">
-                              ({(f.size / 1024 / 1024).toFixed(1)} MB)
-                            </span>
-                          </p>
+                  <div className="space-y-3">
+                    {isImage ? (
+                      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                        {files.map((f, i) => (
+                          <div key={`${f.name}-${i}`} className="group relative aspect-square rounded-lg border bg-muted overflow-hidden">
+                            {previews[i] ? (
+                              <img
+                                src={previews[i]}
+                                alt={f.name}
+                                className="h-full w-full object-cover"
+                              />
+                            ) : (
+                              <div className="flex h-full w-full items-center justify-center">
+                                <ImageIcon className="size-8 text-muted-foreground/30" />
+                              </div>
+                            )}
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-2">
+                              <p className="text-[10px] text-white text-center line-clamp-2 leading-tight">
+                                {f.name}
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const newFiles = [...files];
+                                newFiles.splice(i, 1);
+                                setFiles(newFiles);
+                                if (newFiles.length === 0 && fileRef.current) fileRef.current.value = "";
+                              }}
+                              className="absolute top-1 right-1 size-6 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-red-500 transition-colors"
+                              aria-label="Remove file"
+                            >
+                              <X className="size-3" />
+                            </button>
+                          </div>
                         ))}
                       </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setFiles([]);
-                        if (fileRef.current) fileRef.current.value = "";
-                      }}
-                      className="shrink-0 text-muted-foreground hover:text-destructive"
-                      aria-label="Remove file"
-                    >
-                      <X className="size-4" />
-                    </button>
+                    ) : (
+                      <div className="flex items-center justify-between gap-3 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2.5">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Upload className="size-4 shrink-0 text-primary" />
+                          <div className="min-w-0">
+                            {files.map((f) => (
+                              <p key={f.name} className="text-xs font-medium truncate">
+                                {f.name}
+                                <span className="text-muted-foreground font-normal ml-1.5">
+                                  ({(f.size / 1024 / 1024).toFixed(1)} MB)
+                                </span>
+                              </p>
+                            ))}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFiles([]);
+                            if (fileRef.current) fileRef.current.value = "";
+                          }}
+                          className="shrink-0 text-muted-foreground hover:text-destructive"
+                          aria-label="Remove file"
+                        >
+                          <X className="size-4" />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <label
@@ -473,9 +529,9 @@ export function MediaItemForm({
                     <div>
                       <p className="text-sm font-medium">Click to browse</p>
                       <p className="text-xs text-muted-foreground mt-0.5">
-                        {mediaType === "video"   && "MP4, WebM, MOV — up to 100 MB"}
-                        {mediaType === "audio"   && "MP3, WAV, M4A, OGG — up to 100 MB"}
-                        {mediaType === "image"   && "JPEG, PNG, WebP, GIF — up to 100 MB"}
+                        {mediaType === "video" && "MP4, WebM, MOV — up to 100 MB"}
+                        {mediaType === "audio" && "MP3, WAV, M4A, OGG — up to 100 MB"}
+                        {mediaType === "image" && "JPEG, PNG, WebP, GIF — up to 100 MB"}
                         {mediaType === "article" && "PDF — up to 100 MB"}
                       </p>
                     </div>
@@ -531,13 +587,23 @@ export function MediaItemForm({
                   value={url}
                   onChange={(e) => setUrl(e.target.value)}
                   placeholder={
-                    mediaType === "audio"   ? "https://open.spotify.com/... or https://soundcloud.com/..." :
-                    mediaType === "video"   ? "https://www.youtube.com/... or https://vimeo.com/..." :
-                    mediaType === "article" ? "https://your-blog.com/post or PDF URL..." :
-                    "https://..."
+                    mediaType === "audio" ? "https://open.spotify.com/... or https://soundcloud.com/..." :
+                      mediaType === "video" ? "https://www.youtube.com/... or https://vimeo.com/..." :
+                        mediaType === "article" ? "https://your-blog.com/post or PDF URL..." :
+                          "https://..."
                   }
                   aria-invalid={!!errors.url}
                 />
+                {isImage && url.trim() && !errors.url && (
+                  <div className="mt-2 relative aspect-video w-full rounded-lg border bg-muted overflow-hidden">
+                    <img
+                      src={url.trim()}
+                      alt="URL preview"
+                      className="h-full w-full object-contain bg-black/20"
+                      onError={() => setErrors({ ...errors, url: "Invalid image URL or not accessible." })}
+                    />
+                  </div>
+                )}
                 {errors.url && <p className="text-sm text-destructive">{errors.url}</p>}
               </div>
             )}
