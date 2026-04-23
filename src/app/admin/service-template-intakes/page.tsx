@@ -7,11 +7,12 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,6 +23,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
   TableBody,
@@ -81,6 +83,152 @@ function fmtDate(iso: string) {
     hour: "numeric",
     minute: "2-digit",
   });
+}
+
+function SubmissionSheet({
+  row,
+  open,
+  onOpenChange,
+  busy,
+  onReview,
+  onArchive,
+  onDelete,
+}: {
+  row: IntakeSubmissionRow | null;
+  open: boolean;
+  onOpenChange: (next: boolean) => void;
+  busy: boolean;
+  onReview: () => void;
+  onArchive: () => void;
+  onDelete: () => void;
+}) {
+  const [tab, setTab] = useState<"overview" | "payload">("overview");
+
+  if (!row) return null;
+
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent className="w-full sm:max-w-lg flex flex-col gap-0 p-0">
+        <SheetHeader className="px-5 pt-5 pb-3 border-b">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <SheetTitle className="truncate text-lg">{row.template_name}</SheetTitle>
+              <SheetDescription className="mt-1 flex items-center gap-2">
+                <Badge variant="outline" className="text-xs">
+                  {row.category === "astrology" ? "Astrology" : "Tarot"}
+                </Badge>
+                <Badge variant="outline" className={`text-xs ${STATUS_CLASS[row.submission_status]}`}>
+                  {row.submission_status}
+                </Badge>
+              </SheetDescription>
+            </div>
+          </div>
+        </SheetHeader>
+
+        <Tabs
+          key={row.id}
+          value={tab}
+          onValueChange={(value) => setTab(value as "overview" | "payload")}
+          className="flex min-h-0 flex-1 flex-col"
+        >
+          <div className="border-b px-5 pt-3">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="payload">Payload</TabsTrigger>
+            </TabsList>
+          </div>
+
+          <TabsContent value="overview" className="flex-1 overflow-y-auto px-5 py-4 space-y-4 text-sm">
+            <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2">
+              <div className="contents">
+                <dt className="pt-0.5 text-xs text-muted-foreground">Submitted</dt>
+                <dd>{fmtDate(row.submitted_at)}</dd>
+              </div>
+              <div className="contents">
+                <dt className="pt-0.5 text-xs text-muted-foreground">Template Slug</dt>
+                <dd className="font-mono text-xs">{row.template_slug}</dd>
+              </div>
+              <div className="contents">
+                <dt className="pt-0.5 text-xs text-muted-foreground">Form Mode</dt>
+                <dd className="capitalize">{row.form_mode}</dd>
+              </div>
+              <div className="contents">
+                <dt className="pt-0.5 text-xs text-muted-foreground">Toolkit Tab</dt>
+                <dd className="font-mono text-xs">{row.toolkit_tab_slug ?? "—"}</dd>
+              </div>
+              <div className="contents">
+                <dt className="pt-0.5 text-xs text-muted-foreground">Primary City</dt>
+                <dd>{row.primary_birth_city ?? "—"}</dd>
+              </div>
+              <div className="contents">
+                <dt className="pt-0.5 text-xs text-muted-foreground">Secondary City</dt>
+                <dd>{row.secondary_birth_city ?? "—"}</dd>
+              </div>
+              <div className="contents">
+                <dt className="pt-0.5 text-xs text-muted-foreground">Future Week</dt>
+                <dd>{row.future_week ?? "—"}</dd>
+              </div>
+              <div className="contents">
+                <dt className="pt-0.5 text-xs text-muted-foreground">Future Month</dt>
+                <dd>{row.future_month ?? "—"}</dd>
+              </div>
+            </dl>
+
+            {row.area_of_inquiry && (
+              <div className="rounded-md border bg-muted/30 px-3 py-2">
+                <p className="text-xs text-muted-foreground">Area of Inquiry</p>
+                <p className="mt-1 whitespace-pre-wrap">{row.area_of_inquiry}</p>
+              </div>
+            )}
+
+            {row.question && (
+              <div className="rounded-md border bg-muted/30 px-3 py-2">
+                <p className="text-xs text-muted-foreground">Question</p>
+                <p className="mt-1 whitespace-pre-wrap">{row.question}</p>
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="payload" className="flex-1 overflow-y-auto px-5 py-4">
+            <pre className="max-h-[70vh] overflow-auto rounded-md border bg-muted p-3 text-xs">
+              {JSON.stringify(row.payload, null, 2)}
+            </pre>
+          </TabsContent>
+        </Tabs>
+
+        <div className="border-t px-5 py-3 flex flex-wrap items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={busy || row.submission_status === "reviewed"}
+            onClick={onReview}
+          >
+            <CheckCircle2 className="size-3.5 mr-1.5" />
+            Mark Reviewed
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={busy || row.submission_status === "archived"}
+            onClick={onArchive}
+          >
+            <Archive className="size-3.5 mr-1.5" />
+            Archive
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="ml-auto text-destructive hover:text-destructive"
+            disabled={busy}
+            onClick={onDelete}
+          >
+            <Trash2 className="size-3.5 mr-1.5" />
+            Delete
+          </Button>
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
 }
 
 export default function ServiceTemplateIntakesPage() {
@@ -333,7 +481,11 @@ export default function ServiceTemplateIntakesPage() {
               </TableRow>
             ) : (
               submissions.map((submission) => (
-                <TableRow key={submission.id}>
+                <TableRow
+                  key={submission.id}
+                  className="cursor-pointer hover:bg-muted/50"
+                  onClick={() => setSelected(submission)}
+                >
                   <TableCell className="text-sm text-muted-foreground">
                     {fmtDate(submission.submitted_at)}
                   </TableCell>
@@ -354,8 +506,8 @@ export default function ServiceTemplateIntakesPage() {
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right">
-                    <div className="flex justify-end gap-1">
-                      <Button variant="ghost" size="sm" onClick={() => setSelected(submission)}>
+                    <div className="flex justify-end gap-1" onClick={(event) => event.stopPropagation()}>
+                      <Button variant="ghost" size="sm" onClick={() => setSelected(submission)} title="View details">
                         <Eye className="h-4 w-4" />
                       </Button>
                       <Button
@@ -407,59 +559,15 @@ export default function ServiceTemplateIntakesPage() {
         />
       )}
 
-      <Dialog open={!!selected} onOpenChange={(open) => !open && setSelected(null)}>
-        <DialogContent className="max-w-3xl">
-          <DialogHeader>
-            <DialogTitle>{selected?.template_name}</DialogTitle>
-          </DialogHeader>
-          {selected && (
-            <div className="space-y-4 text-sm">
-              <div className="grid gap-3 md:grid-cols-2">
-                <div className="rounded-lg border p-3">
-                  <div className="text-xs text-muted-foreground">Submitted</div>
-                  <div className="mt-1 font-medium">{fmtDate(selected.submitted_at)}</div>
-                </div>
-                <div className="rounded-lg border p-3">
-                  <div className="text-xs text-muted-foreground">Toolkit Tab</div>
-                  <div className="mt-1 font-mono">{selected.toolkit_tab_slug ?? "—"}</div>
-                </div>
-                <div className="rounded-lg border p-3">
-                  <div className="text-xs text-muted-foreground">Primary City</div>
-                  <div className="mt-1 font-medium">{selected.primary_birth_city ?? "—"}</div>
-                </div>
-                <div className="rounded-lg border p-3">
-                  <div className="text-xs text-muted-foreground">Secondary City</div>
-                  <div className="mt-1 font-medium">{selected.secondary_birth_city ?? "—"}</div>
-                </div>
-              </div>
-
-              {(selected.area_of_inquiry || selected.question || selected.future_week || selected.future_month) && (
-                <div className="space-y-3">
-                  {selected.area_of_inquiry && (
-                    <div className="rounded-lg border p-3">
-                      <div className="text-xs text-muted-foreground">Area of Inquiry</div>
-                      <div className="mt-1 whitespace-pre-wrap">{selected.area_of_inquiry}</div>
-                    </div>
-                  )}
-                  {selected.question && (
-                    <div className="rounded-lg border p-3">
-                      <div className="text-xs text-muted-foreground">Question</div>
-                      <div className="mt-1 whitespace-pre-wrap">{selected.question}</div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              <div className="rounded-lg border p-3">
-                <div className="mb-2 text-xs text-muted-foreground">Full Payload</div>
-                <pre className="max-h-[420px] overflow-auto rounded bg-muted p-3 text-xs">
-                  {JSON.stringify(selected.payload, null, 2)}
-                </pre>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      <SubmissionSheet
+        row={selected}
+        open={!!selected}
+        onOpenChange={(open) => !open && setSelected(null)}
+        busy={mutatingId === selected?.id}
+        onReview={() => selected && void patchStatus(selected.id, "reviewed")}
+        onArchive={() => selected && void patchStatus(selected.id, "archived")}
+        onDelete={() => selected && setDeleteTarget(selected)}
+      />
 
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <AlertDialogContent>
