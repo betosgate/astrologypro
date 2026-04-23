@@ -562,7 +562,7 @@ export default async function CommunityDashboardPage() {
       label: "Natal chart generated",
       completed: pcHasNatalChart,
       pct: 20,
-      action_url: "/community/family",
+      action_url: "/community/charts",
     },
     {
       key: "family_member",
@@ -576,7 +576,7 @@ export default async function CommunityDashboardPage() {
       label: "Relationship chart generated",
       completed: pcHasRelationshipChart,
       pct: 15,
-      action_url: "/community/family",
+      action_url: "/community/charts",
     },
   ];
 
@@ -672,7 +672,7 @@ export default async function CommunityDashboardPage() {
     {
       icon: ownChartReady ? Star : Sparkles,
       label: ownChartReady ? "View Chart" : "Generate Chart",
-      href: ownChartReady ? "/community/horoscope" : "/community/profile",
+      href: ownChartReady ? "/community/horoscope" : "/community/charts",
       highlight: !ownChartReady,
     },
     {
