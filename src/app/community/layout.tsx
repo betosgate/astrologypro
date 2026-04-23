@@ -179,7 +179,7 @@ export default async function CommunityLayout({ children }: { children: React.Re
             </div>
           </div>
         </header>
-        <SectionContainer as="main" verticalPadding="lg">
+        <SectionContainer as="main" size="fluid" verticalPadding="md">
           {children}
         </SectionContainer>
       </div>
