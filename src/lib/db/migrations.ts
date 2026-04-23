@@ -68,6 +68,7 @@ import { MIGRATION_SQL as MIG_20260423000001_AIR } from "@/data/migrations/20260
 import { MIGRATION_SQL as MIG_20260423000002_RLS } from "@/data/migrations/20260423000002_fix_diviner_affiliates_rls";
 import { MIGRATION_SQL as MIG_20260423000003_INV } from "@/data/migrations/20260423000003_affiliate_invite_rpc";
 import { MIGRATION_SQL as MIG_20260423000004_FIX } from "@/data/migrations/20260423000004_fix_invite_rpc_ambiguity";
+import { MIGRATION_SQL as MIG_20260423000005_ACC } from "@/data/migrations/20260423000005_accept_rpc";
 
 /**
  * Allowlisted migrations that the admin migration runner can execute.
@@ -620,6 +621,14 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Increases the length of plan_id, subscription_status, phone, and username columns in the diviners table to TEXT or VARCHAR(50). Resolves 'value too long for type character varying(20)' errors during trainee-to-diviner upgrade.",
     sortKey: "20260428000100",
     sql: MIG_20260428000100,
+  },
+  "20260423000005_accept_rpc": {
+    id: "20260423000005_accept_rpc",
+    title: "Affiliate accept RPC + user_id trigger guard — Task 03",
+    description:
+      "Adds consume_invite_and_activate_junction RPC (atomic: claim invite via UPDATE...RETURNING, activate junction, link canonical account to auth user) plus guard_affiliate_account_user_link trigger on affiliate_accounts. The trigger rejects any UPDATE OF user_id unless the transaction has set the GUC app.allow_affiliate_account_user_link='true'. The RPC is the only code path that sets that GUC via SET LOCAL, so affiliate_accounts.user_id can only be changed via an explicit invite-accept — enforcing D5 (no silent linking by email match alone) at the DB layer. Error codes: P0003 invite_not_claimable (expired/revoked/consumed/unknown), P0004 account_already_linked_to_different_user, P0005 external write attempt to user_id. Must run AFTER 20260423000001. SECURITY DEFINER. Idempotent via CREATE OR REPLACE + DROP TRIGGER IF EXISTS.",
+    sortKey: "20260423000005",
+    sql: MIG_20260423000005_ACC,
   },
   "20260423000004_fix_invite_rpc_ambiguity": {
     id: "20260423000004_fix_invite_rpc_ambiguity",

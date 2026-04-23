@@ -89,8 +89,13 @@ export async function POST(
     return NextResponse.json({ error: insertError.message }, { status: 500 });
   }
 
+  // `next_url` is the "Book Without Choosing a Diviner" destination surfaced
+  // by the intake form's success dialog. This used to point at `/book/demo`
+  // as a placeholder — it now points at the real shared-calendar flow
+  // (`/book/template/[slug]?submission=...`) per
+  // tasks/23.04.2026/book-without-diviner-flow.
   return NextResponse.json({
     submission,
-    next_url: `/book/demo?template=${encodeURIComponent(template.slug)}&submission=${submission.id}`,
+    next_url: `/book/template/${encodeURIComponent(template.slug)}?submission=${submission.id}`,
   });
 }
