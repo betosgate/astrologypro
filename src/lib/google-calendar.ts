@@ -844,6 +844,66 @@ export async function updateGoogleCalendarEvent(
 }
 
 /**
+ * Read a Google Calendar event and return the most useful join URL we can
+ * extract from it. Prefers Meet / conferencing entry points, then falls
+ * back to the Google Calendar event page.
+ */
+export async function getGoogleCalendarEventJoinUrl(
+  ownerId: string,
+  eventId: string
+): Promise<string | null> {
+  try {
+    const connection = await getPreferredGoogleConnection(ownerId);
+    if (!connection) return null;
+    const accessToken = await getAccessToken(ownerId, connection);
+    if (!accessToken) return null;
+
+    const res = await fetch(
+      `${GOOGLE_CALENDAR_API}/calendars/primary/events/${eventId}`,
+      {
+        method: "GET",
+        headers: { Authorization: `Bearer ${accessToken}` },
+      }
+    );
+
+    if (!res.ok) return null;
+
+    const event = (await res.json()) as {
+      hangoutLink?: string | null;
+      htmlLink?: string | null;
+      conferenceData?: {
+        entryPoints?: Array<{
+          entryPointType?: string | null;
+          uri?: string | null;
+        }> | null;
+      } | null;
+      location?: string | null;
+      description?: string | null;
+    };
+
+    const entryPoints = event.conferenceData?.entryPoints ?? [];
+    const videoEntry =
+      entryPoints.find((entry) => entry.entryPointType === "video" && entry.uri) ??
+      entryPoints.find((entry) => !!entry.uri) ??
+      null;
+
+    if (videoEntry?.uri) return videoEntry.uri;
+    if (event.hangoutLink) return event.hangoutLink;
+
+    const textCandidates = [event.location, event.description];
+    for (const text of textCandidates) {
+      if (!text) continue;
+      const match = text.match(/https?:\/\/[^\s<>"']+/i);
+      if (match?.[0]) return match[0];
+    }
+
+    return event.htmlLink ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Delete a Google Calendar event (for cancellation).
  */
 export async function deleteGoogleCalendarEvent(

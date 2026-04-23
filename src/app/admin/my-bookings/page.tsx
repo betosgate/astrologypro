@@ -67,6 +67,8 @@ export default async function AdminMyBookingsPage() {
     ? []
     : (rows as unknown as AdminBookingRow[] | null) ?? [];
 
+  // Server-rendered snapshot time for splitting upcoming vs past rows.
+  // eslint-disable-next-line react-hooks/purity
   const now = Date.now();
   const upcoming = bookings.filter(
     (b) => new Date(b.scheduled_at).getTime() >= now && b.status === "confirmed",
@@ -155,7 +157,11 @@ export default async function AdminMyBookingsPage() {
           </CardHeader>
           <CardContent className="space-y-3">
             {upcoming.map((b) => (
-              <BookingRow key={b.id} booking={b} />
+              <BookingRow
+                key={b.id}
+                booking={b}
+                adminUsername={adminRow?.username ?? null}
+              />
             ))}
           </CardContent>
         </Card>
@@ -169,7 +175,12 @@ export default async function AdminMyBookingsPage() {
           </CardHeader>
           <CardContent className="space-y-3">
             {past.map((b) => (
-              <BookingRow key={b.id} booking={b} faded />
+              <BookingRow
+                key={b.id}
+                booking={b}
+                faded
+                adminUsername={adminRow?.username ?? null}
+              />
             ))}
           </CardContent>
         </Card>
@@ -181,9 +192,11 @@ export default async function AdminMyBookingsPage() {
 function BookingRow({
   booking,
   faded,
+  adminUsername,
 }: {
   booking: AdminBookingRow;
   faded?: boolean;
+  adminUsername: string | null;
 }) {
   return (
     <div
@@ -243,6 +256,11 @@ function BookingRow({
           }}
           detailsOnly
           actionBasePath={`/api/admin/my-bookings/${booking.id}`}
+          joinHref={
+            adminUsername
+              ? `/book/${adminUsername}/session/${booking.id}`
+              : null
+          }
           viewerRole="admin"
         />
       </div>

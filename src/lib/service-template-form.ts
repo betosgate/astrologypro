@@ -155,3 +155,77 @@ export function hasRenderableServiceTemplateForm(input: {
 export function getServiceTemplateToolkitTabSlug(slug: string) {
   return ASTROLOGY_TAB_MAP[getBaseServiceTemplateSlug(slug)] ?? null;
 }
+
+export function normalizeServiceTemplateIntakeState(
+  value: unknown,
+): ServiceTemplateIntakeState | null {
+  if (!value || typeof value !== "object") return null;
+  const input = value as Partial<ServiceTemplateIntakeState>;
+
+  function normalizeBirth(birth: unknown): ServiceTemplateBirthInput {
+    const next = birth as Partial<ServiceTemplateBirthInput> | null | undefined;
+    const city =
+      next?.city &&
+      typeof next.city === "object" &&
+      typeof next.city.label === "string" &&
+      typeof next.city.lat === "number" &&
+      typeof next.city.lng === "number" &&
+      next.city.timezone &&
+      typeof next.city.timezone === "object"
+        ? {
+            label: next.city.label,
+            lat: next.city.lat,
+            lng: next.city.lng,
+            timezone: {
+              name:
+                typeof next.city.timezone.name === "string" ? next.city.timezone.name : "",
+              offset_string:
+                typeof next.city.timezone.offset_string === "string"
+                  ? next.city.timezone.offset_string
+                  : "+00:00",
+              utcOffset:
+                typeof next.city.timezone.utcOffset === "string"
+                  ? next.city.timezone.utcOffset
+                  : "+00:00",
+            },
+          }
+        : null;
+
+    return {
+      dob: typeof next?.dob === "string" ? next.dob : "",
+      tob: typeof next?.tob === "string" ? next.tob : "",
+      city,
+    };
+  }
+
+  return {
+    person1: normalizeBirth(input.person1),
+    person2: normalizeBirth(input.person2),
+    areaOfInquiry: typeof input.areaOfInquiry === "string" ? input.areaOfInquiry : "",
+    question: typeof input.question === "string" ? input.question : "",
+    futureWeek: typeof input.futureWeek === "string" ? input.futureWeek : "",
+    futureMonth: typeof input.futureMonth === "string" ? input.futureMonth : "",
+  };
+}
+
+export function validateServiceTemplateIntakeState(
+  config: ServiceTemplateFormConfig,
+  state: ServiceTemplateIntakeState,
+) {
+  if (!state.person1.dob || !state.person1.tob || !state.person1.city) {
+    return "Please complete the primary birth details.";
+  }
+
+  if (
+    config.mode === "couple" &&
+    (!state.person2.dob || !state.person2.tob || !state.person2.city)
+  ) {
+    return "Please complete the second person's birth details.";
+  }
+
+  if (config.fields.question && !state.question.trim()) {
+    return "Please add the core question for this reading.";
+  }
+
+  return null;
+}

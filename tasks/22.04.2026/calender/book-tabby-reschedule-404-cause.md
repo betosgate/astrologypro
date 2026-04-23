@@ -1,109 +1,123 @@
 # Cause Of 404 For `/book/tabby/reschedule/e1d4bb45-081c-4b33-8f6b-dcd493c06680`
 
-## Reported URL
+## Reported Problem
 
-`/book/tabby/reschedule/e1d4bb45-081c-4b33-8f6b-dcd493c06680`
+The URL:
 
-## Why It Shows 404
+- `/book/tabby/reschedule/e1d4bb45-081c-4b33-8f6b-dcd493c06680`
 
-The URL returns:
+was showing:
 
+- `404`
 - `Page not found`
 - `The page you're looking for doesn't exist or has been moved.`
 
-because the route only works when **all of these conditions are true**:
+even though:
 
-1. `/book/[username]/reschedule/[bookingId]` exists in the app.
-2. The `[username]` segment must match an existing row in `admin_users.username`.
-3. The `[bookingId]` must exist in `admin_bookings`.
-4. That `admin_bookings.admin_user_id` must belong to the same `admin_users.user_id` resolved from `[username]`.
+- `/book/tabby` was working correctly
 
-The page implementation is:
+That means `tabby` itself was already a valid public admin booking username.
 
-- `src/app/book/[username]/reschedule/[bookingId]/page.tsx`
+## Actual Cause
 
-That page does this:
-
-1. looks up `admin_users` by `username`
-2. if no matching admin user is found, it calls `notFound()`
-3. then looks up the booking in `admin_bookings`
-4. if no matching booking is found for that admin user, it also calls `notFound()`
-
-So the page is not a generic public reschedule route for any booking id. It is a **username-scoped admin calendar reschedule route**.
-
-## Exact Cause For This URL
-
-The path uses:
-
-- username: `tabby`
-- booking id: `e1d4bb45-081c-4b33-8f6b-dcd493c06680`
-
-This 404 happens if either:
-
-- there is no `admin_users.username = "tabby"`
-- or that booking id is not in `admin_bookings`
-- or that booking exists, but it does **not** belong to the admin user whose username is `tabby`
-
-## Important Route Distinction
-
-There are **two different reschedule route families** in this codebase:
-
-### Legacy booking reschedule
-
-Used for rows in `bookings`:
-
-- `src/app/[username]/reschedule/[bookingId]/page.tsx`
-- URL shape: `/{username}/reschedule/{bookingId}`
-
-Example:
-
-- `/some-diviner/reschedule/<bookingId>`
-
-### Admin calendar reschedule
-
-Used for rows in `admin_bookings`:
+The problem was in:
 
 - `src/app/book/[username]/reschedule/[bookingId]/page.tsx`
-- URL shape: `/book/{adminUsername}/reschedule/{bookingId}`
 
-Example:
+That page was querying `admin_users` like this:
 
-- `/book/some-admin-username/reschedule/<bookingId>`
+```ts
+.select("user_id, username, display_name")
+```
 
-## Most Likely Problem In This Case
+But `admin_users.display_name` does not appear to exist in the schema used by this project.
 
-Most likely one of these is true:
+So the bug was **not** primarily that `tabby` was invalid.
 
-1. `tabby` is not a valid `admin_users.username`
-2. the booking id belongs to a legacy `bookings` row, not an `admin_bookings` row
-3. the booking id is an `admin_bookings` row, but it belongs to a different admin username
+The real issue was:
 
-## What The Correct URL Should Be
+- the reschedule page selected a non-existent column from `admin_users`
+- the admin lookup failed at that stage
+- the page then fell through to `notFound()`
+- which surfaced as the generic 404 page
 
-If the booking is a legacy `bookings` row:
+## Why `/book/tabby` Still Worked
 
-- use `/{divinerUsername}/reschedule/{bookingId}`
+The main admin booking page:
 
-If the booking is an `admin_bookings` row:
+- `src/app/book/[username]/page.tsx`
 
-- use `/book/{adminUsername}/reschedule/{bookingId}`
+was using a different query:
 
-but only with the **actual username tied to that booking owner**.
+```ts
+.select("user_id, email, username")
+```
+
+That query only used valid fields, so:
+
+- `/book/tabby` worked
+- but `/book/tabby/reschedule/...` failed
+
+## Why The 404 Was Misleading
+
+The 404 page suggested:
+
+- the route did not exist
+- or the username/booking mapping was wrong
+
+But the route file **did exist**, and the username `tabby` was valid.
+
+The not-found result was being triggered by a bad database select inside the page loader, not by the URL pattern itself.
+
+## Fix Applied
+
+The page query was updated from:
+
+```ts
+.select("user_id, username, display_name")
+```
+
+to:
+
+```ts
+.select("user_id, username, email")
+```
+
+And the display label now uses:
+
+- `username`
+- fallback `email`
+- fallback route `username`
+
+instead of relying on `display_name`.
+
+## Corrected Conclusion
+
+The 404 for:
+
+- `/book/tabby/reschedule/e1d4bb45-081c-4b33-8f6b-dcd493c06680`
+
+was caused by a **bad column selection in the reschedule page**, not because `tabby` was an invalid username.
 
 ## Relevant Files
 
 - `src/app/book/[username]/reschedule/[bookingId]/page.tsx`
-- `src/app/[username]/reschedule/[bookingId]/page.tsx`
-- `src/app/api/trainee/appointments/route.ts`
+- `src/app/book/[username]/page.tsx`
 
-## Summary
+## Final Summary
 
-The 404 is caused by a route/data mismatch, not by the generic not-found page itself.
+The error happened because the reschedule page queried:
 
-The URL `/book/tabby/reschedule/e1d4bb45-081c-4b33-8f6b-dcd493c06680` only works if:
+- `admin_users.display_name`
 
-- `tabby` is a real admin booking username
-- and that exact booking id exists in `admin_bookings`
-- and that booking belongs to `tabby`
+but that field was not available.
 
-If any of those are false, the page intentionally returns `notFound()`.
+That caused the page lookup to fail and return `notFound()`, which showed the generic 404 screen.
+
+After changing the query to use valid fields:
+
+- `user_id`
+- `username`
+- `email`
+
+the route can resolve properly for valid admin usernames like `tabby`.

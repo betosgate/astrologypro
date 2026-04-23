@@ -93,22 +93,18 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
 
   const campaignIds = (campaigns ?? []).map((c) => c.id as string);
 
-  // Clicks + conversions scoped to this affiliate on matching destination/period
+  // Clicks + conversions are BOTH scoped through campaignIds (the set of
+  // campaigns whose source_assignment_id equals this assignment). This
+  // removes any cross-assignment bleed when an affiliate holds multiple
+  // assignments on the same diviner.
   const [clicksRes, conversionsRes] = await Promise.all([
-    admin
-      .from("campaign_clicks")
-      .select("clicked_at, is_bot, is_unique_click, device_type, country_code, campaign_id")
-      .eq("diviner_id", diviner.id)
-      .eq("affiliate_id", assignment.affiliate_id)
-      .eq(
-        assignment.destination_type === "PROFILE"
-          ? "destination_type"
-          : "destination_id",
-        assignment.destination_type === "PROFILE"
-          ? "PROFILE"
-          : (assignment.destination_id as string)
-      )
-      .gte("clicked_at", fromTs),
+    campaignIds.length > 0
+      ? admin
+          .from("campaign_clicks")
+          .select("clicked_at, is_bot, is_unique_click, device_type, country_code, campaign_id")
+          .in("campaign_id", campaignIds)
+          .gte("clicked_at", fromTs)
+      : Promise.resolve({ data: [] }),
     campaignIds.length > 0
       ? admin
           .from("campaign_conversions")

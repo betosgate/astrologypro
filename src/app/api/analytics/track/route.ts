@@ -4,13 +4,14 @@ import {
   buildDivinerTrackingContext,
   trackDivinerActivityEvent,
 } from "@/lib/diviner-analytics";
+import { resolveAffiliateFromRef } from "@/lib/affiliate-attribution";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { divinerId, path, referrer, search } = body;
+    const { divinerId, path, referrer, search, refCode } = body;
 
     if (!divinerId || !path) {
       return NextResponse.json(
@@ -25,6 +26,28 @@ export async function POST(request: NextRequest) {
       referrer: typeof referrer === "string" ? referrer : null,
       search: typeof search === "string" ? search : null,
     });
+
+    // V2 affiliate attribution. `refCode` comes verbatim from the
+    // landing-page tracker. We still persist it even when it's malformed
+    // or doesn't resolve, so the raw value is available for debugging;
+    // affiliate_id / affiliate_type stay NULL in those cases.
+    const rawRefCode =
+      typeof refCode === "string" && refCode.length > 0
+        ? refCode.slice(0, 256)
+        : null;
+    let affiliateId: string | null = null;
+    let affiliateType: "social_advocate" | "diviner_affiliate" | null = null;
+    if (rawRefCode) {
+      try {
+        const resolved = await resolveAffiliateFromRef(admin, rawRefCode);
+        if (resolved) {
+          affiliateId = resolved.owner_affiliate_id;
+          affiliateType = resolved.owner_affiliate_type;
+        }
+      } catch {
+        // Never let affiliate resolution break page-view tracking.
+      }
+    }
 
     await admin.from("page_views").insert({
       diviner_id: divinerId,
@@ -44,6 +67,9 @@ export async function POST(request: NextRequest) {
       attribution_kind: tracking.attributionKind,
       affiliate_related: tracking.affiliateRelated,
       advocate_related: tracking.advocateRelated,
+      ref_code: rawRefCode,
+      affiliate_id: affiliateId,
+      affiliate_type: affiliateType,
     });
 
     await trackDivinerActivityEvent({

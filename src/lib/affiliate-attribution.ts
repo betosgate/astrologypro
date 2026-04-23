@@ -224,20 +224,32 @@ export async function creditAffiliateConversion(
   }
   const { data: assignment } = await admin
     .from("diviner_service_affiliates")
-    .select("id, commission_type, commission_value, is_active")
+    .select("id, is_active")
     .eq("id", campaign.source_assignment_id)
     .maybeSingle();
   if (!assignment || !assignment.is_active) {
-    logEvent(false, "assignment_revoked_or_missing");
+    logEvent(false, "assignment_revoked_or_missing", {
+      assignmentId: campaign.source_assignment_id,
+    });
     return null;
   }
 
-  // Compute commission from the LIVE assignment (not the frozen snapshot)
-  // so a rate change on the assignment applies to future conversions.
+  // Commission MUST come from the frozen campaign snapshot. A later edit
+  // to the assignment must not retroactively change payouts for campaigns
+  // that were created under the previous rate.
+  if (
+    campaign.commission_type_snapshot == null ||
+    campaign.commission_value_snapshot == null
+  ) {
+    logEvent(false, "missing_commission_snapshot", {
+      assignmentId: assignment.id,
+    });
+    return null;
+  }
   const commissionCents = computeCommissionCents(
     params.orderAmountCents,
-    assignment.commission_type as AffiliateCommissionType | null,
-    Number(assignment.commission_value)
+    campaign.commission_type_snapshot,
+    campaign.commission_value_snapshot
   );
 
   const { data: inserted, error } = await admin
@@ -271,6 +283,9 @@ export async function creditAffiliateConversion(
     conversionId: inserted?.id,
     commissionCents,
     affiliateId: campaign.owner_affiliate_id,
+    assignmentId: assignment.id,
+    snapshotType: campaign.commission_type_snapshot,
+    snapshotValue: campaign.commission_value_snapshot,
   });
 
   return {

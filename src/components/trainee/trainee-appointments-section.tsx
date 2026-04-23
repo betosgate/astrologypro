@@ -22,6 +22,12 @@ interface TraineeAppointment {
    * falls back to its inline datetime form.
    */
   reschedule_href: string | null;
+  /**
+   * Server-computed video-session join URL.
+   *   - Diviner booking → `/{divinerUsername}/session/{id}`
+   *   - Admin booking   → `/book/{adminUsername}/session/{id}`
+   */
+  join_href: string | null;
   service_id: string | null;
   service_name: string | null;
   client_id: string | null;
@@ -165,6 +171,7 @@ export function TraineeAppointmentsSection() {
                   }
                   viewerRole="client"
                   rescheduleHref={a.reschedule_href ?? null}
+                  joinHref={a.join_href ?? null}
                   booking={{
                     id: a.id,
                     scheduled_at: a.scheduled_at,
