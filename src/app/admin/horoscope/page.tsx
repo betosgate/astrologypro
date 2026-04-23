@@ -2507,10 +2507,12 @@ function TabBar({
   currentSlug,
   onSelect,
   tabs,
+  disabled = false,
 }: {
   currentSlug: string;
   onSelect: (slug: string) => void;
   tabs: TabDef[];
+  disabled?: boolean;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -2574,16 +2576,21 @@ function TabBar({
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const active = tab.slug === currentSlug;
+            const tabDisabled = disabled && !active;
             return (
               <button
                 key={tab.slug}
                 data-active={active}
-                onClick={() => onSelect(tab.slug)}
+                disabled={tabDisabled}
+                onClick={() => {
+                  if (!tabDisabled) onSelect(tab.slug);
+                }}
                 className={cn(
                   "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm whitespace-nowrap shrink-0 transition-all",
                   active
                     ? "bg-amber-500 text-white font-medium shadow-sm"
-                    : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+                    : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground",
+                  tabDisabled && "cursor-not-allowed opacity-45 hover:bg-muted hover:text-muted-foreground"
                 )}
               >
                 <Icon className="size-3.5 shrink-0" />
@@ -3541,7 +3548,7 @@ export function HoroscopeToolkitPage({
       )}
 
       {/* Horizontal tab bar with scroll arrows */}
-      <TabBar currentSlug={currentSlug} onSelect={setTab} tabs={visibleTabs} />
+      <TabBar currentSlug={currentSlug} onSelect={setTab} tabs={visibleTabs} disabled={loading} />
 
       {/* Main panel */}
       <div className="flex-1 overflow-y-auto result-scroll-container" onScroll={(e) => setShowScrollTop((e.currentTarget.scrollTop) > 400)}>
@@ -3568,7 +3575,7 @@ export function HoroscopeToolkitPage({
                 ) : (
                   <div className="flex flex-col gap-6">
                     <BirthBlock title="Person 1 (Self)" value={form.person1} onChange={(v) => setForm((f) => ({ ...f, person1: v }))} disabled={loading || readOnlyBirthData} />
-                    <BirthBlock title="Person 2 (Partner)" value={form.person2} onChange={(v) => setForm((f) => ({ ...f, person2: v }))} disabled={loading} />
+                    <BirthBlock title="Person 2 (Partner)" value={form.person2} onChange={(v) => setForm((f) => ({ ...f, person2: v }))} disabled={loading || readOnlyBirthData} />
                   </div>
                 )}
 

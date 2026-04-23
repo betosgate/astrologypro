@@ -1,3 +1,7 @@
+// migrated-to-canonical-accounts: 2026-04-23 (Task 06)
+// Reports endpoint: now reads affiliate identity via the canonical join.
+// Response shape unchanged — flattened name/email/status per affiliate row.
+
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -47,7 +51,10 @@ export async function GET(request: Request) {
   const [affiliatesRes, commissionsRes, linksRes, payoutsRes] = await Promise.all([
     admin
       .from("diviner_affiliates")
-      .select("id, name, email, status, created_at")
+      .select(
+        `id, name, email, status, created_at,
+         account:affiliate_accounts ( id, name, email )`
+      )
       .eq("diviner_id", diviner.id),
     admin
       .from("affiliate_commissions")
@@ -166,12 +173,21 @@ export async function GET(request: Request) {
     }
   }
 
-  const affiliates = allAffiliates.map((aff) => {
+  type AffiliateRow = {
+    id: string;
+    name: string | null;
+    email: string | null;
+    status: string;
+    created_at: string;
+    account: { id: string; name: string; email: string } | null;
+  };
+  const affiliates = (allAffiliates as unknown as AffiliateRow[]).map((aff) => {
     const stats = affiliateMap.get(aff.id)!;
     return {
       id: aff.id,
-      name: aff.name,
-      email: aff.email,
+      // Prefer canonical identity; fall back to legacy columns
+      name: aff.account?.name ?? aff.name ?? "",
+      email: aff.account?.email ?? aff.email ?? "",
       status: aff.status,
       clicks: stats.clicks,
       conversions: stats.conversions,
