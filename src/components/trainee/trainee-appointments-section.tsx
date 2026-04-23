@@ -102,6 +102,26 @@ export function TraineeAppointmentsSection() {
 
   useEffect(() => {
     load();
+
+    function handlePageShow() {
+      void load();
+    }
+
+    function handleVisibilityChange() {
+      if (document.visibilityState === "visible") {
+        void load();
+      }
+    }
+
+    window.addEventListener("pageshow", handlePageShow);
+    window.addEventListener("focus", handlePageShow);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener("pageshow", handlePageShow);
+      window.removeEventListener("focus", handlePageShow);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
   }, [load]);
 
   // Hide the whole section when there are no appointments — this keeps
