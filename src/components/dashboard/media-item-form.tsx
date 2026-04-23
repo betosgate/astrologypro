@@ -23,6 +23,7 @@ import {
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { MAX_MEDIA_IMAGES } from "@/lib/media-gallery";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 type MediaType = "video" | "audio" | "image" | "article" | "link";
 
@@ -103,6 +104,7 @@ export function MediaItemForm({
   const [isActive, setIsActive] = useState(initialItem?.is_active ?? true);
   const [files, setFiles] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
+  const [fullScreenPreview, setFullScreenPreview] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const isImage = mediaType === "image";
@@ -460,13 +462,18 @@ export function MediaItemForm({
                         <div key={`${f.name}-${i}`} className="flex items-center justify-between gap-3 rounded-lg border border-primary/30 bg-primary/5 p-2">
                           <div className="flex items-center gap-3 min-w-0">
                             {isImage && previews[i] ? (
-                              <div className="h-12 w-16 md:w-20 rounded overflow-hidden border shrink-0 bg-black/40">
+                              <button
+                                type="button"
+                                className="h-12 w-16 md:w-20 rounded overflow-hidden border shrink-0 bg-black/40 cursor-zoom-in hover:opacity-80 transition-opacity"
+                                onClick={() => setFullScreenPreview(previews[i])}
+                                aria-label={`Preview ${f.name} in full screen`}
+                              >
                                 <img
                                   src={previews[i]}
                                   alt={f.name}
                                   className="h-full w-full object-cover"
                                 />
-                              </div>
+                              </button>
                             ) : (
                               <div className="flex h-12 w-12 items-center justify-center rounded border bg-background shrink-0">
                                 <Upload className="size-4 text-primary" />
@@ -592,7 +599,12 @@ export function MediaItemForm({
                   aria-invalid={!!errors.url}
                 />
                 {isImage && url.trim() && !errors.url && (
-                  <div className="mt-2 h-24 sm:h-32 w-auto max-w-sm rounded-lg border overflow-hidden bg-black/40 inline-flex">
+                  <button
+                    type="button"
+                    className="mt-2 h-24 sm:h-32 w-auto max-w-sm rounded-lg border overflow-hidden bg-black/40 inline-flex cursor-zoom-in hover:opacity-80 transition-opacity"
+                    onClick={() => setFullScreenPreview(url.trim())}
+                    aria-label="Preview remote URL image in full screen"
+                  >
                     <img
                       src={url.trim()}
                       alt="URL preview"
@@ -601,7 +613,7 @@ export function MediaItemForm({
                         // don't completely crash the url field to error if they're typing it, but show an error text
                       }}
                     />
-                  </div>
+                  </button>
                 )}
                 {errors.url && <p className="text-sm text-destructive">{errors.url}</p>}
               </div>
@@ -677,6 +689,23 @@ export function MediaItemForm({
           </Button>
         </div>
       </form>
+
+      <Dialog open={!!fullScreenPreview} onOpenChange={(open) => !open && setFullScreenPreview(null)}>
+        <DialogContent className="sm:max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Image Preview</DialogTitle>
+          </DialogHeader>
+          {fullScreenPreview && (
+            <div className="relative w-full flex flex-col items-center justify-center rounded-md overflow-hidden bg-muted/20 border">
+              <img
+                src={fullScreenPreview}
+                alt="Image Preview"
+                className="max-h-[70vh] object-contain"
+              />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
