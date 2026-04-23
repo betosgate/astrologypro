@@ -62,8 +62,10 @@ import { MIGRATION_SQL as MIG_20260422000005 } from "@/data/migrations/202604220
 import { MIGRATION_SQL as MIG_20260422000006 } from "@/data/migrations/20260422000006_add_birth_country_to_community_members";
 import { MIGRATION_SQL as MIG_20260422000007 } from "@/data/migrations/20260422000007_repair_community_members_birth_country";
 import { MIGRATION_SQL as MIG_20260423000001 } from "@/data/migrations/20260423000001_chime_recording_extras";
+import { MIGRATION_SQL as MIG_20260423000002 } from "@/data/migrations/20260423000002_backfill_plan_type_from_pm_tier";
 import { MIGRATION_SQL as MIG_20260428000100 } from "@/data/migrations/20260428000100_fix_diviner_fields_length";
 import { MIGRATION_SQL as MIG_20260423000001_AIR } from "@/data/migrations/20260423000001_affiliate_identity_refactor";
+import { MIGRATION_SQL as MIG_20260423000002_RLS } from "@/data/migrations/20260423000002_fix_diviner_affiliates_rls";
 
 /**
  * Allowlisted migrations that the admin migration runner can execute.
@@ -585,6 +587,14 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
     sortKey: "20260423000001",
     sql: MIG_20260423000001,
   },
+  "20260423000002_backfill_plan_type_from_pm_tier": {
+    id: "20260423000002_backfill_plan_type_from_pm_tier",
+    title: "Backfill legacy plan_type from canonical pm_tier_id",
+    description:
+      "Task 04 of the community-pm-entitlement-state-sync bundle. Updates community_members.plan_type to match the canonical pm_plan_tiers.name mapping (Family → 'family', everything else → 'individual') ONLY for rows where pm_tier_id is set and the stored plan_type disagrees. Rows with NULL pm_tier_id or an unresolved tier id are skipped and logged via RAISE NOTICE. Idempotent — safe to re-run after every deploy. Does not delete or schema-alter any columns.",
+    sortKey: "20260423000002",
+    sql: MIG_20260423000002,
+  },
   "20260428000001_landing_page_cleanup_destructive": {
     id: "20260428000001_landing_page_cleanup_destructive",
     title: "⚠️ DESTRUCTIVE — Landing page V2 cleanup (Deploy 2)",
@@ -608,6 +618,14 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Increases the length of plan_id, subscription_status, phone, and username columns in the diviners table to TEXT or VARCHAR(50). Resolves 'value too long for type character varying(20)' errors during trainee-to-diviner upgrade.",
     sortKey: "20260428000100",
     sql: MIG_20260428000100,
+  },
+  "20260423000002_fix_diviner_affiliates_rls": {
+    id: "20260423000002_fix_diviner_affiliates_rls",
+    title: "Fix buggy diviner_own_affiliates RLS policy (2026-04-23 follow-up)",
+    description:
+      "Rewrites the pre-existing diviner_own_affiliates SELECT policy on diviner_affiliates. Original condition auth.uid() = diviner_id is wrong — diviner_id is a diviners.id, not an auth.users.id, so it never matches and authed diviner sessions saw 0 junction rows via RLS. Previously harmless (all server reads use service_role), but the 2026-04-23 diviner_sees_linked_accounts policy on affiliate_accounts has an EXISTS subquery through diviner_affiliates that runs under caller RLS — the bug made it return empty. Fix: route through diviners.user_id = auth.uid(). Must run AFTER 20260423000001. Idempotent.",
+    sortKey: "20260423000002",
+    sql: MIG_20260423000002_RLS,
   },
   "20260423000001_affiliate_identity_refactor": {
     id: "20260423000001_affiliate_identity_refactor",
