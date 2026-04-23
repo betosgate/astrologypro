@@ -67,6 +67,7 @@ import { MIGRATION_SQL as MIG_20260428000100 } from "@/data/migrations/202604280
 import { MIGRATION_SQL as MIG_20260423000001_AIR } from "@/data/migrations/20260423000001_affiliate_identity_refactor";
 import { MIGRATION_SQL as MIG_20260423000002_RLS } from "@/data/migrations/20260423000002_fix_diviner_affiliates_rls";
 import { MIGRATION_SQL as MIG_20260423000003_INV } from "@/data/migrations/20260423000003_affiliate_invite_rpc";
+import { MIGRATION_SQL as MIG_20260423000004_FIX } from "@/data/migrations/20260423000004_fix_invite_rpc_ambiguity";
 
 /**
  * Allowlisted migrations that the admin migration runner can execute.
@@ -619,6 +620,14 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Increases the length of plan_id, subscription_status, phone, and username columns in the diviners table to TEXT or VARCHAR(50). Resolves 'value too long for type character varying(20)' errors during trainee-to-diviner upgrade.",
     sortKey: "20260428000100",
     sql: MIG_20260428000100,
+  },
+  "20260423000004_fix_invite_rpc_ambiguity": {
+    id: "20260423000004_fix_invite_rpc_ambiguity",
+    title: "Fix column/variable ambiguity in invite RPCs (Task 02 follow-up)",
+    description:
+      "Recreates the four invite RPCs (create/resend/resend-by-junction/revoke) with `#variable_conflict use_column` pragma. Their RETURNS TABLE columns share names with real table columns (invite_id, junction_id, affiliate_account_id, email) — without the pragma any unqualified reference inside the function body throws PG 42702 'column reference is ambiguous'. Signatures unchanged so Task 02 API routes work as shipped. Must run AFTER 20260423000003. CREATE OR REPLACE — idempotent.",
+    sortKey: "20260423000004",
+    sql: MIG_20260423000004_FIX,
   },
   "20260423000003_affiliate_invite_rpc": {
     id: "20260423000003_affiliate_invite_rpc",
