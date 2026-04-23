@@ -80,12 +80,17 @@ export async function POST(request: NextRequest) {
             console.error("[end-meeting] Failed to stop capture pipeline:", err);
           }
         }
-      }
 
-      // Step 2: Trigger concatenation — merges all segment files into a single
-      // MP4: recordings/{bookingId}/final/. Runs asynchronously on AWS;
-      // sync-recordings cron picks up the result.
-      if (booking.chime_pipeline_id) {
+        // Step 2: grace period. AWS writes the last 1–2 composited-video
+        // fragments asynchronously after the Delete call returns. Kicking off
+        // concatenation immediately picks up whatever happens to be on S3 at
+        // that instant, which was producing the short "final" MP4. A few
+        // seconds is enough for the in-flight fragments to settle.
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+
+        // Step 3: Trigger concatenation — merges all segment files into a single
+        // MP4: recordings/{bookingId}/final/. Runs asynchronously on AWS;
+        // sync-recordings cron picks up the result.
         try {
           await startChimeConcatenation(booking.chime_pipeline_id, bookingId);
           console.log(`[end-meeting] Concatenation pipeline started for booking ${bookingId}`);
@@ -94,7 +99,7 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      // Step 3: Delete the meeting LAST — after pipeline is stopped and
+      // Step 4: Delete the meeting LAST — after pipeline is stopped and
       // concatenation is queued
       try {
         await endChimeMeeting(booking.chime_meeting_id);

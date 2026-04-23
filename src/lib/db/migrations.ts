@@ -61,6 +61,7 @@ import { MIGRATION_SQL as MIG_20260422000004 } from "@/data/migrations/202604220
 import { MIGRATION_SQL as MIG_20260422000005 } from "@/data/migrations/20260422000005_admin_bookings_chime_fields";
 import { MIGRATION_SQL as MIG_20260422000006 } from "@/data/migrations/20260422000006_add_birth_country_to_community_members";
 import { MIGRATION_SQL as MIG_20260422000007 } from "@/data/migrations/20260422000007_repair_community_members_birth_country";
+import { MIGRATION_SQL as MIG_20260423000001 } from "@/data/migrations/20260423000001_chime_recording_extras";
 
 /**
  * Allowlisted migrations that the admin migration runner can execute.
@@ -573,6 +574,14 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "One-time data repair for community_members rows where birth_country IS NULL and birth_city ends with a recognized country suffix (e.g. 'Dublin, Ireland'). Never overwrites an existing birth_country; ambiguous labels are skipped. Includes a targeted repair for the known active PM account whose city label lacks a country suffix. Safe to re-run.",
     sortKey: "20260422000007",
     sql: MIG_20260422000007,
+  },
+  "20260423000001_chime_recording_extras": {
+    id: "20260423000001_chime_recording_extras",
+    title: "Chime recording extras (admin_bookings + phone_sessions)",
+    description:
+      "Adds chime_pipeline_id, recording_url, recording_share_id, session_started_at, ended_at, actual_duration_minutes to admin_bookings; chime_pipeline_id + recording_share_id to phone_sessions. Required so the admin↔trainee video flow and the voice (PSTN) flow can persist the Chime Media Capture Pipeline ARN and the S3 recording URL — without these, the end-meeting concatenation has nowhere to write the pipeline ARN and the sync-recordings cron can't publish the final URL. Safe to re-run.",
+    sortKey: "20260423000001",
+    sql: MIG_20260423000001,
   },
   "20260428000001_landing_page_cleanup_destructive": {
     id: "20260428000001_landing_page_cleanup_destructive",
