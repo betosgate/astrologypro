@@ -52,6 +52,14 @@ interface BookingPaymentBody {
   discount_token?: string;
   /** True when the slot is from an unscoped availability (no service linked). Skips charging. */
   freeSlot?: boolean;
+  /**
+   * Optional reference to a `service_template_intake_submissions` row.
+   * Set by the `/book/template/[slug]` shared-calendar flow so the saved
+   * intake remains linked to the created booking. Persisted to
+   * `bookings.metadata.intake_submission_id` so future toolkit modules
+   * can load the intake payload without needing a schema change.
+   */
+  submissionId?: string;
 }
 
 export async function POST(request: NextRequest) {
@@ -74,7 +82,18 @@ export async function POST(request: NextRequest) {
       booking_notes,
       discount_token,
       freeSlot,
+      submissionId: rawSubmissionId,
     } = body;
+
+    // Only accept a UUID-shaped value so a malformed query param can't
+    // poison the metadata blob.
+    const submissionId =
+      typeof rawSubmissionId === "string" &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        rawSubmissionId.trim(),
+      )
+        ? rawSubmissionId.trim()
+        : null;
     const questionnaireData = questionnaire ?? {};
 
     // Sanitize ref_code against cmp_XXXXXXXX pattern so random URL params
@@ -608,6 +627,7 @@ export async function POST(request: NextRequest) {
           post_checkout_fields: purchaseConfig.postCheckoutFields,
           ...(availabilityTemplateTitle ? { availability_title: availabilityTemplateTitle } : {}),
           ...(availabilityTemplateDescription ? { availability_description: availabilityTemplateDescription } : {}),
+          ...(submissionId ? { intake_submission_id: submissionId } : {}),
         },
         ...(policyAcknowledgedAt ? { policy_acknowledged_at: policyAcknowledgedAt } : {}),
         ...(refCode ? { ref_code: refCode } : {}),

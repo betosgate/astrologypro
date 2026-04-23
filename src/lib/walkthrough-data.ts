@@ -9426,6 +9426,277 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "School recognition — practitioners and school leaders can see your streak milestones and acknowledge them"
         ]
       },
+
+    // --------------------nativity_birth_chart screens--------------------//
+  {
+    "name": "nativity_birth_chart",
+    "label": "Nativity Birth Chart",
+    "description": "A complete Western natal chart reading tool where users enter birth date, time, and place to generate charts, planetary placements, houses, aspects, and AI-based interpretations.",
+    "group": "Community & Worship",
+    "subModule": "Nativity Birth Chart",
+    "purpose": "Helps users understand their personal birth chart by turning birth details into a structured astrological reading with charts, tables, and detailed written interpretations.",
+    "bullets": [
+      "Birth data form captures date of birth, time of birth, place of birth, and optional area of inquiry",
+      "Generate Reading action starts the full chart calculation and interpretation flow",
+      "Designed as the main entry point for creating a personal natal chart reading",
+      "Supports location search and selection for accurate chart generation",
+      "Keeps the setup process simple so new users can start with only essential birth inputs",
+      "Acts as the starting screen before chart wheels, tables, and interpretations appear",
+      "Optional inquiry box lets the user guide the reading toward a life concern or question"
+    ]
+  },
+  {
+    "name": "nativity_chart_wheels",
+    "label": "Natal Wheel Charts",
+    "description": "Dual visual chart display showing the natal wheel in graphical form, including zodiac signs, houses, planets, and aspect lines.",
+    "group": "Community & Worship",
+    "subModule": "Nativity Birth Chart",
+    "purpose": "Gives users a visual way to inspect their birth chart structure instead of only reading tables and text explanations.",
+    "bullets": [
+      "Shows circular natal chart wheels with houses and zodiac divisions",
+      "Displays planetary placements and geometric aspect connections",
+      "Useful for users who want both symbolic and visual chart analysis",
+      "Lets users visually compare sign locations, houses, and planetary spread",
+      "Highlights chart structure in a format familiar to astrology learners and practitioners",
+      "Supports easier pattern recognition for clusters, oppositions, and angular emphasis",
+      "Helps bridge technical data and intuitive visual understanding"
+    ]
+  },
+  {
+    "name": "nativity_planet_information",
+    "label": "Planet Information",
+    "description": "A structured planet table listing each planet and point with sign, full degree, house, normalized degree, speed, and retrograde status.",
+    "group": "Community & Worship",
+    "subModule": "Nativity Birth Chart",
+    "purpose": "Makes technical planetary placement data easy to review in one organized section before reading deeper interpretations.",
+    "bullets": [
+      "Lists planets such as Moon, Mercury, Venus, Sun, Mars, Jupiter, Saturn, Uranus, Neptune, Pluto, Node, Chiron, and Part of Fortune",
+      "Shows exact technical values including sign, degree, house placement, speed, and retrograde state",
+      "Useful for quick reference and advanced chart verification",
+      "Helps users confirm the exact placement behind each written interpretation",
+      "Makes it easy to scan planets row by row without reading long narrative text first",
+      "Useful for both beginners and advanced users who want raw chart data",
+      "Creates a clean reference point for later planet, house, and aspect analysis"
+    ]
+  },
+  {
+    "name": "nativity_planet_interpretations",
+    "label": "Planet Interpretations",
+    "description": "Detailed written readings for each planetary placement, explaining how the planet behaves in its zodiac sign, house, degree, and motion.",
+    "group": "Community & Worship",
+    "subModule": "Nativity Birth Chart",
+    "purpose": "Translates raw astrological data into clear meaning so users can understand the emotional, mental, and spiritual significance of each placement.",
+    "bullets": [
+      "Long-form explanation blocks for planets such as Moon and Sun",
+      "Explains sign placement, house meaning, degree influence, and planetary speed in readable language",
+      "Includes Show More actions for expanding large interpretation text",
+      "Helps users understand personality patterns behind technical chart values",
+      "Breaks down emotional, mental, creative, and life-direction themes by planet",
+      "Makes the reading feel personal instead of purely mathematical",
+      "Useful for self-reflection, spiritual study, and one-to-one astrology sessions"
+    ]
+  },
+  {
+    "name": "nativity-horoscope-analysis",
+    "label": "Deep Astrological Analysis",
+    "description": "A detailed horoscope reading view inside the Nativity Birth Chart flow, where users can read extended AI-generated interpretations for planetary placements while still seeing supporting chart data and related interpretation cards in the background.",
+    "group": "Community & Worship",
+    "subModule": "Nativity Birth Chart",
+    "purpose": "Gives users a focused space to read a deeper explanation of a planetary placement without losing the context of the overall birth chart reading.",
+    "bullets": [
+      "Opens as a centered modal overlay titled 'Deep Astrological Analysis'",
+      "Shows long-form interpretation text in a scrollable reading area",
+      "Keeps the horoscope page visible in the background for context",
+      "Includes a close control so the user can return to the main reading view",
+      "Supports deeper exploration beyond the shorter interpretation cards shown on the page",
+      "Helps users focus on one placement at a time without navigating away from the chart",
+      "May include a related visual section such as 'Picture Representation' below the text analysis",
+      "Useful for users who want a more advanced or expanded explanation of planetary meaning"
+    ]
+  },
+  {
+    "name": "nativity-planet-reading-card",
+    "label": "Planet Reading Card",
+    "description": "An individual interpretation card for a planetary placement, such as the Sun, showing a readable summary of the placement in sign and house, with controls for expanding the text and opening related decan content.",
+    "group": "Community & Worship",
+    "subModule": "Nativity Birth Chart",
+    "purpose": "Helps users read the meaning of one placement at a time in a simple, easy-to-follow format, while also linking that placement to deeper decan symbolism.",
+    "bullets": [
+      "Displays the planet name prominently, such as 'Sun'",
+      "Shows a written interpretation of the planet in its sign and house placement",
+      "Includes a 'Show More' button to expand or continue reading long interpretation text",
+      "A triangle icon beside the planet heading indicates related decan content is available",
+      "Clicking the triangle icon opens a decan modal connected to that planetary placement",
+      "Makes it easy for users to move from standard natal interpretation into deeper symbolic analysis",
+      "Keeps the reading approachable by presenting one focused interpretation block at a time",
+      "Supports both casual users and advanced learners through layered reading depth"
+    ]
+  },
+  {
+    "name": "nativity-planet-decan-modal",
+    "label": "Planet Decan Modal",
+    "description": "A modal window that opens from the triangle icon on a planet reading card, showing the decan connected to that planetary placement with symbolic text and image-based esoteric interpretation.",
+    "group": "Community & Worship",
+    "subModule": "Nativity Birth Chart",
+    "purpose": "Lets users explore the decan behind a planetary placement and understand its tarot, symbolic, and mythic correspondences in a dedicated modal view.",
+    "bullets": [
+      "Opens as a modal after clicking the triangle icon on the planet reading card",
+      "Shows a decan-specific title such as 'Sun Decans in Gemini'",
+      "Explains the exact decan range and related calendar span",
+      "Includes interpretation sections for decan influence, tarot correspondence, mundane force, and mythic or spiritual symbolism",
+      "Provides an Image/Text toggle so users can switch between visual and written presentation modes",
+      "Displays related artwork or tarot-style imagery inside the modal",
+      "Includes a close button to return to the main planet interpretation card",
+      "Supports a richer symbolic reading layer beyond the standard natal interpretation",
+      "Helps users connect astrology with decans, tarot, and esoteric teaching systems",
+      "Useful for deeper spiritual study and guided symbolic exploration inside the birth chart feature"
+    ]
+  },
+  {
+    "name": "nativity_house_information",
+    "label": "House Information",
+    "description": "A house table showing each of the 12 houses with its zodiac sign and cusp degree.",
+    "group": "Community & Worship",
+    "subModule": "Nativity Birth Chart",
+    "purpose": "Helps users understand how the chart is divided into life areas and which sign rules each house cusp.",
+    "bullets": [
+      "Lists House 1 through House 12 in a structured table",
+      "Shows corresponding zodiac sign and exact degree for each house",
+      "Acts as the base reference for house-based interpretation sections",
+      "Helps users locate where each life topic begins in the chart",
+      "Makes the house system easier to read before moving into deeper meaning",
+      "Useful for understanding ascendant-based chart structure",
+      "Provides the technical backbone for house interpretation and house occupancy views"
+    ]
+  },
+  {
+    "name": "nativity_house_occupancy_map",
+    "label": "House Occupancy Map",
+    "description": "A visual house layout showing which planets and points fall into each house, alongside house signs and degrees.",
+    "group": "Community & Worship",
+    "subModule": "Nativity Birth Chart",
+    "purpose": "Makes it easier to see planetary distribution across the houses without reading multiple separate tables.",
+    "bullets": [
+      "Displays houses in sequence with sign symbols and cusp degrees",
+      "Shows planetary placements aligned under the houses they occupy",
+      "Useful for spotting concentration of energy across chart life areas",
+      "Helps users quickly notice empty houses and heavily activated houses",
+      "Adds an at-a-glance view of where chart emphasis is strongest",
+      "Supports easier comparison between house rulers and house occupants",
+      "Useful for chart walkthroughs where visual grouping matters"
+    ]
+  },
+  {
+    "name": "nativity_house_interpretations",
+    "label": "House Interpretations",
+    "description": "Written interpretation cards for each house, explaining what it means for a specific zodiac sign to rule that area of life.",
+    "group": "Community & Worship",
+    "subModule": "Nativity Birth Chart",
+    "purpose": "Turns the house cusp data into practical meaning about identity, money, communication, and other life themes.",
+    "bullets": [
+      "Includes readable explanations for houses like House 1, House 2, and House 3",
+      "Combines house meaning with zodiac sign influence",
+      "Provides Show More buttons for longer house-based guidance",
+      "Helps users understand how each house shapes real-life experiences",
+      "Connects chart structure to themes like self-image, money, learning, family, work, and relationships",
+      "Makes the reading easier for non-technical users to follow",
+      "Creates practical interpretation blocks that can be read one house at a time"
+    ]
+  },
+  {
+  "name": "nativity-dharma-karma",
+  "label": "Dharma & Karma Reading",
+  "description": "A dedicated section inside the Nativity Birth Chart reading that explains the user's higher purpose and core life lessons through long-form spiritual interpretation.",
+  "group": "Community & Worship",
+  "subModule": "Nativity Birth Chart",
+  "purpose": "Helps users understand their soul direction, spiritual calling, and repeating karmic lessons by translating chart placements into clear personal guidance.",
+  "bullets": [
+    "Shows two separate interpretation panels: one for Dharma and one for Karma",
+    "Dharma section explains the user's higher path, purpose, and meaningful direction in life",
+    "Karma section explains repeating lessons, growth struggles, and patterns the user is meant to work through",
+    "Combines multiple chart placements, houses, signs, and aspects into one readable spiritual summary",
+    "Uses long-form written guidance instead of only technical astrology data",
+    "Includes a Show More button so the user can expand the reading for deeper interpretation",
+    "Helps connect planetary placements with life mission, service, discipline, and personal evolution",
+    "Makes spiritual astrology easier to understand for users who are not advanced astrologers",
+    "Supports self-reflection by showing how purpose and challenge work together in the chart",
+    "Acts as part of the full AI-generated nativity reading experience alongside planets, houses, and aspects"
+  ]
+},
+  {
+    "name": "nativity_aspect_information",
+    "label": "Aspect Information",
+    "description": "A full aspect table showing relationships between planets and points, including orb, degree difference, aspect type, and proximity indicator.",
+    "group": "Community & Worship",
+    "subModule": "Nativity Birth Chart",
+    "purpose": "Helps users understand how chart placements interact with each other through supportive or challenging angular relationships.",
+    "bullets": [
+      "Lists aspect pairs such as Sun square Moon and Moon trine Jupiter",
+      "Shows orb values, degree comparisons, and aspect type labels",
+      "Includes color-based aspect proximity guidance for quick reading",
+      "Makes it easier to tell which aspects are stronger or weaker",
+      "Helps users identify major internal tensions and harmonious gifts in the chart",
+      "Supports technical review before reading aspect interpretations",
+      "Useful for understanding the energetic relationship between two placements"
+    ]
+  },
+  {
+    "name": "nativity_aspect_interpretations",
+    "label": "Aspect Interpretations",
+    "description": "Written meaning blocks for specific aspects, explaining emotional, psychological, and spiritual dynamics between two placements.",
+    "group": "Community & Worship",
+    "subModule": "Nativity Birth Chart",
+    "purpose": "Explains how planetary relationships shape the user's personality, inner tension, gifts, and growth patterns.",
+    "bullets": [
+      "Includes detailed interpretation sections such as Sun square Moon and Moon trine Jupiter",
+      "Explains challenging and harmonious patterns in easy language",
+      "Uses expandable reading cards for deeper insight",
+      "Helps users understand how two placements work together or clash",
+      "Translates aspect math into personal meaning and life themes",
+      "Useful for emotional self-understanding and relationship to inner conflict",
+      "Shows how chart complexity becomes a path for growth rather than confusion"
+    ]
+  },
+  {
+  "name": "nativity-angles-reading",
+  "label": "Ascendant, Midheaven & Vertex Reading",
+  "description": "A focused interpretation section inside the Nativity Birth Chart reading that explains key chart angles such as the Ascendant, Midheaven, and Vertex, along with their degrees and deeper meaning.",
+  "group": "Community & Worship",
+  "subModule": "Nativity Birth Chart",
+  "purpose": "Helps users understand the most important chart angles that shape identity, life direction, public path, and meaningful encounters.",
+  "bullets": [
+    "Shows the degree values for Ascendant, Midheaven, and Vertex in a summary row at the top",
+    "Presents a dedicated interpretation block for each angle, starting with a large heading such as 'Ascendant'",
+    "Explains the sign placement and exact degree in simple written language",
+    "Connects the Ascendant reading to personality, self-expression, first impressions, and personal presence",
+    "May reference important supporting aspects that influence the angle, such as trines, squares, or conjunctions",
+    "Helps users understand how their outer identity and life direction are shaped astrologically",
+    "Breaks advanced angle interpretation into readable long-form content instead of only raw chart data",
+    "Makes technical chart points easier to understand for non-expert users",
+    "Supports deeper self-reflection by linking chart angles with real-life behavior and patterns",
+    "Works as part of the larger AI-generated natal reading experience"
+  ]
+},
+  {
+    "name": "nativity_lilith_analysis",
+    "label": "Lilith Analysis",
+    "description": "A focused interpretation section for Lilith, showing sign, degree, house, speed, and a deep written reading about shadow, intensity, and inner emotional truth.",
+    "group": "Community & Worship",
+    "subModule": "Nativity Birth Chart",
+    "purpose": "Gives users a deeper psychological and spiritual reading around hidden instincts, taboo patterns, personal power, and emotional depth.",
+    "bullets": [
+      "Shows Lilith data in table format with sign, house, degree, and motion details",
+      "Provides a long-form interpretation of Lilith placement meaning",
+      "Useful for shadow work, inner healing, and advanced natal reading depth",
+      "Explores themes that may not appear in basic personality readings",
+      "Helps users reflect on hidden emotional patterns and deeper sensitivity",
+      "Adds depth for advanced users looking beyond standard planet interpretation",
+      "Supports transformational and inner-work focused astrology study"
+    ]
+  },
+
+
+
       {
         name: "pm-notifications",
         label: "Notification Centre",

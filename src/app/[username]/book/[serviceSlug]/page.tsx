@@ -12,7 +12,21 @@ import { canPubliclySellService } from "@/lib/payout-readiness";
 
 interface PageProps {
   params: Promise<{ username: string; serviceSlug: string }>;
-  searchParams: Promise<{ ref?: string }>;
+  /**
+   * `ref` — optional referrer/campaign tag (pre-existing).
+   * `submission` — intake submission uuid, carried here from
+   *   /book/template/[slug] when the user used the "Book Without Choosing
+   *   a Diviner" flow. Preserved so future toolkit / booking modules can
+   *   tie the final booking back to the saved intake.
+   * `date` — optional preselected date (YYYY-MM-DD) from the shared
+   *   calendar flow. Passed to the BookingWizard so the calendar can
+   *   jump straight to the right month.
+   */
+  searchParams: Promise<{
+    ref?: string;
+    submission?: string;
+    date?: string;
+  }>;
 }
 
 async function getDivinerAndService(username: string, serviceSlug: string) {
@@ -108,8 +122,11 @@ export async function generateMetadata({
 
 export default async function BookingPage({ params, searchParams }: PageProps) {
   const { username, serviceSlug } = await params;
-  const { ref } = await searchParams;
+  const { ref, submission, date } = await searchParams;
   const refParam = ref ? `?ref=${encodeURIComponent(ref)}` : "";
+  const submissionId = submission?.trim() || null;
+  const preselectedDate =
+    date && /^\d{4}-\d{2}-\d{2}$/.test(date.trim()) ? date.trim() : null;
   const { diviner, service } = await getDivinerAndService(username, serviceSlug);
 
   if (!diviner || !service) {
@@ -146,6 +163,8 @@ export default async function BookingPage({ params, searchParams }: PageProps) {
             service={service}
             availabilityServiceId={service.id}
             bookingLabel={service.name}
+            submissionId={submissionId}
+            preselectedDate={preselectedDate}
           />
         ) : (
           <div className="mx-auto max-w-xl rounded-2xl border border-amber-500/20 bg-amber-500/8 px-6 py-8 text-center">

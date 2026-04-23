@@ -95,7 +95,7 @@ export default function DbMigrationsPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-6 ">
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-start gap-3">
           <Database className="size-7 text-primary mt-1" aria-hidden="true" />
