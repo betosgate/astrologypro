@@ -546,6 +546,7 @@ export function ServiceTemplatePublicPage(props: ServiceTemplatePublicPageProps)
               <div className="mx-auto max-w-5xl px-4">
                 <TemplateIntakeForm
                   config={resolvedFormConfig}
+                  category={template.category}
                   templateName={template.name}
                   templateSlug={template.slug}
                   embedded={embedded}

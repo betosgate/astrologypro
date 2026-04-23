@@ -359,7 +359,7 @@ export function ManualBookingModal({
                 value={selectedServiceId || "__none"}
                 onValueChange={(v) => setSelectedServiceId(v === "__none" ? "" : v)}
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select a service…" />
                 </SelectTrigger>
                 <SelectContent>
@@ -403,7 +403,7 @@ export function ManualBookingModal({
           )}
 
           {/* Date / Time / Timezone */}
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6">
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label>Timezone</Label>
@@ -422,7 +422,7 @@ export function ManualBookingModal({
               </div>
             </div>
 
-            <div className="space-y-4 border-l pl-6 border-border/60">
+            <div className="space-y-4 ">
               <div className="space-y-2">
                 <Label htmlFor="date">Session Date</Label>
                 <Input

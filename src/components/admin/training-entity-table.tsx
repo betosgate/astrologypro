@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   Select,
   SelectContent,
@@ -263,6 +264,8 @@ export function TrainingEntityTable<
 
   // ── Row selection ──────────────────────────────────────────────────────
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [deleteRowTarget, setDeleteRowTarget] = useState<T | null>(null);
+  const [deleteBusy, setDeleteBusy] = useState(false);
 
   // Whenever the underlying rows change (filter, refresh), drop any stale
   // selection that no longer matches a visible row.
@@ -464,14 +467,12 @@ export function TrainingEntityTable<
   }
 
   // ── Row delete (single) ────────────────────────────────────────────────
-  async function deleteRow(row: T) {
-    const rowLabel = row.name ?? row.title ?? "this row";
-    if (!confirm(`Delete ${label.toLowerCase()} "${rowLabel}"? This cannot be undone.`)) {
-      return;
-    }
+  async function deleteRow() {
+    if (!deleteRowTarget) return;
     try {
+      setDeleteBusy(true);
       const res = await fetch(
-        `/api/admin/training/${ENTITY_API_PATH[config.entityType]}/${row.id}`,
+        `/api/admin/training/${ENTITY_API_PATH[config.entityType]}/${deleteRowTarget.id}`,
         { method: "DELETE" },
       );
       const body = await res.json().catch(() => ({}));
@@ -479,11 +480,14 @@ export function TrainingEntityTable<
         throw new Error(body.error ?? `HTTP ${res.status}`);
       }
       toast.success(`${label} deleted.`);
+      setDeleteRowTarget(null);
       await onMutated();
     } catch (err) {
       toast.error(
         err instanceof Error ? err.message : `Failed to delete ${label}.`,
       );
+    } finally {
+      setDeleteBusy(false);
     }
   }
 
@@ -548,6 +552,18 @@ export function TrainingEntityTable<
       </CardHeader>
 
       <CardContent className="space-y-3">
+        <ConfirmDialog
+          open={!!deleteRowTarget}
+          title={`Delete ${label}`}
+          description={`Are you sure you want to delete ${label.toLowerCase()} "${deleteRowTarget?.name ?? deleteRowTarget?.title ?? "this row"}"? This cannot be undone.`}
+          confirmLabel="Delete"
+          loading={deleteBusy}
+          variant="destructive"
+          onOpenChange={(open) => {
+            if (!open && !deleteBusy) setDeleteRowTarget(null);
+          }}
+          onConfirm={deleteRow}
+        />
         {/* ── Bulk action bar ─────────────────────────────────────────── */}
         {selectedIds.size > 0 && (
           <div className="sticky top-2 z-10 flex flex-wrap items-center gap-2 rounded-lg border bg-background/95 px-3 py-2 shadow-sm backdrop-blur">
@@ -776,7 +792,7 @@ export function TrainingEntityTable<
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
-                              onClick={() => deleteRow(row)}
+                              onClick={() => setDeleteRowTarget(row)}
                               className="text-destructive focus:text-destructive"
                             >
                               <Trash2 className="mr-2 size-3.5" />

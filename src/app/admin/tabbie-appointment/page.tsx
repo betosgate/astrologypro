@@ -253,7 +253,7 @@ export default function TabbieAppointmentConfigPage() {
             <div className="flex-1 space-y-1.5">
               <Label>Open Mode</Label>
               <Select value={openMode} onValueChange={(v) => setOpenMode(v as "same_tab" | "new_tab")}>
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -268,7 +268,7 @@ export default function TabbieAppointmentConfigPage() {
                 value={highlightVariant}
                 onValueChange={(v) => setHighlightVariant(v as typeof highlightVariant)}
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

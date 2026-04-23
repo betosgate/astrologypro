@@ -350,7 +350,7 @@ export default function TabbieAppointmentMonitoringPage() {
             <div className="space-y-1.5">
               <Label>Action</Label>
               <Select value={overrideAction} onValueChange={setOverrideAction}>
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
