@@ -9151,7 +9151,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
         ]
       },
       { 
-        name: "natal_community", 
+        name: "natal", 
         label: "Natal Chart Studio", 
         description: "Aesthetic birth chart visualization.", 
         group: "Astrology Tools",
@@ -9767,7 +9767,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
     ]
   },
   {
-    "name": "decan-ritual-page",
+    "name": "decan-ritual-page_v1",
     "label": "Decan Ritual Runner",
     "description": "The guided ritual experience for a single decan, where the student moves through ritual work in a structured step-by-step format.",
     "group": "Decans",
@@ -9783,102 +9783,121 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
       "This page is useful because ritual work is often better completed in sequence, not in a general dashboard layout"
     ]
   },
+  // {
+  //   "name": "decan-scrying-page",
+  //   "label": "Scrying Journal",
+  //   "description": "The journal section where the student records symbolic impressions, visions, or reflective observations connected to the active decan and its tarot relationship.",
+  //   "group": "Decans",
+  //   "purpose": "This page is used to capture the student's inner symbolic experience during the decan. It supports reflective and intuitive work by giving the student a place to write down impressions, card-based observations, and personal meaning connected to the practice. It serves as one of the required decan completion steps.",
+  //   "bullets": [
+  //     "Gives the student a dedicated space to write scrying or symbolic reflection notes",
+  //     "Connects the student's experience with the assigned tarot card or decan symbolism",
+  //     "Supports reflective practice rather than only ritual action",
+  //     "Can be used to submit a required journal entry for decan completion",
+  //     "Encourages students to record subtle experiences that may otherwise be forgotten",
+  //     "Helps build continuity between tarot symbolism and personal insight",
+  //     "Can validate submission requirements before allowing completion",
+  //     "This page is useful because it turns private symbolic experience into a trackable part of the student's decan work"
+  //   ]
+  // },
+  // {
+  //   "name": "decan-journal-write",
+  //   "label": "Mundane Impact Journal",
+  //   "description": "The written reflection area where the student records how the current decan is showing up in real life through events, relationships, work, or personal perception.",
+  //   "group": "Decans",
+  //   "purpose": "This page is used to connect the spiritual and symbolic decan work with everyday lived experience. It encourages the student to notice how the decan influences outer life, not only inner ritual or tarot work. This helps complete the decan as an applied practice instead of only a theoretical lesson.",
+  //   "bullets": [
+  //     "Provides a structured writing space for real-world decan reflections",
+  //     "Helps students record how the decan appears in daily life, work, relationships, or inner shifts",
+  //     "Balances symbolic practice with practical life observation",
+  //     "Acts as one of the required completion items for the decan journey",
+  //     "Encourages students to connect astrology with lived experience",
+  //     "Can include multiple reflection prompts or required sections before submission",
+  //     "Supports deeper integration of the decan beyond the ritual itself",
+  //     "This page is useful because it helps the student understand not just what the decan means, but how it is actually being lived"
+  //   ]
+  // },
+
+   
   {
-    "name": "decan-scrying-page",
-    "label": "Scrying Journal",
-    "description": "The journal section where the student records symbolic impressions, visions, or reflective observations connected to the active decan and its tarot relationship.",
-    "group": "Decans",
-    "purpose": "This page is used to capture the student's inner symbolic experience during the decan. It supports reflective and intuitive work by giving the student a place to write down impressions, card-based observations, and personal meaning connected to the practice. It serves as one of the required decan completion steps.",
+    "name": "ms-foundation-training",
+    "label": "Foundation Training",
+    "description": "The /mystery-school/training page showing the Foundation Q1 learning journey with a 12-week sequence, current progress, weekly unlock flow, and per-week task completion summary.",
+    "group": "Foundation",
+    "purpose": "Helps students move through the Mystery School foundation program in the correct order by showing which week is active now, which weeks are locked, and how much of the 12-week training has been completed.",
     "bullets": [
-      "Gives the student a dedicated space to write scrying or symbolic reflection notes",
-      "Connects the student's experience with the assigned tarot card or decan symbolism",
-      "Supports reflective practice rather than only ritual action",
-      "Can be used to submit a required journal entry for decan completion",
-      "Encourages students to record subtle experiences that may otherwise be forgotten",
-      "Helps build continuity between tarot symbolism and personal insight",
-      "Can validate submission requirements before allowing completion",
-      "This page is useful because it turns private symbolic experience into a trackable part of the student's decan work"
+      "Header block shows the Foundation Training title, quarter name, current week indicator, total completed weeks, and the overall training progress bar",
+      "Week cards are displayed from Week 1 through Week 12 so students can clearly see the full structure of the foundation journey",
+      "The currently available week appears expanded and shows its title, subtitle, and task progress summary such as how many tasks are complete",
+      "Future weeks appear locked, helping students understand that the program opens in sequence rather than all at once",
+      "Each week card represents a specific learning theme, making the curriculum easier to follow step by step",
+      "The progress bar at the top gives a quick visual summary of overall completion across all 12 weeks",
+      "The design keeps the student focused on the current week while still showing what is coming later in the program",
+      "This screen is useful because it combines roadmap, progress tracking, and weekly access control in one place"
     ]
   },
   {
-    "name": "decan-journal-write",
-    "label": "Mundane Impact Journal",
-    "description": "The written reflection area where the student records how the current decan is showing up in real life through events, relationships, work, or personal perception.",
-    "group": "Decans",
-    "purpose": "This page is used to connect the spiritual and symbolic decan work with everyday lived experience. It encourages the student to notice how the decan influences outer life, not only inner ritual or tarot work. This helps complete the decan as an applied practice instead of only a theoretical lesson.",
+    "name": "ms-foundation-audio",
+    "label": "Foundation Week Audio",
+    "description": "Audio teaching content can be presented inside an expanded foundation week so students can listen to the lesson as part of that week's learning flow.",
+    "group": "Foundation",
+    "purpose": "Allows weekly teaching material to be delivered in an easy-to-follow format directly inside the active foundation week without forcing students to leave the training page.",
     "bullets": [
-      "Provides a structured writing space for real-world decan reflections",
-      "Helps students record how the decan appears in daily life, work, relationships, or inner shifts",
-      "Balances symbolic practice with practical life observation",
-      "Acts as one of the required completion items for the decan journey",
-      "Encourages students to connect astrology with lived experience",
-      "Can include multiple reflection prompts or required sections before submission",
-      "Supports deeper integration of the decan beyond the ritual itself",
-      "This page is useful because it helps the student understand not just what the decan means, but how it is actually being lived"
+      "Audio content belongs inside an expanded unlocked week rather than on a separate screen",
+      "The audio teaching is tied to a specific foundation week so students can listen in the right order",
+      "Audio can support the written week topic and task flow as part of one guided learning experience",
+      "When present, the weekly lesson area helps students study the teaching before completing their week tasks",
+      "This image mainly shows the expanded week area where audio would appear, even though the audio player itself is not visible in this screenshot",
+      "This section is useful because it keeps teaching content connected to the weekly training structure"
     ]
   },
 
-      {
-        name: "ms-foundation-training",
-        label: "Foundation Training",
-        description: "The /mystery-school/training page showing the 12-week Foundation Q1 sequence, weekly unlocks, task progress, and optional weekly audio.",
-        group: "Foundation",
-        purpose: "Guides students through the required foundation sequence before or alongside decan work, with each week building on the previous one.",
-        bullets: [
-          "Hero header shows quarter, current week, total completed weeks, and Foundation Complete state",
-          "Week cards unlock sequentially and expand to reveal descriptions, audio, and tasks",
-          "Task checklist saves completion inline and updates the foundation progress bar"
-        ]
-      },
-      {
-        name: "ms-foundation-audio",
-        label: "Foundation Week Audio",
-        description: "Expanded foundation week cards can include an embedded weekly audio teaching with the Beto image when available.",
-        group: "Foundation",
-        purpose: "Lets students listen to weekly teaching material directly inside the training page.",
-        bullets: [
-          "Audio player appears inside an expanded unlocked week",
-          "Beto photo or fallback audio icon gives the teaching card visual context",
-          "Weekly description and tasks sit below the audio in the same learning flow"
-        ]
-      },
-      {
-        name: "foundation-task-complete",
-        label: "Foundation Task Completion",
-        description: "Inline task completion inside expanded foundation week cards. The selected task is marked done and the week/foundation progress updates immediately.",
-        group: "Foundation",
-        purpose: "Keeps students moving through the foundation program without leaving the training page.",
-        bullets: [
-          "Checklist button marks individual tasks complete",
-          "Completed tasks show check icon, completion date, and struck-through title",
-          "When all tasks in a week are done, the next week unlocks"
-        ]
-      },
+      // {
+      //   name: "foundation-task-complete",
+      //   label: "Foundation Task Completion",
+      //   description: "Inline task completion inside expanded foundation week cards. The selected task is marked done and the week/foundation progress updates immediately.",
+      //   group: "Foundation",
+      //   purpose: "Keeps students moving through the foundation program without leaving the training page.",
+      //   bullets: [
+      //     "Checklist button marks individual tasks complete",
+      //     "Completed tasks show check icon, completion date, and struck-through title",
+      //     "When all tasks in a week are done, the next week unlocks"
+      //   ]
+      // },
      
-      {
-        name: "ms-graduation",
-        label: "Graduation",
-        description: "The /mystery-school/training/graduation page showing foundation, decan, and missed-decan requirements plus the completed certificate view for graduates.",
-        group: "Graduation",
-        purpose: "Shows students exactly what remains before graduation and unlocks the post-graduation path after all requirements are complete.",
-        bullets: [
-          "Overall completion combines Foundation Q1 and 36-decan progress",
-          "Remaining Requirements card calls out foundation weeks, decans, or unresolved missed decans",
-          "Graduated students see a certificate-style panel and a CTA to the Ritual Builder"
-        ]
-      },
-      {
-        name: "ritual-builder",
-        label: "Post-Graduation Ritual Builder",
-        description: "The /mystery-school/training/ritual-builder tool for graduated students to build, save, load, and delete personal rituals from a component library.",
-        group: "Graduation",
-        purpose: "Gives graduates a practical ritual construction workspace after completing the full Mystery School curriculum.",
-        bullets: [
-          "Locked teaser explains post-graduation access for students who have not graduated yet",
-          "Builder tab assembles ritual components with up/down ordering controls",
-          "Library tab lists saved rituals with load and delete actions"
-        ]
-      },
+     
+  {
+    "name": "ms-graduation",
+    "label": "Graduation",
+    "description": "The Mystery School graduation page that shows overall completion, foundation progress, decan progress, remaining requirements, and the next actions a student can take before graduating.",
+    "group": "Graduation",
+    "purpose": "Helps the student clearly understand what is still required before earning graduation status by showing progress across Foundation Q1 and the 36 Decans in one place.",
+    "bullets": [
+      "Header section explains the graduation goal: complete all 12 foundation weeks and all 36 decans to receive the Priest or Priestess title",
+      "Overall completion progress bar gives a quick visual summary of total graduation progress",
+      "Your Progress card separates the two major requirements: Foundation Q1 progress and 36 Decans progress",
+      "Requirement counters show exact numbers completed out of the total, such as 0/12 weeks and 0/36 decans",
+      "Remaining Requirements section makes unfinished items easy to understand at a glance",
+      "Foundation Training button gives a direct path back to the foundation learning flow",
+      "Decan Training button gives a direct path back to the decan learning flow",
+      "This page is useful because it acts like a graduation checklist and prevents confusion about what still needs to be finished"
+    ]
+  },
+  {
+    "name": "ritual-builder",
+    "label": "Post-Graduation Ritual Builder",
+    "description": "A locked post-graduation feature preview shown on the graduation page, explaining that the Ritual Builder becomes available only after the student completes all graduation requirements.",
+    "group": "Graduation",
+    "purpose": "Shows students that an advanced ritual-building tool will unlock after graduation and gives them a clear incentive to complete the full Mystery School curriculum.",
+    "bullets": [
+      "The feature appears as a locked teaser card on the graduation page",
+      "The card clearly states that access unlocks only after graduation",
+      "The description explains that graduates will be able to design personal rituals using a larger ritual component library",
+      "The preview mentions examples such as planetary invocations, decan workings, seasonal rites, and custom steps",
+      "This section is useful because it shows the reward that becomes available after completing the program"
+    ]
+  },
+   
     ],
   },
   {
