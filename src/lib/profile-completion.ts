@@ -61,6 +61,11 @@ export type CommunityProfileValues = {
   dateOfBirth: string;
   birthTime: string;
   birthCity: string;
+  // `birthCountry` is a required input for the shared Horoscope Toolkit —
+  // track it alongside `birthCity` so the completion bar on
+  // `/community/profile` reflects the same contract as the
+  // `/community/horoscope` missing-data check.
+  birthCountry: string;
   address: string;
   city: string;
   state: string;
@@ -81,6 +86,7 @@ export const COMMUNITY_PROFILE_FIELD_KEYS = {
   dateOfBirth: "community-dob",
   birthTime: "community-birth-time",
   birthCity: "community-birth-city",
+  birthCountry: "community-birth-country",
   address: "community-address",
   city: "community-city",
   state: "community-state",
@@ -104,6 +110,7 @@ export function getCommunityProfileFields(
     { key: COMMUNITY_PROFILE_FIELD_KEYS.dateOfBirth, label: "Birth date", value: values.dateOfBirth },
     { key: COMMUNITY_PROFILE_FIELD_KEYS.birthTime, label: "Birth time", value: values.birthTime },
     { key: COMMUNITY_PROFILE_FIELD_KEYS.birthCity, label: "Birth city", value: values.birthCity },
+    { key: COMMUNITY_PROFILE_FIELD_KEYS.birthCountry, label: "Birth country", value: values.birthCountry },
     { key: COMMUNITY_PROFILE_FIELD_KEYS.address, label: "Address", value: values.address },
     { key: COMMUNITY_PROFILE_FIELD_KEYS.city, label: "City", value: values.city },
     { key: COMMUNITY_PROFILE_FIELD_KEYS.state, label: "State", value: values.state },

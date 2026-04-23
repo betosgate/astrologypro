@@ -172,6 +172,38 @@ function parseAiJsonResponse(raw: unknown): unknown {
   return raw;
 }
 
+function formatInterpretationText(value: unknown): string {
+  if (value == null) return "";
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+
+  if (Array.isArray(value)) {
+    return value
+      .map((entry) => formatInterpretationText(entry))
+      .filter(Boolean)
+      .join("\n\n");
+  }
+
+  if (typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    if ("interpretation" in record) return formatInterpretationText(record.interpretation);
+    if ("data" in record) return formatInterpretationText(record.data);
+    if ("forecast" in record) return formatInterpretationText(record.forecast);
+    if ("text" in record) return formatInterpretationText(record.text);
+
+    return Object.entries(record)
+      .filter(([key]) => key !== "index")
+      .map(([key, entry]) => {
+        const text = formatInterpretationText(entry);
+        return text ? `${key}: ${text}` : "";
+      })
+      .filter(Boolean)
+      .join("\n\n");
+  }
+
+  return "";
+}
+
 function formatPlanetReturnDate(value: string | null): string | null {
   if (!value) return null;
 
@@ -523,7 +555,7 @@ function PlanetsSection({ planets, aiData, areaOfInquiry, checkDacen, onDecanCli
   const aiMap: Record<string, string> = {};
   if (Array.isArray(aiData)) {
     for (const item of aiData) {
-      if (item?.name) aiMap[item.name] = item.interpretation ?? "";
+      if (item?.name) aiMap[item.name] = formatInterpretationText(item.interpretation);
     }
   }
 
@@ -653,7 +685,7 @@ function HousesSection({ houses, planets, aiData, areaOfInquiry }: { houses: any
   const aiMap: Record<string | number, string> = {};
   if (Array.isArray(aiData)) {
     for (const item of aiData) {
-      if (item?.house !== undefined) aiMap[item.house] = item.interpretation ?? "";
+      if (item?.house !== undefined) aiMap[item.house] = formatInterpretationText(item.interpretation);
     }
   }
 
@@ -796,9 +828,9 @@ function HousesSection({ houses, planets, aiData, areaOfInquiry }: { houses: any
                   <h4 className="uppercase tracking-wide text-center w-full" style={{ fontFamily: "'Roboto', sans-serif", color: '#232c3c' }}>House {item.house}</h4>
                 </div>
                 <div className="interp-gradient-default px-4 py-3">
-                  <p className="text-[20px] leading-relaxed" style={{ fontFamily: "'Roboto', sans-serif", fontWeight: 400, lineHeight: '26px' }}>{item.interpretation}</p>
+                  <p className="text-[20px] leading-relaxed whitespace-pre-line" style={{ fontFamily: "'Roboto', sans-serif", fontWeight: 400, lineHeight: '26px' }}>{formatInterpretationText(item.interpretation)}</p>
                   <div className="mt-3 flex justify-center">
-                    <button onClick={() => trigger(`House ${item.house}`, item.interpretation, { ...item, sign }, areaOfInquiry, undefined, false, "house")} className="horoscope-show-more">Show More</button>
+                    <button onClick={() => trigger(`House ${item.house}`, formatInterpretationText(item.interpretation), { ...item, sign }, areaOfInquiry, undefined, false, "house")} className="horoscope-show-more">Show More</button>
                   </div>
                 </div>
               </div>
@@ -890,9 +922,9 @@ function AspectsSection({ aspects, planets, aiData, areaOfInquiry, isSolarReturn
                 </div>
                 {/* Golden-orange gradient interpretation */}
                 <div className="interp-gradient-default px-4 py-3">
-                  <p className="text-[20px] leading-relaxed" style={{ fontFamily: "'Roboto', sans-serif", fontWeight: 400, lineHeight: '26px', color: '#000' }}>{item.interpretation}</p>
+                  <p className="text-[20px] leading-relaxed whitespace-pre-line" style={{ fontFamily: "'Roboto', sans-serif", fontWeight: 400, lineHeight: '26px', color: '#000' }}>{formatInterpretationText(item.interpretation)}</p>
                   <div className="mt-3 flex justify-center">
-                    <button onClick={() => trigger(item.title ?? `Aspect ${i + 1}`, item.interpretation, item, areaOfInquiry, item.title)} className="horoscope-show-more">Show More</button>
+                    <button onClick={() => trigger(item.title ?? `Aspect ${i + 1}`, formatInterpretationText(item.interpretation), item, areaOfInquiry, item.title)} className="horoscope-show-more">Show More</button>
                   </div>
                 </div>
               </div>
@@ -1026,7 +1058,7 @@ function AscMidheavenVertexSection({ natalData, aiData, areaOfInquiry, isSolarRe
   if (Array.isArray(aiData)) {
     for (const item of aiData) {
       for (const k of keys) {
-        if (item[k]) aiMap[k] = item[k];
+        if (item[k]) aiMap[k] = formatInterpretationText(item[k]);
       }
     }
   }
@@ -1117,8 +1149,12 @@ function NatalChartsRow({ svgs, labels, onExpandImg }: {
   };
 
   return (
-    <div className="flex flex-wrap gap-4">
-      {activeItems.map((item, i) => renderImg(item.s!, item.l))}
+      <div className="flex flex-wrap gap-4">
+      {activeItems.map((item, i) => (
+        <div key={`${item.l}-${i}`} className="contents">
+          {renderImg(item.s!, item.l)}
+        </div>
+      ))}
     </div>
   );
 }
@@ -1370,7 +1406,7 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
               return typeof value === "string";
             });
             const cardTitle = item.title ?? item.name ?? derivedEntry?.[0] ?? `${title} ${i + 1}`;
-            const cardText = item.interpretation ?? item.data ?? item.forecast ?? derivedEntry?.[1] ?? "";
+            const cardText = formatInterpretationText(item.interpretation ?? item.data ?? item.forecast ?? derivedEntry?.[1] ?? "");
 
             return (
               <div key={i} className="rounded-lg border overflow-hidden">
@@ -2037,7 +2073,7 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
       {aiData === "error" && <SectionError title={`${label} Interpretation`} />}
       {Array.isArray(aiData) && aiData.map((item: any, i: number) => {
         const title = item.aspecttitle ?? item.title ?? item.aspect ?? "";
-        const interpretation = item.interpretation ?? item.data ?? "";
+        const interpretation = formatInterpretationText(item.interpretation ?? item.data ?? "");
         if (!interpretation) return null;
 
         const RelationshipHeading = () => {
@@ -2088,7 +2124,7 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
               </div>
             </div>
             <div className="interp-gradient-default px-4 py-3 pb-8" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 400, lineHeight: '26px', color: '#000' }}>
-              <p className="leading-relaxed">{interpretation}</p>
+              <p className="leading-relaxed whitespace-pre-line">{interpretation}</p>
               <div className="mt-2 flex justify-center pt-2 border-t border-black/10">
                 <button
                   onClick={() => trigger(title || `${label} ${i + 1}`, interpretation, item, areaOfInquiry)}
@@ -2145,9 +2181,9 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
                   })()}
                 </div>
                 <div className="interp-gradient-default px-4 py-3" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 400, lineHeight: '26px', color: '#000' }}>
-                  <p className="leading-relaxed">{item.interpretation ?? item.data ?? JSON.stringify(item)}</p>
+                  <p className="leading-relaxed whitespace-pre-line">{formatInterpretationText(item.interpretation ?? item.data ?? item)}</p>
                   <div className="mt-2 flex justify-center">
-                    <button onClick={() => trigger(item.title ?? "Lunar Return", item.interpretation ?? "", item, areaOfInquiry)} className="horoscope-show-more">Show More</button>
+                    <button onClick={() => trigger(item.title ?? "Lunar Return", formatInterpretationText(item.interpretation), item, areaOfInquiry)} className="horoscope-show-more">Show More</button>
                   </div>
                 </div>
               </div>
