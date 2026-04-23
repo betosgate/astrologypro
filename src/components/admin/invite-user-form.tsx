@@ -121,7 +121,7 @@ export function InviteUserForm() {
             <div className="space-y-2">
               <Label>Role *</Label>
               <Select value={role} onValueChange={setRole} required>
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select a role" />
                 </SelectTrigger>
                 <SelectContent>
