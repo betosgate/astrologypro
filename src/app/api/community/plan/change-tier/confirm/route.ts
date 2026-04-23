@@ -25,6 +25,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { stripe } from "@/lib/stripe/client";
 import { updateStripeExtraSeats } from "@/lib/stripe/plan-seats";
+import { tierToPlanType } from "@/lib/community/pm-entitlement";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -219,10 +220,17 @@ export async function POST(request: NextRequest) {
     }
 
     // ── Stripe succeeded → now update DB ──────────────────────────────────
+    // Keep the legacy `plan_type` flag in sync with the canonical tier per
+    // `tasks/23.04.2026/community-pm-entitlement-state-sync/00-audit-note.md`
+    // §2. Without this, a Family → Individual downgrade would leave
+    // `plan_type = 'family'` and older routes (like GET /api/community/family)
+    // would continue granting Family access.
+    const canonicalPlanType = tierToPlanType({ name: targetTier.name });
     const { error: updateErr } = await admin
       .from("community_members")
       .update({
         pm_tier_id: targetTierId,
+        plan_type: canonicalPlanType,
         extra_member_count: newExtraCount,
       })
       .eq("id", member.id);

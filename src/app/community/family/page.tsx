@@ -59,11 +59,20 @@ const EMPTY_FORM = {
   notes: "",
 };
 
-const FAMILY_LIMIT = 5;
+const LEGACY_FALLBACK_LIMIT = 5;
+
+type FamilyEntitlement = {
+  isFamilyEntitled: boolean;
+  tierId: string | null;
+  tierName: string | null;
+  /** Tier's max_total_members — primary + family. */
+  maxMembers: number;
+  hasLegacyDrift: boolean;
+};
 
 export default function CommunityFamilyPage() {
   const [members, setMembers] = useState<FamilyMember[]>([]);
-  const [planType, setPlanType] = useState<string | null>(null);
+  const [entitlement, setEntitlement] = useState<FamilyEntitlement | null>(null);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -79,7 +88,7 @@ export default function CommunityFamilyPage() {
     if (res.ok) {
       const data = await res.json();
       setMembers(data.members ?? []);
-      setPlanType(data.planType ?? null);
+      setEntitlement((data.entitlement as FamilyEntitlement | null) ?? null);
     }
     setLoading(false);
   }
@@ -145,8 +154,16 @@ export default function CommunityFamilyPage() {
     setDeleting(null);
   }
 
-  const isFamily = planType === "family";
-  const atLimit = members.length >= FAMILY_LIMIT;
+  // Canonical entitlement (from /api/community/family). The legacy `planType`
+  // field is still returned for backwards-compat but we never gate on it here.
+  const isFamily = entitlement?.isFamilyEntitled === true;
+  // maxMembers is primary+family; subtract 1 for family-only headcount. Fall
+  // back to the legacy 5 when no entitlement is present.
+  const familyLimit =
+    entitlement?.maxMembers != null
+      ? Math.max(0, entitlement.maxMembers - 1)
+      : LEGACY_FALLBACK_LIMIT;
+  const atLimit = members.length >= familyLimit;
 
   return (
     <SectionContainer verticalPadding="none" className="px-0 sm:px-0 lg:px-0">
@@ -169,8 +186,11 @@ export default function CommunityFamilyPage() {
         )}
       </div>
 
-      {/* Plan notice for individual members */}
-      {planType === "individual" && (
+      {/* Plan notice for individual members — shown only when entitlement has
+          been resolved AND the user is NOT Family-entitled. Avoids showing
+          the "Individual" banner to a legitimate Family user during the brief
+          loading window. */}
+      {entitlement && !entitlement.isFamilyEntitled && (
         <Card className="border-amber-500/40 bg-amber-500/10 dark:bg-amber-950/20">
           <CardContent className="flex items-start gap-3 py-4">
             <Info className="size-5 shrink-0 text-amber-500 mt-0.5" />
@@ -179,8 +199,8 @@ export default function CommunityFamilyPage() {
                 Individual Plan
               </p>
               <p className="text-sm text-amber-800 dark:text-amber-300/90">
-                Upgrade to the Family Plan to add up to 5 family members and
-                generate charts for everyone.
+                Upgrade to the Family Plan to add family members and generate
+                charts for everyone.
               </p>
             </div>
           </CardContent>
@@ -370,7 +390,7 @@ export default function CommunityFamilyPage() {
               <h2 className="font-semibold">No family members yet</h2>
               <p className="mt-1 text-sm text-muted-foreground">
                 {isFamily
-                  ? "Add up to 5 family members to generate natal charts for everyone."
+                  ? `Add up to ${familyLimit} family member${familyLimit === 1 ? "" : "s"} to generate natal charts for everyone.`
                   : "Upgrade to the Family Plan to add family members."}
               </p>
             </div>
@@ -385,7 +405,7 @@ export default function CommunityFamilyPage() {
       ) : (
         <div className="space-y-3">
           <div className="flex items-center justify-between text-sm text-muted-foreground">
-            <span>{members.length}/{FAMILY_LIMIT} family members</span>
+            <span>{members.length}/{familyLimit} family members</span>
             {isFamily && !atLimit && !showForm && (
               <Button size="sm" variant="outline" onClick={startAdd}>
                 <Plus className="mr-1.5 size-3.5" />
