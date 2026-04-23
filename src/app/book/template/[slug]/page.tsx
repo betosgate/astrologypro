@@ -7,6 +7,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { resolveTemplateMatches } from "@/lib/booking/template-matched-services";
 import { SharedTemplateCalendar } from "@/components/booking/shared-template-calendar";
 import { APP_URL } from "@/lib/constants";
+import { getBaseServiceTemplateSlug } from "@/lib/service-template-form";
 
 export const dynamic = "force-dynamic";
 
@@ -31,14 +32,22 @@ export async function generateMetadata({
 }: PageProps): Promise<Metadata> {
   const { slug } = await params;
   const admin = createAdminClient();
-  const match = await resolveTemplateMatches(admin, slug);
-  if (!match) return { title: "Booking not available" };
-  const title = `Book ${match.template.name}`;
+  const [{ data: template }, match] = await Promise.all([
+    admin
+      .from("service_templates")
+      .select("slug, name, is_active")
+      .eq("slug", slug)
+      .eq("is_active", true)
+      .maybeSingle(),
+    resolveTemplateMatches(admin, slug),
+  ]);
+  if (!template || !match) return { title: "Booking not available" };
+  const title = `Book ${template.name as string}`;
   return {
     title,
-    description: `Pick a date and match with a compatible reader for your ${match.template.name.toLowerCase()} session.`,
+    description: `Pick a date and match with a compatible reader for your ${(template.name as string).toLowerCase()} session.`,
     robots: { index: false, follow: true },
-    alternates: { canonical: `${APP_URL}/services/${match.template.slug}` },
+    alternates: { canonical: `${APP_URL}/services/${template.slug as string}` },
   };
 }
 
@@ -49,54 +58,43 @@ export default async function SharedBookingPage({
   const { slug } = await params;
   const { submission } = await searchParams;
   const submissionId = submission?.trim() ?? "";
+  if (!submissionId) notFound();
 
   const admin = createAdminClient();
-  const match = await resolveTemplateMatches(admin, slug);
-  if (!match) notFound();
-
-  // Validate the saved submission up-front. We show a gentle "submission not
-  // found" message instead of notFound() so the user can still use the page
-  // if they just lost the link — the submission id is preferred, not required
-  // for browsing availability.
-  let submissionSummary: {
-    id: string;
-    primaryBirthCity: string | null;
-    secondaryBirthCity: string | null;
-    areaOfInquiry: string | null;
-    question: string | null;
-    submittedAt: string;
-  } | null = null;
-  let submissionError: string | null = null;
-
-  if (submissionId) {
-    const { data: sub } = await admin
+  const [{ data: requestedTemplate }, match, { data: sub }] = await Promise.all([
+    admin
+      .from("service_templates")
+      .select("slug, name, category, is_active")
+      .eq("slug", slug)
+      .eq("is_active", true)
+      .maybeSingle(),
+    resolveTemplateMatches(admin, slug),
+    admin
       .from("service_template_intake_submissions")
       .select(
         "id, template_slug, primary_birth_city, secondary_birth_city, area_of_inquiry, question, submitted_at",
       )
       .eq("id", submissionId)
-      .maybeSingle();
-    if (!sub) {
-      submissionError = "We couldn't find your saved intake submission.";
-    } else {
-      const storedSlug = (sub.template_slug as string | null) ?? "";
-      if (storedSlug !== slug && storedSlug !== match.baseSlug) {
-        submissionError =
-          "This saved intake belongs to a different template. Please resubmit the form.";
-      } else {
-        submissionSummary = {
-          id: sub.id as string,
-          primaryBirthCity: (sub.primary_birth_city as string | null) ?? null,
-          secondaryBirthCity: (sub.secondary_birth_city as string | null) ?? null,
-          areaOfInquiry: (sub.area_of_inquiry as string | null) ?? null,
-          question: (sub.question as string | null) ?? null,
-          submittedAt: sub.submitted_at as string,
-        };
-      }
-    }
+      .maybeSingle(),
+  ]);
+
+  if (!requestedTemplate || !match || !sub) notFound();
+
+  const storedSlug = (sub.template_slug as string | null) ?? "";
+  if (getBaseServiceTemplateSlug(storedSlug) !== match.baseSlug) {
+    notFound();
   }
 
-  const templateHomePath = `/services/${encodeURIComponent(match.template.slug)}`;
+  const submissionSummary = {
+    id: sub.id as string,
+    primaryBirthCity: (sub.primary_birth_city as string | null) ?? null,
+    secondaryBirthCity: (sub.secondary_birth_city as string | null) ?? null,
+    areaOfInquiry: (sub.area_of_inquiry as string | null) ?? null,
+    question: (sub.question as string | null) ?? null,
+    submittedAt: sub.submitted_at as string,
+  };
+
+  const templateHomePath = `/services/${encodeURIComponent(requestedTemplate.slug as string)}`;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-purple-950">
@@ -105,13 +103,13 @@ export default async function SharedBookingPage({
         <Button asChild variant="ghost" size="sm" className="mb-6 gap-2">
           <Link href={templateHomePath}>
             <ArrowLeft className="size-4" />
-            Back to {match.template.name}
+            Back to {requestedTemplate.name as string}
           </Link>
         </Button>
 
         <div className="mb-8 text-center">
           <h1 className="mb-2 text-2xl font-bold md:text-3xl">
-            Book: {match.template.name}
+            Book: {requestedTemplate.name as string}
           </h1>
           <p className="text-muted-foreground">
             Pick a date that works for you — we&rsquo;ll match you with a
@@ -136,12 +134,16 @@ export default async function SharedBookingPage({
           </div>
         ) : (
           <SharedTemplateCalendar
-            templateSlug={match.template.slug}
-            templateName={match.template.name}
-            templateCategory={match.template.category}
-            submissionId={submissionSummary?.id ?? null}
+            templateSlug={requestedTemplate.slug as string}
+            templateName={requestedTemplate.name as string}
+            templateCategory={
+              ((requestedTemplate.category as string) === "tarot"
+                ? "tarot"
+                : "astrology") as "astrology" | "tarot"
+            }
+            submissionId={submissionSummary.id}
             submissionSummary={submissionSummary}
-            submissionError={submissionError}
+            submissionError={null}
             compatibleDivinerCount={match.diviners.length}
           />
         )}
