@@ -32,6 +32,7 @@ import {
   ArrowRight,
   Users,
 } from "lucide-react";
+import { AffiliateMarketingKit } from "@/components/affiliate/marketing-kit";
 
 export const dynamic = "force-dynamic";
 
@@ -180,6 +181,12 @@ export default async function AffiliateDashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Marketing kit — 17+ readings to promote (restored from pre-refactor dashboard).
+          The `ref=` attribution pipeline resolves junction IDs, so we pass the first
+          junction id. Multi-diviner affiliates currently get their first partnership
+          credited on marketing-kit links; per-reading routing is a follow-up. */}
+      <AffiliateMarketingKit affiliateId={junctionIds[0]} />
 
       {/* Top links */}
       <Card>
