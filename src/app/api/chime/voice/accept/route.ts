@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { createChimeMeeting, createChimeAttendee, getChimeMeeting } from "@/lib/chime-meetings";
-import { getChimeVoiceClient } from "@/lib/chime-client";
 import {
-  UpdateSipMediaApplicationCallCommand,
-  DeleteSipMediaApplicationCallCommand,
-} from "@aws-sdk/client-chime-sdk-voice";
+  createChimeMeeting,
+  createChimeAttendee,
+  getChimeMeeting,
+  startChimeRecording,
+} from "@/lib/chime-meetings";
+import { getChimeVoiceClient } from "@/lib/chime-client";
+import { UpdateSipMediaApplicationCallCommand } from "@aws-sdk/client-chime-sdk-voice";
 
 export const dynamic = "force-dynamic";
 
@@ -68,7 +70,7 @@ export async function POST(request: NextRequest) {
     const { data: session } = await admin
       .from("phone_sessions")
       .select(
-        "id, diviner_id, client_id, session_type, chime_meeting_id, chime_transaction_id, chime_outbound_transaction_id, status"
+        "id, diviner_id, client_id, session_type, chime_meeting_id, chime_transaction_id, chime_outbound_transaction_id, chime_pipeline_id, status"
       )
       .eq("id", phoneSessionId)
       .single();
@@ -104,6 +106,38 @@ export async function POST(request: NextRequest) {
         .from("phone_sessions")
         .update({ chime_meeting_id: chimeMeetingId })
         .eq("id", phoneSessionId);
+    }
+
+    // ── Start recording (audio-only — voice sessions have no composited video) ──
+    // Idempotent: only start if no pipeline ARN is persisted on the session yet.
+    // The same `recordings/<sessionId>/` S3 prefix is used so the
+    // /api/bookings/<id>/recording-segments endpoint and the sync-recordings
+    // cron can find the files without any special-casing.
+    let pipelineArn = session.chime_pipeline_id as string | null;
+    if (!pipelineArn) {
+      try {
+        const recording = await startChimeRecording(
+          chimeMeetingId,
+          `recordings/${phoneSessionId}`
+        );
+        if (recording.pipelineArn) {
+          pipelineArn = recording.pipelineArn;
+          await admin
+            .from("phone_sessions")
+            .update({ chime_pipeline_id: pipelineArn })
+            .eq("id", phoneSessionId);
+          console.log(
+            `[chime/voice/accept] Recording pipeline started: id=${recording.pipelineId} arn=${pipelineArn}`
+          );
+        }
+      } catch (err: unknown) {
+        // Recording failure must not block the call.
+        const name = (err as { name?: string }).name ?? "Error";
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error(
+          `[chime/voice/accept] Failed to start recording: ${name}: ${msg}`
+        );
+      }
     }
 
     // ── Create attendee for the diviner's browser ──────────────────────────

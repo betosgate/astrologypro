@@ -37,6 +37,8 @@ import {
 import { PRICING } from "@/lib/constants";
 import { calculateMoneySplit } from "@/lib/money-split";
 import { provisionNatalReadiness } from "@/lib/community/provision-natal-readiness";
+import { ensureUserContractRequirements } from "@/lib/contract-orchestration";
+import { provisionTraineeDivinerUpgradeFromSession } from "@/lib/trainee-diviner-upgrade";
 
 export const dynamic = "force-dynamic";
 
@@ -769,6 +771,63 @@ async function handleComboBundleCheckoutCompleted(
   );
 }
 
+async function provisionDivinerFromCheckoutSession(
+  session: Stripe.Checkout.Session,
+  options?: { markTraineePaid?: boolean },
+) {
+  const result = await provisionTraineeDivinerUpgradeFromSession(session, {
+    markTraineePaid: options?.markTraineePaid,
+  });
+
+  if (result) {
+    return result;
+  }
+
+  return { email: "", username: "", displayName: "", planId: session.metadata?.planId ?? null };
+}
+
+async function handleTraineeDivinerUpgradeCheckoutCompleted(
+  session: Stripe.Checkout.Session,
+) {
+  const planName =
+    session.metadata?.planName ?? "Professional Divination Course";
+  const provisioned = await provisionDivinerFromCheckoutSession(session, {
+    markTraineePaid: true,
+  });
+  const userId = session.metadata?.userId;
+
+  if (userId) {
+    try {
+      await ensureUserContractRequirements(userId, "post_login");
+    } catch (error) {
+      console.error(
+        "[Webhook] Trainee diviner upgrade failed to ensure contract requirements:",
+        error,
+      );
+    }
+  }
+
+  if (userId) {
+    logActivity({
+      userId,
+      eventCategory: "subscription",
+      eventType: "subscription.created",
+      metadata: {
+        itemKey: "professional_divination_course",
+        planName,
+        planId: provisioned.planId,
+        source: session.metadata?.type ?? "professional_divination_course",
+        status: "active",
+        portals_after_upgrade: ["/dashboard", "/trainee"],
+      },
+    });
+  }
+
+  console.log(
+    `[Webhook] Trainee diviner upgrade provisioned: userId=${userId ?? "?"} username=${provisioned.username} plan=${planName}`,
+  );
+}
+
 async function handleTraineeSignupCheckoutCompleted(
   session: Stripe.Checkout.Session
 ) {
@@ -1113,6 +1172,10 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     return handlePerennialCommunitySignupCheckoutCompleted(session);
   }
 
+  if (session.metadata?.type === "trainee_diviner_upgrade") {
+    return handleTraineeDivinerUpgradeCheckoutCompleted(session);
+  }
+
   // Route combo bundle (trainee + diviner) checkouts
   if (session.metadata?.itemKey === "trainee_diviner_bundle") {
     return handleComboBundleCheckoutCompleted(session);
@@ -1120,6 +1183,10 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
   if (session.metadata?.type === "trainee_signup") {
     return handleTraineeSignupCheckoutCompleted(session);
+  }
+
+  if (session.metadata?.itemKey === "professional_divination_course") {
+    return handleTraineeDivinerUpgradeCheckoutCompleted(session);
   }
 
   // Handle manual booking payment link checkout

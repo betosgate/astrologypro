@@ -52,6 +52,44 @@ export async function GET(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
+    // Read from whichever table the booking actually lives in.
+    const sourceTable =
+      access.source === "admin_bookings" ? "admin_bookings" : "bookings";
+
+    if (sourceTable === "admin_bookings") {
+      const { data: row, error: adminErr } = await admin
+        .from("admin_bookings")
+        .select(
+          "id, chime_meeting_id, actual_duration_minutes, recording_url, recording_share_id, video_provider",
+        )
+        .eq("id", id)
+        .maybeSingle();
+
+      if (adminErr) {
+        console.warn(
+          "[session-details] admin_bookings query error:",
+          adminErr.message,
+        );
+        return NextResponse.json({});
+      }
+      if (!row) {
+        return NextResponse.json({ error: "Not found" }, { status: 404 });
+      }
+
+      return NextResponse.json({
+        chime_meeting_id: row.chime_meeting_id ?? null,
+        actual_duration_minutes: row.actual_duration_minutes ?? null,
+        recording_url: row.recording_url ?? null,
+        recording_share_id: row.recording_share_id ?? null,
+        video_provider: row.video_provider ?? null,
+        // admin_bookings has no billing — these stay null.
+        total_amount: null,
+        overage_amount: null,
+        viewer_role: access.role,
+      });
+    }
+
+    // Legacy diviner `bookings` path.
     // Step 1 — fetch columns that are guaranteed to exist
     const { data: booking, error: baseError } = await admin
       .from("bookings")
