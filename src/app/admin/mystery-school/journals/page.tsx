@@ -126,7 +126,7 @@ export default function AdminMysterySchoolJournalsPage() {
                 value={filters.type}
                 onValueChange={(v) => setFilters((f) => ({ ...f, type: v as Filters["type"] }))}
               >
-                <SelectTrigger className="h-8 text-sm">
+                <SelectTrigger className="h-8 text-sm w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

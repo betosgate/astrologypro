@@ -3021,12 +3021,28 @@ export async function sendComboBundleWelcome({
 
 // ── Affiliate Invitation Email ──────────────────────────────────────────────
 
+/**
+ * Escapes untrusted strings before embedding in the email HTML template.
+ * Covers the OWASP HTML-context character set. Used by sendAffiliateInvitation
+ * so diviner display names and personal messages can't inject markup.
+ */
+function escapeHtmlForEmail(input: string): string {
+  return input
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 interface AffiliateInvitationParams {
   to: string;
   affiliateName: string;
   divinerName: string;
   message?: string;
   acceptUrl: string;
+  /** When the accept link expires. Rendered as a friendly "… expires on …" note. */
+  expiresAt?: Date | string;
 }
 
 // ── Advocate — Welcome on signup ─────────────────────────────────────────────
@@ -3145,19 +3161,44 @@ export async function sendAffiliateInvitation({
   divinerName,
   message,
   acceptUrl,
+  expiresAt,
 }: AffiliateInvitationParams) {
-  const personalNote = message
+  // HTML-escape every untrusted field. Affiliate/diviner display names and
+  // free-text messages pass through user input and would otherwise inject
+  // markup into the email body.
+  const safeAffiliateName = escapeHtmlForEmail(affiliateName);
+  const safeDivinerName = escapeHtmlForEmail(divinerName);
+  const safeMessage = message ? escapeHtmlForEmail(message) : "";
+
+  const personalNote = safeMessage
     ? `
     ${sectionHeading("Personal Note")}
-    <p style="margin:0 0 16px;color:#a1a1aa;font-style:italic;">&ldquo;${message}&rdquo;</p>
+    <p style="margin:0 0 16px;color:#a1a1aa;font-style:italic;">&ldquo;${safeMessage}&rdquo;</p>
   `
     : "";
 
+  // Friendly expiry text (pre-escaped, no user input)
+  let expiryBlock = "";
+  if (expiresAt) {
+    const expiryDate = expiresAt instanceof Date ? expiresAt : new Date(expiresAt);
+    if (!Number.isNaN(expiryDate.getTime())) {
+      const humanExpiry = expiryDate.toLocaleDateString("en-US", {
+        month: "long",
+        day: "numeric",
+        year: "numeric",
+      });
+      expiryBlock = `
+      <p style="margin:16px 0 0;font-size:13px;color:#9ca3af;">
+        This invitation expires on <strong style="color:#d4d4d8;">${humanExpiry}</strong>.
+      </p>`;
+    }
+  }
+
   const content = `
-    <p style="margin:0 0 16px;color:#d4d4d8;">Hi ${affiliateName},</p>
+    <p style="margin:0 0 16px;color:#d4d4d8;">Hi ${safeAffiliateName},</p>
 
     <p style="margin:0 0 16px;color:#a1a1aa;">
-      <strong style="color:#f4f4f5;">${divinerName}</strong> has invited you to join their
+      <strong style="color:#f4f4f5;">${safeDivinerName}</strong> has invited you to join their
       affiliate program on AstrologyPro. As an affiliate partner, you&rsquo;ll earn
       commissions on referrals you send their way.
     </p>
@@ -3171,6 +3212,8 @@ export async function sendAffiliateInvitation({
       <li style="margin-bottom:6px;">Earn commissions on every booking or signup from your referrals</li>
     </ol>
 
+    ${expiryBlock}
+
     <p style="margin-top:16px;font-size:13px;color:#9ca3af;">
       If you did not expect this invitation, you can safely ignore this email.
     </p>
@@ -3178,10 +3221,10 @@ export async function sendAffiliateInvitation({
 
   return sendEmail({
     to,
-    subject: `${divinerName} invited you to their affiliate program on AstrologyPro`,
+    subject: `${safeDivinerName} invited you to be an affiliate partner on AstrologyPro`,
     html: buildEmailHtml({
       title: "You've Been Invited as an Affiliate Partner",
-      preheader: `${divinerName} wants you to join their affiliate program.`,
+      preheader: `${safeDivinerName} wants you to join their affiliate program.`,
       content,
       ctaText: "Accept Invitation",
       ctaUrl: acceptUrl,
