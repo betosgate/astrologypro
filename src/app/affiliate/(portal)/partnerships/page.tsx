@@ -75,27 +75,26 @@ export default async function AffiliatePartnershipsPage() {
     .eq("affiliate_account_id", ctx.account.id)
     .order("created_at", { ascending: false });
 
-  // Commission totals per junction
+  // Commission totals per junction (System B — campaign_conversions).
+  // No approval state machine in Phase 1; "earned" = sum not reversed.
   const { data: commAgg } = await admin
-    .from("affiliate_commissions")
-    .select("affiliate_id, commission_amount_cents, status")
+    .from("campaign_conversions")
+    .select("affiliate_id, commission_amount_cents, reversed_at")
     .in("affiliate_id", ctx.junctionIds.length > 0 ? ctx.junctionIds : ["_none_"]);
 
   const totalsByJunction = new Map<
     string,
-    { total_cents: number; paid_cents: number; pending_cents: number }
+    { total_cents: number; reversed_cents: number }
   >();
   for (const row of commAgg ?? []) {
     const key = row.affiliate_id as string;
     const cur = totalsByJunction.get(key) ?? {
       total_cents: 0,
-      paid_cents: 0,
-      pending_cents: 0,
+      reversed_cents: 0,
     };
     const amount = Number(row.commission_amount_cents ?? 0);
-    cur.total_cents += amount;
-    if (row.status === "paid") cur.paid_cents += amount;
-    else if (row.status === "pending" || row.status === "on_hold") cur.pending_cents += amount;
+    if (row.reversed_at) cur.reversed_cents += amount;
+    else cur.total_cents += amount;
     totalsByJunction.set(key, cur);
   }
 
@@ -141,8 +140,7 @@ export default async function AffiliatePartnershipsPage() {
           {rows.map((r) => {
             const totals = totalsByJunction.get(r.id) ?? {
               total_cents: 0,
-              paid_cents: 0,
-              pending_cents: 0,
+              reversed_cents: 0,
             };
             const commissionText =
               r.default_commission_type === "percentage"
@@ -184,11 +182,11 @@ export default async function AffiliatePartnershipsPage() {
                       {formatCents(totals.total_cents)}
                     </span>
                   </div>
-                  {totals.pending_cents > 0 && (
+                  {totals.reversed_cents > 0 && (
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Pending</span>
-                      <span className="text-amber-600">
-                        {formatCents(totals.pending_cents)}
+                      <span className="text-muted-foreground">Reversed</span>
+                      <span className="text-muted-foreground line-through">
+                        {formatCents(totals.reversed_cents)}
                       </span>
                     </div>
                   )}
