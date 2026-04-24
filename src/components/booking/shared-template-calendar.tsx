@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { format, isBefore, startOfDay } from "date-fns";
-import { toast } from "sonner";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -77,7 +76,7 @@ export function SharedTemplateCalendar({
   // ── Month (calendar) state ─────────────────────────────────────────────────
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
   const [availableDates, setAvailableDates] = useState<Set<string>>(new Set());
-  const [monthLoading, setMonthLoading] = useState(false);
+  const [monthLoading, setMonthLoading] = useState(true);
   const [monthLoaded, setMonthLoaded] = useState(false);
   const [monthError, setMonthError] = useState<string | null>(null);
 
@@ -207,23 +206,6 @@ export function SharedTemplateCalendar({
     router.push(url);
   }
 
-  // Auto-continue when exactly one diviner is available — per task 04 rule.
-  // Guarded on a ref so we don't re-trigger on re-renders.
-  const autoContinuedForDateRef = useRef<string | null>(null);
-  useEffect(() => {
-    if (!selectedDate || dateLoading) return;
-    const key = format(selectedDate, "yyyy-MM-dd");
-    if (autoContinuedForDateRef.current === key) return;
-    if (divinersAvailable.length !== 1) return;
-    autoContinuedForDateRef.current = key;
-    const only = divinersAvailable[0];
-    toast.success(`Matched you with ${only.displayName}`);
-    // Small delay so the toast is visible before we navigate away.
-    const t = window.setTimeout(() => continueWithDiviner(only), 400);
-    return () => window.clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [divinersAvailable, dateLoading, selectedDate]);
-
   const today = startOfDay(new Date());
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -314,7 +296,7 @@ export function SharedTemplateCalendar({
             </div>
           ) : null}
           <div className="relative flex flex-col items-center">
-            {monthLoading && (
+            {(monthLoading || !monthLoaded) && (
               <div className="absolute inset-0 z-10 flex items-center justify-center rounded-md bg-background/70 backdrop-blur-sm">
                 <div className="flex flex-col items-center gap-2">
                   <Loader2 className="size-5 animate-spin text-primary" />
@@ -359,7 +341,7 @@ export function SharedTemplateCalendar({
                 : divinersAvailable.length === 0
                   ? "No readers available on this date"
                   : divinersAvailable.length === 1
-                    ? "One reader is available — continuing..."
+                    ? "One reader is available"
                     : `${divinersAvailable.length} readers available on this date`}
             </CardTitle>
             <p className="text-xs text-muted-foreground">
