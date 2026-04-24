@@ -125,6 +125,15 @@ function capitalize(value: string | null | undefined): string {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
+function getRelationshipBadgeClasses(rel: string): string {
+  const r = rel.toLowerCase();
+  if (r === "self" || r === "primary") return "bg-amber-500/20 text-amber-500 border-amber-500/30";
+  if (r === "spouse" || r === "partner") return "bg-purple-500/20 text-purple-400 border-purple-500/30";
+  if (r === "son" || r === "boy") return "bg-blue-500/20 text-blue-400 border-blue-500/30";
+  if (r === "daughter" || r === "girl") return "bg-rose-500/20 text-rose-400 border-rose-500/30";
+  return "bg-slate-500/20 text-slate-400 border-slate-500/30";
+}
+
 const AVATAR_COLORS = [
   "bg-rose-500/15 text-rose-600",
   "bg-violet-500/15 text-violet-600",
@@ -721,6 +730,25 @@ export default async function CommunityDashboardPage() {
     },
   ];
 
+  // ── Family Chips Data for Top Card ───────────────────────────────────────
+  const familyChipData = planType === "family" ? (
+    familyMembers.length > 0
+      ? [
+          { id: member.id, name: member.full_name || "Self", relationship: "Self" },
+          ...familyMembers.map((fm) => ({
+            id: fm.id,
+            name: fm.full_name || "Unknown",
+            relationship: capitalize(fm.relationship || "Member"),
+          })),
+        ]
+      : [
+          { id: member.id, name: member.full_name || "Self", relationship: "Self" },
+          { id: "mock-1", name: "Anaya Ashton", relationship: "Spouse", isMock: true },
+          { id: "mock-2", name: "Ethan Ashton", relationship: "Son", isMock: true },
+          { id: "mock-3", name: "Mira Ashton", relationship: "Daughter", isMock: true },
+        ]
+  ) : [];
+
   return (
     <SectionContainer verticalPadding="none" className="px-0 sm:px-0 lg:px-0">
       <div className="space-y-8">
@@ -821,6 +849,37 @@ export default async function CommunityDashboardPage() {
             </div>
           </div>
         </div>
+
+        {/* Family Members Row */}
+        {familyChipData.length > 0 && (
+          <div className="mt-4 flex flex-col gap-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center gap-2 mr-2 text-sm text-muted-foreground">
+                <Users className="size-4" aria-hidden="true" />
+                <span>Family Members</span>
+              </div>
+              {familyChipData.map((chip) => (
+                <div
+                  key={chip.id}
+                  className="flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 pl-2.5 pr-1 py-1"
+                >
+                  <User className="size-3.5 text-muted-foreground" aria-hidden="true" />
+                  <span className="text-sm font-medium text-foreground">{chip.name}</span>
+                  <Badge
+                    variant="outline"
+                    className={`text-[10px] px-1.5 py-0 h-4 min-h-0 rounded-full font-medium border ${getRelationshipBadgeClasses(
+                      chip.relationship
+                    )}`}
+                  >
+                    {chip.relationship}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+            <div className="h-px w-full bg-border/50" />
+          </div>
+        )}
+
         {/* Quick action buttons */}
         <div className="mt-3 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
           <Button asChild variant="outline" size="sm" className="w-full sm:w-auto">
@@ -1390,6 +1449,33 @@ export default async function CommunityDashboardPage() {
                   const profileComplete = completionPct >= 100;
                   const avatarColor = AVATAR_COLORS[idx % AVATAR_COLORS.length];
 
+                  // Community Family UX Task 02 (2026-04-24):
+                  // Build a compact missing-field summary for incomplete
+                  // cards. `completion.missing` is the source of truth
+                  // (from calcFamilyProfileCompletion) — we only format
+                  // labels for card layout (lowercase, strip the parenthetical
+                  // hint on "Birth time (or mark unknown)"). The card line
+                  // shows up to two fields inline and "+N more" when the
+                  // list is longer, so it never overflows the grid layout.
+                  const missingDisplay = completion.missing.map((label) =>
+                    label.replace(/\s*\(.*?\)\s*$/, "").toLowerCase()
+                  );
+                  const missingSummary = (() => {
+                    if (missingDisplay.length === 0) return null;
+                    if (missingDisplay.length <= 2) {
+                      return missingDisplay.join(", ");
+                    }
+                    const head = missingDisplay.slice(0, 2).join(", ");
+                    return `${head} +${missingDisplay.length - 2} more`;
+                  })();
+
+                  // Community Family UX Task 04 (2026-04-24):
+                  // Deep-link the corrective CTAs directly to the per-member
+                  // edit route so the user lands in the exact edit context
+                  // for that member instead of having to locate them on the
+                  // family index page.
+                  const editHref = `/community/family/${m.id}/edit`;
+
                   return (
                     <Card key={m.id} className="transition-colors hover:border-primary/30">
                       <CardContent className="py-4 px-4 space-y-3">
@@ -1460,16 +1546,41 @@ export default async function CommunityDashboardPage() {
                             <p className="text-xs text-muted-foreground leading-snug">
                               Profile {profileComplete ? "complete" : "incomplete"}
                             </p>
+                            {/*
+                              Task 02 — missing-field summary for incomplete
+                              members. `truncate` + `title` makes sure rare
+                              long strings still fit the card and remain
+                              discoverable on hover.
+                            */}
+                            {!profileComplete && missingSummary && (
+                              <p
+                                className="text-[11px] text-amber-600/90 leading-snug mt-0.5 truncate"
+                                title={`Missing: ${missingDisplay.join(", ")}`}
+                              >
+                                Missing: {missingSummary}
+                              </p>
+                            )}
+                            {/*
+                              Task 03 — helper line on the complete-but-no-chart
+                              state so the user sees at a glance that chart
+                              generation is the next step, not more profile
+                              editing.
+                            */}
+                            {profileComplete && !hasNatalChart && (
+                              <p className="text-[11px] text-muted-foreground leading-snug mt-0.5">
+                                Ready to generate chart
+                              </p>
+                            )}
                             {!profileComplete && (
                               <Button asChild variant="link" size="sm" className="h-auto p-0 mt-0.5 text-xs text-primary">
-                                <Link href={`/community/family/${m.id}`}>
+                                <Link href={editHref}>
                                   Complete Profile →
                                 </Link>
                               </Button>
                             )}
                             {profileComplete && !hasNatalChart && (
                               <Button asChild variant="link" size="sm" className="h-auto p-0 mt-0.5 text-xs text-primary">
-                                <Link href={`/community/family/${m.id}`}>
+                                <Link href={editHref}>
                                   Generate Chart →
                                 </Link>
                               </Button>
