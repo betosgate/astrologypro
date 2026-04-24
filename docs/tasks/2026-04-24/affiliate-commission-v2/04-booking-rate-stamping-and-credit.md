@@ -1,6 +1,6 @@
 # Task 04 — Booking Rate Stamping + Webhook Credit
 
-- Status: Not Started
+- Status: Done (2026-04-24)
 - Priority: P0
 - Depends on: 01 (additive — adds the stamp columns on `bookings`), 02 (webhook rewire)
 - Blocks: 01b (destructive)

@@ -680,7 +680,7 @@ export function TemplateForm({ initialData, templateId, divinerCount = 0 }: Temp
                       }))
                     }
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="w-full">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -780,7 +780,7 @@ export function TemplateForm({ initialData, templateId, divinerCount = 0 }: Temp
                 }))
               }
             >
-              <SelectTrigger>
+              <SelectTrigger className="w-full">
                 <SelectValue placeholder="Select icon" />
               </SelectTrigger>
               <SelectContent>

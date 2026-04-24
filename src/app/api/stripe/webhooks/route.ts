@@ -21,7 +21,6 @@ import { buildCalendarDescription } from "@/lib/calendar-utils";
 import { getActiveChimePhoneNumber } from "@/lib/booking-call-pin";
 import { createMsCalendarEvent } from "@/lib/microsoft-calendar";
 import { ensureOrderForBooking, getOrderStatusForService } from "@/lib/orders";
-import { recordAffiliateCommission } from "@/lib/affiliate-commissions";
 import { getSessionLinkForBooking } from "@/lib/service-toolkit-mapping";
 import {
   getSubscriptionPeriodEndIso,
@@ -36,7 +35,7 @@ import {
 } from "@/lib/revenue-ledger";
 import { PRICING } from "@/lib/constants";
 import { calculateMoneySplit } from "@/lib/money-split";
-import { provisionNatalReadiness } from "@/lib/community/provision-natal-readiness";
+import { finalizePerennialCommunityCheckoutSession } from "@/lib/community/finalize-checkout";
 import { tierToPlanType } from "@/lib/community/pm-entitlement";
 import { ensureUserContractRequirements } from "@/lib/contract-orchestration";
 import { provisionTraineeDivinerUpgradeFromSession } from "@/lib/trainee-diviner-upgrade";
@@ -235,9 +234,18 @@ async function handleCommunityCheckoutCompleted(session: Stripe.Checkout.Session
 
   if (!userId || !membershipType) return;
 
-  const { data: { user: authUser } } = await supabase.auth.admin.getUserById(userId);
+  const [{ data: authUserData }, { data: trainee }, { data: client }] = await Promise.all([
+    supabase.auth.admin.getUserById(userId),
+    supabase.from("trainees").select("name").eq("user_id", userId).maybeSingle(),
+    supabase.from("clients").select("full_name, birth_date, birth_time, birth_city").eq("user_id", userId).maybeSingle(),
+  ]);
+
+  const authUser = authUserData?.user;
   const email = authUser?.email ?? "";
-  const fullName = (authUser?.user_metadata?.full_name ?? authUser?.user_metadata?.name ?? null) as string | null;
+
+  // Strategy: Prefer trainee name, then client name, then auth metadata
+  const fullName =
+    (trainee?.name || client?.full_name || authUser?.user_metadata?.full_name || authUser?.user_metadata?.name || null) as string | null;
 
   const isMysterySchool = membershipType === "mystery_school";
 
@@ -253,92 +261,8 @@ async function handleCommunityCheckoutCompleted(session: Stripe.Checkout.Session
   let communityMemberId: string | null = null;
 
   if (!isMysterySchool) {
-    // Resolve pm_tier_id: prefer explicit metadata (new conversion flow),
-    // otherwise map planType → tier name (Individual/couple → Individual, family → Family).
-    // Fetch the tier's `name` in both branches so we can derive the canonical
-    // `plan_type` per audit note §2. If tier and metadata disagree, trust the
-    // tier and log.
-    const explicitTargetTierId = session.metadata?.target_tier_id ?? null;
-    let resolvedTierId: string | null = explicitTargetTierId;
-    let resolvedTierName: string | null = null;
-
-    if (resolvedTierId) {
-      const { data: tierRow } = await supabase
-        .from("pm_plan_tiers")
-        .select("id, name")
-        .eq("id", resolvedTierId)
-        .maybeSingle();
-      resolvedTierName = (tierRow?.name as string | undefined) ?? null;
-    } else {
-      const desiredTierName = planType === "family" ? "Family" : "Individual";
-      const { data: tierRow } = await supabase
-        .from("pm_plan_tiers")
-        .select("id, name")
-        .eq("is_active", true)
-        .ilike("name", desiredTierName)
-        .maybeSingle();
-      resolvedTierId = (tierRow?.id as string | undefined) ?? null;
-      resolvedTierName = (tierRow?.name as string | undefined) ?? null;
-      if (!resolvedTierId) {
-        console.warn(
-          `[webhook/community] Could not resolve pm_tier_id for planType=${planType} — member will default to lowest-order tier on read`
-        );
-      }
-    }
-
-    // Canonical plan_type: derive from the resolved tier when possible; fall
-    // back to the Stripe metadata value only when no tier resolved.
-    const canonicalPlanType = resolvedTierName
-      ? tierToPlanType({ name: resolvedTierName })
-      : (planType === "family" ? "family" : "individual");
-
-    if (
-      resolvedTierName &&
-      canonicalPlanType !== (planType === "family" ? "family" : "individual")
-    ) {
-      console.warn(
-        `[webhook/community] plan_type metadata (${planType}) disagrees with canonical tier '${resolvedTierName}' (${canonicalPlanType}). Trusting tier.`,
-        { session_id: session.id, user_id: userId }
-      );
-    }
-
-    // PM checkout — upsert community_members as the PM record
-    const { data: member } = await supabase
-      .from("community_members")
-      .upsert(
-        {
-          user_id: userId,
-          email,
-          full_name: fullName,
-          membership_type: membershipType,
-          membership_status: "active",
-          plan_type: canonicalPlanType,
-          stripe_subscription_id: subscriptionId ?? null,
-          joined_at: new Date().toISOString(),
-          ...(resolvedTierId ? { pm_tier_id: resolvedTierId } : {}),
-        },
-        { onConflict: "user_id" }
-      )
-      .select("id")
-      .single();
-
-    communityMemberId = member?.id ?? null;
-
-    // Task 08: provision natal readiness for the PM base user immediately after membership creation.
-    // Only natal + monthly transit eligibility — relationship charts are NOT provisioned here
-    // because no family context exists yet.
-    if (communityMemberId && membershipType === "perennial_mandalism") {
-      provisionNatalReadiness({
-        admin: supabase,
-        communityMemberId,
-        birthData: {
-          fullName,
-          // Birth data not available at Stripe checkout time; user fills it in onboarding.
-          // The provision function will set natal_status='not_started' and upgrade to
-          // 'queued' on the next auth callback or onboarding save.
-        },
-      }); // fire-and-forget — must not block the webhook response
-    }
+    const result = await finalizePerennialCommunityCheckoutSession(session);
+    communityMemberId = result?.communityMemberId ?? null;
   } else {
     // MS checkout — look up existing community_members row (may be PM) but do NOT overwrite it
     const { data: existingMember } = await supabase
@@ -377,18 +301,6 @@ async function handleCommunityCheckoutCompleted(session: Stripe.Checkout.Session
     eventType: 'subscription.created',
     metadata: { planName: membershipType, planType, status: 'active' },
   })
-
-  // ── Affiliate commission on community/subscription signup ────────────────
-  const communityAffiliateCode = session.metadata?.affiliateCode;
-  if (communityAffiliateCode) {
-    const amountTotal = (session.amount_total ?? 0) / 100;
-    recordSignupAffiliateCommission(
-      communityAffiliateCode,
-      amountTotal,
-      `community-signup:${session.id}`,
-      "subscription"
-    );
-  }
 
   // Send community welcome email for all membership types (idempotent via SES dedup window)
   if (email) {
@@ -429,6 +341,13 @@ async function handleCommunityCheckoutCompleted(session: Stripe.Checkout.Session
 
     // NOTE: We intentionally do NOT update community_members.membership_type
     // to 'mystery_school'. PM membership stays intact (parallel entitlement).
+  }
+
+  // Ensure contract requirements are triggered for the community role
+  try {
+    await ensureUserContractRequirements(userId, "post_login");
+  } catch (err) {
+    console.error("[Webhook] Failed to ensure contract requirements for community member:", err);
   }
 }
 
@@ -789,18 +708,6 @@ async function handleComboBundleCheckoutCompleted(
     );
   }
 
-  // ── Affiliate commission on combo bundle signup ──────────────────────────
-  const comboAffiliateCode = meta.affiliateCode;
-  if (comboAffiliateCode) {
-    const amountTotal = (session.amount_total ?? 0) / 100;
-    recordSignupAffiliateCommission(
-      comboAffiliateCode,
-      amountTotal,
-      `combo-signup:${session.id}`,
-      "signup"
-    );
-  }
-
   console.log(
     `[Webhook] Combo bundle provisioned: userId=${userId} username=${username} plan=${planName}`
   );
@@ -957,41 +864,6 @@ async function handlePerennialCommunitySignupCheckoutCompleted(
       "[Webhook] perennial_community_signup: failed to upsert community_members:",
       error
     );
-  }
-
-  const affiliateCode = session.metadata?.affiliateCode;
-  if (affiliateCode) {
-    const amountTotal = (session.amount_total ?? 0) / 100;
-    recordSignupAffiliateCommission(
-      affiliateCode,
-      amountTotal,
-      `perennial-community-signup:${session.id}`,
-      "subscription"
-    );
-  }
-}
-
-/**
- * Fire-and-forget: record an affiliate commission for a signup/subscription checkout.
- * Supports both the old `affiliates` (social_advocates) table and the new
- * `diviner_affiliates` system via `affiliate_referral_links`.
- */
-async function recordSignupAffiliateCommission(
-  affiliateCode: string,
-  amountDollars: number,
-  orderRef: string,
-  productType: "signup" | "subscription"
-) {
-  try {
-    await recordAffiliateCommission({
-      affiliateCode,
-      amountCents: Math.round(amountDollars * 100),
-      orderRef,
-      productType,
-    });
-  } catch (err) {
-    // Fire-and-forget — never block the main flow
-    console.error("[Webhook] Failed to record signup affiliate commission:", err);
   }
 }
 
@@ -1163,15 +1035,6 @@ async function handleWeeklySubscriptionCheckoutCompleted(
     })
     .eq("id", productId);
 
-  if (session.metadata?.affiliateCode && session.amount_total) {
-    await recordAffiliateCommission({
-      affiliateCode: session.metadata.affiliateCode,
-      amountCents: session.amount_total,
-      orderRef: `weekly-subscription:${subscriptionId}`,
-      productType: "weekly_subscription",
-      divinerId,
-    });
-  }
 }
 
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
@@ -1274,17 +1137,6 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     console.error("Failed to upsert diviner record:", error);
   }
 
-  // ── Affiliate commission on diviner signup ────────────────────────────────
-  const signupAffiliateCode = session.metadata?.affiliateCode;
-  if (signupAffiliateCode) {
-    const amountTotal = (session.amount_total ?? 0) / 100;
-    recordSignupAffiliateCommission(
-      signupAffiliateCode,
-      amountTotal,
-      `diviner-signup:${session.id}`,
-      "signup"
-    );
-  }
 }
 
 function getSubscriptionIdFromInvoice(invoice: Stripe.Invoice): string | null {
@@ -1400,18 +1252,7 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
     .maybeSingle();
 
   if (weeklySubscription && invoice.amount_paid > 0) {
-    const affiliateCode = subscription.metadata?.affiliateCode;
     const orderRef = `weekly-subscription-invoice:${invoice.id}`;
-
-    if (affiliateCode) {
-      await recordAffiliateCommission({
-        affiliateCode,
-        amountCents: invoice.amount_paid,
-        orderRef,
-        productType: "weekly_subscription",
-        divinerId: weeklySubscription.diviner_id,
-      });
-    }
 
     const affiliateCommissionCents =
       await getAffiliateCommissionTotalForOrderRef(orderRef);
@@ -1421,7 +1262,7 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
       platformFeePercent: WEEKLY_SUBSCRIPTION_PLATFORM_SHARE_PERCENT,
       affiliateCommissionCents,
       platformFeeRule: "weekly_subscription_platform_share_percent",
-      affiliateRule: affiliateCode ? "affiliate_commission_rule" : "no_affiliate_share",
+      affiliateRule: affiliateCommissionCents > 0 ? "affiliate_commission_rule" : "no_affiliate_share",
     });
 
     await recordRevenueLedgerEntry({
@@ -1914,7 +1755,6 @@ async function handlePaymentIntentSucceeded(
 
   const bookingId = paymentIntent.metadata?.bookingId;
   const clientEmail = paymentIntent.metadata?.clientEmail;
-  const affiliateCode = paymentIntent.metadata?.affiliateCode;
   const refCodeFromPi = paymentIntent.metadata?.refCode ?? null;
   if (!bookingId || !clientEmail) return;
 
@@ -1936,24 +1776,41 @@ async function handlePaymentIntentSucceeded(
     const { creditAffiliateConversion } = await import("@/lib/affiliate-attribution");
     const { data: bookingForAttribution } = await supabase
       .from("bookings")
-      .select("id, diviner_id, service_id, base_price, total_amount, ref_code, services(template_id)")
+      .select(
+        "id, base_price, total_amount, ref_code, commission_source_assignment_id, commission_rate_type_stamp, commission_rate_value_stamp",
+      )
       .eq("id", bookingId)
       .single();
 
-    if (bookingForAttribution?.ref_code) {
-      const svc = bookingForAttribution.services as { template_id?: string | null } | { template_id?: string | null }[] | null;
-      const templateId = Array.isArray(svc)
-        ? svc[0]?.template_id ?? null
-        : svc?.template_id ?? null;
+    // Stamping happens at booking creation (spec §3.8). If the three
+    // stamp columns are NULL the booking never earns commission —
+    // regardless of whether ref_code is set.
+    if (
+      bookingForAttribution &&
+      bookingForAttribution.commission_source_assignment_id
+    ) {
       const amountCents =
-        Number(bookingForAttribution.total_amount ?? bookingForAttribution.base_price ?? 0) * 100;
+        Number(
+          bookingForAttribution.total_amount ??
+            bookingForAttribution.base_price ??
+            0,
+        ) * 100;
 
       await creditAffiliateConversion(supabase, {
         bookingId: bookingForAttribution.id as string,
-        divinerId: bookingForAttribution.diviner_id as string,
-        templateId,
         orderAmountCents: Math.round(amountCents),
-        refCode: bookingForAttribution.ref_code as string,
+        refCode: (bookingForAttribution.ref_code as string | null) ?? null,
+        stampedAssignmentId:
+          bookingForAttribution.commission_source_assignment_id as string,
+        stampedRateType:
+          (bookingForAttribution.commission_rate_type_stamp as
+            | "percent"
+            | "flat"
+            | null) ?? null,
+        stampedRateValue:
+          bookingForAttribution.commission_rate_value_stamp != null
+            ? Number(bookingForAttribution.commission_rate_value_stamp)
+            : null,
       });
     }
   } catch (err) {
@@ -2047,16 +1904,6 @@ async function handlePaymentIntentSucceeded(
     paidAt: new Date().toISOString(),
   });
 
-  if (affiliateCode) {
-    await recordAffiliateCommission({
-      affiliateCode,
-      amountCents: paymentIntent.amount,
-      orderRef: `booking:${bookingId}`,
-      productType: "booking",
-      divinerId: div.id,
-    });
-  }
-
   const orderReference = `booking:${bookingId}`;
   const affiliateCommissionCents =
     await getAffiliateCommissionTotalForOrderRef(orderReference);
@@ -2073,7 +1920,7 @@ async function handlePaymentIntentSucceeded(
       paymentIntent.metadata?.splitPlatformFeeRule ?? "payment_intent_platform_fee",
     affiliateRule:
       paymentIntent.metadata?.splitAffiliateRule ??
-      (affiliateCode ? "affiliate_commission_rule" : "no_affiliate_share"),
+      (affiliateCommissionCents > 0 ? "affiliate_commission_rule" : "no_affiliate_share"),
     memberDiscountApplied: paymentIntent.metadata?.memberDiscount === "5%",
   });
 

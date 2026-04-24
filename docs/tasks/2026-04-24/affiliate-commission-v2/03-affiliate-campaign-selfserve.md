@@ -1,6 +1,6 @@
 # Task 03 — Affiliate Self-Serve Campaign Creation
 
-- Status: Not Started
+- Status: Backend done (2026-04-24); UI deferred to Task 07
 - Priority: P0
 - Depends on: 01 (additive)
 - Blocks: —

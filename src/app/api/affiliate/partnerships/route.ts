@@ -1,10 +1,13 @@
-// Task 05 — GET /api/affiliate/partnerships
+// GET /api/affiliate/partnerships
 //
 // List of diviner partnerships for the authenticated affiliate.
 // Each row: junction (status, commission, timestamps) + diviner display info
-// + commission-to-date (from affiliate_commissions sum).
+// + commission-to-date (from campaign_conversions sum).
 //
-// Sprint: docs/tasks/2026-04-23/affiliate-identity-refactor/05-affiliate-portal.md
+// 2026-04-24: rewired off `affiliate_commissions` (deleted) onto
+// `campaign_conversions`. The `totals` shape changed: `paid_cents` +
+// `pending_cents` dropped (no approval state machine in Phase 1),
+// replaced with `reversed_cents`.
 
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
@@ -48,29 +51,27 @@ export async function GET() {
 
   if (error) return problem(500, "Database error", error.message);
 
-  // Aggregate commission totals per junction
+  // Aggregate commission totals per junction (System B — campaign_conversions).
   const { data: commAgg } = await admin
-    .from("affiliate_commissions")
-    .select("affiliate_id, commission_amount_cents, status")
+    .from("campaign_conversions")
+    .select("affiliate_id, commission_amount_cents, reversed_at")
     .in("affiliate_id", ctx.junctionIds);
 
   const totalsByJunction = new Map<
     string,
-    { total_cents: number; paid_cents: number; pending_cents: number; count: number }
+    { total_cents: number; reversed_cents: number; count: number }
   >();
   for (const row of commAgg ?? []) {
     const key = row.affiliate_id as string;
     const cur = totalsByJunction.get(key) ?? {
       total_cents: 0,
-      paid_cents: 0,
-      pending_cents: 0,
+      reversed_cents: 0,
       count: 0,
     };
     const amount = Number(row.commission_amount_cents ?? 0);
-    cur.total_cents += amount;
     cur.count++;
-    if (row.status === "paid") cur.paid_cents += amount;
-    else if (row.status === "pending" || row.status === "on_hold") cur.pending_cents += amount;
+    if (row.reversed_at) cur.reversed_cents += amount;
+    else cur.total_cents += amount;
     totalsByJunction.set(key, cur);
   }
 
@@ -96,8 +97,7 @@ export async function GET() {
   const items = ((junctions ?? []) as unknown as JunctionRow[]).map((j) => {
     const totals = totalsByJunction.get(j.id) ?? {
       total_cents: 0,
-      paid_cents: 0,
-      pending_cents: 0,
+      reversed_cents: 0,
       count: 0,
     };
     return {

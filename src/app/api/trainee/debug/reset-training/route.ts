@@ -158,25 +158,30 @@ export async function POST() {
     );
   }
 
-  const roleCleanupOperations = [
-    admin.from("diviners").delete().eq("user_id", user.id),
-    admin.from("clients").delete().eq("user_id", user.id),
-    admin.from("social_advocates").delete().eq("user_id", user.id),
-    admin.from("community_members").delete().eq("user_id", user.id),
-    admin.from("mystery_school_students").delete().eq("user_id", user.id),
+  // Execute cleanup operations sequentially to avoid deadlocks in tables with foreign keys/correlations
+  const roleCleanupTables = [
+    { table: "diviners", filter: { user_id: user.id } },
+    { table: "clients", filter: { user_id: user.id } },
+    { table: "social_advocates", filter: { user_id: user.id } },
+    { table: "community_members", filter: { user_id: user.id } },
+    { table: "mystery_school_students", filter: { user_id: user.id } },
+    { table: "user_contract_requirements", filter: { user_id: user.id } },
+    { table: "legal_acceptances", filter: { user_id: user.id } },
+    { table: "signed_agreement_artifacts", filter: { user_id: user.id } },
   ];
 
-  const roleCleanupResults = await Promise.all(roleCleanupOperations);
-  const roleCleanupError = roleCleanupResults.find((result) => result.error)?.error;
-
-  if (roleCleanupError) {
-    return NextResponse.json(
-      {
-        error: "Failed to remove non-trainee portal records",
-        message: roleCleanupError.message,
-      },
-      { status: 500 },
-    );
+  for (const op of roleCleanupTables) {
+    const { error: opError } = await admin.from(op.table).delete().match(op.filter);
+    if (opError) {
+      console.error(`[reset-training] Failed to clean ${op.table}:`, opError);
+      return NextResponse.json(
+        {
+          error: `Failed to remove ${op.table} record during cleanup`,
+          message: opError.message,
+        },
+        { status: 500 },
+      );
+    }
   }
 
   return NextResponse.json({

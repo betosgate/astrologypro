@@ -1,8 +1,14 @@
-// migrated-to-canonical-accounts: 2026-04-23
-// GET /api/affiliate/commissions — paginated list of commissions across all
-// of the caller's diviner partnerships.
+// GET /api/affiliate/commissions — paginated list of commissions across
+// all of the caller's diviner partnerships.
 //
-// Sprint: docs/tasks/2026-04-23/affiliate-identity-refactor/05-affiliate-portal.md
+// 2026-04-24: rewired onto `campaign_conversions`. System A
+// (`affiliate_commissions`) retired — see
+// docs/specs/affiliate-commission-system.md §9.
+//
+// Filters:
+//   status=earned → reversed_at IS NULL
+//   status=reversed → reversed_at IS NOT NULL
+// Pagination: cursor on (created_at, id) DESC with tie-breaker on id.
 
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
@@ -44,16 +50,17 @@ export async function GET(request: Request) {
   const cursor = searchParams.get("cursor");
 
   let query = admin
-    .from("affiliate_commissions")
+    .from("campaign_conversions")
     .select(
-      "id, affiliate_id, diviner_id, order_reference, order_amount_cents, commission_type, commission_rate, commission_amount_cents, status, approved_at, notes, created_at",
+      "id, affiliate_id, campaign_id, booking_id, order_amount_cents, commission_amount_cents, rate_type_used, rate_value_used, reversed_at, reversed_reason, created_at",
     )
     .in("affiliate_id", ctx.junctionIds)
     .order("created_at", { ascending: false })
     .order("id", { ascending: false })
     .limit(limit + 1);
 
-  if (statusFilter) query = query.eq("status", statusFilter);
+  if (statusFilter === "earned") query = query.is("reversed_at", null);
+  else if (statusFilter === "reversed") query = query.not("reversed_at", "is", null);
   if (cursor) query = query.lt("id", cursor);
 
   const { data, error } = await query;
