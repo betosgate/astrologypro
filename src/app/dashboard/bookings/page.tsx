@@ -64,8 +64,10 @@ export default async function BookingsPage() {
   const serviceIds = [...new Set(bookingRows.map((b) => b.service_id as string).filter(Boolean))];
 
   const [clientsResult, servicesResult] = await Promise.all([
+    // `phone` is required by the Call-Client row action so it can pre-gate
+    // the button when the booking has no dialable number on file.
     clientIds.length > 0
-      ? admin.from("clients").select("id, full_name, email, birth_date, birth_time, birth_city").in("id", clientIds)
+      ? admin.from("clients").select("id, full_name, email, phone, birth_date, birth_time, birth_city").in("id", clientIds)
       : Promise.resolve({ data: [] as any[] }),
     serviceIds.length > 0
       ? admin.from("services").select("id, name, template_id").in("id", serviceIds)

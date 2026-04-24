@@ -523,11 +523,34 @@ export function BookingsClient({
                             booking + skips the dial for terminal statuses;
                             the button also disables itself to give an
                             immediate UX signal.
+
+                            Pre-gate: if clients.phone is blank and there's
+                            no phone in questionnaire_responses, the button
+                            renders disabled with a clear tooltip instead of
+                            letting the user click through to a 422 error.
                           */}
                           <CallClientButton
                             bookingId={booking.id as string}
                             clientName={client?.full_name ?? null}
                             bookingStatus={status}
+                            hasPhoneOnFile={(() => {
+                              const phoneFromClient =
+                                (client as { phone?: string | null } | null | undefined)
+                                  ?.phone?.toString().trim() ?? "";
+                              if (phoneFromClient) return true;
+                              const qr = booking.questionnaire_responses as
+                                | Record<string, string | undefined>
+                                | null
+                                | undefined;
+                              const qrPhone =
+                                qr?.phone ??
+                                qr?.phone_number ??
+                                qr?.client_phone ??
+                                "";
+                              return Boolean(
+                                qrPhone && String(qrPhone).trim() !== ""
+                              );
+                            })()}
                           />
                           {sessionLinksByBookingId[booking.id as string] && (
                             <Link
