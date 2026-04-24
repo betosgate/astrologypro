@@ -111,6 +111,13 @@ interface ChimeSessionRoomProps {
   disableBillingAndNotes?: boolean;
 }
 
+type VideoTile = {
+  tileId: number;
+  isLocal: boolean;
+  isContent: boolean;
+  boundAttendeeId: string | null;
+};
+
 export function ChimeSessionRoom({
   bookingId,
   meetingId,
@@ -156,6 +163,9 @@ export function ChimeSessionRoom({
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
+  const isScreenSharingRef = useRef(false);
+  const localScreenStreamRef = useRef<MediaStream | null>(null);
+  const screenShareStartLockRef = useRef(false);
   const [isMobile, setIsMobile] = useState(false);
   const [mobileChatOpen, setMobileChatOpen] = useState(false);
   const [chimeSdkReady, setChimeSdkReady] = useState(false);
@@ -168,7 +178,8 @@ export function ChimeSessionRoom({
   const startTimeRef = useRef<Date | null>(null);
   const participantMapRef = useRef<Map<string, string>>(new Map());
   // React-managed tile list — drives the video layout instead of raw DOM manipulation
-  const [tiles, setTiles] = useState<{ tileId: number; isLocal: boolean; isContent: boolean }[]>([]);
+  const [tiles, setTiles] = useState<VideoTile[]>([]);
+  const tilesRef = useRef<VideoTile[]>([]);
   const videoElemRefs = useRef<Map<number, HTMLVideoElement>>(new Map());
 
   // ── Live captions (AWS Transcribe Streaming) ─────────────────────────────
@@ -214,6 +225,7 @@ export function ChimeSessionRoom({
 
   // Bind each tracked tile to its <video> element whenever tiles list changes
   useEffect(() => {
+    tilesRef.current = tiles;
     tiles.forEach(({ tileId }) => {
       const el = videoElemRefs.current.get(tileId);
       if (el && meetingSessionRef.current) {
@@ -223,6 +235,10 @@ export function ChimeSessionRoom({
       }
     });
   }, [tiles]);
+
+  useEffect(() => {
+    isScreenSharingRef.current = isScreenSharing;
+  }, [isScreenSharing]);
 
   // Safety net #1 — derive isDivinerPresent from participants state.
   // The direct setIsDivinerPresent() inside the presence callback is the fast
@@ -406,6 +422,32 @@ export function ChimeSessionRoom({
           }
         );
 
+        // Screen-share handoff — when another participant requests control,
+        // stop the local content share before their new share starts.
+        meetingSession.audioVideo.realtimeSubscribeToReceiveDataMessage(
+          "screen-share-control",
+          (dataMessage: any) => {
+            const payload =
+              typeof dataMessage.data === "string"
+                ? dataMessage.data
+                : new TextDecoder().decode(dataMessage.data as Uint8Array);
+            try {
+              const msg = JSON.parse(payload);
+              if (msg.type !== "takeover") return;
+              if (!isScreenSharingRef.current) return;
+
+              meetingSession.audioVideo.stopContentShare();
+              localScreenStreamRef.current?.getTracks().forEach((track) => track.stop());
+              localScreenStreamRef.current = null;
+              isScreenSharingRef.current = false;
+              setIsScreenSharing(false);
+              toast.info("Screen share switched to another participant.");
+            } catch {
+              // Ignore malformed control messages.
+            }
+          }
+        );
+
         // Chat data messaging — receive messages from the other participant
         meetingSession.audioVideo.realtimeSubscribeToReceiveDataMessage(
           "chat",
@@ -497,16 +539,19 @@ export function ChimeSessionRoom({
               setTiles((prev) => prev.filter((t) => t.tileId !== tileState.tileId));
               return;
             }
+            const nextTile: VideoTile = {
+              tileId: tileState.tileId,
+              isLocal: Boolean(tileState.localTile),
+              isContent: Boolean(tileState.isContent),
+              boundAttendeeId: tileState.boundAttendeeId ?? null,
+            };
             setTiles((prev) => {
-              if (prev.some((t) => t.tileId === tileState.tileId)) return prev;
-              return [
-                ...prev,
-                {
-                  tileId: tileState.tileId,
-                  isLocal: Boolean(tileState.localTile),
-                  isContent: Boolean(tileState.isContent),
-                },
-              ];
+              if (prev.some((t) => t.tileId === tileState.tileId)) {
+                return prev.map((tile) =>
+                  tile.tileId === tileState.tileId ? nextTile : tile
+                );
+              }
+              return [...prev, nextTile];
             });
           },
           videoTileWasRemoved: (tileId: number) => {
@@ -517,8 +562,16 @@ export function ChimeSessionRoom({
 
         // Content share observer
         meetingSession.audioVideo.addContentShareObserver({
-          contentShareDidStart: () => setIsScreenSharing(true),
-          contentShareDidStop: () => setIsScreenSharing(false),
+          contentShareDidStart: () => {
+            isScreenSharingRef.current = true;
+            setIsScreenSharing(true);
+          },
+          contentShareDidStop: () => {
+            localScreenStreamRef.current?.getTracks().forEach((track) => track.stop());
+            localScreenStreamRef.current = null;
+            isScreenSharingRef.current = false;
+            setIsScreenSharing(false);
+          },
         } as any);
 
         // 4. Start
@@ -572,10 +625,35 @@ export function ChimeSessionRoom({
 
   const handleToggleScreenShare = useCallback(async () => {
     if (!meetingSessionRef.current) return;
-    if (isScreenSharing) {
+    if (isScreenSharingRef.current) {
       meetingSessionRef.current.audioVideo.stopContentShare();
+      localScreenStreamRef.current?.getTracks().forEach((track) => track.stop());
+      localScreenStreamRef.current = null;
+      isScreenSharingRef.current = false;
+      setIsScreenSharing(false);
     } else {
+      if (screenShareStartLockRef.current) return;
+      screenShareStartLockRef.current = true;
       try {
+        const hasAnyContentShare = tilesRef.current.some((tile) => tile.isContent);
+        if (hasAnyContentShare) {
+          try {
+            meetingSessionRef.current.audioVideo.realtimeSendDataMessage(
+              "screen-share-control",
+              JSON.stringify({ type: "takeover", requestedAt: Date.now() }),
+              5_000
+            );
+          } catch { /* non-critical */ }
+
+          const deadline = Date.now() + 1_500;
+          while (
+            tilesRef.current.some((tile) => tile.isContent && !tile.isLocal) &&
+            Date.now() < deadline
+          ) {
+            await new Promise((resolve) => setTimeout(resolve, 150));
+          }
+        }
+
         // Use getDisplayMedia directly so we can pass selfBrowserSurface: 'exclude'.
         // This removes the current tab from the Chrome picker entirely, which is the
         // industry-standard fix (Chrome 107+) for the infinite-mirror problem.
@@ -587,13 +665,32 @@ export function ChimeSessionRoom({
           // @ts-expect-error — selfBrowserSurface is a Chrome 107+ constraint not yet in TS types
           selfBrowserSurface: "exclude",
         });
+        localScreenStreamRef.current = stream;
+        stream.getVideoTracks()[0]?.addEventListener(
+          "ended",
+          () => {
+            meetingSessionRef.current?.audioVideo.stopContentShare();
+            localScreenStreamRef.current = null;
+            isScreenSharingRef.current = false;
+            setIsScreenSharing(false);
+          },
+          { once: true }
+        );
         await meetingSessionRef.current.audioVideo.startContentShare(stream);
+        isScreenSharingRef.current = true;
+        setIsScreenSharing(true);
       } catch {
+        localScreenStreamRef.current?.getTracks().forEach((track) => track.stop());
+        localScreenStreamRef.current = null;
+        isScreenSharingRef.current = false;
+        setIsScreenSharing(false);
         // User dismissed the picker, browser denied permission, or
         // selfBrowserSurface is unsupported — no-op
+      } finally {
+        screenShareStartLockRef.current = false;
       }
     }
-  }, [isScreenSharing]);
+  }, []);
 
   // ── Helper: broadcast caption data to the other participant via Chime ────
   // ── Helper: broadcast caption data to the other participant via Chime ────
@@ -792,6 +889,10 @@ export function ChimeSessionRoom({
           5_000
         );
       } catch { /* non-critical */ }
+      try { meetingSessionRef.current.audioVideo.stopContentShare(); } catch { /* non-critical */ }
+      localScreenStreamRef.current?.getTracks().forEach((track) => track.stop());
+      localScreenStreamRef.current = null;
+      isScreenSharingRef.current = false;
       try { await meetingSessionRef.current.audioVideo.stopVideoInput(); } catch { /* non-critical */ }
       try { await meetingSessionRef.current.audioVideo.stopAudioInput(); } catch { /* non-critical */ }
       try { meetingSessionRef.current.audioVideo.stopLocalVideoTile(); } catch { /* non-critical */ }

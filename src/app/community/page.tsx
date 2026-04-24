@@ -1606,11 +1606,10 @@ export default async function CommunityDashboardPage() {
                   })();
 
                   // Community Family UX Task 04 (2026-04-24):
-                  // Deep-link the corrective CTAs directly to the per-member
-                  // edit route so the user lands in the exact edit context
-                  // for that member instead of having to locate them on the
-                  // family index page.
-                  const editHref = `/community/family/${m.id}/edit`;
+                  // Deep-link incomplete-member corrective CTAs to the family
+                  // index with an edit query param so `/community/family`
+                  // opens the inline edit state for the exact member.
+                  const completeProfileHref = `/community/family?edit=${encodeURIComponent(m.id)}`;
 
                   return (
                     <Card key={m.id} className="transition-colors hover:border-primary/30">
@@ -1709,14 +1708,14 @@ export default async function CommunityDashboardPage() {
                             )}
                             {!profileComplete && (
                               <Button asChild variant="link" size="sm" className="h-auto p-0 mt-0.5 text-xs text-primary">
-                                <Link href={editHref}>
+                                <Link href={completeProfileHref}>
                                   Complete Profile →
                                 </Link>
                               </Button>
                             )}
                             {profileComplete && !hasNatalChart && (
                               <Button asChild variant="link" size="sm" className="h-auto p-0 mt-0.5 text-xs text-primary">
-                                <Link href={editHref}>
+                                <Link href={`/community/family/${m.id}`}>
                                   Generate Chart →
                                 </Link>
                               </Button>

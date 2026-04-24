@@ -104,14 +104,17 @@ export async function GET(
           cache: "no-store",
         });
         if (!res.ok) return { diviner: d, slots: [] as string[] };
-        const json = (await res.json().catch(() => ({}))) as {
-          slots?: Array<{ start?: unknown; end?: unknown }>;
-        };
-        const slots = Array.isArray(json.slots)
-          ? (json.slots as Array<{ start?: unknown }>)
+        const json = (await res.json().catch(() => [])) as
+          | Array<{ start?: unknown; end?: unknown }>
+          | { slots?: Array<{ start?: unknown; end?: unknown }> };
+        const rawSlots = Array.isArray(json)
+          ? json
+          : Array.isArray(json.slots)
+            ? json.slots
+            : [];
+        const slots = rawSlots
               .map((s) => (typeof s.start === "string" ? s.start : ""))
-              .filter((s) => s.length > 0)
-          : [];
+              .filter((s) => s.length > 0);
         return { diviner: d, slots };
       } catch {
         return { diviner: d, slots: [] as string[] };
