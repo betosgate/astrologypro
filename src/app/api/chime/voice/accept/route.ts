@@ -5,8 +5,8 @@ import {
   createChimeMeeting,
   createChimeAttendee,
   getChimeMeeting,
-  startChimeRecording,
 } from "@/lib/chime-meetings";
+import { ensureSingleChimeRecordingPipeline } from "@/lib/chime-recording-pipeline";
 import { getChimeVoiceClient } from "@/lib/chime-client";
 import { UpdateSipMediaApplicationCallCommand } from "@aws-sdk/client-chime-sdk-voice";
 
@@ -113,31 +113,18 @@ export async function POST(request: NextRequest) {
     // The same `recordings/<sessionId>/` S3 prefix is used so the
     // /api/bookings/<id>/recording-segments endpoint and the sync-recordings
     // cron can find the files without any special-casing.
-    let pipelineArn = session.chime_pipeline_id as string | null;
-    if (!pipelineArn) {
-      try {
-        const recording = await startChimeRecording(
-          chimeMeetingId,
-          `recordings/${phoneSessionId}`
-        );
-        if (recording.pipelineArn) {
-          pipelineArn = recording.pipelineArn;
-          await admin
-            .from("phone_sessions")
-            .update({ chime_pipeline_id: pipelineArn })
-            .eq("id", phoneSessionId);
-          console.log(
-            `[chime/voice/accept] Recording pipeline started: id=${recording.pipelineId} arn=${pipelineArn}`
-          );
-        }
-      } catch (err: unknown) {
-        // Recording failure must not block the call.
-        const name = (err as { name?: string }).name ?? "Error";
-        const msg = err instanceof Error ? err.message : String(err);
-        console.error(
-          `[chime/voice/accept] Failed to start recording: ${name}: ${msg}`
-        );
-      }
+    const recording = await ensureSingleChimeRecordingPipeline({
+      table: "phone_sessions",
+      sessionId: phoneSessionId,
+      meetingId: chimeMeetingId,
+      s3KeyPrefix: `recordings/${phoneSessionId}`,
+      currentPipelineId: session.chime_pipeline_id,
+      logLabel: "chime/voice/accept",
+    });
+    if (recording.status === "started") {
+      console.log(
+        `[chime/voice/accept] Recording pipeline started: id=${recording.pipelineId} arn=${recording.pipelineArn}`,
+      );
     }
 
     // ── Create attendee for the diviner's browser ──────────────────────────

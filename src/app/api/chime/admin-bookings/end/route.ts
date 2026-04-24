@@ -6,6 +6,7 @@ import {
   stopChimeRecording,
   startChimeConcatenation,
 } from "@/lib/chime-meetings";
+import { waitForUsableChimePipelineId } from "@/lib/chime-recording-pipeline";
 
 export const dynamic = "force-dynamic";
 
@@ -86,12 +87,18 @@ export async function POST(request: NextRequest) {
 
     // ── Recording & meeting teardown ────────────────────────────────────────
     if (booking.chime_meeting_id) {
+      const capturePipelineArn = await waitForUsableChimePipelineId({
+        table: "admin_bookings",
+        sessionId: bookingId,
+        currentPipelineId: booking.chime_pipeline_id,
+      });
+
       // Step 1: stop capture pipeline (flushes remaining segments to S3).
-      if (booking.chime_pipeline_id) {
+      if (capturePipelineArn) {
         try {
-          await stopChimeRecording(booking.chime_pipeline_id);
+          await stopChimeRecording(capturePipelineArn);
           console.log(
-            `[admin-bookings/end] capture pipeline stopped: ${booking.chime_pipeline_id}`,
+            `[admin-bookings/end] capture pipeline stopped: ${capturePipelineArn}`,
           );
         } catch (err) {
           const errName = (err as { name?: string }).name ?? "";
@@ -110,7 +117,7 @@ export async function POST(request: NextRequest) {
 
         // Step 3: start concatenation pipeline (merges segments → final MP4).
         try {
-          await startChimeConcatenation(booking.chime_pipeline_id, bookingId);
+          await startChimeConcatenation(capturePipelineArn, bookingId);
           console.log(
             `[admin-bookings/end] concatenation started for booking ${bookingId}`,
           );
