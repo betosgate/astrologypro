@@ -29,6 +29,14 @@ export default async function PendingContractsPage({
   const source = Array.isArray(sourceParam) ? sourceParam[0] : sourceParam;
   const sessionIdParam = resolvedSearchParams.session_id;
   const sessionId = Array.isArray(sessionIdParam) ? sessionIdParam[0] : sessionIdParam;
+  const nextParam = resolvedSearchParams.next;
+  const nextPathRaw = Array.isArray(nextParam) ? nextParam[0] : nextParam;
+  const nextPath =
+    typeof nextPathRaw === "string" &&
+    nextPathRaw.startsWith("/") &&
+    !nextPathRaw.startsWith("//")
+      ? nextPathRaw
+      : null;
 
   let requirements = await getPendingUserContractRequirements(user.id, "post_login");
 
@@ -48,7 +56,7 @@ export default async function PendingContractsPage({
   }
 
   if (requirements.length === 0) {
-    redirect("/switch");
+    redirect(nextPath ?? "/switch");
   }
 
   return <PendingContractsClient requirements={requirements} />;

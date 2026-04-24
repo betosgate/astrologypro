@@ -13,6 +13,7 @@ import { applyRuntimePricesToServices } from "@/lib/runtime-service-pricing";
 import { isDivinerPayoutReadyForPaidServices } from "@/lib/payout-readiness";
 import { calculateMoneySplit } from "@/lib/money-split";
 import { getSessionLinkForBooking } from "@/lib/service-toolkit-mapping";
+import { resolveStampForBooking } from "@/lib/affiliate-stamp";
 import {
   generateBookingCallPin,
   getActiveChimePhoneNumber,
@@ -606,6 +607,30 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Resolve the commission rate stamp BEFORE the booking insert.
+    // If refCode is valid AND all five §3.8 conditions pass, the stamp
+    // fields get populated on the booking row at creation time and
+    // become the authoritative rate for commission payout when the
+    // Stripe webhook fires. If any condition fails, the stamp fields
+    // stay NULL and the booking will never earn commission — the
+    // diviner keeps 100% of the payment.
+    const stamp = await resolveStampForBooking(adminSupabase, {
+      refCode: refCode ?? null,
+      divinerId: resolvedDivinerId,
+      serviceId,
+    });
+    if (refCode && stamp.reason !== "stamped") {
+      console.log(
+        JSON.stringify({
+          event: "affiliate_stamp_skipped",
+          refCode,
+          reason: stamp.reason,
+          divinerId: resolvedDivinerId,
+          serviceId,
+        }),
+      );
+    }
+
     // Create booking record with pending status
     // Use admin client — guest bookers have no session so RLS would block the insert
     const { data: booking, error: bookingError } = await adminSupabase
@@ -631,6 +656,13 @@ export async function POST(request: NextRequest) {
         },
         ...(policyAcknowledgedAt ? { policy_acknowledged_at: policyAcknowledgedAt } : {}),
         ...(refCode ? { ref_code: refCode } : {}),
+        ...(stamp.reason === "stamped"
+          ? {
+              commission_source_assignment_id: stamp.source_assignment_id,
+              commission_rate_type_stamp: stamp.rate_type_stamp,
+              commission_rate_value_stamp: stamp.rate_value_stamp,
+            }
+          : {}),
         ...(callPin
           ? {
               call_pin: callPin.pin,
