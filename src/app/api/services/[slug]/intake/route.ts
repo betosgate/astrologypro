@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 
 export async function POST(
   req: NextRequest,
-  { params }: RouteContext<"/api/services/[slug]/intake">,
+  { params }: { params: Promise<{ slug: string }> },
 ) {
   const { slug } = await params;
 

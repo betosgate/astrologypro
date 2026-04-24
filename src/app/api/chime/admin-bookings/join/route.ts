@@ -6,8 +6,8 @@ import {
   createChimeMeeting,
   getChimeMeeting,
   listChimeAttendees,
-  startChimeRecording,
 } from "@/lib/chime-meetings";
+import { ensureSingleChimeRecordingPipeline } from "@/lib/chime-recording-pipeline";
 
 export const dynamic = "force-dynamic";
 
@@ -94,7 +94,6 @@ export async function POST(request: NextRequest) {
 
     // Reuse an existing meeting if AWS still has it, else create fresh.
     let activeMeetingId: string | null = booking.chime_meeting_id ?? null;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let meeting: any;
 
     if (activeMeetingId) {
@@ -125,44 +124,28 @@ export async function POST(request: NextRequest) {
       meeting = await getChimeMeeting(activeMeetingId);
     }
 
-    // ── Start recording when the host joins for the first time ──────────────
-    // Idempotent: only start if no pipeline exists yet on this booking. Runs
-    // in parallel with the rest of the join flow so we don't block the
-    // attendee response on the AWS pipeline create call.
+    // ── Start recording when the host joins ────────────────────────────────
+    // Guarded by a DB reservation so two host tabs/retries cannot create two
+    // capture pipelines for the same meeting.
     const recordingPromise =
-      role === "diviner" && !booking.chime_pipeline_id
-        ? startChimeRecording(
-            activeMeetingId,
-            `recordings/${bookingId}`,
-          ).catch((err: unknown) => {
-            const name = (err as { name?: string }).name ?? "Error";
-            const msg = err instanceof Error ? err.message : String(err);
-            console.error(
-              `[admin-bookings/join] Failed to start recording: ${name}: ${msg}`,
-            );
-            return null;
+      role === "diviner"
+        ? ensureSingleChimeRecordingPipeline({
+            table: "admin_bookings",
+            sessionId: bookingId,
+            meetingId: activeMeetingId,
+            s3KeyPrefix: `recordings/${bookingId}`,
+            currentPipelineId: booking.chime_pipeline_id,
+            logLabel: "admin-bookings/join",
           })
         : Promise.resolve(null);
 
     const attendee = await createChimeAttendee(activeMeetingId!, externalUserId);
 
     const recording = await recordingPromise;
-    if (recording?.pipelineArn) {
+    if (recording?.status === "started") {
       console.log(
         `[admin-bookings/join] Recording pipeline started: id=${recording.pipelineId} arn=${recording.pipelineArn}`,
       );
-      // Fire-and-forget — if this fails (e.g. transient supabase error), the
-      // pipeline is still alive and we'll retry persisting on the next join.
-      // Use the two-argument form of `.then` to satisfy supabase-js's
-      // PromiseLike return type which doesn't expose `.catch`.
-      void admin
-        .from("admin_bookings")
-        .update({ chime_pipeline_id: recording.pipelineArn })
-        .eq("id", bookingId)
-        .then(
-          () => {},
-          () => {},
-        );
     }
 
     // Client side: detect whether the host is already in the meeting so the

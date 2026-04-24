@@ -86,7 +86,7 @@ export async function GET(
             currentRecordingUrl: row.recording_url ?? null,
             currentShareId: row.recording_share_id ?? null,
             clearStaleSegment: true,
-            allowManualConcat: true,
+            allowManualConcat: false,
           })
         : null;
 
@@ -144,7 +144,7 @@ export async function GET(
               ? extended.recording_share_id
               : null,
           clearStaleSegment: true,
-          allowManualConcat: true,
+          allowManualConcat: false,
         })
       : null;
 

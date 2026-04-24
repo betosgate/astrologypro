@@ -14,6 +14,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pipeline } from "node:stream/promises";
 import { Readable } from "node:stream";
+import type { ReadableStream as NodeReadableStream } from "node:stream/web";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 
@@ -66,7 +67,10 @@ async function downloadS3ObjectToFile(s3: S3Client, key: string, targetPath: str
   }
 
   if (typeof (body as Blob).stream === "function") {
-    await pipeline(Readable.fromWeb((body as Blob).stream() as ReadableStream), createWriteStream(targetPath));
+    await pipeline(
+      Readable.fromWeb((body as Blob).stream() as unknown as NodeReadableStream),
+      createWriteStream(targetPath),
+    );
     return;
   }
 
@@ -81,13 +85,19 @@ async function buildManualConcatenatedRecording(sessionId: string, objects: _Obj
   const workDir = await mkdtemp(join(tmpdir(), `astropro-recording-${sessionId}-`));
 
   try {
-    const localFiles: string[] = [];
+    const localFiles: string[] = new Array(segments.length);
+    const CONCURRENCY = 12; // Download 12 segments at a time
 
-    for (let index = 0; index < segments.length; index += 1) {
-      const segment = segments[index];
-      const localPath = join(workDir, `segment-${String(index).padStart(4, "0")}.mp4`);
-      await downloadS3ObjectToFile(s3, segment.Key!, localPath);
-      localFiles.push(localPath);
+    for (let i = 0; i < segments.length; i += CONCURRENCY) {
+      const chunk = segments.slice(i, i + CONCURRENCY);
+      await Promise.all(
+        chunk.map(async (segment, chunkIndex) => {
+          const index = i + chunkIndex;
+          const localPath = join(workDir, `segment-${String(index).padStart(4, "0")}.mp4`);
+          await downloadS3ObjectToFile(s3, segment.Key!, localPath);
+          localFiles[index] = localPath;
+        }),
+      );
     }
 
     const listPath = join(workDir, "concat-list.txt");
@@ -210,7 +220,7 @@ export async function ensureFinalRecordingForSession(options: {
   }
 
   let finalKey = inspection.finalKey;
-  if (!finalKey && allowManualConcat && inspection.segmentCount > 1) {
+  if (!finalKey && allowManualConcat && inspection.segmentCount > 0) {
     finalKey = await buildManualConcatenatedRecording(sessionId, inspection.objects);
   }
 

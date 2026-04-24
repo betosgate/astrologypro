@@ -6,6 +6,7 @@ import {
   stopChimeRecording,
   startChimeConcatenation,
 } from "@/lib/chime-meetings";
+import { waitForUsableChimePipelineId } from "@/lib/chime-recording-pipeline";
 
 export const dynamic = "force-dynamic";
 
@@ -82,12 +83,18 @@ export async function POST(request: NextRequest) {
 
     // ── Recording + meeting teardown ─────────────────────────────────────────
     if (session.chime_meeting_id) {
+      const capturePipelineArn = await waitForUsableChimePipelineId({
+        table: "phone_sessions",
+        sessionId: phoneSessionId,
+        currentPipelineId: session.chime_pipeline_id,
+      });
+
       // Step 1: stop capture pipeline (flush remaining segments to S3).
-      if (session.chime_pipeline_id) {
+      if (capturePipelineArn) {
         try {
-          await stopChimeRecording(session.chime_pipeline_id);
+          await stopChimeRecording(capturePipelineArn);
           console.log(
-            `[chime/voice/hangup] Capture pipeline stopped: ${session.chime_pipeline_id}`
+            `[chime/voice/hangup] Capture pipeline stopped: ${capturePipelineArn}`
           );
         } catch (err) {
           const errName = (err as { name?: string }).name ?? "";
@@ -105,7 +112,7 @@ export async function POST(request: NextRequest) {
         // Step 3: start concatenation pipeline.
         try {
           await startChimeConcatenation(
-            session.chime_pipeline_id,
+            capturePipelineArn,
             phoneSessionId
           );
           console.log(

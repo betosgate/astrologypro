@@ -220,6 +220,9 @@ export function TemplateIntakeForm({
     chooseDivinerUrl: string;
     bookingUrl: string;
   } | null>(null);
+  const [postSubmitAction, setPostSubmitAction] = useState<
+    "choose-diviner" | "direct-booking" | null
+  >(null);
   const requiresPartner = config.mode === "couple";
   const isGeneralTemplate = !embedded && isGeneralServiceTemplateSlug(templateSlug);
 
@@ -451,6 +454,7 @@ export function TemplateIntakeForm({
       <Dialog
         open={postSubmitChoices != null}
         onOpenChange={(open) => {
+          if (postSubmitAction) return;
           if (!open) {
             setPostSubmitChoices(null);
           }
@@ -476,8 +480,10 @@ export function TemplateIntakeForm({
               className="h-auto w-full justify-between bg-gold px-5 py-4 text-left text-cosmos-900 hover:bg-gold-light"
               onClick={() => {
                 if (!postSubmitChoices) return;
+                setPostSubmitAction("choose-diviner");
                 router.push(postSubmitChoices.chooseDivinerUrl);
               }}
+              disabled={postSubmitAction !== null}
             >
               <span className="flex flex-col items-start">
                 <span className="font-semibold">Choose a Diviner and Book</span>
@@ -485,7 +491,11 @@ export function TemplateIntakeForm({
                   Browse matching readers before you continue.
                 </span>
               </span>
-              <ArrowRight className="size-4 shrink-0" />
+              {postSubmitAction === "choose-diviner" ? (
+                <Loader2 className="size-4 shrink-0 animate-spin" />
+              ) : (
+                <ArrowRight className="size-4 shrink-0" />
+              )}
             </Button>
 
             <Button
@@ -494,8 +504,10 @@ export function TemplateIntakeForm({
               className="h-auto w-full justify-between border-white/10 bg-[#141b2d] px-5 py-4 text-left text-cream hover:bg-[#1a2337]"
               onClick={() => {
                 if (!postSubmitChoices) return;
+                setPostSubmitAction("direct-booking");
                 router.push(postSubmitChoices.bookingUrl);
               }}
+              disabled={postSubmitAction !== null}
             >
               <span className="flex flex-col items-start">
                 <span className="font-semibold">Book Without Choosing a Diviner</span>
@@ -503,7 +515,11 @@ export function TemplateIntakeForm({
                   Continue straight into the direct booking route.
                 </span>
               </span>
-              <ArrowRight className="size-4 shrink-0" />
+              {postSubmitAction === "direct-booking" ? (
+                <Loader2 className="size-4 shrink-0 animate-spin" />
+              ) : (
+                <ArrowRight className="size-4 shrink-0" />
+              )}
             </Button>
           </div>
 
@@ -512,7 +528,11 @@ export function TemplateIntakeForm({
               type="button"
               variant="ghost"
               className="text-silver/75 hover:bg-white/[0.04] hover:text-cream"
-              onClick={() => setPostSubmitChoices(null)}
+              disabled={postSubmitAction !== null}
+              onClick={() => {
+                setPostSubmitAction(null);
+                setPostSubmitChoices(null);
+              }}
             >
               Stay on this page
             </Button>
