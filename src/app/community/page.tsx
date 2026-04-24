@@ -125,6 +125,15 @@ function capitalize(value: string | null | undefined): string {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
+function getRelationshipBadgeClasses(rel: string): string {
+  const r = rel.toLowerCase();
+  if (r === "self" || r === "primary") return "bg-amber-500/20 text-amber-500 border-amber-500/30";
+  if (r === "spouse" || r === "partner") return "bg-purple-500/20 text-purple-400 border-purple-500/30";
+  if (r === "son" || r === "boy") return "bg-blue-500/20 text-blue-400 border-blue-500/30";
+  if (r === "daughter" || r === "girl") return "bg-rose-500/20 text-rose-400 border-rose-500/30";
+  return "bg-slate-500/20 text-slate-400 border-slate-500/30";
+}
+
 const AVATAR_COLORS = [
   "bg-rose-500/15 text-rose-600",
   "bg-violet-500/15 text-violet-600",
@@ -721,6 +730,25 @@ export default async function CommunityDashboardPage() {
     },
   ];
 
+  // ── Family Chips Data for Top Card ───────────────────────────────────────
+  const familyChipData = planType === "family" ? (
+    familyMembers.length > 0
+      ? [
+          { id: member.id, name: member.full_name || "Self", relationship: "Self" },
+          ...familyMembers.map((fm) => ({
+            id: fm.id,
+            name: fm.full_name || "Unknown",
+            relationship: capitalize(fm.relationship || "Member"),
+          })),
+        ]
+      : [
+          { id: member.id, name: member.full_name || "Self", relationship: "Self" },
+          { id: "mock-1", name: "Anaya Ashton", relationship: "Spouse", isMock: true },
+          { id: "mock-2", name: "Ethan Ashton", relationship: "Son", isMock: true },
+          { id: "mock-3", name: "Mira Ashton", relationship: "Daughter", isMock: true },
+        ]
+  ) : [];
+
   return (
     <SectionContainer verticalPadding="none" className="px-0 sm:px-0 lg:px-0">
       <div className="space-y-8">
@@ -821,6 +849,37 @@ export default async function CommunityDashboardPage() {
             </div>
           </div>
         </div>
+
+        {/* Family Members Row */}
+        {familyChipData.length > 0 && (
+          <div className="mt-4 flex flex-col gap-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center gap-2 mr-2 text-sm text-muted-foreground">
+                <Users className="size-4" aria-hidden="true" />
+                <span>Family Members</span>
+              </div>
+              {familyChipData.map((chip) => (
+                <div
+                  key={chip.id}
+                  className="flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 pl-2.5 pr-1 py-1"
+                >
+                  <User className="size-3.5 text-muted-foreground" aria-hidden="true" />
+                  <span className="text-sm font-medium text-foreground">{chip.name}</span>
+                  <Badge
+                    variant="outline"
+                    className={`text-[10px] px-1.5 py-0 h-4 min-h-0 rounded-full font-medium border ${getRelationshipBadgeClasses(
+                      chip.relationship
+                    )}`}
+                  >
+                    {chip.relationship}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+            <div className="h-px w-full bg-border/50" />
+          </div>
+        )}
+
         {/* Quick action buttons */}
         <div className="mt-3 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
           <Button asChild variant="outline" size="sm" className="w-full sm:w-auto">
