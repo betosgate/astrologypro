@@ -72,6 +72,7 @@ import { MIGRATION_SQL as MIG_20260423000003_INV } from "@/data/migrations/20260
 import { MIGRATION_SQL as MIG_20260423000004_FIX } from "@/data/migrations/20260423000004_fix_invite_rpc_ambiguity";
 import { MIGRATION_SQL as MIG_20260423000005_ACC } from "@/data/migrations/20260423000005_accept_rpc";
 import { MIGRATION_SQL as MIG_20260424000001_ODC } from "@/data/migrations/20260424000001_phone_sessions_outbound_diviner_call";
+import { MIGRATION_SQL as MIG_20260424000010_ACV2A } from "@/data/migrations/20260424000010_affiliate_commission_v2_additive";
 
 /**
  * Allowlisted migrations that the admin migration runner can execute.
@@ -688,6 +689,14 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Introduces canonical affiliate_accounts identity table (email CITEXT UNIQUE, user_id UUID UNIQUE, platform-wide status, profile + payout fields). Adds affiliate_invites (hashed SHA-256 tokens, 14d expiry). Reshapes diviner_affiliates into a junction via additive ALTER (affiliate_account_id FK + invited_at + accepted_at). Backfills the 14 existing diviner_affiliates rows into the new model: one canonical account per unique email, auth.users link attempted by email match, decisions logged in _affiliate_backfill_audit. RLS on both new tables (service_role all + self-select/update + diviner-linked). Reuses aff_updated_at() trigger. Strictly additive — no DROPs, no FK rewiring; all downstream FKs on diviner_affiliates.id remain untouched. End-of-migration assertion fails loudly if any junction row is left without affiliate_account_id. Idempotent: IF NOT EXISTS guards + WHERE affiliate_account_id IS NULL on the backfill UPDATEs. Sprint plan: docs/tasks/2026-04-23/affiliate-identity-refactor/. Task 02 adds create_affiliate_invite RPC, Task 03 adds consume_invite_and_activate_junction RPC + user-link trigger guard.",
     sortKey: "20260423000001",
     sql: MIG_20260423000001_AIR,
+  },
+  "20260424000010_affiliate_commission_v2_additive": {
+    id: "20260424000010_affiliate_commission_v2_additive",
+    title: "Affiliate Commission v2 — additive (rate history, booking stamp, admin action log)",
+    description:
+      "Task 01a of the Affiliate Commission v2 sprint. Strictly additive. Creates diviner_service_affiliate_rate_history (full rate-edit audit keyed on assignment_id) and admin_action_log (force-revoke / force-archive / reverse events). Adds three stamp columns to bookings (commission_source_assignment_id, commission_rate_type_stamp, commission_rate_value_stamp) so the rate that pays out on a conversion is captured at booking creation time, not resolved live at webhook (spec §3.8). Adds rate_type_used + rate_value_used on campaign_conversions for permanent webhook-time audit. Extends affiliate_campaigns.status CHECK to allow 'archived'. Hardens campaign_conversions.campaign_id FK from ON DELETE CASCADE to ON DELETE RESTRICT so hard-delete of a campaign with conversions errors rather than cascade-wiping history. RLS: service_role ALL on both new tables, plus diviner/affiliate scoped SELECT on rate history and admin-only SELECT on action log. Idempotent: IF NOT EXISTS guards, DO blocks on policy + constraint work, end-of-migration sanity check raises if any of the four required additions didn't land. Spec: docs/specs/affiliate-commission-system.md (v1.2).",
+    sortKey: "20260424000010",
+    sql: MIG_20260424000010_ACV2A,
   },
 };
 
