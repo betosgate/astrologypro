@@ -163,24 +163,32 @@ export function MembershipCard({ subscription, userEmail }: MembershipCardProps)
 
         {/* Action buttons */}
         <div className="flex flex-wrap gap-2 pt-1">
-          {isFamily && subscription.member_count < subscription.max_members && (
+          {/* {isFamily && subscription.member_count < subscription.max_members && (
             <Button asChild size="sm">
               <Link href="/community/members/new">+ Add Member</Link>
             </Button>
-          )}
+          )} */}
           {canUpgrade && (
             <Button asChild size="sm" variant="outline">
-              <Link href="/mystery-school/enroll">Upgrade Plan</Link>
+              <Link href="/community/plan">Upgrade Plan</Link>
             </Button>
           )}
-          <Button
+          {/* Client update 2026-04-24:
+              Hide "Update Payment" from the PM membership card for now.
+              Keep the implementation commented instead of deleting it so the
+              custom Stripe Elements flow can be restored if needed later. */}
+          {/* <Button
             size="sm"
             variant="outline"
             onClick={() => setPaymentModalOpen(true)}
           >
             Update Payment
-          </Button>
-          {subscription.status === "active" && (
+          </Button> */}
+          {/* Client update 2026-04-24:
+              Hide "Subscribed" from the PM membership card for now.
+              Keep the implementation commented instead of deleting it so the
+              custom unsubscribe flow remains easy to restore later. */}
+          {/* {subscription.status === "active" && (
             <Button
               size="sm"
               variant="outline"
@@ -189,15 +197,15 @@ export function MembershipCard({ subscription, userEmail }: MembershipCardProps)
             >
               Subscribed
             </Button>
-          )}
+          )} */}
           <Button
             size="sm"
-            variant="ghost"
+            variant="outline"
             onClick={handleManageBilling}
             disabled={portalLoading}
             aria-busy={portalLoading}
           >
-            {portalLoading ? "Redirecting…" : "Manage Billing"}
+            {portalLoading ? "Redirecting…" : "Manage Subscription"}
           </Button>
         </div>
 

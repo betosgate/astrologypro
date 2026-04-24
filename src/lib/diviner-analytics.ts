@@ -90,7 +90,10 @@ export async function buildDivinerTrackingContext(params: {
   let advocateRelated = false;
 
   if (referralCode) {
-    const [{ data: advocate }, { data: legacyAffiliate }, { data: divinerAffiliateLink }] =
+    // Post-System-A: referral codes come from affiliate_campaigns.campaign_code.
+    // Legacy advocate (social_advocates.referral_code) + legacy affiliates table
+    // are kept for backward-compat with existing referral links.
+    const [{ data: advocate }, { data: legacyAffiliate }, { data: divinerAffiliateCampaign }] =
       await Promise.all([
         admin
           .from("social_advocates")
@@ -104,17 +107,18 @@ export async function buildDivinerTrackingContext(params: {
           .eq("is_active", true)
           .maybeSingle(),
         admin
-          .from("affiliate_referral_links")
+          .from("affiliate_campaigns")
           .select("id")
-          .eq("slug", referralCode)
-          .eq("is_active", true)
+          .eq("campaign_code", referralCode)
+          .eq("owner_type", "affiliate")
+          .eq("status", "active")
           .maybeSingle(),
       ]);
 
     if (advocate) {
       attributionKind = "advocate";
       advocateRelated = true;
-    } else if (legacyAffiliate || divinerAffiliateLink) {
+    } else if (legacyAffiliate || divinerAffiliateCampaign) {
       attributionKind = "affiliate";
       affiliateRelated = true;
     } else {

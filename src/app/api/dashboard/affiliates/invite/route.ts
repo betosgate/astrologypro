@@ -10,7 +10,6 @@ import { randomBytes, createHash } from "crypto";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { assertAffiliateShareWithinCap } from "@/lib/affiliate-share-cap";
-import { isAffiliateIdentityV2Enabled } from "@/lib/feature-flags";
 import { rateLimit, rateLimitResponse } from "@/lib/rate-limit";
 import { sendAffiliateInvitation } from "@/lib/email";
 
@@ -58,11 +57,6 @@ function maskAcceptUrl(appUrl: string) {
  * }
  */
 export async function POST(request: Request) {
-  // Flag gate
-  if (!isAffiliateIdentityV2Enabled()) {
-    return problem(503, "Feature not available");
-  }
-
   // Auth
   const supabase = await createClient();
   const {

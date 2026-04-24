@@ -1,9 +1,13 @@
-// Task 05 (2026-04-23): rehabilitated affiliate dashboard.
-// Was: queried diviner_affiliates.user_id (always null → broken for everyone).
-// Now: reads via resolveAffiliateForCaller (canonical account → all junctions).
-//
+// Affiliate dashboard — lands here after login.
 // Aggregates across ALL diviner partnerships for this affiliate.
-// Sprint: docs/tasks/2026-04-23/affiliate-identity-refactor/05-affiliate-portal.md
+//
+// 2026-04-24: rewired onto System B (campaign_conversions + affiliate_campaigns).
+// System A (affiliate_commissions + affiliate_referral_links) retired — see
+// docs/specs/affiliate-commission-system.md §9.
+//
+// KPIs simplified: Phase 1 has no admin approval state machine, so
+// "Pending vs Approved" go away. Total Earned = sum(commission_amount_cents)
+// where reversed_at IS NULL. Paid column is Phase 2 (Stripe auto-split).
 
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
@@ -85,37 +89,37 @@ export default async function AffiliateDashboardPage() {
     );
   }
 
-  // Aggregate commissions + links across all junctions in parallel
-  const [{ data: commissionRows }, { data: linkRows }] = await Promise.all([
+  // Aggregate conversions + campaigns across all junctions in parallel.
+  // Clicks come from campaign_clicks joined via affiliate_id.
+  const [
+    { data: conversionRows },
+    { data: campaignRows },
+    { count: totalClicks },
+  ] = await Promise.all([
     admin
-      .from("affiliate_commissions")
-      .select("commission_amount_cents, status")
+      .from("campaign_conversions")
+      .select("commission_amount_cents, reversed_at")
       .in("affiliate_id", junctionIds),
     admin
-      .from("affiliate_referral_links")
-      .select("id, slug, url, product_type, clicks, conversions, is_active, diviner_id")
-      .in("affiliate_id", junctionIds)
-      .order("clicks", { ascending: false })
+      .from("affiliate_campaigns")
+      .select("id, campaign_code, name, status, diviner_id")
+      .eq("owner_affiliate_type", "diviner_affiliate")
+      .in("owner_affiliate_id", junctionIds)
+      .order("created_at", { ascending: false })
       .limit(5),
+    admin
+      .from("campaign_clicks")
+      .select("id", { count: "exact", head: true })
+      .in("affiliate_id", junctionIds),
   ]);
 
-  let pendingCents = 0;
-  let approvedCents = 0;
-  let paidCents = 0;
+  let earnedCents = 0;
   let totalConversions = 0;
-  for (const row of commissionRows ?? []) {
-    const amount = Number(row.commission_amount_cents ?? 0);
+  for (const row of conversionRows ?? []) {
+    if (row.reversed_at) continue;
+    earnedCents += Number(row.commission_amount_cents ?? 0);
     totalConversions++;
-    const s = row.status as string;
-    if (s === "pending" || s === "on_hold") pendingCents += amount;
-    else if (s === "approved") approvedCents += amount;
-    else if (s === "paid") paidCents += amount;
   }
-
-  const totalClicks = (linkRows ?? []).reduce(
-    (sum, l) => sum + Number(l.clicks ?? 0),
-    0,
-  );
 
   return (
     <div className="space-y-6">
@@ -138,14 +142,14 @@ export default async function AffiliateDashboardPage() {
       </header>
 
       {/* KPIs */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Total Clicks</CardTitle>
             <MousePointerClick className="size-4 text-muted-foreground" aria-hidden />
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold">{totalClicks.toLocaleString()}</p>
+            <p className="text-2xl font-bold">{(totalClicks ?? 0).toLocaleString()}</p>
           </CardContent>
         </Card>
         <Card>
@@ -159,28 +163,12 @@ export default async function AffiliateDashboardPage() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Pending</CardTitle>
-            <Clock className="size-4 text-muted-foreground" aria-hidden />
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold text-amber-600">
-              {formatCents(pendingCents)}
-            </p>
-            <p className="text-xs text-muted-foreground">awaiting approval</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Total Paid</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Earned</CardTitle>
             <DollarSign className="size-4 text-muted-foreground" aria-hidden />
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold text-sky-600">{formatCents(paidCents)}</p>
-            {approvedCents > 0 && (
-              <p className="text-xs text-green-600">
-                +{formatCents(approvedCents)} approved
-              </p>
-            )}
+            <p className="text-2xl font-bold text-sky-600">{formatCents(earnedCents)}</p>
+            <p className="text-xs text-muted-foreground">across all active conversions</p>
           </CardContent>
         </Card>
       </div>
@@ -191,40 +179,34 @@ export default async function AffiliateDashboardPage() {
           credited on marketing-kit links; per-reading routing is a follow-up. */}
       <AffiliateMarketingKit affiliateId={junctionIds[0]} />
 
-      {/* Top links */}
+      {/* Recent campaigns */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Top Performing Links</CardTitle>
+          <CardTitle>Recent Campaigns</CardTitle>
           <Link
-            href="/affiliate/links"
+            href="/affiliate/campaigns"
             className="text-sm font-medium text-primary hover:underline"
           >
-            All links
+            All campaigns
           </Link>
         </CardHeader>
         <CardContent>
-          {linkRows && linkRows.length > 0 ? (
+          {campaignRows && campaignRows.length > 0 ? (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Slug</TableHead>
-                  <TableHead>Product</TableHead>
-                  <TableHead className="text-right">Clicks</TableHead>
-                  <TableHead className="text-right">Conversions</TableHead>
+                  <TableHead>Campaign</TableHead>
+                  <TableHead>Code</TableHead>
                   <TableHead>Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {linkRows.map((l) => (
-                  <TableRow key={l.id}>
-                    <TableCell className="font-mono text-xs">{l.slug}</TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {l.product_type ?? "general"}
-                    </TableCell>
-                    <TableCell className="text-right">{l.clicks}</TableCell>
-                    <TableCell className="text-right">{l.conversions}</TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {l.is_active ? "Active" : "Inactive"}
+                {campaignRows.map((c) => (
+                  <TableRow key={c.id}>
+                    <TableCell>{c.name ?? "—"}</TableCell>
+                    <TableCell className="font-mono text-xs">{c.campaign_code}</TableCell>
+                    <TableCell className="text-muted-foreground capitalize">
+                      {c.status}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -232,7 +214,7 @@ export default async function AffiliateDashboardPage() {
             </Table>
           ) : (
             <p className="py-8 text-center text-sm text-muted-foreground">
-              No referral links yet. Visit your partnerships page to generate one.
+              No campaigns yet. Visit your partnerships page and create one.
             </p>
           )}
         </CardContent>

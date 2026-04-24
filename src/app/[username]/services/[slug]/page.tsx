@@ -210,6 +210,20 @@ function CategoryBadge({ category }: { category: string }) {
   );
 }
 
+function SectionHeading({
+  title,
+  className = "",
+}: {
+  title: string;
+  className?: string;
+}) {
+  return (
+    <h2 className={`font-display text-3xl font-semibold tracking-tight text-cream md:text-4xl ${className}`}>
+      {title}
+    </h2>
+  );
+}
+
 /* ------------------------------------------------------------------ */
 /*  Page component                                                     */
 /* ------------------------------------------------------------------ */
@@ -368,7 +382,7 @@ export default async function ServiceDetailPage({
       ) : null}
 
       {/* ===== STICKY TOP NAV ===== */}
-      <nav className="sticky top-0 z-40 border-b border-white/5 bg-cosmos-900/80 backdrop-blur-xl">
+      <nav className="sticky top-0 z-40 border-b border-white/5 bg-cosmos-900/78 shadow-[0_8px_40px_rgba(0,0,0,0.18)] backdrop-blur-xl">
         <div className="mx-auto flex h-12 max-w-6xl items-center justify-between px-4">
           <div className="flex items-center gap-2 text-sm">
             <Link
@@ -390,7 +404,7 @@ export default async function ServiceDetailPage({
           {bookingEnabled ? (
             <Link
               href={bookUrl}
-              className="rounded-full bg-gold px-4 py-1.5 text-xs font-semibold text-cosmos-900 transition-colors hover:bg-gold-light"
+              className="rounded-full bg-gold px-4 py-1.5 text-xs font-semibold text-cosmos-900 shadow-[0_0_18px_rgba(201,168,76,0.18)] transition-all hover:-translate-y-0.5 hover:bg-gold-light"
             >
               Book Now
             </Link>
@@ -403,22 +417,22 @@ export default async function ServiceDetailPage({
       </nav>
 
       {/* ===== 1. HERO SECTION ===== */}
-      <section className="relative overflow-hidden border-b border-white/5 bg-cosmos-900">
-        {/* Radial glow */}
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_30%_20%,rgba(201,168,76,0.06)_0%,transparent_60%)]" />
+      <section className="relative overflow-hidden border-b border-white/5 bg-[linear-gradient(180deg,#06080f_0%,#080b14_42%,#090d19_100%)]">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_16%_18%,rgba(201,168,76,0.16),transparent_28%),radial-gradient(circle_at_85%_20%,rgba(99,102,241,0.12),transparent_24%),radial-gradient(circle_at_50%_100%,rgba(201,168,76,0.08),transparent_34%)]" />
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-gold/45 to-transparent" />
 
         <div className="relative z-10 mx-auto max-w-6xl px-4 py-12 md:py-16 lg:py-20">
-          <div className="grid items-center gap-8 md:grid-cols-2 md:gap-12">
+          <div className="grid items-center gap-10 lg:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)] lg:gap-14">
             {/* Left: text content */}
-            <div>
+            <div className="max-w-2xl">
               <CategoryBadge category={service.category} />
 
-              <h1 className="mt-4 font-display text-4xl font-bold leading-tight text-cream md:text-5xl lg:text-6xl">
+              <h1 className="mt-5 font-display text-4xl font-bold leading-[0.95] tracking-tight text-cream md:text-5xl lg:text-7xl">
                 {service.name}
               </h1>
 
               {service.description && (
-                <p className="mt-4 text-base leading-relaxed text-silver/70 md:text-lg">
+                <p className="mt-5 max-w-xl text-base leading-8 text-silver/74 md:text-lg">
                   {service.description}
                 </p>
               )}
@@ -429,10 +443,9 @@ export default async function ServiceDetailPage({
                 </div>
               )}
 
-              {/* Diviner attribution */}
               <Link
                 href={profileUrl}
-                className="mt-6 inline-flex items-center gap-3 rounded-full border border-white/[0.06] bg-white/[0.02] px-4 py-2 transition-colors hover:border-gold/20 hover:bg-gold/5"
+                className="mt-7 inline-flex items-center gap-3 rounded-full border border-white/[0.08] bg-white/[0.03] pr-4 pl-3 py-2.5 shadow-[0_12px_40px_rgba(0,0,0,0.18)] transition-all duration-300 hover:border-gold/20 hover:bg-gold/5"
               >
                 <div className="relative size-9 overflow-hidden rounded-full border border-gold/20">
                   <Image
@@ -449,66 +462,96 @@ export default async function ServiceDetailPage({
                 <ChevronRight className="size-3.5 text-silver/40" />
               </Link>
 
-              {/* Price + duration */}
-              <div className="mt-8 flex flex-wrap items-end gap-4">
-                <span className="font-display text-4xl font-bold text-gold md:text-5xl">
-                  {formatCurrency(Number(service.base_price))}
-                </span>
-                <div className="mb-1 space-y-0.5">
-                  <span className="flex items-center gap-1.5 text-sm text-silver/70">
-                    <Clock className="size-3.5" />
-                    {service.duration_minutes} min session
-                  </span>
-                  {service.overage_rate && Number(service.overage_rate) > 0 && (
-                    <span className="text-xs text-silver/50">
-                      {formatCurrency(Number(service.overage_rate))}/min after
+              <div className="mt-8 rounded-[28px] border border-white/10 bg-white/[0.03] p-5 shadow-[0_20px_80px_rgba(0,0,0,0.28)] backdrop-blur-xl md:p-6">
+                <div className="flex flex-wrap items-end justify-between gap-5">
+                  <div className="space-y-2">
+                    <span className="font-display text-4xl font-bold text-gold md:text-5xl">
+                      {formatCurrency(Number(service.base_price))}
+                    </span>
+                    <div className="space-y-0.5">
+                      <span className="flex items-center gap-1.5 text-sm text-silver/70">
+                        <Clock className="size-3.5" />
+                        {service.duration_minutes} min session
+                      </span>
+                      {service.overage_rate && Number(service.overage_rate) > 0 && (
+                        <span className="text-xs text-silver/50">
+                          {formatCurrency(Number(service.overage_rate))}/min after
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {bookingEnabled ? (
+                    <Link
+                      href={bookUrl}
+                      className="inline-flex h-12 items-center gap-2 rounded-full bg-gold px-7 text-sm font-semibold text-cosmos-900 shadow-[0_0_24px_rgba(201,168,76,0.24)] transition-all hover:-translate-y-0.5 hover:bg-gold-light hover:shadow-[0_0_32px_rgba(201,168,76,0.34)]"
+                    >
+                      Book This Reading
+                      <ArrowRight className="size-4" />
+                    </Link>
+                  ) : (
+                    <span className="inline-flex h-12 items-center rounded-full border border-white/10 px-7 text-sm font-semibold text-silver/45">
+                      Booking temporarily unavailable
                     </span>
                   )}
                 </div>
-              </div>
 
-              {/* Booking count social proof */}
-              {bookingCount > 0 && (
-                <p className="mt-3 text-xs text-silver/50">
-                  {bookingCount} session{bookingCount !== 1 ? "s" : ""} booked
-                </p>
-              )}
-
-              {/* Primary CTA */}
-              <div className="mt-8">
-                {bookingEnabled ? (
-                  <Link
-                    href={bookUrl}
-                    className="inline-flex h-12 items-center gap-2 rounded-lg bg-gold px-8 text-sm font-semibold text-cosmos-900 shadow-[0_0_20px_rgba(201,168,76,0.3)] transition-all hover:bg-gold-light hover:shadow-[0_0_30px_rgba(201,168,76,0.4)]"
-                  >
-                    Book This Reading
-                    <ArrowRight className="size-4" />
-                  </Link>
-                ) : (
-                  <span className="inline-flex h-12 items-center rounded-lg border border-white/10 px-8 text-sm font-semibold text-silver/45">
-                    Booking temporarily unavailable
-                  </span>
-                )}
+                <div className="mt-5 flex flex-wrap gap-2.5">
+                  {proofBullets.map((bullet) => (
+                    <div
+                      key={bullet}
+                      className="inline-flex items-center rounded-full border border-white/10 bg-cosmos-950/55 px-3.5 py-2 text-xs text-cream/78"
+                    >
+                      {bullet}
+                    </div>
+                  ))}
+                  {bookingCount > 0 && (
+                    <div className="inline-flex items-center rounded-full border border-gold/20 bg-gold/6 px-3.5 py-2 text-xs text-gold/85">
+                      {bookingCount} session{bookingCount !== 1 ? "s" : ""} booked
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
             {/* Right: service image or decorative element */}
-            <div className="relative hidden md:block">
+            <div className="relative hidden lg:block">
+              <div className="pointer-events-none absolute -top-6 -right-6 size-28 rounded-full border border-gold/12 bg-gold/8 blur-2xl" />
               {serviceImageUrl ? (
-                <div className="relative mx-auto aspect-square max-w-sm overflow-hidden rounded-2xl border border-white/[0.06] shadow-2xl">
-                  <Image
-                    src={serviceImageUrl}
-                    alt={service.name}
-                    fill
-                    className="object-cover"
-                    sizes="(max-width: 768px) 100vw, 384px"
-                    priority
-                  />
-                  {/* Overlay gradient */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-cosmos-900/60 to-transparent" />
+                <div className="relative mx-auto max-w-md">
+                  <div className="absolute -inset-4 rounded-[2rem] border border-white/8 bg-white/[0.02]" />
+                  <div className="absolute inset-x-10 -top-5 h-20 rounded-full bg-gold/12 blur-3xl" />
+                  <div className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-cosmos-950/70 p-3 shadow-[0_30px_120px_rgba(0,0,0,0.38)]">
+                    <div className="relative aspect-[0.92] overflow-hidden rounded-[1.45rem]">
+                      <Image
+                        src={serviceImageUrl}
+                        alt={service.name}
+                        fill
+                        className="object-cover"
+                        sizes="(max-width: 1024px) 100vw, 448px"
+                        priority
+                      />
+                      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(6,8,15,0.06),rgba(6,8,15,0.12)_40%,rgba(6,8,15,0.6))]" />
+                    </div>
+                  </div>
+                  <div className="absolute -bottom-5 left-6 right-6 rounded-[1.4rem] border border-white/10 bg-cosmos-900/88 px-5 py-4 backdrop-blur-xl">
+                    <div className="flex items-center justify-between gap-4">
+                      <div>
+                        <p className="text-xs uppercase tracking-[0.28em] text-silver/42">
+                          {service.duration_minutes} min session
+                        </p>
+                        <p className="mt-1 font-display text-2xl text-cream">
+                          {formatCurrency(Number(service.base_price))}
+                        </p>
+                      </div>
+                      <div className="rounded-full border border-gold/18 bg-gold/8 px-3 py-1 text-xs text-gold/85">
+                        {getServiceCategoryLabel(service.category)}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               ) : (
-                <div className="relative mx-auto flex aspect-square max-w-sm items-center justify-center rounded-2xl border border-white/[0.06] bg-white/[0.02]">
+                <div className="relative mx-auto flex aspect-square max-w-sm items-center justify-center rounded-[2rem] border border-white/[0.08] bg-white/[0.03] shadow-[0_30px_120px_rgba(0,0,0,0.32)]">
                   <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(201,168,76,0.08)_0%,transparent_70%)]" />
                   <Sparkles className="size-20 text-gold/20" />
                 </div>
@@ -520,15 +563,13 @@ export default async function ServiceDetailPage({
 
       {/* ===== 2. WHAT'S INCLUDED ===== */}
       <section className="py-12 md:py-16">
-        <div className="mx-auto max-w-4xl px-4">
-          <h2 className="mb-8 text-center font-display text-3xl font-semibold text-cream md:text-4xl">
-            What&apos;s Included
-          </h2>
+        <div className="mx-auto max-w-5xl px-4">
+          <SectionHeading title="What&apos;s Included" className="text-center" />
 
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {/* Duration card */}
-            <div className="glass-card flex items-start gap-4 rounded-xl p-5">
-              <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-gold/10">
+            <div className="glass-card flex h-full items-start gap-4 rounded-[1.6rem] border-white/10 p-5 shadow-[0_18px_40px_rgba(0,0,0,0.2)]">
+              <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl border border-gold/18 bg-gold/10">
                 <Clock className="size-5 text-gold" />
               </div>
               <div>
@@ -540,8 +581,8 @@ export default async function ServiceDetailPage({
             </div>
 
             {/* HD Video card */}
-            <div className="glass-card flex items-start gap-4 rounded-xl p-5">
-              <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-gold/10">
+            <div className="glass-card flex h-full items-start gap-4 rounded-[1.6rem] border-white/10 p-5 shadow-[0_18px_40px_rgba(0,0,0,0.2)]">
+              <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl border border-gold/18 bg-gold/10">
                 <Video className="size-5 text-gold" />
               </div>
               <div>
@@ -553,8 +594,8 @@ export default async function ServiceDetailPage({
             </div>
 
             {/* Session type card */}
-            <div className="glass-card flex items-start gap-4 rounded-xl p-5">
-              <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-gold/10">
+            <div className="glass-card flex h-full items-start gap-4 rounded-[1.6rem] border-white/10 p-5 shadow-[0_18px_40px_rgba(0,0,0,0.2)]">
+              <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl border border-gold/18 bg-gold/10">
                 <Sparkles className="size-5 text-gold" />
               </div>
               <div>
@@ -569,29 +610,44 @@ export default async function ServiceDetailPage({
           </div>
 
           {/* Category-specific bullets */}
-          <div className="mt-8 glass-card rounded-xl p-6">
-            <h3 className="mb-4 text-sm font-medium uppercase tracking-wider text-silver/50">
-              Your Session Includes
-            </h3>
-            <ul className="space-y-3">
-              {includedBullets.map((bullet) => (
-                <li
-                  key={bullet}
-                  className="flex items-start gap-3 text-sm text-cream/80"
-                >
-                  <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-gold/60" />
-                  {bullet}
-                </li>
-              ))}
-            </ul>
+          <div className="mt-8 grid gap-6 lg:grid-cols-[1.1fr,0.9fr]">
+            <div className="glass-card rounded-[1.9rem] border-white/10 p-6 md:p-7">
+              <h3 className="mb-4 text-sm font-medium uppercase tracking-wider text-silver/50">
+                Your Session Includes
+              </h3>
+              <ul className="space-y-3">
+                {includedBullets.map((bullet) => (
+                  <li
+                    key={bullet}
+                    className="flex items-start gap-3 rounded-2xl border border-white/8 bg-cosmos-950/38 px-4 py-3 text-sm text-cream/80"
+                  >
+                    <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-gold/60" />
+                    {bullet}
+                  </li>
+                ))}
+              </ul>
 
-            {requiresBirthData && (
-              <div className="mt-5 rounded-lg border border-gold/15 bg-gold/5 px-4 py-3">
-                <p className="text-xs text-gold/80">
-                  <strong>Note:</strong> Please have your exact birth date, time, and location ready for the most accurate reading.
-                </p>
+              {requiresBirthData && (
+                <div className="mt-5 rounded-2xl border border-gold/15 bg-gold/5 px-4 py-3.5">
+                  <p className="text-xs text-gold/80">
+                    <strong>Note:</strong> Please have your exact birth date, time, and location ready for the most accurate reading.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="rounded-[1.9rem] border border-gold/15 bg-[linear-gradient(180deg,rgba(201,168,76,0.08),rgba(13,18,48,0.48))] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.18)] md:p-7">
+              <div className="space-y-3">
+                {proofBullets.map((bullet) => (
+                  <div
+                    key={bullet}
+                    className="rounded-2xl border border-white/10 bg-cosmos-950/50 px-4 py-3 text-sm text-cream/85"
+                  >
+                    {bullet}
+                  </div>
+                ))}
               </div>
-            )}
+            </div>
           </div>
         </div>
 
@@ -599,39 +655,45 @@ export default async function ServiceDetailPage({
       </section>
 
       <section className="py-12 md:py-16">
-        <div className="mx-auto grid max-w-5xl gap-6 px-4 lg:grid-cols-[1.05fr,0.95fr]">
-          <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6 md:p-8">
-            <p className="text-xs uppercase tracking-[0.24em] text-gold/70">
-              Who This Reading Is For
-            </p>
-            <h2 className="mt-3 font-display text-3xl font-semibold text-cream">
-              A clearer fit for the right client
-            </h2>
-            <div className="mt-5 space-y-3">
-              {serviceForBullets.map((bullet) => (
-                <div
-                  key={bullet}
-                  className="rounded-2xl border border-white/8 bg-cosmos-950/40 px-4 py-3 text-sm text-cream/85"
-                >
-                  {bullet}
-                </div>
-              ))}
+        <div className="mx-auto max-w-5xl px-4">
+          <SectionHeading title="Who This Reading Is For" />
+          <div className="mt-8 grid gap-6 lg:grid-cols-[1.05fr,0.95fr]">
+            <div className="rounded-[2rem] border border-white/10 bg-white/[0.035] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.18)] md:p-8">
+              <div className="grid gap-3">
+                {serviceForBullets.map((bullet) => (
+                  <div
+                    key={bullet}
+                    className="rounded-[1.35rem] border border-white/8 bg-cosmos-950/40 px-4 py-4 text-sm leading-7 text-cream/85"
+                  >
+                    {bullet}
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
 
-          <div className="rounded-3xl border border-gold/15 bg-gold/[0.04] p-6 md:p-8">
-            <p className="text-xs uppercase tracking-[0.24em] text-gold/70">
-              Why Book Here
-            </p>
-            <div className="mt-5 space-y-3">
-              {proofBullets.map((bullet) => (
-                <div
-                  key={bullet}
-                  className="rounded-2xl border border-gold/10 bg-cosmos-950/45 px-4 py-3 text-sm text-cream/85"
-                >
-                  {bullet}
+            <div className="overflow-hidden rounded-[2rem] border border-gold/15 bg-[linear-gradient(180deg,rgba(201,168,76,0.08),rgba(13,18,48,0.56))] shadow-[0_24px_80px_rgba(0,0,0,0.18)]">
+              <div className="border-b border-white/8 px-6 py-5 md:px-8">
+                <div className="inline-flex items-center gap-2 rounded-full border border-gold/18 bg-gold/8 px-3 py-1 text-xs font-medium text-gold/85">
+                  <Shield className="size-3.5" />
+                  {bookingEnabled ? "Book Now" : "Booking unavailable"}
                 </div>
-              ))}
+                <p className="mt-4 font-display text-3xl leading-none text-cream">
+                  {formatCurrency(Number(service.base_price))}
+                </p>
+                <p className="mt-2 text-sm text-silver/65">
+                  {service.duration_minutes} min session
+                </p>
+              </div>
+              <div className="space-y-3 px-6 py-5 md:px-8 md:py-6">
+                {proofBullets.map((bullet) => (
+                  <div
+                    key={bullet}
+                    className="rounded-[1.2rem] border border-white/10 bg-cosmos-950/48 px-4 py-3 text-sm text-cream/85"
+                  >
+                    {bullet}
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -642,14 +704,12 @@ export default async function ServiceDetailPage({
       {/* ===== 3. ABOUT YOUR DIVINER ===== */}
       <section className="py-12 md:py-16">
         <div className="mx-auto max-w-4xl px-4">
-          <h2 className="mb-8 text-center font-display text-3xl font-semibold text-cream md:text-4xl">
-            About Your Diviner
-          </h2>
+          <SectionHeading title="About Your Diviner" className="text-center" />
 
-          <div className="glass-card overflow-hidden rounded-2xl">
-            <div className="flex flex-col items-center gap-6 p-8 sm:flex-row sm:items-start">
+          <div className="mt-8 overflow-hidden rounded-[2rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(13,18,48,0.62))] shadow-[0_26px_90px_rgba(0,0,0,0.22)] backdrop-blur-xl">
+            <div className="flex flex-col items-center gap-6 p-8 sm:flex-row sm:items-start md:p-10">
               {/* Avatar */}
-              <div className="relative size-24 shrink-0 overflow-hidden rounded-full border-2 border-gold/20 sm:size-28">
+              <div className="relative size-24 shrink-0 overflow-hidden rounded-full border-2 border-gold/20 shadow-[0_0_0_10px_rgba(201,168,76,0.04)] sm:size-28">
                 <Image
                   src={divinerAvatarUrl}
                   alt={diviner.display_name}
@@ -661,7 +721,7 @@ export default async function ServiceDetailPage({
 
               {/* Text */}
               <div className="flex-1 text-center sm:text-left">
-                <h3 className="font-display text-xl font-semibold text-cream">
+                <h3 className="font-display text-2xl font-semibold text-cream">
                   {diviner.display_name}
                 </h3>
 
@@ -673,7 +733,7 @@ export default async function ServiceDetailPage({
 
                 {/* Bio excerpt */}
                 {diviner.bio && (
-                  <p className="mt-3 text-sm leading-relaxed text-silver/70">
+                  <p className="mt-4 max-w-2xl text-sm leading-7 text-silver/70">
                     {diviner.bio.length > 300
                       ? `${diviner.bio.slice(0, 300)}...`
                       : diviner.bio}
@@ -682,11 +742,11 @@ export default async function ServiceDetailPage({
 
                 {/* Specialties */}
                 {(diviner.specialties ?? []).length > 0 && (
-                  <div className="mt-4 flex flex-wrap justify-center gap-2 sm:justify-start">
+                  <div className="mt-5 flex flex-wrap justify-center gap-2 sm:justify-start">
                     {(diviner.specialties as string[]).map((spec: string) => (
                       <span
                         key={spec}
-                        className="rounded-full border border-gold/20 bg-gold/5 px-2.5 py-0.5 text-[11px] font-medium text-gold/80"
+                        className="rounded-full border border-gold/20 bg-gold/5 px-3 py-1 text-[11px] font-medium text-gold/80"
                       >
                         {spec}
                       </span>
@@ -696,7 +756,7 @@ export default async function ServiceDetailPage({
 
                 <Link
                   href={profileUrl}
-                  className="mt-5 inline-flex items-center gap-1.5 text-sm font-medium text-gold/80 transition-colors hover:text-gold"
+                  className="mt-6 inline-flex items-center gap-1.5 rounded-full border border-gold/18 bg-gold/6 px-4 py-2 text-sm font-medium text-gold/80 transition-all hover:border-gold/28 hover:text-gold"
                 >
                   View Full Profile
                   <ArrowRight className="size-3.5" />
@@ -719,14 +779,13 @@ export default async function ServiceDetailPage({
       {/* ===== 4. HOW IT WORKS ===== */}
       <section className="py-12 md:py-16">
         <div className="mx-auto max-w-4xl px-4">
-          <h2 className="mb-10 text-center font-display text-3xl font-semibold text-cream md:text-4xl">
-            How It Works
-          </h2>
+          <SectionHeading title="How It Works" className="text-center" />
 
-          <div className="grid gap-8 md:grid-cols-3">
+          <div className="relative mt-10 grid gap-5 md:grid-cols-3 md:gap-6">
+            <div className="pointer-events-none absolute left-[16.66%] right-[16.66%] top-7 hidden h-px bg-gradient-to-r from-transparent via-gold/25 to-transparent md:block" />
             {/* Step 1 */}
-            <div className="text-center">
-              <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-xl border border-gold/20 bg-gold/5">
+            <div className="relative rounded-[1.8rem] border border-white/10 bg-white/[0.03] p-6 text-center shadow-[0_20px_50px_rgba(0,0,0,0.16)]">
+              <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl border border-gold/20 bg-gold/5">
                 <CalendarCheck className="size-6 text-gold" />
               </div>
               <div className="mb-2 text-xs font-semibold uppercase tracking-widest text-gold/60">
@@ -741,8 +800,8 @@ export default async function ServiceDetailPage({
             </div>
 
             {/* Step 2 */}
-            <div className="text-center">
-              <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-xl border border-gold/20 bg-gold/5">
+            <div className="relative rounded-[1.8rem] border border-white/10 bg-white/[0.03] p-6 text-center shadow-[0_20px_50px_rgba(0,0,0,0.16)]">
+              <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl border border-gold/20 bg-gold/5">
                 <MessageSquare className="size-6 text-gold" />
               </div>
               <div className="mb-2 text-xs font-semibold uppercase tracking-widest text-gold/60">
@@ -757,8 +816,8 @@ export default async function ServiceDetailPage({
             </div>
 
             {/* Step 3 */}
-            <div className="text-center">
-              <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-xl border border-gold/20 bg-gold/5">
+            <div className="relative rounded-[1.8rem] border border-white/10 bg-white/[0.03] p-6 text-center shadow-[0_20px_50px_rgba(0,0,0,0.16)]">
+              <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl border border-gold/20 bg-gold/5">
                 <Play className="size-6 text-gold" />
               </div>
               <div className="mb-2 text-xs font-semibold uppercase tracking-widest text-gold/60">
@@ -781,18 +840,16 @@ export default async function ServiceDetailPage({
       {testimonials.length > 0 && (
         <section className="py-12 md:py-16">
           <div className="mx-auto max-w-4xl px-4">
-            <h2 className="mb-8 text-center font-display text-3xl font-semibold text-cream md:text-4xl">
-              Client Testimonials
-            </h2>
+            <SectionHeading title="Client Testimonials" className="text-center" />
 
-            <div className="grid gap-5 sm:grid-cols-3">
+            <div className="mt-8 grid gap-5 sm:grid-cols-3">
               {testimonials.map((t) => (
                 <div
                   key={t.id}
-                  className="glass-card flex flex-col rounded-xl p-5"
+                  className="glass-card flex flex-col rounded-[1.6rem] border-white/10 p-5 shadow-[0_18px_48px_rgba(0,0,0,0.2)]"
                 >
                   <GoldStars rating={t.rating} size="sm" />
-                  <blockquote className="mt-3 flex-1 text-sm leading-relaxed text-silver/70">
+                  <blockquote className="mt-4 flex-1 text-sm leading-7 text-silver/70">
                     &ldquo;{t.text}&rdquo;
                   </blockquote>
                   <div className="mt-4 border-t border-white/[0.06] pt-3">
@@ -825,13 +882,14 @@ export default async function ServiceDetailPage({
       {/* ===== 6. FAQ ===== */}
       <section className="py-12 md:py-16">
         <div className="mx-auto max-w-3xl px-4">
-          <h2 className="mb-8 text-center font-display text-3xl font-semibold text-cream md:text-4xl">
-            Frequently Asked Questions
-          </h2>
+          <SectionHeading title="Frequently Asked Questions" className="text-center" />
 
-          <div className="space-y-4">
+          <div className="mt-8 space-y-4">
             {faqs.map((faq) => (
-              <div key={faq.q} className="glass-card rounded-xl p-5">
+              <div
+                key={faq.q}
+                className="glass-card rounded-[1.5rem] border-white/10 p-5 shadow-[0_18px_48px_rgba(0,0,0,0.18)]"
+              >
                 <h3 className="mb-2 font-display text-base font-semibold text-cream">
                   {faq.q}
                 </h3>
@@ -860,35 +918,37 @@ export default async function ServiceDetailPage({
       <section className="relative overflow-hidden py-14 md:py-20">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_50%,rgba(201,168,76,0.06)_0%,transparent_60%)]" />
 
-        <div className="relative mx-auto max-w-3xl px-4 text-center">
-          <h2 className="mb-4 font-display text-3xl font-semibold text-cream md:text-4xl">
-            Ready to Book Your {service.name}?
-          </h2>
-          <p className="mx-auto mb-8 max-w-md text-sm leading-relaxed text-silver/60">
-            {service.duration_minutes}-minute session with {diviner.display_name}
-            {" "}&mdash; {formatCurrency(Number(service.base_price))}
-          </p>
-          {bookingEnabled ? (
-            <Link
-              href={bookUrl}
-              className="inline-flex h-12 items-center gap-2 rounded-lg bg-gold px-8 text-sm font-semibold text-cosmos-900 shadow-[0_0_20px_rgba(201,168,76,0.3)] transition-all hover:bg-gold-light hover:shadow-[0_0_30px_rgba(201,168,76,0.4)]"
-            >
-              Book This Reading
-              <ArrowRight className="size-4" />
-            </Link>
-          ) : (
-            <span className="inline-flex h-12 items-center rounded-lg border border-white/10 px-8 text-sm font-semibold text-silver/45">
-              Booking temporarily unavailable
-            </span>
-          )}
+        <div className="relative mx-auto max-w-4xl px-4">
+          <div className="overflow-hidden rounded-[2.25rem] border border-gold/16 bg-[linear-gradient(180deg,rgba(201,168,76,0.08),rgba(10,14,39,0.86))] px-6 py-10 text-center shadow-[0_30px_120px_rgba(0,0,0,0.26)] md:px-10 md:py-12">
+            <h2 className="mb-4 font-display text-3xl font-semibold text-cream md:text-5xl">
+              Ready to Book Your {service.name}?
+            </h2>
+            <p className="mx-auto mb-8 max-w-md text-sm leading-relaxed text-silver/60">
+              {service.duration_minutes}-minute session with {diviner.display_name}
+              {" "}&mdash; {formatCurrency(Number(service.base_price))}
+            </p>
+            {bookingEnabled ? (
+              <Link
+                href={bookUrl}
+                className="inline-flex h-12 items-center gap-2 rounded-full bg-gold px-8 text-sm font-semibold text-cosmos-900 shadow-[0_0_20px_rgba(201,168,76,0.3)] transition-all hover:-translate-y-0.5 hover:bg-gold-light hover:shadow-[0_0_30px_rgba(201,168,76,0.4)]"
+              >
+                Book This Reading
+                <ArrowRight className="size-4" />
+              </Link>
+            ) : (
+              <span className="inline-flex h-12 items-center rounded-full border border-white/10 px-8 text-sm font-semibold text-silver/45">
+                Booking temporarily unavailable
+              </span>
+            )}
+          </div>
         </div>
       </section>
 
       {/* ===== STICKY PRICING BAR (desktop: right sidebar; mobile: bottom bar) ===== */}
       <Suspense fallback={null}>
         <RefLinkPreserver bookUrl={bookingEnabled ? bookUrl : profileUrl}>
-          <div className="fixed inset-x-0 bottom-0 z-50 border-t border-white/10 bg-cosmos-900/95 px-4 py-3 backdrop-blur-xl md:hidden">
-            <div className="mx-auto flex max-w-lg items-center justify-between">
+          <div className="fixed inset-x-0 bottom-0 z-50 border-t border-white/10 bg-cosmos-900/94 px-4 py-3 shadow-[0_-18px_40px_rgba(0,0,0,0.24)] backdrop-blur-xl md:hidden">
+            <div className="mx-auto flex max-w-lg items-center justify-between rounded-[1.2rem] border border-white/8 bg-white/[0.03] px-3 py-2.5">
               <div>
                 <p className="text-sm font-semibold text-cream">{service.name}</p>
                 <p className="text-xs text-silver/60">
@@ -898,12 +958,12 @@ export default async function ServiceDetailPage({
               {bookingEnabled ? (
                 <Link
                   href={bookUrl}
-                  className="rounded-lg bg-gold px-5 py-2.5 text-sm font-semibold text-cosmos-900 transition-colors hover:bg-gold-light"
+                  className="rounded-full bg-gold px-5 py-2.5 text-sm font-semibold text-cosmos-900 transition-colors hover:bg-gold-light"
                 >
                   Book Now
                 </Link>
               ) : (
-                <span className="rounded-lg border border-white/10 px-5 py-2.5 text-sm font-semibold text-silver/45">
+                <span className="rounded-full border border-white/10 px-5 py-2.5 text-sm font-semibold text-silver/45">
                   Unavailable
                 </span>
               )}

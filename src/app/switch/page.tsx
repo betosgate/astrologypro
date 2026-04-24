@@ -18,14 +18,20 @@ const ICONS: Record<string, React.ElementType> = {
 
 export const metadata = { title: "Switch Portal - AstrologyPro" };
 
-export default async function SwitchPortalPage() {
+export default async function SwitchPortalPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ subscribed?: string }>;
+}) {
+  const { subscribed } = await searchParams;
+  const isSubscribed = subscribed === "true";
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
   const portals = await getUserPortals(supabase, user.id);
 
-  if (portals.length === 1) {
+  if (portals.length === 1 && !isSubscribed) {
     redirect(portals[0].href);
   }
 
@@ -38,6 +44,19 @@ export default async function SwitchPortalPage() {
       <MarketingHeader />
       <main className="flex flex-1 items-center justify-center px-4 py-12">
         <div className="w-full max-w-lg">
+          {isSubscribed && (
+            <div className="mb-10 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-6 text-center shadow-lg shadow-emerald-500/10">
+              <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-full bg-emerald-500/20">
+                <Users className="size-6 text-emerald-500" />
+              </div>
+              <h2 className="text-xl font-bold text-emerald-500">Upgrade Successful!</h2>
+              <p className="mt-2 text-sm text-emerald-500/80">
+                Welcome to Perennial Mandalism. Your new community portal is now unlocked. 
+                Choose it below to complete your setup and sign the community agreements.
+              </p>
+            </div>
+          )}
+
           <div className="mb-8 text-center">
             <h1 className="text-2xl font-bold tracking-tight">Choose Your Portal</h1>
             <p className="mt-2 text-muted-foreground">

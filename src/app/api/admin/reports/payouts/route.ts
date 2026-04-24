@@ -77,9 +77,13 @@ export async function GET(req: NextRequest) {
       .select("id, diviner_id, amount_cents, created_at")
       .order("created_at", { ascending: false });
 
+    // Post System A: affiliate ledger is campaign_conversions. There's
+    // no `status` enum (pending/approved/paid) in Phase 1 — conversions
+    // are either earned (reversed_at IS NULL) or reversed. Phase 2
+    // (Stripe auto-split) will add paid_at for true payout semantics.
     let affiliateQuery = db
-      .from("affiliate_commissions")
-      .select("affiliate_id, commission_amount_cents, status, created_at")
+      .from("campaign_conversions")
+      .select("affiliate_id, commission_amount_cents, reversed_at, created_at")
       .order("created_at", { ascending: false });
 
     if (since) {
@@ -204,11 +208,16 @@ export async function GET(req: NextRequest) {
         pendingAmount: 0,
         count: 0,
       };
+      if (row.reversed_at) {
+        // Reversed conversions don't contribute to earned or pending.
+        affMap.set(affiliateId, existing);
+        continue;
+      }
       existing.totalEarned += amount;
       existing.count += 1;
-      if (row.status === "pending") {
-        existing.pendingAmount += amount;
-      }
+      // Phase 1 has no paid/pending split — everything not reversed is
+      // "pending payout" until Stripe auto-split ships in Phase 2.
+      existing.pendingAmount += amount;
       affMap.set(affiliateId, existing);
     }
 

@@ -1,14 +1,21 @@
-// migrated-to-canonical-accounts: 2026-04-23
 // GET /api/affiliate/dashboard — KPI summary for the authenticated affiliate.
-// Aggregates across ALL their diviner partnerships (Task 05).
+// Aggregates across ALL their diviner partnerships.
 //
-// Sprint: docs/tasks/2026-04-23/affiliate-identity-refactor/05-affiliate-portal.md
+// 2026-04-24: rewired onto System B (campaign_clicks + campaign_conversions +
+// affiliate_campaigns). System A (affiliate_referral_links +
+// affiliate_commissions) retired — see
+// docs/specs/affiliate-commission-system.md §9.
+//
+// KPI shape changed: `pending_commission_cents` / `approved_commission_cents`
+// / `total_paid_cents` replaced with `total_earned_cents` + `reversed_cents`.
+// Phase 1 has no admin approval state machine, and payouts are deferred
+// to Phase 2 (Stripe auto-split). The `top_links` key is renamed
+// `recent_campaigns` for clarity.
 
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { resolveAffiliateForCaller } from "@/lib/affiliate-accounts";
-import { isAffiliateIdentityV2Enabled } from "@/lib/feature-flags";
 
 export const dynamic = "force-dynamic";
 
@@ -25,8 +32,6 @@ function problem(status: number, title: string, detail?: string) {
 }
 
 export async function GET() {
-  if (!isAffiliateIdentityV2Enabled()) return problem(503, "Feature not available");
-
   const supabase = await createClient();
   const {
     data: { user },
@@ -51,48 +56,44 @@ export async function GET() {
       kpis: {
         total_clicks: 0,
         total_conversions: 0,
-        pending_commission_cents: 0,
-        approved_commission_cents: 0,
-        total_paid_cents: 0,
+        total_earned_cents: 0,
+        reversed_cents: 0,
       },
       partnership_count: 0,
-      top_links: [],
+      recent_campaigns: [],
     });
   }
 
-  // Aggregate clicks + commissions + links across all junctions
-  const [{ data: linkRows }, { data: commissionRows }, { data: topLinks }] = await Promise.all([
-    admin
-      .from("affiliate_referral_links")
-      .select("clicks")
-      .in("affiliate_id", junctionIds),
-    admin
-      .from("affiliate_commissions")
-      .select("commission_amount_cents, status")
-      .in("affiliate_id", junctionIds),
-    admin
-      .from("affiliate_referral_links")
-      .select("id, slug, clicks, conversions, is_active, affiliate_id")
-      .in("affiliate_id", junctionIds)
-      .order("clicks", { ascending: false })
-      .limit(5),
-  ]);
+  const [{ count: totalClicks }, { data: conversionRows }, { data: recentCampaigns }] =
+    await Promise.all([
+      admin
+        .from("campaign_clicks")
+        .select("id", { count: "exact", head: true })
+        .in("affiliate_id", junctionIds),
+      admin
+        .from("campaign_conversions")
+        .select("commission_amount_cents, reversed_at")
+        .in("affiliate_id", junctionIds),
+      admin
+        .from("affiliate_campaigns")
+        .select("id, campaign_code, name, status, diviner_id")
+        .eq("owner_affiliate_type", "diviner_affiliate")
+        .in("owner_affiliate_id", junctionIds)
+        .order("created_at", { ascending: false })
+        .limit(5),
+    ]);
 
-  const totalClicks = (linkRows ?? []).reduce(
-    (sum, l) => sum + Number(l.clicks ?? 0),
-    0,
-  );
-
-  let pendingCents = 0;
-  let approvedCents = 0;
-  let paidCents = 0;
+  let earnedCents = 0;
+  let reversedCents = 0;
   let totalConversions = 0;
-  for (const row of commissionRows ?? []) {
+  for (const row of conversionRows ?? []) {
     const amount = Number(row.commission_amount_cents ?? 0);
-    totalConversions++;
-    if (row.status === "pending" || row.status === "on_hold") pendingCents += amount;
-    else if (row.status === "approved") approvedCents += amount;
-    else if (row.status === "paid") paidCents += amount;
+    if (row.reversed_at) {
+      reversedCents += amount;
+    } else {
+      earnedCents += amount;
+      totalConversions++;
+    }
   }
 
   return NextResponse.json({
@@ -103,13 +104,12 @@ export async function GET() {
       status: account.status,
     },
     kpis: {
-      total_clicks: totalClicks,
+      total_clicks: totalClicks ?? 0,
       total_conversions: totalConversions,
-      pending_commission_cents: pendingCents,
-      approved_commission_cents: approvedCents,
-      total_paid_cents: paidCents,
+      total_earned_cents: earnedCents,
+      reversed_cents: reversedCents,
     },
     partnership_count: junctionIds.length,
-    top_links: topLinks ?? [],
+    recent_campaigns: recentCampaigns ?? [],
   });
 }

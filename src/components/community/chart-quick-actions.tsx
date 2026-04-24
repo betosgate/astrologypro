@@ -62,13 +62,6 @@ interface ResolvedBirthData {
   missing: string[];
 }
 
-const SOURCE_LABELS: Record<ResolvedBirthData["source"], string> = {
-  family_self: "from your family profile",
-  past_booking: "from your past booking",
-  member_profile: "from your member profile",
-  none: "",
-};
-
 type ResultState =
   | { kind: "idle" }
   | { kind: "loading"; type: ChartType }
@@ -214,8 +207,6 @@ export function ChartQuickActions() {
 
   // ── Render ────────────────────────────────────────────────────────────────
   const isLoading = (t: ChartType) => result.kind === "loading" && result.type === t;
-  const sourceLabel = birthData ? SOURCE_LABELS[birthData.source] : "";
-
   return (
     <>
       <Card>
@@ -225,14 +216,7 @@ export function ChartQuickActions() {
             <CardTitle className="text-base">Quick Chart Generation</CardTitle>
           </div>
           <CardDescription>
-            One-click charts using your saved birth data.{" "}
-            {birthData?.source && birthData.source !== "none" && (
-              <span className="inline-flex items-center gap-1 ml-1">
-                <Badge variant="outline" className="text-xs">
-                  {sourceLabel}
-                </Badge>
-              </span>
-            )}
+            One-click astrology tools using your saved birth data.
           </CardDescription>
         </CardHeader>
 
@@ -269,7 +253,7 @@ export function ChartQuickActions() {
                 <div className="text-center">
                   <p className="font-semibold text-sm">Natal Chart</p>
                   <p className="text-xs text-muted-foreground">
-                    Open Horoscope
+                    View your birth chart
                   </p>
                 </div>
               </Link>
@@ -284,7 +268,7 @@ export function ChartQuickActions() {
                 <CalendarDays className="size-6 text-primary" />
                 <div className="text-center">
                   <p className="font-semibold text-sm">Monthly Transits</p>
-                  <p className="text-xs text-muted-foreground">This month&apos;s forecast</p>
+                  <p className="text-xs text-muted-foreground">View your monthly forecast</p>
                 </div>
               </Link>
             </Button>
@@ -298,7 +282,7 @@ export function ChartQuickActions() {
                 <Heart className="size-6 text-primary" />
                 <div className="text-center">
                   <p className="font-semibold text-sm">Relationship Charts</p>
-                  <p className="text-xs text-muted-foreground">All family pairs</p>
+                  <p className="text-xs text-muted-foreground">Open your compatibility charts</p>
                 </div>
               </Link>
             </Button>

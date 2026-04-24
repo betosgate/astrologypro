@@ -171,6 +171,9 @@ function validateMember(m: unknown, idx: number): HouseholdMemberPayload | strin
 }
 
 export async function POST(req: NextRequest) {
+  const origin = req.headers.get("origin") || process.env.NEXT_PUBLIC_APP_URL || "https://astrologypro.com";
+  const baseUrl = origin.endsWith("/") ? origin.slice(0, -1) : origin;
+
   let body: { plan_key?: unknown; members?: unknown };
   try {
     body = await req.json();
@@ -251,7 +254,6 @@ export async function POST(req: NextRequest) {
   }
 
   const primary = validatedMembers.find((m) => m.is_primary)!;
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://astrologypro.com";
 
   // Create the Stripe Checkout session.
   let session;
@@ -262,8 +264,8 @@ export async function POST(req: NextRequest) {
       mode: "subscription",
       customer: customerId,
       line_items: [{ price: priceId, quantity: 1 }],
-      success_url: `${appUrl}/perennial-signup/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${appUrl}/perennial-signup?cancelled=1`,
+      success_url: `${baseUrl}/perennial-signup/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${baseUrl}/perennial-signup?cancelled=1`,
       metadata: {
         type: "perennial_signup",
         plan_key: planKey,

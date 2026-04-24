@@ -25,6 +25,7 @@ export async function getCommunityProfileCompletion(
     .eq("user_id", userId)
     .maybeSingle();
 
+
   const member = memberResult.data;
   if (!member) return null;
 

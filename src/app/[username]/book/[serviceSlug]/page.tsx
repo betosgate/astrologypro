@@ -9,6 +9,10 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { applyRuntimePricesToServices } from "@/lib/runtime-service-pricing";
 import { canPubliclySellService } from "@/lib/payout-readiness";
+import {
+  getBaseServiceTemplateSlug,
+  normalizeServiceTemplateIntakeState,
+} from "@/lib/service-template-form";
 
 interface PageProps {
   params: Promise<{ username: string; serviceSlug: string }>;
@@ -21,11 +25,15 @@ interface PageProps {
    * `date` — optional preselected date (YYYY-MM-DD) from the shared
    *   calendar flow. Passed to the BookingWizard so the calendar can
    *   jump straight to the right month.
+   * `template` — optional original public template slug. For general
+   *   templates, this lets the final booking page preserve the product label
+   *   while still booking the canonical diviner service.
    */
   searchParams: Promise<{
     ref?: string;
     submission?: string;
     date?: string;
+    template?: string;
   }>;
 }
 
@@ -122,15 +130,82 @@ export async function generateMetadata({
 
 export default async function BookingPage({ params, searchParams }: PageProps) {
   const { username, serviceSlug } = await params;
-  const { ref, submission, date } = await searchParams;
+  const { ref, submission, date, template } = await searchParams;
   const refParam = ref ? `?ref=${encodeURIComponent(ref)}` : "";
   const submissionId = submission?.trim() || null;
+  const templateParam = template?.trim() || null;
   const preselectedDate =
     date && /^\d{4}-\d{2}-\d{2}$/.test(date.trim()) ? date.trim() : null;
   const { diviner, service } = await getDivinerAndService(username, serviceSlug);
 
   if (!diviner || !service) {
     notFound();
+  }
+
+  let bookingDisplayName = service.name as string;
+  let intakePrefill: {
+    birthDate?: string;
+    birthTime?: string;
+    birthCity?: string;
+    birthLat?: number | null;
+    birthLng?: number | null;
+    birthTimezone?: string;
+    notes?: string;
+  } | null = null;
+
+  if (submissionId) {
+    const admin = createAdminClient();
+    const [{ data: intake }, { data: serviceTemplate }] = await Promise.all([
+      admin
+        .from("service_template_intake_submissions")
+        .select("id, template_slug, template_name, payload, area_of_inquiry, question")
+        .eq("id", submissionId)
+        .maybeSingle(),
+      service.template_id
+        ? admin
+            .from("service_templates")
+            .select("slug")
+            .eq("id", service.template_id)
+            .maybeSingle()
+        : Promise.resolve({ data: null }),
+    ]);
+
+    if (!intake || !serviceTemplate) {
+      notFound();
+    }
+
+    const intakeBaseSlug = getBaseServiceTemplateSlug(
+      (intake.template_slug as string | null) ?? "",
+    );
+    const serviceBaseSlug = getBaseServiceTemplateSlug(
+      (serviceTemplate.slug as string | null) ?? "",
+    );
+    if (intakeBaseSlug !== serviceBaseSlug) {
+      notFound();
+    }
+    if (
+      templateParam &&
+      getBaseServiceTemplateSlug(templateParam) !== intakeBaseSlug
+    ) {
+      notFound();
+    }
+
+    bookingDisplayName =
+      (intake.template_name as string | null) || bookingDisplayName;
+
+    const normalizedIntake = normalizeServiceTemplateIntakeState(intake.payload);
+    if (normalizedIntake) {
+      const city = normalizedIntake.person1.city;
+      intakePrefill = {
+        birthDate: normalizedIntake.person1.dob || undefined,
+        birthTime: normalizedIntake.person1.tob || undefined,
+        birthCity: city?.label || undefined,
+        birthLat: city?.lat ?? null,
+        birthLng: city?.lng ?? null,
+        birthTimezone:
+          city?.timezone.name || city?.timezone.utcOffset || city?.timezone.offset_string || undefined,
+      };
+    }
   }
 
   const bookingEnabled = canPubliclySellService(service, diviner);
@@ -149,7 +224,7 @@ export default async function BookingPage({ params, searchParams }: PageProps) {
         {/* Page header */}
         <div className="mb-8 text-center">
           <h1 className="mb-2 text-2xl font-bold md:text-3xl">
-            Book: {service.name}
+            Book: {bookingDisplayName}
           </h1>
           <p className="text-muted-foreground">
             {service.duration_minutes}-minute session with{" "}
@@ -162,8 +237,9 @@ export default async function BookingPage({ params, searchParams }: PageProps) {
             diviner={diviner}
             service={service}
             availabilityServiceId={service.id}
-            bookingLabel={service.name}
+            bookingLabel={bookingDisplayName}
             submissionId={submissionId}
+            intakePrefill={intakePrefill}
             preselectedDate={preselectedDate}
           />
         ) : (

@@ -3,8 +3,11 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { stripe, getOrCreateStripeCustomer } from "@/lib/stripe/client";
 import { APP_URL } from "@/lib/constants";
+import { inferPmPlanType } from "@/lib/community/finalize-checkout";
 
 export const dynamic = "force-dynamic";
+
+const PM_ITEM_KEY = "perennial_mandalism_community";
 
 /**
  * POST /api/community/checkout
@@ -42,15 +45,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Please sign in to subscribe." }, { status: 401 });
     }
 
+    const origin = request.headers.get("origin") || APP_URL;
+    const baseUrl = origin.endsWith("/") ? origin.slice(0, -1) : origin;
+
     const body = await request.json();
     const {
       membershipType,
       planType,
+      planId,
+      sourcePortal,
       entry_quarter,
       entry_year,
     } = body as {
       membershipType: string;
       planType?: string;
+      planId?: string;
+      sourcePortal?: string;
       entry_quarter?: string;
       entry_year?: number;
     };
@@ -61,6 +71,9 @@ export async function POST(request: NextRequest) {
     }
 
     const isMysterySchool = membershipType === "mystery_school";
+    const pmPlanType = isMysterySchool
+      ? "individual"
+      : inferPmPlanType(planType, planId);
 
     if (isMysterySchool) {
       const validQuarters = ["spring", "summer", "autumn", "winter"];
@@ -78,9 +91,10 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const isFamily = planType === "family" && !isMysterySchool;
-    const isCouple = planType === "couple" && !isMysterySchool;
+    const isFamily = pmPlanType === "family" && !isMysterySchool;
+    const isCouple = pmPlanType === "couple" && !isMysterySchool;
     const admin = createAdminClient();
+    let resolvedPmPlanId: string | null = null;
 
     // --- Build Stripe line items from pricing_plans ---
     //
@@ -163,16 +177,17 @@ export async function POST(request: NextRequest) {
         );
       }
     } else {
-      // Perennial Mandalism — resolve plan_id from planType
-      const pmPlanId = isFamily
+      // Perennial Mandalism — resolve plan_id
+      const pmPlanId = planId || (isFamily
         ? "plan_pm_family"
         : isCouple
           ? "plan_pm_couple"
-          : "plan_pm_individual";
+          : "plan_pm_individual");
+      resolvedPmPlanId = pmPlanId;
 
       const { data: plan, error: planErr } = await admin
         .from("pricing_plans")
-        .select("stripe_price_id, display_name, recurring_amount, recurring_currency, recurring_interval, onetime_amount, onetime_currency")
+        .select("stripe_price_id, display_name, recurring_amount, recurring_currency, recurring_interval, onetime_amount, onetime_currency, global_pricing(item_key)")
         .eq("plan_id", pmPlanId)
         .eq("is_active", true)
         .single();
@@ -181,6 +196,16 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(
           { error: "Community pricing plan not found or inactive." },
           { status: 500 }
+        );
+      }
+
+      const itemInfo = Array.isArray(plan.global_pricing)
+        ? (plan.global_pricing[0] ?? null)
+        : plan.global_pricing;
+      if (itemInfo?.item_key && itemInfo.item_key !== PM_ITEM_KEY) {
+        return NextResponse.json(
+          { error: "Selected plan is not a Perennial Mandalism plan." },
+          { status: 422 }
         );
       }
 
@@ -220,37 +245,32 @@ export async function POST(request: NextRequest) {
       type: "community",
       userId: user.id,
       membershipType,
-      planType: isFamily ? "family" : isCouple ? "couple" : "individual",
+      planType: isMysterySchool ? "individual" : pmPlanType,
     };
+
+    if (!isMysterySchool && resolvedPmPlanId) {
+      metadata.planId = resolvedPmPlanId;
+    }
+
+    if (!isMysterySchool && sourcePortal) {
+      metadata.sourcePortal = String(sourcePortal);
+    }
 
     if (isMysterySchool && entry_quarter && entry_year) {
       metadata.entry_quarter = entry_quarter;
       metadata.entry_year = String(entry_year);
     }
 
-    // Route success/cancel URLs to the correct portal context.
-    // For returning PM members (onboarding already done), skip onboarding
-    // and go straight to the dashboard.
-    let pmSuccessUrl = `${APP_URL}/community/onboarding?subscribed=true`;
-    if (!isMysterySchool) {
-      const { data: existingMember } = await admin
-        .from("community_members")
-        .select("onboarding_completed")
-        .eq("user_id", user.id)
-        .eq("membership_type", "perennial_mandalism")
-        .maybeSingle();
-      if (existingMember) {
-        // Returning member — skip onboarding, use session_id finalize flow
-        pmSuccessUrl = `${APP_URL}/join/community/resubscribe/success?session_id={CHECKOUT_SESSION_ID}`;
-      }
-    }
-
     const successUrl = isMysterySchool
-      ? `${APP_URL}/mystery-school/checkout/success?session_id={CHECKOUT_SESSION_ID}`
-      : pmSuccessUrl;
+      ? `${baseUrl}/mystery-school/checkout/success?session_id={CHECKOUT_SESSION_ID}`
+      : `${baseUrl}/join/community/checkout/success?session_id={CHECKOUT_SESSION_ID}`;
     const cancelUrl = isMysterySchool
-      ? `${APP_URL}/mystery-school/checkout/cancel`
-      : `${APP_URL}/community/upgrade`;
+      ? `${baseUrl}/mystery-school/checkout/cancel`
+      : sourcePortal === "trainee"
+        ? `${baseUrl}/trainee?pm=cancelled`
+        : sourcePortal === "diviner"
+          ? `${baseUrl}/dashboard?pm=cancelled`
+          : `${baseUrl}/switch?pm=cancelled`;
 
     const customerId = await getOrCreateStripeCustomer(user.email!, { supabase_user_id: user.id });
 

@@ -24,7 +24,7 @@ import Link from "next/link";
 
 import { SessionExplorer } from "@/components/trainee/session-explorer";
 
-export const metadata = { title: "Practice Sessions - AstrologyPro" };
+export const metadata = { title: "Meeting Sessions - AstrologyPro" };
 
 // ---------------------------------------------------------------------------
 // Types
@@ -173,7 +173,7 @@ export default async function TraineeSessionsPage() {
       durationMinutes: Number(row.duration_minutes ?? 0),
       hostDisplayName: diviner?.display_name ?? null,
       hostUsername: username,
-      serviceName: service?.name ?? "Practice Session",
+      serviceName: service?.name ?? "Meeting Session",
       serviceCategory: service?.category ?? null,
       joinHref: username ? `/${encodeURIComponent(username)}/session/${encodeURIComponent(id)}` : null,
       actionBasePath: null,
@@ -194,7 +194,7 @@ export default async function TraineeSessionsPage() {
       durationMinutes: Number(row.duration_minutes ?? 0),
       hostDisplayName: lookup?.display ?? null,
       hostUsername: lookup?.username ?? null,
-      serviceName: "Practice Session",
+      serviceName: "Meeting Session",
       serviceCategory: null,
       joinHref: lookup?.username ? `/book/${encodeURIComponent(lookup.username)}/session/${encodeURIComponent(id)}` : null,
       actionBasePath: `/api/trainee/appointments/admin-bookings/${id}`,
@@ -216,7 +216,7 @@ export default async function TraineeSessionsPage() {
   return (
     <div className="space-y-6 h-full flex flex-col">
       <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-bold tracking-tight">Practice Sessions</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Meeting Sessions</h1>
         <p className="text-muted-foreground text-sm">
           Select a session to view detailed information, recordings, and playback.
         </p>
@@ -234,7 +234,7 @@ export default async function TraineeSessionsPage() {
           <CardContent className="p-4 flex items-center gap-4 text-xs text-muted-foreground">
              <Info className="size-4 shrink-0" />
              <p>
-               Practice sessions are pre-arranged with your mentor. If a scheduled session does not appear, 
+               Meeting sessions are pre-arranged with your mentor. If a scheduled session does not appear, 
                please contact your mentor directly or check your specialized program requirements.
              </p>
           </CardContent>
