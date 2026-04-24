@@ -7,7 +7,6 @@ import {
   CardContent,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -287,171 +286,74 @@ export default function ChartsPage() {
                   </div>
                 </div>
 
-                {isOpen && synastry && (() => {
-                  const harmonious = synastry.aspects.filter((a) => a.isHarmonious);
-                  const challenging = synastry.aspects.filter((a) => !a.isHarmonious);
-                  const aspectTypes = [...new Set(synastry.aspects.map((a) => a.aspectType))];
-
-                  return (
-                    <CardContent className="border-t pt-4 space-y-5">
-                      <div className="rounded-lg border bg-primary/5 p-4">
-                        <p className="text-sm font-medium">Open the full diviner-style report</p>
-                        <p className="mt-1 text-sm text-muted-foreground">
-                          Reuse the saved birth data for this pair and load the same detailed relationship toolkit used in practitioner sessions.
-                        </p>
-                        <Select
-                          value=""
-                          onValueChange={(value) =>
-                            openDetailedReport(a.id, b.id, value as RelationshipMode)
-                          }
+                {isOpen && synastry && (
+                  <CardContent className="border-t pt-4 space-y-5">
+                    <div className="rounded-lg border bg-primary/5 p-4">
+                      <p className="text-sm font-medium">Open the full diviner-style report</p>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        Reuse the saved birth data for this pair and load the same detailed relationship toolkit used in practitioner sessions.
+                      </p>
+                      <Select
+                        value=""
+                        onValueChange={(value) =>
+                          openDetailedReport(a.id, b.id, value as RelationshipMode)
+                        }
+                      >
+                        <SelectTrigger
+                          size="sm"
+                          className="mt-3 w-[180px]"
+                          aria-label={`Select detailed report type for ${a.full_name} and ${b.full_name}`}
                         >
-                          <SelectTrigger
-                            size="sm"
-                            className="mt-3 w-[180px]"
-                            aria-label={`Select detailed report type for ${a.full_name} and ${b.full_name}`}
-                          >
-                            <SelectValue placeholder="Select report type" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {RELATIONSHIP_MODES.map((option) => (
-                              <SelectItem key={option.value} value={option.value}>
-                                {option.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
+                          <SelectValue placeholder="Select report type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {RELATIONSHIP_MODES.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
 
-                      {/* Summary */}
+                    {/*
+                      In-house/dummy synastry summary, compatibility score,
+                      aspect type legend, and harmonious/challenging aspect
+                      lists intentionally hidden. Full relationship analysis is
+                      handled by the detailed report toolkit after type select.
+
+                      Commented-out legacy block kept for reference:
+
+                      const harmonious = synastry.aspects.filter((a) => a.isHarmonious);
+                      const challenging = synastry.aspects.filter((a) => !a.isHarmonious);
+                      const aspectTypes = [...new Set(synastry.aspects.map((a) => a.aspectType))];
+
                       <p className="text-sm text-muted-foreground italic">
                         {synastry.summary}
                       </p>
 
-                      {/* Compatibility gauge */}
                       <div className="space-y-2">
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="font-medium text-muted-foreground">
-                            Compatibility Score
-                          </span>
-                          <span className="font-semibold text-sm">
-                            {synastry.score}%
-                          </span>
-                        </div>
+                        Compatibility Score: {synastry.score}%
                         <div className="h-2.5 w-full rounded-full bg-muted overflow-hidden">
-                          <div
-                            className={`h-full rounded-full transition-all ${
-                              synastry.score >= 70
-                                ? "bg-green-500"
-                                : synastry.score >= 40
-                                ? "bg-amber-500"
-                                : "bg-red-500"
-                            }`}
-                            style={{ width: `${synastry.score}%` }}
-                          />
+                          <div style={{ width: `${synastry.score}%` }} />
                         </div>
                       </div>
 
-                      {/* Quick stats */}
                       <div className="grid grid-cols-3 gap-3">
-                        <div className="rounded-lg border p-3 text-center">
-                          <p className="text-lg font-bold">{synastry.aspects.length}</p>
-                          <p className="text-xs text-muted-foreground">Total Aspects</p>
-                        </div>
-                        <div className="rounded-lg border border-green-200 bg-green-50 p-3 text-center">
-                          <p className="text-lg font-bold text-green-700">{harmonious.length}</p>
-                          <p className="text-xs text-green-600">Harmonious</p>
-                        </div>
-                        <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-center">
-                          <p className="text-lg font-bold text-red-700">{challenging.length}</p>
-                          <p className="text-xs text-red-600">Challenging</p>
-                        </div>
+                        Total Aspects: {synastry.aspects.length}
+                        Harmonious: {harmonious.length}
+                        Challenging: {challenging.length}
                       </div>
 
-                      {/* Aspect type legend */}
                       <div className="flex flex-wrap gap-2">
-                        {aspectTypes.map((type) => {
-                          const count = synastry.aspects.filter((a) => a.aspectType === type).length;
-                          const isHarm = synastry.aspects.find((a) => a.aspectType === type)?.isHarmonious;
-                          return (
-                            <Badge
-                              key={type}
-                              variant="outline"
-                              className={`text-xs ${
-                                isHarm
-                                  ? "border-green-300 text-green-700"
-                                  : "border-red-300 text-red-700"
-                              }`}
-                            >
-                              {type} ({count})
-                            </Badge>
-                          );
-                        })}
+                        {aspectTypes.map((type) => render aspect count badge)}
                       </div>
 
-                      {/* Harmonious aspects */}
-                      {harmonious.length > 0 && (
-                        <div className="space-y-2">
-                          <p className="text-xs font-semibold uppercase tracking-wider text-green-600">
-                            Harmonious Aspects
-                          </p>
-                          <div className="grid gap-1.5">
-                            {harmonious.map((aspect, i) => (
-                              <div
-                                key={i}
-                                className="flex items-center justify-between gap-3 rounded-md px-3 py-2 text-sm bg-green-50 border border-green-200"
-                              >
-                                <span className="text-green-800">
-                                  <span className="font-medium">{synastry.personAName}&apos;s {aspect.planetA}</span>
-                                  {" "}{aspect.aspectType.toLowerCase()}{" "}
-                                  <span className="font-medium">{synastry.personBName}&apos;s {aspect.planetB}</span>
-                                </span>
-                                <div className="flex items-center gap-2 shrink-0">
-                                  <Badge variant="outline" className="text-xs border-green-300 text-green-700">
-                                    {aspect.aspectType}
-                                  </Badge>
-                                  <span className="text-xs text-muted-foreground">
-                                    {aspect.orb}° orb
-                                  </span>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Challenging aspects */}
-                      {challenging.length > 0 && (
-                        <div className="space-y-2">
-                          <p className="text-xs font-semibold uppercase tracking-wider text-red-600">
-                            Challenging Aspects
-                          </p>
-                          <div className="grid gap-1.5">
-                            {challenging.map((aspect, i) => (
-                              <div
-                                key={i}
-                                className="flex items-center justify-between gap-3 rounded-md px-3 py-2 text-sm bg-red-50 border border-red-200"
-                              >
-                                <span className="text-red-800">
-                                  <span className="font-medium">{synastry.personAName}&apos;s {aspect.planetA}</span>
-                                  {" "}{aspect.aspectType.toLowerCase()}{" "}
-                                  <span className="font-medium">{synastry.personBName}&apos;s {aspect.planetB}</span>
-                                </span>
-                                <div className="flex items-center gap-2 shrink-0">
-                                  <Badge variant="outline" className="text-xs border-red-300 text-red-700">
-                                    {aspect.aspectType}
-                                  </Badge>
-                                  <span className="text-xs text-muted-foreground">
-                                    {aspect.orb}° orb
-                                  </span>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </CardContent>
-                  );
-                })()}
+                      {harmonious.length > 0 && render harmonious aspect rows}
+                      {challenging.length > 0 && render challenging aspect rows}
+                    */}
+                  </CardContent>
+                )}
               </Card>
             );
           })}

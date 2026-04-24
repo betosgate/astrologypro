@@ -12,6 +12,11 @@ export const metadata = {
 
 export const dynamic = "force-dynamic";
 
+function currentMonthStart(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+}
+
 export default async function CommunityTransitDetailPage() {
   const supabase = await createClient();
   const {
@@ -37,6 +42,7 @@ export default async function CommunityTransitDetailPage() {
   const resolved = await resolveUserBirthData(user.id, member.id, member.full_name);
   const prefill = await buildToolkitPrefillForm({
     person1: resolved,
+    futureMonth: currentMonthStart(),
   });
 
   return (
@@ -53,6 +59,7 @@ export default async function CommunityTransitDetailPage() {
         basePath="/community/transits/detailed"
         allowedSlugs={["tropical_transits_monthly_v3"]}
         initialPrefill={encodeURIComponent(JSON.stringify(prefill))}
+        readOnlyBirthData={true}
       />
     </div>
   );
