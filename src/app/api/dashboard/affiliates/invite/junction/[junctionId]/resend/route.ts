@@ -10,7 +10,6 @@ import { NextResponse } from "next/server";
 import { randomBytes, createHash } from "crypto";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { isAffiliateIdentityV2Enabled } from "@/lib/feature-flags";
 import { rateLimit, rateLimitResponse } from "@/lib/rate-limit";
 import { sendAffiliateInvitation } from "@/lib/email";
 
@@ -41,8 +40,6 @@ export async function POST(
   _request: Request,
   { params }: { params: Promise<{ junctionId: string }> },
 ) {
-  if (!isAffiliateIdentityV2Enabled()) return problem(503, "Feature not available");
-
   const { junctionId } = await params;
   if (!junctionId) return problem(422, "Validation error", "junctionId is required");
 

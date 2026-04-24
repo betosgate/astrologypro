@@ -72,8 +72,7 @@ All accounts are active and confirmed. Use the credentials below to log in at an
 
 Seeded by `node scripts/seed-affiliate-accounts.mjs` (idempotent). Covers every
 lifecycle state of the 2026-04-23 identity model. Password for the claimed
-accounts is the same as other test users: `TestUser123!`. Requires
-`NEXT_PUBLIC_AFFILIATE_IDENTITY_V2=on` (default in dev/preview).
+accounts is the same as other test users: `TestUser123!`.
 
 | Email | Password | Partnerships | Junction status | Canonical state |
 |---|---|---|---|---|
