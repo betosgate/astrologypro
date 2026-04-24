@@ -37,8 +37,47 @@ export async function GET(
   }
 
   // ── 3. Inactive link check ─────────────────────────────────────────────────
+  // tracking_links.is_active=false → route the visitor to the branded
+  // "link no longer active" page instead of the diviner profile, so
+  // they understand why the link didn't work. No click is logged.
   if (link.is_active === false) {
-    return NextResponse.redirect(new URL("/", request.url));
+    return NextResponse.redirect(
+      new URL("/link-not-active", request.url),
+      307,
+    );
+  }
+
+  // Pre-validate the campaign + its source assignment BEFORE logging the
+  // click. Spec §5 Flow D step 3: a dead campaign or revoked assignment
+  // MUST render the "link no longer active" page — and clicks on dead
+  // links should not pollute campaign_clicks analytics.
+  if (link.campaign_id) {
+    const { data: gatingCampaign } = await admin
+      .from("affiliate_campaigns")
+      .select("status, source_assignment_id")
+      .eq("id", link.campaign_id)
+      .maybeSingle();
+
+    if (!gatingCampaign || gatingCampaign.status !== "active") {
+      return NextResponse.redirect(
+        new URL("/link-not-active", request.url),
+        307,
+      );
+    }
+
+    if (gatingCampaign.source_assignment_id) {
+      const { data: gatingAssignment } = await admin
+        .from("diviner_service_affiliates")
+        .select("is_active")
+        .eq("id", gatingCampaign.source_assignment_id as string)
+        .maybeSingle();
+      if (!gatingAssignment || gatingAssignment.is_active === false) {
+        return NextResponse.redirect(
+          new URL("/link-not-active", request.url),
+          307,
+        );
+      }
+    }
   }
 
   // ── 4. Parse click data ────────────────────────────────────────────────────
@@ -62,11 +101,13 @@ export async function GET(
   if (link.campaign_id && link.destination_type && link.destination_entity_id) {
     isCampaignLink = true;
 
-    // Load campaign for date/status validation + affiliate owner context
+    // Load campaign for date/status validation + affiliate owner context.
+    // Snapshot columns are no longer read here (spec v1.2 — rate lives
+    // on the booking stamp, not the campaign). Dropped in 01b.
     const { data: campaign } = await admin
       .from("affiliate_campaigns")
       .select(
-        "id, status, destination_type, destination_profile_id, destination_service_template_id, diviner_id, start_date, end_date, owner_type, owner_affiliate_id, owner_affiliate_type, commission_value_snapshot, commission_type_snapshot"
+        "id, status, destination_type, destination_profile_id, destination_service_template_id, diviner_id, start_date, end_date, owner_type, owner_affiliate_id, owner_affiliate_type"
       )
       .eq("id", link.campaign_id)
       .maybeSingle();
@@ -75,12 +116,10 @@ export async function GET(
       affiliateId = (campaign.owner_affiliate_id as string | null) ?? null;
       affiliateType =
         (campaign.owner_affiliate_type as "diviner_affiliate" | "social_advocate" | null) ?? null;
-      commissionValueSnapshot =
-        campaign.commission_value_snapshot != null
-          ? Number(campaign.commission_value_snapshot)
-          : null;
-      commissionTypeSnapshot =
-        (campaign.commission_type_snapshot as "percent" | "flat" | null) ?? null;
+      // Click-level snapshot carried on campaign_clicks is legacy audit
+      // only — the authoritative rate for payout is on the booking row.
+      commissionValueSnapshot = null;
+      commissionTypeSnapshot = null;
     }
 
     if (campaign && campaign.status === "active") {

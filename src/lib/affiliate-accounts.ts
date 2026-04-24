@@ -165,6 +165,36 @@ export async function resolveAffiliateForCaller(
 }
 
 /**
+ * Inverse of `resolveAffiliateForCaller` — given a junction id
+ * (`diviner_affiliates.id`), resolve the canonical affiliate account
+ * so notifications + emails can be targeted at the real user.
+ *
+ * Returns `null` if the junction doesn't exist or the joined account is
+ * missing. Callers should log and skip notification when this returns
+ * null — don't raise.
+ */
+export async function getAffiliateAccountForJunction(
+  admin: Admin,
+  junctionId: string,
+): Promise<AffiliateAccount | null> {
+  const { data: junction } = await admin
+    .from("diviner_affiliates")
+    .select("affiliate_account_id")
+    .eq("id", junctionId)
+    .maybeSingle();
+  if (!junction || !junction.affiliate_account_id) return null;
+
+  const { data: account } = await admin
+    .from("affiliate_accounts")
+    .select(
+      "id, user_id, email, name, phone, avatar_url, timezone, payout_method, payout_details, tax_form_status, tax_form_url, status, notification_prefs, created_at, updated_at",
+    )
+    .eq("id", junction.affiliate_account_id)
+    .maybeSingle();
+  return (account ?? null) as AffiliateAccount | null;
+}
+
+/**
  * Link an auth user to a canonical affiliate account.
  *
  * IMPORTANT: This helper is only valid inside the accept-flow RPC context.

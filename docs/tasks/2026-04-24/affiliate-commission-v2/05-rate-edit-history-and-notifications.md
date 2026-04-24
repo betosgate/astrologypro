@@ -1,6 +1,6 @@
 # Task 05 — Rate-Edit Flow + History + Notifications
 
-- Status: Not Started
+- Status: Done (2026-04-24) — admin override assignment/campaign notifications deferred to Task 07 handlers
 - Priority: P0
 - Depends on: 01 (additive)
 - Blocks: —

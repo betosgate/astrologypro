@@ -462,6 +462,7 @@ export function TemplateIntakeForm({
       >
         <DialogContent
           className="max-w-xl overflow-hidden border border-white/10 bg-[#0b1020] p-0 text-cream shadow-[0_32px_80px_rgba(0,0,0,0.7)]"
+          showCloseButton={postSubmitAction === null}
         >
           <div className="border-b border-white/8 bg-[linear-gradient(180deg,rgba(201,168,76,0.12),rgba(201,168,76,0.04))] px-6 py-5">
             <DialogHeader className="space-y-2">
