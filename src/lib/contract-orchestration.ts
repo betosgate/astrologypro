@@ -160,7 +160,9 @@ async function fetchRoleProfileValue(userId: string, roleKey: string, key: strin
         .from("community_members")
         .select("full_name, email")
         .eq("user_id", userId)
+        .eq("membership_type", "perennial_mandalism")
         .maybeSingle();
+
       if (!data) return null;
       const map: Record<string, string | null> = {
         signer_name: data.full_name ?? null,
@@ -218,7 +220,8 @@ export async function resolveUserRoleKeys(userId: string) {
     admin.from("diviners").select("id").eq("user_id", userId).maybeSingle(),
     admin.from("clients").select("id").eq("user_id", userId).maybeSingle(),
     admin.from("social_advocates").select("id").eq("user_id", userId).maybeSingle(),
-    admin.from("community_members").select("id, membership_type, membership_status").eq("user_id", userId).maybeSingle(),
+    admin.from("community_members").select("id, membership_type, membership_status").eq("user_id", userId).eq("membership_type", "perennial_mandalism").maybeSingle(),
+
     admin.from("mystery_school_students").select("id, status, access_expires_at").eq("user_id", userId).maybeSingle(),
     admin.from("trainees").select("id").eq("user_id", userId).maybeSingle(),
   ]);
@@ -593,9 +596,12 @@ export async function getPendingUserContractRequirements(
   );
 }
 
-export async function getPendingContractDestination(userId: string) {
+export async function getPendingContractDestination(userId: string, nextPath?: string) {
   const pending = await getPendingUserContractRequirements(userId, "post_login");
-  return pending.length > 0 ? "/contracts/pending" : null;
+  if (pending.length === 0) return null;
+  return nextPath
+    ? `/contracts/pending?next=${encodeURIComponent(nextPath)}`
+    : "/contracts/pending";
 }
 
 export async function activateContractAmendmentRollout(params: {

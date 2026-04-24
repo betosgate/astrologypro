@@ -36,7 +36,7 @@ import {
 } from "@/lib/revenue-ledger";
 import { PRICING } from "@/lib/constants";
 import { calculateMoneySplit } from "@/lib/money-split";
-import { provisionNatalReadiness } from "@/lib/community/provision-natal-readiness";
+import { finalizePerennialCommunityCheckoutSession } from "@/lib/community/finalize-checkout";
 import { tierToPlanType } from "@/lib/community/pm-entitlement";
 import { ensureUserContractRequirements } from "@/lib/contract-orchestration";
 import { provisionTraineeDivinerUpgradeFromSession } from "@/lib/trainee-diviner-upgrade";
@@ -235,9 +235,18 @@ async function handleCommunityCheckoutCompleted(session: Stripe.Checkout.Session
 
   if (!userId || !membershipType) return;
 
-  const { data: { user: authUser } } = await supabase.auth.admin.getUserById(userId);
+  const [{ data: authUserData }, { data: trainee }, { data: client }] = await Promise.all([
+    supabase.auth.admin.getUserById(userId),
+    supabase.from("trainees").select("name").eq("user_id", userId).maybeSingle(),
+    supabase.from("clients").select("full_name, birth_date, birth_time, birth_city").eq("user_id", userId).maybeSingle(),
+  ]);
+
+  const authUser = authUserData?.user;
   const email = authUser?.email ?? "";
-  const fullName = (authUser?.user_metadata?.full_name ?? authUser?.user_metadata?.name ?? null) as string | null;
+
+  // Strategy: Prefer trainee name, then client name, then auth metadata
+  const fullName =
+    (trainee?.name || client?.full_name || authUser?.user_metadata?.full_name || authUser?.user_metadata?.name || null) as string | null;
 
   const isMysterySchool = membershipType === "mystery_school";
 
@@ -253,92 +262,8 @@ async function handleCommunityCheckoutCompleted(session: Stripe.Checkout.Session
   let communityMemberId: string | null = null;
 
   if (!isMysterySchool) {
-    // Resolve pm_tier_id: prefer explicit metadata (new conversion flow),
-    // otherwise map planType → tier name (Individual/couple → Individual, family → Family).
-    // Fetch the tier's `name` in both branches so we can derive the canonical
-    // `plan_type` per audit note §2. If tier and metadata disagree, trust the
-    // tier and log.
-    const explicitTargetTierId = session.metadata?.target_tier_id ?? null;
-    let resolvedTierId: string | null = explicitTargetTierId;
-    let resolvedTierName: string | null = null;
-
-    if (resolvedTierId) {
-      const { data: tierRow } = await supabase
-        .from("pm_plan_tiers")
-        .select("id, name")
-        .eq("id", resolvedTierId)
-        .maybeSingle();
-      resolvedTierName = (tierRow?.name as string | undefined) ?? null;
-    } else {
-      const desiredTierName = planType === "family" ? "Family" : "Individual";
-      const { data: tierRow } = await supabase
-        .from("pm_plan_tiers")
-        .select("id, name")
-        .eq("is_active", true)
-        .ilike("name", desiredTierName)
-        .maybeSingle();
-      resolvedTierId = (tierRow?.id as string | undefined) ?? null;
-      resolvedTierName = (tierRow?.name as string | undefined) ?? null;
-      if (!resolvedTierId) {
-        console.warn(
-          `[webhook/community] Could not resolve pm_tier_id for planType=${planType} — member will default to lowest-order tier on read`
-        );
-      }
-    }
-
-    // Canonical plan_type: derive from the resolved tier when possible; fall
-    // back to the Stripe metadata value only when no tier resolved.
-    const canonicalPlanType = resolvedTierName
-      ? tierToPlanType({ name: resolvedTierName })
-      : (planType === "family" ? "family" : "individual");
-
-    if (
-      resolvedTierName &&
-      canonicalPlanType !== (planType === "family" ? "family" : "individual")
-    ) {
-      console.warn(
-        `[webhook/community] plan_type metadata (${planType}) disagrees with canonical tier '${resolvedTierName}' (${canonicalPlanType}). Trusting tier.`,
-        { session_id: session.id, user_id: userId }
-      );
-    }
-
-    // PM checkout — upsert community_members as the PM record
-    const { data: member } = await supabase
-      .from("community_members")
-      .upsert(
-        {
-          user_id: userId,
-          email,
-          full_name: fullName,
-          membership_type: membershipType,
-          membership_status: "active",
-          plan_type: canonicalPlanType,
-          stripe_subscription_id: subscriptionId ?? null,
-          joined_at: new Date().toISOString(),
-          ...(resolvedTierId ? { pm_tier_id: resolvedTierId } : {}),
-        },
-        { onConflict: "user_id" }
-      )
-      .select("id")
-      .single();
-
-    communityMemberId = member?.id ?? null;
-
-    // Task 08: provision natal readiness for the PM base user immediately after membership creation.
-    // Only natal + monthly transit eligibility — relationship charts are NOT provisioned here
-    // because no family context exists yet.
-    if (communityMemberId && membershipType === "perennial_mandalism") {
-      provisionNatalReadiness({
-        admin: supabase,
-        communityMemberId,
-        birthData: {
-          fullName,
-          // Birth data not available at Stripe checkout time; user fills it in onboarding.
-          // The provision function will set natal_status='not_started' and upgrade to
-          // 'queued' on the next auth callback or onboarding save.
-        },
-      }); // fire-and-forget — must not block the webhook response
-    }
+    const result = await finalizePerennialCommunityCheckoutSession(session);
+    communityMemberId = result?.communityMemberId ?? null;
   } else {
     // MS checkout — look up existing community_members row (may be PM) but do NOT overwrite it
     const { data: existingMember } = await supabase
@@ -429,6 +354,13 @@ async function handleCommunityCheckoutCompleted(session: Stripe.Checkout.Session
 
     // NOTE: We intentionally do NOT update community_members.membership_type
     // to 'mystery_school'. PM membership stays intact (parallel entitlement).
+  }
+
+  // Ensure contract requirements are triggered for the community role
+  try {
+    await ensureUserContractRequirements(userId, "post_login");
+  } catch (err) {
+    console.error("[Webhook] Failed to ensure contract requirements for community member:", err);
   }
 }
 

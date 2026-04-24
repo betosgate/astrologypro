@@ -537,6 +537,7 @@ export default function OnboardingPage() {
         return;
       }
 
+      router.refresh();
       router.push("/community");
     } catch {
       setError("An unexpected error occurred. Please try again.");

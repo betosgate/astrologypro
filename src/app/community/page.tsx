@@ -49,6 +49,7 @@ import { getCommunityDashboardFeed } from "@/lib/dashboard-content";
 import { calcFamilyProfileCompletion } from "@/lib/community/family-profile-completion";
 import { formatBirthPlace } from "@/lib/community/birth-location";
 import { SectionContainer } from "@/components/shared/section-container";
+import { RoleSwitcher } from "@/components/dashboard/role-switcher";
 
 export const metadata = { title: "Community - AstrologyPro" };
 export const dynamic = "force-dynamic";
@@ -193,6 +194,7 @@ export default async function CommunityDashboardPage() {
       "id, full_name, email, membership_type, membership_status, plan_type, joined_at, expires_at, pm_tier_id, current_period_end, extra_member_count, date_of_birth, birth_time, birth_city"
     )
     .eq("user_id", user.id)
+    .eq("membership_type", "perennial_mandalism")
     .maybeSingle();
 
   if (!member) redirect("/get-started");
@@ -868,7 +870,7 @@ export default async function CommunityDashboardPage() {
             })}
           </p>
         </div>
-
+        <RoleSwitcher />
       </div>
 
       {/* ═══════════════════════════════════════════════════════════════════

@@ -21,7 +21,9 @@ export default async function CommunityProfilePage() {
     .from("community_members")
     .select("id, full_name, first_name, last_name, email, phone, gender, date_of_birth, birth_time, birth_city, birth_country, address, city, state, zip, relationship_status, intake_data, membership_type, membership_status, joined_at, expires_at")
     .eq("user_id", user.id)
+    .eq("membership_type", "perennial_mandalism")
     .single();
+
 
   if (!member) redirect("/get-started");
 
