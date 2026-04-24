@@ -1390,6 +1390,33 @@ export default async function CommunityDashboardPage() {
                   const profileComplete = completionPct >= 100;
                   const avatarColor = AVATAR_COLORS[idx % AVATAR_COLORS.length];
 
+                  // Community Family UX Task 02 (2026-04-24):
+                  // Build a compact missing-field summary for incomplete
+                  // cards. `completion.missing` is the source of truth
+                  // (from calcFamilyProfileCompletion) — we only format
+                  // labels for card layout (lowercase, strip the parenthetical
+                  // hint on "Birth time (or mark unknown)"). The card line
+                  // shows up to two fields inline and "+N more" when the
+                  // list is longer, so it never overflows the grid layout.
+                  const missingDisplay = completion.missing.map((label) =>
+                    label.replace(/\s*\(.*?\)\s*$/, "").toLowerCase()
+                  );
+                  const missingSummary = (() => {
+                    if (missingDisplay.length === 0) return null;
+                    if (missingDisplay.length <= 2) {
+                      return missingDisplay.join(", ");
+                    }
+                    const head = missingDisplay.slice(0, 2).join(", ");
+                    return `${head} +${missingDisplay.length - 2} more`;
+                  })();
+
+                  // Community Family UX Task 04 (2026-04-24):
+                  // Deep-link the corrective CTAs directly to the per-member
+                  // edit route so the user lands in the exact edit context
+                  // for that member instead of having to locate them on the
+                  // family index page.
+                  const editHref = `/community/family/${m.id}/edit`;
+
                   return (
                     <Card key={m.id} className="transition-colors hover:border-primary/30">
                       <CardContent className="py-4 px-4 space-y-3">
@@ -1460,16 +1487,41 @@ export default async function CommunityDashboardPage() {
                             <p className="text-xs text-muted-foreground leading-snug">
                               Profile {profileComplete ? "complete" : "incomplete"}
                             </p>
+                            {/*
+                              Task 02 — missing-field summary for incomplete
+                              members. `truncate` + `title` makes sure rare
+                              long strings still fit the card and remain
+                              discoverable on hover.
+                            */}
+                            {!profileComplete && missingSummary && (
+                              <p
+                                className="text-[11px] text-amber-600/90 leading-snug mt-0.5 truncate"
+                                title={`Missing: ${missingDisplay.join(", ")}`}
+                              >
+                                Missing: {missingSummary}
+                              </p>
+                            )}
+                            {/*
+                              Task 03 — helper line on the complete-but-no-chart
+                              state so the user sees at a glance that chart
+                              generation is the next step, not more profile
+                              editing.
+                            */}
+                            {profileComplete && !hasNatalChart && (
+                              <p className="text-[11px] text-muted-foreground leading-snug mt-0.5">
+                                Ready to generate chart
+                              </p>
+                            )}
                             {!profileComplete && (
                               <Button asChild variant="link" size="sm" className="h-auto p-0 mt-0.5 text-xs text-primary">
-                                <Link href={`/community/family/${m.id}`}>
+                                <Link href={editHref}>
                                   Complete Profile →
                                 </Link>
                               </Button>
                             )}
                             {profileComplete && !hasNatalChart && (
                               <Button asChild variant="link" size="sm" className="h-auto p-0 mt-0.5 text-xs text-primary">
-                                <Link href={`/community/family/${m.id}`}>
+                                <Link href={editHref}>
                                   Generate Chart →
                                 </Link>
                               </Button>
