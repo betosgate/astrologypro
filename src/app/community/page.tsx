@@ -1319,7 +1319,12 @@ export default async function CommunityDashboardPage() {
 
         {/* Own natal chart status */}
         <div className="grid gap-3 sm:grid-cols-2">
-          {ownChartReady ? (
+          {/* Client update 2026-04-24:
+              Hide the standalone own-chart status card for now. This was the
+              green "Your Natal Chart / Birth data complete" block. Keep the
+              implementation commented instead of deleting it so the dashboard
+              can restore this state card later if requirements change. */}
+          {/* {ownChartReady ? (
             <Card className="border-emerald-500/30 bg-emerald-500/5">
               <CardContent className="flex items-center gap-4 py-4">
                 <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-emerald-500/15">
@@ -1328,11 +1333,6 @@ export default async function CommunityDashboardPage() {
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold leading-tight">Your Natal Chart</p>
                   <p className="text-xs text-emerald-600 mt-0.5">Birth data complete — open your chart</p>
-                  {/*
-                    Task 04: deep-link directly into the shared toolkit route
-                    instead of sending users back to the family list — the
-                    toolkit now renders the member's natal chart on demand.
-                  */}
                   <Button asChild variant="link" size="sm" className="h-auto p-0 mt-1 text-xs text-primary">
                     <Link href="/community/horoscope">View Chart →</Link>
                   </Button>
@@ -1342,7 +1342,8 @@ export default async function CommunityDashboardPage() {
                 </Badge>
               </CardContent>
             </Card>
-          ) : (
+          ) : ( */}
+          {ownChartReady ? null : (
             <Card className="border-dashed border-amber-500/20">
               <CardContent className="flex flex-col items-center gap-3 py-6 text-center">
                 <div className="flex size-12 items-center justify-center rounded-full bg-amber-500/15">
@@ -1368,7 +1369,11 @@ export default async function CommunityDashboardPage() {
           )}
 
           {/* Relationship charts quick stat */}
-          {relationshipChartCount > 0 ? (
+          {/* Client update 2026-04-24:
+              Hide the standalone ready-state relationship-chart stat card for
+              now. Keep the implementation commented instead of deleting it so
+              this quick-summary card can be restored later if needed. */}
+          {/* {relationshipChartCount > 0 ? (
             <Card>
               <CardContent className="flex items-center gap-4 py-4">
                 <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-violet-500/10">
@@ -1388,7 +1393,8 @@ export default async function CommunityDashboardPage() {
                 </span>
               </CardContent>
             </Card>
-          ) : (
+          ) : ( */}
+          {relationshipChartCount > 0 ? null : (
             <Card className="border-dashed">
               <CardContent className="flex flex-col items-center gap-3 py-5 text-center">
                 <div className="flex size-10 items-center justify-center rounded-full bg-violet-500/10">
@@ -1411,8 +1417,11 @@ export default async function CommunityDashboardPage() {
           )}
         </div>
 
-        {/* Western Horoscope deep-link */}
-        <Card className="border-sky-500/20 bg-sky-500/5">
+        {/* Client update 2026-04-24:
+            Hide the standalone "Western Natal Chart" promo card for now.
+            Keep the implementation commented instead of deleting it so this
+            entry point can be restored easily if requirements change. */}
+        {/* <Card className="border-sky-500/20 bg-sky-500/5">
           <CardContent className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3 min-w-0">
               <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-sky-500/20">
@@ -1439,7 +1448,7 @@ export default async function CommunityDashboardPage() {
               </Link>
             </Button>
           </CardContent>
-        </Card>
+        </Card> */}
       </section>
 
       {/* ═══════════════════════════════════════════════════════════════════
