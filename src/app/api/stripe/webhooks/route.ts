@@ -21,7 +21,6 @@ import { buildCalendarDescription } from "@/lib/calendar-utils";
 import { getActiveChimePhoneNumber } from "@/lib/booking-call-pin";
 import { createMsCalendarEvent } from "@/lib/microsoft-calendar";
 import { ensureOrderForBooking, getOrderStatusForService } from "@/lib/orders";
-import { recordAffiliateCommission } from "@/lib/affiliate-commissions";
 import { getSessionLinkForBooking } from "@/lib/service-toolkit-mapping";
 import {
   getSubscriptionPeriodEndIso,
@@ -302,18 +301,6 @@ async function handleCommunityCheckoutCompleted(session: Stripe.Checkout.Session
     eventType: 'subscription.created',
     metadata: { planName: membershipType, planType, status: 'active' },
   })
-
-  // ── Affiliate commission on community/subscription signup ────────────────
-  const communityAffiliateCode = session.metadata?.affiliateCode;
-  if (communityAffiliateCode) {
-    const amountTotal = (session.amount_total ?? 0) / 100;
-    recordSignupAffiliateCommission(
-      communityAffiliateCode,
-      amountTotal,
-      `community-signup:${session.id}`,
-      "subscription"
-    );
-  }
 
   // Send community welcome email for all membership types (idempotent via SES dedup window)
   if (email) {
@@ -721,18 +708,6 @@ async function handleComboBundleCheckoutCompleted(
     );
   }
 
-  // ── Affiliate commission on combo bundle signup ──────────────────────────
-  const comboAffiliateCode = meta.affiliateCode;
-  if (comboAffiliateCode) {
-    const amountTotal = (session.amount_total ?? 0) / 100;
-    recordSignupAffiliateCommission(
-      comboAffiliateCode,
-      amountTotal,
-      `combo-signup:${session.id}`,
-      "signup"
-    );
-  }
-
   console.log(
     `[Webhook] Combo bundle provisioned: userId=${userId} username=${username} plan=${planName}`
   );
@@ -889,41 +864,6 @@ async function handlePerennialCommunitySignupCheckoutCompleted(
       "[Webhook] perennial_community_signup: failed to upsert community_members:",
       error
     );
-  }
-
-  const affiliateCode = session.metadata?.affiliateCode;
-  if (affiliateCode) {
-    const amountTotal = (session.amount_total ?? 0) / 100;
-    recordSignupAffiliateCommission(
-      affiliateCode,
-      amountTotal,
-      `perennial-community-signup:${session.id}`,
-      "subscription"
-    );
-  }
-}
-
-/**
- * Fire-and-forget: record an affiliate commission for a signup/subscription checkout.
- * Supports both the old `affiliates` (social_advocates) table and the new
- * `diviner_affiliates` system via `affiliate_referral_links`.
- */
-async function recordSignupAffiliateCommission(
-  affiliateCode: string,
-  amountDollars: number,
-  orderRef: string,
-  productType: "signup" | "subscription"
-) {
-  try {
-    await recordAffiliateCommission({
-      affiliateCode,
-      amountCents: Math.round(amountDollars * 100),
-      orderRef,
-      productType,
-    });
-  } catch (err) {
-    // Fire-and-forget — never block the main flow
-    console.error("[Webhook] Failed to record signup affiliate commission:", err);
   }
 }
 
@@ -1095,15 +1035,6 @@ async function handleWeeklySubscriptionCheckoutCompleted(
     })
     .eq("id", productId);
 
-  if (session.metadata?.affiliateCode && session.amount_total) {
-    await recordAffiliateCommission({
-      affiliateCode: session.metadata.affiliateCode,
-      amountCents: session.amount_total,
-      orderRef: `weekly-subscription:${subscriptionId}`,
-      productType: "weekly_subscription",
-      divinerId,
-    });
-  }
 }
 
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
@@ -1206,17 +1137,6 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     console.error("Failed to upsert diviner record:", error);
   }
 
-  // ── Affiliate commission on diviner signup ────────────────────────────────
-  const signupAffiliateCode = session.metadata?.affiliateCode;
-  if (signupAffiliateCode) {
-    const amountTotal = (session.amount_total ?? 0) / 100;
-    recordSignupAffiliateCommission(
-      signupAffiliateCode,
-      amountTotal,
-      `diviner-signup:${session.id}`,
-      "signup"
-    );
-  }
 }
 
 function getSubscriptionIdFromInvoice(invoice: Stripe.Invoice): string | null {
@@ -1332,18 +1252,7 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
     .maybeSingle();
 
   if (weeklySubscription && invoice.amount_paid > 0) {
-    const affiliateCode = subscription.metadata?.affiliateCode;
     const orderRef = `weekly-subscription-invoice:${invoice.id}`;
-
-    if (affiliateCode) {
-      await recordAffiliateCommission({
-        affiliateCode,
-        amountCents: invoice.amount_paid,
-        orderRef,
-        productType: "weekly_subscription",
-        divinerId: weeklySubscription.diviner_id,
-      });
-    }
 
     const affiliateCommissionCents =
       await getAffiliateCommissionTotalForOrderRef(orderRef);
@@ -1353,7 +1262,7 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
       platformFeePercent: WEEKLY_SUBSCRIPTION_PLATFORM_SHARE_PERCENT,
       affiliateCommissionCents,
       platformFeeRule: "weekly_subscription_platform_share_percent",
-      affiliateRule: affiliateCode ? "affiliate_commission_rule" : "no_affiliate_share",
+      affiliateRule: affiliateCommissionCents > 0 ? "affiliate_commission_rule" : "no_affiliate_share",
     });
 
     await recordRevenueLedgerEntry({
@@ -1846,7 +1755,6 @@ async function handlePaymentIntentSucceeded(
 
   const bookingId = paymentIntent.metadata?.bookingId;
   const clientEmail = paymentIntent.metadata?.clientEmail;
-  const affiliateCode = paymentIntent.metadata?.affiliateCode;
   const refCodeFromPi = paymentIntent.metadata?.refCode ?? null;
   if (!bookingId || !clientEmail) return;
 
@@ -1979,16 +1887,6 @@ async function handlePaymentIntentSucceeded(
     paidAt: new Date().toISOString(),
   });
 
-  if (affiliateCode) {
-    await recordAffiliateCommission({
-      affiliateCode,
-      amountCents: paymentIntent.amount,
-      orderRef: `booking:${bookingId}`,
-      productType: "booking",
-      divinerId: div.id,
-    });
-  }
-
   const orderReference = `booking:${bookingId}`;
   const affiliateCommissionCents =
     await getAffiliateCommissionTotalForOrderRef(orderReference);
@@ -2005,7 +1903,7 @@ async function handlePaymentIntentSucceeded(
       paymentIntent.metadata?.splitPlatformFeeRule ?? "payment_intent_platform_fee",
     affiliateRule:
       paymentIntent.metadata?.splitAffiliateRule ??
-      (affiliateCode ? "affiliate_commission_rule" : "no_affiliate_share"),
+      (affiliateCommissionCents > 0 ? "affiliate_commission_rule" : "no_affiliate_share"),
     memberDiscountApplied: paymentIntent.metadata?.memberDiscount === "5%",
   });
 

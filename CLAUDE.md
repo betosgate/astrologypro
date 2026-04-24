@@ -4,6 +4,18 @@
 
 ---
 
+## Living Specs
+
+Some subsystems have authoritative living-spec documents. Before touching
+code in the listed areas, READ the spec. Any PR that changes behavior in
+that area MUST update the spec in the same commit.
+
+| Area | Spec |
+|---|---|
+| Affiliate / commission / campaign flow | `docs/specs/affiliate-commission-system.md` |
+
+---
+
 ## Project Structure
 
 | App | Path | Stack |

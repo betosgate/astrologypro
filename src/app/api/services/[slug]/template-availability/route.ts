@@ -10,19 +10,17 @@ export const runtime = "nodejs";
  * GET /api/services/[slug]/template-availability?date=YYYY-MM-DD&submission=<uuid>
  *
  * Shared calendar date resolver for the `Book Without Choosing a Diviner`
- * flow. Given a chosen date, returns the ranked list of compatible diviners
- * who actually have at least one slot on that date, with the matched service
- * + earliest slot per diviner for handoff.
+ * flow. Given a chosen date, returns available UTC slots grouped across
+ * compatible diviners. The UI selects a slot first, then chooses among the
+ * diviners available at that exact time.
  *
  * Response:
  *   {
  *     template: { id, slug, name, category },
- *     divinersAvailable: Array<{
- *       divinerId, username, displayName, avatarUrl, tagline, isCertified,
- *       averageRating, reviewCount, completedSessions, timezone,
- *       service: { id, slug, name, basePrice, durationMinutes },
- *       earliestSlot: { start: ISO, end: ISO } | null,
- *       totalSlots: number,
+ *     slots: Array<{
+ *       start: ISO,
+ *       end: ISO | null,
+ *       diviners: Array<...matched diviner + service + slot...>
  *     }>
  *   }
  *
@@ -84,7 +82,11 @@ export async function GET(
   };
 
   if (match.diviners.length === 0) {
-    return NextResponse.json({ template: templateInfo, divinersAvailable: [] });
+    return NextResponse.json({
+      template: templateInfo,
+      slots: [],
+      divinersAvailable: [],
+    });
   }
 
   const origin = request.nextUrl.origin;
@@ -103,7 +105,12 @@ export async function GET(
           headers: { accept: "application/json" },
           cache: "no-store",
         });
-        if (!res.ok) return { diviner: d, slots: [] as string[] };
+        if (!res.ok) {
+          return {
+            diviner: d,
+            slots: [] as Array<{ start: string; end: string | null }>,
+          };
+        }
         const json = (await res.json().catch(() => [])) as
           | Array<{ start?: unknown; end?: unknown }>
           | { slots?: Array<{ start?: unknown; end?: unknown }> };
@@ -113,11 +120,17 @@ export async function GET(
             ? json.slots
             : [];
         const slots = rawSlots
-              .map((s) => (typeof s.start === "string" ? s.start : ""))
-              .filter((s) => s.length > 0);
+          .map((s) => ({
+            start: typeof s.start === "string" ? s.start : "",
+            end: typeof s.end === "string" ? s.end : null,
+          }))
+          .filter((s) => s.start.length > 0);
         return { diviner: d, slots };
       } catch {
-        return { diviner: d, slots: [] as string[] };
+        return {
+          diviner: d,
+          slots: [] as Array<{ start: string; end: string | null }>,
+        };
       }
     }),
   );
@@ -125,9 +138,9 @@ export async function GET(
   const available = perDivinerResults
     .filter((r) => r.slots.length > 0)
     .map(({ diviner: d, slots }) => {
-      const earliestStart = slots.reduce(
-        (min, s) => (min === "" || s < min ? s : min),
-        "",
+      const earliestSlot = slots.reduce(
+        (min, s) => (!min || s.start < min.start ? s : min),
+        null as { start: string; end: string | null } | null,
       );
       return {
         divinerId: d.divinerId,
@@ -147,18 +160,89 @@ export async function GET(
           basePrice: d.service.basePrice,
           durationMinutes: d.service.durationMinutes,
         },
-        earliestSlot: earliestStart
-          ? {
-              start: earliestStart,
-              // end not critical for picking; let booking wizard resolve.
-              end: null as string | null,
-            }
-          : null,
+        earliestSlot,
         totalSlots: slots.length,
       };
     });
 
-  // Date-aware ranking per audit §7.
+  const slotGroups = new Map<
+    string,
+    {
+      start: string;
+      end: string | null;
+      diviners: Array<{
+        divinerId: string;
+        username: string;
+        displayName: string;
+        avatarUrl: string | null;
+        tagline: string | null;
+        isCertified: boolean;
+        averageRating: number | null;
+        reviewCount: number;
+        completedSessions: number;
+        timezone: string | null;
+        service: {
+          id: string;
+          slug: string;
+          name: string;
+          basePrice: number;
+          durationMinutes: number;
+        };
+        slot: { start: string; end: string | null };
+      }>;
+    }
+  >();
+
+  for (const { diviner: d, slots } of perDivinerResults) {
+    for (const slot of slots) {
+      const current =
+        slotGroups.get(slot.start) ??
+        {
+          start: slot.start,
+          end: slot.end,
+          diviners: [],
+        };
+      current.end = current.end ?? slot.end;
+      current.diviners.push({
+        divinerId: d.divinerId,
+        username: d.username,
+        displayName: d.displayName,
+        avatarUrl: d.avatarUrl,
+        tagline: d.tagline,
+        isCertified: d.isCertified,
+        averageRating: d.averageRating,
+        reviewCount: d.reviewCount,
+        completedSessions: d.completedSessions,
+        timezone: d.timezone,
+        service: {
+          id: d.service.id,
+          slug: d.service.slug,
+          name: d.service.name,
+          basePrice: d.service.basePrice,
+          durationMinutes: d.service.durationMinutes,
+        },
+        slot,
+      });
+      slotGroups.set(slot.start, current);
+    }
+  }
+
+  const slots = [...slotGroups.values()]
+    .map((slot) => {
+      slot.diviners.sort((a, b) => {
+        if (a.isCertified !== b.isCertified) return a.isCertified ? -1 : 1;
+        const ar = a.averageRating ?? 0;
+        const br = b.averageRating ?? 0;
+        if (Math.abs(br - ar) > 0.001) return br - ar;
+        if (a.completedSessions !== b.completedSessions)
+          return b.completedSessions - a.completedSessions;
+        return a.service.basePrice - b.service.basePrice;
+      });
+      return slot;
+    })
+    .sort((a, b) => a.start.localeCompare(b.start));
+
+  // Keep the previous date-level list for callers that still consume it.
   available.sort((a, b) => {
     const aStart = a.earliestSlot?.start ?? "";
     const bStart = b.earliestSlot?.start ?? "";
@@ -174,6 +258,7 @@ export async function GET(
 
   return NextResponse.json({
     template: templateInfo,
+    slots,
     divinersAvailable: available,
   });
 }
