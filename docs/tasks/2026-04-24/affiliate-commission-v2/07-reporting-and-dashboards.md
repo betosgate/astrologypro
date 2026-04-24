@@ -1,6 +1,6 @@
 # Task 07 — Reporting + Dashboards + Admin Overrides
 
-- Status: Not Started
+- Status: Phase A done (2026-04-24). Phase B (report APIs) + Phase C (UI) deferred to follow-up sprint.
 - Priority: P1
 - Depends on: 01, 02, 04
 - Blocks: —

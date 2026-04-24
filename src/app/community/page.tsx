@@ -193,8 +193,8 @@ export default async function CommunityDashboardPage() {
       "id, full_name, email, membership_type, membership_status, plan_type, joined_at, expires_at, pm_tier_id, current_period_end, extra_member_count, date_of_birth, birth_time, birth_city"
     )
     .eq("user_id", user.id)
-    .eq("membership_type", "perennial_mandalism")
     .maybeSingle();
+
 
   if (!member) redirect("/get-started");
 

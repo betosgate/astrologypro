@@ -160,7 +160,6 @@ async function fetchRoleProfileValue(userId: string, roleKey: string, key: strin
         .from("community_members")
         .select("full_name, email")
         .eq("user_id", userId)
-        .eq("membership_type", "perennial_mandalism")
         .maybeSingle();
 
       if (!data) return null;
@@ -220,7 +219,8 @@ export async function resolveUserRoleKeys(userId: string) {
     admin.from("diviners").select("id").eq("user_id", userId).maybeSingle(),
     admin.from("clients").select("id").eq("user_id", userId).maybeSingle(),
     admin.from("social_advocates").select("id").eq("user_id", userId).maybeSingle(),
-    admin.from("community_members").select("id, membership_type, membership_status").eq("user_id", userId).eq("membership_type", "perennial_mandalism").maybeSingle(),
+    admin.from("community_members").select("id, membership_type, membership_status").eq("user_id", userId).maybeSingle(),
+
 
     admin.from("mystery_school_students").select("id, status, access_expires_at").eq("user_id", userId).maybeSingle(),
     admin.from("trainees").select("id").eq("user_id", userId).maybeSingle(),
@@ -349,8 +349,8 @@ async function listUserIdsForRole(roleKey: string) {
       const { data, error } = await admin
         .from("community_members")
         .select("user_id")
-        .eq("membership_type", "perennial_mandalism")
         .eq("membership_status", "active");
+
       if (error) throw new Error(error.message);
       return (data ?? []).map((entry) => entry.user_id).filter(Boolean) as string[];
     }

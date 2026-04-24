@@ -23,7 +23,6 @@ export async function getCommunityProfileCompletion(
     .from("community_members")
     .select("id, full_name, date_of_birth, birth_time, birth_city")
     .eq("user_id", userId)
-    .eq("membership_type", "perennial_mandalism")
     .maybeSingle();
 
 

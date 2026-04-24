@@ -33,8 +33,11 @@ export default async function CommunityLayout({ children }: { children: React.Re
     .from("community_members")
     .select("id, full_name, first_name, membership_type, membership_status, onboarding_completed, stripe_subscription_id")
     .eq("user_id", user.id)
-    .eq("membership_type", "perennial_mandalism")
     .maybeSingle();
+
+
+  console.log("[CommunityLayout] user.id =", user.id, "onboarding_completed =", member?.onboarding_completed);
+
 
 
   if (!member) redirect("/get-started");

@@ -238,7 +238,7 @@ export async function creditAffiliateConversion(
 
   const { data: account } = await admin
     .from("affiliate_accounts")
-    .select("status")
+    .select("status, user_id, email")
     .eq("id", junction.affiliate_account_id as string)
     .maybeSingle();
   if (!account || account.status !== "active") {
@@ -308,6 +308,33 @@ export async function creditAffiliateConversion(
     stampType: params.stampedRateType,
     stampValue: params.stampedRateValue,
   });
+
+  // Fire `affiliate.conversion` notification (in-app immediate, email
+  // queued to daily digest). Fire-and-forget so a notification failure
+  // never blocks the webhook from acknowledging Stripe.
+  try {
+    const recipientUserId = (account as unknown as { user_id?: string }).user_id;
+    const recipientEmail = (account as unknown as { email?: string }).email;
+    if (recipientUserId && recipientEmail) {
+      const { notifyAffiliate } = await import("@/lib/affiliate-notifications");
+      const dollars = (commissionCents / 100).toFixed(2);
+      await notifyAffiliate({
+        admin,
+        userId: recipientUserId,
+        affiliateAccountId: junction.affiliate_account_id as string,
+        toEmail: recipientEmail,
+        kind: "affiliate.conversion",
+        title: `Commission earned: $${dollars}`,
+        body: `A referred customer's payment just confirmed. You earned $${dollars} on this conversion. Review your earnings in the affiliate portal.`,
+        actionUrl: "/affiliate/earnings",
+      });
+    }
+  } catch (err) {
+    console.error("[creditAffiliateConversion] notify failed", {
+      conversionId: inserted?.id,
+      err: err instanceof Error ? err.message : String(err),
+    });
+  }
 
   return {
     conversionId: inserted!.id as string,

@@ -27,8 +27,8 @@ export async function GET() {
         "id, email, full_name, first_name, last_name, phone, gender, date_of_birth, birth_time, birth_city, birth_country, state, city, zip, address, relationship_status, relation_type, intake_data, occupation, membership_status, membership_type, plan_type, onboarding_completed"
       )
       .eq("user_id", user.id)
-      .eq("membership_type", "perennial_mandalism")
       .maybeSingle();
+
 
     if (memberErr) {
       console.error("[onboarding/prefill] lookup error:", memberErr);

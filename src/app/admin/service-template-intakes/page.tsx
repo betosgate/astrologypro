@@ -419,6 +419,7 @@ export default function ServiceTemplateIntakesPage() {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-12">#</TableHead>
               <TableHead>
                 <SortHeader
                   label="Submitted"
@@ -472,7 +473,7 @@ export default function ServiceTemplateIntakesPage() {
             {loading ? (
               Array.from({ length: 6 }).map((_, idx) => (
                 <TableRow key={idx}>
-                  {Array.from({ length: 7 }).map((__, cellIdx) => (
+                  {Array.from({ length: 8 }).map((__, cellIdx) => (
                     <TableCell key={cellIdx}>
                       <div className="h-4 w-full animate-pulse rounded bg-muted" />
                     </TableCell>
@@ -481,17 +482,20 @@ export default function ServiceTemplateIntakesPage() {
               ))
             ) : submissions.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="py-12 text-center text-muted-foreground">
+                <TableCell colSpan={8} className="py-12 text-center text-muted-foreground">
                   No intake submissions found.
                 </TableCell>
               </TableRow>
             ) : (
-              submissions.map((submission) => (
+              submissions.map((submission, idx) => (
                 <TableRow
                   key={submission.id}
                   className="cursor-pointer hover:bg-muted/50"
                   onClick={() => setSelected(submission)}
                 >
+                  <TableCell className="text-sm text-muted-foreground">
+                    {(currentPage - 1) * pageSize + idx + 1}
+                  </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {fmtDate(submission.submitted_at)}
                   </TableCell>
