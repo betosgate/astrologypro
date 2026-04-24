@@ -22,7 +22,7 @@ async function getDiviner() {
   const admin = createAdminClient();
   const { data: diviner } = await admin
     .from("diviners")
-    .select("id, user_id")
+    .select("id, user_id, display_name")
     .eq("user_id", user.id)
     .maybeSingle();
   return diviner ? { user, diviner, admin } : null;
@@ -340,6 +340,48 @@ export async function POST(req: NextRequest) {
       { error: insertErr?.message ?? "Failed to create assignment" },
       { status: 500 }
     );
+  }
+
+  // Fire `affiliate.assigned` notification (fire-and-forget; never fail the POST).
+  if (affiliateType === "diviner_affiliate") {
+    try {
+      const { getAffiliateAccountForJunction } = await import(
+        "@/lib/affiliate-accounts"
+      );
+      const { notifyAffiliate, formatRate } = await import(
+        "@/lib/affiliate-notifications"
+      );
+
+      const account = await getAffiliateAccountForJunction(admin, affiliateId);
+
+      let productLabel = `${diviner.display_name ?? "the diviner"}'s profile`;
+      if (destinationType === "SERVICE" && destinationId) {
+        const { data: template } = await admin
+          .from("service_templates")
+          .select("name")
+          .eq("id", destinationId)
+          .maybeSingle();
+        productLabel = (template?.name as string) ?? "a service";
+      }
+
+      if (account?.user_id) {
+        await notifyAffiliate({
+          admin,
+          userId: account.user_id,
+          affiliateAccountId: account.id,
+          toEmail: account.email,
+          kind: "affiliate.assigned",
+          title: `New affiliate assignment on ${productLabel}`,
+          body: `${diviner.display_name ?? "A diviner"} has assigned you to ${productLabel} at ${formatRate(commissionType, commissionValue)}. You can now create tracking campaigns for this product from your affiliate portal.`,
+          actionUrl: "/affiliate/assignments",
+        });
+      }
+    } catch (err) {
+      console.error("[POST affiliate-assignments] notification failed", {
+        assignmentId: inserted.id,
+        err: err instanceof Error ? err.message : String(err),
+      });
+    }
   }
 
   return NextResponse.json({ id: inserted.id }, { status: 201 });

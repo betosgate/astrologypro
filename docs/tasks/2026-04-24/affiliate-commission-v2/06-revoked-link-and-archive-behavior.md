@@ -1,6 +1,6 @@
 # Task 06 — Revoked-Link + Archive Behavior
 
-- Status: Not Started
+- Status: Done (2026-04-24)
 - Priority: P1
 - Depends on: 01 (additive)
 - Blocks: —
