@@ -977,40 +977,61 @@ export default async function CommunityDashboardPage() {
                   aria-hidden="true"
                 />
               </span>
-              {familyChipData.map((chip) => (
-                <div
-                  key={chip.id}
-                  className="flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 pl-2.5 pr-1 py-1"
-                >
-                  <User className="size-3.5 text-muted-foreground" aria-hidden="true" />
-                  <span className="text-sm font-medium text-foreground">{chip.name}</span>
-                  {/*
-                    Task 04 — missing-role chip is visually distinct from
-                    the grey fallback. The amber dashed border + italic
-                    label + hover/focus title tells the user the row is
-                    real but the relationship field hasn't been filled
-                    in yet, without looking like a hard error.
-                  */}
-                  {chip.missingRelationship ? (
-                    <Badge
-                      variant="outline"
-                      className="text-[10px] px-1.5 py-0 h-4 min-h-0 rounded-full font-medium italic border border-dashed border-amber-500/50 bg-amber-500/10 text-amber-700"
-                      title="Relationship is missing for this member"
+              {familyChipData.map((chip) => {
+                const chipContent = (
+                  <>
+                    <User className="size-3.5 text-muted-foreground" aria-hidden="true" />
+                    <span className="text-sm font-medium text-foreground">{chip.name}</span>
+                    {/*
+                      Task 04 — missing-role chip is visually distinct from
+                      the grey fallback. The amber dashed border + italic
+                      label + hover/focus title tells the user the row is
+                      real but the relationship field hasn't been filled
+                      in yet, without looking like a hard error.
+                    */}
+                    {chip.missingRelationship ? (
+                      <Badge
+                        variant="outline"
+                        className="text-[10px] px-1.5 py-0 h-4 min-h-0 rounded-full font-medium italic border border-dashed border-amber-500/50 bg-amber-500/10 text-amber-700"
+                        title="Relationship is missing for this member"
+                      >
+                        Missing: relationship
+                      </Badge>
+                    ) : (
+                      <Badge
+                        variant="outline"
+                        className={`text-[10px] px-1.5 py-0 h-4 min-h-0 rounded-full font-medium border ${getRelationshipBadgeClasses(
+                          chip.relationship
+                        )}`}
+                      >
+                        {chip.relationship}
+                      </Badge>
+                    )}
+                  </>
+                );
+
+                if (chip.missingRelationship) {
+                  return (
+                    <Link
+                      key={chip.id}
+                      href={`/community/family?edit=${encodeURIComponent(chip.id)}`}
+                      title={`Complete profile for ${chip.name}`}
+                      className="flex items-center gap-2 rounded-full border border-amber-500/40 bg-amber-500/5 pl-2.5 pr-1 py-1 transition-colors hover:border-amber-500/60 hover:bg-amber-500/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     >
-                      Missing role
-                    </Badge>
-                  ) : (
-                    <Badge
-                      variant="outline"
-                      className={`text-[10px] px-1.5 py-0 h-4 min-h-0 rounded-full font-medium border ${getRelationshipBadgeClasses(
-                        chip.relationship
-                      )}`}
-                    >
-                      {chip.relationship}
-                    </Badge>
-                  )}
-                </div>
-              ))}
+                      {chipContent}
+                    </Link>
+                  );
+                }
+
+                return (
+                  <div
+                    key={chip.id}
+                    className="flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 pl-2.5 pr-1 py-1"
+                  >
+                    {chipContent}
+                  </div>
+                );
+              })}
             </div>
             <div className="h-px w-full bg-border/50" />
           </div>
