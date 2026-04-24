@@ -21,7 +21,6 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { canPubliclySellService } from "@/lib/payout-readiness";
 import { getBaseServiceTemplateSlug } from "@/lib/service-template-form";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnySupabase = SupabaseClient<any, any, any>;
 
 export interface TemplateMatch {
@@ -160,8 +159,13 @@ export async function resolveTemplateMatches(
       visibleServices.map((row) => (row.diviner_id as string) ?? "").filter(Boolean),
     ),
   ];
+  const serviceIds = [
+    ...new Set(
+      visibleServices.map((row) => (row.id as string) ?? "").filter(Boolean),
+    ),
+  ];
 
-  const [testimonialsRes, bookingsRes] = await Promise.all([
+  const [testimonialsRes, bookingsRes, availabilityTemplatesRes] = await Promise.all([
     admin
       .from("testimonials")
       .select("diviner_id, rating")
@@ -172,6 +176,12 @@ export async function resolveTemplateMatches(
       .select("diviner_id")
       .in("diviner_id", divinerIds)
       .eq("status", "completed"),
+    admin
+      .from("availability_templates")
+      .select("service_id, duration_minutes, created_at")
+      .in("service_id", serviceIds)
+      .eq("is_active", true)
+      .order("created_at", { ascending: false }),
   ]);
 
   const ratingsByDiviner = new Map<string, number[]>();
@@ -188,6 +198,14 @@ export async function resolveTemplateMatches(
     const key = row.diviner_id as string | null;
     if (!key) continue;
     sessionsByDiviner.set(key, (sessionsByDiviner.get(key) ?? 0) + 1);
+  }
+  const availabilityDurationByService = new Map<string, number>();
+  for (const row of availabilityTemplatesRes.data ?? []) {
+    const serviceId = row.service_id as string | null;
+    if (!serviceId || availabilityDurationByService.has(serviceId)) continue;
+    if (typeof row.duration_minutes === "number" && row.duration_minutes > 0) {
+      availabilityDurationByService.set(serviceId, row.duration_minutes);
+    }
   }
 
   // Dedup so each diviner appears once even if multiple services under the
@@ -211,7 +229,12 @@ export async function resolveTemplateMatches(
       category: svcCategory,
       basePrice: Number(row.base_price ?? 0),
       durationMinutes:
-        Number(row.duration_minutes ?? template.duration_minutes ?? 0) || 0,
+        Number(
+          availabilityDurationByService.get(row.id as string) ??
+            row.duration_minutes ??
+            template.duration_minutes ??
+            0,
+        ) || 0,
     };
 
     const existing = byDiviner.get(divinerId);
