@@ -485,12 +485,30 @@ async function handleNewOutboundCall(event) {
   console.log("callId:", callId, "txId:", txId, "to:", outbound?.To);
   console.log("Arguments:", JSON.stringify(args));
 
-  if (args.action === "ring_diviner" && args.meetingId) {
+  // ring_diviner         — simultaneous-ring: Chime dials the diviner's
+  //                         personal phone. On CALL_ANSWERED we JoinChimeMeeting,
+  //                         on ACTION_SUCCESSFUL we bridge the inbound caller.
+  // dial_client_for_booking — diviner-initiated outbound: Chime dials the
+  //                         client's PSTN for a booking. On CALL_ANSWERED we
+  //                         JoinChimeMeeting so the client's phone joins the
+  //                         meeting the diviner's browser is already in.
+  //                         There is no inbound caller to bridge.
+  if (
+    (args.action === "ring_diviner" ||
+      args.action === "dial_client_for_booking") &&
+    args.meetingId
+  ) {
     // Cache args — CALL_ANSWERED will use them to return JoinChimeMeeting,
-    // and ACTION_SUCCESSFUL will use them to bridge the caller.
+    // and ACTION_SUCCESSFUL will use them (for ring_diviner only) to bridge
+    // the caller.
     if (txId) {
       cacheArgs(txId, args);
-      console.log("Cached outbound args for txId:", txId);
+      console.log(
+        "Cached outbound args for txId:",
+        txId,
+        "action:",
+        args.action
+      );
     }
 
     // Return empty — phone is still ringing, can't join meeting yet.
@@ -618,17 +636,37 @@ async function handleActionSuccessful(event) {
     return handlePinEntered(event);
   }
 
-  // Diviner's phone joined the Chime meeting — now bridge the inbound caller
+  // Outbound leg joined the Chime meeting.
+  //
+  // Two distinct flows land here:
+  //   1. ring_diviner           — the diviner's personal phone joined. We now
+  //                               need to bridge the original inbound caller
+  //                               into the same meeting (via bridge-caller).
+  //   2. dial_client_for_booking — the client's phone joined. There is no
+  //                               inbound caller to bridge — the diviner's
+  //                               browser attendee was already created by
+  //                               /api/chime/voice/call-client. Just log and
+  //                               clear the cached args.
   if (actionType === "JoinChimeMeeting" && direction === "Outbound") {
     const args = txId ? peekArgs(txId) : null;
     if (txId) clearArgs(txId);
 
     console.log(
-      "Diviner joined meeting via phone! Bridging caller...",
+      "Outbound leg joined meeting.",
+      "action:", args?.action,
       "meetingId:", args?.meetingId,
       "phoneSessionId:", args?.phoneSessionId
     );
 
+    // Diviner-initiated outbound call to client — no bridge needed.
+    if (args?.action === "dial_client_for_booking") {
+      console.log(
+        "dial_client_for_booking: client phone joined meeting; no bridge needed."
+      );
+      return { SchemaVersion: "1.0", Actions: [] };
+    }
+
+    // Legacy simultaneous-ring: bridge the inbound caller into the meeting.
     // Call bridge-caller endpoint (looks up everything from DB).
     // MUST await — Lambda freezes context on return.
     if (args?.meetingId && args?.phoneSessionId) {

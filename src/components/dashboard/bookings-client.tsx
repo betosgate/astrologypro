@@ -20,6 +20,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { BookingDetailSheet } from "@/components/dashboard/booking-detail-sheet";
+import { CallClientButton } from "@/components/dashboard/call-client-button";
 import {
   CalendarX2,
   Search,
@@ -516,6 +517,18 @@ export function BookingsClient({
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
+                          {/*
+                            Row-action: outbound Chime call to the booking's
+                            client. Server enforces diviner ownership of the
+                            booking + skips the dial for terminal statuses;
+                            the button also disables itself to give an
+                            immediate UX signal.
+                          */}
+                          <CallClientButton
+                            bookingId={booking.id as string}
+                            clientName={client?.full_name ?? null}
+                            bookingStatus={status}
+                          />
                           {sessionLinksByBookingId[booking.id as string] && (
                             <Link
                               href={sessionLinksByBookingId[booking.id as string]!}
