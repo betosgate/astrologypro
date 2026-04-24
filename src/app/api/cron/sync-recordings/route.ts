@@ -1,23 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { S3Client, ListObjectsV2Command, GetObjectCommand } from "@aws-sdk/client-s3";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { generateShareId } from "@/lib/format";
 import { verifyCronAuth } from "@/lib/cron-auth";
+import { ensureFinalRecordingForSession } from "@/lib/chime-recording-sync";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 const RECORDING_BUCKET = process.env.CHIME_RECORDING_BUCKET ?? "";
-
-function getS3Client() {
-  const region = process.env.AWS_CHIME_REGION ?? process.env.AWS_REGION ?? "us-east-1";
-  const accessKeyId = process.env.AWS_CHIME_ACCESS_KEY_ID ?? process.env.AWS_ACCESS_KEY_ID;
-  const secretAccessKey = process.env.AWS_CHIME_SECRET_ACCESS_KEY ?? process.env.AWS_SECRET_ACCESS_KEY;
-  return accessKeyId && secretAccessKey
-    ? new S3Client({ region, credentials: { accessKeyId, secretAccessKey } })
-    : new S3Client({ region });
-}
 
 /**
  * Polls S3 for completed Chime recordings across all three session tables
@@ -26,7 +15,7 @@ function getS3Client() {
  *
  * For each row we:
  *   - list S3 objects under `recordings/{sessionId}/`
- *   - prefer the final/ concatenated mp4; fall back to the largest segment
+ *   - prefer only the final/ concatenated mp4
  *   - generate a 7-day presigned URL
  *   - persist `recording_url` (+ `recording_share_id`) back to the row
  *
@@ -150,8 +139,6 @@ export async function GET(request: NextRequest) {
   }
 
   const admin = createAdminClient();
-  const s3 = getS3Client();
-
   // Require at least 5 min between session end and cron sync so Chime has
   // time to finalize the concatenation pipeline.
   const cutoff = new Date(Date.now() - 5 * 60 * 1000).toISOString();
@@ -168,78 +155,37 @@ export async function GET(request: NextRequest) {
     const { kind, id, chimeMeetingId, updatedAt } = candidate;
 
     try {
-      const list = await s3.send(
-        new ListObjectsV2Command({
-          Bucket: RECORDING_BUCKET,
-          Prefix: `recordings/${id}/`,
-        }),
-      );
+      const ageMinutes = updatedAt
+        ? (Date.now() - new Date(updatedAt).getTime()) / 60_000
+        : Infinity;
+      const resolved = await ensureFinalRecordingForSession({
+        table: tableForKind(kind) as "bookings" | "admin_bookings" | "phone_sessions",
+        sessionId: id,
+        chimeMeetingId,
+        clearStaleSegment: true,
+        allowManualConcat: ageMinutes >= 10,
+      });
 
-      const objects = list.Contents ?? [];
-      if (!objects.length) {
+      if (resolved.status === "no_files") {
         results.push({ kind, id, status: "no_files_yet" });
         continue;
       }
 
-      // Prefer the concatenated single file, fall back to the largest segment.
-      const finalFile = objects.find(
-        (o) => o.Key?.includes("/final/") && o.Key.endsWith(".mp4"),
-      );
-      const compositedFiles = objects
-        .filter(
-          (o) => o.Key?.includes("composited-video") && o.Key.endsWith(".mp4"),
-        )
-        .sort((a, b) => (b.Size ?? 0) - (a.Size ?? 0));
-      const allMp4sBySize = objects
-        .filter((o) => o.Key?.endsWith(".mp4") && (o.Size ?? 0) > 500_000)
-        .sort((a, b) => (b.Size ?? 0) - (a.Size ?? 0));
-
-      // Give concatenation 10 minutes to finish before falling back to the
-      // largest segment — otherwise we'd publish a partial recording.
-      const ageMinutes = updatedAt
-        ? (Date.now() - new Date(updatedAt).getTime()) / 60_000
-        : Infinity;
-      if (!finalFile && compositedFiles.length > 0 && ageMinutes < 10) {
-        results.push({ kind, id, status: "waiting_for_concatenation" });
+      if (resolved.status === "processing") {
+        results.push({
+          kind,
+          id,
+          status: ageMinutes < 10 ? "waiting_for_concatenation" : "final_not_ready",
+        });
         continue;
       }
 
-      const recordingKey =
-        finalFile?.Key ??
-        compositedFiles[0]?.Key ??
-        allMp4sBySize[0]?.Key ??
-        objects.find((o) => o.Key?.endsWith(".webm"))?.Key ??
-        objects.find((o) => (o.Size ?? 0) > 0)?.Key;
-
-      if (!recordingKey) {
-        results.push({ kind, id, status: "no_playable_file" });
+      if (resolved.status === "final") {
+        results.push({ kind, id, status: "synced" });
         continue;
       }
 
-      const recordingUrl = await getSignedUrl(
-        s3,
-        new GetObjectCommand({ Bucket: RECORDING_BUCKET, Key: recordingKey }),
-        { expiresIn: 7 * 24 * 60 * 60 },
-      );
-
-      const shareId = generateShareId();
-
-      const table = tableForKind(kind);
-      await admin
-        .from(table)
-        .update({ recording_url: recordingUrl, recording_share_id: shareId })
-        .eq("id", id);
-
-      // Also update the legacy video_sessions mirror table for diviner
-      // bookings. Admin_bookings and phone_sessions don't use it.
-      if (kind === "booking" && chimeMeetingId) {
-        await admin
-          .from("video_sessions")
-          .update({ recording_url: recordingUrl })
-          .eq("chime_meeting_id", chimeMeetingId);
-      }
-
-      results.push({ kind, id, status: "synced" });
+      results.push({ kind, id, status: resolved.status });
     } catch (err) {
       console.error(`[sync-recordings] Failed for ${kind} ${id}:`, err);
       results.push({ kind, id, status: "error" });

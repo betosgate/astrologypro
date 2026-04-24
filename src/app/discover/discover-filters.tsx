@@ -77,10 +77,14 @@ function DivinerCardGrid({ diviner }: { diviner: DivinerCard }) {
   const searchParams = useSearchParams();
   const submissionId = searchParams.get("submission")?.trim() || "";
   const templateSlug = searchParams.get("template")?.trim() || "";
+  const bookingParams = new URLSearchParams();
+  if (submissionId) bookingParams.set("submission", submissionId);
+  if (templateSlug) bookingParams.set("template", templateSlug);
+  const bookingQuery = bookingParams.toString();
   const bookingHref =
     diviner.matchedServiceSlug && templateSlug
       ? `/${diviner.username}/book/${diviner.matchedServiceSlug}${
-          submissionId ? `?submission=${encodeURIComponent(submissionId)}` : ""
+          bookingQuery ? `?${bookingQuery}` : ""
         }`
       : `/${diviner.username}`;
   return (

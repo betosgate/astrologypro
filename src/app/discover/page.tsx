@@ -176,14 +176,25 @@ async function getTemplateMatchedDiviners(templateSlug: string): Promise<{
   diviners: DivinerCard[];
 }> {
   const admin = createAdminClient();
-  const baseSlug = getBaseServiceTemplateSlug(templateSlug.trim());
+  const trimmedSlug = templateSlug.trim();
+  const baseSlug = getBaseServiceTemplateSlug(trimmedSlug);
 
-  const { data: template } = await admin
-    .from("service_templates")
-    .select("id, name, slug, category")
-    .eq("slug", baseSlug)
-    .eq("is_active", true)
-    .maybeSingle();
+  const [baseTemplateResult, requestedTemplateResult] = await Promise.all([
+    admin
+      .from("service_templates")
+      .select("id, name, slug, category")
+      .eq("slug", baseSlug)
+      .eq("is_active", true)
+      .maybeSingle(),
+    admin
+      .from("service_templates")
+      .select("id, name, slug, category")
+      .eq("slug", trimmedSlug)
+      .eq("is_active", true)
+      .maybeSingle(),
+  ]);
+  const template = baseTemplateResult.data;
+  const displayTemplate = requestedTemplateResult.data ?? template;
 
   if (!template) {
     return { templateName: null, templateCategory: null, diviners: [] };
@@ -200,8 +211,8 @@ async function getTemplateMatchedDiviners(templateSlug: string): Promise<{
 
   if (error || !services || services.length === 0) {
     return {
-      templateName: template.name ?? null,
-      templateCategory: (template.category as "astrology" | "tarot" | null) ?? null,
+      templateName: displayTemplate?.name ?? null,
+      templateCategory: (displayTemplate?.category as "astrology" | "tarot" | null) ?? null,
       diviners: [],
     };
   }
@@ -228,8 +239,8 @@ async function getTemplateMatchedDiviners(templateSlug: string): Promise<{
 
   if (visibleServices.length === 0) {
     return {
-      templateName: template.name ?? null,
-      templateCategory: (template.category as "astrology" | "tarot" | null) ?? null,
+      templateName: displayTemplate?.name ?? null,
+      templateCategory: (displayTemplate?.category as "astrology" | "tarot" | null) ?? null,
       diviners: [],
     };
   }
@@ -337,8 +348,8 @@ async function getTemplateMatchedDiviners(templateSlug: string): Promise<{
   });
 
   return {
-    templateName: (template.name as string | null) ?? null,
-    templateCategory: (template.category as "astrology" | "tarot" | null) ?? null,
+    templateName: (displayTemplate?.name as string | null) ?? null,
+    templateCategory: (displayTemplate?.category as "astrology" | "tarot" | null) ?? null,
     diviners: cards,
   };
 }

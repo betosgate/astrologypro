@@ -46,7 +46,7 @@ type NavItem = {
 const navItems: NavItem[] = [
   { label: "Dashboard", href: "/trainee", icon: LayoutDashboard },
   { label: "Training", href: "/trainee/training", icon: GraduationCap },
-  { label: "Practice Sessions", href: "/trainee/sessions", icon: MonitorPlay },
+  { label: "Meeting Session", href: "/trainee/sessions", icon: MonitorPlay },
   { label: "Progress", href: "/trainee/progress", icon: BarChart3 },
   { label: "Quiz History", href: "/trainee/quiz-history", icon: ListChecks },
   { label: "Library Resources", href: "/trainee/resources", icon: Library },
@@ -90,7 +90,7 @@ function NavLink({
               className={cn(
                 "flex h-10 w-10 items-center justify-center rounded-lg transition-colors",
                 isActive
-                  ? "bg-primary text-primary-foreground"
+                  ? "bg-amber-500/15 text-amber-600 dark:text-amber-400"
                   : "text-muted-foreground hover:bg-muted hover:text-foreground"
               )}
             >
@@ -103,7 +103,7 @@ function NavLink({
               className={cn(
                 "flex h-10 w-10 items-center justify-center rounded-lg transition-colors",
                 isActive
-                  ? "bg-primary text-primary-foreground"
+                  ? "bg-amber-500/15 text-amber-600 dark:text-amber-400"
                   : "text-muted-foreground hover:bg-muted hover:text-foreground"
               )}
             >
@@ -123,13 +123,18 @@ function NavLink({
         <button
           onClick={onToggle}
           className={cn(
-            "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+            "flex w-full items-center gap-2.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
             isActive
-              ? "bg-primary/10 text-foreground"
+              ? "bg-amber-500/15 text-amber-600 dark:text-amber-400"
               : "text-muted-foreground hover:bg-muted hover:text-foreground"
           )}
         >
-          <Icon className="size-5" />
+          <Icon
+            className={cn(
+              "size-4 shrink-0",
+              isActive ? "text-amber-500" : ""
+            )}
+          />
           {item.label}
           <ChevronDown
             className={cn(
@@ -148,13 +153,18 @@ function NavLink({
                   key={child.href}
                   href={child.href}
                   className={cn(
-                    "flex items-center gap-3 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
+                    "flex items-center gap-2.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
                     childActive
-                      ? "bg-primary text-primary-foreground"
+                      ? "bg-amber-500/15 text-amber-600 dark:text-amber-400"
                       : "text-muted-foreground hover:bg-muted hover:text-foreground"
                   )}
                 >
-                  <ChildIcon className="size-4" />
+                  <ChildIcon
+                    className={cn(
+                      "size-4 shrink-0",
+                      childActive ? "text-amber-500" : ""
+                    )}
+                  />
                   {child.label}
                 </Link>
               );
@@ -169,13 +179,18 @@ function NavLink({
     <Link
       href={item.href}
       className={cn(
-        "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+        "flex items-center gap-2.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
         isActive
-          ? "bg-primary text-primary-foreground"
+          ? "bg-amber-500/15 text-amber-600 dark:text-amber-400"
           : "text-muted-foreground hover:bg-muted hover:text-foreground"
       )}
     >
-      <Icon className="size-5" />
+      <Icon
+        className={cn(
+          "size-4 shrink-0",
+          isActive ? "text-amber-500" : ""
+        )}
+      />
       {item.label}
     </Link>
   );
@@ -312,7 +327,7 @@ export function TraineeSidebar({ trainee }: TraineeSidebarProps) {
         </header>
 
         {/* Desktop sidebar */}
-        <aside className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0 lg:z-50 lg:border-r lg:bg-card">
+        <aside className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0 lg:z-50 lg:border-r lg:bg-background">
           <div className="flex h-14 items-center border-b px-6">
             <Link href="/trainee" className="flex items-center gap-2 text-lg font-bold">
               <span className="text-primary underline decoration-primary/30 underline-offset-4">AstrologyPro</span>
