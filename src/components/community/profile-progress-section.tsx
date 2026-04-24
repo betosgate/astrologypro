@@ -43,13 +43,13 @@ export function ProfileProgressSection({
             color={isComplete ? "hsl(142, 71%, 45%)" : "hsl(var(--primary))"}
           />
 
-          {/* Members ring — approximate metric based on other active members */}
+          {/* Household members ring */}
           <ProgressRing
             percentage={membersCount > 0 ? Math.min(100, membersCount * 20) : 0}
             size={88}
             strokeWidth={8}
-            label="Members Connected"
-            sublabel={`${membersCount} active member${membersCount !== 1 ? "s" : ""}`}
+            label="Household Members"
+            sublabel={`${membersCount} plan member${membersCount !== 1 ? "s" : ""}`}
             color="hsl(262, 80%, 60%)"
           />
         </div>
