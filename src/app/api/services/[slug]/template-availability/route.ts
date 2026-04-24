@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { resolveTemplateMatches } from "@/lib/booking/template-matched-services";
+import { getBaseServiceTemplateSlug } from "@/lib/service-template-form";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -67,7 +68,7 @@ export async function GET(
       );
     }
     const storedSlug = (sub.template_slug as string | null) ?? "";
-    if (storedSlug !== slug && storedSlug !== match.baseSlug) {
+    if (getBaseServiceTemplateSlug(storedSlug) !== match.baseSlug) {
       return NextResponse.json(
         { error: "Submission does not belong to this template" },
         { status: 403 },
