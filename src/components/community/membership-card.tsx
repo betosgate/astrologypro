@@ -170,7 +170,7 @@ export function MembershipCard({ subscription, userEmail }: MembershipCardProps)
           )} */}
           {canUpgrade && (
             <Button asChild size="sm" variant="outline">
-              <Link href="/mystery-school/enroll">Upgrade Plan</Link>
+              <Link href="/community/plan">Upgrade Plan</Link>
             </Button>
           )}
           <Button
