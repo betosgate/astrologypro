@@ -141,7 +141,7 @@ export function AstroChartsSection() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Sun className="size-4 text-amber-500" />
-              <CardTitle className="text-sm">Your Natal Chart</CardTitle>
+              <CardTitle className="text-sm">Natal Charts</CardTitle>
             </div>
             <button
               type="button"
@@ -156,8 +156,8 @@ export function AstroChartsSection() {
           </div>
           {showTooltip === "natal" && (
             <div className="mt-2 rounded-md border bg-muted/50 p-2 text-xs text-muted-foreground">
-              Your natal chart is a snapshot of the sky at the exact moment of
-              your birth. It reveals your core nature, strengths, and life themes.
+              Browse saved natal charts for you and your household members, and
+              open the full chart details for any available profile.
             </div>
           )}
         </CardHeader>
