@@ -3,8 +3,10 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAdminUser } from "@/lib/admin-auth";
 import { resolveBookingViewer } from "@/lib/booking-access";
+import { ensureFinalRecordingForSession } from "@/lib/chime-recording-sync";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 /**
  * GET /api/bookings/[id]/session-details
@@ -76,11 +78,24 @@ export async function GET(
         return NextResponse.json({ error: "Not found" }, { status: 404 });
       }
 
+      const resolvedRecording = row.chime_meeting_id
+        ? await ensureFinalRecordingForSession({
+            table: "admin_bookings",
+            sessionId: id,
+            chimeMeetingId: row.chime_meeting_id,
+            currentRecordingUrl: row.recording_url ?? null,
+            currentShareId: row.recording_share_id ?? null,
+            clearStaleSegment: true,
+            allowManualConcat: true,
+          })
+        : null;
+
       return NextResponse.json({
         chime_meeting_id: row.chime_meeting_id ?? null,
         actual_duration_minutes: row.actual_duration_minutes ?? null,
-        recording_url: row.recording_url ?? null,
-        recording_share_id: row.recording_share_id ?? null,
+        recording_url: resolvedRecording?.recordingUrl ?? row.recording_url ?? null,
+        recording_share_id:
+          resolvedRecording?.recordingShareId ?? row.recording_share_id ?? null,
         video_provider: row.video_provider ?? null,
         // admin_bookings has no billing — these stay null.
         total_amount: null,
@@ -115,11 +130,30 @@ export async function GET(
       .maybeSingle();
     if (ext) extended = ext as Record<string, unknown>;
 
+    const resolvedRecording = booking.chime_meeting_id
+      ? await ensureFinalRecordingForSession({
+          table: "bookings",
+          sessionId: id,
+          chimeMeetingId: booking.chime_meeting_id,
+          currentRecordingUrl:
+            typeof extended.recording_url === "string"
+              ? extended.recording_url
+              : null,
+          currentShareId:
+            typeof extended.recording_share_id === "string"
+              ? extended.recording_share_id
+              : null,
+          clearStaleSegment: true,
+          allowManualConcat: true,
+        })
+      : null;
+
     return NextResponse.json({
       chime_meeting_id: booking.chime_meeting_id ?? null,
       actual_duration_minutes: booking.actual_duration_minutes ?? null,
-      recording_url: extended.recording_url ?? null,
-      recording_share_id: extended.recording_share_id ?? null,
+      recording_url: resolvedRecording?.recordingUrl ?? extended.recording_url ?? null,
+      recording_share_id:
+        resolvedRecording?.recordingShareId ?? extended.recording_share_id ?? null,
       video_provider: extended.video_provider ?? null,
       total_amount: extended.total_amount ?? null,
       overage_amount: extended.overage_amount ?? null,
