@@ -1,6 +1,6 @@
 # Task 01 — Schema Migrations
 
-- Status: Not Started
+- Status: 01a drafted (not yet applied); 01b pending (after tasks 02 + 04)
 - Priority: P0
 - Depends on: —
 - Blocks: 02, 03, 04, 05, 06, 07
