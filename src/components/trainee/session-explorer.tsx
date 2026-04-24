@@ -17,7 +17,6 @@ import {
   Video, 
   CheckCircle2, 
   Info, 
-  ChevronRight,
   Download,
   Share2,
   Loader2,
@@ -264,23 +263,6 @@ function SessionDetailView({ booking }: { booking: UnifiedBooking }) {
               )}
             </div>
           )}
-
-          {/* Additional Info / Actions */}
-          <div className="grid sm:grid-cols-2 gap-4">
-             {booking.actionBasePath && (
-               <Card className="bg-muted/30 border-none shadow-none">
-                 <CardContent className="p-4 flex items-center justify-between">
-                    <div className="space-y-1">
-                      <p className="text-xs font-bold">Appointment Management</p>
-                      <p className="text-[10px] text-muted-foreground">Schedule changes or cancellations</p>
-                    </div>
-                    <Button variant="outline" size="sm" className="text-xs h-8">
-                       Manage <ChevronRight className="ml-1 size-3" />
-                    </Button>
-                 </CardContent>
-               </Card>
-             )}
-          </div>
         </CardContent>
       </Card>
     </div>
