@@ -12,7 +12,6 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { resolveAffiliateForCaller } from "@/lib/affiliate-accounts";
-import { isAffiliateIdentityV2Enabled } from "@/lib/feature-flags";
 
 export const dynamic = "force-dynamic";
 
@@ -26,8 +25,6 @@ function problem(status: number, title: string, detail?: string) {
 const PAYOUT_METHODS = new Set(["bank", "paypal", "check", "other"]);
 
 export async function PATCH(request: Request) {
-  if (!isAffiliateIdentityV2Enabled()) return problem(503, "Feature not available");
-
   const supabase = await createClient();
   const {
     data: { user },
