@@ -1,11 +1,11 @@
-// Task 05 (2026-04-23): rehabilitated earnings page.
-// Was: queried `affiliates` (legacy) + `commission_ledger_entries` and
-//      `affiliate_payout_records` (dead schema, empty in prod) → redirected
-//      every caller to /.
-// Now: reads the live schema — affiliate_commissions + affiliate_payouts —
-//      scoped to the caller's canonical account.
+// Affiliate earnings page.
+// 2026-04-24: rewired onto System B (campaign_conversions). System A
+// (affiliate_commissions + affiliate_payouts) retired — see
+// docs/specs/affiliate-commission-system.md §9.
 //
-// Sprint: docs/tasks/2026-04-23/affiliate-identity-refactor/05-affiliate-portal.md
+// Payout history section removed — payouts are deferred to Phase 2
+// (Stripe Connect auto-split). "Total Earned" is the authoritative ledger
+// until then.
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -89,33 +89,23 @@ export default async function AffiliateEarningsPage() {
     );
   }
 
-  const [{ data: commissions }, { data: payouts }] = await Promise.all([
-    admin
-      .from("affiliate_commissions")
-      .select(
-        "id, affiliate_id, diviner_id, order_reference, order_amount_cents, commission_amount_cents, status, approved_at, created_at, notes",
-      )
-      .in("affiliate_id", ctx.junctionIds)
-      .order("created_at", { ascending: false })
-      .limit(50),
-    admin
-      .from("affiliate_payouts")
-      .select(
-        "id, affiliate_id, diviner_id, amount_cents, method, reference, notes, paid_at",
-      )
-      .in("affiliate_id", ctx.junctionIds)
-      .order("paid_at", { ascending: false })
-      .limit(50),
-  ]);
+  // System B commission ledger — campaign_conversions. Payouts deferred
+  // to Phase 2 (spec §10), so the "Payout history" section is omitted for now.
+  const { data: commissions } = await admin
+    .from("campaign_conversions")
+    .select(
+      "id, affiliate_id, booking_id, order_amount_cents, commission_amount_cents, rate_type_used, rate_value_used, reversed_at, reversed_reason, created_at",
+    )
+    .in("affiliate_id", ctx.junctionIds)
+    .order("created_at", { ascending: false })
+    .limit(50);
 
-  let totalApproved = 0;
-  let totalPending = 0;
-  let totalPaid = 0;
+  let totalEarned = 0;
+  let totalReversed = 0;
   for (const c of commissions ?? []) {
     const amt = Number(c.commission_amount_cents ?? 0);
-    if (c.status === "paid") totalPaid += amt;
-    else if (c.status === "pending" || c.status === "on_hold") totalPending += amt;
-    else if (c.status === "approved") totalApproved += amt;
+    if (c.reversed_at) totalReversed += amt;
+    else totalEarned += amt;
   }
 
   return (
@@ -128,32 +118,29 @@ export default async function AffiliateEarningsPage() {
         </p>
       </header>
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Approved</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Earned</CardTitle>
             <TrendingUp className="size-4 text-muted-foreground" aria-hidden />
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold">{formatCents(totalApproved)}</p>
+            <p className="text-2xl font-bold">{formatCents(totalEarned)}</p>
+            <p className="text-xs text-muted-foreground">
+              Payouts will arrive once Stripe auto-split is enabled.
+            </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Pending</CardTitle>
-            <Clock className="size-4 text-amber-500" aria-hidden />
+            <CardTitle className="text-sm font-medium">Reversed</CardTitle>
+            <Clock className="size-4 text-muted-foreground" aria-hidden />
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold text-amber-600">{formatCents(totalPending)}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Total Paid</CardTitle>
-            <DollarSign className="size-4 text-muted-foreground" aria-hidden />
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">{formatCents(totalPaid)}</p>
+            <p className="text-2xl font-bold text-muted-foreground">
+              {formatCents(totalReversed)}
+            </p>
+            <p className="text-xs text-muted-foreground">refunds + disputes</p>
           </CardContent>
         </Card>
       </div>
@@ -169,11 +156,11 @@ export default async function AffiliateEarningsPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Date</TableHead>
-                    <TableHead>Order ref</TableHead>
+                    <TableHead>Booking</TableHead>
                     <TableHead className="text-right">Order amount</TableHead>
+                    <TableHead className="text-right">Rate</TableHead>
                     <TableHead className="text-right">Commission</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Description</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -181,18 +168,22 @@ export default async function AffiliateEarningsPage() {
                     <TableRow key={c.id}>
                       <TableCell>{formatDate(c.created_at)}</TableCell>
                       <TableCell className="font-mono text-xs">
-                        {c.order_reference ?? "—"}
+                        {(c.booking_id as string | null)?.slice(0, 8) ?? "—"}
                       </TableCell>
                       <TableCell className="text-right">
                         {formatCents(Number(c.order_amount_cents ?? 0))}
                       </TableCell>
+                      <TableCell className="text-right text-sm text-muted-foreground">
+                        {c.rate_type_used === "percent"
+                          ? `${Number(c.rate_value_used ?? 0)}%`
+                          : c.rate_type_used === "flat"
+                            ? formatCents(Math.round(Number(c.rate_value_used ?? 0) * 100))
+                            : "—"}
+                      </TableCell>
                       <TableCell className="text-right font-medium">
                         {formatCents(Number(c.commission_amount_cents ?? 0))}
                       </TableCell>
-                      <TableCell>{statusBadge(c.status as string)}</TableCell>
-                      <TableCell className="max-w-[200px] truncate text-sm text-muted-foreground">
-                        {c.notes ?? "—"}
-                      </TableCell>
+                      <TableCell>{statusBadge(c.reversed_at ? "reversed" : "earned")}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -206,47 +197,6 @@ export default async function AffiliateEarningsPage() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Payout history</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {payouts && payouts.length > 0 ? (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Method</TableHead>
-                    <TableHead>Reference</TableHead>
-                    <TableHead className="text-right">Amount</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {payouts.map((p) => (
-                    <TableRow key={p.id}>
-                      <TableCell>{formatDate(p.paid_at as string)}</TableCell>
-                      <TableCell className="capitalize text-muted-foreground">
-                        {p.method ?? "—"}
-                      </TableCell>
-                      <TableCell className="font-mono text-xs">
-                        {p.reference ?? "—"}
-                      </TableCell>
-                      <TableCell className="text-right font-medium">
-                        {formatCents(Number(p.amount_cents ?? 0))}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          ) : (
-            <p className="py-8 text-center text-sm text-muted-foreground">
-              No payouts yet.
-            </p>
-          )}
-        </CardContent>
-      </Card>
     </div>
   );
 }

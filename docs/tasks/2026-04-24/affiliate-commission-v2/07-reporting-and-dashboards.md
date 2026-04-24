@@ -146,6 +146,26 @@ Extend existing `src/app/affiliate/(portal)/`:
   `campaign_conversions`. Confirm it's displaying `rate_value_used`
   correctly (post-task 04)
 
+### Additional admin-side endpoints that MUST be handled before Task 01b
+
+Discovered during Task 02 grep sweep; not caught by the initial survey.
+Each still reads System A tables. Leaving these alive would crash admin
+pages the moment Task 01b drops the legacy tables.
+
+| File | Current reads | Required action |
+|---|---|---|
+| `src/app/api/admin/reports/affiliates/route.ts` | `affiliate_commissions` | Rewrite to read `campaign_conversions` + `campaign_clicks` scoped via `affiliate_campaigns.diviner_id`. Rebuild as part of Task 07 Part A. |
+| `src/app/api/admin/reports/payouts/route.ts` | `affiliate_commissions` | Phase 2 scope. Return empty for now, or delete — payouts don't exist until Stripe auto-split lands. |
+| `src/app/api/admin/reports/operations/route.ts` | `affiliate_commissions` | Rewrite against `campaign_conversions` for operations metrics. |
+| `src/app/api/admin/affiliates/[id]/payouts/route.ts` | `affiliate_payouts` + `affiliate_commissions` | Phase 2 scope. Delete or stub. |
+| `src/app/api/admin/refunds/route.ts` | `affiliate_commissions` | Rewrite the `affiliate_commissions` read path to `campaign_conversions` (reads the commission linked to a refundable booking). Admin-initiated refunds flow through the reversal endpoint (Task 05 Part B). |
+
+**Gate:** Task 01b cannot run until `git grep -wE
+"affiliate_commissions|affiliate_referral_links|affiliate_clicks|
+affiliate_payouts|affiliate_commission_history" -- 'src/**'` returns zero
+non-comment hits. Task 07 must close these five files before that grep
+can pass.
+
 ### Existing portal pages that MUST be refactored (discovered 2026-04-24)
 
 Task 02 now includes these as part of the System A retirement, but

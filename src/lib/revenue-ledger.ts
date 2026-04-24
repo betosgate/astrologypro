@@ -34,12 +34,27 @@ interface RecordRevenueLedgerEntryParams {
   metadata?: Record<string, unknown>;
 }
 
+/**
+ * Returns the total commission cents owed on an order, summed across all
+ * campaign conversions tied to its booking. Post-Affiliate-Commission-v2
+ * this reads `campaign_conversions` (indexed on `booking_id`, UNIQUE),
+ * not the retired `affiliate_commissions` ledger.
+ *
+ * `orderReference` format is `booking:<uuid>`. Non-matching formats
+ * return 0 — only bookings can carry affiliate credit.
+ */
 export async function getAffiliateCommissionTotalForOrderRef(orderReference: string) {
+  const bookingPrefix = "booking:";
+  if (!orderReference.startsWith(bookingPrefix)) return 0;
+  const bookingId = orderReference.slice(bookingPrefix.length);
+  if (!bookingId) return 0;
+
   const admin = createAdminClient();
   const { data, error } = await admin
-    .from("affiliate_commissions")
+    .from("campaign_conversions")
     .select("commission_amount_cents")
-    .eq("order_reference", orderReference);
+    .eq("booking_id", bookingId)
+    .is("reversed_at", null);
 
   if (error) {
     console.error("[revenue-ledger] affiliate commission lookup failed", {
