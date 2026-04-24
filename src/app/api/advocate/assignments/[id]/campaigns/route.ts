@@ -15,7 +15,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { generateCampaignCode } from "@/lib/campaign-code";
-import { isAffiliateAssignmentV2Enabled } from "@/lib/feature-flags";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -62,9 +61,6 @@ async function resolveAffiliate() {
 }
 
 export async function POST(req: NextRequest, { params }: RouteParams) {
-  if (!isAffiliateAssignmentV2Enabled()) {
-    return NextResponse.json({ error: "Feature disabled" }, { status: 503 });
-  }
   const { id: assignmentId } = await params;
   const ctx = await resolveAffiliate();
   if (!ctx) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
