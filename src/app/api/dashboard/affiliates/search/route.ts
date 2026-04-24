@@ -56,23 +56,40 @@ export async function GET(req: NextRequest) {
     ? `name.ilike.%${q}%,email.ilike.%${q}%`
     : null;
 
+  // migrated-to-canonical-accounts: 2026-04-23 (Task 06)
+  // For diviner_affiliates we prefer affiliate_accounts.{name,email} when
+  // present (canonical); social_advocates has its own identity table.
   async function loadTable(table: "social_advocates" | "diviner_affiliates") {
+    const selectStr =
+      table === "diviner_affiliates"
+        ? "id, name, email, account:affiliate_accounts ( name, email )"
+        : "id, name, email";
+    // Dynamic select string per table; cast via unknown past the PostgREST
+    // type parser.
     let query = admin
       .from(table)
-      .select("id, name, email")
+      .select(selectStr as string)
       .order("created_at", { ascending: false })
       .limit(limit);
     if (ilikeFilter) query = query.or(ilikeFilter);
     const { data } = await query;
-    return (data ?? []).map((r: { id: string; name: string; email: string }) => ({
-      id: r.id,
-      name: r.name,
-      email: r.email,
-      affiliate_type:
-        table === "social_advocates"
-          ? ("social_advocate" as const)
-          : ("diviner_affiliate" as const),
-    }));
+    const rows = (data ?? []) as unknown as Array<{
+      id: string;
+      name: string;
+      email: string;
+      account?: { name?: string; email?: string } | null;
+    }>;
+    return rows.map(
+      (r) => ({
+        id: r.id,
+        name: r.account?.name ?? r.name,
+        email: r.account?.email ?? r.email,
+        affiliate_type:
+          table === "social_advocates"
+            ? ("social_advocate" as const)
+            : ("diviner_affiliate" as const),
+      }),
+    );
   }
 
   const [advocates, divAffs] = await Promise.all([

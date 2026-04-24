@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { MarketingHeader } from "@/components/marketing/header";
-import { LayoutDashboard, User, Share2, Users, GraduationCap } from "lucide-react";
+import { LayoutDashboard, User, Share2, Users, GraduationCap, Handshake } from "lucide-react";
 
 const ICONS: Record<string, React.ElementType> = {
   diviner: LayoutDashboard,
@@ -13,6 +13,7 @@ const ICONS: Record<string, React.ElementType> = {
   advocate: Share2,
   community: Users,
   trainee: GraduationCap,
+  affiliate: Handshake,
 };
 
 export const metadata = { title: "Switch Portal - AstrologyPro" };

@@ -276,37 +276,31 @@ export function ChartQuickActions() {
             </Button>
 
             <Button
+              asChild
               variant="outline"
-              className="h-auto flex-col gap-2 py-4"
-              disabled={loading || isLoading("monthly")}
-              onClick={() => handleGenerate("monthly")}
+              className="h-auto flex-col gap-2 py-4 cursor-pointer"
             >
-              {isLoading("monthly") ? (
-                <Loader2 className="size-6 animate-spin" />
-              ) : (
+              <Link href="/community/transits/detailed">
                 <CalendarDays className="size-6 text-primary" />
-              )}
-              <div className="text-center">
-                <p className="font-semibold text-sm">Monthly Transits</p>
-                <p className="text-xs text-muted-foreground">This month&apos;s forecast</p>
-              </div>
+                <div className="text-center">
+                  <p className="font-semibold text-sm">Monthly Transits</p>
+                  <p className="text-xs text-muted-foreground">This month&apos;s forecast</p>
+                </div>
+              </Link>
             </Button>
 
             <Button
+              asChild
               variant="outline"
-              className="h-auto flex-col gap-2 py-4"
-              disabled={loading || isLoading("relationship")}
-              onClick={() => handleGenerate("relationship")}
+              className="h-auto flex-col gap-2 py-4 cursor-pointer"
             >
-              {isLoading("relationship") ? (
-                <Loader2 className="size-6 animate-spin" />
-              ) : (
+              <Link href="/community/charts">
                 <Heart className="size-6 text-primary" />
-              )}
-              <div className="text-center">
-                <p className="font-semibold text-sm">Relationship Charts</p>
-                <p className="text-xs text-muted-foreground">All family pairs</p>
-              </div>
+                <div className="text-center">
+                  <p className="font-semibold text-sm">Relationship Charts</p>
+                  <p className="text-xs text-muted-foreground">All family pairs</p>
+                </div>
+              </Link>
             </Button>
           </div>
         </CardContent>

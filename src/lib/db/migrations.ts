@@ -63,10 +63,13 @@ import { MIGRATION_SQL as MIG_20260422000006 } from "@/data/migrations/202604220
 import { MIGRATION_SQL as MIG_20260422000007 } from "@/data/migrations/20260422000007_repair_community_members_birth_country";
 import { MIGRATION_SQL as MIG_20260423000001 } from "@/data/migrations/20260423000001_chime_recording_extras";
 import { MIGRATION_SQL as MIG_20260423000002 } from "@/data/migrations/20260423000002_backfill_plan_type_from_pm_tier";
+import { MIGRATION_SQL as MIG_20260423000003 } from "@/data/migrations/20260423000003_admin_bookings_status_completed";
 import { MIGRATION_SQL as MIG_20260428000100 } from "@/data/migrations/20260428000100_fix_diviner_fields_length";
 import { MIGRATION_SQL as MIG_20260423000001_AIR } from "@/data/migrations/20260423000001_affiliate_identity_refactor";
 import { MIGRATION_SQL as MIG_20260423000002_RLS } from "@/data/migrations/20260423000002_fix_diviner_affiliates_rls";
 import { MIGRATION_SQL as MIG_20260423000003_INV } from "@/data/migrations/20260423000003_affiliate_invite_rpc";
+import { MIGRATION_SQL as MIG_20260423000004_FIX } from "@/data/migrations/20260423000004_fix_invite_rpc_ambiguity";
+import { MIGRATION_SQL as MIG_20260423000005_ACC } from "@/data/migrations/20260423000005_accept_rpc";
 
 /**
  * Allowlisted migrations that the admin migration runner can execute.
@@ -596,6 +599,14 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
     sortKey: "20260423000002",
     sql: MIG_20260423000002,
   },
+  "20260423000003_admin_bookings_status_completed": {
+    id: "20260423000003_admin_bookings_status_completed",
+    title: "Extend admin_bookings.status to completed / no_show / in_progress",
+    description:
+      "Drops and re-adds the admin_bookings_status_check CHECK constraint to allow 'completed', 'no_show', and 'in_progress' alongside the original 'confirmed' / 'canceled'. Required so /api/chime/admin-bookings/end can flip status to 'completed' after a Chime session ends — without this the status stayed at 'confirmed' forever and the trainee/admin UI showed the wrong badge. Additive, idempotent, safe to re-run.",
+    sortKey: "20260423000003",
+    sql: MIG_20260423000003,
+  },
   "20260428000001_landing_page_cleanup_destructive": {
     id: "20260428000001_landing_page_cleanup_destructive",
     title: "⚠️ DESTRUCTIVE — Landing page V2 cleanup (Deploy 2)",
@@ -619,6 +630,22 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Increases the length of plan_id, subscription_status, phone, and username columns in the diviners table to TEXT or VARCHAR(50). Resolves 'value too long for type character varying(20)' errors during trainee-to-diviner upgrade.",
     sortKey: "20260428000100",
     sql: MIG_20260428000100,
+  },
+  "20260423000005_accept_rpc": {
+    id: "20260423000005_accept_rpc",
+    title: "Affiliate accept RPC + user_id trigger guard — Task 03",
+    description:
+      "Adds consume_invite_and_activate_junction RPC (atomic: claim invite via UPDATE...RETURNING, activate junction, link canonical account to auth user) plus guard_affiliate_account_user_link trigger on affiliate_accounts. The trigger rejects any UPDATE OF user_id unless the transaction has set the GUC app.allow_affiliate_account_user_link='true'. The RPC is the only code path that sets that GUC via SET LOCAL, so affiliate_accounts.user_id can only be changed via an explicit invite-accept — enforcing D5 (no silent linking by email match alone) at the DB layer. Error codes: P0003 invite_not_claimable (expired/revoked/consumed/unknown), P0004 account_already_linked_to_different_user, P0005 external write attempt to user_id. Must run AFTER 20260423000001. SECURITY DEFINER. Idempotent via CREATE OR REPLACE + DROP TRIGGER IF EXISTS.",
+    sortKey: "20260423000005",
+    sql: MIG_20260423000005_ACC,
+  },
+  "20260423000004_fix_invite_rpc_ambiguity": {
+    id: "20260423000004_fix_invite_rpc_ambiguity",
+    title: "Fix column/variable ambiguity in invite RPCs (Task 02 follow-up)",
+    description:
+      "Recreates the four invite RPCs (create/resend/resend-by-junction/revoke) with `#variable_conflict use_column` pragma. Their RETURNS TABLE columns share names with real table columns (invite_id, junction_id, affiliate_account_id, email) — without the pragma any unqualified reference inside the function body throws PG 42702 'column reference is ambiguous'. Signatures unchanged so Task 02 API routes work as shipped. Must run AFTER 20260423000003. CREATE OR REPLACE — idempotent.",
+    sortKey: "20260423000004",
+    sql: MIG_20260423000004_FIX,
   },
   "20260423000003_affiliate_invite_rpc": {
     id: "20260423000003_affiliate_invite_rpc",

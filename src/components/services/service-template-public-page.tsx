@@ -251,9 +251,15 @@ export function ServiceTemplatePublicPage(props: ServiceTemplatePublicPageProps)
     slug: template.slug,
     form_config: template.form_config ?? null,
   });
+  // When a template has an intake form, the CTA scrolls to the form. When
+  // it does not, we send the user straight to the shared calendar flow —
+  // `/book/template/[slug]` handles the no-submission case by just showing
+  // availability across compatible diviners. Previously this pointed at
+  // the stale `/book/demo` placeholder (removed in the
+  // book-without-diviner-flow bundle, 23.04.2026).
   const ctaHref = hasIntakeForm
     ? "#template-intake-form"
-    : `/book/demo?template=${encodeURIComponent(template.slug)}`;
+    : `/book/template/${encodeURIComponent(template.slug)}`;
   const ctaLabel = hasIntakeForm ? "Start Intake" : "Continue to Booking";
   const faqItems = getFaqItems(template, hasIntakeForm);
   const proofBullets = hasIntakeForm

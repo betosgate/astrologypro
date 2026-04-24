@@ -1031,10 +1031,10 @@ export function ChimeSessionRoom({
           {role === "client" && (
             <div className="mt-6 space-y-2.5">
               <a
-                href="/portal/bookings"
+                href={joinApiPath.includes("/admin-bookings/") ? "/trainee" : "/portal/bookings"}
                 className="flex w-full items-center justify-center rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground shadow-lg transition-all hover:bg-primary/90"
               >
-                View My Bookings
+                {joinApiPath.includes("/admin-bookings/") ? "Back to Learning Portal" : "View My Bookings"}
               </a>
               <a
                 href={`/${username}`}
@@ -1046,7 +1046,7 @@ export function ChimeSessionRoom({
           )}
           {role === "diviner" && (
             <a
-              href="/dashboard/bookings"
+              href={joinApiPath.includes("/admin-bookings/") ? "/admin/my-bookings" : "/dashboard/bookings"}
               className="mt-6 flex w-full items-center justify-center rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground shadow-lg transition-all hover:bg-primary/90"
             >
               Back to Dashboard

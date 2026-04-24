@@ -138,6 +138,33 @@ export async function upsertAffiliateAccount(
 }
 
 /**
+ * Resolve the authorization context for a caller hitting an /api/affiliate/*
+ * endpoint. Returns the canonical account + the set of junction IDs the
+ * caller owns. All /api/affiliate/* endpoints should gate on this: if it
+ * returns null, respond with 403.
+ *
+ * - 403 (via null return) when the user has no canonical account, or the
+ *   account is suspended/blocked/unclaimed.
+ * - Returns empty `junctionIds` for an affiliate with zero partnerships
+ *   (still authorized to see empty-state UI).
+ */
+export async function resolveAffiliateForCaller(
+  admin: Admin,
+  userId: string,
+): Promise<{ account: AffiliateAccount; junctionIds: string[] } | null> {
+  const account = await getAffiliateAccountByUserId(admin, userId);
+  if (!account || account.status !== "active") return null;
+
+  const { data: junctions } = await admin
+    .from("diviner_affiliates")
+    .select("id")
+    .eq("affiliate_account_id", account.id);
+  const junctionIds = (junctions ?? []).map((j) => j.id);
+
+  return { account, junctionIds };
+}
+
+/**
  * Link an auth user to a canonical affiliate account.
  *
  * IMPORTANT: This helper is only valid inside the accept-flow RPC context.

@@ -279,7 +279,7 @@ export function BookingDetailSheet({
 
   // Fetch session/recording details when sheet opens
   useEffect(() => {
-    if (!open || sessionDetails || detailsOnly) return;
+    if (!open || sessionDetails) return;
     setLoadingSession(true);
     fetch(`/api/bookings/${booking.id}/session-details`)
       .then((r) => r.json())
@@ -652,7 +652,7 @@ export function BookingDetailSheet({
                 <Loader2 className="size-4 animate-spin text-muted-foreground" />
                 <p className="text-sm text-muted-foreground">Loading session details…</p>
               </div>
-            ) : sessionDetails?.chime_meeting_id ? (
+            ) : (sessionDetails?.chime_meeting_id || sessionDetails?.recording_url || sessionDetails?.recording_share_id) ? (
               <>
                 <div className="rounded-lg border border-border bg-muted/20 p-3 space-y-2">
                   <div className="flex items-center gap-1.5 mb-1">
