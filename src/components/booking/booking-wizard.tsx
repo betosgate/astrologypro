@@ -99,6 +99,22 @@ interface BookingWizardProps {
    */
   submissionId?: string | null;
   /**
+   * Optional sanitized values from a service template intake submission.
+   * Used only to prefill empty Contact-step fields; user edits still win.
+   */
+  intakePrefill?: Partial<
+    Pick<
+      BookingDetails,
+      | "birthDate"
+      | "birthTime"
+      | "birthCity"
+      | "birthLat"
+      | "birthLng"
+      | "birthTimezone"
+      | "notes"
+    >
+  > | null;
+  /**
    * Optional preselected date (YYYY-MM-DD) carried from the shared
    * calendar flow so the wizard opens on the correct month. Purely a
    * UX hint — does not skip slot selection.
@@ -280,6 +296,7 @@ export function BookingWizard({
   bookingLabel,
   hideServiceName = false,
   submissionId = null,
+  intakePrefill = null,
   preselectedDate = null,
 }: BookingWizardProps) {
   // Start on the Contact step when the URL already carries a chosen date + time
@@ -334,6 +351,25 @@ export function BookingWizard({
   const [clientTimezone, setClientTimezone] = useState(diviner.timezone || "UTC");
   const resolvedServiceName = hideServiceName ? (bookingLabel ?? "Reading Session") : (bookingLabel ?? service.name);
   const availabilityQuery = availabilityServiceId ? `&serviceId=${availabilityServiceId}` : "";
+
+  useEffect(() => {
+    if (!intakePrefill) return;
+
+    setBookingDetails((prev) => ({
+      ...prev,
+      birthDate: prev.birthDate || intakePrefill.birthDate || "",
+      birthTime: prev.birthTime || intakePrefill.birthTime || "",
+      birthCity: prev.birthCity || intakePrefill.birthCity || "",
+      birthLat:
+        prev.birthLat != null ? prev.birthLat : (intakePrefill.birthLat ?? null),
+      birthLng:
+        prev.birthLng != null ? prev.birthLng : (intakePrefill.birthLng ?? null),
+      birthTimezone:
+        prev.birthTimezone || intakePrefill.birthTimezone || "",
+      notes: prev.notes || intakePrefill.notes || "",
+    }));
+    setPrefilled(true);
+  }, [intakePrefill]);
 
   // Effective price: slot's linked service price takes priority over the service prop's base_price.
   // If the slot has NO linked service (availabilityServiceId is null), it is an unscoped
@@ -867,8 +903,8 @@ export function BookingWizard({
             <div className="space-y-6">
               {prefilled && (
                 <div className="mb-4 rounded-lg border border-green-500/30 bg-green-500/10 p-3 text-sm text-green-400">
-                  Welcome back! Your details are pre-filled from your last
-                  session. Feel free to update anything before continuing.
+                  Your details are pre-filled where available. Feel free to
+                  update anything before continuing.
                 </div>
               )}
               <div className="grid gap-4 md:grid-cols-2">

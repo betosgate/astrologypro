@@ -9,7 +9,10 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { applyRuntimePricesToServices } from "@/lib/runtime-service-pricing";
 import { canPubliclySellService } from "@/lib/payout-readiness";
-import { getBaseServiceTemplateSlug } from "@/lib/service-template-form";
+import {
+  getBaseServiceTemplateSlug,
+  normalizeServiceTemplateIntakeState,
+} from "@/lib/service-template-form";
 
 interface PageProps {
   params: Promise<{ username: string; serviceSlug: string }>;
@@ -140,12 +143,22 @@ export default async function BookingPage({ params, searchParams }: PageProps) {
   }
 
   let bookingDisplayName = service.name as string;
+  let intakePrefill: {
+    birthDate?: string;
+    birthTime?: string;
+    birthCity?: string;
+    birthLat?: number | null;
+    birthLng?: number | null;
+    birthTimezone?: string;
+    notes?: string;
+  } | null = null;
+
   if (submissionId) {
     const admin = createAdminClient();
     const [{ data: intake }, { data: serviceTemplate }] = await Promise.all([
       admin
         .from("service_template_intake_submissions")
-        .select("id, template_slug, template_name")
+        .select("id, template_slug, template_name, payload, area_of_inquiry, question")
         .eq("id", submissionId)
         .maybeSingle(),
       service.template_id
@@ -179,6 +192,20 @@ export default async function BookingPage({ params, searchParams }: PageProps) {
 
     bookingDisplayName =
       (intake.template_name as string | null) || bookingDisplayName;
+
+    const normalizedIntake = normalizeServiceTemplateIntakeState(intake.payload);
+    if (normalizedIntake) {
+      const city = normalizedIntake.person1.city;
+      intakePrefill = {
+        birthDate: normalizedIntake.person1.dob || undefined,
+        birthTime: normalizedIntake.person1.tob || undefined,
+        birthCity: city?.label || undefined,
+        birthLat: city?.lat ?? null,
+        birthLng: city?.lng ?? null,
+        birthTimezone:
+          city?.timezone.name || city?.timezone.utcOffset || city?.timezone.offset_string || undefined,
+      };
+    }
   }
 
   const bookingEnabled = canPubliclySellService(service, diviner);
@@ -212,6 +239,7 @@ export default async function BookingPage({ params, searchParams }: PageProps) {
             availabilityServiceId={service.id}
             bookingLabel={bookingDisplayName}
             submissionId={submissionId}
+            intakePrefill={intakePrefill}
             preselectedDate={preselectedDate}
           />
         ) : (
