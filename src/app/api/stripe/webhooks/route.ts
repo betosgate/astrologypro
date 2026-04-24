@@ -1844,24 +1844,41 @@ async function handlePaymentIntentSucceeded(
     const { creditAffiliateConversion } = await import("@/lib/affiliate-attribution");
     const { data: bookingForAttribution } = await supabase
       .from("bookings")
-      .select("id, diviner_id, service_id, base_price, total_amount, ref_code, services(template_id)")
+      .select(
+        "id, base_price, total_amount, ref_code, commission_source_assignment_id, commission_rate_type_stamp, commission_rate_value_stamp",
+      )
       .eq("id", bookingId)
       .single();
 
-    if (bookingForAttribution?.ref_code) {
-      const svc = bookingForAttribution.services as { template_id?: string | null } | { template_id?: string | null }[] | null;
-      const templateId = Array.isArray(svc)
-        ? svc[0]?.template_id ?? null
-        : svc?.template_id ?? null;
+    // Stamping happens at booking creation (spec §3.8). If the three
+    // stamp columns are NULL the booking never earns commission —
+    // regardless of whether ref_code is set.
+    if (
+      bookingForAttribution &&
+      bookingForAttribution.commission_source_assignment_id
+    ) {
       const amountCents =
-        Number(bookingForAttribution.total_amount ?? bookingForAttribution.base_price ?? 0) * 100;
+        Number(
+          bookingForAttribution.total_amount ??
+            bookingForAttribution.base_price ??
+            0,
+        ) * 100;
 
       await creditAffiliateConversion(supabase, {
         bookingId: bookingForAttribution.id as string,
-        divinerId: bookingForAttribution.diviner_id as string,
-        templateId,
         orderAmountCents: Math.round(amountCents),
-        refCode: bookingForAttribution.ref_code as string,
+        refCode: (bookingForAttribution.ref_code as string | null) ?? null,
+        stampedAssignmentId:
+          bookingForAttribution.commission_source_assignment_id as string,
+        stampedRateType:
+          (bookingForAttribution.commission_rate_type_stamp as
+            | "percent"
+            | "flat"
+            | null) ?? null,
+        stampedRateValue:
+          bookingForAttribution.commission_rate_value_stamp != null
+            ? Number(bookingForAttribution.commission_rate_value_stamp)
+            : null,
       });
     }
   } catch (err) {
