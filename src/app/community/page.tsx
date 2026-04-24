@@ -1045,12 +1045,16 @@ export default async function CommunityDashboardPage() {
               My Profile
             </Link>
           </Button>
-          <Button asChild variant="outline" size="sm" className="w-full sm:w-auto">
+          {/* Client update 2026-04-24:
+              Hide "Manage Subscription" from the top summary quick actions in
+              section one. Keep the implementation commented for now instead of
+              deleting so it can be restored easily if requirements change. */}
+          {/* <Button asChild variant="outline" size="sm" className="w-full sm:w-auto">
             <Link href="/community/plan">
               <CreditCard className="mr-1.5 size-3.5" />
               Manage Subscription
             </Link>
-          </Button>
+          </Button> */}
           <Button asChild variant="outline" size="sm" className="w-full sm:w-auto">
             <Link href="/astrologers">
               <Compass className="mr-1.5 size-3.5" />
