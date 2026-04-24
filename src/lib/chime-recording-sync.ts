@@ -85,13 +85,19 @@ async function buildManualConcatenatedRecording(sessionId: string, objects: _Obj
   const workDir = await mkdtemp(join(tmpdir(), `astropro-recording-${sessionId}-`));
 
   try {
-    const localFiles: string[] = [];
+    const localFiles: string[] = new Array(segments.length);
+    const CONCURRENCY = 12; // Download 12 segments at a time
 
-    for (let index = 0; index < segments.length; index += 1) {
-      const segment = segments[index];
-      const localPath = join(workDir, `segment-${String(index).padStart(4, "0")}.mp4`);
-      await downloadS3ObjectToFile(s3, segment.Key!, localPath);
-      localFiles.push(localPath);
+    for (let i = 0; i < segments.length; i += CONCURRENCY) {
+      const chunk = segments.slice(i, i + CONCURRENCY);
+      await Promise.all(
+        chunk.map(async (segment, chunkIndex) => {
+          const index = i + chunkIndex;
+          const localPath = join(workDir, `segment-${String(index).padStart(4, "0")}.mp4`);
+          await downloadS3ObjectToFile(s3, segment.Key!, localPath);
+          localFiles[index] = localPath;
+        }),
+      );
     }
 
     const listPath = join(workDir, "concat-list.txt");
