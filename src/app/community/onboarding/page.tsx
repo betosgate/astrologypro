@@ -537,7 +537,14 @@ export default function OnboardingPage() {
         return;
       }
 
-      router.push("/community");
+      // community-onboarding-loop-fix Task 02 (2026-04-24):
+      // Hard navigation forces /community/layout.tsx to re-run on the server
+      // and read the freshly updated community_members.onboarding_completed
+      // value. `router.push` would reuse cached App Router state where
+      // onboarding_completed is still false, so OnboardingGuard would bounce
+      // the user back here — the infinite loop. Same pattern used by the
+      // diviner onboarding page at src/app/onboarding/page.tsx.
+      window.location.href = "/community";
     } catch {
       setError("An unexpected error occurred. Please try again.");
     } finally {
