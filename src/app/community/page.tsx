@@ -698,7 +698,7 @@ export default async function CommunityDashboardPage() {
     {
       icon: ownChartReady ? Star : Sparkles,
       label: ownChartReady ? "View Chart" : "Generate Chart",
-      href: ownChartReady ? "/community/horoscope" : "/community/charts",
+      href: "/community/charts",
       highlight: !ownChartReady,
     },
     {
