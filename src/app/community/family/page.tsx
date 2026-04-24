@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -81,9 +80,22 @@ export default function CommunityFamilyPage() {
   const [deleting, setDeleting] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [pendingEditId, setPendingEditId] = useState<string | null>(null);
+  const formCardRef = useRef<HTMLDivElement | null>(null);
 
-  async function load() {
-    setLoading(true);
+  function clearPendingEditQueryParam() {
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    if (!url.searchParams.has("edit")) return;
+    url.searchParams.delete("edit");
+    const nextUrl = `${url.pathname}${url.search}${url.hash}`;
+    window.history.replaceState(window.history.state, "", nextUrl);
+  }
+
+  async function load(options?: { skipLoadingState?: boolean }) {
+    if (!options?.skipLoadingState) {
+      setLoading(true);
+    }
     const res = await fetch("/api/community/family");
     if (res.ok) {
       const data = await res.json();
@@ -93,7 +105,46 @@ export default function CommunityFamilyPage() {
     setLoading(false);
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    let cancelled = false;
+
+    async function initialLoad() {
+      const res = await fetch("/api/community/family");
+      if (cancelled) return;
+
+      if (res.ok) {
+        const data = await res.json();
+        if (cancelled) return;
+        setMembers(data.members ?? []);
+        setEntitlement((data.entitlement as FamilyEntitlement | null) ?? null);
+      }
+
+      if (!cancelled) {
+        setLoading(false);
+      }
+    }
+
+    void initialLoad();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const frame = window.requestAnimationFrame(() => {
+      const editId = new URLSearchParams(window.location.search).get("edit");
+      if (editId) {
+        setPendingEditId(editId);
+      }
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+    };
+  }, []);
 
   function startAdd() {
     setForm({ ...EMPTY_FORM });
@@ -102,7 +153,7 @@ export default function CommunityFamilyPage() {
     setError(null);
   }
 
-  function startEdit(m: FamilyMember) {
+  function startEdit(m: FamilyMember, options?: { scrollToForm?: boolean }) {
     setForm({
       fullName: m.full_name,
       dateOfBirth: m.date_of_birth,
@@ -117,7 +168,28 @@ export default function CommunityFamilyPage() {
     setEditingId(m.id);
     setShowForm(true);
     setError(null);
+    if (options?.scrollToForm) {
+      requestAnimationFrame(() => {
+        formCardRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      });
+    }
   }
+
+  useEffect(() => {
+    if (!pendingEditId || loading) return;
+
+    const member = members.find((item) => item.id === pendingEditId);
+    clearPendingEditQueryParam();
+    requestAnimationFrame(() => {
+      setPendingEditId(null);
+      if (!member) return;
+      setExpandedId(member.id);
+      startEdit(member, { scrollToForm: true });
+    });
+  }, [loading, members, pendingEditId]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -209,6 +281,7 @@ export default function CommunityFamilyPage() {
 
       {/* Add / Edit form */}
       {showForm && (
+        <div ref={formCardRef}>
         <Card>
           <CardHeader>
             <CardTitle className="text-base">
@@ -373,6 +446,7 @@ export default function CommunityFamilyPage() {
             </form>
           </CardContent>
         </Card>
+        </div>
       )}
 
       {/* Member list */}
