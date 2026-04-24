@@ -12,7 +12,6 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAffiliateAccountByUserId } from "@/lib/affiliate-accounts";
-import { isAffiliateIdentityV2Enabled } from "@/lib/feature-flags";
 import { AffiliateHeader } from "../_components/affiliate-header";
 import { SectionContainer } from "@/components/shared/section-container";
 
@@ -25,13 +24,6 @@ export default async function AffiliateLayout({
 }: {
   children: React.ReactNode;
 }) {
-  if (!isAffiliateIdentityV2Enabled()) {
-    // Flag off: hide the portal entirely. /affiliate/accept/[token] and
-    // /affiliate/[code] are public routes and should not go through this
-    // layout — but if they do, the next.js route tree will short-circuit.
-    redirect("/");
-  }
-
   const supabase = await createClient();
   const {
     data: { user },
