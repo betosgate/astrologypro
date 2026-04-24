@@ -241,11 +241,14 @@ export default async function CommunityDashboardPage() {
       .eq("user_id", user.id)
       .single(),
 
-    // Family members — full fields for profile completion rings
+    // Family members — full fields for profile completion rings.
+    // `user_id` is selected so the top-summary family chip row can
+    // deduplicate the primary member if they were also added as a
+    // family-member row (community-dashboard-family-chips Task 02).
     supabase
       .from("community_family_members")
       .select(
-        "id, full_name, relationship, date_of_birth, birth_time, birth_city, birth_country, natal_chart"
+        "id, user_id, full_name, relationship, date_of_birth, birth_time, birth_city, birth_country, natal_chart"
       )
       .eq("member_id", member.id)
       .limit(10),
@@ -731,23 +734,124 @@ export default async function CommunityDashboardPage() {
   ];
 
   // ── Family Chips Data for Top Card ───────────────────────────────────────
-  const familyChipData = planType === "family" ? (
-    familyMembers.length > 0
-      ? [
-          { id: member.id, name: member.full_name || "Self", relationship: "Self" },
-          ...familyMembers.map((fm) => ({
-            id: fm.id,
-            name: fm.full_name || "Unknown",
-            relationship: capitalize(fm.relationship || "Member"),
-          })),
-        ]
-      : [
-          { id: member.id, name: member.full_name || "Self", relationship: "Self" },
-          { id: "mock-1", name: "Anaya Ashton", relationship: "Spouse", isMock: true },
-          { id: "mock-2", name: "Ethan Ashton", relationship: "Son", isMock: true },
-          { id: "mock-3", name: "Mira Ashton", relationship: "Daughter", isMock: true },
-        ]
-  ) : [];
+  //
+  // community-dashboard-family-chips (2026-04-24):
+  //   Task 02 — dedup Self. A family-member row can duplicate the primary
+  //             member in two legitimate ways: it was invited (fm.user_id
+  //             matches auth.uid()), or legacy rows share the same name.
+  //             We skip both.
+  //   Task 03 — deterministic order: Self → Spouse/Partner → children →
+  //             others → missing-role.
+  //   Task 04 — flag missing-role chips so the renderer can show a distinct
+  //             "Missing role" treatment instead of the old grey "Member".
+  //
+  // `relationshipPriority` sorts within known groups and is stable for
+  // unknown strings (they all land in the same "others" bucket so their
+  // relative order is preserved from the DB query).
+  const normalizeRel = (rel: string | null | undefined): string =>
+    (rel ?? "").trim().toLowerCase();
+
+  const relationshipPriority = (rel: string): number => {
+    const r = normalizeRel(rel);
+    if (r === "self" || r === "primary") return 0;
+    if (r === "spouse" || r === "partner") return 1;
+    if (
+      r === "child" ||
+      r === "children" ||
+      r === "son" ||
+      r === "boy" ||
+      r === "daughter" ||
+      r === "girl"
+    )
+      return 2;
+    if (r === "") return 4; // missing — after known groups
+    return 3; // everything else (parent, sibling, friend, other)
+  };
+
+  type FamilyChip = {
+    id: string;
+    name: string;
+    relationship: string;
+    missingRelationship: boolean;
+    sortKey: number;
+    isMock?: boolean;
+  };
+
+  const primarySelfName = (member.full_name ?? "").trim().toLowerCase();
+
+  const buildRealChips = (): FamilyChip[] => {
+    const chips: FamilyChip[] = [
+      {
+        id: member.id,
+        name: member.full_name || "Self",
+        relationship: "Self",
+        missingRelationship: false,
+        sortKey: 0,
+      },
+    ];
+
+    for (const fm of familyMembers) {
+      // Dedup against primary member — stable id first, name fallback.
+      const isSameAsPrimaryByUser =
+        (fm as { user_id?: string | null }).user_id != null &&
+        (fm as { user_id?: string | null }).user_id === user.id;
+      const isSameAsPrimaryByName =
+        primarySelfName !== "" &&
+        (fm.full_name ?? "").trim().toLowerCase() === primarySelfName;
+      if (isSameAsPrimaryByUser || isSameAsPrimaryByName) continue;
+
+      const rel = (fm.relationship ?? "").trim();
+      const missing = rel === "";
+      chips.push({
+        id: fm.id,
+        name: fm.full_name || "Unknown",
+        relationship: missing ? "" : capitalize(rel),
+        missingRelationship: missing,
+        sortKey: relationshipPriority(rel),
+      });
+    }
+
+    return chips.sort((a, b) => a.sortKey - b.sortKey);
+  };
+
+  const familyChipData: FamilyChip[] =
+    planType === "family"
+      ? familyMembers.length > 0
+        ? buildRealChips()
+        : [
+            {
+              id: member.id,
+              name: member.full_name || "Self",
+              relationship: "Self",
+              missingRelationship: false,
+              sortKey: 0,
+            },
+            {
+              id: "mock-1",
+              name: "Anaya Ashton",
+              relationship: "Spouse",
+              missingRelationship: false,
+              sortKey: 1,
+              isMock: true,
+            },
+            {
+              id: "mock-2",
+              name: "Ethan Ashton",
+              relationship: "Son",
+              missingRelationship: false,
+              sortKey: 2,
+              isMock: true,
+            },
+            {
+              id: "mock-3",
+              name: "Mira Ashton",
+              relationship: "Daughter",
+              missingRelationship: false,
+              sortKey: 2,
+              isMock: true,
+            },
+          ]
+      : [];
 
   return (
     <SectionContainer verticalPadding="none" className="px-0 sm:px-0 lg:px-0">
@@ -850,14 +954,29 @@ export default async function CommunityDashboardPage() {
           </div>
         </div>
 
-        {/* Family Members Row */}
+        {/* Family Members Row (community-dashboard-family-chips) */}
+        {/*
+          Task 05 — the visible "Family Members" text label is removed;
+            the people icon carries a title/aria-label as its sole anchor.
+          Task 06 — more breathing room: mt-6 pushes the row away from
+            the metadata row above, gap-4 widens the gap between the row
+            and the divider below. gap-y-2 on the chip wrap keeps multi-
+            line wraps readable on small screens.
+        */}
         {familyChipData.length > 0 && (
-          <div className="mt-4 flex flex-col gap-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="flex items-center gap-2 mr-2 text-sm text-muted-foreground">
-                <Users className="size-4" aria-hidden="true" />
-                <span>Family Members</span>
-              </div>
+          <div className="mt-6 flex flex-col gap-4">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-2">
+              <span
+                title="Family members"
+                aria-label="Family members"
+                role="img"
+                className="inline-flex items-center mr-1 shrink-0"
+              >
+                <Users
+                  className="size-4 text-muted-foreground"
+                  aria-hidden="true"
+                />
+              </span>
               {familyChipData.map((chip) => (
                 <div
                   key={chip.id}
@@ -865,14 +984,31 @@ export default async function CommunityDashboardPage() {
                 >
                   <User className="size-3.5 text-muted-foreground" aria-hidden="true" />
                   <span className="text-sm font-medium text-foreground">{chip.name}</span>
-                  <Badge
-                    variant="outline"
-                    className={`text-[10px] px-1.5 py-0 h-4 min-h-0 rounded-full font-medium border ${getRelationshipBadgeClasses(
-                      chip.relationship
-                    )}`}
-                  >
-                    {chip.relationship}
-                  </Badge>
+                  {/*
+                    Task 04 — missing-role chip is visually distinct from
+                    the grey fallback. The amber dashed border + italic
+                    label + hover/focus title tells the user the row is
+                    real but the relationship field hasn't been filled
+                    in yet, without looking like a hard error.
+                  */}
+                  {chip.missingRelationship ? (
+                    <Badge
+                      variant="outline"
+                      className="text-[10px] px-1.5 py-0 h-4 min-h-0 rounded-full font-medium italic border border-dashed border-amber-500/50 bg-amber-500/10 text-amber-700"
+                      title="Relationship is missing for this member"
+                    >
+                      Missing role
+                    </Badge>
+                  ) : (
+                    <Badge
+                      variant="outline"
+                      className={`text-[10px] px-1.5 py-0 h-4 min-h-0 rounded-full font-medium border ${getRelationshipBadgeClasses(
+                        chip.relationship
+                      )}`}
+                    >
+                      {chip.relationship}
+                    </Badge>
+                  )}
                 </div>
               ))}
             </div>
