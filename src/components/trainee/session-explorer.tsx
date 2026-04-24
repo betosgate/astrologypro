@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { 
   Card, 
   CardContent, 
@@ -17,7 +17,6 @@ import {
   Video, 
   CheckCircle2, 
   Info, 
-  ChevronRight,
   Download,
   Share2,
   Loader2,
@@ -26,7 +25,6 @@ import {
   ExternalLink
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { SegmentVideoPlayer } from "@/components/dashboard/segment-video-player";
 
 type BookingSource = "bookings" | "admin_bookings";
 
@@ -265,23 +263,6 @@ function SessionDetailView({ booking }: { booking: UnifiedBooking }) {
               )}
             </div>
           )}
-
-          {/* Additional Info / Actions */}
-          <div className="grid sm:grid-cols-2 gap-4">
-             {booking.actionBasePath && (
-               <Card className="bg-muted/30 border-none shadow-none">
-                 <CardContent className="p-4 flex items-center justify-between">
-                    <div className="space-y-1">
-                      <p className="text-xs font-bold">Appointment Management</p>
-                      <p className="text-[10px] text-muted-foreground">Schedule changes or cancellations</p>
-                    </div>
-                    <Button variant="outline" size="sm" className="text-xs h-8">
-                       Manage <ChevronRight className="ml-1 size-3" />
-                    </Button>
-                 </CardContent>
-               </Card>
-             )}
-          </div>
         </CardContent>
       </Card>
     </div>
@@ -289,29 +270,44 @@ function SessionDetailView({ booking }: { booking: UnifiedBooking }) {
 }
 
 function RecordingPlayer({ bookingId, recordingUrl }: { bookingId: string, recordingUrl: string | null }) {
-  const [segments, setSegments] = useState<any[] | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [resolvedUrl, setResolvedUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(!recordingUrl);
+  const [error, setError] = useState<string | null>(null);
+  const finalUrl = recordingUrl ?? resolvedUrl;
 
-  useState(() => {
+  useEffect(() => {
+    if (recordingUrl) return;
+
     fetch(`/api/bookings/${bookingId}/recording-segments`)
       .then(r => r.json())
       .then(d => {
-        if (d.segments?.length > 0) setSegments(d.segments);
+        if (typeof d.recording_url === "string" && d.recording_url) {
+          setResolvedUrl(d.recording_url);
+          setError(null);
+        } else {
+          setError("Recording is still being processed.");
+        }
       })
+      .catch(() => setError("Failed to load recording."))
       .finally(() => setLoading(false));
-  });
+  }, [bookingId, recordingUrl]);
 
   if (loading) return null;
 
   return (
     <div className="p-1">
-      {segments ? (
+      {finalUrl ? (
         <div className="space-y-2">
-          <SegmentVideoPlayer segments={segments} />
-          {recordingUrl && (
+          <video
+            src={finalUrl}
+            controls
+            preload="metadata"
+            className="w-full rounded-lg bg-black"
+          />
+          {finalUrl && (
              <div className="p-3 pt-0 flex gap-2">
                <Button size="xs" variant="ghost" className="text-[10px] text-zinc-400 hover:text-white" asChild>
-                 <a href={recordingUrl} download>
+                 <a href={finalUrl} download>
                     <Download className="mr-1 size-3" /> Download MP4
                  </a>
                </Button>
@@ -320,7 +316,7 @@ function RecordingPlayer({ bookingId, recordingUrl }: { bookingId: string, recor
         </div>
       ) : (
         <div className="p-8 text-center text-zinc-500 text-sm">
-          Segments failed to load. Please try refreshing or checking back later.
+          {error ?? "Recording is still being processed. Please check back shortly."}
         </div>
       )}
     </div>

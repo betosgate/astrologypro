@@ -654,10 +654,24 @@ export default async function CommunityDashboardPage() {
       ];
 
   // ── Own chart completeness (server-side, no polling needed) ───────────────
+  //
+  // Community Dashboard Task 02 (2026-04-24):
+  // The logged-in PM member's natal-readiness must be derived from
+  // `community_members` (the PM member record that `/community/profile`
+  // reads and writes), not from `clients` (a broader client-domain record
+  // that can be stale, missing, or unsynced for PM members).
+  //
+  // Reuse the already-derived booleans `hasDob`, `hasBirthTime`, and
+  // `hasBirthCity` computed earlier from `memberBirthFields` so the card,
+  // the profile-completion widget, and the progress bar all agree on a
+  // single source of truth for the PM member's own birth data.
+  //
+  // Scope: only the logged-in PM member's own cosmic blueprint card.
+  // Household/family-member chart logic is intentionally left unchanged.
   const ownChartMissingFields: string[] = [];
-  if (!client?.birth_date) ownChartMissingFields.push("date of birth");
-  if (!client?.birth_time) ownChartMissingFields.push("birth time");
-  if (!client?.birth_city) ownChartMissingFields.push("birth city");
+  if (!hasDob) ownChartMissingFields.push("date of birth");
+  if (!hasBirthTime) ownChartMissingFields.push("birth time");
+  if (!hasBirthCity) ownChartMissingFields.push("birth city");
   const ownChartReady = ownChartMissingFields.length === 0;
   const relationshipChartCount = pcRelCharts.length;
 

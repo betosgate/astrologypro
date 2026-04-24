@@ -64,6 +64,7 @@ import { MIGRATION_SQL as MIG_20260422000007 } from "@/data/migrations/202604220
 import { MIGRATION_SQL as MIG_20260423000001 } from "@/data/migrations/20260423000001_chime_recording_extras";
 import { MIGRATION_SQL as MIG_20260423000002 } from "@/data/migrations/20260423000002_backfill_plan_type_from_pm_tier";
 import { MIGRATION_SQL as MIG_20260423000003 } from "@/data/migrations/20260423000003_admin_bookings_status_completed";
+import { MIGRATION_SQL as MIG_20260424000001_STCIM } from "@/data/migrations/20260424000001_service_template_content_image_matrix";
 import { MIGRATION_SQL as MIG_20260428000100 } from "@/data/migrations/20260428000100_fix_diviner_fields_length";
 import { MIGRATION_SQL as MIG_20260423000001_AIR } from "@/data/migrations/20260423000001_affiliate_identity_refactor";
 import { MIGRATION_SQL as MIG_20260423000002_RLS } from "@/data/migrations/20260423000002_fix_diviner_affiliates_rls";
@@ -606,6 +607,14 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Drops and re-adds the admin_bookings_status_check CHECK constraint to allow 'completed', 'no_show', and 'in_progress' alongside the original 'confirmed' / 'canceled'. Required so /api/chime/admin-bookings/end can flip status to 'completed' after a Chime session ends — without this the status stayed at 'confirmed' forever and the trainee/admin UI showed the wrong badge. Additive, idempotent, safe to re-run.",
     sortKey: "20260423000003",
     sql: MIG_20260423000003,
+  },
+  "20260424000001_service_template_content_image_matrix": {
+    id: "20260424000001_service_template_content_image_matrix",
+    title: "Service template content + image matrix",
+    description:
+      "Seeds standardized descriptions, long descriptions, included bullets, audience bullets, FAQ entries, SEO metadata, and shared image_url values for all 19 canonical service templates plus their 19 general variants. Safe to re-run because every row is updated by stable slug.",
+    sortKey: "20260424000001",
+    sql: MIG_20260424000001_STCIM,
   },
   "20260428000001_landing_page_cleanup_destructive": {
     id: "20260428000001_landing_page_cleanup_destructive",
