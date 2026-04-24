@@ -90,7 +90,7 @@
     },
     {
       "path": "/api/cron/sync-recordings",
-      "schedule": "*/15 * * * *"
+      "schedule": "*/5 * * * *"
     }
   ]
 }

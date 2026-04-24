@@ -15,6 +15,13 @@ interface CallClientButtonProps {
   bookingId: string;
   clientName?: string | null;
   bookingStatus?: string | null;
+  /**
+   * Whether the booking has a dialable phone on file (clients.phone or a
+   * phone field on questionnaire_responses). Server always validates, but
+   * when this is false we render the button disabled with a clear tooltip
+   * so the user doesn't find out only after clicking.
+   */
+  hasPhoneOnFile?: boolean;
 }
 
 /**
@@ -36,6 +43,7 @@ export function CallClientButton({
   bookingId,
   clientName,
   bookingStatus,
+  hasPhoneOnFile = true,
 }: CallClientButtonProps) {
   const [status, setStatus] = useState<"idle" | "dialing" | "active" | "error">(
     "idle"
@@ -53,7 +61,7 @@ export function CallClientButton({
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Disable on terminal statuses — server enforces the same rule, this is UX only.
-  const blocked =
+  const blockedByStatus =
     typeof bookingStatus === "string" &&
     [
       "cancelled",
@@ -62,6 +70,29 @@ export function CallClientButton({
       "declined",
       "no_show",
     ].includes(bookingStatus);
+
+  // Disable when nothing to dial — clear reason shown in tooltip.
+  const blockedByPhone = !hasPhoneOnFile;
+
+  const blocked = blockedByStatus || blockedByPhone;
+
+  const blockedReason = blockedByStatus
+    ? `Cannot call on a ${bookingStatus} booking`
+    : blockedByPhone
+    ? "No phone number on file for this client"
+    : null;
+
+  // Auto-clear error state after 5s so the row doesn't stay littered with
+  // a stale error message. The full error remains in the tooltip title for
+  // the duration so the diviner can still read it.
+  useEffect(() => {
+    if (status !== "error") return;
+    const t = setTimeout(() => {
+      setStatus("idle");
+      setErrorMsg(null);
+    }, 5000);
+    return () => clearTimeout(t);
+  }, [status]);
 
   // Active-call elapsed-time timer
   useEffect(() => {
@@ -286,7 +317,11 @@ export function CallClientButton({
       <Button
         size="icon"
         variant="outline"
-        className="h-8 w-8"
+        className={
+          status === "error"
+            ? "h-8 w-8 border-destructive/50 text-destructive hover:bg-destructive/10"
+            : "h-8 w-8"
+        }
         onClick={handleStartCall}
         disabled={blocked}
         aria-label={
@@ -294,7 +329,9 @@ export function CallClientButton({
         }
         title={
           blocked
-            ? `Cannot call on a ${bookingStatus} booking`
+            ? blockedReason ?? undefined
+            : status === "error" && errorMsg
+            ? errorMsg
             : clientName
             ? `Call ${clientName}`
             : "Call client"
@@ -302,14 +339,6 @@ export function CallClientButton({
       >
         <Phone className="h-3.5 w-3.5" />
       </Button>
-      {status === "error" && errorMsg ? (
-        <span
-          className="ml-1 max-w-[12rem] truncate text-xs text-destructive"
-          title={errorMsg}
-        >
-          {errorMsg}
-        </span>
-      ) : null}
     </>
   );
 }

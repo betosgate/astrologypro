@@ -7,11 +7,14 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 const RECORDING_BUCKET = process.env.CHIME_RECORDING_BUCKET ?? "";
+const SCAN_AFTER_END_MS = 5 * 60 * 1000;
+const MANUAL_CONCAT_AFTER_END_MS = 10 * 60 * 1000;
 
 /**
  * Polls S3 for completed Chime recordings across all three session tables
  * (`bookings`, `admin_bookings`, `phone_sessions`) and writes `recording_url`
- * back to Supabase. Run this cron every 10–15 minutes.
+ * back to Supabase. Run this cron every 5 minutes so stalled recordings are
+ * finalized inside the 10-minute recovery window.
  *
  * For each row we:
  *   - list S3 objects under `recordings/{sessionId}/`
@@ -31,6 +34,8 @@ interface SessionCandidate {
   id: string;
   chimeMeetingId: string | null;
   updatedAt: string | null;
+  recordingUrl: string | null;
+  recordingShareId: string | null;
 }
 
 async function loadCandidates(
@@ -38,27 +43,35 @@ async function loadCandidates(
   cutoff: string,
 ): Promise<SessionCandidate[]> {
   const out: SessionCandidate[] = [];
+  const seen = new Set<string>();
+
+  function pushCandidate(candidate: SessionCandidate) {
+    const key = `${candidate.kind}:${candidate.id}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    out.push(candidate);
+  }
 
   // ── Legacy diviner `bookings` ────────────────────────────────────────────
   const { data: bookings, error: bookingsErr } = await admin
     .from("bookings")
-    .select("id, chime_meeting_id, confirmed_at, updated_at")
+    .select("id, chime_meeting_id, updated_at, recording_url, recording_share_id")
     .not("chime_meeting_id", "is", null)
-    .is("recording_url", null)
-    .or(
-      `and(confirmed_at.not.is.null,confirmed_at.lt.${cutoff}),` +
-      `and(status.eq.completed,updated_at.lt.${cutoff})`,
-    )
+    .eq("status", "completed")
+    .lt("updated_at", cutoff)
+    .or("recording_url.is.null,recording_url.ilike.%composited-video%")
     .limit(20);
   if (bookingsErr) {
     console.error("[sync-recordings] bookings query failed:", bookingsErr.message);
   }
   for (const b of bookings ?? []) {
-    out.push({
+    pushCandidate({
       kind: "booking",
       id: b.id as string,
       chimeMeetingId: (b.chime_meeting_id as string | null) ?? null,
-      updatedAt: (b.updated_at as string | null) ?? (b.confirmed_at as string | null),
+      updatedAt: (b.updated_at as string | null) ?? null,
+      recordingUrl: (b.recording_url as string | null) ?? null,
+      recordingShareId: (b.recording_share_id as string | null) ?? null,
     });
   }
 
@@ -70,20 +83,22 @@ async function loadCandidates(
   try {
     const { data: adminBookings, error: adminErr } = await admin
       .from("admin_bookings")
-      .select("id, chime_meeting_id, ended_at, updated_at")
+      .select("id, chime_meeting_id, ended_at, updated_at, recording_url, recording_share_id")
       .not("chime_meeting_id", "is", null)
-      .is("recording_url", null)
       .lt("ended_at", cutoff)
+      .or("recording_url.is.null,recording_url.ilike.%composited-video%")
       .limit(20);
     if (adminErr) {
       console.error("[sync-recordings] admin_bookings query failed:", adminErr.message);
     } else {
       for (const b of adminBookings ?? []) {
-        out.push({
+        pushCandidate({
           kind: "admin_booking",
           id: b.id as string,
           chimeMeetingId: (b.chime_meeting_id as string | null) ?? null,
           updatedAt: (b.ended_at as string | null) ?? (b.updated_at as string | null),
+          recordingUrl: (b.recording_url as string | null) ?? null,
+          recordingShareId: (b.recording_share_id as string | null) ?? null,
         });
       }
     }
@@ -95,20 +110,22 @@ async function loadCandidates(
   try {
     const { data: phones, error: phonesErr } = await admin
       .from("phone_sessions")
-      .select("id, chime_meeting_id, ended_at, updated_at")
+      .select("id, chime_meeting_id, ended_at, updated_at, recording_url, recording_share_id")
       .not("chime_meeting_id", "is", null)
-      .is("recording_url", null)
       .lt("ended_at", cutoff)
+      .or("recording_url.is.null,recording_url.ilike.%composited-video%")
       .limit(20);
     if (phonesErr) {
       console.error("[sync-recordings] phone_sessions query failed:", phonesErr.message);
     } else {
       for (const p of phones ?? []) {
-        out.push({
+        pushCandidate({
           kind: "phone_session",
           id: p.id as string,
           chimeMeetingId: (p.chime_meeting_id as string | null) ?? null,
           updatedAt: (p.ended_at as string | null) ?? (p.updated_at as string | null),
+          recordingUrl: (p.recording_url as string | null) ?? null,
+          recordingShareId: (p.recording_share_id as string | null) ?? null,
         });
       }
     }
@@ -139,9 +156,9 @@ export async function GET(request: NextRequest) {
   }
 
   const admin = createAdminClient();
-  // Require at least 5 min between session end and cron sync so Chime has
-  // time to finalize the concatenation pipeline.
-  const cutoff = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+  // Give Chime a short window to finish its own concatenation first. At the
+  // 10-minute mark, unresolved segment sets are manually concatenated below.
+  const cutoff = new Date(Date.now() - SCAN_AFTER_END_MS).toISOString();
 
   const candidates = await loadCandidates(admin, cutoff);
 
@@ -152,18 +169,23 @@ export async function GET(request: NextRequest) {
   const results: { kind: SessionKind; id: string; status: string }[] = [];
 
   for (const candidate of candidates) {
-    const { kind, id, chimeMeetingId, updatedAt } = candidate;
+    const { kind, id, chimeMeetingId, updatedAt, recordingUrl, recordingShareId } = candidate;
 
     try {
       const ageMinutes = updatedAt
         ? (Date.now() - new Date(updatedAt).getTime()) / 60_000
         : Infinity;
+      const allowManualConcat = updatedAt
+        ? Date.now() - new Date(updatedAt).getTime() >= MANUAL_CONCAT_AFTER_END_MS
+        : true;
       const resolved = await ensureFinalRecordingForSession({
         table: tableForKind(kind) as "bookings" | "admin_bookings" | "phone_sessions",
         sessionId: id,
         chimeMeetingId,
+        currentRecordingUrl: recordingUrl,
+        currentShareId: recordingShareId,
         clearStaleSegment: true,
-        allowManualConcat: ageMinutes >= 10,
+        allowManualConcat,
       });
 
       if (resolved.status === "no_files") {

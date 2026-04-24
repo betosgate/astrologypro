@@ -14,6 +14,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pipeline } from "node:stream/promises";
 import { Readable } from "node:stream";
+import type { ReadableStream as NodeReadableStream } from "node:stream/web";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 
@@ -66,7 +67,10 @@ async function downloadS3ObjectToFile(s3: S3Client, key: string, targetPath: str
   }
 
   if (typeof (body as Blob).stream === "function") {
-    await pipeline(Readable.fromWeb((body as Blob).stream() as ReadableStream), createWriteStream(targetPath));
+    await pipeline(
+      Readable.fromWeb((body as Blob).stream() as unknown as NodeReadableStream),
+      createWriteStream(targetPath),
+    );
     return;
   }
 
@@ -210,7 +214,7 @@ export async function ensureFinalRecordingForSession(options: {
   }
 
   let finalKey = inspection.finalKey;
-  if (!finalKey && allowManualConcat && inspection.segmentCount > 1) {
+  if (!finalKey && allowManualConcat && inspection.segmentCount > 0) {
     finalKey = await buildManualConcatenatedRecording(sessionId, inspection.objects);
   }
 
