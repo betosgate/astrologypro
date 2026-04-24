@@ -17,7 +17,6 @@ import {
 import { ClipboardList, Loader2, RotateCcw, CheckCircle2, NotebookPen, CreditCard, RefreshCw, CalendarClock, XCircle, Send, Receipt, Video, Clock, Share2, Download, FileText, Copy, Sparkles, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { SegmentVideoPlayer } from "@/components/dashboard/segment-video-player";
 
 const statusColors: Record<string, string> = {
   pending: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20",
@@ -149,8 +148,9 @@ interface SessionDetails {
 }
 
 /**
- * Self-contained recording player. Auto-loads segments from S3 on mount
- * and plays them seamlessly as one video via SegmentVideoPlayer.
+ * Self-contained recording player. Prefers the final concatenated MP4 and
+ * only asks the API to recover/check that final asset when the DB URL is
+ * missing.
  */
 function RecordingSection({
   bookingId,
@@ -172,32 +172,38 @@ function RecordingSection({
    */
   canSync?: boolean;
 }) {
-  const [segments, setSegments] = useState<{ key: string; size: number; url: string }[] | null>(null);
+  const [resolvedUrl, setResolvedUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const finalUrl = recordingUrl ?? resolvedUrl;
 
-  // Auto-load segments when component mounts
-  const loadSegments = useCallback(async () => {
+  const loadRecording = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
+      if (recordingUrl) {
+        setLoading(false);
+        return;
+      }
+
       const res = await fetch(`/api/bookings/${bookingId}/recording-segments`);
       const data = await res.json();
-      if (data.segments?.length > 0) {
-        setSegments(data.segments);
+      if (typeof data.recording_url === "string" && data.recording_url) {
+        setResolvedUrl(data.recording_url);
       } else {
-        setError("No recording segments found in S3");
+        setResolvedUrl(null);
+        setError("Recording is still being processed");
       }
     } catch {
       setError("Failed to load recording");
     } finally {
       setLoading(false);
     }
-  }, [bookingId]);
+  }, [bookingId, recordingUrl]);
 
   useEffect(() => {
-    loadSegments();
-  }, [loadSegments]);
+    loadRecording();
+  }, [loadRecording]);
 
   return (
     <div className="rounded-lg border border-border bg-muted/20 p-3 space-y-3">
@@ -211,16 +217,19 @@ function RecordingSection({
           <Loader2 className="size-5 animate-spin text-muted-foreground" />
           <span className="ml-2 text-sm text-muted-foreground">Loading recording…</span>
         </div>
-      ) : segments && segments.length > 0 ? (
+      ) : finalUrl ? (
         <>
-          <SegmentVideoPlayer segments={segments} />
-          {recordingUrl && (
-            <a href={recordingUrl} download target="_blank" rel="noopener noreferrer">
-              <Button size="sm" variant="outline" className="w-full gap-2">
-                <Download className="size-3.5" />Download Recording
-              </Button>
-            </a>
-          )}
+          <video
+            src={finalUrl}
+            controls
+            preload="metadata"
+            className="w-full rounded-lg bg-black"
+          />
+          <a href={finalUrl} download target="_blank" rel="noopener noreferrer">
+            <Button size="sm" variant="outline" className="w-full gap-2">
+              <Download className="size-3.5" />Download Recording
+            </Button>
+          </a>
           {shareId && (
             <Button size="sm" variant="ghost" className="w-full gap-2 text-xs text-muted-foreground"
               onClick={() => {
@@ -234,7 +243,7 @@ function RecordingSection({
       ) : error ? (
         <div className="space-y-2">
           <p className="text-sm text-muted-foreground">{error}</p>
-          <Button size="sm" variant="outline" className="w-full gap-2" onClick={loadSegments}>
+          <Button size="sm" variant="outline" className="w-full gap-2" onClick={loadRecording}>
             <RefreshCw className="size-3.5" />Retry
           </Button>
           {!recordingUrl && canSync && (

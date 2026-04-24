@@ -2,22 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAdminUser } from "@/lib/admin-auth";
-import { S3Client, ListObjectsV2Command, GetObjectCommand } from "@aws-sdk/client-s3";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { generateShareId } from "@/lib/format";
+import {
+  ensureFinalRecordingForSession,
+  inspectChimeRecordingArtifacts,
+} from "@/lib/chime-recording-sync";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 const RECORDING_BUCKET = process.env.CHIME_RECORDING_BUCKET ?? "";
-
-function getS3Client() {
-  const region = process.env.AWS_CHIME_REGION ?? process.env.AWS_REGION ?? "us-east-1";
-  const accessKeyId = process.env.AWS_CHIME_ACCESS_KEY_ID ?? process.env.AWS_ACCESS_KEY_ID;
-  const secretAccessKey = process.env.AWS_CHIME_SECRET_ACCESS_KEY ?? process.env.AWS_SECRET_ACCESS_KEY;
-  return accessKeyId && secretAccessKey
-    ? new S3Client({ region, credentials: { accessKeyId, secretAccessKey } })
-    : new S3Client({ region });
-}
 
 /**
  * POST /api/admin/sync-recording
@@ -92,17 +85,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const s3 = getS3Client();
-
-  // List all objects under recordings/{bookingId}/
-  const list = await s3.send(
-    new ListObjectsV2Command({
-      Bucket: RECORDING_BUCKET,
-      Prefix: `recordings/${bookingId}/`,
-    })
-  );
-
-  const objects = list.Contents ?? [];
+  const inspection = await inspectChimeRecordingArtifacts(bookingId);
+  const objects = inspection.objects;
 
   if (!objects.length) {
     return NextResponse.json({
@@ -112,63 +96,34 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  // Return list of found files for diagnostics
   const fileList = objects.map((o) => ({ key: o.Key, size: o.Size }));
+  const resolved = await ensureFinalRecordingForSession({
+    table: bookingSource,
+    sessionId: bookingId,
+    chimeMeetingId: booking.chime_meeting_id,
+    currentRecordingUrl: booking.recording_url ?? null,
+    clearStaleSegment: true,
+    allowManualConcat: true,
+  });
 
-  // 1. Check for already-concatenated /final/ file
-  const finalFile = objects.find(
-    (o) => o.Key?.includes("/final/") && o.Key.endsWith(".mp4") && (o.Size ?? 0) > 10_000
-  );
-
-  // 2. Collect composited-video segments sorted by size (largest first)
-  const segments = objects
-    .filter((o) => o.Key?.includes("composited-video") && o.Key.endsWith(".mp4") && (o.Size ?? 0) > 0)
-    .sort((a, b) => (b.Size ?? 0) - (a.Size ?? 0));
-
-  // Pick the best single file: /final/ > largest segment > any MP4 > any file
-  // NOTE: When multiple segments exist, the full recording is played via
-  // the segment player (GET /api/bookings/[id]/recording-segments).
-  // This sync just picks the best single-file thumbnail for the standard player.
-  const recordingKey =
-    finalFile?.Key ??
-    segments[0]?.Key ??
-    objects.sort((a, b) => (b.Size ?? 0) - (a.Size ?? 0)).find((o) => o.Key?.endsWith(".mp4"))?.Key ??
-    objects.find((o) => o.Key?.endsWith(".webm"))?.Key ??
-    objects.sort((a, b) => (b.Size ?? 0) - (a.Size ?? 0)).find((o) => (o.Size ?? 0) > 0)?.Key;
-
-  if (!recordingKey) {
-    return NextResponse.json({ found: false, files: fileList, message: "No playable file found" });
-  }
-
-  // Generate a 7-day presigned URL
-  const recordingUrl = await getSignedUrl(
-    s3,
-    new GetObjectCommand({ Bucket: RECORDING_BUCKET, Key: recordingKey }),
-    { expiresIn: 7 * 24 * 60 * 60 }
-  );
-
-  const shareId = generateShareId();
-
-  await admin
-    .from(bookingSource)
-    .update({ recording_url: recordingUrl, recording_share_id: shareId })
-    .eq("id", bookingId);
-
-  // Update video_sessions too
-  if (booking.chime_meeting_id) {
-    await admin
-      .from("video_sessions")
-      .update({ recording_url: recordingUrl })
-      .eq("chime_meeting_id", booking.chime_meeting_id);
+  if (resolved.status !== "final") {
+    return NextResponse.json({
+      found: false,
+      files: fileList,
+      finalKey: inspection.finalKey,
+      segmentCount: inspection.segmentCount,
+      message:
+        resolved.status === "processing"
+          ? "Raw segments exist, but the final concatenated recording is not ready yet"
+          : "No final concatenated recording found",
+    });
   }
 
   return NextResponse.json({
     synced: true,
-    recordingKey,
-    segmentCount: segments.length,
+    recordingKey: resolved.finalKey,
+    segmentCount: inspection.segmentCount,
     files: fileList,
-    message: segments.length > 1
-      ? `recording_url updated (${segments.length} segments available — use "Play Full Recording" for all)`
-      : "recording_url updated",
+    message: "recording_url updated with final concatenated recording",
   });
 }
