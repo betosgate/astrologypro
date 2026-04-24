@@ -1073,7 +1073,7 @@ export default async function CommunityDashboardPage() {
           {/* Profile Completion Progress Ring */}
           <ProfileProgressSection
             profilePct={profilePct}
-            membersCount={otherMembers.length}
+            membersCount={memberCount}
             missingFields={profileMissingFields}
           />
 

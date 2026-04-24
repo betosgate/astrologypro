@@ -3590,7 +3590,7 @@ export function HoroscopeToolkitPage({
                 {currentTab.extras?.includes("future_month") && (
                   <div>
                     <Label className="text-xs font-medium text-muted-foreground mb-1 block">Select Month (optional — defaults to current month)</Label>
-                    <Input type="month" value={form.futureMonth ? form.futureMonth.slice(0, 7) : ""} onChange={(e) => { const val = e.target.value; setForm((f) => ({ ...f, futureMonth: val ? `${val}-01` : "" })); }} disabled={loading} className="h-9 text-sm max-w-xs" />
+                    <Input type="month" value={form.futureMonth ? form.futureMonth.slice(0, 7) : ""} onChange={(e) => { const val = e.target.value; setForm((f) => ({ ...f, futureMonth: val ? `${val}-01` : "" })); }} disabled={loading || readOnlyBirthData} className="h-9 text-sm max-w-xs" />
                   </div>
                 )}
                 {/* Question */}

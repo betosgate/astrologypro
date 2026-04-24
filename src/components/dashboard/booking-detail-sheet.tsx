@@ -652,7 +652,7 @@ export function BookingDetailSheet({
                 <Loader2 className="size-4 animate-spin text-muted-foreground" />
                 <p className="text-sm text-muted-foreground">Loading session details…</p>
               </div>
-            ) : sessionDetails?.chime_meeting_id ? (
+            ) : (sessionDetails?.chime_meeting_id || sessionDetails?.recording_url || sessionDetails?.recording_share_id) ? (
               <>
                 <div className="rounded-lg border border-border bg-muted/20 p-3 space-y-2">
                   <div className="flex items-center gap-1.5 mb-1">
