@@ -59,6 +59,37 @@ function hasTrustedOrigin(request: Request): boolean {
   }
 }
 
+/**
+ * Authoritative check against Supabase Auth. The `affiliate_accounts.user_id`
+ * proxy is unreliable here — a recipient may independently sign up as a
+ * client before accepting the invite, leaving user_id NULL on their
+ * canonical row while auth.users already has an account for this email.
+ *
+ * Uses the `get_auth_users_info()` SECURITY DEFINER RPC (migration
+ * 20260404000026) instead of `admin.auth.admin.listUsers`. The Auth Admin
+ * API errors with "Database error finding users" on page 2 of our current
+ * Supabase project, and even when healthy it caps at 1 000 users per page.
+ * The RPC returns every row in one call and is already the established
+ * pattern across `src/app/admin/*`.
+ *
+ * Exported for the Task 01 regression test at
+ * `tests/integration/affiliate-accept-existing-user-branch.test.ts`.
+ */
+export async function findAuthUserIdByEmail(
+  admin: ReturnType<typeof createAdminClient>,
+  email: string,
+): Promise<string | null> {
+  const target = email.toLowerCase();
+  const { data, error } = await admin.rpc("get_auth_users_info");
+  if (error) {
+    console.error("[accept:get_auth_users_info-failed]", error.message);
+    throw error;
+  }
+  const users = (data ?? []) as Array<{ user_id: string; email: string | null }>;
+  const match = users.find((u) => (u.email ?? "").toLowerCase() === target);
+  return match?.user_id ?? null;
+}
+
 export async function POST(request: Request) {
   // CSRF: require Origin to match the request Host on state-changing POSTs
   if (!hasTrustedOrigin(request)) {
@@ -165,14 +196,17 @@ export async function POST(request: Request) {
       );
     }
 
-    // Check whether an auth user already exists for this email.
-    const { data: existing } = await admin
-      .from("affiliate_accounts")
-      .select("user_id")
-      .eq("email", invite.email)
-      .maybeSingle();
+    // Authoritative check against Supabase Auth — the affiliate_accounts.user_id
+    // column is not a reliable signal, since an invitee may have signed up
+    // independently before accepting, leaving their canonical row unlinked.
+    let existingAuthUserId: string | null;
+    try {
+      existingAuthUserId = await findAuthUserIdByEmail(admin, invite.email);
+    } catch {
+      return problem(500, "Auth lookup failed");
+    }
 
-    if (existing?.user_id) {
+    if (existingAuthUserId) {
       // Sign-in branch — existing auth user. Try to sign them in.
       const { data: signIn, error: signInErr } =
         await supabase.auth.signInWithPassword({
