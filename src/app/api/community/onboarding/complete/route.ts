@@ -182,8 +182,8 @@ export async function POST(req: NextRequest) {
         "id, membership_status, membership_type, plan_type, pm_tier_id, intake_data"
       )
       .eq("user_id", user.id)
-      .eq("membership_type", "perennial_mandalism")
       .maybeSingle();
+
 
     if (memberErr) {
       console.error("[onboarding/complete] member lookup error:", memberErr);

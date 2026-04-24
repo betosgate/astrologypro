@@ -25,7 +25,7 @@ async function getDiviner() {
   const admin = createAdminClient();
   const { data: diviner } = await admin
     .from("diviners")
-    .select("id, user_id")
+    .select("id, user_id, display_name")
     .eq("user_id", user.id)
     .maybeSingle();
   return diviner ? { user, diviner, admin } : null;
@@ -221,10 +221,13 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
   if (!ctx) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const { user, diviner, admin } = ctx;
 
-  // Confirm ownership
+  // Confirm ownership. Also pull the fields we'll need for rate-history
+  // diff + notification body.
   const { data: existing } = await admin
     .from("diviner_service_affiliates")
-    .select("id, diviner_id, commission_type, commission_value, is_active")
+    .select(
+      "id, diviner_id, destination_type, destination_id, affiliate_id, affiliate_type, commission_type, commission_value, is_active",
+    )
     .eq("id", id)
     .eq("diviner_id", diviner.id)
     .maybeSingle();
@@ -289,5 +292,98 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
   if (updateErr) {
     return NextResponse.json({ error: updateErr.message }, { status: 500 });
   }
+
+  // ── Side-effects: rate history + affiliate notification ─────────────────
+  // Compute diffs against the pre-update row. All side-effect work is
+  // fire-and-forget and must not fail the PATCH response.
+  const newType =
+    (update.commission_type as "percent" | "flat" | undefined) ??
+    (existing.commission_type as "percent" | "flat");
+  const newValue =
+    update.commission_value !== undefined
+      ? Number(update.commission_value)
+      : Number(existing.commission_value);
+  const oldType = existing.commission_type as "percent" | "flat";
+  const oldValue = Number(existing.commission_value);
+  const rateChanged = newType !== oldType || newValue !== oldValue;
+
+  const wasRevoked =
+    body.is_active === false && existing.is_active === true;
+
+  // Only fire side-effects when something meaningful actually changed.
+  if (rateChanged || wasRevoked) {
+    try {
+      const { getAffiliateAccountForJunction } = await import(
+        "@/lib/affiliate-accounts"
+      );
+      const { notifyAffiliate, formatRate } = await import(
+        "@/lib/affiliate-notifications"
+      );
+
+      const account = await getAffiliateAccountForJunction(
+        admin,
+        existing.affiliate_id as string,
+      );
+
+      // Resolve a human-readable product label for the notification body.
+      let productLabel = "your assignment";
+      if (existing.destination_type === "PROFILE") {
+        productLabel = `${diviner.display_name ?? "the diviner"}'s profile`;
+      } else if (existing.destination_type === "SERVICE" && existing.destination_id) {
+        const { data: template } = await admin
+          .from("service_templates")
+          .select("name")
+          .eq("id", existing.destination_id as string)
+          .maybeSingle();
+        productLabel = (template?.name as string) ?? "a service";
+      }
+
+      if (rateChanged) {
+        await admin
+          .from("diviner_service_affiliate_rate_history")
+          .insert({
+            assignment_id: existing.id,
+            old_commission_type: oldType,
+            old_commission_value: oldValue,
+            new_commission_type: newType,
+            new_commission_value: newValue,
+            changed_by: user.id,
+            reason: null,
+          });
+
+        if (account?.user_id) {
+          await notifyAffiliate({
+            admin,
+            userId: account.user_id,
+            affiliateAccountId: account.id,
+            toEmail: account.email,
+            kind: "affiliate.rate_changed",
+            title: `Commission rate updated on ${productLabel}`,
+            body: `Your commission on ${productLabel} changed from ${formatRate(oldType, oldValue)} to ${formatRate(newType, newValue)}. The new rate applies to future bookings from now on; bookings already in checkout keep the earlier rate.`,
+            actionUrl: "/affiliate/rate-history",
+          });
+        }
+      }
+
+      if (wasRevoked && account?.user_id) {
+        await notifyAffiliate({
+          admin,
+          userId: account.user_id,
+          affiliateAccountId: account.id,
+          toEmail: account.email,
+          kind: "affiliate.revoked",
+          title: `Your assignment on ${productLabel} was revoked`,
+          body: `${diviner.display_name ?? "The diviner"} has ended your affiliate partnership on ${productLabel}. Your existing share links will stop working and no new commissions will be credited.`,
+          actionUrl: "/affiliate/assignments",
+        });
+      }
+    } catch (err) {
+      console.error("[PATCH affiliate-assignments] side-effects failed", {
+        assignmentId: id,
+        err: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+
   return NextResponse.json({ success: true });
 }

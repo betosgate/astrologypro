@@ -29,6 +29,7 @@ export async function GET() {
       .eq("user_id", user.id)
       .maybeSingle();
 
+
     if (memberErr) {
       console.error("[onboarding/prefill] lookup error:", memberErr);
       return NextResponse.json(

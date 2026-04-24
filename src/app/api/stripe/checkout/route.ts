@@ -29,6 +29,9 @@ type PricingPlanRow = {
 
 export async function POST(request: NextRequest) {
   try {
+    const origin = request.headers.get("origin") || APP_URL;
+    const baseUrl = origin.endsWith("/") ? origin.slice(0, -1) : origin;
+
     const { email, userId, planId, affiliateCode } = await request.json();
 
     if (!email || !userId || !planId) {
@@ -130,8 +133,8 @@ export async function POST(request: NextRequest) {
         ...(typeTag ? { type: typeTag } : {}),
         ...(affiliateCode ? { affiliateCode } : {}),
       },
-      success_url: `${APP_URL}${successPath}`,
-      cancel_url: `${APP_URL}/get-started?cancelled=true`,
+      success_url: `${baseUrl}${successPath}`,
+      cancel_url: `${baseUrl}/get-started?cancelled=true`,
     });
 
     return NextResponse.json({ url: session.url });

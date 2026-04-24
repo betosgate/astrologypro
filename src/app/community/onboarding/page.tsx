@@ -545,6 +545,7 @@ export default function OnboardingPage() {
       // the user back here — the infinite loop. Same pattern used by the
       // diviner onboarding page at src/app/onboarding/page.tsx.
       window.location.href = "/community";
+
     } catch {
       setError("An unexpected error occurred. Please try again.");
     } finally {
