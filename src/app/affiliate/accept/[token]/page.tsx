@@ -9,7 +9,6 @@
 import { createHash } from "crypto";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { isAffiliateIdentityV2Enabled } from "@/lib/feature-flags";
 import { AcceptScreen } from "./components/AcceptScreen";
 import {
   InviteNotFoundView,
@@ -28,17 +27,6 @@ interface PageProps {
 }
 
 export default async function AffiliateAcceptPage({ params }: PageProps) {
-  if (!isAffiliateIdentityV2Enabled()) {
-    return (
-      <div className="mx-auto max-w-md p-8">
-        <h1 className="text-xl font-semibold">Feature not available</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          The affiliate invitation flow is not enabled in this environment.
-        </p>
-      </div>
-    );
-  }
-
   const { token } = await params;
   if (!token || !/^[A-Za-z0-9_-]{16,64}$/.test(token)) {
     return <InviteNotFoundView />;

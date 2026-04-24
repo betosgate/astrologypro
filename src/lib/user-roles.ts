@@ -1,7 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { hasValidMysterySchoolBilling } from "@/lib/mystery-school/access";
-import { isAffiliateIdentityV2Enabled } from "@/lib/feature-flags";
 
 export interface UserPortal {
   role: string;
@@ -53,8 +52,6 @@ export async function getUserPortals(
     }
   }
 
-  const affiliateFlagOn = isAffiliateIdentityV2Enabled();
-
   const [diviner, client, advocate, community, mysteryStudent, trainee, affiliate] = await Promise.all([
     supabase.from("diviners").select("id").eq("user_id", userId).maybeSingle(),
     supabase.from("clients").select("id").eq("user_id", userId).maybeSingle(),
@@ -75,14 +72,11 @@ export async function getUserPortals(
       .eq("user_id", userId)
       .maybeSingle(),
     supabase.from("trainees").select("id").eq("user_id", userId).maybeSingle(),
-    // Affiliate account (2026-04-23 identity refactor). Skipped when flag is off.
-    affiliateFlagOn
-      ? supabase
-          .from("affiliate_accounts")
-          .select("id, status")
-          .eq("user_id", userId)
-          .maybeSingle()
-      : Promise.resolve({ data: null as { id: string; status: string } | null }),
+    supabase
+      .from("affiliate_accounts")
+      .select("id, status")
+      .eq("user_id", userId)
+      .maybeSingle(),
   ]);
 
   const portals: UserPortal[] = [];
@@ -146,8 +140,6 @@ export async function getUserPortals(
   if (trainee.data)
     portals.push({ role: "trainee", label: "Trainee Portal", href: "/trainee" });
 
-  // Affiliate portal — only surfaced when the 2026-04-23 identity refactor
-  // is enabled AND the user has an active canonical affiliate_accounts row.
   if (affiliate.data && affiliate.data.status === "active") {
     portals.push({ role: "affiliate", label: "Affiliate Portal", href: "/affiliate" });
   }

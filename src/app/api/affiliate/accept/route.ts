@@ -12,7 +12,6 @@ import { NextResponse } from "next/server";
 import { createHash } from "crypto";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { isAffiliateIdentityV2Enabled } from "@/lib/feature-flags";
 import { rateLimit, rateLimitResponse, getIpIdentifier } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
@@ -61,8 +60,6 @@ function hasTrustedOrigin(request: Request): boolean {
 }
 
 export async function POST(request: Request) {
-  if (!isAffiliateIdentityV2Enabled()) return problem(503, "Feature not available");
-
   // CSRF: require Origin to match the request Host on state-changing POSTs
   if (!hasTrustedOrigin(request)) {
     return problem(403, "Invalid origin");

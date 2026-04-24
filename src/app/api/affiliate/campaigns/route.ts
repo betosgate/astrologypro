@@ -9,7 +9,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { resolveAffiliateForCaller } from "@/lib/affiliate-accounts";
-import { isAffiliateIdentityV2Enabled } from "@/lib/feature-flags";
 
 export const dynamic = "force-dynamic";
 
@@ -31,13 +30,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(
       { type: "https://httpstatuses.io/401", title: "Unauthorized", status: 401 },
       { status: 401 }
-    );
-  }
-
-  if (!isAffiliateIdentityV2Enabled()) {
-    return NextResponse.json(
-      { type: "https://httpstatuses.io/503", title: "Feature not available", status: 503 },
-      { status: 503 }
     );
   }
 
