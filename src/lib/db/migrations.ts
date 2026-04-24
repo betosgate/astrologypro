@@ -64,12 +64,14 @@ import { MIGRATION_SQL as MIG_20260422000007 } from "@/data/migrations/202604220
 import { MIGRATION_SQL as MIG_20260423000001 } from "@/data/migrations/20260423000001_chime_recording_extras";
 import { MIGRATION_SQL as MIG_20260423000002 } from "@/data/migrations/20260423000002_backfill_plan_type_from_pm_tier";
 import { MIGRATION_SQL as MIG_20260423000003 } from "@/data/migrations/20260423000003_admin_bookings_status_completed";
+import { MIGRATION_SQL as MIG_20260424000001_STCIM } from "@/data/migrations/20260424000001_service_template_content_image_matrix";
 import { MIGRATION_SQL as MIG_20260428000100 } from "@/data/migrations/20260428000100_fix_diviner_fields_length";
 import { MIGRATION_SQL as MIG_20260423000001_AIR } from "@/data/migrations/20260423000001_affiliate_identity_refactor";
 import { MIGRATION_SQL as MIG_20260423000002_RLS } from "@/data/migrations/20260423000002_fix_diviner_affiliates_rls";
 import { MIGRATION_SQL as MIG_20260423000003_INV } from "@/data/migrations/20260423000003_affiliate_invite_rpc";
 import { MIGRATION_SQL as MIG_20260423000004_FIX } from "@/data/migrations/20260423000004_fix_invite_rpc_ambiguity";
 import { MIGRATION_SQL as MIG_20260423000005_ACC } from "@/data/migrations/20260423000005_accept_rpc";
+import { MIGRATION_SQL as MIG_20260424000001_ODC } from "@/data/migrations/20260424000001_phone_sessions_outbound_diviner_call";
 
 /**
  * Allowlisted migrations that the admin migration runner can execute.
@@ -607,6 +609,14 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
     sortKey: "20260423000003",
     sql: MIG_20260423000003,
   },
+  "20260424000001_service_template_content_image_matrix": {
+    id: "20260424000001_service_template_content_image_matrix",
+    title: "Service template content + image matrix",
+    description:
+      "Seeds standardized descriptions, long descriptions, included bullets, audience bullets, FAQ entries, SEO metadata, and shared image_url values for all 19 canonical service templates plus their 19 general variants. Safe to re-run because every row is updated by stable slug.",
+    sortKey: "20260424000001",
+    sql: MIG_20260424000001_STCIM,
+  },
   "20260428000001_landing_page_cleanup_destructive": {
     id: "20260428000001_landing_page_cleanup_destructive",
     title: "⚠️ DESTRUCTIVE — Landing page V2 cleanup (Deploy 2)",
@@ -638,6 +648,14 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Adds consume_invite_and_activate_junction RPC (atomic: claim invite via UPDATE...RETURNING, activate junction, link canonical account to auth user) plus guard_affiliate_account_user_link trigger on affiliate_accounts. The trigger rejects any UPDATE OF user_id unless the transaction has set the GUC app.allow_affiliate_account_user_link='true'. The RPC is the only code path that sets that GUC via SET LOCAL, so affiliate_accounts.user_id can only be changed via an explicit invite-accept — enforcing D5 (no silent linking by email match alone) at the DB layer. Error codes: P0003 invite_not_claimable (expired/revoked/consumed/unknown), P0004 account_already_linked_to_different_user, P0005 external write attempt to user_id. Must run AFTER 20260423000001. SECURITY DEFINER. Idempotent via CREATE OR REPLACE + DROP TRIGGER IF EXISTS.",
     sortKey: "20260423000005",
     sql: MIG_20260423000005_ACC,
+  },
+  "20260424000001_phone_sessions_outbound_diviner_call": {
+    id: "20260424000001_phone_sessions_outbound_diviner_call",
+    title: "Phone sessions: direction flag + outbound_diviner_call session_type",
+    description:
+      "Additive. Adds phone_sessions.direction VARCHAR(12) NOT NULL DEFAULT 'inbound' with CHECK ('inbound','outbound'); relaxes phone_sessions.session_type CHECK to additionally allow 'outbound_diviner_call' alongside existing 'scheduled_dialin'/'standalone'; adds a composite index on (diviner_id, direction, status). Required by POST /api/chime/voice/call-client and the new Call-client row action on /dashboard/bookings so diviner-originated PSTN legs are distinguishable from client-originated inbound calls. Rollback: DROP COLUMN direction (CHECK extension is safe to leave in place).",
+    sortKey: "20260424000001",
+    sql: MIG_20260424000001_ODC,
   },
   "20260423000004_fix_invite_rpc_ambiguity": {
     id: "20260423000004_fix_invite_rpc_ambiguity",

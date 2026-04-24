@@ -125,6 +125,15 @@ function capitalize(value: string | null | undefined): string {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
+function getRelationshipBadgeClasses(rel: string): string {
+  const r = rel.toLowerCase();
+  if (r === "self" || r === "primary") return "bg-amber-500/20 text-amber-500 border-amber-500/30";
+  if (r === "spouse" || r === "partner") return "bg-purple-500/20 text-purple-400 border-purple-500/30";
+  if (r === "son" || r === "boy") return "bg-blue-500/20 text-blue-400 border-blue-500/30";
+  if (r === "daughter" || r === "girl") return "bg-rose-500/20 text-rose-400 border-rose-500/30";
+  return "bg-slate-500/20 text-slate-400 border-slate-500/30";
+}
+
 const AVATAR_COLORS = [
   "bg-rose-500/15 text-rose-600",
   "bg-violet-500/15 text-violet-600",
@@ -232,11 +241,14 @@ export default async function CommunityDashboardPage() {
       .eq("user_id", user.id)
       .single(),
 
-    // Family members — full fields for profile completion rings
+    // Family members — full fields for profile completion rings.
+    // `user_id` is selected so the top-summary family chip row can
+    // deduplicate the primary member if they were also added as a
+    // family-member row (community-dashboard-family-chips Task 02).
     supabase
       .from("community_family_members")
       .select(
-        "id, full_name, relationship, date_of_birth, birth_time, birth_city, birth_country, natal_chart"
+        "id, user_id, full_name, relationship, date_of_birth, birth_time, birth_city, birth_country, natal_chart"
       )
       .eq("member_id", member.id)
       .limit(10),
@@ -721,6 +733,126 @@ export default async function CommunityDashboardPage() {
     },
   ];
 
+  // ── Family Chips Data for Top Card ───────────────────────────────────────
+  //
+  // community-dashboard-family-chips (2026-04-24):
+  //   Task 02 — dedup Self. A family-member row can duplicate the primary
+  //             member in two legitimate ways: it was invited (fm.user_id
+  //             matches auth.uid()), or legacy rows share the same name.
+  //             We skip both.
+  //   Task 03 — deterministic order: Self → Spouse/Partner → children →
+  //             others → missing-role.
+  //   Task 04 — flag missing-role chips so the renderer can show a distinct
+  //             "Missing role" treatment instead of the old grey "Member".
+  //
+  // `relationshipPriority` sorts within known groups and is stable for
+  // unknown strings (they all land in the same "others" bucket so their
+  // relative order is preserved from the DB query).
+  const normalizeRel = (rel: string | null | undefined): string =>
+    (rel ?? "").trim().toLowerCase();
+
+  const relationshipPriority = (rel: string): number => {
+    const r = normalizeRel(rel);
+    if (r === "self" || r === "primary") return 0;
+    if (r === "spouse" || r === "partner") return 1;
+    if (
+      r === "child" ||
+      r === "children" ||
+      r === "son" ||
+      r === "boy" ||
+      r === "daughter" ||
+      r === "girl"
+    )
+      return 2;
+    if (r === "") return 4; // missing — after known groups
+    return 3; // everything else (parent, sibling, friend, other)
+  };
+
+  type FamilyChip = {
+    id: string;
+    name: string;
+    relationship: string;
+    missingRelationship: boolean;
+    sortKey: number;
+    isMock?: boolean;
+  };
+
+  const primarySelfName = (member.full_name ?? "").trim().toLowerCase();
+
+  const buildRealChips = (): FamilyChip[] => {
+    const chips: FamilyChip[] = [
+      {
+        id: member.id,
+        name: member.full_name || "Self",
+        relationship: "Self",
+        missingRelationship: false,
+        sortKey: 0,
+      },
+    ];
+
+    for (const fm of familyMembers) {
+      // Dedup against primary member — stable id first, name fallback.
+      const isSameAsPrimaryByUser =
+        (fm as { user_id?: string | null }).user_id != null &&
+        (fm as { user_id?: string | null }).user_id === user.id;
+      const isSameAsPrimaryByName =
+        primarySelfName !== "" &&
+        (fm.full_name ?? "").trim().toLowerCase() === primarySelfName;
+      if (isSameAsPrimaryByUser || isSameAsPrimaryByName) continue;
+
+      const rel = (fm.relationship ?? "").trim();
+      const missing = rel === "";
+      chips.push({
+        id: fm.id,
+        name: fm.full_name || "Unknown",
+        relationship: missing ? "" : capitalize(rel),
+        missingRelationship: missing,
+        sortKey: relationshipPriority(rel),
+      });
+    }
+
+    return chips.sort((a, b) => a.sortKey - b.sortKey);
+  };
+
+  const familyChipData: FamilyChip[] =
+    planType === "family"
+      ? familyMembers.length > 0
+        ? buildRealChips()
+        : [
+            {
+              id: member.id,
+              name: member.full_name || "Self",
+              relationship: "Self",
+              missingRelationship: false,
+              sortKey: 0,
+            },
+            {
+              id: "mock-1",
+              name: "Anaya Ashton",
+              relationship: "Spouse",
+              missingRelationship: false,
+              sortKey: 1,
+              isMock: true,
+            },
+            {
+              id: "mock-2",
+              name: "Ethan Ashton",
+              relationship: "Son",
+              missingRelationship: false,
+              sortKey: 2,
+              isMock: true,
+            },
+            {
+              id: "mock-3",
+              name: "Mira Ashton",
+              relationship: "Daughter",
+              missingRelationship: false,
+              sortKey: 2,
+              isMock: true,
+            },
+          ]
+      : [];
+
   return (
     <SectionContainer verticalPadding="none" className="px-0 sm:px-0 lg:px-0">
       <div className="space-y-8">
@@ -821,6 +953,69 @@ export default async function CommunityDashboardPage() {
             </div>
           </div>
         </div>
+
+        {/* Family Members Row (community-dashboard-family-chips) */}
+        {/*
+          Task 05 — the visible "Family Members" text label is removed;
+            the people icon carries a title/aria-label as its sole anchor.
+          Task 06 — more breathing room: mt-6 pushes the row away from
+            the metadata row above, gap-4 widens the gap between the row
+            and the divider below. gap-y-2 on the chip wrap keeps multi-
+            line wraps readable on small screens.
+        */}
+        {familyChipData.length > 0 && (
+          <div className="mt-6 flex flex-col gap-4">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-2">
+              <span
+                title="Family members"
+                aria-label="Family members"
+                role="img"
+                className="inline-flex items-center mr-1 shrink-0"
+              >
+                <Users
+                  className="size-4 text-muted-foreground"
+                  aria-hidden="true"
+                />
+              </span>
+              {familyChipData.map((chip) => (
+                <div
+                  key={chip.id}
+                  className="flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 pl-2.5 pr-1 py-1"
+                >
+                  <User className="size-3.5 text-muted-foreground" aria-hidden="true" />
+                  <span className="text-sm font-medium text-foreground">{chip.name}</span>
+                  {/*
+                    Task 04 — missing-role chip is visually distinct from
+                    the grey fallback. The amber dashed border + italic
+                    label + hover/focus title tells the user the row is
+                    real but the relationship field hasn't been filled
+                    in yet, without looking like a hard error.
+                  */}
+                  {chip.missingRelationship ? (
+                    <Badge
+                      variant="outline"
+                      className="text-[10px] px-1.5 py-0 h-4 min-h-0 rounded-full font-medium italic border border-dashed border-amber-500/50 bg-amber-500/10 text-amber-700"
+                      title="Relationship is missing for this member"
+                    >
+                      Missing role
+                    </Badge>
+                  ) : (
+                    <Badge
+                      variant="outline"
+                      className={`text-[10px] px-1.5 py-0 h-4 min-h-0 rounded-full font-medium border ${getRelationshipBadgeClasses(
+                        chip.relationship
+                      )}`}
+                    >
+                      {chip.relationship}
+                    </Badge>
+                  )}
+                </div>
+              ))}
+            </div>
+            <div className="h-px w-full bg-border/50" />
+          </div>
+        )}
+
         {/* Quick action buttons */}
         <div className="mt-3 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
           <Button asChild variant="outline" size="sm" className="w-full sm:w-auto">
@@ -1390,6 +1585,33 @@ export default async function CommunityDashboardPage() {
                   const profileComplete = completionPct >= 100;
                   const avatarColor = AVATAR_COLORS[idx % AVATAR_COLORS.length];
 
+                  // Community Family UX Task 02 (2026-04-24):
+                  // Build a compact missing-field summary for incomplete
+                  // cards. `completion.missing` is the source of truth
+                  // (from calcFamilyProfileCompletion) — we only format
+                  // labels for card layout (lowercase, strip the parenthetical
+                  // hint on "Birth time (or mark unknown)"). The card line
+                  // shows up to two fields inline and "+N more" when the
+                  // list is longer, so it never overflows the grid layout.
+                  const missingDisplay = completion.missing.map((label) =>
+                    label.replace(/\s*\(.*?\)\s*$/, "").toLowerCase()
+                  );
+                  const missingSummary = (() => {
+                    if (missingDisplay.length === 0) return null;
+                    if (missingDisplay.length <= 2) {
+                      return missingDisplay.join(", ");
+                    }
+                    const head = missingDisplay.slice(0, 2).join(", ");
+                    return `${head} +${missingDisplay.length - 2} more`;
+                  })();
+
+                  // Community Family UX Task 04 (2026-04-24):
+                  // Deep-link the corrective CTAs directly to the per-member
+                  // edit route so the user lands in the exact edit context
+                  // for that member instead of having to locate them on the
+                  // family index page.
+                  const editHref = `/community/family/${m.id}/edit`;
+
                   return (
                     <Card key={m.id} className="transition-colors hover:border-primary/30">
                       <CardContent className="py-4 px-4 space-y-3">
@@ -1460,16 +1682,41 @@ export default async function CommunityDashboardPage() {
                             <p className="text-xs text-muted-foreground leading-snug">
                               Profile {profileComplete ? "complete" : "incomplete"}
                             </p>
+                            {/*
+                              Task 02 — missing-field summary for incomplete
+                              members. `truncate` + `title` makes sure rare
+                              long strings still fit the card and remain
+                              discoverable on hover.
+                            */}
+                            {!profileComplete && missingSummary && (
+                              <p
+                                className="text-[11px] text-amber-600/90 leading-snug mt-0.5 truncate"
+                                title={`Missing: ${missingDisplay.join(", ")}`}
+                              >
+                                Missing: {missingSummary}
+                              </p>
+                            )}
+                            {/*
+                              Task 03 — helper line on the complete-but-no-chart
+                              state so the user sees at a glance that chart
+                              generation is the next step, not more profile
+                              editing.
+                            */}
+                            {profileComplete && !hasNatalChart && (
+                              <p className="text-[11px] text-muted-foreground leading-snug mt-0.5">
+                                Ready to generate chart
+                              </p>
+                            )}
                             {!profileComplete && (
                               <Button asChild variant="link" size="sm" className="h-auto p-0 mt-0.5 text-xs text-primary">
-                                <Link href={`/community/family/${m.id}`}>
+                                <Link href={editHref}>
                                   Complete Profile →
                                 </Link>
                               </Button>
                             )}
                             {profileComplete && !hasNatalChart && (
                               <Button asChild variant="link" size="sm" className="h-auto p-0 mt-0.5 text-xs text-primary">
-                                <Link href={`/community/family/${m.id}`}>
+                                <Link href={editHref}>
                                   Generate Chart →
                                 </Link>
                               </Button>
