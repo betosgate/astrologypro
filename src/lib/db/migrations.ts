@@ -72,6 +72,7 @@ import { MIGRATION_SQL as MIG_20260423000003_INV } from "@/data/migrations/20260
 import { MIGRATION_SQL as MIG_20260423000004_FIX } from "@/data/migrations/20260423000004_fix_invite_rpc_ambiguity";
 import { MIGRATION_SQL as MIG_20260423000005_ACC } from "@/data/migrations/20260423000005_accept_rpc";
 import { MIGRATION_SQL as MIG_20260424000001_ODC } from "@/data/migrations/20260424000001_phone_sessions_outbound_diviner_call";
+import { MIGRATION_SQL as MIG_20260424000002_AAR } from "@/data/migrations/20260424000002_astro_ai_responses";
 import { MIGRATION_SQL as MIG_20260424000010_ACV2A } from "@/data/migrations/20260424000010_affiliate_commission_v2_additive";
 
 /**
@@ -657,6 +658,14 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Additive. Adds phone_sessions.direction VARCHAR(12) NOT NULL DEFAULT 'inbound' with CHECK ('inbound','outbound'); relaxes phone_sessions.session_type CHECK to additionally allow 'outbound_diviner_call' alongside existing 'scheduled_dialin'/'standalone'; adds a composite index on (diviner_id, direction, status). Required by POST /api/chime/voice/call-client and the new Call-client row action on /dashboard/bookings so diviner-originated PSTN legs are distinguishable from client-originated inbound calls. Rollback: DROP COLUMN direction (CHECK extension is safe to leave in place).",
     sortKey: "20260424000001",
     sql: MIG_20260424000001_ODC,
+  },
+  "20260424000002_astro_ai_responses": {
+    id: "20260424000002_astro_ai_responses",
+    title: "Astro AI responses persistence (replaces legacy NestJS save endpoint)",
+    description:
+      "Additive. Creates public.astro_ai_responses table for persisting AI-generated astrological reports (toolname, ai_response JSONB, formData, astro_api_data, natal_chart, summary, multiple chart-image URLs, share URL, timestamps). Adds a nullable user_id FK to auth.users so rows can be attributed to a creator without breaking the legacy spec-shape. Enables RLS with: service_role full; authenticated SELECT-by-id (the UUID acts as the share key, matching the spec's 'password-protected shared links via _id' design); INSERT/UPDATE/DELETE scoped to user_id = auth.uid(). Adds a BEFORE UPDATE trigger that bumps updated_at, an index on (user_id, created_at DESC) for 'my recent reports' lookups, and a partial index on toolname. Required by POST /api/astro-ai/save-astro-ai-response and POST /api/astro-ai/fetch-save-astro-ai-response. Rollback: DROP TRIGGER, DROP FUNCTION, DROP TABLE.",
+    sortKey: "20260424000002",
+    sql: MIG_20260424000002_AAR,
   },
   "20260423000004_fix_invite_rpc_ambiguity": {
     id: "20260423000004_fix_invite_rpc_ambiguity",
