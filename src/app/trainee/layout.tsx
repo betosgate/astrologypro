@@ -6,6 +6,7 @@ import { NotificationBell } from "@/components/notifications/notification-bell";
 import { RouteTracker } from "@/components/shared/route-tracker";
 import { TraineeSidebar } from "@/components/trainee/sidebar";
 import { SectionContainer } from "@/components/shared/section-container";
+import { getPendingContractDestination } from "@/lib/contract-orchestration";
 
 export const metadata = { title: "Trainee Portal - AstrologyPro" };
 
@@ -22,6 +23,10 @@ export default async function TraineeLayout({ children }: { children: React.Reac
 
   if (!trainee) redirect("/join/trainee");
   if (!trainee.onboarding_completed) redirect("/join/trainee/profile");
+
+  // Contract check
+  const contractDest = await getPendingContractDestination(user.id, "/trainee");
+  if (contractDest) redirect(contractDest);
 
   const portals = await getUserPortals(supabase, user.id);
 

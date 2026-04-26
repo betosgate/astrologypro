@@ -10460,32 +10460,557 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
       },
     ],
     screens: [
-      {
-        name: "trainee-hub",
-        label: "Trainee Dashboard",
-        description: "Personal command center for training progress, current lesson focus, recent completions, quiz performance, mentor context, and graduation readiness.",
-        group: "Dashboard",
-        purpose: "This is the trainee's day-to-day starting point. It combines curriculum progress, recent activity, mentor assignment, practice-session prompts, and next-step calls to action so the learner knows exactly what to do next.",
-        bullets: [
-          "Overall progress cards summarize accessible lessons, completed lessons, study time, quiz pass rate, and training status",
-          "Next training target links the learner back into the correct program and category without manual searching",
-          "Recent activity combines lesson completions and quiz attempts into one timeline",
-          "Mentor and Tabbie appointment cards surface supervised-practice context when applicable"
-        ]
-      },
-      {
-        name: "training-center",
-        label: "Training Center",
-        description: "Program catalog showing every accessible training program with lesson counts, category counts, progress rings, and continue/start actions.",
-        group: "Training",
-        purpose: "This page is the learner's curriculum index. It shows which programs are available, how far each one has progressed, what category is currently active, and whether the learner should start, continue, or review a program.",
-        bullets: [
-          "Top summary splits all accessible lessons into Not Started, Ongoing, and Completed",
-          "Program cards show circular progress, categories, lesson counts, and completion badges",
-          "Current in-progress category appears as an amber status strip on active programs",
-          "CTA changes between Start Program, Continue, and Review Program based on learner state"
-        ]
-      },
+{
+  "name": "trainee-hub_v1",
+  "label": "Trainee Dashboard",
+  "description": "Main learner home screen shown after a trainee enters the trainee portal. It gives a clear overview of banners, appointments, training progress, mentor status, shortcuts, and recent learning activity.",
+  "group": "Dashboard",
+  "purpose": "This dashboard is the trainee's main entry screen. It helps the learner quickly understand where they are in training, what options are available right now, and which action they may want to take next. It is designed so the trainee can see learning progress, optional offers, appointments, and recent activity without opening multiple pages.",
+  "bullets": [
+    "Trainee entry dashboard: this is the first main screen a trainee sees after entering the trainee portal.",
+    "Left sidebar navigation: the trainee can move quickly to Dashboard, Training, Practice Sessions, Progress, Quiz History, Library Resources, Certificate, and My Profile.",
+    "Welcome area: the top section shows the dashboard title and trainee welcome message so the learner knows they are inside their personal training space.",
+    "Status and admin/testing badges: the top-right area may show badges such as bypass, reset, and graduation state depending on the current account or environment setup.",
+    "Dual promotional banners: the trainee sees two top banners on this dashboard.",
+    "Diviner banner: the first banner promotes the option to launch a divination practice and become a diviner.",
+    "Perennial Mandalism banner: the second banner promotes joining the Perennial Mandalism community for spiritual content, live events, and deeper practice.",
+    "User choice flow: the trainee can choose either banner based on personal interest, or ignore both and continue normal training.",
+    "Optional pathway meaning: these banners are optional opportunities and are separate from the trainee's required lesson progression.",
+    "My Appointments block: this section shows upcoming and past appointments, including appointment name, status, date, time, duration, and a Details action.",
+    "Training Progress block: this section gives a summary of the trainee's full learning progress in one place.",
+    "Progress details: it shows overall completion percentage, total completed lessons, number of started programs, finished programs, quiz score average, and total study time.",
+    "Mentor block: this area tells the trainee whether a mentor has already been assigned or if assignment is still pending.",
+    "Mentor guidance text: when no mentor is assigned, the dashboard explains that an administrator may connect the trainee with a mentor later.",
+    "Quick action cards: the middle dashboard cards give one-click shortcuts to the most important trainee pages.",
+    "Practice Sessions card: opens supervised practice reading or session-related activities.",
+    "My Progress card: opens a deeper breakdown of skills, completed modules, and learning feedback.",
+    "Resources card: opens study materials, guides, charts, and reference content needed during learning.",
+    "My Profile card: lets the trainee manage personal profile details and training-related settings or specialties.",
+    "Recent Activity block: shows the trainee's latest completed lessons or other recent study actions in timeline format.",
+    "Daily use purpose: this dashboard is built to help the trainee understand the current situation quickly and decide what to do next.",
+    "Walkthrough note: when explaining this screen, it should be clearly mentioned that this dashboard belongs to the trainee role and that the two banners at the top are selectable optional paths for the trainee."
+  ]
+},
+
+
+{
+  "name": "trainee-dashboard-trainee-plus-diviner",
+  "label": "Trainee Dashboard (Trainee + Diviner)",
+  "description": "This dashboard is shown to a new user who has both trainee access and diviner access. In this scenario, the trainee enters the trainee portal and sees a simplified dashboard with only the Perennial Mandalism notification banner at the top.",
+  "group": "Dashboard",
+  "purpose": "This dashboard helps a dual-role user begin training while also being aware of the Perennial Mandalism community offer. It keeps the learning experience focused by showing the core trainee blocks and only one top notification banner instead of multiple promotional banners.",
+  "bullets": [
+    "This screen is the trainee dashboard for a user who has both trainee and diviner access.",
+    "When this type of new trainee logs in, the system shows only the Perennial Mandalism banner at the top of the dashboard.",
+    "The user does not see the separate 'Become a Diviner' banner in this scenario because the account already belongs to a trainee plus diviner flow.",
+    "The purple Perennial Mandalism banner is used as the only top notification banner and highlights access to spiritual content, live community events, and deeper practice.",
+    "The Training Progress block gives the learner a quick overview of current completion status, including completed lessons, started programs, quiz average, and total study time.",
+    "The Continue Learning block helps the trainee return directly to the lesson or program they were working on most recently.",
+    "The Continue button takes the user back into their current learning flow, while the View All button opens the broader training area.",
+    "The Mentor block informs the trainee whether a mentor has been assigned yet and explains that an administrator may connect them with a mentor later.",
+    "The Practice Sessions card is a shortcut for scheduling and reviewing supervised practice readings or session-based activities.",
+    "The My Progress card gives the trainee direct access to a more detailed progress view, including completed modules and feedback.",
+    "The Resources card opens study materials, guides, and supporting learning references available to the trainee.",
+    "The My Profile card lets the trainee manage their trainee profile information and specialties.",
+    "The Recent Activity block shows the latest learning actions, such as completed lessons and quiz results, so the trainee can quickly review recent work.",
+    "This scenario should be explained clearly in the walkthrough so users understand that a trainee with diviner access will see a cleaner dashboard layout with only the Perennial Mandalism notification banner shown at the top."
+  ]
+},
+
+
+  {
+    "name": "trainee-dashboard-divination-banner",
+    "label": "Launch Your Divination Practice Banner",
+    "description": "Promotional dashboard banner that introduces the trainee to the professional divination upgrade path and invites them to start the setup flow.",
+    "group": "Dashboard",
+    "purpose": "This block is used to promote the trainee’s next professional step. It explains the value of upgrading into a diviner-facing offering and gives the learner a direct action button to open the plan-selection modal.",
+    "bullets": [
+      "1. This is the first promotional block on the trainee dashboard and is visually highlighted with a gold gradient to attract attention.",
+      "2. The section tag 'Professional Practice' tells the user that this block is related to career or practice-building opportunities beyond core training.",
+      "3. The main heading 'Launch Your Divination Practice' clearly explains the goal of the block.",
+      "4. The supporting text explains the value proposition: the trainee can get a branded page, booking system, HD video sessions, and payment processing in one platform.",
+      "5. The primary call-to-action button 'Become a Diviner' starts the upgrade journey and opens the plan-selection modal.",
+      "6. The close icon on the right allows the user to dismiss or hide this banner if they do not want to engage with it immediately.",
+      "7. This block functions as a conversion entry point from the dashboard into a paid professional-practice setup flow."
+    ]
+  },
+  {
+    "name": "trainee-diviner-plan-modal-astrologer",
+    "label": "Become a Diviner Modal - Astrologer Plan Selected",
+    "description": "Plan-selection modal that appears after clicking the 'Become a Diviner' button, showing available divination plans with the Astrologer option currently selected.",
+    "group": "Dashboard",
+    "purpose": "This modal helps the trainee choose a professional divination course plan before payment. It allows the user to compare plan options, review the selected package, understand what is included, and continue to Stripe checkout.",
+    "bullets": [
+      "1. The modal title 'Become a Diviner' confirms that the user has entered the professional-practice purchase flow.",
+      "2. The intro text explains that the trainee must choose a Professional Divination Course plan and that payment unlocks the diviner setup and onboarding path.",
+      "3. The 'Choose Your Option' section presents multiple selectable plans so the user can compare available professional tracks.",
+      "4. In this screen, the 'Astrologer' plan is selected, indicated by the highlighted card and selected state marker.",
+      "5. The available plans shown are The Tarot Reader, The Oracle, and The Astrologer, each with a short audience description and pricing.",
+      "6. The 'What You're Unlocking' section updates dynamically based on the selected plan and now shows the Astrologer package details.",
+      "7. The Astrologer package preview includes the selected plan name, pricing, course type, and the key included capabilities such as natal and return readings, relationship synastry, and transit or horary work.",
+      "8. The primary action button 'Continue to Payment' moves the trainee into the payment step, which opens through Stripe Checkout.",
+      "9. The close icon in the modal header allows the user to exit the flow without purchasing.",
+      "10. This screen is meant to guide the user from interest to informed plan selection before committing to payment."
+    ]
+  },
+  {
+    "name": "trainee-diviner-plan-modal-tarot-reader",
+    "label": "Become a Diviner Modal - Tarot Reader Plan Selected",
+    "description": "Plan-selection modal that appears after clicking the 'Become a Diviner' button, showing available divination plans with the Tarot Reader option currently selected.",
+    "group": "Dashboard",
+    "purpose": "This version of the modal demonstrates the same upgrade flow, but with a different plan chosen. It helps the trainee review Tarot Reader pricing, package scope, and included learning outcomes before continuing to payment.",
+    "bullets": [
+      "1. The modal remains in the same 'Become a Diviner' purchase flow, but the selected plan has changed.",
+      "2. The 'Choose Your Option' section again displays the available tracks: The Tarot Reader, The Oracle, and The Astrologer.",
+      "3. In this screen, 'The Tarot Reader' is selected, shown by the highlighted plan card and active selection indicator.",
+      "4. Each plan card includes the plan name, a brief description of the intended practitioner type, and the pricing structure.",
+      "5. The 'What You're Unlocking' section updates based on the chosen plan and now displays the Tarot Reader package details.",
+      "6. The Tarot Reader package section shows the selected plan name, one-time and recurring price, course type, and included reading formats or spread types.",
+      "7. The feature list under the package explains what this plan enables, such as card spreads, relationship spreads, and freelance tarot session capabilities.",
+      "8. The 'Continue to Payment' button remains the final call to action and sends the user to Stripe Checkout to complete the purchase.",
+      "9. This modal step helps the trainee validate that they picked the correct specialization before moving into payment.",
+      "10. The close icon provides an exit path if the trainee wants to cancel or revisit the decision later."
+    ]
+  },
+
+{
+  "name": "trainee-diviner-payment",
+  "label": "Plan Payment Checkout",
+  "description": "After choosing a diviner plan, the trainee is taken to the payment checkout screen to complete the subscription and setup fee payment.",
+  "group": "Dashboard",
+  "purpose": "This screen is used to finish the selected diviner plan purchase. It clearly shows the total amount, monthly recurring fee, selected currency, payment form, and final subscribe action before the user moves to the next step.",
+  "bullets": [
+    "Shows the selected diviner plan payment checkout after plan selection.",
+    "Displays the full payable amount at the top so the user can confirm the total before paying.",
+    "Shows the recurring monthly subscription amount separately under the main total.",
+    "Lets the user view or switch available currency options such as INR and USD.",
+    "Lists the selected course or plan details with itemized pricing.",
+    "Includes contact information so the user can confirm which email is linked to the purchase.",
+    "Provides payment method fields for card number, expiry date, CVV, cardholder name, and country or region.",
+    "May offer faster checkout options such as Link for returning users.",
+    "Includes optional saved-information settings for faster future checkout.",
+    "The Subscribe button completes the payment process.",
+    "After successful payment, the user is moved to the next screen in the diviner onboarding or setup flow."
+  ]
+},
+
+
+  {
+    "name": "trainee-diviner-pending-contract",
+    "label": "Pending Diviner Contract",
+    "description": "After completing payment, the user is taken to the pending contract screen where they must review the Diviner Service Agreement before entering the portal.",
+    "group": "Dashboard",
+    "purpose": "This screen ensures the user reads the required service agreement before continuing to the role-specific portal selection step.",
+    "bullets": [
+      "Shows the Pending Contracts page after payment completion.",
+      "Displays a message explaining that required agreements must be completed before entering the portal.",
+      "Shows the Diviner Service Agreement inside a scrollable contract panel.",
+      "Includes agreement details such as effective date and version number.",
+      "Explains the independent contractor relationship between the diviner and platform.",
+      "Describes the services the diviner may provide through the platform.",
+      "Shows commission and payout terms inside the agreement.",
+      "The Accept and Continue button remains unavailable until the user scrolls through the full contract.",
+      "Guides the user to read the full contract before accepting.",
+      "This is the first agreement step before portal access is granted."
+    ]
+  },
+  {
+    "name": "trainee-diviner-contract-signature",
+    "label": "Diviner Agreement Signature",
+    "description": "After scrolling to the bottom of the Diviner Service Agreement, the user can enter their full legal name to provide an electronic signature.",
+    "group": "Dashboard",
+    "purpose": "This screen collects the user's electronic signature to confirm agreement acceptance before continuing to portal selection.",
+    "bullets": [
+      "Shows the bottom section of the Diviner Service Agreement.",
+      "Displays final agreement sections such as confidentiality, account termination, dispute resolution, and contact details.",
+      "Includes a full legal name input field for signing the agreement.",
+      "Explains that typing the name and clicking accept provides an electronic signature.",
+      "Shows the Accept and Continue button below the signature area.",
+      "The user must complete the required signature field before continuing.",
+      "Confirms that the user agrees to the terms listed above.",
+      "This step completes the contract signing requirement after payment.",
+      "After acceptance, the user is moved to the portal selection screen."
+    ]
+  },
+  {
+    "name": "trainee-diviner-contract-signed",
+    "label": "Diviner Agreement Signed",
+    "description": "The user enters their full legal name in the signature field, enabling them to accept the agreement and continue.",
+    "group": "Dashboard",
+    "purpose": "This screen confirms that the agreement signature field has been filled and the user is ready to submit the signed contract.",
+    "bullets": [
+      "Shows the Diviner Service Agreement after the user has reached the bottom of the contract.",
+      "Displays the full legal name entered in the signature field.",
+      "Uses the typed name as the user's electronic signature.",
+      "Enables the Accept and Continue button after required signing information is provided.",
+      "Reminds the user that accepting means agreeing to the contract terms.",
+      "Completes the agreement acceptance step for diviner onboarding.",
+      "After clicking Accept and Continue, the signed agreement is submitted.",
+      "Once the agreement is completed, the user can proceed to choose their portal."
+    ]
+  },
+  {
+    "name": "trainee-diviner-portal-selection",
+    "label": "Choose Your Portal",
+    "description": "After completing payment and signing the required agreement, the user is taken to the portal selection screen to choose which available area they want to enter.",
+    "group": "Dashboard",
+    "purpose": "This screen lets users with access to multiple roles choose the correct portal, such as Diviner or Trainee Portal, before continuing.",
+    "bullets": [
+      "Shows the portal selection screen after payment and agreement completion.",
+      "Displays the main website navigation at the top.",
+      "Shows a clear heading asking the user to choose their portal.",
+      "Explains that the user has access to multiple areas.",
+      "Provides a Diviner option with an Enter button.",
+      "Provides a Trainee Portal option with an Enter button.",
+      "Lets the user enter the selected role-specific portal.",
+      "Includes a Manage my account link for account settings.",
+      "This screen appears after all required onboarding steps are completed.",
+      "Choosing a portal sends the user into the selected dashboard area."
+    ]
+  },
+
+  
+  {
+    "name": "diviner-dashboard-overview",
+    "label": "Diviner Dashboard Overview",
+    "description": "After choosing the Diviner portal, the user enters the Diviner dashboard where they can manage sessions, clients, services, profile completion, and practice-related tools.",
+    "group": "Dashboard",
+    "purpose": "This screen gives the diviner a complete overview of their practice and provides quick access to all main Diviner portal features.",
+    "bullets": [
+      "Shows the Diviner dashboard after the user selects the Diviner portal.",
+      "Displays the main sidebar navigation for overview, calendar, orders, clients, check-ins, sessions, services, landing pages, media gallery, rituals, astrology tools, marketing, insights, testimonials, and finance.",
+      "Shows certification and community promotion banners at the top.",
+      "Displays today's sessions so the diviner can quickly check upcoming work.",
+      "Shows planetary returns for the next 30 days.",
+      "Provides a public profile link for the diviner page.",
+      "Includes a Complete Your Profile section with profile setup tasks.",
+      "Shows profile completion progress such as 0/8 or percentage complete.",
+      "Lists required setup items like uploading a profile photo, writing a bio, setting a tagline, adding specialties, creating services, collecting testimonials, connecting Stripe, and connecting Google Calendar.",
+      "Helps the diviner prepare their profile and services before actively working with clients."
+    ]
+  },
+  {
+    "name": "diviner-dashboard-portal-switcher",
+    "label": "Portal Access Switcher",
+    "description": "Inside the dashboard, the user can open the portal switcher to change access between Diviner and Trainee Portal.",
+    "group": "Dashboard",
+    "purpose": "This dropdown allows users with multiple portal access to switch between their Diviner workspace and Trainee Portal for completing training lessons.",
+    "bullets": [
+      "Shows the portal switcher dropdown from the top-right dashboard area.",
+      "Displays the currently selected portal with a check mark.",
+      "Shows Diviner as the active portal when the user is inside the Diviner dashboard.",
+      "Provides Trainee Portal as another available option.",
+      "Allows the user to switch from Diviner to Trainee Portal.",
+      "The Trainee Portal is used to continue or complete training lessons.",
+      "After selecting Trainee Portal, the user can access training content and lesson completion flow.",
+      "Helps users move between working as a diviner and completing required training.",
+      "Supports users who have both Diviner and Trainee access under the same account.",
+      "Improves navigation without requiring logout or a new login."
+    ]
+  },
+{
+  "name": "trainee-dashboard-overview_v1",
+  "label": "Trainee Dashboard Overview",
+  "description": "After switching from the Diviner portal to the Trainee Portal, the user lands on the Trainee Dashboard where they can continue lessons, track training progress, attend practice sessions, review resources, and manage their trainee profile.",
+  "group": "Dashboard",
+  "purpose": "This dashboard acts as the central learning hub for trainees. It helps users monitor their certification journey, continue active lessons, view mentor information, access study materials, and track overall learning performance.",
+  "bullets": [
+    "Shows the Trainee Dashboard after the user switches from the Diviner portal to the Trainee Portal.",
+    "Displays the trainee account status such as Active Trainee.",
+    "Provides sidebar navigation for Dashboard, Training, Meeting Session, Progress, Quiz History, Library Resources, and My Profile.",
+    "The Training menu is used to access all training programs, lessons, and certification modules.",
+    "Meeting Session allows trainees to attend scheduled mentorship or practice sessions.",
+    "Progress helps users track completed modules, scores, and learning performance.",
+    "Quiz History stores quiz attempts, scores, and lesson assessment records.",
+    "Library Resources provides study materials, guides, charts, and learning references.",
+    "My Profile allows trainees to manage profile details, specialties, and personal information.",
+    "The top portal selector confirms the user is currently inside the Trainee Portal.",
+    "The community banner promotes exclusive trainee or spiritual community programs and learning opportunities.",
+    "The Training Progress block displays the user's overall certification progress.",
+    "Shows the percentage of lessons completed compared to the total available lessons.",
+    "Displays statistics such as programs started, quiz score average, and total learning time spent.",
+    "Helps trainees quickly understand how far they are in the certification journey.",
+    "The Continue Learning block helps users resume the most recent unfinished lesson or program.",
+    "Displays the current course or lesson title currently in progress.",
+    "The Continue button directly resumes the active lesson.",
+    "The View All button opens the complete training program list.",
+    "The Mentor block displays assigned mentor information for trainee guidance.",
+    "If no mentor is assigned, the dashboard informs the trainee that an administrator will assign one later.",
+    "Practice Sessions allows trainees to join supervised reading practice or live learning sessions.",
+    "My Progress provides detailed analytics about completed lessons, modules, and feedback.",
+    "Resources gives quick access to educational content and learning references.",
+    "My Profile helps the trainee manage account settings and profile customization.",
+    "The Recent Activity block displays recently completed lessons, quizzes, and training milestones.",
+    "Shows activity timestamps such as completed lessons and passed quizzes.",
+    "Helps trainees review recent accomplishments and continue consistent learning progress.",
+    "The entire dashboard is designed to guide trainees from beginner learning stages toward becoming fully certified diviners."
+  ]
+},
+  
+{
+  "name": "trainee-dashboard-training-progress-continue-learning",
+  "label": "Training Progress and Continue Learning",
+  "description": "On the Trainee Dashboard, the user can view training progress and continue the current lesson by clicking the Continue button in the Continue Learning block.",
+  "group": "Dashboard",
+  "purpose": "This dashboard section helps the trainee understand their training completion status and quickly navigate to the training module to continue and complete lessons.",
+  "bullets": [
+    "The Training Progress block shows the trainee's overall learning completion.",
+    "Displays progress percentage and completed lessons, such as 7% — 3 of 43 lessons.",
+    "Shows how many programs have been started.",
+    "Shows how many programs or lessons are completed.",
+    "Displays the trainee's average quiz score.",
+    "Shows total training time spent.",
+    "The Continue Learning block displays the current lesson the trainee should continue.",
+    "Shows the lesson name, such as The 12 Zodiac Signs.",
+    "Shows the related training category, such as Astrology Fundamentals.",
+    "The Continue button navigates the user to the training module.",
+    "From the training module, the user can continue and complete the selected lesson.",
+    "The View All button allows the user to see all available training programs or lessons.",
+    "This block is placed on the Dashboard for quick access to ongoing training."
+  ]
+},
+
+
+
+
+  {
+    "name": "trainee-training-completion-book-appointment_v1",
+    "label": "Training Completion Appointment Request",
+    "description": "After completing all training lessons, the trainee is prompted to book a post-training appointment with the administrator.",
+    "group": "Dashboard",
+    "purpose": "This dashboard section helps trainees schedule a required review appointment with the admin after finishing the certification training journey.",
+    "bullets": [
+      "Appears after the trainee completes all required training lessons.",
+      "Displays a congratulatory message for completing the training journey.",
+      "Informs the trainee that the next step is to book a one-on-one appointment with the administrator.",
+      "Explains that the appointment is required to review training progress and discuss next steps.",
+      "The Book Appointment with Admin button starts the scheduling process.",
+      "The Training Progress block below shows 100% completion status.",
+      "Displays completed lessons such as 43 of 43 lessons completed.",
+      "Shows learning statistics including completed programs, quiz average, and total training time.",
+      "This block acts as the final dashboard step before trainee graduation or certification review."
+    ]
+  },
+  {
+    "name": "trainee-admin-appointment-calendar-selection",
+    "label": "Admin Appointment Calendar Selection",
+    "description": "After clicking the booking button, the trainee is taken to the appointment scheduling screen where they can select an available date and time.",
+    "group": "Dashboard",
+    "purpose": "This screen allows trainees to reserve a meeting slot with the administrator for post-training review and certification discussion.",
+    "bullets": [
+      "Displays the appointment booking calendar interface.",
+      "Shows the next available appointment dates.",
+      "Allows the trainee to navigate between calendar months.",
+      "Highlights selectable available dates.",
+      "Displays available appointment times for the selected day.",
+      "Shows the administrator availability schedule and timezone.",
+      "Lets the trainee select a preferred appointment time slot.",
+      "Supports booking appointments based on available admin schedule.",
+      "This screen is used after training completion to schedule the required review session."
+    ]
+  },
+  {
+    "name": "trainee-admin-appointment-confirmation-form",
+    "label": "Admin Appointment Booking Form",
+    "description": "After selecting a date and time, the trainee fills in booking details and confirms the appointment request.",
+    "group": "Dashboard",
+    "purpose": "This screen collects booking information required to finalize the trainee's post-training appointment with the administrator.",
+    "bullets": [
+      "Shows the selected appointment date and time.",
+      "Displays the timezone and appointment duration.",
+      "Includes a name input field for the trainee.",
+      "Displays the trainee email linked to the account.",
+      "Allows the trainee to add optional notes for the appointment.",
+      "Provides a Change time option to select another slot.",
+      "The Confirm booking button finalizes the appointment request.",
+      "This step confirms the trainee's selected meeting schedule before submission.",
+      "Used as the final form step before appointment confirmation."
+    ]
+  },
+  {
+    "name": "trainee-admin-appointment-booking-success",
+    "label": "Appointment Booking Confirmation",
+    "description": "After successfully confirming the booking, the trainee sees the appointment confirmation screen with meeting details and next steps.",
+    "group": "Dashboard",
+    "purpose": "This screen confirms that the trainee's post-training appointment has been successfully scheduled with the administrator.",
+    "bullets": [
+      "Displays a successful booking confirmation message.",
+      "Confirms that the appointment has been recorded on the host calendar.",
+      "Shows the scheduled meeting date, time, timezone, and duration.",
+      "Displays any notes submitted during booking.",
+      "Provides next-step instructions for the trainee.",
+      "Explains that meeting details will be shared before the session.",
+      "Provides guidance for rescheduling if required.",
+      "Confirms that the trainee can safely close the page.",
+      "Acts as the final confirmation step in the post-training appointment workflow."
+    ]
+  },
+
+
+
+
+
+  
+
+
+  // ------------------Training Module Screens ------------------//
+  {
+    "name": "training-center_v1",
+    "label": "Training Center",
+    "description": "Program catalog showing all available training programs with lesson counts, category counts, progress status, and start actions.",
+    "group": "Training",
+    "purpose": "This page works as the trainee's main learning catalog. The user can see all training programs, check completion status, and start or continue lessons from one place.",
+    "bullets": [
+      "Shows the Training Center page inside the Trainee Portal.",
+      "Displays total lesson status at the top: Not Started, Ongoing, and Completed.",
+      "Shows total lesson progress such as 0/43 lessons and 0% complete.",
+      "Lists all available training programs in card format.",
+      "Each program card shows program name, short description, category count, lesson count, and completed lesson count.",
+      "Each card includes a circular progress indicator.",
+      "The Start Program button opens the selected training program.",
+      "Programs can include astrology, tarot, divination, and test certification training.",
+      "This screen helps trainees choose which training program they want to begin or review."
+    ]
+  },
+  {
+    "name": "training-lesson-content-completed",
+    "label": "Training Lesson Content",
+    "description": "Lesson detail screen showing the selected lesson content, image or media, description, quiz status, and category progress.",
+    "group": "Training",
+    "purpose": "This screen lets the trainee study an individual lesson and complete the required quiz. It also shows whether the lesson and quiz are already completed.",
+    "bullets": [
+      "Shows the selected training lesson inside the Training module.",
+      "Displays the lesson title and estimated duration.",
+      "Shows the lesson description below the title.",
+      "Includes lesson media or image content for learning.",
+      "Displays written lesson content below the media section.",
+      "Shows the Lesson Quiz section for assessment.",
+      "If the quiz is already completed, it shows Quiz already passed.",
+      "Displays a Passed status badge for the completed quiz.",
+      "Shows completed lesson items below the current lesson.",
+      "The right-side category panel shows category progress such as 3/3 completed.",
+      "Helps trainees understand which lessons are completed and which lesson they are currently viewing."
+    ]
+  },
+  {
+    "name": "training-lesson-review-content",
+    "label": "Training Lesson Review",
+    "description": "Completed lesson review screen where the trainee can revisit lesson content, media, and passed quiz status.",
+    "group": "Training",
+    "purpose": "This screen allows trainees to review completed training content after finishing the lesson and passing the quiz.",
+    "bullets": [
+      "Shows a completed lesson with a Complete status badge.",
+      "Displays lesson media such as an astrology or planet-related image.",
+      "Shows the lesson description and supporting content.",
+      "Displays the quiz section with Passed status.",
+      "Confirms that the quiz has already been completed for the lesson.",
+      "Shows other lessons in the same category as completed.",
+      "Allows the trainee to revisit learning material without retaking completed work.",
+      "The category panel on the right confirms progress for the current category.",
+      "Useful for reviewing training material before final certification or admin appointment."
+    ]
+  },
+
+
+    //  ----------------Session Module Screens ------------------//
+
+      
+  {
+    "name": "trainee-meeting-session-list",
+    "label": "Meeting Session List",
+    "description": "After booking is completed, the trainee can open the Meeting Session module to view the confirmed meeting and join it.",
+    "group": "Sessions",
+    "purpose": "This screen helps the trainee find their upcoming admin meeting and start the joining process.",
+    "bullets": [
+      "Shows the confirmed upcoming meeting session.",
+      "Displays the meeting date and time.",
+      "Shows the meeting status as Confirmed.",
+      "Displays meeting details such as host name, duration, method, and booking ID.",
+      "The Join Session button opens the meeting joining screen.",
+      "This card is created after the trainee successfully books an appointment with the admin."
+    ]
+  },
+  {
+    "name": "trainee-meeting-recording-consent",
+    "label": "Session Recording Consent",
+    "description": "After clicking Join Session, the trainee is taken to a consent screen before entering the live meeting.",
+    "group": "Sessions",
+    "purpose": "This screen asks the trainee to accept recording consent because the session may be recorded for future review.",
+    "bullets": [
+      "Shows the appointment header with client name, meeting date, time, and duration.",
+      "Displays a Session Recording Consent message.",
+      "Explains that the session will be recorded for the trainee's benefit.",
+      "Shows basic session details such as appointment type and duration.",
+      "The I Consent — Join Session button confirms consent and continues to the meeting room.",
+      "The trainee cannot enter the session until consent is accepted."
+    ]
+  },
+  {
+    "name": "trainee-meeting-waiting-room",
+    "label": "Meeting Waiting Room",
+    "description": "After accepting recording consent, the trainee enters the waiting room until the admin joins or accepts the meeting.",
+    "group": "Sessions",
+    "purpose": "This screen confirms that the trainee is connected and waiting for the admin to start the session.",
+    "bullets": [
+      "Shows the trainee is waiting for the admin or host.",
+      "Displays a message such as Waiting for tabby.",
+      "Confirms the trainee is connected to the meeting room.",
+      "Explains that the session will start automatically when the admin joins.",
+      "Shows the appointment duration.",
+      "The page updates automatically, so the trainee does not need to refresh."
+    ]
+  },
+  {
+    "name": "trainee-meeting-connecting",
+    "label": "Meeting Connecting Screen",
+    "description": "After the admin accepts or joins the session, the trainee sees the meeting interface while the live session connects.",
+    "group": "Sessions",
+    "purpose": "This screen shows the transition from waiting room to active meeting session.",
+    "bullets": [
+      "Shows the live appointment interface.",
+      "Displays recording status at the top.",
+      "Shows meeting title, host name, joined status, timer, and participant count.",
+      "Shows a Connecting to session message while the video room loads.",
+      "Displays meeting controls such as microphone, camera, and screen share.",
+      "Shows a side panel with diviner or admin details.",
+      "Includes notes and chat areas for session communication."
+    ]
+  },
+  {
+    "name": "trainee-meeting-live-session",
+    "label": "Live Meeting Session",
+    "description": "After the connection completes, the trainee joins the live meeting with the admin.",
+    "group": "Sessions",
+    "purpose": "This screen allows the trainee and admin to communicate through the live appointment session.",
+    "bullets": [
+      "Shows the active live video meeting.",
+      "Displays the admin or host video tile.",
+      "Shows the trainee tile inside the meeting area.",
+      "Displays joined status and participant count.",
+      "Shows the meeting timer and total session duration.",
+      "Provides microphone, camera, and screen share controls.",
+      "Includes a side panel showing the assigned admin or diviner.",
+      "Allows the trainee to write private session notes.",
+      "Includes chat support for text communication during the session."
+    ]
+  },
+  {
+    "name": "trainee-meeting-screen-sharing",
+    "label": "Meeting Screen Sharing",
+    "description": "During the live meeting, the trainee can share their screen with the admin.",
+    "group": "Sessions",
+    "purpose": "This screen helps the trainee present their screen during the session when they need to show progress, documents, or training-related work.",
+    "bullets": [
+      "Shows that the trainee is presenting their screen.",
+      "Displays a clear message that others can see the screen.",
+      "Shows a Stop Sharing button to end screen sharing.",
+      "Keeps the meeting timer and recording status visible.",
+      "Shows participant video tiles on the side while screen sharing.",
+      "Keeps microphone, camera, and screen share controls available.",
+      "Allows the trainee to continue using notes and chat during screen sharing.",
+      "Useful when the trainee needs to show training progress, questions, or account details to the admin."
+    ]
+  },
       {
         name: "program-workspace",
         label: "Program Workspace",
@@ -10500,97 +11025,311 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Completing a lesson refreshes progress and can auto-advance the learner to the next available lesson"
         ]
       },
-      {
-        name: "progress",
-        label: "Progress Tracker",
-        description: "Progress dashboard with overall lesson completion, training status, average quiz score, and module-by-module breakdown.",
-        group: "Progress",
-        purpose: "This view gives trainees a transparent record of where they stand. It is useful for checking completion gaps, reviewing which modules still need attention, and confirming readiness for graduation.",
-        bullets: [
-          "Summary cards show lessons completed, active/graduated training status, and average quiz score",
-          "Graduation banner appears when all requirements are complete",
-          "Module breakdown lists each category with completion counts and progress bars",
-          "Lesson rows link directly back into the corresponding training path"
-        ]
-      },
-      {
-        name: "quiz-history",
-        label: "Quiz History",
-        description: "Complete attempt history across lesson quizzes, including pass/fail status, score, attempt number, date, and time taken.",
-        group: "Assessment",
-        purpose: "This page turns quiz performance into a study record. Trainees can see how many quizzes they have attempted, which ones were passed, where retakes happened, and how scores trend over time.",
-        bullets: [
-          "Top badges summarize total time, pass rate, retakes, and graduated status when applicable",
-          "Stat cards show total attempts, passed attempts, average score, and best score",
-          "Attempt list records lesson title, date, duration, attempt number, raw score, percentage, and pass/fail icon",
-          "Score colors highlight strong, moderate, and low performance for quick self-review"
-        ]
-      },
-      {
-        name: "resources",
-        label: "Learning Resources",
-        description: "Central library for lesson assets and study guides available through the trainee's accessible programs.",
-        group: "Assessment",
-        purpose: "This page saves trainees from hunting through individual lessons for files. It gathers downloadable PDFs, documents, images, external links, video references, and study guides into one resource library.",
-        bullets: [
-          "Quick links jump back to Training Center, My Progress, and Certificate when available",
-          "Lesson assets are grouped by type with file-type icon, lesson, category, file size, and open/download action",
-          "Study Guides section lists lessons with attached PDFs or videos",
-          "Empty states explain when mentors/admins have not attached materials yet"
-        ]
-      },
-      {
-        name: "sessions",
-        label: "Practice Sessions",
-        description: "Mentor-supervised practice session area with upcoming bookings, past sessions, session status, and join links when active.",
-        group: "Sessions",
-        purpose: "Practice sessions are where trainees apply the curriculum with mentor oversight. This page explains what is scheduled, what has already happened, and how to join eligible live sessions.",
-        bullets: [
-          "Upcoming Sessions list shows service, mentor/diviner, date, time, duration, and booking status",
-          "Join button appears only during the allowed window around the scheduled session",
-          "Past Sessions records completed, cancelled, and no-show sessions with status indicators",
-          "How to Schedule section explains the mentor-led booking workflow"
-        ]
-      },
-      {
-        name: "graduation",
-        label: "Graduation Readiness",
-        description: "Graduation page that either shows certificate details for graduated trainees or the not-yet-graduated path back to training.",
-        group: "Certification",
-        purpose: "This is the formal completion checkpoint. Before graduation, it clearly directs trainees back to required training. After graduation, it becomes the certificate summary with verification code and completion record.",
-        bullets: [
-          "Not-yet-graduated state explains that all programs must be completed first",
-          "Graduated state lists completed programs, lessons completed, award date, and certificate code",
-          "Verification URL and copy action are shown when a certificate code exists",
-          "Back-to-training action keeps incomplete trainees focused on the next requirement"
-        ]
-      },
-      {
-        name: "certificate",
-        label: "Certificate of Completion",
-        description: "Printable certificate page available to graduated trainees after all training requirements are satisfied.",
-        group: "Certification",
-        purpose: "This is the formal credential screen for a completed trainee. It presents the school identity, trainee name, awarded designation, training statistics, covered astrology and tarot programs, certificate ID, verification URL, and print/share actions.",
-        bullets: [
-          "Certificate header uses admin-managed school name, tagline, and visual seal",
-          "Trainee name, award date, designation, and certificate ID identify the credential",
-          "Training stats and program lists summarize the completed certification scope",
-          "Print and share controls support saving the certificate as a PDF and sharing its verification link"
-        ]
-      },
-      {
-        name: "trainee-profile",
-        label: "Trainee Profile",
-        description: "Editable trainee identity page covering personal information, profile completion, package access, specialties, goals, birth data, mentor, and training status.",
-        group: "Settings",
-        purpose: "The profile page controls how a trainee appears to mentors and internal teams. It also exposes package limits, profile completion gaps, training progress, mentor details, and account metadata.",
-        bullets: [
-          "Profile completion bar identifies missing onboarding fields",
-          "Personal information editor manages name, bio, avatar, username, phone, timezone, goals, specialties, and birth data",
-          "Package notice explains which categories and specialties are available to this trainee",
-          "Training status and mentor cards summarize progress, graduation, mentor identity, and next navigation"
-        ]
-      },
+    
+
+
+      
+  {
+    "name": "academic-progress-overview",
+    "label": "Academic Progress Overview",
+    "description": "Main academic progress dashboard showing the trainee's overall learning journey, lesson completion, quiz performance, and curriculum activity.",
+    "group": "Progress",
+    "purpose": "This page helps trainees quickly understand their complete training progress, active learning status, quiz performance, and graduation readiness.",
+    "bullets": [
+      "Shows the Academic Progress dashboard inside the Trainee Portal.",
+      "Displays overall course progress with completed lessons out of total lessons.",
+      "Shows total completed practice sessions.",
+      "Displays quiz performance percentage across all quizzes.",
+      "Shows trainee account status such as Active.",
+      "Displays the trainee start date.",
+      "The Curriculum Modules section lists all available training programs and lesson groups.",
+      "Recent Quizzes shows recently attempted quizzes with score percentages.",
+      "Practice Sessions section displays scheduled or completed practice sessions.",
+      "The Go to Training button navigates directly to the Training module.",
+      "Helps trainees monitor learning performance and certification readiness from one place."
+    ]
+  },
+  {
+    "name": "progress-curriculum-modules-overview",
+    "label": "Curriculum Modules Overview",
+    "description": "Curriculum section showing all training modules, lesson groups, and current lesson completion progress.",
+    "group": "Progress",
+    "purpose": "This section helps trainees understand how lessons are grouped into certification programs and track completion status for each module.",
+    "bullets": [
+      "Shows grouped curriculum modules inside the Academic Progress page.",
+      "Displays program names such as Sanket Biswas and Diviner Certification Program.",
+      "Each module card shows completed lessons out of total lessons.",
+      "Lesson titles are listed inside each module card.",
+      "Locked lesson icons indicate lessons not yet accessible.",
+      "Progress circles help identify module completion status.",
+      "Recent Quizzes panel displays recently completed quizzes and scores.",
+      "This section helps trainees understand which modules are incomplete and which lessons remain pending."
+    ]
+  },
+  {
+    "name": "progress-foundations-of-astrology",
+    "label": "Foundations of Astrology Progress",
+    "description": "Progress section for the Foundations of Astrology training program showing lesson categories and astrology learning topics.",
+    "group": "Progress",
+    "purpose": "This section tracks trainee progress through beginner astrology learning modules and foundational concepts.",
+    "bullets": [
+      "Displays the Foundations of Astrology program progress.",
+      "Shows completed lessons compared to total lessons.",
+      "Includes lesson categories such as Introduction to the Birth Chart, Planetary Aspects, and Transits and Progressions.",
+      "Shows lesson topics like zodiac signs, birth charts, planetary meanings, conjunctions, oppositions, trines, and eclipses.",
+      "Locked icons indicate lessons not yet unlocked.",
+      "Progress indicators help trainees understand current learning position.",
+      "Useful for tracking beginner and intermediate astrology education progress."
+    ]
+  },
+  {
+    "name": "progress-tarot-mastery",
+    "label": "Tarot Mastery Progress",
+    "description": "Progress section for Tarot Mastery training programs showing tarot lesson groups, card studies, and reading techniques.",
+    "group": "Progress",
+    "purpose": "This section helps trainees track tarot-focused learning programs and understand progress across tarot reading lessons.",
+    "bullets": [
+      "Displays the Tarot Mastery training program.",
+      "Shows lesson categories such as Major Arcana Deep Dive, Minor Arcana and Court Cards, and Reading Spreads.",
+      "Includes lesson topics about tarot card meanings and tarot spread techniques.",
+      "Displays completed lesson counts and remaining lessons.",
+      "Progress circles indicate module completion status.",
+      "Locked lesson icons indicate unavailable or future lessons.",
+      "Helps trainees monitor tarot reading education progress and skill development."
+    ]
+  },
+  {
+    "name": "progress-advanced-divination-track",
+    "label": "Advanced Divination Track",
+    "description": "Advanced training progress section covering predictive astrology, intuitive reading, tarot spread design, and certification modules.",
+    "group": "Progress",
+    "purpose": "This section tracks advanced-level divination training and helps trainees prepare for higher-level certification skills.",
+    "bullets": [
+      "Displays advanced-level training modules inside the Academic Progress page.",
+      "Includes Tarot Mastery Track, Advanced Divination, and Test Certification sections.",
+      "Shows advanced lesson groups such as Predictive Astrology and Intuitive Reading Techniques.",
+      "Includes topics like Solar Returns, Lunar Returns, Profections, intuition development, and ethics in readings.",
+      "Displays advanced tarot spread design and reading strategy lessons.",
+      "Shows completed and remaining lesson counts for each advanced module.",
+      "Locked icons indicate lessons that require progression or prerequisites.",
+      "The Test Certification section represents final certification assessment training.",
+      "Helps trainees track progress toward advanced diviner certification and graduation."
+    ]
+  },
+
+
+  {
+  "name": "quiz-history-summary-cards",
+  "label": "Quiz History Summary",
+  "description": "The Quiz History summary section provides a quick overview of the trainee's overall quiz performance across all completed lessons.",
+  "group": "Assessment",
+  "purpose": "This section helps trainees quickly understand their quiz statistics, performance quality, and certification readiness without opening each individual quiz attempt.",
+  "bullets": [
+    "Shows a high-level summary of all trainee quiz activity.",
+    "Displays the total number of quiz attempts completed by the trainee.",
+    "Shows how many quizzes were successfully passed.",
+    "Displays the trainee's average quiz score percentage.",
+    "Shows the highest score achieved across all quizzes.",
+    "Displays total quiz completion time.",
+    "Shows the overall pass rate percentage.",
+    "Helps trainees quickly review learning performance at a glance.",
+    "Useful for tracking overall academic progress and training success.",
+    "Acts as the main performance overview section at the top of the Quiz History page."
+  ]
+},
+
+{
+  "name": "trainee-quiz-history",
+  "label": "Quiz History",
+  "description": "Quiz History shows the trainee's complete quiz attempt record across all completed lessons.",
+  "group": "Assessment",
+  "purpose": "This page helps trainees review their quiz performance, pass rate, scores, attempt history, and completed lesson assessments in one place.",
+  "bullets": [
+    "Shows the complete quiz attempt history for the trainee.",
+    "Displays total quiz time spent, such as 4m 31s.",
+    "Shows overall pass rate, such as 100%.",
+    "Displays Total Attempts count.",
+    "Shows how many quizzes were passed.",
+    "Displays average quiz score percentage.",
+    "Shows the best score achieved.",
+    "Lists all quiz attempts in chronological order.",
+    "Each quiz row shows the lesson or quiz title.",
+    "Each quiz row shows the attempt date.",
+    "Some rows show time spent on the quiz attempt.",
+    "Each row displays score details such as 6/6 - 100% or 8/10 - 80%.",
+    "Green check icons indicate passed quiz attempts.",
+    "Helps the trainee understand which quizzes are completed and how well they performed.",
+    "Useful for tracking certification readiness and reviewing past learning results."
+  ]
+},
+    
+  {
+    "name": "library-resources-quick-links-assets",
+    "label": "Library Resources and Lesson Assets",
+    "description": "The Library Resources page provides quick access links, downloadable lesson assets, study PDFs, and supporting learning materials attached to training lessons.",
+    "group": "Assessment",
+    "purpose": "This page helps trainees quickly access learning materials, downloadable files, training references, and important lesson resources from one place.",
+    "bullets": [
+      "Shows Quick Links for Training Center, My Progress, and Certificate pages.",
+      "Allows trainees to quickly navigate to important training sections.",
+      "Displays Lesson Assets section containing downloadable lesson files.",
+      "Lists PDF study resources connected to accessible training lessons.",
+      "Each asset row shows the lesson or resource title.",
+      "Displays related training category and lesson information.",
+      "Shows file sizes for downloadable resources.",
+      "The Download button allows trainees to save lesson files locally.",
+      "PDF badges help identify downloadable document resources.",
+      "Useful for offline study, revision, and certification preparation."
+    ]
+  },
+  {
+    "name": "library-study-guides-overview",
+    "label": "Study Guides Overview",
+    "description": "Study Guides section showing training lessons with attached PDFs, videos, and direct links to continue learning.",
+    "group": "Assessment",
+    "purpose": "This section helps trainees access guided lesson content, video recordings, and downloadable materials connected to their training programs.",
+    "bullets": [
+      "Displays lesson study guide cards for available training lessons.",
+      "Each card shows the lesson title and related training program.",
+      "Displays lesson duration in minutes.",
+      "PDF buttons open downloadable lesson documents.",
+      "Video buttons open attached lesson recordings or video content.",
+      "Go to training links navigate directly to the lesson inside the Training module.",
+      "Includes lessons from astrology, tarot mastery, diviner certification, and communication programs.",
+      "Helps trainees quickly continue learning without manually searching for lessons.",
+      "Supports both video-based and document-based learning."
+    ]
+  },
+  {
+    "name": "library-study-guides-advanced-lessons",
+    "label": "Advanced Study Guides",
+    "description": "Advanced lesson resource section showing higher-level astrology, tarot, and divination study materials with training navigation links.",
+    "group": "Assessment",
+    "purpose": "This section provides trainees with advanced learning resources, downloadable guides, and direct access to specialized training lessons.",
+    "bullets": [
+      "Displays advanced study lesson cards with astrology and tarot topics.",
+      "Includes lessons such as Cups and Swords, The 12 Houses, Creating Custom Spreads, Profections and Firdaria, Ethics and Boundaries in Readings, and The 12 Zodiac Signs.",
+      "Shows lesson duration for each advanced lesson.",
+      "Provides PDF download access for lesson study material.",
+      "Provides Video access for recorded lesson content.",
+      "Go to training links open the lesson directly in the Training module.",
+      "Helps trainees continue advanced certification learning.",
+      "Useful for revision, skill improvement, and deeper topic understanding.",
+      "Supports advanced astrology, tarot reading, predictive astrology, and intuitive reading education."
+    ]
+  },
+
+     
+      // {
+      //   name: "graduation",
+      //   label: "Graduation Readiness",
+      //   description: "Graduation page that either shows certificate details for graduated trainees or the not-yet-graduated path back to training.",
+      //   group: "Certification",
+      //   purpose: "This is the formal completion checkpoint. Before graduation, it clearly directs trainees back to required training. After graduation, it becomes the certificate summary with verification code and completion record.",
+      //   bullets: [
+      //     "Not-yet-graduated state explains that all programs must be completed first",
+      //     "Graduated state lists completed programs, lessons completed, award date, and certificate code",
+      //     "Verification URL and copy action are shown when a certificate code exists",
+      //     "Back-to-training action keeps incomplete trainees focused on the next requirement"
+      //   ]
+      // },
+     {
+  "name": "certificate_v1",
+  "label": "Certificate of Completion",
+  "description": "Printable certificate page available to graduated trainees after all training, practice, and certification requirements are completed.",
+  "group": "Certification",
+  "purpose": "This screen presents the trainee's official certification credential. It confirms the completed course, awarded designation, training statistics, covered astrology and tarot programs, certificate ID, verification URL, and available share or download actions.",
+  "bullets": [
+    "Shows the official certificate after the trainee completes all certification requirements.",
+    "Displays the school or organization name, tagline, and certificate branding.",
+    "Shows the trainee name clearly in the center of the certificate.",
+    "Displays the awarded course name, such as Astrology & Tarot Consulting Certification Course.",
+    "Shows the final designation, such as Certified Divination Consultant.",
+    "Includes completed training statistics such as study hours, live classroom hours, readings performed, and certification programs.",
+    "Lists astrology programs completed during certification.",
+    "Lists tarot programs completed during certification.",
+    "Displays the head master or authority name.",
+    "Shows the official seal area.",
+    "Displays the certificate conferral date.",
+    "Includes a certificate authenticity ID.",
+    "Provides a verification URL so others can confirm the certificate online.",
+    "Back to Progress returns the trainee to the progress page.",
+    "Share Certificate allows the trainee to share the certificate or verification link.",
+    "Download PDF allows the trainee to save the certificate as a printable PDF."
+  ]
+},
+      
+  {
+    "name": "trainee-profile-overview",
+    "label": "Trainee Profile Overview",
+    "description": "My Profile page where the trainee can manage personal details, profile completion, account information, and training status.",
+    "group": "Settings",
+    "purpose": "This page helps trainees update their profile, complete missing onboarding fields, review training status, and access progress or certificate pages.",
+    "bullets": [
+      "Shows the trainee profile management page.",
+      "Displays profile completion percentage at the top.",
+      "Highlights missing profile fields that still need to be completed.",
+      "Includes personal information fields for the trainee.",
+      "Shows account information such as email, username, member since date, training status, and graduation date.",
+      "Displays training completion status and certificate access.",
+      "Helps the trainee keep their profile ready for mentors, admins, and future clients."
+    ]
+  },
+  {
+    "name": "trainee-profile-completion",
+    "label": "Profile Completion Status",
+    "description": "Profile completion block showing how much of the trainee profile is complete and which fields are still missing.",
+    "group": "Settings",
+    "purpose": "This block helps the trainee quickly identify incomplete profile fields and finish required onboarding information.",
+    "bullets": [
+      "Shows profile completion percentage, such as 33%.",
+      "Displays completed fields count, such as 3 of 9 fields complete.",
+      "Uses a progress bar to show completion visually.",
+      "Lists missing fields like Timezone, Bio, Profile Photo, Date of Birth, Birth Time, and Birth City.",
+      "Helps the trainee understand what information is still required.",
+      "Encourages the trainee to complete the profile before full onboarding or client-facing use."
+    ]
+  },
+  {
+    "name": "trainee-personal-information",
+    "label": "Personal Information Editor",
+    "description": "Editable profile form where the trainee manages package details, display name, bio, specialties, phone, timezone, goals, and birth information.",
+    "group": "Settings",
+    "purpose": "This section allows the trainee to update personal and training-related information used by mentors, admins, and future client-facing areas.",
+    "bullets": [
+      "Shows the current package, such as Astrology + Tarot.",
+      "Displays allowed categories connected to the trainee package.",
+      "Shows personal profile completion status for this section.",
+      "Allows the trainee to upload or update a profile photo.",
+      "Allows editing the display name.",
+      "Provides a bio field for describing the trainee to mentors and future clients.",
+      "Shows selected specialties and allows editing them.",
+      "Includes phone number and timezone fields.",
+      "Includes training goals so the trainee can describe what they are working toward.",
+      "Collects birth date, birth time, and birth city.",
+      "Save changes button stores the updated profile information."
+    ]
+  },
+  {
+    "name": "trainee-account-training-status",
+    "label": "Account and Training Status",
+    "description": "Account and training status section showing trainee account metadata, graduation status, completed lessons, and certificate access.",
+    "group": "Settings",
+    "purpose": "This section helps the trainee confirm account details, check graduation status, view training completion, and open progress or certificate pages.",
+    "bullets": [
+      "Shows account email and username.",
+      "Displays when the trainee became a member.",
+      "Shows training status such as graduated.",
+      "Displays the graduation date.",
+      "Shows training completion percentage such as 100%.",
+      "Displays completed lessons, such as 52 of 52 lessons complete.",
+      "Confirms all lessons are complete.",
+      "Shows mentor assignment status.",
+      "View full progress opens the detailed progress page.",
+      "View certificate opens the completed certification certificate."
+    ]
+  }
+
     ],
   },
   {

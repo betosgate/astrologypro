@@ -1,9 +1,9 @@
 # Task 02 — Rewire Stripe Webhook + Retire System A
 
-- Status: Not Started
+- Status: Done (2026-04-24) — except for 5 admin endpoints rolled into Task 07
 - Priority: P0
 - Depends on: 01 (additive migration only)
-- Blocks: 04 (stamping + credit work), 01b (destructive migration)
+- Blocks: 04 (stamping + credit work), 01b (destructive migration — pending Task 07 closeout)
 - Spec: v1.2 (§5 Flow F, §9)
 
 ## Goal
@@ -123,7 +123,12 @@ Changelog.
 - **Affiliate portal post-login smoke test:** log in as a test affiliate;
   `/affiliate/dashboard`, `/affiliate/partnerships`, `/affiliate/earnings`
   all load without error. No 500s, no "table does not exist" stack traces.
-- Task 01b (destructive migration) can now run safely.
+- **Caveat for Task 01b:** Task 02 completion does NOT yet unlock 01b.
+  Five admin-side endpoints still read System A and are now Task 07's
+  responsibility to finish (see
+  [07-reporting-and-dashboards.md](07-reporting-and-dashboards.md) →
+  "Additional admin-side endpoints that MUST be handled before Task 01b").
+  01b can run only after BOTH Task 02 and Task 07 close these out.
 
 ## Notes
 

@@ -23,6 +23,7 @@ export default async function CommunityProfilePage() {
     .eq("user_id", user.id)
     .single();
 
+
   if (!member) redirect("/get-started");
 
   // Community Journey Progress reads the avatar off auth.users.user_metadata,

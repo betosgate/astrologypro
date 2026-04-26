@@ -88,6 +88,7 @@ export function SharedTemplateCalendar({
   const [availableDates, setAvailableDates] = useState<Set<string>>(new Set());
   const [monthLoading, setMonthLoading] = useState(true);
   const [monthLoaded, setMonthLoaded] = useState(false);
+  const [showMonthOverlay, setShowMonthOverlay] = useState(true);
   const [monthError, setMonthError] = useState<string | null>(null);
 
   // ── Date-aware diviner resolution state ────────────────────────────────────
@@ -104,6 +105,10 @@ export function SharedTemplateCalendar({
   const [clientTimezone, setClientTimezone] = useState("UTC");
 
   const monthFetchRef = useRef<AbortController | null>(null);
+  const monthRequestIdRef = useRef(0);
+  const monthOverlayTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
   const dateFetchRef = useRef<AbortController | null>(null);
 
   const submissionQuery = useMemo(
@@ -120,12 +125,21 @@ export function SharedTemplateCalendar({
   // ── Fetch month availability whenever the calendar month changes ──────────
   useEffect(() => {
     monthFetchRef.current?.abort();
+    if (monthOverlayTimeoutRef.current) {
+      clearTimeout(monthOverlayTimeoutRef.current);
+      monthOverlayTimeoutRef.current = null;
+    }
+
     const controller = new AbortController();
     monthFetchRef.current = controller;
+    const requestId = monthRequestIdRef.current + 1;
+    monthRequestIdRef.current = requestId;
 
     async function load() {
+      const startedAt = Date.now();
       setMonthLoading(true);
       setMonthLoaded(false);
+      setShowMonthOverlay(true);
       setMonthError(null);
       try {
         const monthKey = format(currentMonth, "yyyy-MM");
@@ -155,13 +169,26 @@ export function SharedTemplateCalendar({
           "We couldn't load availability for this month. Please try again.",
         );
       } finally {
+        if (monthRequestIdRef.current !== requestId) return;
         setMonthLoaded(true);
         setMonthLoading(false);
+        const remainingOverlayMs = Math.max(0, 450 - (Date.now() - startedAt));
+        monthOverlayTimeoutRef.current = setTimeout(() => {
+          if (monthRequestIdRef.current === requestId) {
+            setShowMonthOverlay(false);
+          }
+        }, remainingOverlayMs);
       }
     }
     void load();
 
-    return () => controller.abort();
+    return () => {
+      controller.abort();
+      if (monthOverlayTimeoutRef.current) {
+        clearTimeout(monthOverlayTimeoutRef.current);
+        monthOverlayTimeoutRef.current = null;
+      }
+    };
   }, [currentMonth, submissionQuery, templateSlug]);
 
   // ── Resolve available diviners whenever the user picks a date ─────────────
@@ -322,8 +349,8 @@ export function SharedTemplateCalendar({
             </div>
           ) : null}
           <div className="relative flex flex-col items-center">
-            {(monthLoading || !monthLoaded) && (
-              <div className="absolute inset-0 z-10 flex items-center justify-center rounded-md bg-background/70 backdrop-blur-sm">
+            {(showMonthOverlay || monthLoading || !monthLoaded) && (
+              <div className="absolute inset-0 z-20 flex items-center justify-center rounded-md bg-background/75 backdrop-blur-sm">
                 <div className="flex flex-col items-center gap-2">
                   <Loader2 className="size-5 animate-spin text-primary" />
                   <p className="text-xs text-muted-foreground">

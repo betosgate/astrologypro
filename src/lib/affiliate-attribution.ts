@@ -79,8 +79,7 @@ export async function resolveAffiliateFromRef(
     .from("affiliate_campaigns")
     .select(
       `id, diviner_id, status, owner_type, owner_affiliate_id, owner_affiliate_type,
-       commission_value_snapshot, commission_type_snapshot, source_assignment_id,
-       destination_type, destination_service_template_id`
+       source_assignment_id, destination_type, destination_service_template_id`
     )
     .eq("campaign_code", code)
     .eq("status", "active")
@@ -96,12 +95,11 @@ export async function resolveAffiliateFromRef(
     owner_type: campaign.owner_type as AffiliateCampaignOwnerType,
     owner_affiliate_id: campaign.owner_affiliate_id as string,
     owner_affiliate_type: campaign.owner_affiliate_type as AffiliateType,
-    commission_value_snapshot:
-      campaign.commission_value_snapshot != null
-        ? Number(campaign.commission_value_snapshot)
-        : null,
-    commission_type_snapshot:
-      (campaign.commission_type_snapshot as AffiliateCommissionType | null) ?? null,
+    // Snapshot fields no longer read from the campaign (spec v1.2 — rate is
+    // stamped on the booking, not on the campaign). Kept in the returned
+    // shape as null for backward-compat; dropped entirely in 01b.
+    commission_value_snapshot: null,
+    commission_type_snapshot: null,
     source_assignment_id: (campaign.source_assignment_id as string | null) ?? null,
     destination_type: (campaign.destination_type as AffiliateDestinationType | null) ?? null,
     destination_service_template_id:
@@ -141,11 +139,19 @@ export function computeCommissionCents(
 
 export interface CreditConversionInput {
   bookingId: string;
-  divinerId: string;
-  /** service_templates.id for the booked service; null if booking is not tied to a template */
-  templateId: string | null;
   orderAmountCents: number;
+  /** Copy of bookings.ref_code. Used for conversion row snapshot + campaign lookup. */
   refCode: string | null | undefined;
+  /**
+   * bookings.commission_source_assignment_id — authoritative rate source.
+   * NULL means the booking was never stamped (spec §3.8), so no commission
+   * is credited. Stamping happens at booking creation (Task 04 Part A).
+   */
+  stampedAssignmentId: string | null;
+  /** bookings.commission_rate_type_stamp — 'percent' or 'flat', or NULL. */
+  stampedRateType: "percent" | "flat" | null;
+  /** bookings.commission_rate_value_stamp — NUMERIC, or NULL. */
+  stampedRateValue: number | null;
 }
 
 export interface CreditConversionResult {
@@ -190,86 +196,101 @@ export async function creditAffiliateConversion(
     );
   };
 
-  const campaign = await resolveAffiliateFromRef(admin, params.refCode);
-  if (!campaign) {
-    logEvent(false, "no_campaign_match");
+  // Spec v1.2 §5 Flow F: rate comes from the booking stamp. Destination
+  // + assignment-active checks already happened at booking creation
+  // (§3.8). At webhook time we only re-check `affiliate_accounts.status`
+  // — the single live read for fraud enforcement.
+
+  if (
+    !params.stampedAssignmentId ||
+    !params.stampedRateType ||
+    params.stampedRateValue == null
+  ) {
+    logEvent(false, "no_stamp");
     return null;
   }
 
-  // Destination match
-  const matchesService =
-    campaign.destination_type === "SERVICE" &&
-    campaign.destination_service_template_id != null &&
-    campaign.destination_service_template_id === params.templateId;
-  const matchesProfile =
-    campaign.destination_type === "PROFILE" &&
-    campaign.diviner_id === params.divinerId;
-  if (!matchesService && !matchesProfile) {
-    logEvent(false, "destination_mismatch", {
-      campaignDestinationType: campaign.destination_type,
-      campaignTemplateId: campaign.destination_service_template_id,
-      bookingTemplateId: params.templateId,
-      campaignDivinerId: campaign.diviner_id,
-      bookingDivinerId: params.divinerId,
-    });
-    return null;
-  }
-
-  // Verify the source assignment is still active (revocation cuts off
-  // commission credit even if a stale campaign row still carries the
-  // snapshot).
-  if (!campaign.source_assignment_id) {
-    logEvent(false, "no_source_assignment");
-    return null;
-  }
+  // Resolve the assignment's junction + affiliate account so we can
+  // (a) re-check status, (b) get the junction id for the conversion row.
   const { data: assignment } = await admin
     .from("diviner_service_affiliates")
-    .select("id, is_active")
-    .eq("id", campaign.source_assignment_id)
+    .select("id, affiliate_id, affiliate_type")
+    .eq("id", params.stampedAssignmentId)
     .maybeSingle();
-  if (!assignment || !assignment.is_active) {
-    logEvent(false, "assignment_revoked_or_missing", {
-      assignmentId: campaign.source_assignment_id,
+  if (!assignment) {
+    logEvent(false, "assignment_gone", {
+      assignmentId: params.stampedAssignmentId,
     });
     return null;
   }
 
-  // Commission MUST come from the frozen campaign snapshot. A later edit
-  // to the assignment must not retroactively change payouts for campaigns
-  // that were created under the previous rate.
-  if (
-    campaign.commission_type_snapshot == null ||
-    campaign.commission_value_snapshot == null
-  ) {
-    logEvent(false, "missing_commission_snapshot", {
-      assignmentId: assignment.id,
+  const { data: junction } = await admin
+    .from("diviner_affiliates")
+    .select("affiliate_account_id")
+    .eq("id", assignment.affiliate_id as string)
+    .maybeSingle();
+  if (!junction || !junction.affiliate_account_id) {
+    logEvent(false, "junction_gone", {
+      assignmentId: params.stampedAssignmentId,
     });
     return null;
   }
+
+  const { data: account } = await admin
+    .from("affiliate_accounts")
+    .select("status, user_id, email")
+    .eq("id", junction.affiliate_account_id as string)
+    .maybeSingle();
+  if (!account || account.status !== "active") {
+    // Fraud-enforcement gate. Even if the booking was stamped at a prior
+    // in-flight moment, a later block/unclaimed status means no commission.
+    logEvent(false, "account_not_active_at_credit", {
+      assignmentId: params.stampedAssignmentId,
+      accountStatus: account?.status ?? null,
+    });
+    return null;
+  }
+
+  // Resolve the campaign from ref_code to get campaign_id for the row.
+  // The campaign itself is no longer authoritative for rate (spec §3.8).
+  const campaign = await resolveAffiliateFromRef(admin, params.refCode);
+  if (!campaign) {
+    // Unusual: stamp was set but campaign went away between booking and
+    // payment. Log and bail — stamp alone doesn't justify a conversion
+    // row without a campaign_id (conversions.campaign_id is NOT NULL).
+    logEvent(false, "campaign_missing_at_credit", {
+      assignmentId: params.stampedAssignmentId,
+    });
+    return null;
+  }
+
+  // Commission is computed from the stamp, NOT from any campaign read.
   const commissionCents = computeCommissionCents(
     params.orderAmountCents,
-    campaign.commission_type_snapshot,
-    campaign.commission_value_snapshot
+    params.stampedRateType,
+    params.stampedRateValue,
   );
 
   const { data: inserted, error } = await admin
     .from("campaign_conversions")
     .insert({
       campaign_id: campaign.campaign_id,
-      affiliate_id: campaign.owner_affiliate_id,
-      affiliate_type: campaign.owner_affiliate_type,
+      affiliate_id: assignment.affiliate_id,
+      affiliate_type: assignment.affiliate_type,
       booking_id: params.bookingId,
       ref_code_snapshot: params.refCode ?? null,
       order_reference: params.bookingId,
       order_amount_cents: params.orderAmountCents,
       commission_amount_cents: commissionCents,
       commission_source: "campaign_assignment",
+      rate_type_used: params.stampedRateType,
+      rate_value_used: params.stampedRateValue,
     })
     .select("id")
     .single();
 
   if (error) {
-    // 23505 = unique_violation (booking already credited)
+    // 23505 = unique_violation (booking already credited). Idempotent.
     const pgErr = error as unknown as { code?: string; message?: string };
     if (pgErr.code === "23505") {
       logEvent(false, "already_credited");
@@ -282,17 +303,44 @@ export async function creditAffiliateConversion(
   logEvent(true, "credited", {
     conversionId: inserted?.id,
     commissionCents,
-    affiliateId: campaign.owner_affiliate_id,
-    assignmentId: assignment.id,
-    snapshotType: campaign.commission_type_snapshot,
-    snapshotValue: campaign.commission_value_snapshot,
+    affiliateId: assignment.affiliate_id,
+    assignmentId: params.stampedAssignmentId,
+    stampType: params.stampedRateType,
+    stampValue: params.stampedRateValue,
   });
+
+  // Fire `affiliate.conversion` notification (in-app immediate, email
+  // queued to daily digest). Fire-and-forget so a notification failure
+  // never blocks the webhook from acknowledging Stripe.
+  try {
+    const recipientUserId = (account as unknown as { user_id?: string }).user_id;
+    const recipientEmail = (account as unknown as { email?: string }).email;
+    if (recipientUserId && recipientEmail) {
+      const { notifyAffiliate } = await import("@/lib/affiliate-notifications");
+      const dollars = (commissionCents / 100).toFixed(2);
+      await notifyAffiliate({
+        admin,
+        userId: recipientUserId,
+        affiliateAccountId: junction.affiliate_account_id as string,
+        toEmail: recipientEmail,
+        kind: "affiliate.conversion",
+        title: `Commission earned: $${dollars}`,
+        body: `A referred customer's payment just confirmed. You earned $${dollars} on this conversion. Review your earnings in the affiliate portal.`,
+        actionUrl: "/affiliate/earnings",
+      });
+    }
+  } catch (err) {
+    console.error("[creditAffiliateConversion] notify failed", {
+      conversionId: inserted?.id,
+      err: err instanceof Error ? err.message : String(err),
+    });
+  }
 
   return {
     conversionId: inserted!.id as string,
     commissionCents,
     campaignId: campaign.campaign_id,
-    affiliateId: campaign.owner_affiliate_id!,
-    affiliateType: campaign.owner_affiliate_type!,
+    affiliateId: assignment.affiliate_id as string,
+    affiliateType: assignment.affiliate_type as AffiliateType,
   };
 }

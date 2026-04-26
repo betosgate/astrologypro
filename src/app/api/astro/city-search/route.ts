@@ -2,16 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
-export async function POST(req: NextRequest) {
-  let body: { q?: string };
-
-  try {
-    body = (await req.json()) as { q?: string };
-  } catch {
-    return NextResponse.json({ results: [] });
-  }
-
-  const q = body.q?.trim() ?? "";
+async function searchCities(q: string) {
   if (q.length < 2) {
     return NextResponse.json({ results: [] });
   }
@@ -46,4 +37,21 @@ export async function POST(req: NextRequest) {
     const msg = err instanceof Error ? err.message : "Geocoding error";
     return NextResponse.json({ error: msg }, { status: 502 });
   }
+}
+
+export async function GET(req: NextRequest) {
+  const q = req.nextUrl.searchParams.get("q")?.trim() ?? "";
+  return searchCities(q);
+}
+
+export async function POST(req: NextRequest) {
+  let body: { q?: string };
+
+  try {
+    body = (await req.json()) as { q?: string };
+  } catch {
+    return NextResponse.json({ results: [] });
+  }
+
+  return searchCities(body.q?.trim() ?? "");
 }

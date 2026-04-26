@@ -52,6 +52,7 @@ export async function GET(request: NextRequest) {
   }
 
   const orderRefs = bookings.map((row) => `booking:${row.id}`);
+  const bookingIds = bookings.map((row) => row.id as string);
 
   const [{ data: ledgerRows }, { data: affiliateRows }, { data: noteRows }] =
     await Promise.all([
@@ -62,10 +63,14 @@ export async function GET(request: NextRequest) {
       )
       .eq("source_type", "booking")
       .in("source_reference", orderRefs),
+    // Post System A: ledger is campaign_conversions. `refunded` bucket
+    // is `reversed_at IS NOT NULL`. No per-conversion partial-refund
+    // tracking in Phase 1 — a conversion is either fully earned or
+    // fully reversed.
     admin
-      .from("affiliate_commissions")
-      .select("order_reference, commission_amount_cents, refund_amount_cents")
-      .in("order_reference", orderRefs),
+      .from("campaign_conversions")
+      .select("booking_id, commission_amount_cents, reversed_at")
+      .in("booking_id", bookingIds),
     admin
       .from("finance_operation_notes")
       .select("order_reference, note_type, note, created_at")
@@ -82,10 +87,13 @@ export async function GET(request: NextRequest) {
     { noteType: string; note: string; createdAt: string } | undefined
   >();
   for (const row of affiliateRows ?? []) {
-    const key = row.order_reference as string;
+    const bookingId = row.booking_id as string | null;
+    if (!bookingId) continue;
+    const key = `booking:${bookingId}`;
     const existing = affiliateMap.get(key) ?? { total: 0, refunded: 0 };
-    existing.total += Number(row.commission_amount_cents ?? 0) / 100;
-    existing.refunded += Number(row.refund_amount_cents ?? 0) / 100;
+    const cents = Number(row.commission_amount_cents ?? 0);
+    existing.total += cents / 100;
+    if (row.reversed_at) existing.refunded += cents / 100;
     affiliateMap.set(key, existing);
   }
   for (const row of noteRows ?? []) {
