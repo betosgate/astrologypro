@@ -233,13 +233,23 @@ This mapping section defines how ritual tags should resolve to the supplied vide
 - `DIB_Gate_Invocation_Ritual` and `DIB_Invocation_Ritual`
   Playback target: `Core_Invocation_Ritual.mp4`
 
-Implementation note:
-For the three fixed ritual presets, decide whether to:
+Implementation rule:
+For the three fixed ritual presets, playback must use a single static video item in the playlist.
 
-1. Play a single static video, or
-2. Preserve the modular opening/gate/core/closing playlist model.
+Required static playlist behavior:
 
-This task is focused primarily on the custom planetary/zodiacal ritual playback flow. If needed, static presets may continue using current behavior until a follow-up unifies both systems.
+1. `Standard Banishing Ritual of the Pentagram`
+   Build a 1-item playlist using `StandardBanishingRitual.mp4`
+2. `Standard Invocation Ritual of the Pentagram`
+   Build a 1-item playlist using `StandardInvocationRitual.mp4`
+3. `Divine Infinite Being Invocation Ritual of the Pentagram`
+   Build a 1-item playlist using `Core_Invocation_Ritual.mp4`
+
+Important:
+
+- Do not expand these three rituals into modular `Ritual Opening`, `Gate`, `Core`, `Closing` playlist steps.
+- Their saved tag sets may still contain opening/gate/core/closing tags for identity and display purposes, but playback must collapse each preset into a single static video row.
+- This single-static-video behavior is the approved contract for preset ritual playback.
 
 ### Gate Tags
 
@@ -347,6 +357,61 @@ For custom planetary/zodiacal rituals, the playlist order must be:
 4. Zodiac signs inside a shared element follow:
    Cardinal -> Fixed -> Mutable
 5. `Ritual_Closing`
+
+### Static Ritual Playlist Rule
+
+For the three preset rituals, the playback page must show a single playlist item only.
+
+#### Static Standard Banishing
+
+Saved tags may include:
+
+1. `Ritual_Opening`
+2. `Pentagram_Gate_Banishing_Ritual`
+3. `Pentagram_Banishing_Ritual`
+4. `Ritual_Closing`
+
+But playback must collapse these into exactly:
+
+1. `Standard Banishing Ritual of the Pentagram`
+
+Video resolution:
+
+1. `StandardBanishingRitual.mp4`
+
+#### Static Standard Invocation
+
+Saved tags may include:
+
+1. `Ritual_Opening`
+2. `Pentagram_Gate_Invocation_Ritual`
+3. `Pentagram_Invocation_Ritual`
+4. `Ritual_Closing`
+
+But playback must collapse these into exactly:
+
+1. `Standard Invocation Ritual of the Pentagram`
+
+Video resolution:
+
+1. `StandardInvocationRitual.mp4`
+
+#### Static Divine Infinite Being
+
+Saved tags may include:
+
+1. `Ritual_Opening`
+2. `DIB_Gate_Invocation_Ritual`
+3. `DIB_Invocation_Ritual`
+4. `Ritual_Closing`
+
+But playback must collapse these into exactly:
+
+1. `Divine Infinite Being Invocation Ritual of the Pentagram`
+
+Video resolution:
+
+1. `Core_Invocation_Ritual.mp4`
 
 ### Example Custom Invocation Playlist
 
@@ -565,11 +630,12 @@ type RitualPlaylistItem = {
 9. Locked future steps show visibly different UI and are not clickable.
 10. Playlist sequencing for custom rituals follows:
     Opening -> Gate order by element -> Invocation order by gate hierarchy -> Closing
-11. Banishing custom rituals use gate banishing videos only, with no planet invocation videos.
-12. Invocation custom rituals use gate invocation videos plus relevant invocation videos.
-13. Zodiac invocation order inside the same element follows Cardinal -> Fixed -> Mutable.
-14. All provided video filenames resolve to the S3 URL base correctly.
-15. Ritual completion behavior remains compatible with existing ritual state handling.
+11. The three static preset rituals render as a single playlist item each and do not expand into four modular steps.
+12. Banishing custom rituals use gate banishing videos only, with no planet invocation videos.
+13. Invocation custom rituals use gate invocation videos plus relevant invocation videos.
+14. Zodiac invocation order inside the same element follows Cardinal -> Fixed -> Mutable.
+15. All provided video filenames resolve to the S3 URL base correctly.
+16. Ritual completion behavior remains compatible with existing ritual state handling.
 
 ## Verification Plan
 

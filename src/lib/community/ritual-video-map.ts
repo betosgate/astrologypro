@@ -82,6 +82,51 @@ const TAG_TO_FILENAME: Record<string, string> = {
   Virgo_Invocation_Ritual: "virgo_invocation.mp4",
 };
 
+const STATIC_PRESET_PLAYLISTS = [
+  {
+    tags: [
+      "Ritual_Opening",
+      "Pentagram_Gate_Banishing_Ritual",
+      "Pentagram_Banishing_Ritual",
+      "Ritual_Closing",
+    ],
+    item: {
+      tag: "Standard_Banishing_Ritual_Static",
+      title: "Standard Banishing Ritual of the Pentagram",
+      filename: "StandardBanishingRitual.mp4",
+      kind: "static" as const,
+    },
+  },
+  {
+    tags: [
+      "Ritual_Opening",
+      "Pentagram_Gate_Invocation_Ritual",
+      "Pentagram_Invocation_Ritual",
+      "Ritual_Closing",
+    ],
+    item: {
+      tag: "Standard_Invocation_Ritual_Static",
+      title: "Standard Invocation Ritual of the Pentagram",
+      filename: "StandardInvocationRitual.mp4",
+      kind: "static" as const,
+    },
+  },
+  {
+    tags: [
+      "Ritual_Opening",
+      "DIB_Gate_Invocation_Ritual",
+      "DIB_Invocation_Ritual",
+      "Ritual_Closing",
+    ],
+    item: {
+      tag: "DIB_Invocation_Ritual_Static",
+      title: "Divine Infinite Being Invocation Ritual of the Pentagram",
+      filename: "Core_Invocation_Ritual.mp4",
+      kind: "static" as const,
+    },
+  },
+] as const;
+
 /** Returns the S3 URL for a tag, or null if the tag is unmapped. */
 export function getRitualVideoUrlForTag(tag: string): string | null {
   const filename = TAG_TO_FILENAME[tag];
@@ -313,6 +358,27 @@ function tagToTitle(tag: string): string {
  *    must not be silently skipped).
  */
 export function buildRitualPlaylist(tags: string[]): RitualPlaylistItem[] {
+  const uniqueInput = [...new Set(tags)];
+  const staticPreset = STATIC_PRESET_PLAYLISTS.find(
+    ({ tags: presetTags }) =>
+      presetTags.length === uniqueInput.length &&
+      presetTags.every((tag) => uniqueInput.includes(tag))
+  );
+
+  if (staticPreset) {
+    return [
+      {
+        tag: staticPreset.item.tag,
+        title: staticPreset.item.title,
+        videoUrl: ritualVideoUrl(staticPreset.item.filename),
+        filename: staticPreset.item.filename,
+        sequence: 1,
+        kind: staticPreset.item.kind,
+        missing: false,
+      },
+    ];
+  }
+
   const ordered = sortRitualTagsForPlayback(tags);
   return ordered.map((tag, idx) => {
     const filename = getRitualVideoFilenameForTag(tag);
