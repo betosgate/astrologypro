@@ -296,7 +296,7 @@ export default function CreateRitualPage() {
       .then((data) => {
         if (data) setStepPreview(data);
       })
-      .catch(() => {});
+      .catch(() => { });
 
     return () => controller.abort();
   }, [step, mode, selectedPlanets, selectedZodiacs]);
@@ -362,14 +362,14 @@ export default function CreateRitualPage() {
 
   if (step === "choose") {
     return (
-      <div className="max-w-2xl space-y-8">
+      <div className="mx-auto w-full max-w-7xl space-y-8">
         <div>
-          <Link
+          {/* <Link
             href="/community/rituals"
             className="text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
           >
             My Rituals
-          </Link>
+          </Link> */}
           <div className="mt-3 flex items-center gap-3">
             <div className="flex size-10 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500/30 to-orange-500/20 ring-1 ring-amber-500/20">
               <Flame className="size-5 text-amber-400" />
@@ -392,7 +392,7 @@ export default function CreateRitualPage() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
           {PRESET_OPTIONS.map((option) => {
             const Icon = option.icon;
             const isLoading = savingPreset === option.name;
@@ -413,11 +413,11 @@ export default function CreateRitualPage() {
 
                   void submitPreset(option.name, [...option.tags]);
                 }}
-                className={`group relative overflow-hidden rounded-2xl border border-border/60 bg-card/70 p-5 text-left transition-all hover:border-amber-500/30 hover:shadow-lg hover:shadow-amber-500/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60 ${option.borderColor}`}
+                className={`group relative flex min-h-[240px] overflow-hidden rounded-2xl border border-border/60 bg-card/70 p-6 text-left transition-all hover:border-amber-500/30 hover:shadow-lg hover:shadow-amber-500/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60 ${option.borderColor}`}
               >
                 <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(245,158,11,0.06),transparent_60%)] opacity-0 transition-opacity group-hover:opacity-100" />
 
-                <div className="relative space-y-3">
+                <div className="relative flex w-full flex-col space-y-5">
                   <div className="flex items-start justify-between gap-2">
                     <div
                       className={`flex size-11 items-center justify-center rounded-xl bg-gradient-to-br ${option.iconBg} ring-1 ring-white/5 shadow-inner`}
@@ -429,7 +429,7 @@ export default function CreateRitualPage() {
                         variant="outline"
                         className="shrink-0 border-border/40 px-1.5 py-0.5 text-[10px] text-muted-foreground"
                       >
-                        {option.tags.length} tags
+                        Static
                       </Badge>
                     ) : (
                       <Badge
@@ -441,16 +441,16 @@ export default function CreateRitualPage() {
                     )}
                   </div>
 
-                  <div>
-                    <p className="text-sm font-semibold leading-snug">
+                  <div className="space-y-2">
+                    <p className="text-lg font-semibold leading-snug">
                       {option.name}
                     </p>
-                    <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                    <p className="line-clamp-2 text-xs leading-relaxed text-muted-foreground">
                       {option.description}
                     </p>
                   </div>
 
-                  <div className="flex items-center justify-between pt-1">
+                  <div className="mt-auto flex items-center justify-between pt-1">
                     <span className="text-xs text-muted-foreground/60">
                       {option.tags ? "Click to start" : "Configure first"}
                     </span>
@@ -474,9 +474,9 @@ export default function CreateRitualPage() {
     selectedPlanets.length > 0 || selectedZodiacs.length > 0;
 
   return (
-    <div className="max-w-2xl space-y-6">
+    <div className="mx-auto w-full max-w-5xl space-y-6">
       <div>
-        <button
+        {/* <button
           type="button"
           className="text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
           onClick={() => {
@@ -487,7 +487,7 @@ export default function CreateRitualPage() {
           }}
         >
           Back to Ritual Options
-        </button>
+        </button> */}
         <div className="mt-3 flex items-center gap-3">
           <div className="flex size-10 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500/30 to-sky-500/20 ring-1 ring-cyan-500/20">
             <Star className="size-5 text-cyan-400" />
@@ -533,13 +533,12 @@ export default function CreateRitualPage() {
                   setMode(ritualMode);
                   if (ritualMode === "banishing") setSelectedZodiacs([]);
                 }}
-                className={`flex-1 rounded-lg px-4 py-2 text-sm font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
-                  mode === ritualMode
+                className={`flex-1 rounded-lg px-4 py-2 text-sm font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${mode === ritualMode
                     ? ritualMode === "invocation"
                       ? "bg-gradient-to-r from-violet-600 to-purple-600 text-white shadow-md"
                       : "bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-md"
                     : "text-muted-foreground hover:text-foreground"
-                }`}
+                  }`}
               >
                 {ritualMode.charAt(0).toUpperCase() + ritualMode.slice(1)}
               </button>
@@ -567,11 +566,10 @@ export default function CreateRitualPage() {
                     toggleItem(planet, selectedPlanets, setSelectedPlanets)
                   }
                   aria-pressed={selected}
-                  className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
-                    selected
+                  className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${selected
                       ? "border-amber-500/50 bg-amber-500/20 text-amber-300"
                       : "border-border/60 bg-muted/20 text-muted-foreground hover:border-border hover:text-foreground"
-                  }`}
+                    }`}
                 >
                   <Checkbox
                     checked={selected}
@@ -588,9 +586,8 @@ export default function CreateRitualPage() {
       </Card>
 
       <Card
-        className={`border-border/60 transition-opacity ${
-          mode === "banishing" ? "pointer-events-none opacity-40" : ""
-        }`}
+        className={`border-border/60 transition-opacity ${mode === "banishing" ? "pointer-events-none opacity-40" : ""
+          }`}
       >
         <CardHeader className="pb-3">
           <div className="flex items-center gap-2">
@@ -620,11 +617,10 @@ export default function CreateRitualPage() {
                     toggleItem(sign, selectedZodiacs, setSelectedZodiacs)
                   }
                   aria-pressed={selected}
-                  className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
-                    selected
+                  className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${selected
                       ? "border-violet-500/50 bg-violet-500/20 text-violet-300"
                       : "border-border/60 bg-muted/20 text-muted-foreground hover:border-border hover:text-foreground"
-                  }`}
+                    }`}
                 >
                   <Checkbox
                     checked={selected}
@@ -672,9 +668,8 @@ export default function CreateRitualPage() {
               {stepPreview && (
                 <span className="text-xs text-muted-foreground">
                   {stepPreview.matched_steps > 0
-                    ? `This ritual has ${stepPreview.matched_steps} step${
-                        stepPreview.matched_steps !== 1 ? "s" : ""
-                      } ready`
+                    ? `This ritual has ${stepPreview.matched_steps} step${stepPreview.matched_steps !== 1 ? "s" : ""
+                    } ready`
                     : "Ritual instructions are being prepared by your guide"}
                 </span>
               )}
