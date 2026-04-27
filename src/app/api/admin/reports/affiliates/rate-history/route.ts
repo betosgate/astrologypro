@@ -35,6 +35,21 @@ export async function GET(request: Request) {
 
   const admin = createAdminClient();
 
+  // Resolve assignment-id scope BEFORE the LIMIT when filtering by diviner
+  // or affiliate. rate_history is keyed on assignment_id, so filtering at
+  // the SQL level keeps pagination correct.
+  let scopedAssignmentIds: string[] | null = null;
+  if (divinerId || affiliateId) {
+    let asgnQuery = admin.from("diviner_service_affiliates").select("id");
+    if (divinerId) asgnQuery = asgnQuery.eq("diviner_id", divinerId);
+    if (affiliateId) asgnQuery = asgnQuery.eq("affiliate_id", affiliateId);
+    const { data: assignments } = await asgnQuery;
+    scopedAssignmentIds = (assignments ?? []).map((a) => a.id as string);
+    if (scopedAssignmentIds.length === 0) {
+      return NextResponse.json({ data: [], nextCursor: null, hasMore: false });
+    }
+  }
+
   let query = admin
     .from("diviner_service_affiliate_rate_history")
     .select(
@@ -44,6 +59,7 @@ export async function GET(request: Request) {
     .order("id", { ascending: false })
     .limit(limit + 1);
 
+  if (scopedAssignmentIds) query = query.in("assignment_id", scopedAssignmentIds);
   if (dateFrom) query = query.gte("changed_at", dateFrom);
   if (dateTo) query = query.lte("changed_at", dateTo);
   if (cursor) query = query.lt("id", cursor);
@@ -61,28 +77,9 @@ export async function GET(request: Request) {
     );
   }
 
-  type Row = {
-    id: string;
-    assignment:
-      | { diviner_id: string | null; affiliate_id: string | null }
-      | { diviner_id: string | null; affiliate_id: string | null }[]
-      | null;
-  };
-  let filtered = (data ?? []) as unknown as Row[];
-
-  if (divinerId || affiliateId) {
-    filtered = filtered.filter((r) => {
-      const a = Array.isArray(r.assignment) ? r.assignment[0] : r.assignment;
-      if (!a) return false;
-      if (divinerId && a.diviner_id !== divinerId) return false;
-      if (affiliateId && a.affiliate_id !== affiliateId) return false;
-      return true;
-    });
-  }
-
-  const hasMore = filtered.length > limit;
-  const items = hasMore ? filtered.slice(0, limit) : filtered;
+  const rows = data ?? [];
+  const hasMore = rows.length > limit;
+  const items = hasMore ? rows.slice(0, limit) : rows;
   const nextCursor = hasMore ? items[items.length - 1]?.id ?? null : null;
-
   return NextResponse.json({ data: items, nextCursor, hasMore });
 }

@@ -36,6 +36,21 @@ export async function GET(request: Request) {
 
   const admin = createAdminClient();
 
+  // Resolve campaign-id scope BEFORE the LIMIT, so divinerId-filtered
+  // requests get a full page of matching rows (not a sliver after a
+  // post-LIMIT JS filter).
+  let scopedCampaignIds: string[] | null = null;
+  if (divinerId) {
+    const { data: campaigns } = await admin
+      .from("affiliate_campaigns")
+      .select("id")
+      .eq("diviner_id", divinerId);
+    scopedCampaignIds = (campaigns ?? []).map((c) => c.id as string);
+    if (scopedCampaignIds.length === 0) {
+      return NextResponse.json({ data: [], nextCursor: null, hasMore: false });
+    }
+  }
+
   let query = admin
     .from("campaign_conversions")
     .select(
@@ -45,6 +60,7 @@ export async function GET(request: Request) {
     .order("id", { ascending: false })
     .limit(limit + 1);
 
+  if (scopedCampaignIds) query = query.in("campaign_id", scopedCampaignIds);
   if (dateFrom) query = query.gte("created_at", dateFrom);
   if (dateTo) query = query.lte("created_at", dateTo);
   if (affiliateId) query = query.eq("affiliate_id", affiliateId);
@@ -65,26 +81,9 @@ export async function GET(request: Request) {
     );
   }
 
-  // diviner_id filter: campaign_conversions has no direct diviner_id, so
-  // we filter the SELECT result by the joined campaign.diviner_id.
-  type Row = {
-    id: string;
-    campaign:
-      | { diviner_id: string | null; name: string | null }
-      | { diviner_id: string | null; name: string | null }[]
-      | null;
-  };
-  let filtered = (data ?? []) as unknown as Row[];
-  if (divinerId) {
-    filtered = filtered.filter((r) => {
-      const camp = Array.isArray(r.campaign) ? r.campaign[0] : r.campaign;
-      return camp?.diviner_id === divinerId;
-    });
-  }
-
-  const hasMore = filtered.length > limit;
-  const items = hasMore ? filtered.slice(0, limit) : filtered;
+  const rows = data ?? [];
+  const hasMore = rows.length > limit;
+  const items = hasMore ? rows.slice(0, limit) : rows;
   const nextCursor = hasMore ? items[items.length - 1]?.id ?? null : null;
-
   return NextResponse.json({ data: items, nextCursor, hasMore });
 }
