@@ -50,6 +50,7 @@ import { DashboardFeedPreview } from "@/components/community/dashboard-feed-prev
 import { getCommunityDashboardFeed } from "@/lib/dashboard-content";
 import { calcFamilyProfileCompletion } from "@/lib/community/family-profile-completion";
 import { formatBirthPlace } from "@/lib/community/birth-location";
+import { deriveNatalReportState } from "@/lib/community/chart-report-state";
 import { SectionContainer } from "@/components/shared/section-container";
 
 export const metadata = { title: "Community - AstrologyPro" };
@@ -313,7 +314,7 @@ export default async function CommunityDashboardPage() {
     supabase
       .from("community_family_members")
       .select(
-        "id, user_id, full_name, relationship, date_of_birth, birth_time, birth_city, birth_country, natal_chart"
+        "id, user_id, full_name, relationship, date_of_birth, birth_time, birth_city, birth_country, natal_chart, natal_status, natal_report_id, natal_report_status"
       )
       .eq("member_id", member.id)
       .limit(10),
@@ -353,7 +354,7 @@ export default async function CommunityDashboardPage() {
     // Profile completion: family members with natal_chart data
     supabase
       .from("community_family_members")
-      .select("id, natal_chart")
+      .select("id, user_id, relationship, natal_chart, natal_status, natal_report_id, natal_report_status")
       .eq("member_id", member.id),
 
     // Profile completion: relationship charts generated
@@ -639,10 +640,16 @@ export default async function CommunityDashboardPage() {
   const pcHasFullName = Boolean(member.full_name && member.full_name.trim() !== "");
   const pcHasBirthData = hasDob && hasBirthTime && hasBirthCity;
   const pcHasNatalChart = pcFamilyMembers.some(
-    (fm) =>
-      fm.natal_chart != null &&
-      Object.keys(fm.natal_chart as Record<string, unknown>).length > 0
+    (fm) => deriveNatalReportState(fm) === "generated"
   );
+  const ownSelfChartRow =
+    pcFamilyMembers.find((fm) => fm.user_id === user.id) ??
+    pcFamilyMembers.find(
+      (fm) => (fm.relationship ?? "").toLowerCase() === "self"
+    );
+  const ownChartGenerated =
+    ownSelfChartRow != null &&
+    deriveNatalReportState(ownSelfChartRow) === "generated";
   const pcHasFamilyMember = pcFamilyMembers.length > 0;
   const pcHasRelationshipChart = pcRelCharts.length > 0;
 
@@ -796,9 +803,9 @@ export default async function CommunityDashboardPage() {
   const quickActions = [
     {
       icon: ownChartReady ? Star : Sparkles,
-      label: ownChartReady ? "View Chart" : "Generate Chart",
-      href: "/community/charts",
-      highlight: !ownChartReady,
+      label: ownChartGenerated ? "View Chart" : "Generate Chart",
+      href: "/community/horoscope",
+      highlight: !ownChartGenerated && ownChartReady,
     },
     {
       icon: TrendingUp,
@@ -1699,8 +1706,7 @@ export default async function CommunityDashboardPage() {
                   );
                   const completionPct = completion.percent;
                   const hasNatalChart =
-                    m.natal_chart != null &&
-                    Object.keys(m.natal_chart as Record<string, unknown>).length > 0;
+                    deriveNatalReportState(m) === "generated";
                   const profileComplete = completionPct >= 100;
                   const avatarColor = AVATAR_COLORS[idx % AVATAR_COLORS.length];
 

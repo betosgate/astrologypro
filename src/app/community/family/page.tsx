@@ -29,6 +29,10 @@ import {
 } from "@/components/community/birth-city-autocomplete";
 import { formatBirthPlace } from "@/lib/community/birth-location";
 import { SectionContainer } from "@/components/shared/section-container";
+import {
+  ctaForState,
+  deriveNatalReportState,
+} from "@/lib/community/chart-report-state";
 
 type FamilyMember = {
   id: string;
@@ -42,6 +46,9 @@ type FamilyMember = {
   relationship: string | null;
   age_group: "child" | "adult";
   natal_chart: Record<string, unknown> | null;
+  natal_status: string | null;
+  natal_report_id: string | null;
+  natal_report_status: string | null;
   chart_updated_at: string | null;
   notes: string | null;
 };
@@ -494,6 +501,21 @@ export default function CommunityFamilyPage() {
               (new Date().getTime() - dob.getTime()) /
                 (365.25 * 24 * 3600 * 1000)
             );
+            const reportState = deriveNatalReportState(m);
+            const reportCta = ctaForState(reportState);
+            const chartReady = reportCta.kind === "view";
+            const chartCtaLabel =
+              reportCta.kind === "view"
+                ? "View Chart"
+                : reportCta.kind === "retry"
+                ? "Retry Chart"
+                : reportCta.kind === "regenerate"
+                ? "Regenerate Chart"
+                : reportCta.kind === "generating"
+                ? "Generating Chart..."
+                : reportCta.kind === "locked"
+                ? "Review Chart"
+                : "Generate Chart";
             return (
               <Card key={m.id}>
                 <button
@@ -529,7 +551,7 @@ export default function CommunityFamilyPage() {
                     >
                       {m.age_group}
                     </Badge>
-                    {m.natal_chart && (
+                    {chartReady && (
                       <Badge variant="default" className="text-xs">
                         Chart ready
                       </Badge>
@@ -581,7 +603,7 @@ export default function CommunityFamilyPage() {
                     <div className="flex items-center gap-2 pt-1 flex-wrap">
                       <Button size="sm" asChild>
                         <a href={`/community/family/${m.id}`}>
-                          {m.natal_chart ? "View Chart" : "Generate Chart"}
+                          {chartCtaLabel}
                         </a>
                       </Button>
                       <Button

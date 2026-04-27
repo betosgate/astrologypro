@@ -4,6 +4,7 @@ import {
   isValidNatalChart,
   isValidMonthlyTransit,
 } from "@/lib/community/chart-validators";
+import { deriveNatalReportState } from "@/lib/community/chart-report-state";
 
 export const dynamic = "force-dynamic";
 
@@ -57,9 +58,10 @@ export async function GET() {
   // An empty array is a valid "no chart yet" signal — not an error.
   const { data: familyWithCharts, error: familyError } = await supabase
     .from("community_family_members")
-    .select("id, full_name, date_of_birth, natal_chart, created_at")
+    .select(
+      "id, full_name, date_of_birth, natal_chart, natal_status, natal_report_id, natal_report_status, created_at"
+    )
     .eq("member_id", member.id)
-    .not("natal_chart", "is", null)
     .order("created_at", { ascending: true });
 
   type NatalChartItem = {
@@ -99,12 +101,12 @@ export async function GET() {
     // as "no chart" so the user is offered regeneration instead of a
     // stale render.
     natalCharts = familyWithCharts
-      .filter((row) => isValidNatalChart(row.natal_chart))
+      .filter((row) => deriveNatalReportState(row) === "generated")
       .map((row) => ({
         id: row.id,
         full_name: row.full_name,
         date_of_birth: row.date_of_birth,
-        natal_chart: row.natal_chart,
+        natal_chart: isValidNatalChart(row.natal_chart) ? row.natal_chart : {},
       }));
 
     if (natalCharts.length === 0) {
