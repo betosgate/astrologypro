@@ -210,7 +210,7 @@ export default function DashboardAssignAffiliatePage() {
                   onValueChange={setAffiliateId}
                   disabled={submitting}
                 >
-                  <SelectTrigger id="affiliate">
+                  <SelectTrigger id="affiliate" className="w-full">
                     <SelectValue placeholder="Pick an affiliate…" />
                   </SelectTrigger>
                   <SelectContent>
@@ -243,7 +243,7 @@ export default function DashboardAssignAffiliatePage() {
                   }
                   disabled={submitting}
                 >
-                  <SelectTrigger id="destination-type">
+                  <SelectTrigger id="destination-type" className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -263,7 +263,7 @@ export default function DashboardAssignAffiliatePage() {
                     onValueChange={setDestinationId}
                     disabled={submitting || services.length === 0}
                   >
-                    <SelectTrigger id="destination-id">
+                    <SelectTrigger id="destination-id" className="w-full">
                       <SelectValue
                         placeholder={
                           services.length === 0
@@ -305,7 +305,7 @@ export default function DashboardAssignAffiliatePage() {
                   }
                   disabled={submitting}
                 >
-                  <SelectTrigger id="commission-type">
+                  <SelectTrigger id="commission-type" className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
