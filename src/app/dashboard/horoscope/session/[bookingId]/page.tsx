@@ -1,28 +1,9 @@
 /**
- * /admin/horoscope/session/[bookingId]
+ * /dashboard/horoscope/session/[bookingId]
  *
- * Diviner-facing booking-scoped horoscope route.
- *
- * Rendering strategy (2026-04-20 product decision: "don't build a parallel
- * result renderer — reuse the main toolkit page verbatim"):
- *   1. Server-side auth via requireDivinerOrAdminForBooking (admin + assigned
- *      diviner only).
- *   2. Resolve the booking's service_template → horoscope tab slug.
- *   3. Collect the client's birth data from `clients` (fallback to the older
- *      `questionnaire_responses` JSONB for pre-refactor bookings) and the
- *      partner's birth data for the three two-person services.
- *   4. Build a FormState-shaped prefill payload and 307-redirect to
- *      `/dashboard/horoscope?tab=<slug>&prefill=<encoded-json>`.
- *
- * The main /admin/horoscope page reads `prefill`, hydrates its form, and
- * auto-fires handleSubmit — so the diviner lands directly on the rich,
- * fully-rendered result (wheel charts + Solar Return Details table +
- * Solar Return Planets table + AI interpretations) without a second click
- * and without this route owning any rendering code.
- *
- * This replaces the old SingleHoroscopeSession client that dumped raw JSON.
- * That file is dead but left in place to avoid a git churn in this patch —
- * it's no longer imported anywhere and can be deleted in a follow-up.
+ * Diviner-facing booking-scoped horoscope route. It performs the same
+ * ownership and template checks as the admin route, then redirects into the
+ * dashboard-hosted horoscope toolkit with a prefilled form.
  */
 
 import { notFound, redirect } from "next/navigation";
@@ -37,15 +18,11 @@ import {
 } from "@/lib/service-toolkit-mapping";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Horoscope Session — AstrologyPro" };
+export const metadata = { title: "Horoscope Session - AstrologyPro" };
 
 interface PageProps {
   params: Promise<{ bookingId: string }>;
 }
-
-// ─── Prefill shape — mirrors /admin/horoscope FormState + CityOption ────────
-// Kept inline so this route has zero cross-file coupling to the toolkit
-// internals beyond the URL contract.
 
 interface PrefillCity {
   label: string;
@@ -67,8 +44,6 @@ interface PrefillForm {
   futureMonth: string;
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
 function num(v: number | string | null | undefined): number | null {
   if (v === null || v === undefined) return null;
   const n = typeof v === "number" ? v : Number(v);
@@ -79,9 +54,6 @@ function str(v: unknown): string {
   return typeof v === "string" ? v : "";
 }
 
-// Astrology convention: if no birth time was captured, fall back to a
-// 12:00 noon chart. Houses/rising are then approximate, but planetary
-// positions are still valid — the diviner can correct on the toolkit page.
 const NOON_DEFAULT_TOB = "12:00";
 
 function emptyBirth(): PrefillBirth {
@@ -115,10 +87,6 @@ function asPrefillBirth(
   };
 }
 
-/**
- * Prefer the `clients` row for birth data; fall back to the booking's
- * questionnaire_responses JSONB (older bookings captured data there).
- */
 function extractClientBirth(booking: BookingForSession): PrefillBirth {
   const client = booking.clients;
   const q = (booking.questionnaire_responses ?? {}) as Record<string, unknown>;
@@ -152,12 +120,11 @@ function extractPartnerBirth(booking: BookingForSession): PrefillBirth | null {
   return asPrefillBirth(dob, tob, cityLabel, lat, lng, tz);
 }
 
-// ─── Page ────────────────────────────────────────────────────────────────────
-
-export default async function HoroscopeSessionPage({ params }: PageProps) {
+export default async function DashboardHoroscopeSessionPage({
+  params,
+}: PageProps) {
   const { bookingId } = await params;
 
-  // Rollout gate — see service-toolkit-mapping.ts isToolkitEnabled().
   if (!isToolkitEnabled()) notFound();
 
   const { booking } = await requireDivinerOrAdminForBooking(bookingId);
@@ -168,9 +135,7 @@ export default async function HoroscopeSessionPage({ params }: PageProps) {
   }
 
   const tabSlug = ASTROLOGY_TAB_MAP[template.slug];
-  if (!tabSlug) {
-    notFound();
-  }
+  if (!tabSlug) notFound();
 
   const clientBirth = extractClientBirth(booking);
   const needsPartner = requiresPartnerBirthData(template.slug);

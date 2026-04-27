@@ -2887,7 +2887,7 @@ interface DivinerNewBookingParams {
   };
   birthData?: string;
   /**
-   * Pre-computed /admin/session/{bookingId} URL for the toolkit entry point.
+   * Pre-computed /dashboard/session/{bookingId} URL for the toolkit entry point.
    * NULL when the service has no toolkit mapping (suppresses the CTA row).
    */
   sessionUrl?: string | null;
