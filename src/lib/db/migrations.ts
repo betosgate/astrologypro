@@ -73,6 +73,7 @@ import { MIGRATION_SQL as MIG_20260423000004_FIX } from "@/data/migrations/20260
 import { MIGRATION_SQL as MIG_20260423000005_ACC } from "@/data/migrations/20260423000005_accept_rpc";
 import { MIGRATION_SQL as MIG_20260424000001_ODC } from "@/data/migrations/20260424000001_phone_sessions_outbound_diviner_call";
 import { MIGRATION_SQL as MIG_20260424000002_AAR } from "@/data/migrations/20260424000002_astro_ai_responses";
+import { MIGRATION_SQL as MIG_20260427000001_SRL } from "@/data/migrations/20260427000001_saved_report_linkage";
 import { MIGRATION_SQL as MIG_20260424000010_ACV2A } from "@/data/migrations/20260424000010_affiliate_commission_v2_additive";
 import { MIGRATION_SQL as MIG_20260424009001_ACV2D } from "@/data/migrations/20260424009001_affiliate_commission_v2_destructive";
 
@@ -667,6 +668,14 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Additive. Creates public.astro_ai_responses table for persisting AI-generated astrological reports (toolname, ai_response JSONB, formData, astro_api_data, natal_chart, summary, multiple chart-image URLs, share URL, timestamps). Adds a nullable user_id FK to auth.users so rows can be attributed to a creator without breaking the legacy spec-shape. Enables RLS with: service_role full; authenticated SELECT-by-id (the UUID acts as the share key, matching the spec's 'password-protected shared links via _id' design); INSERT/UPDATE/DELETE scoped to user_id = auth.uid(). Adds a BEFORE UPDATE trigger that bumps updated_at, an index on (user_id, created_at DESC) for 'my recent reports' lookups, and a partial index on toolname. Required by POST /api/astro-ai/save-astro-ai-response and POST /api/astro-ai/fetch-save-astro-ai-response. Rollback: DROP TRIGGER, DROP FUNCTION, DROP TABLE.",
     sortKey: "20260424000002",
     sql: MIG_20260424000002_AAR,
+  },
+  "20260427000001_saved_report_linkage": {
+    id: "20260427000001_saved_report_linkage",
+    title: "Saved report linkage (community domain ↔ astro_ai_responses)",
+    description:
+      "Additive. Adds natal_report_id/natal_report_generated_at/natal_report_status to community_family_members; full_report_id/full_report_generated_at/full_report_status to monthly_transits; report_id/report_type/report_generated_at/report_status to relationship_charts. CHECK-constrained statuses (missing|generating|generated|failed|stale|locked_for_review) and report_type (friendship|romantic|partnership). Creates community_relationship_reports child table so a single pair can have multiple report types simultaneously, with unique (person_a_id, person_b_id, report_type) and a person_a_id < person_b_id sort guard. Indexed for 'find report by id' and 'list by member+status' patterns. RLS: service_role full; authenticated members see only their own household rows. Existing chart_data / natal_chart / transit_data columns are untouched so legacy rows remain viewable during rollout. Rollback: DROP COLUMN ... and DROP TABLE community_relationship_reports.",
+    sortKey: "20260427000001",
+    sql: MIG_20260427000001_SRL,
   },
   "20260423000004_fix_invite_rpc_ambiguity": {
     id: "20260423000004_fix_invite_rpc_ambiguity",
