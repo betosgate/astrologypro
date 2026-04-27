@@ -9,6 +9,11 @@ import {
 import { generateNatalChart, type NatalChartData } from "@/lib/astro/natal-chart";
 import { calculateMonthlyTransits } from "@/lib/astro/transits";
 import { calculateSynastry } from "@/lib/astro/synastry";
+import {
+  isValidNatalChart,
+  isValidRelationshipChart,
+} from "@/lib/community/chart-validators";
+import { ensureCurrentMonthTransitsForMember } from "@/lib/community/ensure-monthly-transits";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -72,7 +77,11 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  let body: { type?: string; birthData?: Partial<BirthDataInput> };
+  let body: {
+    type?: string;
+    birthData?: Partial<BirthDataInput>;
+    forceRegenerate?: boolean;
+  };
   try {
     body = await req.json();
   } catch {
@@ -81,6 +90,13 @@ export async function POST(req: NextRequest) {
       { status: 400 }
     );
   }
+
+  // community-chart-cache-and-regeneration Task 02 (2026-04-27):
+  // Caller may explicitly opt out of cache reuse. Birth-data changes
+  // (`body.birthData` present below) are also treated as an implicit
+  // force, since the persisted chart no longer reflects the input.
+  const forceRegenerate = body.forceRegenerate === true;
+  const birthDataChanged = !!body.birthData;
 
   const type = body.type as ChartType | undefined;
   if (!type || !["natal", "monthly", "relationship"].includes(type)) {
@@ -205,24 +221,85 @@ export async function POST(req: NextRequest) {
     selfId = id;
   }
 
-  // Always (re)generate the self natal chart — needed for all 3 chart types
-  const selfNatal: NatalChartData = generateNatalChart({
-    dateOfBirth: resolved.dateOfBirth!,
-    birthTime: resolved.birthTime,
-    lat: resolved.birthLat!,
-    lng: resolved.birthLng!,
-    ageGroup: "adult",
-  });
-
-  await admin
+  // community-chart-cache-and-regeneration Task 02 (2026-04-27):
+  //
+  // Stop blindly regenerating the self natal chart. Look up the stored
+  // row first; reuse if it matches the current production shape, status
+  // is `generated`, the caller didn't supply changed birth data, and
+  // they didn't explicitly force regeneration.
+  //
+  // Important constraints from the spec:
+  //   - cached reads must NOT consume natal correction retries
+  //   - cached reads must NOT bypass `locked_for_review`
+  //   - cached reads must NOT bump `chart_updated_at` /
+  //     `natal_last_generated_at`
+  //
+  // We treat `locked_for_review` as a cache hit too — that status only
+  // exists when a fully validated chart was already persisted, and the
+  // governance flow at /api/community/generate-natal owns flipping it
+  // off. Reading from this convenience endpoint must not interact with
+  // governance state.
+  const { data: existingSelf } = await admin
     .from("community_family_members")
-    .update({
-      natal_chart: selfNatal,
-      chart_updated_at: new Date().toISOString(),
-      natal_status: "generated",
-      natal_last_generated_at: new Date().toISOString(),
-    })
-    .eq("id", selfId);
+    .select("natal_chart, natal_status, chart_updated_at, natal_last_generated_at")
+    .eq("id", selfId)
+    .maybeSingle();
+
+  const cachedNatalCandidate = existingSelf?.natal_chart;
+  const cachedNatalStatus = existingSelf?.natal_status as string | null | undefined;
+  const cachedNatalIsValid =
+    cachedNatalCandidate != null && isValidNatalChart(cachedNatalCandidate);
+  const cachedNatalIsCurrent =
+    (cachedNatalStatus === "generated" || cachedNatalStatus === "locked_for_review") &&
+    cachedNatalIsValid;
+
+  const shouldUseCachedNatal =
+    cachedNatalIsCurrent && !birthDataChanged && !forceRegenerate;
+
+  let selfNatal: NatalChartData;
+  let selfNatalSource: "cached" | "generated" | "regenerated";
+
+  if (shouldUseCachedNatal) {
+    selfNatal = cachedNatalCandidate as NatalChartData;
+    selfNatalSource = "cached";
+    // No DB write — preserves chart_updated_at / natal_last_generated_at.
+  } else {
+    selfNatal = generateNatalChart({
+      dateOfBirth: resolved.dateOfBirth!,
+      birthTime: resolved.birthTime,
+      lat: resolved.birthLat!,
+      lng: resolved.birthLng!,
+      ageGroup: "adult",
+    });
+
+    await admin
+      .from("community_family_members")
+      .update({
+        natal_chart: selfNatal,
+        chart_updated_at: new Date().toISOString(),
+        natal_status: "generated",
+        natal_last_generated_at: new Date().toISOString(),
+      })
+      .eq("id", selfId);
+
+    // Distinguish first-time vs. legacy/forced regen for callers + telemetry.
+    selfNatalSource =
+      cachedNatalCandidate == null ? "generated" : "regenerated";
+
+    // community-monthly-transit-architecture Task 05 T3 (2026-04-27):
+    // A fresh natal chart was just persisted. Fire-and-forget the
+    // current-month catch-up so the new family member gets a summary
+    // row without waiting for next month's cron. Failures are logged
+    // but never block the user's chart-generation request — the next
+    // /community/transits visit (lazy fallback) will retry on their
+    // behalf.
+    void ensureCurrentMonthTransitsForMember(member.id).catch((err) => {
+      console.warn(
+        "[generate-chart] post-natal monthly-transit catch-up failed:",
+        err instanceof Error ? err.message : err
+      );
+    });
+  }
 
   // ── Dispatch per chart type ─────────────────────────────────────────────────
   if (type === "natal") {
@@ -230,6 +307,9 @@ export async function POST(req: NextRequest) {
       ok: true,
       type: "natal",
       source: resolved.source,
+      // Cache-aware status — "cached" means the persisted chart was
+      // returned without recomputing or rewriting.
+      cacheSource: selfNatalSource,
       data: { natalChart: selfNatal, selfFamilyMemberId: selfId },
     });
   }
@@ -267,33 +347,128 @@ export async function POST(req: NextRequest) {
       ok: true,
       type: "monthly",
       source: resolved.source,
+      // Whether the underlying natal chart was reused or regenerated.
+      cacheSource: selfNatalSource,
       data: { month: monthStr, transitData, selfFamilyMemberId: selfId },
     });
   }
 
-  // type === "relationship" — generate for every family pair that includes self
-  // (and every other pair — matches existing /community/charts flow)
+  // ── type === "relationship" ─────────────────────────────────────────────────
+  //
+  // community-chart-cache-and-regeneration Task 04 (2026-04-27):
+  //
+  // Align this branch with /api/community/relationship-charts/batch:
+  //   - skip pairs where a current (non-invalidated, shape-valid) chart exists
+  //   - regenerate pairs where invalidated_at is set
+  //   - regenerate pairs where stored chart_data fails shape validation
+  //     (legacy/dummy data — Task 06)
+  //   - generate missing pairs
+  //   - report counts so callers can show "all current" vs. "5 generated"
+  //
+  // forceRegenerate=true rebuilds every pair regardless of cache state.
+  //
+  // Eligibility = `natal_status='generated'` AND a shape-valid stored
+  // natal chart. The shape gate keeps Task 06 honest: a relationship
+  // chart computed from a legacy/dummy natal chart would itself be
+  // garbage.
+
   const { data: familyRows } = await admin
     .from("community_family_members")
-    .select("id, full_name, natal_chart")
+    .select("id, full_name, natal_chart, natal_status")
     .eq("member_id", member.id);
 
   const family = (familyRows ?? []) as Array<{
     id: string;
     full_name: string;
     natal_chart: unknown;
+    natal_status: string | null;
   }>;
 
-  const withCharts = family.filter((f) => f.natal_chart);
-  const generated: Array<{ personAId: string; personBId: string; score: number }> = [];
-  const skipped: Array<{ personAId: string; personBId: string; reason: string }> = [];
+  const eligible = family.filter(
+    (f) =>
+      f.natal_status === "generated" &&
+      f.natal_chart != null &&
+      isValidNatalChart(f.natal_chart)
+  );
 
-  for (let i = 0; i < withCharts.length; i++) {
-    for (let j = i + 1; j < withCharts.length; j++) {
-      const a = withCharts[i];
-      const b = withCharts[j];
+  const familyWithoutCharts = family
+    .filter(
+      (f) =>
+        f.natal_status !== "generated" ||
+        f.natal_chart == null ||
+        !isValidNatalChart(f.natal_chart)
+    )
+    .map((f) => ({ id: f.id, fullName: f.full_name }));
+
+  if (eligible.length < 2) {
+    return Response.json({
+      ok: true,
+      type: "relationship",
+      source: resolved.source,
+      cacheSource: selfNatalSource,
+      data: {
+        generated: 0,
+        cached: 0,
+        invalidatedRegenerated: 0,
+        blocked: 0,
+        familyWithoutCharts,
+        totalPairs: 0,
+        message:
+          "Need at least 2 members with generated natal charts to create relationship charts.",
+      },
+    });
+  }
+
+  // Pull existing relationship_charts for this member; we look at
+  // invalidation + chart_data shape per pair.
+  const { data: existingCharts } = await admin
+    .from("relationship_charts")
+    .select("id, person_a_id, person_b_id, invalidated_at, chart_data")
+    .eq("member_id", member.id);
+
+  const chartMap = new Map<
+    string,
+    {
+      id: string;
+      invalidated_at: string | null;
+      chart_data: unknown;
+    }
+  >();
+  for (const c of existingCharts ?? []) {
+    const key = [c.person_a_id, c.person_b_id].sort().join(":");
+    chartMap.set(key, {
+      id: c.id,
+      invalidated_at: c.invalidated_at,
+      chart_data: c.chart_data,
+    });
+  }
+
+  let generated = 0;
+  let cached = 0;
+  let invalidatedRegenerated = 0;
+  let blocked = 0;
+
+  for (let i = 0; i < eligible.length; i++) {
+    for (let j = i + 1; j < eligible.length; j++) {
+      const a = eligible[i];
+      const b = eligible[j];
       const [aId, bId] = [a.id, b.id].sort();
+      const pairKey = `${aId}:${bId}`;
+      const existing = chartMap.get(pairKey);
 
+      // Cache hit: row exists, not invalidated, shape valid, no force.
+      const isCacheHit =
+        !forceRegenerate &&
+        existing != null &&
+        existing.invalidated_at === null &&
+        isValidRelationshipChart(existing.chart_data);
+
+      if (isCacheHit) {
+        cached++;
+        continue;
+      }
+
+      // Otherwise (re)generate.
       try {
         const synastry = calculateSynastry(
           a.natal_chart as NatalChartData,
@@ -302,7 +477,7 @@ export async function POST(req: NextRequest) {
           b.full_name
         );
 
-        await admin
+        const { error: upsertError } = await admin
           .from("relationship_charts")
           .upsert(
             {
@@ -311,34 +486,53 @@ export async function POST(req: NextRequest) {
               person_b_id: bId,
               chart_data: synastry,
               generated_at: new Date().toISOString(),
+              invalidated_at: null,
+              invalidation_reason: null,
+              updated_at: new Date().toISOString(),
             },
             { onConflict: "person_a_id,person_b_id" }
           );
 
-        generated.push({ personAId: aId, personBId: bId, score: synastry.score });
+        if (upsertError) {
+          console.error(
+            "[me/generate-chart] relationship upsert error for pair",
+            pairKey,
+            upsertError
+          );
+          blocked++;
+          continue;
+        }
+
+        if (existing?.invalidated_at) {
+          invalidatedRegenerated++;
+        } else {
+          generated++;
+        }
       } catch (err) {
-        skipped.push({
-          personAId: aId,
-          personBId: bId,
-          reason: err instanceof Error ? err.message : "unknown",
-        });
+        console.error(
+          "[me/generate-chart] relationship calc failed for pair",
+          pairKey,
+          err
+        );
+        blocked++;
       }
     }
   }
 
-  const familyWithoutCharts = family
-    .filter((f) => !f.natal_chart)
-    .map((f) => ({ id: f.id, fullName: f.full_name }));
+  const totalPairs = (eligible.length * (eligible.length - 1)) / 2;
 
   return Response.json({
     ok: true,
     type: "relationship",
     source: resolved.source,
+    cacheSource: selfNatalSource,
     data: {
       generated,
-      skipped,
+      cached,
+      invalidatedRegenerated,
+      blocked,
       familyWithoutCharts,
-      totalPairs: generated.length,
+      totalPairs,
     },
   });
 }

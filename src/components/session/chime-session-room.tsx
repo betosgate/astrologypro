@@ -81,7 +81,7 @@ interface ChimeSessionRoomProps {
     city?: string;
   };
   /**
-   * Pre-computed link to /admin/session/{bookingId} when the booking's service
+   * Pre-computed link to /service/session/{bookingId} when the booking's service
    * maps to a toolkit (horoscope tab or tarot spread). NULL when the service
    * is unmapped (hides the button). Only meaningful for role === "diviner".
    * Computed server-side via getSessionLinkForBooking().

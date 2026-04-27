@@ -33,6 +33,7 @@ interface DrawnCard {
 
 const CARD_BACK_URL =
   "https://all-frontend-assets.s3.amazonaws.com/transcendentpagan/assets/images/TarotCardBG.jpg";
+const PAGE_SHELL_CLASS = "mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8";
 
 // ─── Fisher-Yates shuffle ─────────────────────────────────────────────────────
 
@@ -47,7 +48,11 @@ function shuffle<T>(arr: T[]): T[] {
 
 // ─── Main Page (Practice Mode — no saving) ───────────────────────────────────
 
-export default function AdminSpreadReadingPage() {
+export function TarotSpreadReadingPage({
+  listHref = "/admin/tarot/readings",
+}: {
+  listHref?: string;
+}) {
   const params = useParams<{ spreadId: string }>();
 
   const [state, setState] = useState<ReadingState>("loading");
@@ -137,8 +142,10 @@ export default function AdminSpreadReadingPage() {
   // ── Loading ──
   if (state === "loading") {
     return (
-      <div className="flex justify-center py-16">
-        <Loader2 className="size-8 animate-spin text-indigo-400/60" />
+      <div className={PAGE_SHELL_CLASS}>
+        <div className="flex justify-center py-16">
+          <Loader2 className="size-8 animate-spin text-indigo-400/60" />
+        </div>
       </div>
     );
   }
@@ -146,11 +153,13 @@ export default function AdminSpreadReadingPage() {
   // ── Error ──
   if (state === "error" || !spread) {
     return (
-      <div className="space-y-4 text-center py-16">
-        <p className="text-lg font-semibold">Spread not found.</p>
-        <Button asChild variant="outline">
-          <Link href="/admin/tarot/readings">Browse Spreads</Link>
-        </Button>
+      <div className={PAGE_SHELL_CLASS}>
+        <div className="space-y-4 text-center py-16">
+          <p className="text-lg font-semibold">Spread not found.</p>
+          <Button asChild variant="outline">
+            <Link href={listHref}>Browse Spreads</Link>
+          </Button>
+        </div>
       </div>
     );
   }
@@ -158,17 +167,17 @@ export default function AdminSpreadReadingPage() {
   // ── Revealed — just show "Begin Another Reading" (practice mode, no save) ──
   if (state === "revealed") {
     return (
-      <div className="space-y-6">
+      <div className={`${PAGE_SHELL_CLASS} space-y-6`}>
         <div className="flex items-center justify-between">
           <div>
-            <Link href="/admin/tarot/readings" className="text-sm text-muted-foreground hover:text-foreground">
+            <Link href={listHref} className="text-sm text-muted-foreground hover:text-foreground">
               ← Tarot Practice
             </Link>
             <h1 className="mt-1 text-2xl font-bold tracking-tight">{spread.name} — Complete</h1>
           </div>
         </div>
 
-        <div className="rounded-2xl border border-[#343a45] bg-[#1a1e27] p-6 md:p-10 overflow-hidden -mx-4 md:-mx-10 lg:-mx-16">
+        <div className="rounded-2xl border border-[#343a45] bg-[#1a1e27] p-6 md:p-10 overflow-hidden">
           <SpreadLayout
             spreadName={spread.name}
             cardCount={spread.card_count}
@@ -184,7 +193,7 @@ export default function AdminSpreadReadingPage() {
             Begin Another Reading
           </Button>
           <Button asChild variant="outline">
-            <Link href="/admin/tarot/readings">All Spreads</Link>
+            <Link href={listHref}>All Spreads</Link>
           </Button>
         </div>
       </div>
@@ -193,10 +202,10 @@ export default function AdminSpreadReadingPage() {
 
   // ── Drawing screen ────────────────────────────────────────────────────────
   return (
-    <div className="space-y-6">
+    <div className={`${PAGE_SHELL_CLASS} space-y-6`}>
       <div className="flex items-center justify-between">
         <div>
-          <Link href="/admin/tarot/readings" className="text-sm text-muted-foreground hover:text-foreground">
+          <Link href={listHref} className="text-sm text-muted-foreground hover:text-foreground">
             ← Tarot Practice
           </Link>
           <h1 className="mt-1 text-2xl font-bold tracking-tight">{spread.name}</h1>
@@ -218,4 +227,8 @@ export default function AdminSpreadReadingPage() {
       </div>
     </div>
   );
+}
+
+export default function AdminSpreadReadingPage() {
+  return <TarotSpreadReadingPage />;
 }

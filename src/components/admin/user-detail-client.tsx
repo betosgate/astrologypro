@@ -1884,9 +1884,9 @@ export function UserDetailClient({ user }: { user: UserDetailData }) {
                   </dl>
                   <div className="pt-2 border-t">
                     <Button size="sm" variant="outline" asChild>
-                      <Link href={`/admin/affiliates/${user.businessData.data.affiliate_row_id}`}>
+                      <Link href="/admin/reports/affiliates/by-affiliate">
                         <ExternalLink className="mr-1.5 size-3.5" />
-                        Full Affiliate Management
+                        View affiliate metrics
                       </Link>
                     </Button>
                   </div>

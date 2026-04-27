@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   Dialog,
   DialogContent,
@@ -114,6 +115,8 @@ export default function AffiliateAssignmentsPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [groupBy, setGroupBy] = useState<"affiliate" | "service">("affiliate");
   const [showInactive, setShowInactive] = useState(false);
+  const [revokeAssignment, setRevokeAssignment] = useState<Assignment | null>(null);
+  const [revoking, setRevoking] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -135,18 +138,23 @@ export default function AffiliateAssignmentsPage() {
   }, [load]);
 
   async function handleRevoke(id: string) {
-    if (!confirm("Revoke this assignment? Affiliate campaigns pointing at this destination will be auto-paused.")) return;
-    const res = await fetch(`/api/dashboard/affiliate-assignments/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ is_active: false }),
-    });
-    if (res.ok) {
-      toast.success("Assignment revoked");
-      await load();
-    } else {
-      const err = await res.json();
-      toast.error(err.error ?? "Failed to revoke");
+    setRevoking(true);
+    try {
+      const res = await fetch(`/api/dashboard/affiliate-assignments/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ is_active: false }),
+      });
+      if (res.ok) {
+        toast.success("Assignment revoked");
+        setRevokeAssignment(null);
+        await load();
+      } else {
+        const err = await res.json();
+        toast.error(err.error ?? "Failed to revoke");
+      }
+    } finally {
+      setRevoking(false);
     }
   }
 
@@ -159,6 +167,21 @@ export default function AffiliateAssignmentsPage() {
 
   return (
     <div className="space-y-6 pb-16">
+      <ConfirmDialog
+        open={!!revokeAssignment}
+        title="Revoke Assignment"
+        description="Revoke this assignment? Affiliate campaigns pointing at this destination will be auto-paused."
+        confirmLabel="Revoke"
+        loading={revoking}
+        variant="destructive"
+        onOpenChange={(open) => {
+          if (!open && !revoking) setRevokeAssignment(null);
+        }}
+        onConfirm={() => {
+          if (revokeAssignment) void handleRevoke(revokeAssignment.id);
+        }}
+      />
+
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" asChild>
@@ -307,7 +330,7 @@ export default function AffiliateAssignmentsPage() {
                                 variant="ghost"
                                 size="sm"
                                 className="h-7 px-2 text-destructive hover:text-destructive"
-                                onClick={() => handleRevoke(r.id)}
+                                onClick={() => setRevokeAssignment(r)}
                                 title="Revoke"
                               >
                                 <Ban className="size-3.5" />
