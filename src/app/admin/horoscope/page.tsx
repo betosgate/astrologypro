@@ -3398,6 +3398,15 @@ export function HoroscopeToolkitPage({
       // and raw data to avoid repeated AI costs. The external endpoint is the
       // legacy CloudFront-fronted NestJS API. We fire-and-forget because a
       // save failure should not block the user from seeing their results.
+      //
+      // community-monthly-transit-architecture Task 02 partial (2026-04-27):
+      // We ALSO fire the same payload at the local Supabase-backed
+      // /api/astro-ai/save-astro-ai-response so the report is reusable
+      // via /api/astro-ai/lookup-saved on subsequent visits. Both legacy
+      // and local saves are fire-and-forget — neither blocks the user
+      // and either failing alone does not affect the displayed result.
+      // The legacy save remains in place; the lookup/read repointing is
+      // intentionally a follow-up so this UI is not refactored here.
       if (currentTab.slug === "tropical_transits_monthly_v3") {
         try {
           const savePayload = {
@@ -3416,6 +3425,13 @@ export function HoroscopeToolkitPage({
               body: JSON.stringify(savePayload),
             },
           ).catch(() => { });
+
+          // Parallel local save — same payload shape, different URL.
+          fetch("/api/astro-ai/save-astro-ai-response", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(savePayload),
+          }).catch(() => { });
         } catch {
           /* ignore save errors */
         }
@@ -3453,6 +3469,13 @@ export function HoroscopeToolkitPage({
               body: JSON.stringify(savePayload),
             },
           ).catch(() => { });
+
+          // Parallel local save — see comment above for rationale.
+          fetch("/api/astro-ai/save-astro-ai-response", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(savePayload),
+          }).catch(() => { });
         } catch {
           /* ignore save errors */
         }

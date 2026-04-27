@@ -1,8 +1,10 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { PRICING } from "@/lib/constants";
 import { toast } from "sonner";
 import {
   CalendarConnections,
@@ -84,16 +86,6 @@ interface StripeSubscriptionDetails {
   plan_name: string;
   one_time_fee: number;
   one_time_fee_currency: string;
-}
-
-interface PhoneSession {
-  id: string;
-  session_type: string;
-  started_at: string | null;
-  duration_seconds: number | null;
-  amount_charged: number | null;
-  platform_cost: number | null;
-  status: string;
 }
 
 interface DiscountRule {
@@ -197,10 +189,23 @@ function SettingsContent() {
   const [subscriptionLoading, setSubscriptionLoading] = useState(false);
 
   // Phone state
-  // phoneProvisioning state removed — admin manages phone number provisioning
-  const [phoneSessions, setPhoneSessions] = useState<PhoneSession[]>([]);
+  // phoneProvisioning state removed — admin manages phone number provisioning.
+  // phoneSessions state removed — call history lives on /dashboard/phone-calls
+  // (the Settings → Phone tab links there instead of duplicating the list).
   const [phoneRequestStatus, setPhoneRequestStatus] = useState<{
     hasPhoneNumber: boolean;
+    // Authoritative phone number from the admin-client API (post-reconciliation
+    // with the chime_phone_numbers pool). Used as the source of truth for the
+    // Phone tab so it doesn't fall through to "Request Phone Number" when the
+    // diviner row's column is stale due to drift between the pool table and
+    // the diviner row.
+    phoneNumber: string | null;
+    phoneDialinEnabled: boolean;
+    // Shared central platform number — present when the deployment uses a
+    // single central line for every diviner (PIN-routed). When set and
+    // there's no personal number, the Phone tab shows this with a Shared
+    // badge instead of the Request CTA.
+    centralPhoneNumber: string | null;
     currentRequest: {
       id: string;
       status: "pending" | "assigned" | "rejected";
@@ -368,17 +373,9 @@ function SettingsContent() {
           setDiscountRules(rules);
         }
 
-        // Load phone sessions
-        const { data: sessions } = await supabase
-          .from("phone_sessions")
-          .select("id, session_type, started_at, duration_seconds, amount_charged, platform_cost, status")
-          .eq("diviner_id", data.id)
-          .order("created_at", { ascending: false })
-          .limit(20);
-
-        if (sessions) {
-          setPhoneSessions(sessions);
-        }
+        // Phone-session history fetch removed — call history now lives on
+        // the dedicated /dashboard/phone-calls page, which the Phone tab
+        // links to instead of duplicating the list here.
 
         // Load phone number request status for the Phone tab.
         try {
@@ -389,6 +386,9 @@ function SettingsContent() {
             const payload = await res.json();
             setPhoneRequestStatus({
               hasPhoneNumber: !!payload.hasPhoneNumber,
+              phoneNumber: payload.phoneNumber ?? null,
+              phoneDialinEnabled: !!payload.phoneDialinEnabled,
+              centralPhoneNumber: payload.centralPhoneNumber ?? null,
               currentRequest: payload.currentRequest ?? null,
               latestRequest: payload.latestRequest ?? null,
             });
@@ -425,6 +425,9 @@ function SettingsContent() {
         const statusPayload = await statusRes.json();
         setPhoneRequestStatus({
           hasPhoneNumber: !!statusPayload.hasPhoneNumber,
+          phoneNumber: statusPayload.phoneNumber ?? null,
+          phoneDialinEnabled: !!statusPayload.phoneDialinEnabled,
+          centralPhoneNumber: statusPayload.centralPhoneNumber ?? null,
           currentRequest: statusPayload.currentRequest ?? null,
           latestRequest: statusPayload.latestRequest ?? null,
         });
@@ -1189,81 +1192,161 @@ function SettingsContent() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {(settings.chime_phone_number || settings.twilio_phone_number) ? (
-                <div className="flex items-center gap-3 rounded-lg border bg-muted/30 p-4">
-                  <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-green-500/10">
-                    <Phone className="size-5 text-green-500" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-lg font-semibold">
-                      {settings.chime_phone_number ?? settings.twilio_phone_number}
+              {/*
+                Source-of-truth precedence for the assigned-number
+                detection:
+                  1. The admin-client API response (`phoneRequestStatus`),
+                     which is reconciled against the chime_phone_numbers
+                     pool every read. This is the authoritative answer
+                     and survives drift between the pool and the
+                     diviner row.
+                  2. The local browser-client query as a fallback (in
+                     case the API call hasn't returned yet on first
+                     paint).
+                The displayed number prefers the API value too, falling
+                back to the local one for the same reason.
+              */}
+              {(() => {
+                const assignedNumber =
+                  phoneRequestStatus?.phoneNumber ??
+                  settings.chime_phone_number ??
+                  settings.twilio_phone_number ??
+                  null;
+                const isActive =
+                  phoneRequestStatus?.phoneDialinEnabled ??
+                  settings.phone_dialin_enabled;
+                if (assignedNumber) {
+                  return (
+                    <div className="flex items-center gap-3 rounded-lg border bg-muted/30 p-4">
+                      <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-green-500/10">
+                        <Phone className="size-5 text-green-500" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-lg font-semibold">{assignedNumber}</p>
+                        <p className="text-xs text-muted-foreground">
+                          Clients can call this number for readings
+                        </p>
+                      </div>
+                      <Badge variant={isActive ? "default" : "secondary"}>
+                        {isActive ? "Active" : "Inactive"}
+                      </Badge>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
+              {/*
+                When there's no personal number, three states ranked by
+                preference:
+                  1. A central shared platform number is configured →
+                     show it with a "Shared" badge and PIN guidance.
+                     This is the normal happy path on deployments that
+                     don't issue per-diviner numbers.
+                  2. A request is currently pending → show the pending
+                     state.
+                  3. Neither → show the Request CTA (legacy fallback;
+                     only reachable when the platform has neither a
+                     central nor a personal number for this diviner).
+              */}
+              {!(
+                phoneRequestStatus?.phoneNumber ??
+                settings.chime_phone_number ??
+                settings.twilio_phone_number
+              ) &&
+                (phoneRequestStatus?.centralPhoneNumber ? (
+                  <div className="space-y-3 rounded-lg border bg-muted/30 p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-blue-500/10">
+                        <Phone className="size-5 text-blue-500" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-lg font-semibold">
+                          {phoneRequestStatus.centralPhoneNumber}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Shared platform line — calls reach you via your
+                          booking PIN
+                        </p>
+                      </div>
+                      <Badge
+                        variant="outline"
+                        className="bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/20"
+                      >
+                        Shared
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      Clients call this number and enter the 6-digit PIN from
+                      their booking confirmation. Our system matches the PIN
+                      to your booking and bridges the call to you. No
+                      per-diviner number is needed.
                     </p>
-                    <p className="text-xs text-muted-foreground">
-                      Clients can call this number for readings
-                    </p>
                   </div>
-                  <Badge
-                    variant={settings.phone_dialin_enabled ? "default" : "secondary"}
-                  >
-                    {settings.phone_dialin_enabled ? "Active" : "Inactive"}
-                  </Badge>
-                </div>
-              ) : phoneRequestStatus?.currentRequest ? (
-                <div className="rounded-lg border border-dashed bg-amber-500/5 p-6 text-center">
-                  <Phone className="mx-auto size-8 text-amber-500/60 mb-2" />
-                  <p className="text-sm font-medium text-foreground">
-                    Request pending — awaiting admin
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Submitted{" "}
-                    {new Date(
-                      phoneRequestStatus.currentRequest.created_at,
-                    ).toLocaleString()}
-                    . You&apos;ll see your number here once an admin assigns one.
-                  </p>
-                  <Badge variant="secondary" className="mt-3">
-                    Pending
-                  </Badge>
-                </div>
-              ) : (
-                <div className="rounded-lg border border-dashed bg-muted/20 p-6 text-center">
-                  <Phone className="mx-auto size-8 text-muted-foreground/50 mb-2" />
-                  <p className="text-sm text-muted-foreground">
-                    No phone number assigned yet.
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Request a dedicated Chime number from the platform admin
-                    below. You&apos;ll be notified once it&apos;s assigned.
-                  </p>
-                  {phoneRequestStatus?.latestRequest?.status === "rejected" &&
-                    phoneRequestStatus.latestRequest.rejected_reason && (
-                      <p className="mt-3 text-xs text-destructive">
-                        Previous request rejected:{" "}
-                        {phoneRequestStatus.latestRequest.rejected_reason}
-                      </p>
-                    )}
-                  <Button
-                    className="mt-4"
-                    size="sm"
-                    onClick={handleRequestPhoneNumber}
-                    disabled={submittingPhoneRequest}
-                  >
-                    {submittingPhoneRequest ? (
-                      <>
-                        <Loader2 className="mr-2 size-4 animate-spin" />
-                        Submitting…
-                      </>
-                    ) : (
-                      "Request Phone Number"
-                    )}
-                  </Button>
-                </div>
-              )}
+                ) : phoneRequestStatus?.currentRequest ? (
+                  <div className="rounded-lg border border-dashed bg-amber-500/5 p-6 text-center">
+                    <Phone className="mx-auto size-8 text-amber-500/60 mb-2" />
+                    <p className="text-sm font-medium text-foreground">
+                      Request pending — awaiting admin
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Submitted{" "}
+                      {new Date(
+                        phoneRequestStatus.currentRequest.created_at,
+                      ).toLocaleString()}
+                      . You&apos;ll see your number here once an admin
+                      assigns one.
+                    </p>
+                    <Badge variant="secondary" className="mt-3">
+                      Pending
+                    </Badge>
+                  </div>
+                ) : (
+                  <div className="rounded-lg border border-dashed bg-muted/20 p-6 text-center">
+                    <Phone className="mx-auto size-8 text-muted-foreground/50 mb-2" />
+                    <p className="text-sm text-muted-foreground">
+                      No phone number assigned yet.
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Request a dedicated Chime number from the platform admin
+                      below. You&apos;ll be notified once it&apos;s assigned.
+                    </p>
+                    {phoneRequestStatus?.latestRequest?.status === "rejected" &&
+                      phoneRequestStatus.latestRequest.rejected_reason && (
+                        <p className="mt-3 text-xs text-destructive">
+                          Previous request rejected:{" "}
+                          {phoneRequestStatus.latestRequest.rejected_reason}
+                        </p>
+                      )}
+                    <Button
+                      className="mt-4"
+                      size="sm"
+                      onClick={handleRequestPhoneNumber}
+                      disabled={submittingPhoneRequest}
+                    >
+                      {submittingPhoneRequest ? (
+                        <>
+                          <Loader2 className="mr-2 size-4 animate-spin" />
+                          Submitting…
+                        </>
+                      ) : (
+                        "Request Phone Number"
+                      )}
+                    </Button>
+                  </div>
+                ))}
             </CardContent>
           </Card>
 
-          {/* Call Answering Mode — Editable */}
-          {(settings.chime_phone_number || settings.twilio_phone_number) && (
+          {/* Call Answering Mode — Editable. Shown whenever the diviner can
+               receive inbound calls at all: a personal number, a legacy
+               Twilio number, OR (most common in shared-line deployments)
+               the central platform number. Without this gate widening, the
+               card would be hidden for every diviner on a central setup,
+               leaving them no way to set browser-vs-mobile answer mode. */}
+          {(phoneRequestStatus?.phoneNumber ??
+            settings.chime_phone_number ??
+            settings.twilio_phone_number ??
+            phoneRequestStatus?.centralPhoneNumber) && (
             <Card>
               <CardHeader>
                 <CardTitle>Call Answering Mode</CardTitle>
@@ -1331,137 +1414,101 @@ function SettingsContent() {
             </Card>
           )}
 
-          {/* Phone Reading Pricing — View Only */}
+          {/*
+            Phone Billing card — rewritten to remove the prior misleading
+            "$25 + $0.50/min" framing. The actual backend only charges that
+            rate for `session_type === 'standalone'` walk-up calls (see
+            /api/chime/voice/status). Pre-booked phone sessions
+            (`scheduled_dialin`) are paid through the booking and never
+            charged a second time. The card now leads with that fact so
+            diviners aren't confused about double-billing.
+          */}
           <Card>
             <CardHeader>
-              <CardTitle>Phone Reading Pricing</CardTitle>
+              <CardTitle>Phone Billing</CardTitle>
               <CardDescription>
-                Phone readings are billed at $25.00 for the first 20 minutes,
-                plus $0.50 per additional minute. Platform takes 20%.
+                How the platform charges for phone sessions.
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-3 gap-4 text-center">
-                <div className="rounded-lg border bg-muted/30 p-3">
-                  <p className="text-xs text-muted-foreground">Base Price</p>
-                  <p className="text-lg font-bold">$25.00</p>
-                  <p className="text-xs text-muted-foreground">First 20 min</p>
+            <CardContent className="space-y-3">
+              <div className="rounded-lg border border-green-500/30 bg-green-500/5 p-4">
+                <div className="flex items-start gap-3">
+                  <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-green-500/10">
+                    <Phone className="size-4 text-green-500" />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm font-semibold">
+                      Booked phone sessions — no extra charge
+                    </p>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      When a client books a session through the system, the
+                      booking price is what they pay. Picking up the phone for
+                      that booking does not add any extra fee on top — your
+                      client is not double-charged.
+                    </p>
+                  </div>
                 </div>
-                <div className="rounded-lg border bg-muted/30 p-3">
-                  <p className="text-xs text-muted-foreground">Overage</p>
-                  <p className="text-lg font-bold">$0.50</p>
-                  <p className="text-xs text-muted-foreground">Per extra min</p>
-                </div>
-                <div className="rounded-lg border bg-muted/30 p-3">
-                  <p className="text-xs text-muted-foreground">You Earn</p>
-                  <p className="text-lg font-bold">80%</p>
-                  <p className="text-xs text-muted-foreground">Of each call</p>
+              </div>
+
+              <div className="rounded-lg border bg-muted/30 p-4">
+                <div className="space-y-1">
+                  <p className="text-sm font-semibold">
+                    Walk-up calls (no booking)
+                  </p>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    If a client calls the platform line <em>without</em> a
+                    matching booking, the call is billed at{" "}
+                    <span className="font-medium">
+                      ${PRICING.PHONE_READING_BASE_PRICE.toFixed(2)}
+                    </span>{" "}
+                    for the first{" "}
+                    <span className="font-medium">
+                      {PRICING.PHONE_READING_BASE_MINUTES} minutes
+                    </span>
+                    , then{" "}
+                    <span className="font-medium">
+                      ${PRICING.PHONE_READING_OVERAGE_RATE.toFixed(2)}/min
+                    </span>{" "}
+                    after that. Platform takes{" "}
+                    <span className="font-medium">
+                      {PRICING.platformFeePercent}%
+                    </span>
+                    ; you keep the rest. This rule only fires for true walk-up
+                    calls with no associated booking.
+                  </p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Phone Session History — View Only */}
-          {phoneSessions.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Phone Session History</CardTitle>
-                <CardDescription>
-                  Your recent phone sessions and billing.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {/* Summary */}
-                  {(() => {
-                    const completed = phoneSessions.filter(
-                      (s) => s.status === "completed"
-                    );
-                    const totalRevenue = completed.reduce(
-                      (sum, s) => sum + (s.amount_charged ?? 0),
-                      0
-                    );
-                    const totalCost = completed.reduce(
-                      (sum, s) => sum + (s.platform_cost ?? 0),
-                      0
-                    );
-                    return (
-                      <div className="mb-4 grid grid-cols-3 gap-4 text-center">
-                        <div className="rounded-lg border bg-muted/30 p-3">
-                          <p className="text-xs text-muted-foreground">
-                            Total Calls
-                          </p>
-                          <p className="text-lg font-bold">
-                            {completed.length}
-                          </p>
-                        </div>
-                        <div className="rounded-lg border bg-muted/30 p-3">
-                          <p className="text-xs text-muted-foreground">
-                            Total Revenue
-                          </p>
-                          <p className="text-lg font-bold">
-                            {formatCurrency(totalRevenue)}
-                          </p>
-                        </div>
-                        <div className="rounded-lg border bg-muted/30 p-3">
-                          <p className="text-xs text-muted-foreground">
-                            Phone Costs
-                          </p>
-                          <p className="text-lg font-bold">
-                            {formatCurrency(totalCost)}
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  })()}
-
-                  {/* Session list */}
-                  <div className="rounded-lg border">
-                    {phoneSessions.slice(0, 10).map((session) => (
-                      <div
-                        key={session.id}
-                        className="flex items-center justify-between border-b px-4 py-3 last:border-b-0"
-                      >
-                        <div>
-                          <p className="text-sm font-medium">
-                            {session.session_type === "scheduled_dialin"
-                              ? "Scheduled Dial-in"
-                              : "Phone Reading"}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {session.started_at
-                              ? new Date(session.started_at).toLocaleString()
-                              : "Pending"}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm font-medium">
-                            {session.duration_seconds
-                              ? `${Math.ceil(session.duration_seconds / 60)} min`
-                              : "--"}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {session.amount_charged != null
-                              ? formatCurrency(session.amount_charged)
-                              : "--"}
-                          </p>
-                        </div>
-                        <Badge
-                          variant={
-                            session.status === "completed"
-                              ? "default"
-                              : "secondary"
-                          }
-                        >
-                          {session.status}
-                        </Badge>
-                      </div>
-                    ))}
-                  </div>
+          {/*
+            Phone call history lives on the dedicated /dashboard/phone-calls
+            page (richer filtering, pagination, search, status breakdown).
+            We surface a single link instead of duplicating the history
+            here — keeps the Settings → Phone tab focused on configuration
+            rather than reporting, and removes the misleading per-call
+            "Total Revenue" block that mixed pre-paid bookings with
+            standalone walk-up calls.
+          */}
+          <Card>
+            <CardContent className="flex items-center justify-between gap-3 py-4">
+              <div className="flex items-center gap-3">
+                <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-muted">
+                  <Phone className="size-4 text-muted-foreground" />
                 </div>
-              </CardContent>
-            </Card>
-          )}
+                <div>
+                  <p className="text-sm font-medium">Phone call history</p>
+                  <p className="text-xs text-muted-foreground">
+                    See every inbound and outbound call, with filters and
+                    search.
+                  </p>
+                </div>
+              </div>
+              <Button asChild size="sm" variant="outline">
+                <Link href="/dashboard/phone-calls">View calls</Link>
+              </Button>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* Loyalty Tab */}

@@ -13,6 +13,7 @@ import {
   isValidNatalChart,
   isValidRelationshipChart,
 } from "@/lib/community/chart-validators";
+import { ensureCurrentMonthTransitsForMember } from "@/lib/community/ensure-monthly-transits";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -284,6 +285,20 @@ export async function POST(req: NextRequest) {
     // Distinguish first-time vs. legacy/forced regen for callers + telemetry.
     selfNatalSource =
       cachedNatalCandidate == null ? "generated" : "regenerated";
+
+    // community-monthly-transit-architecture Task 05 T3 (2026-04-27):
+    // A fresh natal chart was just persisted. Fire-and-forget the
+    // current-month catch-up so the new family member gets a summary
+    // row without waiting for next month's cron. Failures are logged
+    // but never block the user's chart-generation request — the next
+    // /community/transits visit (lazy fallback) will retry on their
+    // behalf.
+    void ensureCurrentMonthTransitsForMember(member.id).catch((err) => {
+      console.warn(
+        "[generate-chart] post-natal monthly-transit catch-up failed:",
+        err instanceof Error ? err.message : err
+      );
+    });
   }
 
   // ── Dispatch per chart type ─────────────────────────────────────────────────

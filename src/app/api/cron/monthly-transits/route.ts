@@ -1,167 +1,115 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { calculateMonthlyTransits } from "@/lib/astro/transits";
-import type { NatalChartData } from "@/lib/astro/natal-chart";
 import { verifyCronAuth } from "@/lib/cron-auth";
 import { sendMonthlyTransitReady } from "@/lib/email";
+import { ensureCurrentMonthTransitsForMember } from "@/lib/community/ensure-monthly-transits";
 
 export const dynamic = "force-dynamic";
-
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
 /**
  * GET /api/cron/monthly-transits
  *
- * Runs on the 1st of each month. Generates monthly transit reports for all
- * active Perennial Mandalism family members that have generated natal charts.
+ * Runs on the 1st of each month. Generates monthly transit summaries for
+ * every active Perennial Mandalism family member that has a generated
+ * natal chart, then sends a "your monthly transits are ready" email.
  *
- * Lifecycle states written:
+ * Spec source:
+ *   tasks/27.04.2026/community-monthly-transit-architecture/05-integrate-generation-triggers.md
+ *
+ * This route is now a thin orchestration layer over
+ * `ensureCurrentMonthTransitsForMember` — the same service powers the
+ * mid-month catch-up and lazy-fallback paths so all four triggers share
+ * one generator. Email notification stays in the cron because the other
+ * triggers (page visit, natal completion) shouldn't email the user.
+ *
+ * Lifecycle states written by the service:
  *   pending   → generation starts
- *   generated → transit data computed successfully
- *   notified  → email delivered
- *   failed    → generation or email failed (surfaced to admin ops)
- *
- * Generation and notification are tracked independently:
- *   - A transit can be 'generated' even if notification fails.
- *   - Failed notifications remain visible to admin for resend.
+ *   generated → transit data computed successfully (this route then
+ *               attempts the email)
+ *   notified  → email delivered (written here, not by the service)
+ *   failed    → generation or email failed
  */
 export async function GET(request: NextRequest) {
   const authError = verifyCronAuth(request);
   if (authError) return authError;
 
   const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth() + 1;
-  const monthStr = `${year}-${String(month).padStart(2, "0")}`;
+  const monthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 
   const admin = createAdminClient();
 
-  // Fetch all family members with generated natal charts whose membership is active
-  const { data: familyMembers, error } = await admin
-    .from("community_family_members")
-    .select(
-      `id, full_name, natal_chart, member_id,
-       community_members!inner(id, membership_status, email, full_name)`
-    )
-    .eq("natal_status", "generated")
-    .not("natal_chart", "is", null);
+  // ── Find every active Perennial member with at least one eligible
+  //    family member (has a generated natal chart).
+  //
+  //    The cron used to iterate family-member rows directly. We now
+  //    iterate at the *member* level so the per-member service handles
+  //    the per-family-member loop in one consistent place. This keeps
+  //    the generator behaviour identical between cron, lazy fallback,
+  //    and natal-completion catch-up.
+  const { data: memberRows, error: memberError } = await admin
+    .from("community_members")
+    .select("id, email, full_name, membership_status")
+    .eq("membership_status", "active");
 
-  if (error) {
-    console.error("[monthly-transits] query error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  if (memberError) {
+    console.error("[monthly-transits] member query error:", memberError);
+    return NextResponse.json({ error: memberError.message }, { status: 500 });
   }
 
   let generated = 0;
+  let regenerated = 0;
+  let retried = 0;
   let skipped = 0;
+  let blocked = 0;
   let failed = 0;
   let notified = 0;
 
-  for (const fm of familyMembers ?? []) {
-    const memberData = (fm.community_members as unknown) as {
-      id: string;
-      membership_status: string;
-      email: string | null;
-      full_name: string | null;
-    } | null;
-
-    if (memberData?.membership_status !== "active") { skipped++; continue; }
-    if (!fm.natal_chart) { skipped++; continue; }
-
-    // Skip if a non-failed transit already exists for this month
-    const { data: existing } = await admin
-      .from("monthly_transits")
-      .select("id, generation_status")
-      .eq("family_member_id", fm.id)
-      .eq("month", monthStr)
-      .maybeSingle();
-
-    if (existing && existing.generation_status !== "failed") {
-      skipped++;
-      continue;
-    }
-
-    const attemptedAt = new Date().toISOString();
-
-    // If a failed record exists, update it in place; otherwise insert
-    let transitId: string | null = existing?.id ?? null;
-
-    if (!transitId) {
-      // Reserve the row as 'pending' before computation
-      const { data: pendingRow, error: insertErr } = await admin
-        .from("monthly_transits")
-        .insert({
-          family_member_id: fm.id,
-          month: monthStr,
-          transit_data: {},
-          generation_status: "pending",
-          notification_sent: false,
-          last_attempted_at: attemptedAt,
-        })
-        .select("id")
-        .single();
-
-      if (insertErr || !pendingRow) {
-        console.error("[monthly-transits] failed to reserve pending row for", fm.id, insertErr);
-        failed++;
-        continue;
-      }
-      transitId = pendingRow.id;
-    }
-
-    // Compute transit data
-    let transitData;
+  for (const member of memberRows ?? []) {
+    let memberResult;
     try {
-      transitData = calculateMonthlyTransits(
-        fm.natal_chart as NatalChartData,
-        year,
-        month
+      memberResult = await ensureCurrentMonthTransitsForMember(member.id);
+    } catch (err) {
+      console.error(
+        "[monthly-transits] ensure failed for member",
+        member.id,
+        err
       );
-    } catch (calcErr) {
-      console.error("[monthly-transits] calculation failed for", fm.id, calcErr);
-      await admin
-        .from("monthly_transits")
-        .update({
-          generation_status: "failed",
-          failure_reason: calcErr instanceof Error ? calcErr.message : "calculation_error",
-          retry_count: (existing?.generation_status === "failed" ? 1 : 0) + 1,
-          last_attempted_at: attemptedAt,
-        })
-        .eq("id", transitId);
-      failed++;
+      // Keep the cron going for other members.
       continue;
     }
 
-    // Persist generated transit data
-    const { error: updateErr } = await admin
-      .from("monthly_transits")
-      .update({
-        transit_data: transitData,
-        generation_status: "generated",
-        generated_at: attemptedAt,
-        failure_reason: null,
-        last_attempted_at: attemptedAt,
-      })
-      .eq("id", transitId);
+    generated += memberResult.generated;
+    regenerated += memberResult.regenerated;
+    retried += memberResult.retried;
+    skipped += memberResult.skipped;
+    blocked += memberResult.blocked;
+    failed += memberResult.failed;
 
-    if (updateErr) {
-      console.error("[monthly-transits] failed to save transit for", fm.id, updateErr);
-      failed++;
-      continue;
-    }
+    // ── Email notification for newly-generated rows ─────────────────────
+    // Notify on `generated` and `regenerated` (the user effectively has a
+    // fresh report), but skip `skipped` (already-current → already
+    // notified previously) and `failed` (no report to send). `retried`
+    // re-sends notification because the prior failure didn't.
+    const newlyAvailable = memberResult.details.filter((d) =>
+      d.outcome === "generated" ||
+      d.outcome === "regenerated" ||
+      d.outcome === "retried"
+    );
 
-    generated++;
+    if (newlyAvailable.length === 0 || !member.email) continue;
 
-    // ── Send notification — tracked independently from generation ────────────
-    if (memberData?.email && memberData.membership_status === "active") {
+    for (const detail of newlyAvailable) {
       try {
         await sendMonthlyTransitReady({
-          to: memberData.email,
-          name: memberData.full_name ?? "Member",
+          to: member.email,
+          name: member.full_name ?? "Member",
           month: monthStr,
-          familyMemberName: fm.full_name ?? "your family member",
+          familyMemberName: detail.full_name ?? "your family member",
         });
 
+        // Mark the row as notified.
         await admin
           .from("monthly_transits")
           .update({
@@ -169,25 +117,38 @@ export async function GET(request: NextRequest) {
             notification_sent: true,
             notified_at: new Date().toISOString(),
           })
-          .eq("id", transitId);
+          .eq("family_member_id", detail.family_member_id)
+          .eq("month", monthStr);
 
         notified++;
       } catch (emailErr) {
-        // Generation succeeded but email failed — stay in 'generated' state.
-        // Admin can see notification_sent=false and resend.
-        console.error("[monthly-transits] email failed for", fm.id, emailErr);
+        // Generation succeeded but email failed — leave row in
+        // `generated` state and surface to admin via failure_reason.
+        console.error(
+          "[monthly-transits] email failed for",
+          detail.family_member_id,
+          emailErr
+        );
         await admin
           .from("monthly_transits")
-          .update({
-            failure_reason: "notification_email_failed",
-          })
-          .eq("id", transitId);
+          .update({ failure_reason: "notification_email_failed" })
+          .eq("family_member_id", detail.family_member_id)
+          .eq("month", monthStr);
       }
     }
   }
 
   console.log(
-    `[monthly-transits] month=${monthStr} generated=${generated} notified=${notified} skipped=${skipped} failed=${failed}`
+    `[monthly-transits] month=${monthStr} generated=${generated} regenerated=${regenerated} retried=${retried} skipped=${skipped} blocked=${blocked} failed=${failed} notified=${notified}`
   );
-  return NextResponse.json({ generated, notified, skipped, failed, month: monthStr });
+  return NextResponse.json({
+    month: monthStr,
+    generated,
+    regenerated,
+    retried,
+    skipped,
+    blocked,
+    failed,
+    notified,
+  });
 }
