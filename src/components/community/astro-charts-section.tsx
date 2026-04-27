@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Moon, Sun, Info } from "lucide-react";
+import { Loader2, Moon, Sun, Info, ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -32,8 +32,22 @@ type ChartStatus = "loading" | "ready" | "empty" | "pending" | "failed";
 
 type ApiStatus = "ready" | "empty" | "pending" | "failed";
 
+type NatalChartItem = {
+  id: string;
+  natal_chart: Record<string, unknown>;
+  full_name: string;
+  date_of_birth: string;
+};
+
 type ApiResponse = {
   natalChart: NatalChartData;
+  /**
+   * community-natal-carousel Task 02 (2026-04-26): the API now returns the
+   * full list of family members with charts so the dashboard card can render
+   * a member carousel. Older responses won't include this field — fall back
+   * to the singular `natalChart` for back-compat.
+   */
+  natalCharts?: NatalChartItem[];
   monthlyTransit: ChartData;
   // Older responses won't include status — treat as inferred from data.
   status?: { natal: ApiStatus; transit: ApiStatus };
@@ -47,7 +61,16 @@ const MAX_PENDING_POLLS = 18; // ~3 minutes, only while explicitly pending
 const MAX_ERROR_RETRIES = 2;
 
 export function AstroChartsSection() {
-  const [natalChart, setNatalChart] = useState<NatalChartData>(null);
+  /**
+   * community-natal-carousel Task 02 (2026-04-26): the dashboard ready
+   * state is a member carousel. `natalCharts` is the full list returned
+   * by /api/community/astro-charts; `activeChartIndex` is the slot the
+   * user has cycled to. Old API responses without the `natalCharts` field
+   * fall back to a one-item list built from the legacy `natalChart`
+   * field (see fetch handler below).
+   */
+  const [natalCharts, setNatalCharts] = useState<NatalChartItem[]>([]);
+  const [activeChartIndex, setActiveChartIndex] = useState(0);
   const [monthlyTransit, setMonthlyTransit] = useState<ChartData>(null);
   const [natalStatus, setNatalStatus] = useState<ChartStatus>("loading");
   const [transitStatus, setTransitStatus] = useState<ChartStatus>("loading");
@@ -93,8 +116,22 @@ export function AstroChartsSection() {
         const transit: ApiStatus =
           data.status?.transit ?? (data.monthlyTransit ? "ready" : "empty");
 
-        if (data.natalChart) setNatalChart(data.natalChart);
         if (data.monthlyTransit) setMonthlyTransit(data.monthlyTransit);
+
+        // Carousel: prefer the explicit list when the API returns one.
+        // Old API responses still produce a one-item list from natalChart.
+        const nextCharts: NatalChartItem[] =
+          Array.isArray(data.natalCharts) && data.natalCharts.length > 0
+            ? data.natalCharts
+            : data.natalChart
+            ? [data.natalChart as NatalChartItem]
+            : [];
+        setNatalCharts(nextCharts);
+        // Keep the active index in range when the list shrinks (e.g. a
+        // family member is removed and the chart count drops by one).
+        setActiveChartIndex((idx) =>
+          nextCharts.length === 0 ? 0 : Math.min(idx, nextCharts.length - 1)
+        );
 
         setNatalStatus(natal);
         setTransitStatus(transit);
@@ -177,33 +214,101 @@ export function AstroChartsSection() {
                 Could not load chart data. Try refreshing the page.
               </p>
             </div>
-          ) : natalStatus === "ready" && natalChart ? (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <Badge variant="default" className="text-xs">Chart Ready</Badge>
-                <span className="text-xs text-muted-foreground">
-                  {natalChart.full_name}
-                </span>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                DOB:{" "}
-                {new Date(natalChart.date_of_birth + "T12:00:00").toLocaleDateString(
-                  "en-US",
-                  { month: "long", day: "numeric", year: "numeric" }
-                )}
-              </p>
-              {/*
-                Deep-link into the family-member detail route where the shared
-                HoroscopeToolkitPage now renders the chart (Task 03). Previous
-                link pointed at `/community/family` (the list) which required
-                an extra click to find the ready chart.
-              */}
-              <Button asChild variant="outline" size="sm" className="w-full">
-                <Link href={`/community/family/${natalChart.id}`}>
-                  View Full Chart →
-                </Link>
-              </Button>
-            </div>
+          ) : natalStatus === "ready" && natalCharts.length > 0 ? (
+            // community-natal-carousel Task 02 (2026-04-26):
+            // The ready-state used to be a single static member block. It's
+            // now a lightweight member carousel — prev/next chevrons cycle
+            // through every household member with a saved chart, the active
+            // member's name + DOB + chart-ready badge are shown, and the
+            // View Full Chart deep-link follows the active member's id.
+            //
+            // For a one-item list the chevrons are hidden so the layout
+            // doesn't feel overbuilt for the single-chart case (Scenario 2
+            // in the QA checklist).
+            (() => {
+              const safeIndex = Math.min(
+                Math.max(activeChartIndex, 0),
+                natalCharts.length - 1
+              );
+              const active = natalCharts[safeIndex];
+              const total = natalCharts.length;
+              const isMulti = total > 1;
+              return (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Badge variant="default" className="text-xs shrink-0">
+                        Chart Ready
+                      </Badge>
+                      <span className="text-xs text-muted-foreground truncate">
+                        {active.full_name}
+                      </span>
+                    </div>
+                    {isMulti && (
+                      <span
+                        className="text-[10px] text-muted-foreground tabular-nums shrink-0"
+                        aria-label={`Member ${safeIndex + 1} of ${total}`}
+                      >
+                        {safeIndex + 1} / {total}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    DOB:{" "}
+                    {new Date(
+                      active.date_of_birth + "T12:00:00"
+                    ).toLocaleDateString("en-US", {
+                      month: "long",
+                      day: "numeric",
+                      year: "numeric",
+                    })}
+                  </p>
+                  <div className="flex items-center gap-1.5">
+                    {isMulti && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        className="size-8 shrink-0"
+                        aria-label="Previous member"
+                        onClick={() =>
+                          setActiveChartIndex((idx) =>
+                            (idx - 1 + total) % total
+                          )
+                        }
+                      >
+                        <ChevronLeft className="size-4" />
+                      </Button>
+                    )}
+                    {/*
+                      Deep-link into the family-member detail route where
+                      the shared HoroscopeToolkitPage renders the chart.
+                      Uses the *active* carousel member, not always the
+                      first one.
+                    */}
+                    <Button asChild variant="outline" size="sm" className="flex-1">
+                      <Link href={`/community/family/${active.id}`}>
+                        View Full Chart →
+                      </Link>
+                    </Button>
+                    {isMulti && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        className="size-8 shrink-0"
+                        aria-label="Next member"
+                        onClick={() =>
+                          setActiveChartIndex((idx) => (idx + 1) % total)
+                        }
+                      >
+                        <ChevronRight className="size-4" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              );
+            })()
           ) : (
             <div className="space-y-2">
               {/*

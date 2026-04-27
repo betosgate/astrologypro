@@ -72,7 +72,9 @@ import { MIGRATION_SQL as MIG_20260423000003_INV } from "@/data/migrations/20260
 import { MIGRATION_SQL as MIG_20260423000004_FIX } from "@/data/migrations/20260423000004_fix_invite_rpc_ambiguity";
 import { MIGRATION_SQL as MIG_20260423000005_ACC } from "@/data/migrations/20260423000005_accept_rpc";
 import { MIGRATION_SQL as MIG_20260424000001_ODC } from "@/data/migrations/20260424000001_phone_sessions_outbound_diviner_call";
+import { MIGRATION_SQL as MIG_20260424000002_AAR } from "@/data/migrations/20260424000002_astro_ai_responses";
 import { MIGRATION_SQL as MIG_20260424000010_ACV2A } from "@/data/migrations/20260424000010_affiliate_commission_v2_additive";
+import { MIGRATION_SQL as MIG_20260424009001_ACV2D } from "@/data/migrations/20260424009001_affiliate_commission_v2_destructive";
 
 /**
  * Allowlisted migrations that the admin migration runner can execute.
@@ -658,6 +660,14 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
     sortKey: "20260424000001",
     sql: MIG_20260424000001_ODC,
   },
+  "20260424000002_astro_ai_responses": {
+    id: "20260424000002_astro_ai_responses",
+    title: "Astro AI responses persistence (replaces legacy NestJS save endpoint)",
+    description:
+      "Additive. Creates public.astro_ai_responses table for persisting AI-generated astrological reports (toolname, ai_response JSONB, formData, astro_api_data, natal_chart, summary, multiple chart-image URLs, share URL, timestamps). Adds a nullable user_id FK to auth.users so rows can be attributed to a creator without breaking the legacy spec-shape. Enables RLS with: service_role full; authenticated SELECT-by-id (the UUID acts as the share key, matching the spec's 'password-protected shared links via _id' design); INSERT/UPDATE/DELETE scoped to user_id = auth.uid(). Adds a BEFORE UPDATE trigger that bumps updated_at, an index on (user_id, created_at DESC) for 'my recent reports' lookups, and a partial index on toolname. Required by POST /api/astro-ai/save-astro-ai-response and POST /api/astro-ai/fetch-save-astro-ai-response. Rollback: DROP TRIGGER, DROP FUNCTION, DROP TABLE.",
+    sortKey: "20260424000002",
+    sql: MIG_20260424000002_AAR,
+  },
   "20260423000004_fix_invite_rpc_ambiguity": {
     id: "20260423000004_fix_invite_rpc_ambiguity",
     title: "Fix column/variable ambiguity in invite RPCs (Task 02 follow-up)",
@@ -697,6 +707,14 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Task 01a of the Affiliate Commission v2 sprint. Strictly additive. Creates diviner_service_affiliate_rate_history (full rate-edit audit keyed on assignment_id) and admin_action_log (force-revoke / force-archive / reverse events). Adds three stamp columns to bookings (commission_source_assignment_id, commission_rate_type_stamp, commission_rate_value_stamp) so the rate that pays out on a conversion is captured at booking creation time, not resolved live at webhook (spec §3.8). Adds rate_type_used + rate_value_used on campaign_conversions for permanent webhook-time audit. Extends affiliate_campaigns.status CHECK to allow 'archived'. Hardens campaign_conversions.campaign_id FK from ON DELETE CASCADE to ON DELETE RESTRICT so hard-delete of a campaign with conversions errors rather than cascade-wiping history. RLS: service_role ALL on both new tables, plus diviner/affiliate scoped SELECT on rate history and admin-only SELECT on action log. Idempotent: IF NOT EXISTS guards, DO blocks on policy + constraint work, end-of-migration sanity check raises if any of the four required additions didn't land. Spec: docs/specs/affiliate-commission-system.md (v1.2).",
     sortKey: "20260424000010",
     sql: MIG_20260424000010_ACV2A,
+  },
+  "20260424009001_affiliate_commission_v2_destructive": {
+    id: "20260424009001_affiliate_commission_v2_destructive",
+    title: "Affiliate Commission v2 — destructive (drop System A tables, trim status enums)",
+    description:
+      "Task 01b of the Affiliate Commission v2 sprint. **DESTRUCTIVE** — drops 6 System A tables (affiliate_commission_history, affiliate_commissions, affiliate_payouts, affiliate_payout_items, affiliate_clicks, affiliate_referral_links) with CASCADE. Defensive backfill collapses any 'suspended' affiliate_accounts.status values to 'blocked' before trimming the enum to (unclaimed | active | blocked). Trims affiliate_campaigns.status to (active | paused | archived | expired); pre-existing 'draft' rows become 'active', 'completed' becomes 'archived'. Relaxes affiliate_campaigns_owner_consistency CHECK so the snapshot columns are no longer required (rate now lives on the booking stamp per spec v1.2). The snapshot columns themselves are NOT dropped — the advocate service still writes them, and dropping them is deferred to a future cross-service cleanup. Run AFTER 01a additive + Tasks 02 + 04 + 07-Phase-A have shipped. Idempotent (DROP IF EXISTS, status updates are no-ops on already-clean data, CHECK swap uses IF EXISTS). End-of-migration sanity check raises if anything didn't drop or any out-of-range status survived.",
+    sortKey: "20260424009001",
+    sql: MIG_20260424009001_ACV2D,
   },
 };
 

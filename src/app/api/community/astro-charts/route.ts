@@ -9,8 +9,14 @@ type ChartStatus = "ready" | "empty" | "pending" | "failed";
  * GET /api/community/astro-charts
  *
  * Returns:
- * - natalChart: the first family member that has natal_chart data, else null
- * - monthlyTransit: this month's transit record for that member, else null
+ * - natalChart  : the first family member that has natal_chart data, else null
+ *                 (kept for backward compatibility with older clients).
+ * - natalCharts : full list of family members that have natal_chart data
+ *                 (used by the dashboard member-carousel UI added in
+ *                 community-natal-carousel Task 02). Empty array when no
+ *                 charts exist yet — never null.
+ * - monthlyTransit: this month's transit record for the first ready member,
+ *                 else null.
  * - status.natal / status.transit:
  *     "ready"   — data is available
  *     "empty"   — no data exists yet and no background generation is running;
@@ -22,7 +28,7 @@ type ChartStatus = "ready" | "empty" | "pending" | "failed";
  *
  * Empty results are a normal outcome (a member may have zero family rows, or
  * the monthly transit for the current month may not have been generated yet),
- * so we use .maybeSingle() to avoid treating "no rows" as an error.
+ * so we use .maybeSingle() / array reads that tolerate zero-row responses.
  */
 export async function GET() {
   const supabase = await createClient();
@@ -42,22 +48,25 @@ export async function GET() {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  // Find first family member with a natal chart. `.maybeSingle()` because
-  // an empty list is a valid "no chart yet" signal — not an error.
-  const { data: familyWithChart, error: familyError } = await supabase
+  // Pull every family member that has a natal chart, ordered by
+  // created_at so the carousel ordering is stable across refreshes.
+  // An empty array is a valid "no chart yet" signal — not an error.
+  const { data: familyWithCharts, error: familyError } = await supabase
     .from("community_family_members")
-    .select("id, full_name, date_of_birth, natal_chart")
+    .select("id, full_name, date_of_birth, natal_chart, created_at")
     .eq("member_id", member.id)
     .not("natal_chart", "is", null)
-    .limit(1)
-    .maybeSingle();
+    .order("created_at", { ascending: true });
 
-  let natalChart: {
+  type NatalChartItem = {
     id: string;
     full_name: string;
     date_of_birth: string;
     natal_chart: Record<string, unknown>;
-  } | null = null;
+  };
+
+  let natalChart: NatalChartItem | null = null;
+  let natalCharts: NatalChartItem[] = [];
   let monthlyTransit: {
     id: string;
     member_id: string;
@@ -73,28 +82,31 @@ export async function GET() {
     console.error("[community/astro-charts] family read error:", familyError);
     natalStatus = "failed";
     transitStatus = "failed";
-  } else if (!familyWithChart) {
+  } else if (!familyWithCharts || familyWithCharts.length === 0) {
     // No family member has a natal chart yet — not a loading state.
     natalStatus = "empty";
     // Without a natal chart there is nothing to transit against.
     transitStatus = "empty";
   } else {
-    natalChart = {
-      id: familyWithChart.id,
-      full_name: familyWithChart.full_name,
-      date_of_birth: familyWithChart.date_of_birth,
-      natal_chart: familyWithChart.natal_chart,
-    };
+    natalCharts = familyWithCharts.map((row) => ({
+      id: row.id,
+      full_name: row.full_name,
+      date_of_birth: row.date_of_birth,
+      natal_chart: row.natal_chart,
+    }));
+    // First chart kept on the legacy `natalChart` field for back-compat.
+    natalChart = natalCharts[0] ?? null;
     natalStatus = "ready";
 
-    // Look up this month's transit for that family member.
+    // Monthly transit is still scoped to the first ready member so the
+    // existing Monthly Transit card behaviour is unchanged.
     const now = new Date();
     const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 
     const { data: transit, error: transitError } = await supabase
       .from("monthly_transits")
       .select("id, month, transit_data, created_at")
-      .eq("member_id", familyWithChart.id)
+      .eq("member_id", natalCharts[0].id)
       .eq("month", currentMonth)
       .maybeSingle();
 
@@ -104,7 +116,7 @@ export async function GET() {
     } else if (transit) {
       monthlyTransit = {
         id: transit.id,
-        member_id: familyWithChart.id,
+        member_id: natalCharts[0].id,
         month: transit.month,
         transit_data: transit.transit_data,
         created_at: transit.created_at,
@@ -117,6 +129,7 @@ export async function GET() {
 
   return NextResponse.json({
     natalChart,
+    natalCharts,
     monthlyTransit,
     status: { natal: natalStatus, transit: transitStatus },
   });

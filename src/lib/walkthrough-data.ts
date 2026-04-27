@@ -10708,6 +10708,177 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
       "Improves navigation without requiring logout or a new login."
     ]
   },
+
+
+// --------------- Perennial Mandalism Walkthrough Screens ---------------
+
+  
+  {
+    "name": "trainee-dashboard-perennial-entry",
+    "label": "Trainee Dashboard Perennial Entry",
+    "description": "A trainee can access the Perennial Mandalism offer from the Trainee Dashboard by using the Learn More button on the community banner.",
+    "group": "Dashboard",
+    "subModule": "Perennial Mandalism",
+    "purpose": "This step introduces the trainee to Perennial Mandalism and starts the subscription flow for community access.",
+    "bullets": [
+      "User is currently logged in as a Trainee.",
+      "The Trainee Dashboard shows the Perennial Mandalism promotional banner.",
+      "The Learn More button opens the Perennial Mandalism plan selection modal.",
+      "This flow is available even when the user only has trainee access.",
+      "After clicking Learn More, the user can choose a Perennial Mandalism plan."
+    ]
+  },
+  {
+    "name": "perennial-plan-selection",
+    "label": "Perennial Plan Selection",
+    "description": "The user selects a Perennial Mandalism subscription plan before continuing to payment.",
+  "group": "Dashboard",
+    "subModule": "Perennial Mandalism",
+    "purpose": "This modal lets the user review available community membership plans, compare pricing, and continue to checkout.",
+    "bullets": [
+      "Shows available plans such as Individual, Couple, and Family.",
+      "Displays monthly pricing for each plan.",
+      "Shows what the user is unlocking with the selected plan.",
+      "Includes benefits like monthly billing, live ceremonies, community forum access, and sacred teachings.",
+      "The Continue to Payment button sends the user to Stripe checkout.",
+      "The user can close the modal if they do not want to continue."
+    ]
+  },
+  {
+    "name": "perennial-payment-checkout",
+    "label": "Perennial Payment Checkout",
+    "description": "The user completes payment for the selected Perennial Mandalism subscription plan through the checkout page.",
+    "group": "Dashboard",
+    "subModule": "Perennial Mandalism",
+    "purpose": "This screen collects payment details and confirms the subscription purchase before the user can access the community onboarding flow.",
+    "bullets": [
+      "Shows the selected Perennial Mandalism subscription amount.",
+      "Displays monthly billing information.",
+      "Allows the user to choose currency such as INR or USD.",
+      "Shows the user email in the contact information section.",
+      "Provides payment method fields for card number, expiry date, CVV, cardholder name, and country.",
+      "Includes optional faster checkout options such as Link or Amazon Pay.",
+      "The Subscribe button completes the payment.",
+      "After successful payment, the user is redirected to the required contract screen."
+    ]
+  },
+  {
+    "name": "perennial-payment-success",
+    "label": "Perennial Payment Success",
+    "description": "After the subscription payment is submitted successfully, the checkout confirms completion and prepares the user for the next step.",
+  "group": "Dashboard",
+    "subModule": "Perennial Mandalism",
+    "purpose": "This step confirms that the subscription payment was accepted before moving the user into the contract and onboarding process.",
+    "bullets": [
+      "Shows payment success after the Subscribe action is completed.",
+      "Confirms that the payment information was processed.",
+      "Locks or disables payment fields after successful submission.",
+      "The user is then redirected back into the platform flow.",
+      "Next step is completing the Perennial customer terms or contract."
+    ]
+  },
+  {
+    "name": "perennial-pending-contract",
+    "label": "Perennial Pending Contract",
+    "description": "After payment, the user must review and accept the Customer Terms of Service before entering the Perennial community area.",
+    "group": "Dashboard",
+    "subModule": "Perennial Mandalism",
+    "purpose": "This screen ensures the user accepts the required Perennial service agreement before community access is activated.",
+    "bullets": [
+      "Shows the Pending Contracts page after successful payment.",
+      "Displays the Customer Terms of Service agreement.",
+      "Includes agreement details such as effective date and version.",
+      "Explains service rules, age requirement, entertainment disclaimer, and booking policies.",
+      "The user must scroll through the contract before accepting.",
+      "The I Accept and Continue button completes the contract step.",
+      "After the contract is accepted, the user moves to the Perennial onboarding form."
+    ]
+  },
+  {
+    "name": "perennial-onboarding-personal-details",
+    "label": "Perennial Onboarding Personal Details",
+    "description": "The first Perennial onboarding step collects the user's basic personal information.",
+    "group": "Dashboard",
+    "subModule": "Perennial Mandalism",
+    "purpose": "This step gathers required identity and birth information so the community profile can be created correctly.",
+    "bullets": [
+      "Shows step 1 of the Perennial onboarding form.",
+      "Collects first name and last name.",
+      "Collects email and phone number.",
+      "Includes gender and occupation fields.",
+      "Collects date of birth, birth time, and birth location.",
+      "Required fields are marked with an asterisk.",
+      "The Next button moves the user to the address step."
+    ]
+  },
+  {
+    "name": "perennial-onboarding-address",
+    "label": "Perennial Onboarding Address",
+    "description": "The second Perennial onboarding step collects the user's address information.",
+    "group": "Dashboard",
+        "subModule": "Perennial Mandalism",
+    "purpose": "This step records the user's location details so community content and account information can be tailored properly.",
+    "bullets": [
+      "Shows step 2 of the Perennial onboarding form.",
+      "Collects street address.",
+      "Collects city, state, and zip code.",
+      "Explains that location helps tailor community content.",
+      "Back button returns the user to the personal details step.",
+      "Next button moves the user to the journey step."
+    ]
+  },
+  {
+    "name": "perennial-onboarding-journey",
+    "label": "Perennial Onboarding Journey",
+    "description": "The third Perennial onboarding step collects optional journey details before activating the community dashboard.",
+    "group": "Dashboard",
+        "subModule": "Perennial Mandalism",
+    "purpose": "This step helps personalize the user's Perennial experience using relationship status and optional questionnaire information.",
+    "bullets": [
+      "Shows step 3 of the Perennial onboarding form.",
+      "Collects relationship status.",
+      "Includes an optional questionnaire section.",
+      "Back button returns to the address step.",
+      "Complete Profile and Enter Community submits the onboarding form.",
+      "After completion, the user enters the Perennial Mandalism dashboard."
+    ]
+  },
+  {
+    "name": "perennial-community-dashboard",
+    "label": "Perennial Community Dashboard",
+    "description": "After completing payment, contract acceptance, and onboarding, the user enters the Perennial Mandalism community dashboard.",
+    "group": "Dashboard",
+        "subModule": "Perennial Mandalism",
+    "purpose": "This dashboard is the main community portal where users manage membership, profile, readings, sacred library, agreements, and journey setup.",
+    "bullets": [
+      "Shows the Perennial Mandalism dashboard after onboarding is complete.",
+      "Displays user membership status and member since date.",
+      "Shows quick actions such as My Profile, Get a Reading, Sacred Library, and Agreements.",
+      "Displays membership plan, billing amount, and renewal information.",
+      "Allows the user to upgrade plan or manage subscription.",
+      "Shows journey setup progress and next missing milestone.",
+      "Provides left sidebar navigation for community areas such as Home, Sessions, Broadcasts, Events, Resources, My Plan, Family, Charts, Tarot, Horoscope, Service, Library, and Profile."
+    ]
+  },
+  {
+    "name": "perennial-portal-switcher",
+    "label": "Perennial Portal Switcher",
+    "description": "After gaining Perennial access, the user can switch between available portals from the top-right portal dropdown.",
+    "group": "Dashboard",
+    "subModule": "Perennial Mandalism",
+    "purpose": "This switcher lets users move between Community, Trainee Portal, and Diviner portal when those access levels are available on the same account.",
+    "bullets": [
+      "Shows the portal dropdown in the top-right area.",
+      "Displays all portals available to the user.",
+      "Community is selected when the user is inside Perennial Mandalism.",
+      "Trainee Portal is available for users who also have trainee access.",
+      "Diviner is available only if the user has purchased or received diviner access.",
+      "The user can switch portals without logging out.",
+      "This supports users who have multiple roles under one account."
+    ]
+  },
+
+  // --------------- Trainee Dashboard Walkthrough Screens --------------
 {
   "name": "trainee-dashboard-overview_v1",
   "label": "Trainee Dashboard Overview",

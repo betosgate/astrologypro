@@ -45,8 +45,9 @@ export function InviteNotFoundView() {
         been mistyped or already cleared out.
       </p>
       <p>
-        If you received the invitation via email, open the link directly from
-        the email instead of copying it.
+        If you received more than one invitation email from this diviner, only
+        the most recent one is valid — earlier links are replaced each time
+        the invite is resent. Open the latest email and click its button.
       </p>
       <Button asChild variant="outline">
         <Link href="/">Back to home</Link>
@@ -79,8 +80,12 @@ export function InviteRevokedView() {
       title="Invitation revoked"
     >
       <p>
-        The diviner who invited you has revoked this invitation. If this
-        wasn&rsquo;t intentional, reach out to them to have it re-sent.
+        This invitation link is no longer valid. It was either cancelled by
+        the diviner who invited you, or replaced by a newer invitation email.
+      </p>
+      <p>
+        Check your inbox for a more recent message from this diviner — only
+        the latest invitation link works.
       </p>
       <Button asChild variant="outline">
         <Link href="/">Back to home</Link>
