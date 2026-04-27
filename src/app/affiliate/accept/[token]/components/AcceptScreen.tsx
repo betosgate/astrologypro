@@ -231,8 +231,8 @@ export function AcceptScreen(props: Props) {
                   {mode === "session"
                     ? "Accept invitation"
                     : mode === "signin"
-                      ? "Sign in &amp; accept"
-                      : "Create account &amp; accept"}
+                      ? "Sign in & accept"
+                      : "Create account & accept"}
                 </>
               )}
             </Button>

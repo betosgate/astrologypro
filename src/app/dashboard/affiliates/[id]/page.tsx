@@ -144,31 +144,23 @@ export default function DashboardAffiliateDetailPage({
   const [affiliate, setAffiliate] = useState<Affiliate | null>(null);
   const [links, setLinks] = useState<ReferralLink[]>([]);
   const [commissions, setCommissions] = useState<Commission[]>([]);
-  const [payouts, setPayouts] = useState<Payout[]>([]);
+  // Stripe auto-split (Phase 2) will provide the real payouts feed; until
+  // then keep an empty list so the Payout History card and Total Paid stat
+  // render in their pre-Phase-2 placeholder state.
+  const payouts: Payout[] = [];
   const [loading, setLoading] = useState(true);
   const [generatingLink, setGeneratingLink] = useState(false);
   const [linkDialogOpen, setLinkDialogOpen] = useState(false);
-  const [payoutDialogOpen, setPayoutDialogOpen] = useState(false);
-  const [savingPayout, setSavingPayout] = useState(false);
   const [publicUsername, setPublicUsername] = useState("");
   const [services, setServices] = useState<ServiceOption[]>([]);
   const [linkType, setLinkType] = useState<"general" | "diviner_profile" | "diviner_service">("general");
   const [selectedServiceId, setSelectedServiceId] = useState("");
 
-  // Payout form
-  const [payoutAmount, setPayoutAmount] = useState("");
-  const [payoutDate, setPayoutDate] = useState(new Date().toISOString().split("T")[0]);
-  const [payoutMethod, setPayoutMethod] = useState("");
-  const [payoutRef, setPayoutRef] = useState("");
-  const [payoutNotes, setPayoutNotes] = useState("");
-  const [selectedCommissionIds, setSelectedCommissionIds] = useState<string[]>([]);
-
   const loadData = useCallback(async () => {
-    const [affRes, linksRes, commRes, payRes, profileRes, servicesRes] = await Promise.all([
+    const [affRes, linksRes, commRes, profileRes, servicesRes] = await Promise.all([
       fetch(`/api/dashboard/affiliates/${id}`),
       fetch(`/api/dashboard/affiliates/${id}/links`),
       fetch(`/api/dashboard/affiliates/${id}/commissions`),
-      fetch(`/api/dashboard/affiliates/${id}/payouts`),
       fetch("/api/onboarding/profile"),
       fetch("/api/dashboard/services?active=true&limit=100"),
     ]);
@@ -176,7 +168,6 @@ export default function DashboardAffiliateDetailPage({
     if (affRes.ok) setAffiliate((await affRes.json()).data);
     if (linksRes.ok) setLinks((await linksRes.json()).data ?? []);
     if (commRes.ok) setCommissions((await commRes.json()).data ?? []);
-    if (payRes.ok) setPayouts((await payRes.json()).data ?? []);
     if (profileRes.ok) {
       const json = await profileRes.json();
       setPublicUsername(json.diviner?.username ?? "");
@@ -287,41 +278,6 @@ export default function DashboardAffiliateDetailPage({
     toast.success("Link copied to clipboard");
   }
 
-  async function handleRecordPayout() {
-    const amountCents = Math.round(parseFloat(payoutAmount) * 100);
-    if (isNaN(amountCents) || amountCents <= 0) {
-      toast.error("Enter a valid payout amount");
-      return;
-    }
-    setSavingPayout(true);
-    const res = await fetch(`/api/dashboard/affiliates/${id}/payouts`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        amount_cents: amountCents,
-        paid_at: payoutDate,
-        method: payoutMethod || undefined,
-        reference: payoutRef || undefined,
-        notes: payoutNotes || undefined,
-        commission_ids: selectedCommissionIds.length > 0 ? selectedCommissionIds : undefined,
-      }),
-    });
-    if (res.ok) {
-      toast.success("Payout recorded");
-      setPayoutDialogOpen(false);
-      setPayoutAmount("");
-      setPayoutRef("");
-      setPayoutNotes("");
-      setPayoutMethod("");
-      setSelectedCommissionIds([]);
-      await loadData();
-    } else {
-      const err = await res.json();
-      toast.error(err.title ?? "Failed to record payout");
-    }
-    setSavingPayout(false);
-  }
-
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -374,10 +330,15 @@ export default function DashboardAffiliateDetailPage({
         </div>
         <div className="flex items-center gap-2">
           <Badge variant={STATUS_COLORS[affiliate.status] ?? "outline"}>{affiliate.status}</Badge>
-          <Button size="sm" onClick={() => setPayoutDialogOpen(true)}>
-            <DollarSign className="mr-2 size-4" />
-            Record Payout
-          </Button>
+          <span
+            title="Manual payouts retired — payouts now happen automatically via Stripe (coming soon)."
+            className="inline-flex"
+          >
+            <Button size="sm" disabled aria-disabled="true">
+              <DollarSign className="mr-2 size-4" />
+              Record Payout
+            </Button>
+          </span>
         </div>
       </div>
 
@@ -744,7 +705,13 @@ export default function DashboardAffiliateDetailPage({
         </CardHeader>
         <CardContent>
           {payouts.length === 0 ? (
-            <p className="py-6 text-center text-sm text-muted-foreground">No payouts recorded yet.</p>
+            <div className="space-y-2 py-6 text-center text-sm text-muted-foreground">
+              <p>No payouts recorded yet.</p>
+              <p className="text-xs">
+                Stripe auto-split — coming soon. Affiliate payouts will be
+                processed automatically at the time of each referred sale.
+              </p>
+            </div>
           ) : (
             <div className="overflow-x-auto">
               <Table>
@@ -773,106 +740,6 @@ export default function DashboardAffiliateDetailPage({
           )}
         </CardContent>
       </Card>
-
-      {/* Record Payout Dialog */}
-      <Dialog open={payoutDialogOpen} onOpenChange={setPayoutDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Record Payout</DialogTitle>
-            <DialogDescription>
-              Record a manual payment to {affiliate.name}. Pending balance: {fmtCents(pendingTotal)}.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Amount ($)</Label>
-              <Input
-                type="number"
-                min="0.01"
-                step="0.01"
-                value={payoutAmount}
-                onChange={(e) => setPayoutAmount(e.target.value)}
-                placeholder="100.00"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Payment Date</Label>
-              <Input
-                type="date"
-                value={payoutDate}
-                onChange={(e) => setPayoutDate(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Method (optional)</Label>
-              <select
-                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
-                value={payoutMethod}
-                onChange={(e) => setPayoutMethod(e.target.value)}
-              >
-                <option value="">Select…</option>
-                <option value="bank">Bank transfer</option>
-                <option value="paypal">PayPal</option>
-                <option value="cash">Cash</option>
-                <option value="other">Other</option>
-              </select>
-            </div>
-            <div className="space-y-2">
-              <Label>Reference (optional)</Label>
-              <Input
-                value={payoutRef}
-                onChange={(e) => setPayoutRef(e.target.value)}
-                placeholder="TXN-12345"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Notes (optional)</Label>
-              <Input
-                value={payoutNotes}
-                onChange={(e) => setPayoutNotes(e.target.value)}
-                placeholder="Monthly payout"
-              />
-            </div>
-            {pendingCommissions.length > 0 && (
-              <div className="space-y-2">
-                <Label>Link to commissions (optional)</Label>
-                <div className="max-h-40 overflow-y-auto space-y-1 rounded border p-2 text-sm">
-                  {pendingCommissions.map((c) => (
-                    <label key={c.id} className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={selectedCommissionIds.includes(c.id)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setSelectedCommissionIds((prev) => [...prev, c.id]);
-                          } else {
-                            setSelectedCommissionIds((prev) => prev.filter((x) => x !== c.id));
-                          }
-                        }}
-                      />
-                      <span>
-                        {fmtCents(c.commission_amount_cents)} — {c.order_reference ?? fmtDate(c.created_at)}
-                      </span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setPayoutDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleRecordPayout} disabled={savingPayout}>
-              {savingPayout ? (
-                <><Loader2 className="mr-2 size-4 animate-spin" />Saving…</>
-              ) : (
-                "Record Payout"
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

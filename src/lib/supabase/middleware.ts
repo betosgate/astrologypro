@@ -15,6 +15,10 @@ import { NextResponse, type NextRequest } from "next/server";
  *
  * Browser requests to protected routes redirect to /login?reason=<group>.
  * API requests return a 401 JSON response.
+ *
+ * Public exceptions (sub-paths underneath a protected prefix) are listed in
+ * PUBLIC_PREFIXES and bypass the gate — used for invite-acceptance pages
+ * where the visitor cannot have a session yet.
  */
 
 type ProtectedRoute = {
@@ -37,7 +41,16 @@ const PROTECTED_ROUTES: ProtectedRoute[] = [
   { prefix: "/onboarding", reason: "onboarding" },
 ] as const;
 
+// Public sub-paths that sit underneath a protected prefix and must not be
+// gated. /affiliate/accept/* is the invitation-acceptance flow — first-time
+// invitees have no session yet, so the redirect to /login leaves them
+// stranded with no credentials.
+const PUBLIC_PREFIXES = ["/affiliate/accept", "/api/affiliate/accept"];
+
 function matchProtectedRoute(pathname: string) {
+  if (PUBLIC_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`))) {
+    return undefined;
+  }
   return PROTECTED_ROUTES.find(
     ({ prefix }) => pathname === prefix || pathname.startsWith(`${prefix}/`),
   );

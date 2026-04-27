@@ -102,23 +102,3 @@ export function revokeInvite(inviteId: string) {
   );
 }
 
-// ── Copy-link convenience ──────────────────────────────────────────────────
-//
-// "Copy a fresh accept link to the clipboard" is UI sugar over resend. The
-// masked URL the server returns cannot be clicked — we need the raw token,
-// which never leaves the server. So the copy-link flow is "resend the email
-// and copy the URL pattern (without the token) for reference."
-//
-// In practice the diviner clicks "Copy accept link" and sees a toast: the
-// affiliate has received a fresh invite email. The masked URL is shown so
-// the diviner knows where the link points, not to click on themselves.
-
-export async function reinviteAndReturnMaskedUrl(
-  junctionId: string,
-): Promise<{ masked_url: string; expires_at: string }> {
-  const result = await resendInviteByJunction(junctionId);
-  return {
-    masked_url: result.accept_url_masked,
-    expires_at: result.expires_at,
-  };
-}
