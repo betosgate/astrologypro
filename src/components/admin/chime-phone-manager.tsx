@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
   Phone,
@@ -11,7 +11,15 @@ import {
   AlertTriangle,
   Smartphone,
   KeyRound,
+  PhoneCall,
 } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -85,6 +93,80 @@ export function ChimePhoneManager({
   const [dialinEnabled, setDialinEnabled] = useState(initialDialinEnabled);
   const [togglingDialin, setTogglingDialin] = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
+
+  // ── Assign-from-pool state ────────────────────────────────────────────────
+  // Loaded only when there is no current per-diviner number (otherwise the
+  // assignment UI is hidden, and there's no point fetching the pool).
+  type PoolNumber = { id: string; phone_number: string };
+  const [poolNumbers, setPoolNumbers] = useState<PoolNumber[]>([]);
+  const [poolLoading, setPoolLoading] = useState(false);
+  const [selectedPoolId, setSelectedPoolId] = useState<string>("");
+  const [assigning, setAssigning] = useState(false);
+
+  useEffect(() => {
+    if (phone) return; // already has a number — no need to fetch the pool
+    let cancelled = false;
+    setPoolLoading(true);
+    fetch("/api/admin/chime-phone-numbers?status=available", {
+      cache: "no-store",
+    })
+      .then((res) => (res.ok ? res.json() : { numbers: [] }))
+      .then((payload) => {
+        if (cancelled) return;
+        const list: PoolNumber[] = Array.isArray(payload?.numbers)
+          ? payload.numbers
+              .filter(
+                (n: { id?: unknown; phone_number?: unknown }) =>
+                  typeof n?.id === "string" &&
+                  typeof n?.phone_number === "string",
+              )
+              .map((n: { id: string; phone_number: string }) => ({
+                id: n.id,
+                phone_number: n.phone_number,
+              }))
+          : [];
+        setPoolNumbers(list);
+      })
+      .catch(() => {
+        if (!cancelled) setPoolNumbers([]);
+      })
+      .finally(() => {
+        if (!cancelled) setPoolLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [phone]);
+
+  async function handleAssignFromPool() {
+    if (!selectedPoolId || assigning) return;
+    setAssigning(true);
+    try {
+      const res = await fetch(
+        `/api/admin/diviners/${divinerId}/assign-phone`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ chime_phone_number_id: selectedPoolId }),
+        },
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(data?.error ?? "Failed to assign phone number");
+        return;
+      }
+      // Update local state so the card flips to the assigned view without
+      // requiring a page reload — the diviner's settings page will pick up
+      // the same value on its next refresh (the diviner row is now correct).
+      setPhone(data.phoneNumber ?? null);
+      setSmaArn(data.phoneArn ?? null);
+      toast.success(`Assigned ${data.phoneNumber} to this diviner`);
+    } catch {
+      toast.error("Network error — could not assign number");
+    } finally {
+      setAssigning(false);
+    }
+  }
 
   // ── Release ───────────────────────────────────────────────────────────────
 
@@ -231,42 +313,119 @@ export function ChimePhoneManager({
                 </Button>
               </div>
             </>
-          ) : centralChimeNumber ? (
-            <>
-              {/* Central routing state — no per-diviner number needed */}
-              <div className="flex items-center gap-3">
-                <p className="text-2xl font-mono font-semibold tracking-tight">
-                  {formatPhone(centralChimeNumber)}
-                </p>
-                <Badge className="bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/20">
-                  Shared
-                </Badge>
-              </div>
-
-              <div className="flex items-start gap-2 text-sm">
-                <KeyRound className="size-4 text-muted-foreground shrink-0 mt-0.5" />
-                <p className="text-muted-foreground">
-                  Inbound calls route through the shared central line. Clients
-                  enter the 6-digit PIN from their booking confirmation — the
-                  SMA Lambda looks up the matching booking and bridges to this
-                  diviner automatically. No per-diviner number required.
-                </p>
-              </div>
-            </>
           ) : (
             <>
-              {/* No central configured — operator needs to run migration 003 */}
-              <div className="flex items-start gap-2 text-sm">
-                <AlertTriangle className="size-4 text-amber-500 shrink-0 mt-0.5" />
-                <p className="text-amber-600 dark:text-amber-400">
-                  No central Chime number is configured. Run the{" "}
-                  <span className="font-mono">
-                    20260421000003_seed_central_chime_number
-                  </span>{" "}
-                  migration to enable shared-number + PIN routing for all
-                  diviners.
-                </p>
+              {/*
+                Assign-from-pool UI. Shown whenever the diviner has no
+                personal Chime number — works regardless of whether a
+                central shared number is configured. Lets the admin pick
+                an available pool number and atomically assign it
+                (chime_phone_numbers + diviners rows updated together)
+                without requiring the diviner to first submit a phone
+                request. Mirrors the writes done by the request-driven
+                /api/admin/phone-requests/[id]/assign endpoint.
+              */}
+              <div className="space-y-3 rounded-lg border border-amber-500/20 bg-amber-500/5 p-4">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <PhoneCall className="size-4 text-amber-500" />
+                  Assign a personal Chime number
+                </div>
+                {poolLoading ? (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="size-4 animate-spin" />
+                    Loading available numbers…
+                  </div>
+                ) : poolNumbers.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    No unassigned numbers in the pool. Add one in{" "}
+                    <span className="font-medium">Admin → Chime Phone Numbers</span>{" "}
+                    first.
+                  </p>
+                ) : (
+                  <>
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                      <Select
+                        value={selectedPoolId}
+                        onValueChange={setSelectedPoolId}
+                        disabled={assigning}
+                      >
+                        <SelectTrigger className="sm:max-w-xs">
+                          <SelectValue placeholder="Pick a pool number…" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {poolNumbers.map((n) => (
+                            <SelectItem key={n.id} value={n.id}>
+                              {formatPhone(n.phone_number)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        size="sm"
+                        onClick={handleAssignFromPool}
+                        disabled={!selectedPoolId || assigning}
+                      >
+                        {assigning ? (
+                          <>
+                            <Loader2 className="mr-1.5 size-4 animate-spin" />
+                            Assigning…
+                          </>
+                        ) : (
+                          <>
+                            <Phone className="mr-1.5 size-4" />
+                            Assign to this diviner
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Atomically marks the pool row as assigned and writes the
+                      number onto the diviner. The diviner&apos;s settings page
+                      will show this number on next refresh.
+                    </p>
+                  </>
+                )}
               </div>
+
+              {centralChimeNumber ? (
+                <>
+                  {/* Central routing state — informational fallback */}
+                  <div className="flex items-center gap-3">
+                    <p className="text-2xl font-mono font-semibold tracking-tight">
+                      {formatPhone(centralChimeNumber)}
+                    </p>
+                    <Badge className="bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/20">
+                      Shared
+                    </Badge>
+                  </div>
+
+                  <div className="flex items-start gap-2 text-sm">
+                    <KeyRound className="size-4 text-muted-foreground shrink-0 mt-0.5" />
+                    <p className="text-muted-foreground">
+                      Until a personal number is assigned above, inbound calls
+                      route through this shared central line. Clients enter the
+                      6-digit PIN from their booking confirmation — the SMA
+                      Lambda looks up the matching booking and bridges to this
+                      diviner automatically.
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* No central configured — operator needs to run migration 003 */}
+                  <div className="flex items-start gap-2 text-sm">
+                    <AlertTriangle className="size-4 text-amber-500 shrink-0 mt-0.5" />
+                    <p className="text-amber-600 dark:text-amber-400">
+                      No central Chime number is configured. Run the{" "}
+                      <span className="font-mono">
+                        20260421000003_seed_central_chime_number
+                      </span>{" "}
+                      migration to enable shared-number + PIN routing for
+                      diviners without a personal number.
+                    </p>
+                  </div>
+                </>
+              )}
             </>
           )}
         </CardContent>

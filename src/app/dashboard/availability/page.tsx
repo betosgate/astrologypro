@@ -66,6 +66,10 @@ type ServiceOption = {
   id: string;
   name: string;
   slug: string;
+  // Session length the service is configured for. Used to drive the
+  // availability slot duration so that the slots a client sees on the
+  // booking page actually fit the service they're booking.
+  duration_minutes?: number;
 };
 
 type FormState = {
@@ -487,10 +491,25 @@ export default function AvailabilityPage() {
               <Select
                 value={form.service_id || "__none"}
                 onValueChange={(v) =>
-                  setForm((p) => ({
-                    ...p,
-                    service_id: v === "__none" ? "" : v,
-                  }))
+                  setForm((p) => {
+                    const nextServiceId = v === "__none" ? "" : v;
+                    // When a real service is chosen, lock the slot duration
+                    // to the service's configured length so what the client
+                    // can book always matches what the diviner provides.
+                    // When the user goes back to "No specific service", we
+                    // leave the existing duration in place — that field
+                    // becomes editable again so they can pick their own.
+                    const picked = services.find((s) => s.id === nextServiceId);
+                    const nextDuration =
+                      picked && typeof picked.duration_minutes === "number"
+                        ? picked.duration_minutes
+                        : p.duration_minutes;
+                    return {
+                      ...p,
+                      service_id: nextServiceId,
+                      duration_minutes: nextDuration,
+                    };
+                  })
                 }
               >
                 <SelectTrigger id="av-service" className="w-full">
@@ -589,20 +608,77 @@ export default function AvailabilityPage() {
             {/* Duration */}
             <div className="space-y-1.5">
               <Label htmlFor="av-duration">Session Duration</Label>
-              <select
-                id="av-duration"
-                value={form.duration_minutes}
-                onChange={(e) =>
-                  setForm((p) => ({ ...p, duration_minutes: Number(e.target.value) }))
+              {(() => {
+                const linkedService = form.service_id
+                  ? services.find((s) => s.id === form.service_id)
+                  : null;
+                const isLocked =
+                  linkedService != null &&
+                  typeof linkedService.duration_minutes === "number" &&
+                  linkedService.duration_minutes > 0;
+
+                if (isLocked) {
+                  // Service-bound: show the service's configured duration
+                  // as a disabled read-only field. We use a plain <input>
+                  // (not a <select>) because the service's value (e.g. 20
+                  // for a tarot reading) might not appear in the standard
+                  // DURATION_OPTIONS list and we still need to display it
+                  // accurately.
+                  return (
+                    <>
+                      <Input
+                        id="av-duration"
+                        type="text"
+                        value={`${linkedService!.duration_minutes} minutes`}
+                        disabled
+                        readOnly
+                        aria-describedby="av-duration-help"
+                      />
+                      <p
+                        id="av-duration-help"
+                        className="text-xs text-muted-foreground"
+                      >
+                        Locked to <span className="font-medium">{linkedService!.name}</span>{" "}
+                        ({linkedService!.duration_minutes} min). Each booking slot
+                        in this window will be exactly this long. To change it,
+                        switch the service or edit the service&apos;s duration in
+                        the Services page.
+                      </p>
+                    </>
+                  );
                 }
-                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
-              >
-                {DURATION_OPTIONS.map((d) => (
-                  <option key={d} value={d}>
-                    {d} minutes
-                  </option>
-                ))}
-              </select>
+
+                return (
+                  <>
+                    <select
+                      id="av-duration"
+                      value={form.duration_minutes}
+                      onChange={(e) =>
+                        setForm((p) => ({
+                          ...p,
+                          duration_minutes: Number(e.target.value),
+                        }))
+                      }
+                      aria-describedby="av-duration-help"
+                      className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+                    >
+                      {DURATION_OPTIONS.map((d) => (
+                        <option key={d} value={d}>
+                          {d} minutes
+                        </option>
+                      ))}
+                    </select>
+                    <p
+                      id="av-duration-help"
+                      className="text-xs text-muted-foreground"
+                    >
+                      Length of each bookable slot inside the time window above.
+                      Pick a service to lock this to that service&apos;s
+                      configured duration.
+                    </p>
+                  </>
+                );
+              })()}
             </div>
 
             {/* Timezone */}
