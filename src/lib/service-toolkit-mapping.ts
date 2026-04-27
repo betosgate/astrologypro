@@ -66,15 +66,26 @@ export const TWO_PERSON_ASTROLOGY_SLUGS: ReadonlySet<string> = new Set([
   "business-relationship",
 ]);
 
-// ─── Tarot: template slug → tarot_spreads.name (ONLY the 3 matched) ──────────
-// Intentional gap: 5-card complex, 7-card 6-month, 10-card relationship,
-// 12-card astrological are NOT mapped. isToolkitMappable() returns false,
-// and the UI must hide the "Open Service" link for those bookings.
+// ─── Tarot: template slug -> tarot_spreads.name ─────────────────────────────
+// The current catalogue has active spreads for every tarot service template.
+// "General ..." service templates reuse the same spread as their non-general
+// counterpart.
 
 export const TAROT_SPREAD_NAME_MAP: Record<string, string> = {
-  "3-card-basic-question-spread": "Three Card Spread",
-  "7-card-horseshoe-spread-major-read": "Horseshoe Spread",
-  "10-card-celtic-cross-major-read": "Celtic Cross",
+  "3-card-basic-question-spread": "3 Card Basic Question Spread",
+  "5-card-complex-question-spread": "5 Card Complex Question Spread",
+  "7-card-6-month-forward-review": "7 Card 6 Month Forward Review",
+  "7-card-horseshoe-spread-major-read": "7 Card Horseshoe Spread (Major Read)",
+  "10-card-celtic-cross-major-read": "10 Card Celtic Cross (Major Read)",
+  "10-card-relationship-spread": "10 Card Relationship Spread",
+  "12-card-astrological-spread-major-read": "12 Card Astrological Spread (Major Read)",
+  "general-3-card-basic-question-spread": "3 Card Basic Question Spread",
+  "general-5-card-complex-question-spread": "5 Card Complex Question Spread",
+  "general-7-card-6-month-forward-review": "7 Card 6 Month Forward Review",
+  "general-7-card-horseshoe-spread-major-read": "7 Card Horseshoe Spread (Major Read)",
+  "general-10-card-celtic-cross-major-read": "10 Card Celtic Cross (Major Read)",
+  "general-10-card-relationship-spread": "10 Card Relationship Spread",
+  "general-12-card-astrological-spread-major-read": "12 Card Astrological Spread (Major Read)",
 };
 
 // ─── Pure helpers ────────────────────────────────────────────────────────────
@@ -83,7 +94,7 @@ export const TAROT_SPREAD_NAME_MAP: Record<string, string> = {
  * Rollout gate (CLAUDE.md §8 — every release must have a feature flag where
  * applicable). When `NEXT_PUBLIC_TOOLKIT_SESSION_ENABLED` is explicitly set to
  * "false" or "0", the feature is hidden everywhere:
- *   - `getSessionLinkForBooking` returns null → no "Open Service" buttons
+ *   - `getSessionLinkForBooking` returns null -> no "Open Service" buttons
  *     render in the 4 placements; no URLs are embedded in diviner emails.
  *   - `isToolkitEnabled` is also consulted by the smart router to 404 direct
  *     URL access (defense in depth — a flipped flag must stop new traffic,
@@ -120,9 +131,9 @@ export function requiresPartnerBirthData(
  * service has no toolkit mapping. Callers (UI, email) use `null` as the
  * signal to hide the "Open Service" link.
  *
- * Note: this returns the "smart-router" URL `/admin/session/[bookingId]`
- * regardless of category. The smart router (src/app/admin/session/[bookingId]/page.tsx)
- * server-redirects to the right category-specific page.
+ * Note: this returns the diviner-facing smart-router URL
+ * `/dashboard/session/[bookingId]` regardless of category. Admin-scoped
+ * `/admin/session/[bookingId]` remains as a backwards-compatible alias.
  */
 export function getSessionLinkForBooking(input: {
   bookingId: string;
@@ -131,7 +142,7 @@ export function getSessionLinkForBooking(input: {
 }): string | null {
   if (!isToolkitEnabled()) return null;
   if (!isToolkitMappable(input.templateSlug, input.category)) return null;
-  return `/admin/session/${input.bookingId}`;
+  return `/dashboard/session/${input.bookingId}`;
 }
 
 /**
@@ -169,15 +180,17 @@ export async function resolveToolkitForBooking(
     bookingId: string;
     templateSlug: string;
     category: string;
+    routeBasePath?: "/admin" | "/dashboard";
   },
 ): Promise<ToolkitResolution | null> {
+  const routeBasePath = input.routeBasePath ?? "/dashboard";
   if (input.category === "astrology") {
     const tabSlug = ASTROLOGY_TAB_MAP[input.templateSlug];
     if (!tabSlug) return null;
     return {
       kind: "horoscope",
       tabSlug,
-      sessionPath: `/admin/horoscope/session/${input.bookingId}`,
+      sessionPath: `${routeBasePath}/horoscope/session/${input.bookingId}`,
     };
   }
   if (input.category === "tarot") {
@@ -187,7 +200,7 @@ export async function resolveToolkitForBooking(
       kind: "tarot",
       spreadId: resolved.spreadId,
       spreadName: resolved.spreadName,
-      sessionPath: `/admin/tarot/session/${input.bookingId}`,
+      sessionPath: `${routeBasePath}/tarot/session/${input.bookingId}`,
     };
   }
   return null;

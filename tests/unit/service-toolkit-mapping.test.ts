@@ -74,15 +74,24 @@ test("astrology map covers all 12 sold templates", () => {
   }
 });
 
-test("tarot map intentionally covers ONLY the 3 already-matched spreads", () => {
-  // Other 4 sold tarot services are intentional gaps — UI must hide their links.
-  // See product decision in service-toolkit-mapping.ts file header.
+test("tarot map covers all current tarot service templates", () => {
   const matched = [
     "3-card-basic-question-spread",
+    "5-card-complex-question-spread",
+    "7-card-6-month-forward-review",
     "7-card-horseshoe-spread-major-read",
     "10-card-celtic-cross-major-read",
+    "10-card-relationship-spread",
+    "12-card-astrological-spread-major-read",
+    "general-3-card-basic-question-spread",
+    "general-5-card-complex-question-spread",
+    "general-7-card-6-month-forward-review",
+    "general-7-card-horseshoe-spread-major-read",
+    "general-10-card-celtic-cross-major-read",
+    "general-10-card-relationship-spread",
+    "general-12-card-astrological-spread-major-read",
   ];
-  assert.equal(Object.keys(TAROT_SPREAD_NAME_MAP).length, 3);
+  assert.equal(Object.keys(TAROT_SPREAD_NAME_MAP).length, matched.length);
   for (const slug of matched) {
     assert.ok(slug in TAROT_SPREAD_NAME_MAP, `tarot slug ${slug} should be mapped`);
   }
@@ -108,10 +117,9 @@ test("isToolkitMappable: known tarot slug is mappable", () => {
   );
 });
 
-test("isToolkitMappable: unmapped tarot slug is not mappable", () => {
-  // 5-card complex isn't mapped yet — UI hides the link.
+test("isToolkitMappable: unknown tarot slug is not mappable", () => {
   assert.equal(
-    isToolkitMappable("5-card-complex-question-spread", "tarot"),
+    isToolkitMappable("unknown-tarot-spread", "tarot"),
     false,
   );
 });
@@ -146,22 +154,22 @@ test("requiresPartnerBirthData: false for missing slug", () => {
 
 // ─── getSessionLinkForBooking + rollout gate ─────────────────────────────────
 
-test("getSessionLinkForBooking: returns smart-router URL for mapped service", () => {
+test("getSessionLinkForBooking: returns dashboard smart-router URL for mapped service", () => {
   withEnv(undefined, () => {
     const link = getSessionLinkForBooking({
       bookingId: "abc-123",
       templateSlug: "nativity-birth-chart",
       category: "astrology",
     });
-    assert.equal(link, "/admin/session/abc-123");
+    assert.equal(link, "/dashboard/session/abc-123");
   });
 });
 
-test("getSessionLinkForBooking: returns null for unmapped tarot slug", () => {
+test("getSessionLinkForBooking: returns null for unknown tarot slug", () => {
   withEnv(undefined, () => {
     const link = getSessionLinkForBooking({
       bookingId: "abc-123",
-      templateSlug: "5-card-complex-question-spread",
+      templateSlug: "unknown-tarot-spread",
       category: "tarot",
     });
     assert.equal(link, null);

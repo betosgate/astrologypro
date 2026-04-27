@@ -12,7 +12,7 @@
  *      `questionnaire_responses` JSONB for pre-refactor bookings) and the
  *      partner's birth data for the three two-person services.
  *   4. Build a FormState-shaped prefill payload and 307-redirect to
- *      `/admin/horoscope?tab=<slug>&prefill=<encoded-json>`.
+ *      `/dashboard/horoscope?tab=<slug>&prefill=<encoded-json>`.
  *
  * The main /admin/horoscope page reads `prefill`, hydrates its form, and
  * auto-fires handleSubmit — so the diviner lands directly on the rich,
@@ -164,7 +164,7 @@ export default async function HoroscopeSessionPage({ params }: PageProps) {
 
   const template = booking.service_templates;
   if (!template || template.category !== "astrology") {
-    redirect(`/admin/session/${bookingId}`);
+    redirect(`/dashboard/session/${bookingId}`);
   }
 
   const tabSlug = ASTROLOGY_TAB_MAP[template.slug];
@@ -186,5 +186,5 @@ export default async function HoroscopeSessionPage({ params }: PageProps) {
   };
 
   const encoded = encodeURIComponent(JSON.stringify(prefill));
-  redirect(`/admin/horoscope?tab=${tabSlug}&prefill=${encoded}`);
+  redirect(`/dashboard/horoscope?tab=${tabSlug}&prefill=${encoded}`);
 }

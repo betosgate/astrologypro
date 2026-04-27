@@ -8,7 +8,6 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   DollarSign,
-  Link as LinkIcon,
   Megaphone,
   Users,
   UserCircle,
@@ -27,8 +26,6 @@ const navItems = [
   { href: "/affiliate/products", label: "Products", icon: Package },
   { href: "/affiliate/campaigns", label: "Campaigns", icon: Megaphone },
   { href: "/affiliate/earnings", label: "Earnings", icon: DollarSign },
-  { href: "/affiliate/commissions", label: "Commissions", icon: DollarSign },
-  { href: "/affiliate/links", label: "Links", icon: LinkIcon },
   { href: "/affiliate/rate-history", label: "Rate history", icon: History },
   { href: "/affiliate/notifications", label: "Notifications", icon: Bell },
   { href: "/affiliate/profile", label: "Profile", icon: UserCircle },

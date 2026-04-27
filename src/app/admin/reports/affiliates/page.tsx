@@ -14,6 +14,8 @@ import {
 } from "@/components/ui/table";
 import { Loader2, DollarSign, Wallet, Users, TrendingUp } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
+import { ReportsTabs } from "./_components/reports-tabs";
+import { EmergencyOverridesPanel } from "./_components/emergency-overrides-panel";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -152,8 +154,11 @@ export default function AffiliatesReportPage() {
         </h1>
         <p className="mt-1 text-sm" style={{ color: "rgba(184,188,208,0.6)" }}>
           Combined metrics for social advocates and diviner affiliate programs.
+          Drill into commission-v2 detail via the tabs below.
         </p>
       </div>
+
+      <ReportsTabs />
 
       {/* Period Selector */}
       <div className="flex flex-wrap gap-2">
@@ -544,6 +549,8 @@ function CombinedTab({ combined }: { combined: AffiliateReport["combined"] }) {
           )}
         </CardContent>
       </Card>
+
+      <EmergencyOverridesPanel />
     </div>
   );
 }
