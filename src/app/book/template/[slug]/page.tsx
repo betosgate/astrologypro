@@ -24,8 +24,8 @@ interface PageProps {
  * ranked list of diviners available on that date. If exactly one diviner
  * is available, the UI can continue directly; if multiple, the user chooses
  * explicitly. The final booking is completed at `/{username}/book/{serviceSlug}`
- * with `?submission=<uuid>&date=<YYYY-MM-DD>` preserved so the existing
- * booking wizard handles the real payment flow unchanged.
+ * with `?date=<YYYY-MM-DD>` plus `submission=<uuid>` when an intake exists, so
+ * the existing booking wizard handles the real payment flow unchanged.
  */
 export async function generateMetadata({
   params,
@@ -58,10 +58,9 @@ export default async function SharedBookingPage({
   const { slug } = await params;
   const { submission } = await searchParams;
   const submissionId = submission?.trim() ?? "";
-  if (!submissionId) notFound();
 
   const admin = createAdminClient();
-  const [{ data: requestedTemplate }, match, { data: sub }] = await Promise.all([
+  const [requestedTemplateRes, match, submissionRes] = await Promise.all([
     admin
       .from("service_templates")
       .select("slug, name, category, is_active")
@@ -69,30 +68,40 @@ export default async function SharedBookingPage({
       .eq("is_active", true)
       .maybeSingle(),
     resolveTemplateMatches(admin, slug),
-    admin
-      .from("service_template_intake_submissions")
-      .select(
-        "id, template_slug, primary_birth_city, secondary_birth_city, area_of_inquiry, question, submitted_at",
-      )
-      .eq("id", submissionId)
-      .maybeSingle(),
+    submissionId
+      ? admin
+          .from("service_template_intake_submissions")
+          .select(
+            "id, template_slug, primary_birth_city, secondary_birth_city, area_of_inquiry, question, submitted_at",
+          )
+          .eq("id", submissionId)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
   ]);
 
-  if (!requestedTemplate || !match || !sub) notFound();
+  const requestedTemplate = requestedTemplateRes.data;
+  const sub = submissionRes.data;
 
-  const storedSlug = (sub.template_slug as string | null) ?? "";
-  if (getBaseServiceTemplateSlug(storedSlug) !== match.baseSlug) {
-    notFound();
+  if (!requestedTemplate || !match) notFound();
+
+  if (submissionId) {
+    if (!sub) notFound();
+    const storedSlug = (sub.template_slug as string | null) ?? "";
+    if (getBaseServiceTemplateSlug(storedSlug) !== match.baseSlug) {
+      notFound();
+    }
   }
 
-  const submissionSummary = {
-    id: sub.id as string,
-    primaryBirthCity: (sub.primary_birth_city as string | null) ?? null,
-    secondaryBirthCity: (sub.secondary_birth_city as string | null) ?? null,
-    areaOfInquiry: (sub.area_of_inquiry as string | null) ?? null,
-    question: (sub.question as string | null) ?? null,
-    submittedAt: sub.submitted_at as string,
-  };
+  const submissionSummary = sub
+    ? {
+        id: sub.id as string,
+        primaryBirthCity: (sub.primary_birth_city as string | null) ?? null,
+        secondaryBirthCity: (sub.secondary_birth_city as string | null) ?? null,
+        areaOfInquiry: (sub.area_of_inquiry as string | null) ?? null,
+        question: (sub.question as string | null) ?? null,
+        submittedAt: sub.submitted_at as string,
+      }
+    : null;
 
   const templateHomePath = `/services/${encodeURIComponent(requestedTemplate.slug as string)}`;
 
@@ -141,7 +150,7 @@ export default async function SharedBookingPage({
                 ? "tarot"
                 : "astrology") as "astrology" | "tarot"
             }
-            submissionId={submissionSummary.id}
+            submissionId={submissionSummary?.id ?? null}
             submissionSummary={submissionSummary}
             submissionError={null}
             compatibleDivinerCount={match.diviners.length}
