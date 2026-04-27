@@ -18,6 +18,10 @@ export const dynamic = "force-dynamic";
  *   - limit  : page size (1..100). When provided, response includes
  *              `count`, `nextOffset`, `hasMore` for infinite-scroll UIs.
  *   - offset : zero-based offset into the result set. Defaults to 0.
+ *   - ritualName : exact ritual name filter
+ *   - status     : one of completed | in-progress | never-performed
+ *   - dateFrom   : inclusive created_at lower bound (YYYY-MM-DD)
+ *   - dateTo     : inclusive created_at upper bound (YYYY-MM-DD)
  *
  * Ordering is deterministic: `created_at DESC, id DESC`. The `id` tie-
  * breaker (per project rule #16) guarantees stable pagination even when
@@ -45,6 +49,10 @@ export async function GET(req: NextRequest) {
   const url = new URL(req.url);
   const rawLimit = url.searchParams.get("limit");
   const rawOffset = url.searchParams.get("offset");
+  const ritualName = url.searchParams.get("ritualName")?.trim() ?? "";
+  const status = url.searchParams.get("status")?.trim() ?? "";
+  const dateFrom = url.searchParams.get("dateFrom")?.trim() ?? "";
+  const dateTo = url.searchParams.get("dateTo")?.trim() ?? "";
   const paginated = rawLimit !== null;
 
   let limit = 0;
@@ -73,6 +81,32 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  if (
+    status.length > 0 &&
+    status !== "completed" &&
+    status !== "in-progress" &&
+    status !== "never-performed"
+  ) {
+    return NextResponse.json(
+      { error: "status must be completed, in-progress, or never-performed" },
+      { status: 422 }
+    );
+  }
+
+  if (dateFrom && Number.isNaN(Date.parse(`${dateFrom}T00:00:00.000Z`))) {
+    return NextResponse.json(
+      { error: "dateFrom must be a valid YYYY-MM-DD date" },
+      { status: 422 }
+    );
+  }
+
+  if (dateTo && Number.isNaN(Date.parse(`${dateTo}T23:59:59.999Z`))) {
+    return NextResponse.json(
+      { error: "dateTo must be a valid YYYY-MM-DD date" },
+      { status: 422 }
+    );
+  }
+
   // Build the base query. We always order by (created_at DESC, id DESC)
   // for deterministic pagination — the trailing `id` is the unique tie-
   // breaker required by project rule #16.
@@ -85,6 +119,26 @@ export async function GET(req: NextRequest) {
     .eq("user_id", user.id)
     .order("created_at", { ascending: false })
     .order("id", { ascending: false });
+
+  if (ritualName) {
+    query = query.eq("ritual_name", ritualName);
+  }
+
+  if (status === "completed") {
+    query = query.eq("is_complete", true);
+  } else if (status === "in-progress") {
+    query = query.eq("is_complete", false).gt("current_step", 0);
+  } else if (status === "never-performed") {
+    query = query.eq("is_complete", false).eq("current_step", 0);
+  }
+
+  if (dateFrom) {
+    query = query.gte("created_at", `${dateFrom}T00:00:00.000Z`);
+  }
+
+  if (dateTo) {
+    query = query.lte("created_at", `${dateTo}T23:59:59.999Z`);
+  }
 
   if (paginated) {
     query = query.range(offset, offset + limit - 1);
@@ -100,12 +154,30 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ rituals });
   }
 
+  const { data: ritualNameRows, error: ritualNamesError } = await supabase
+    .from("user_ritual_configurations")
+    .select("ritual_name")
+    .eq("user_id", user.id)
+    .order("ritual_name", { ascending: true });
+
+  if (ritualNamesError) {
+    return NextResponse.json(
+      { error: ritualNamesError.message },
+      { status: 500 }
+    );
+  }
+
+  const ritualNames = Array.from(
+    new Set((ritualNameRows ?? []).map((row) => row.ritual_name).filter(Boolean))
+  );
+
   const totalCount = count ?? 0;
   const nextOffset = offset + rituals.length;
   const hasMore = nextOffset < totalCount;
 
   return NextResponse.json({
     rituals,
+    ritualNames,
     count: totalCount,
     nextOffset,
     hasMore,

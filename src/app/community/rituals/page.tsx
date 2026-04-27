@@ -1,10 +1,18 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Flame,
   Plus,
@@ -14,8 +22,10 @@ import {
   Play,
   ArrowRight,
   Sparkles,
+  X,
 } from "lucide-react";
 import { formatDate } from "@/lib/format";
+import { buildRitualPlaylist } from "@/lib/community/ritual-video-map";
 
 type RitualRow = {
   id: string;
@@ -28,36 +38,60 @@ type RitualRow = {
   is_complete: boolean;
 };
 
+type RitualStatusFilter = "all" | "completed" | "in-progress" | "never-performed";
+
 const PAGE_SIZE = 10;
+
+function getDisplayTags(ritualName: string, tags: string[]): string[] {
+  if (ritualName === "Planetary Zodiacal Invocation Ritual of the Pentagram") {
+    return tags;
+  }
+
+  const primaryTags = tags.filter(
+    (tag) => !tag.startsWith("Ritual_") && !tag.includes("_Gate_")
+  );
+
+  return primaryTags.length > 0 ? primaryTags : tags;
+}
 
 export default function CommunityRitualsPage() {
   const router = useRouter();
   const [rituals, setRituals] = useState<RitualRow[]>([]);
+  const [ritualNameOptions, setRitualNameOptions] = useState<string[]>([]);
   const [loadingInitial, setLoadingInitial] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const [totalCount, setTotalCount] = useState(0);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [selectedRitualName, setSelectedRitualName] = useState("all");
+  const [selectedStatus, setSelectedStatus] =
+    useState<RitualStatusFilter>("all");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
 
-  // Tracks the next offset to request. Kept in a ref alongside state so
-  // the IntersectionObserver callback always reads the latest value
-  // without needing to be re-bound on every render.
   const nextOffsetRef = useRef(0);
   const hasMoreRef = useRef(false);
   const loadingMoreRef = useRef(false);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
-  /**
-   * Fetches a page of rituals. When `reset` is true the list is replaced
-   * (used for the initial load and after a delete). Otherwise the new
-   * rows are appended.
-   *
-   * Duplicate-row protection: even though the API guarantees stable
-   * `(created_at DESC, id DESC)` ordering, we still de-dupe by id when
-   * appending — defense in depth for any future race (e.g. a row created
-   * in another tab while the user is scrolling).
-   */
+  const currentFilterParams = useMemo(() => {
+    const params = new URLSearchParams();
+    if (selectedRitualName !== "all") {
+      params.set("ritualName", selectedRitualName);
+    }
+    if (selectedStatus !== "all") {
+      params.set("status", selectedStatus);
+    }
+    if (dateFrom) {
+      params.set("dateFrom", dateFrom);
+    }
+    if (dateTo) {
+      params.set("dateTo", dateTo);
+    }
+    return params.toString();
+  }, [selectedRitualName, selectedStatus, dateFrom, dateTo]);
+
   const fetchPage = useCallback(
     async (offset: number, reset: boolean): Promise<void> => {
       if (reset) {
@@ -70,18 +104,23 @@ export default function CommunityRitualsPage() {
       }
 
       try {
-        const res = await fetch(
-          `/api/community/rituals?limit=${PAGE_SIZE}&offset=${offset}`,
+        const query = new URLSearchParams(currentFilterParams);
+        query.set("limit", PAGE_SIZE.toString());
+        query.set("offset", offset.toString());
+
+        const response = await fetch(
+          `/api/community/rituals?${query.toString()}`,
           { cache: "no-store" }
         );
 
-        if (!res.ok) {
+        if (!response.ok) {
           setError("Failed to load rituals");
           return;
         }
 
-        const data = (await res.json()) as {
+        const data = (await response.json()) as {
           rituals: RitualRow[];
+          ritualNames: string[];
           count: number;
           nextOffset: number;
           hasMore: boolean;
@@ -91,18 +130,21 @@ export default function CommunityRitualsPage() {
 
         setRituals((previous) => {
           if (reset) return incoming;
-          // Append, skipping any ids already present.
+
           const seen = new Set(previous.map((row) => row.id));
           const merged = previous.slice();
+
           for (const row of incoming) {
             if (seen.has(row.id)) continue;
             seen.add(row.id);
             merged.push(row);
           }
+
           return merged;
         });
 
         setTotalCount(data.count ?? 0);
+        setRitualNameOptions(data.ritualNames ?? []);
         nextOffsetRef.current = data.nextOffset ?? offset + incoming.length;
         hasMoreRef.current = Boolean(data.hasMore);
         setHasMore(Boolean(data.hasMore));
@@ -117,19 +159,15 @@ export default function CommunityRitualsPage() {
         }
       }
     },
-    []
+    [currentFilterParams]
   );
 
-  // Initial load
   useEffect(() => {
     nextOffsetRef.current = 0;
     hasMoreRef.current = false;
     void fetchPage(0, true);
-  }, [fetchPage]);
+  }, [fetchPage, currentFilterParams]);
 
-  // IntersectionObserver-driven infinite scroll. The sentinel is rendered
-  // at the bottom of the list; when it enters the viewport we request the
-  // next page. Concurrent fetches are guarded by `loadingMoreRef`.
   useEffect(() => {
     const target = sentinelRef.current;
     if (!target) return;
@@ -146,37 +184,42 @@ export default function CommunityRitualsPage() {
 
     observer.observe(target);
     return () => observer.disconnect();
-    // We depend on `hasMore` so the observer is re-attached when the
-    // sentinel mounts/unmounts (it only renders while there are more
-    // pages to load).
   }, [fetchPage, hasMore, loadingInitial]);
 
   async function handleDelete(id: string, name: string) {
-    if (!window.confirm(`Delete ritual "${name}"? This cannot be undone.`))
+    if (!window.confirm(`Delete ritual "${name}"? This cannot be undone.`)) {
       return;
+    }
+
     setDeleting(id);
     setError(null);
-    const res = await fetch(`/api/community/rituals/${id}`, {
+
+    const response = await fetch(`/api/community/rituals/${id}`, {
       method: "DELETE",
     });
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
+
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}));
       setError(body.error ?? "Delete failed");
       setDeleting(null);
       return;
     }
-    // Reload from the top — simplest correct behavior. Avoids re-indexing
-    // offsets after a row removal in the middle of the loaded set.
+
     setDeleting(null);
     nextOffsetRef.current = 0;
     hasMoreRef.current = false;
     await fetchPage(0, true);
   }
 
+  const hasActiveFilters =
+    selectedRitualName !== "all" ||
+    selectedStatus !== "all" ||
+    dateFrom !== "" ||
+    dateTo !== "";
+
   return (
     <div className="space-y-8">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-4 flex-wrap">
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <div className="flex items-center gap-3">
             <div className="flex size-10 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500/30 to-orange-500/20 shadow-inner">
@@ -193,7 +236,7 @@ export default function CommunityRitualsPage() {
         <Button
           asChild
           size="sm"
-          className="bg-gradient-to-r from-amber-600 to-orange-600 text-white hover:from-amber-500 hover:to-orange-500 shadow-md"
+          className="bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow-md hover:from-amber-500 hover:to-orange-500"
         >
           <Link href="/community/rituals/new">
             <Plus className="mr-2 size-4" />
@@ -209,12 +252,98 @@ export default function CommunityRitualsPage() {
         </div>
       )}
 
+      {!loadingInitial && rituals.length > 0 && (
+        <div className="rounded-2xl border border-amber-500/10 bg-gradient-to-r from-amber-950/15 via-card to-card p-4">
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="min-w-[220px] flex-1">
+              <p className="mb-1.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                Ritual Name
+              </p>
+              <Select
+                value={selectedRitualName}
+                onValueChange={setSelectedRitualName}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="All rituals" />
+                </SelectTrigger>
+                <SelectContent>
+                  {["all", ...ritualNameOptions].map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {option === "all" ? "All rituals" : option}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="min-w-[180px]">
+              <p className="mb-1.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                Status
+              </p>
+              <Select
+                value={selectedStatus}
+                onValueChange={(value) =>
+                  setSelectedStatus(value as RitualStatusFilter)
+                }
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="All statuses" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All statuses</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="in-progress">In Progress</SelectItem>
+                  <SelectItem value="never-performed">Never performed</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="min-w-[160px]">
+              <p className="mb-1.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                Date From
+              </p>
+              <Input
+                type="date"
+                value={dateFrom}
+                onChange={(event) => setDateFrom(event.target.value)}
+              />
+            </div>
+
+            <div className="min-w-[160px]">
+              <p className="mb-1.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                Date To
+              </p>
+              <Input
+                type="date"
+                value={dateTo}
+                onChange={(event) => setDateTo(event.target.value)}
+              />
+            </div>
+
+            <Button
+              type="button"
+              variant="outline"
+              disabled={!hasActiveFilters}
+              onClick={() => {
+                setSelectedRitualName("all");
+                setSelectedStatus("all");
+                setDateFrom("");
+                setDateTo("");
+              }}
+              className="border-amber-500/20"
+            >
+              <X className="mr-2 size-4" />
+              Clear
+            </Button>
+          </div>
+        </div>
+      )}
+
       {loadingInitial ? (
         <div className="flex justify-center py-16">
           <Loader2 className="size-6 animate-spin text-amber-400/60" />
         </div>
       ) : rituals.length === 0 ? (
-        /* Empty state */
         <div className="relative overflow-hidden rounded-2xl border border-amber-500/20 bg-gradient-to-br from-amber-950/30 via-background to-orange-950/20 px-8 py-14 text-center shadow-xl">
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_0%,rgba(245,158,11,0.1),transparent_70%)]" />
           <div className="relative flex flex-col items-center gap-5">
@@ -229,7 +358,7 @@ export default function CommunityRitualsPage() {
             </div>
             <Button
               asChild
-              className="bg-gradient-to-r from-amber-600 to-orange-600 text-white hover:from-amber-500 hover:to-orange-500 shadow-md"
+              className="bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow-md hover:from-amber-500 hover:to-orange-500"
             >
               <Link href="/community/rituals/new">
                 <Sparkles className="mr-2 size-4" />
@@ -245,115 +374,119 @@ export default function CommunityRitualsPage() {
             {totalCount !== 1 ? "s" : ""}
           </p>
 
-          {rituals.map((r) => {
-            const isInProgress = r.current_step > 0 && !r.is_complete;
-            const isCompleted = r.is_complete && r.last_executed_at;
+          {rituals.map((ritual) => {
+            const isInProgress = ritual.current_step > 0 && !ritual.is_complete;
+            const isCompleted = ritual.is_complete && ritual.last_executed_at;
+            const displayTags = getDisplayTags(
+              ritual.ritual_name,
+              ritual.ritual_tags
+            );
+            const totalSteps = buildRitualPlaylist(ritual.ritual_tags).length;
+            const completedSteps = isCompleted
+              ? totalSteps
+              : Math.max(ritual.current_step - 1, 0);
 
             return (
-              /* Mystical card design with flame icon per ritual */
               <div
-                key={r.id}
+                key={ritual.id}
                 className="group relative overflow-hidden rounded-2xl border border-amber-500/10 bg-gradient-to-r from-amber-950/20 via-card to-card transition-all hover:border-amber-500/30 hover:shadow-lg hover:shadow-amber-500/5"
               >
-                {/* Subtle glow on hover */}
-                <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100 bg-[radial-gradient(ellipse_at_0%_50%,rgba(245,158,11,0.05),transparent_50%)]" />
+                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_0%_50%,rgba(245,158,11,0.05),transparent_50%)] opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
 
-                <div className="relative flex items-center justify-between gap-4 px-5 py-4 flex-wrap">
-                  {/* Left: flame + ritual info */}
-                  <div className="flex items-center gap-4 min-w-0 flex-1">
-                    {/* Flame icon per ritual — glows amber */}
+                <div className="relative flex flex-wrap items-center justify-between gap-4 px-5 py-4">
+                  <div className="flex min-w-0 flex-1 items-center gap-4">
                     <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500/25 to-orange-500/15 ring-1 ring-amber-500/20 shadow-inner transition-all group-hover:ring-amber-500/40">
                       <Flame className="size-5 text-amber-400 transition-colors group-hover:text-amber-300" />
                     </div>
 
                     <div className="min-w-0">
-                      <p className="font-semibold text-sm leading-snug truncate">
-                        {r.ritual_name}
+                      <p className="truncate text-sm font-semibold leading-snug">
+                        {ritual.ritual_name}
                       </p>
 
-                      {/* Status line */}
                       <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
                         {isInProgress ? (
                           <Badge
                             variant="outline"
-                            className="text-[10px] px-1.5 py-0.5 border-amber-400/50 text-amber-500 bg-amber-950/30"
+                            className="border-amber-400/50 bg-amber-950/30 px-1.5 py-0.5 text-[10px] text-amber-500"
                           >
                             <span className="mr-1 inline-block size-1.5 rounded-full bg-amber-400 animate-pulse" />
-                            In Progress — Step {r.current_step}
+                            In Progress - {completedSteps} of {totalSteps} completed
                           </Badge>
                         ) : isCompleted ? (
                           <Badge
                             variant="outline"
-                            className="text-[10px] px-1.5 py-0.5 border-green-500/40 text-green-400 bg-green-950/30"
+                            className="border-green-500/40 bg-green-950/30 px-1.5 py-0.5 text-[10px] text-green-400"
                           >
-                            Last: {formatDate(r.last_executed_at!)}
+                            Last: {formatDate(ritual.last_executed_at!)}
                           </Badge>
                         ) : (
                           <span className="text-[11px] text-muted-foreground">
                             Never performed
                           </span>
                         )}
-                        {r.execution_count > 0 && (
+
+                        {ritual.execution_count > 0 && (
                           <span className="text-[11px] text-muted-foreground">
-                            · {r.execution_count}× completed
+                            · {ritual.execution_count}x completed
                           </span>
                         )}
                       </div>
 
-                      {/* Tags */}
                       <div className="mt-1.5 flex flex-wrap gap-1">
-                        {r.ritual_tags.slice(0, 3).map((tag) => (
+                        {displayTags.slice(0, 3).map((tag) => (
                           <Badge
                             key={tag}
                             variant="secondary"
-                            className="text-[10px] px-1.5 py-0.5 bg-amber-500/10 text-amber-300/80 border-none"
+                            className="border-none bg-amber-500/10 px-1.5 py-0.5 text-[10px] text-amber-300/80"
                           >
                             {tag.replace(/_/g, " ")}
                           </Badge>
                         ))}
-                        {r.ritual_tags.length > 3 && (
+                        {displayTags.length > 3 && (
                           <Badge
                             variant="outline"
-                            className="text-[10px] px-1.5 py-0.5 text-muted-foreground"
+                            className="px-1.5 py-0.5 text-[10px] text-muted-foreground"
                           >
-                            +{r.ritual_tags.length - 3} more
+                            +{displayTags.length - 3} more
                           </Badge>
                         )}
                       </div>
                     </div>
                   </div>
 
-                  {/* Actions */}
-                  <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex shrink-0 items-center gap-2">
                     {isInProgress ? (
                       <Button
                         size="sm"
-                        className="bg-gradient-to-r from-amber-600 to-orange-600 text-white hover:from-amber-500 hover:to-orange-500 shadow"
-                        onClick={() => router.push(`/community/rituals/${r.id}`)}
+                        className="bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow hover:from-amber-500 hover:to-orange-500"
+                        onClick={() =>
+                          router.push(`/community/rituals/${ritual.id}/playback`)
+                        }
                       >
                         <Play className="mr-1.5 size-3.5" />
                         Continue
                       </Button>
                     ) : (
-                      /* Navigate button — prominent per spec */
                       <Button
                         size="sm"
-                        className="bg-gradient-to-r from-amber-600/80 to-orange-600/80 text-white hover:from-amber-500 hover:to-orange-500 shadow"
-                        onClick={() => router.push(`/community/rituals/${r.id}`)}
+                        className="bg-gradient-to-r from-amber-600/80 to-orange-600/80 text-white shadow hover:from-amber-500 hover:to-orange-500"
+                        onClick={() => router.push(`/community/rituals/${ritual.id}`)}
                       >
                         <ArrowRight className="mr-1.5 size-3.5" />
-                        {r.execution_count > 0 ? "Navigate" : "Navigate"}
+                        Navigate
                       </Button>
                     )}
+
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                      disabled={deleting === r.id}
-                      onClick={() => handleDelete(r.id, r.ritual_name)}
-                      aria-label={`Delete ritual ${r.ritual_name}`}
+                      className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                      disabled={deleting === ritual.id}
+                      onClick={() => handleDelete(ritual.id, ritual.ritual_name)}
+                      aria-label={`Delete ritual ${ritual.ritual_name}`}
                     >
-                      {deleting === r.id ? (
+                      {deleting === ritual.id ? (
                         <Loader2 className="size-3.5 animate-spin" />
                       ) : (
                         <Trash2 className="size-3.5" />
@@ -365,10 +498,14 @@ export default function CommunityRitualsPage() {
             );
           })}
 
-          {/* Infinite-scroll sentinel + loading / end-of-list indicator.
-              The sentinel only renders while more pages exist, so the
-              IntersectionObserver naturally stops firing once we reach
-              the end of the list. */}
+          {rituals.length === 0 && (
+            <div className="rounded-2xl border border-amber-500/10 bg-gradient-to-r from-amber-950/10 via-card to-card px-6 py-10 text-center">
+              <p className="text-sm text-muted-foreground">
+                No rituals match the current filters.
+              </p>
+            </div>
+          )}
+
           {hasMore ? (
             <div
               ref={sentinelRef}
@@ -378,7 +515,7 @@ export default function CommunityRitualsPage() {
               {loadingMore ? (
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <Loader2 className="size-4 animate-spin text-amber-400/60" />
-                  Loading more rituals…
+                  Loading more rituals...
                 </div>
               ) : (
                 <span className="h-px w-px" />
