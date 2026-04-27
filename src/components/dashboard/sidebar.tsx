@@ -41,6 +41,7 @@ import {
   Target,
   Trophy,
   Share2,
+  Bell,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -137,6 +138,7 @@ const navItems: NavItem[] = [
       { label: "Billing", href: "/dashboard/billing", icon: CreditCard },
     ],
   },
+  { label: "Notifications", href: "/dashboard/notifications", icon: Bell },
   { label: "Profile", href: "/dashboard/profile", icon: User },
   { label: "Settings", href: "/dashboard/settings", icon: Settings },
   { label: "Support", href: "/dashboard/support", icon: LifeBuoy },

@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { stripe } from "@/lib/stripe/client";
+import { APP_URL } from "@/lib/constants";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import {
   Card,
@@ -120,6 +122,67 @@ function formatCurrency(amount: number, currency = "usd"): string {
   }).format(amount);
 }
 
+type PmApiSubscription = {
+  id: string;
+  status: string;
+  current_period_end: string | null;
+  cancel_at_period_end: boolean;
+  amount: number;
+  currency: string;
+  interval: string;
+  plan_name: string;
+  one_time_fee?: number;
+  one_time_fee_currency?: string;
+  membership_status?: string | null;
+  membership_type?: string | null;
+  plan_type?: string | null;
+  stripe_customer_id?: string | null;
+  tier_id?: string | null;
+  tier_name?: string | null;
+};
+
+function stripeCentsToAmount(cents: number): number {
+  return Number((cents / 100).toFixed(2));
+}
+
+function billingCycleFromInterval(
+  interval: string | null | undefined
+): MembershipSubscription["billing_cycle"] {
+  if (interval === "year") return "annual";
+  if (interval === "month") return "monthly";
+  return null;
+}
+
+async function fetchPmSubscription(): Promise<PmApiSubscription | null> {
+  try {
+    const hdrs = await headers();
+    const host = hdrs.get("x-forwarded-host") ?? hdrs.get("host");
+    const protocol =
+      hdrs.get("x-forwarded-proto") ??
+      (host?.startsWith("localhost") ? "http" : "https");
+    const origin = host ? `${protocol}://${host}` : APP_URL;
+    const cookie = hdrs.get("cookie");
+
+    const res = await fetch(`${origin}/api/pm/subscription`, {
+      cache: "no-store",
+      headers: cookie ? { cookie } : undefined,
+    });
+
+    if (!res.ok) {
+      console.error("[community] Failed to fetch PM subscription API", res.status);
+      return null;
+    }
+
+    const body = (await res.json()) as {
+      subscription?: PmApiSubscription | null;
+    };
+    return body.subscription ?? null;
+  } catch (err) {
+    console.error("[community] PM subscription API error:", err);
+    return null;
+  }
+}
+
 function capitalize(value: string | null | undefined): string {
   if (!value) return "";
   return value.charAt(0).toUpperCase() + value.slice(1);
@@ -234,6 +297,7 @@ export default async function CommunityDashboardPage() {
     pmTierResult,
     platformSettingsResult,
     mysterySchoolStudentResult,
+    pmApiSubscription,
   ] = await Promise.all([
     // Client profile for progress ring calculation
     supabase
@@ -323,6 +387,8 @@ export default async function CommunityDashboardPage() {
       )
       .eq("user_id", user.id)
       .maybeSingle(),
+
+    isPerennial ? fetchPmSubscription() : Promise.resolve(null),
   ]);
 
   const client = clientResult.data;
@@ -436,47 +502,73 @@ export default async function CommunityDashboardPage() {
       : null;
 
   // ── Membership card subscription prop ────────────────────────────────────
+  const membershipPlanType =
+    isPerennial && pmApiSubscription?.plan_type
+      ? pmApiSubscription.plan_type
+      : planType;
+
   // Max members: from tier table if available, else derive from plan_type
   const maxMembers: number =
     (pmTier as { max_total_members?: number } | null)?.max_total_members ??
-    (planType === "family" ? 5 : 1);
+    (membershipPlanType === "family" ? 5 : 1);
 
   // family count: family members + the primary member
   const memberCount =
-    planType === "family"
+    membershipPlanType === "family"
       ? Math.min((familyMembers?.length ?? 0) + 1, maxMembers)
       : 1;
 
-  // Tier display name: use pm_plan_tiers.name if available
+  // Tier display name: prefer the PM subscription API, then pm_plan_tiers.
   const tierName: string | null =
+    (isPerennial
+      ? pmApiSubscription?.tier_name ?? pmApiSubscription?.plan_name
+      : null) ??
     (pmTier as { name?: string } | null)?.name ??
-    PLAN_LABELS[membershipType]?.[planType] ??
+    PLAN_LABELS[membershipType]?.[membershipPlanType] ??
     null;
 
-  // Best renewal date: prefer current_period_end (Stripe), fallback expires_at
+  // Best renewal date: PM prefers the API's Stripe current_period_end.
   const renewalDate: string | null =
+    (isPerennial ? pmApiSubscription?.current_period_end ?? null : null) ??
     (member as { current_period_end?: string | null }).current_period_end ??
     member.expires_at ??
     null;
 
   const membershipSubscription: MembershipSubscription = {
-    membership_type: membershipType,
-    plan_type: planType,
+    membership_type:
+      (isPerennial ? pmApiSubscription?.membership_type ?? null : null) ??
+      membershipType,
+    plan_type: membershipPlanType,
     plan_label:
-      PLAN_LABELS[membershipType]?.[planType] ??
+      (isPerennial ? pmApiSubscription?.plan_name ?? null : null) ??
+      PLAN_LABELS[membershipType]?.[membershipPlanType] ??
       PLAN_LABELS["perennial_mandalism"]["individual"],
     tier_name: tierName,
-    status: member.membership_status ?? "active",
+    status:
+      isPerennial && pmApiSubscription?.cancel_at_period_end
+        ? "cancelling"
+        : (isPerennial ? pmApiSubscription?.status ?? null : null) ??
+          member.membership_status ??
+          "active",
     amount:
-      isPerennial && pmTier
+      isPerennial && pmApiSubscription
+        ? stripeCentsToAmount(pmApiSubscription.amount)
+        : isPerennial && pmTier
         ? Number(pmTier.base_price_usd ?? 0) +
-          (member.extra_member_count ?? 0) * Number(pmTier.extra_per_member_usd ?? 0)
+          (member.extra_member_count ?? 0) *
+            Number(pmTier.extra_per_member_usd ?? 0)
         : isMysterySchool && mysterySchoolRecurringAmount
         ? mysterySchoolRecurringAmount
-        : PLAN_AMOUNTS[membershipType]?.[planType] ??
+        : PLAN_AMOUNTS[membershipType]?.[membershipPlanType] ??
           PLAN_AMOUNTS["perennial_mandalism"]["individual"],
-    currency: "usd",
-    billing_cycle: "monthly",
+    currency:
+      (isPerennial ? pmApiSubscription?.currency ?? null : null) ??
+      mysterySchoolRecurringCurrency ??
+      "usd",
+    billing_cycle:
+      (isPerennial
+        ? billingCycleFromInterval(pmApiSubscription?.interval)
+        : null) ?? "monthly",
     renewal_date: renewalDate,
     created_at: member.joined_at,
     member_count: memberCount,
@@ -485,6 +577,7 @@ export default async function CommunityDashboardPage() {
 
   // ── Cancellation / renewal-soon flags ─────────────────────────────────────
   const isCancelling =
+    Boolean(isPerennial && pmApiSubscription?.cancel_at_period_end) ||
     Boolean((member as { cancel_at_period_end?: boolean | null }).cancel_at_period_end) ||
     Boolean((member as { cancel_at?: string | null }).cancel_at) ||
     member.membership_status === "cancelling";

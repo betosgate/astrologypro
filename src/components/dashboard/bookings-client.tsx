@@ -133,7 +133,15 @@ export function BookingsClient({
     for (const b of bookings) {
       const scheduledAt = new Date(b.scheduled_at as string);
       const status = b.status as string;
-      const duration = b.duration_minutes as number;
+      // Prefer the service's standard duration over the per-booking value
+      // (which can be stale/wrong for older rows). Falls back to the
+      // booking's own value when no service is attached (manual bookings).
+      const serviceDuration = (b.services as { duration_minutes?: number } | null)
+        ?.duration_minutes;
+      const duration =
+        typeof serviceDuration === "number" && serviceDuration > 0
+          ? serviceDuration
+          : ((b.duration_minutes as number) ?? 0);
       const clientId = b.client_id as string;
 
       if (scheduledAt >= thisWeekStart && scheduledAt < thisWeekEnd &&
@@ -432,7 +440,9 @@ export function BookingsClient({
                     birth_time?: string;
                     birth_city?: string;
                   } | null;
-                  const service = booking.services as { name?: string } | null;
+                  const service = booking.services as
+                    | { name?: string; duration_minutes?: number }
+                    | null;
                   const meta = booking.metadata as {
                     is_reminder?: boolean;
                     availability_title?: string;
@@ -493,7 +503,31 @@ export function BookingsClient({
                         </span>
                       </TableCell>
                       <TableCell>
-                        {booking.duration_minutes as number} min
+                        {/*
+                          Display the service's standard duration when a
+                          service is attached — that's the source of truth
+                          for the product the client booked. Fall back to
+                          the per-booking value only when there's no
+                          service (manual bookings / personal reminders).
+                          Fixes the bug where bookings whose stored
+                          `duration_minutes` was miscomputed at insert time
+                          (e.g. a 60-min "3 Card Basic Question Spread"
+                          showing as 20 min) rendered with the wrong value.
+                        */}
+                        {(() => {
+                          const svcMin = service?.duration_minutes;
+                          const bookingMin = booking.duration_minutes as
+                            | number
+                            | null
+                            | undefined;
+                          const minutes =
+                            typeof svcMin === "number" && svcMin > 0
+                              ? svcMin
+                              : typeof bookingMin === "number" && bookingMin > 0
+                              ? bookingMin
+                              : null;
+                          return minutes != null ? `${minutes} min` : "--";
+                        })()}
                       </TableCell>
                       <TableCell>
                         <div className="space-y-1">
