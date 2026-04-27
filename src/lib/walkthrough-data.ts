@@ -6402,7 +6402,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
       { name: "report_affiliates", label: "Affiliate ROI", description: "Performance of external traffic sources.", group: "Reports" },
       { name: "report_campaigns", label: "Campaign ROI", description: "Financial results of marketing spends.", group: "Reports" },
 
-      // Config
+      //----------------Config-----------------------//
       { 
         name: "platform_settings", 
         label: "Platform Settings", 
@@ -6416,24 +6416,365 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Admin notification and alert settings"
         ]
       },
-      { 
-        name: "api_keys_config", 
-        label: "API Keys", 
-        description: "Credentials for Stripe, SMTP, and Astrology API.", 
-        group: "Config",
-        purpose: "Manages the platform's vital integrations with third-party processing and data services.",
-        bullets: [
-          "Secure credential storage for Stripe and PayPal",
-          "SMTP and email delivery provider configuration",
-          "Astrological data engine API management",
-          "Cloud storage and CDN integration settings"
-        ]
-      },
-      { name: "astro_system_settings", label: "Astro Engine Config", description: "House systems and calculation preferences.", group: "Config" },
-      { name: "calendar_config_detailed", label: "Calendar Layouts", description: "Formatting for booking and transit calendars.", group: "Config" },
-      { name: "pricing_management", label: "Pricing Matrix", description: "Complex pricing logic for tiers and services.", group: "Config" },
-      { name: "legal_config", label: "Legal Docs", description: "Terms, Privacy Policy, and EULA management.", group: "Config" },
-      { name: "db_migrations", label: "DB Schema Health", description: "Monitoring system state and migrations.", group: "Config" },
+
+      {
+  "name": "brand-social-connections",
+  "label": "Brand Social Connections",
+  "description": "Admin social media connection management page used to connect and manage publishing access for all supported social platforms.",
+  "group": "Config",
+ 
+  "purpose": "This screen allows administrators to connect the brand’s social media accounts so automated social advocacy campaigns and scheduled posts can publish to connected platforms. Each platform must be authorized before it can receive posts from the automation system.",
+  "bullets": [
+    "The page displays all supported social media integrations in a card-based layout.",
+    "Each social platform has its own connection card with platform-specific details and actions.",
+    "The page explains that scheduled social advocacy posts are controlled from the admin social advocacy module.",
+    "The system warns that platforms must be connected before automated posts can be published.",
+    "Connected platforms display connection status badges such as Connected.",
+    "Unavailable or unfinished integrations display a Coming Soon status badge.",
+    "The X (Twitter) integration card shows the currently connected account information.",
+    "The connected Twitter account displays the username and connection timestamp.",
+    "The Twitter card includes API response details and platform errors when connection or posting problems occur.",
+    "The example error shown indicates Twitter API credit exhaustion or posting limit restrictions.",
+    "Connected platforms provide a Disconnect button so admins can remove authorization access.",
+    "Unconnected platforms provide a Connect button to begin OAuth authorization setup.",
+    "Facebook Page integration is prepared for posting to managed Facebook business pages.",
+    "Instagram integration is intended for Instagram Business account publishing.",
+    "LinkedIn integration supports posting content to personal or business LinkedIn profiles.",
+    "TikTok integration is designed for short-form video publishing workflows.",
+    "YouTube integration supports video upload and publishing to connected channels.",
+    "Each platform card contains a short explanation describing the publishing capability of that platform.",
+    "The layout helps admins quickly identify which platforms are active, disconnected, unavailable, or still under development.",
+    "This page acts as the main social publishing authorization center for marketing automation workflows.",
+    "Connected platforms can later be used by automated schedulers, advocacy campaigns, content publishing systems, and cron-based posting jobs.",
+    "The interface centralizes all social publishing management in one location for easier monitoring and troubleshooting.",
+    "Error handling visibility helps administrators diagnose API failures, expired tokens, permission issues, and usage-limit problems directly from the dashboard.",
+    "The design supports future expansion by allowing additional social platforms to be added later."
+  ]
+},
+
+
+  {
+    "name": "astrology-api-keys-list",
+    "label": "Astrology API Keys List",
+    "description": "Admin page showing all Astrology API key pairs created for json.astrologyapi.com integrations.",
+    "group": "Config",
+    "purpose": "This screen helps administrators view, monitor, activate, deactivate, edit, and delete Astrology API credentials from one place.",
+    "bullets": [
+      "Shows all existing API key pairs in a table format.",
+      "Displays each key label for easy identification.",
+      "Shows the Access Key value used for API authentication.",
+      "Masks the Secret Key to protect sensitive credentials.",
+      "Includes an eye icon to view the hidden Secret Key when needed.",
+      "Provides an Active toggle to enable or disable each API key.",
+      "Shows Requests Today so admins can monitor daily API usage.",
+      "Shows Last Used date and time to track recent activity.",
+      "Includes edit action for updating an existing API key.",
+      "Includes delete action for removing unused or unsafe keys.",
+      "The Add Key button opens the form to create a new API key pair.",
+      "Useful for managing API access, monitoring usage, and keeping integrations secure."
+    ]
+  },
+  {
+    "name": "astrology-api-key-add-modal",
+    "label": "Add API Key Modal",
+    "description": "Popup form used to create a new Astrology API key pair.",
+     "group": "Config",
+    "purpose": "This modal allows administrators to add a new API credential set by entering a label, access key, and secret key.",
+    "bullets": [
+      "Opens after the administrator clicks the Add Key button.",
+      "Shows a modal titled Add API Key.",
+      "Includes a Label field to identify the key, such as Key 1.",
+      "Includes a required Access Key field.",
+      "Includes a required Secret Key field.",
+      "The Secret Key field hides sensitive text for security.",
+      "The Create button saves the new API key pair.",
+      "The Cancel button closes the modal without saving.",
+      "The close icon also exits the modal.",
+      "After creation, the new key appears in the API Keys list.",
+      "Used when adding a new integration, environment, or service credential."
+    ]
+  },
+
+     
+  {
+    "name": "astro-system-settings-overview",
+    "label": "Astro System Settings Overview",
+    "description": "Full admin configuration screen for managing astrology API credentials, free astrology API keys, and system configuration values.",
+    "group": "Config",
+    "purpose": "This page works as a centralized admin store for API keys, secret values, external service URLs, and system configuration settings used by astrology-related platform features.",
+    "bullets": [
+      "Shows all Astro System Settings in one admin screen.",
+      "Includes three setting groups: ASTROLOGY_API, FREEASTROLOGY_API, and SYSTEM_CONFIG.",
+      "ASTROLOGY_API stores access key and secret key pairs.",
+      "FREEASTROLOGY_API stores key-only API credentials.",
+      "SYSTEM_CONFIG stores URLs and scalar configuration values.",
+      "Each table shows key name, masked value, status, updated date, and available actions.",
+      "Reload button refreshes the latest settings list.",
+      "Add setting button opens the form to create a new configuration entry.",
+      "Active and inactive badges help admins identify which settings are currently enabled.",
+      "Action controls allow admins to view, activate, deactivate, or delete settings."
+    ]
+  },
+  {
+    "name": "astro-system-settings-astrology-api",
+    "label": "ASTROLOGY API Settings",
+    "description": "Configuration table for Astrology API credentials that require both access key and secret key values.",
+    "group": "Config",
+    "purpose": "This section manages paid or secured Astrology API credential pairs used for astrology calculations, chart services, and external astrology integrations.",
+    "bullets": [
+      "Shows ASTROLOGY_API settings that use a key and secret pair.",
+      "Displays each credential by key name.",
+      "Masks the key value to protect sensitive access information.",
+      "Masks the secret value while showing partial characters for identification.",
+      "Shows whether each key is active or inactive.",
+      "Displays the last updated date and time for each setting.",
+      "View icon allows admins to inspect the stored value when needed.",
+      "Activate action enables an inactive API credential.",
+      "Deactivate action disables an active API credential without deleting it.",
+      "Delete action removes an unused or incorrect credential.",
+      "Row count badge shows the total number of Astrology API settings."
+    ]
+  },
+  {
+    "name": "astro-system-settings-freeastrology-api",
+    "label": "FREEASTROLOGY API Settings",
+    "description": "Configuration table for Free Astrology API credentials that require only a key value.",
+    "group": "Config",
+    "purpose": "This section manages Free Astrology API keys used for astrology-related features where only a single API key is required.",
+    "bullets": [
+      "Shows FREEASTROLOGY_API key-only settings.",
+      "Displays API key names such as FREEASTROLOGY_API_KEY and related variants.",
+      "Shows the masked key value for security.",
+      "Does not require a separate secret value.",
+      "Displays active or inactive status for each key.",
+      "Shows the last updated timestamp.",
+      "View icon allows admins to inspect the configured key.",
+      "Activate action turns on an inactive key.",
+      "Deactivate action turns off an active key.",
+      "Delete action removes an unused key.",
+      "Row count badge shows how many Free Astrology API keys are configured."
+    ]
+  },
+  {
+    "name": "astro-system-settings-system-config",
+    "label": "System Config Settings",
+    "description": "Configuration table for platform-level URLs, storage credentials, and scalar system values.",
+    "group": "Config",
+    "purpose": "This section manages non-API-pair system values such as service URLs, AI endpoints, planet return URLs, and storage credentials required by the astrology platform.",
+    "bullets": [
+      "Shows SYSTEM_CONFIG settings for URL and scalar values.",
+      "Includes configuration keys such as ASTRO_AI_API_URL and ASTRO_PLANET_RETURN_URL.",
+      "Can store storage-related values such as S3 bucket access key and secret access key.",
+      "Masks sensitive values to prevent direct exposure.",
+      "Displays active status for each configuration value.",
+      "Shows the last updated date and time.",
+      "View icon allows admins to inspect the stored value when needed.",
+      "Deactivate action disables an active system config value.",
+      "Delete action removes an unused or incorrect config entry.",
+      "Row count badge shows the number of system config values."
+    ]
+  },
+  {
+    "name": "astro-system-settings-add-new",
+    "label": "Add New Astro System Setting",
+    "description": "Form used by admins to create a new astrology API, free astrology API, or system configuration setting.",
+    "group": "Config",
+    "purpose": "This form allows administrators to safely add new system settings by selecting the setting type, entering a unique key name, adding required values, and saving the configuration.",
+    "bullets": [
+      "Opens when the admin clicks Add setting.",
+      "Shows a note that the combination of type and key_name must be unique.",
+      "Type dropdown lets the admin choose the setting category.",
+      "Supported types include ASTROLOGY_API, FREEASTROLOGY_API, and SYSTEM_CONFIG.",
+      "key_name field identifies the setting name.",
+      "key_value field stores the access key, API key, URL, or scalar value.",
+      "secret_value field appears for key and secret pair settings.",
+      "Notes field allows optional internal documentation.",
+      "Save button creates the new setting.",
+      "Cancel button exits the form without saving.",
+      "This form is used when adding new API credentials, changing integration access, or registering new system URLs."
+    ]
+  },
+
+  {
+    "name": "calendar-config",
+    "label": "Calendar Config",
+    "description": "Admin configuration page for managing OAuth credentials used by Google Calendar and Microsoft Calendar integrations.",
+    "group": "Config",
+    "purpose": "This screen allows admins to store, refresh, inspect, edit, and delete calendar integration credentials. These credentials are used by runtime calendar features to connect with Google or Microsoft calendar services.",
+    "bullets": [
+      "Shows calendar integration configuration for Google Calendar and Microsoft Calendar.",
+      "Explains that OAuth client credential values are masked by default for security.",
+      "Google Calendar section shows stored credentials for this provider.",
+      "Google Calendar includes required keys such as GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, and GOOGLE_REDIRECT_URI.",
+      "Each credential row shows key name, masked value, description, status, and actions.",
+      "Active status means the credential is included in runtime credential lookup.",
+      "Eye icon allows admins to reveal or inspect the hidden credential value.",
+      "Edit icon allows admins to update an existing credential.",
+      "Delete icon removes an unused or incorrect credential.",
+      "Refresh button reloads the latest saved credential list.",
+      "Add credential button opens the credential creation form.",
+      "Microsoft Calendar section shows no saved credentials in this example.",
+      "Warning message identifies missing Microsoft keys such as client_id, client_secret, redirect_uri, and tenant_id.",
+      "If no saved credential exists, the runtime falls back to matching environment variables."
+    ]
+  },
+  {
+    "name": "calendar-config-add-credential",
+    "label": "Add Calendar Credential",
+    "description": "Modal form used to add a new OAuth credential for Google Calendar or Microsoft Calendar integration.",
+    "group": "Config",
+    "purpose": "This popup allows admins to add a calendar credential key-value pair and decide whether it should be active for runtime calendar lookup.",
+    "bullets": [
+      "Opens after clicking Add credential.",
+      "Shows provider context, such as Google Calendar.",
+      "Lists well-known required keys such as client_id, client_secret, and redirect_uri.",
+      "Key field selects or enters the credential key name.",
+      "Value field stores the credential value and masks it by default.",
+      "Show option allows the admin to reveal the hidden value while editing.",
+      "Description field allows optional notes about the credential.",
+      "Active checkbox controls whether this credential is included in runtime lookup.",
+      "Cancel button closes the modal without saving.",
+      "Add credential button saves the new credential.",
+      "Used when adding missing OAuth client IDs, client secrets, redirect URLs, or tenant IDs."
+    ]
+  },
+
+  
+  {
+    "name": "pricing-management",
+    "label": "Pricing Management",
+    "description": "Admin pricing dashboard used to manage Stripe-connected pricing items, billing plans, and product visibility across signup and subscription flows.",
+    "group": "Config",
+    "purpose": "This page allows admins to configure pricing products, manage billing plans, control active subscription offerings, and connect products to Stripe billing accounts used by the platform.",
+    "bullets": [
+      "Shows the full Pricing Management dashboard for commerce administration.",
+      "Stripe Configuration section displays the connected Stripe account details.",
+      "Business name, account ID, default currency, and API key are displayed for the connected Stripe workspace.",
+      "Status badges confirm whether Stripe charges and payouts are operational.",
+      "Add Item button opens the product creation form.",
+      "Reload button refreshes pricing items and Stripe configuration data.",
+      "All Items & Plans section lists every billing item configured in the platform.",
+      "Search bar helps admins quickly find pricing items by key or name.",
+      "Status filter allows filtering active or inactive pricing items.",
+      "Each row displays item key, display name, Stripe account, status, toggle control, and actions.",
+      "Expand arrow reveals pricing plans connected to a pricing item.",
+      "Pricing plans can include one-time or recurring Stripe billing products.",
+      "Toggle switch enables or disables a pricing item without deleting it.",
+      "Edit action opens the pricing item for modification.",
+      "Delete action removes an unused pricing item.",
+      "Pagination controls support navigation across multiple pricing pages.",
+      "This screen is used to manage trainee plans, diviner plans, community memberships, and bundled subscription offerings."
+    ]
+  },
+  {
+    "name": "pricing-management-add-item",
+    "label": "Create Pricing Item",
+    "description": "Admin form used to create a new pricing product and connect it with Stripe billing products.",
+    "group": "Config",
+    "purpose": "This form allows admins to define a new pricing item, configure its Stripe billing relationship, and prepare the item for use in signup and subscription flows.",
+    "bullets": [
+      "Opens after clicking Add Item in Pricing Management.",
+      "Used to create a new product category such as Mystery School or Perennial Mandalism.",
+      "Item Key field stores the unique machine-readable identifier.",
+      "Item key is used by APIs and pricing endpoints.",
+      "Display Name field defines the human-readable product title shown in the admin dashboard.",
+      "Description field stores optional internal notes about the pricing item.",
+      "Payment Provider field identifies the billing provider, such as Stripe.",
+      "Account field shows which Stripe account the item will use.",
+      "Stripe Product Name field connects the pricing item to an existing or new Stripe product.",
+      "Admins can search existing Stripe products or create new ones directly.",
+      "Create Item button saves the pricing item configuration.",
+      "Cancel button exits the form without saving.",
+      "This form is used before creating pricing plans, subscriptions, bundles, or membership billing flows."
+    ]
+  },
+{
+  "name": "legal-documents",
+  "label": "Legal Documents Management",
+  "description": "Admin legal document management screen used to maintain versioned platform agreements, policies, and customer-facing legal content.",
+  "group": "Config",
+  "purpose": "This page allows admins to manage legal document categories, publish new document versions, maintain version history, and control the active agreement shown to users during onboarding, payment, and account flows.",
+  "bullets": [
+    "Shows centralized management for all legal platform documents.",
+    "Supports version-controlled legal agreements and policies.",
+    "Each document type can maintain one active version and full version history.",
+    "Top navigation tabs organize document categories such as Customer Terms, Diviner Agreement, Affiliate Agreement, Telephony Consent, and Privacy Policy.",
+    "Customer Terms of Service is selected in this example.",
+    "Active badge identifies the currently published version of the document.",
+    "Effective date shows when the legal document became active.",
+    "Accepted user count shows how many users have agreed to the active version.",
+    "New Version button allows admins to publish a new revision of the legal agreement.",
+    "Document editor area displays the full legal content in markdown or formatted text.",
+    "Legal sections include service terms, age requirements, refund policy, prohibited uses, intellectual property, and liability information.",
+    "Admins can update customer agreements without deleting older versions.",
+    "Historical versions can be preserved for compliance and audit purposes.",
+    "This screen controls the agreements shown during signup, payment, onboarding, and contract acceptance flows.",
+    "Used to manage platform compliance, customer consent, privacy disclosures, and service policies."
+  ]
+},
+
+{
+  "name": "database-migrations",
+  "label": "Database Migrations",
+  "description": "Administrative migration runner used to execute approved SQL database migrations safely against the production or staging database.",
+  "group": "Config",
+  
+  "purpose": "Allows administrators and developers to review, validate, and execute allowlisted SQL migrations directly from the admin dashboard using the Supabase Management API.",
+  "bullets": [
+    "Displays centralized database migration management interface.",
+    "Used for executing controlled SQL schema and data migrations.",
+    "Supports on-demand execution of allowlisted migration scripts.",
+    "Migration system is integrated with Supabase Management API.",
+    "Project reference and API access token configuration are displayed at the top.",
+    "Allowlist size shows how many approved migrations are available for execution.",
+    "Each migration card contains migration title, internal migration identifier, and detailed summary.",
+    "Run migration button allows admins to execute a migration manually.",
+    "Migration descriptions explain what tables, columns, triggers, indexes, or data updates will be created or modified.",
+    "SQL size information shows the approximate script size in characters.",
+    "Migrations are designed to be idempotent, meaning re-running them is safe.",
+    "Some migrations create new database tables and seed initial records.",
+    "Some migrations normalize existing legacy data structures into improved schemas.",
+    "Supports staged migration workflows such as additive schema updates before cleanup phases.",
+    "Calendar connection migrations demonstrate secure OAuth token storage normalization.",
+    "Backfill migrations move old JSON or legacy data into newer structured tables.",
+    "System helps prevent accidental execution of unauthorized SQL scripts.",
+    "Used by engineering or platform admins for controlled infrastructure upgrades.",
+    "Migration history and naming conventions help track deployment order.",
+    "Supports scalable database maintenance without direct manual SQL access."
+  ]
+},
+
+{
+  "name": "cron-jobs",
+  "label": "Cron Jobs",
+  "description": "Administrative monitoring and execution panel for scheduled background automation tasks running in the platform infrastructure.",
+  "group": "Config",
+
+  "purpose": "Allows administrators to monitor, review, and manually trigger automated cron jobs responsible for astrology event generation, scoring systems, alerts, and financial settlement processing.",
+  "bullets": [
+    "Displays all scheduled backend cron jobs in a centralized dashboard.",
+    "Shows active automation services currently enabled in the platform.",
+    "Each cron card includes job name, schedule frequency, and execution details.",
+    "Generate Astro Events job creates upcoming astrology and planetary event records.",
+    "Scoring Digest job computes entity stress scores from recent astrology events.",
+    "Settlement Sweep job processes pending revenue and ledger settlement entries.",
+    "Alert Check job evaluates notification rules and triggers in-app alerts.",
+    "Supports automatic recurring execution using UTC cron schedules.",
+    "Admins can manually execute jobs using the Trigger button.",
+    "Each job panel displays last execution information.",
+    "Shows whether the job has never run or recently completed.",
+    "Displays total number of executions within the last 7 days.",
+    "Visual status badges indicate whether a job is active.",
+    "Schedule Reference section explains cron expressions and execution frequency.",
+    "Cron expressions are displayed in standard cron syntax format.",
+    "Supports infrastructure monitoring for scheduled automation workflows.",
+    "Helps admins validate background task health and execution state.",
+    "Used for operational maintenance and automation debugging.",
+    "Provides transparency into automated platform processes.",
+    "Supports scalable background task management across the astrology platform."
+  ]
+},
+     
 
       // Walkthrough
       {
@@ -6809,97 +7150,10 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Bulk action log: every bulk operation recorded with actor, timestamp, and affected users"
         ]
       },
-      {
-        name: "admin_feature_flags",
-        label: "Feature Flags",
-        description: "Toggle platform features on or off by role, user group, or percentage rollout — without a code deploy.",
-        group: "Config",
-        purpose: "Gives the product team safe gradual rollouts and instant kill-switches for any feature — essential for managing risk in production.",
-        bullets: [
-          "Feature list with current state (enabled/disabled) and rollout percentage",
-          "Target by role: enable a feature only for Diviners, or only for PM Members",
-          "User overrides: force a feature on or off for a specific user (for QA testing)",
-          "Change log: every flag toggle recorded with actor and reason"
-        ]
-      },
-      {
-        name: "admin_webhook_logs",
-        label: "Webhook Logs",
-        description: "Real-time log of all incoming Stripe, VideoSDK, and third-party webhook events — status, payload, retry count, and processing result.",
-        group: "Config",
-        purpose: "The first place to look when a payment, session, or integration event is not reflected correctly in the platform — full payload visibility.",
-        bullets: [
-          "Webhook log with event type, source, received-at timestamp, and HTTP response code",
-          "Payload viewer: expand any event to see the full JSON body",
-          "Failed events highlighted in red with error message and retry count",
-          "Manual retry button: re-process any failed webhook immediately"
-        ]
-      },
-      {
-        name: "admin_system_health",
-        label: "System Health Dashboard",
-        description: "Live overview of platform health — API response times, error rate, active sessions, database query performance, and third-party status.",
-        group: "Config",
-        purpose: "Provides the engineering and ops team with an always-on health view so issues are caught before members report them.",
-        bullets: [
-          "Four golden signals: latency P95, error rate %, active sessions, DB saturation",
-          "Stripe, VideoSDK, and AWS Chime status widgets (live heartbeat checks)",
-          "Alert history: last 24 hours of triggered monitoring alerts",
-          "Link to full OpenTelemetry dashboard (Grafana / Datadog) for deep-dive"
-        ]
-      },
-      {
-        name: "admin_email_templates",
-        label: "Email Template Library",
-        description: "All transactional and marketing email templates — view, preview, and edit HTML/text content for any system-generated email.",
-        group: "Config",
-        purpose: "Allows content and ops teams to update email copy, branding, and CTAs without engineering involvement.",
-        bullets: [
-          "Template list: grouped by trigger (booking confirmation, subscription renewal, graduation, etc.)",
-          "Live preview: see the rendered HTML email in a web frame with test variable substitution",
-          "Edit HTML and plain-text versions side by side",
-          "Send test email to any address before saving changes"
-        ]
-      },
-      {
-        name: "admin_scheduled_tasks",
-        label: "Scheduled Task Manager",
-        description: "View and control all cron jobs and scheduled tasks running on the platform — mundane alerts, decan window opens, email digests, and more.",
-        group: "Config",
-        purpose: "Gives ops full visibility and control over automated background processes — catch stuck jobs, trigger manual runs, and audit run history.",
-        bullets: [
-          "Task list with name, cron expression, last run time, and last run status",
-          "Run now button: trigger any scheduled task immediately for testing or backfill",
-          "Failure alerts: tasks that errored in the last 24 hours highlighted with error detail",
-          "Disable / enable toggle: pause any task without deleting the schedule"
-        ]
-      },
-      {
-        name: "admin_session_recordings",
-        label: "Session Recordings Library",
-        description: "Admin-side library of recorded video and phone sessions stored in S3 — searchable by diviner, client, date, and session type.",
-        group: "Governance",
-        purpose: "Required for quality control, dispute resolution, and compliance — admins can retrieve any recorded session on demand.",
-        bullets: [
-          "Search by diviner name, client name, session date, or session ID",
-          "Play back video recordings directly in the portal with timestamp navigation",
-          "Download or delete any recording (with logged deletion reason)",
-          "Retention policy indicator: how many days remain before auto-deletion"
-        ]
-      },
-      {
-        name: "admin_chime_infrastructure",
-        label: "Chime Infrastructure Status",
-        description: "Live status of the AWS Chime SIP Media Application — active calls, pipeline health, and SMA configuration for phone readings.",
-        group: "Config",
-        purpose: "Gives ops visibility into the telephony layer so call failures can be diagnosed without opening the AWS console.",
-        bullets: [
-          "Active call count: live count of ongoing phone readings routed through Chime SMA",
-          "SMA health check: last heartbeat, last error, and PSTN gateway status",
-          "DID inventory: all E.164 numbers provisioned for inbound calling",
-          "Lambda ARN and version displayed for quick reference during incidents"
-        ]
-      },
+     
+     
+     
+    
       {
         name: "admin_pm_member_detail",
         label: "PM Member Detail — Admin View",
@@ -6913,19 +7167,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Activity summary: last login, last session attended, resources accessed this month"
         ]
       },
-      {
-        name: "admin_pm_plan_tiers",
-        label: "Plan Tier Configuration",
-        description: "Edit the Perennial Mandalism plan tiers — name, base price, included member count, extra member price, and max total members.",
-        group: "Config",
-        purpose: "Allows ops to adjust pricing and tier structure without a code deploy — critical for promotional pricing and plan restructuring.",
-        bullets: [
-          "Tier list with current price and member limits at a glance",
-          "Edit tier: inline form for all pricing fields with change preview",
-          "Active / inactive toggle: retire a tier without deleting it",
-          "Stripe product ID linkage: each tier maps to a Stripe Price object"
-        ]
-      },
+    
       // {
       //   name: "admin_commission_payouts",
       //   label: "Commission Payout Manager",
@@ -7029,54 +7271,9 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
       //     "Sales chart showing units sold per month with revenue total"
       //   ]
       // },
-      {
-        name: "stripe-config",
-        label: "Stripe Configuration",
-        description: "Admin panel for managing Stripe Connect settings including platform fee percentage, payout schedule, connected account requirements, and webhook endpoint health. Shows live connection status to Stripe dashboard.",
-        group: "Config",
-        purpose: "Centralises all Stripe integration settings so payment behaviour can be adjusted without a code deploy.",
-        bullets: [
-          "Platform fee percentage field with instant preview of net diviner payout on a sample transaction",
-          "Webhook endpoint health — last ping timestamp and event types registered",
-          "Connected accounts summary: total active, pending verification, and suspended"
-        ]
-      },
-      {
-        name: "ses-config",
-        label: "SES Email Configuration",
-        description: "Configuration panel for AWS Simple Email Service settings including sending domain, DKIM records, bounce and complaint handling thresholds, and daily sending quota usage. Surfaces suppression list management.",
-        group: "Config",
-        purpose: "Keeps transactional email delivery healthy by surfacing deliverability signals and quota usage before they cause platform-wide issues.",
-        bullets: [
-          "Sending domain list with DKIM / DMARC verification status per domain",
-          "Bounce rate and complaint rate gauges with AWS-recommended thresholds marked",
-          "Suppression list viewer — search and manually remove email addresses"
-        ]
-      },
-      {
-        name: "twilio-config",
-        label: "Twilio / Phone Configuration",
-        description: "Admin interface for Twilio phone-session settings including purchased phone numbers, call routing rules, fallback URLs, and SMS template management. Shows per-number call volume and error rates.",
-        group: "Config",
-        purpose: "Manages the phone-session infrastructure that diviners use for audio readings, ensuring routing rules are correct and numbers are healthy.",
-        bullets: [
-          "Purchased number list with assignment status (assigned to diviner / unassigned / retired)",
-          "Call routing rule builder — select primary and fallback numbers per region",
-          "SMS templates editor for booking confirmations and session reminders"
-        ]
-      },
-      {
-        name: "media-detail",
-        label: "Media Item Detail",
-        description: "Detailed view for a single media asset in the platform library. Shows metadata, usage references, transcoding status, access permissions, and storage cost. Admins can update tags, replace the file, or delete.",
-        group: "Config",
-        purpose: "Provides a single place to audit and manage individual media assets so the library stays clean and cost-efficient.",
-        bullets: [
-          "Asset preview (video player, image viewer, or audio waveform depending on type)",
-          "Usage references — lists every lesson, blog post, or broadcast that links to this asset",
-          "Storage size, transcoding status, and CDN cache-purge button"
-        ]
-      },
+     
+     
+      
       {
         name: "holy-book-detail",
         label: "Holy Book Detail",
@@ -7344,30 +7541,8 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
       //     "Reason field and audit trail — every override is logged with admin ID and timestamp"
       //   ]
       // },
-      {
-        name: "content-calendar",
-        label: "Content Calendar",
-        description: "Monthly calendar view of all scheduled platform content including blog posts, broadcasts, email sequences, and social media posts. Admins can drag items to reschedule, click to edit, and filter by content type.",
-        group: "Config",
-        purpose: "Gives the content team a single timeline view so publications are evenly spaced and no two major pieces conflict on the same day.",
-        bullets: [
-          "Month / week / day view toggle with colour-coded content type legend",
-          "Drag-and-drop rescheduling with instant save and conflict warning if another item exists on the same slot",
-          "Filter by content type: Blog, Broadcast, Email, Social — show/hide categories independently"
-        ]
-      },
-      {
-        name: "video-upload-admin",
-        label: "Video Upload (Admin)",
-        description: "Dedicated upload interface for platform video content. Admins select a file, set the title, description, visibility tier, and associated lesson or product. File is uploaded to S3, transcoded, and indexed automatically.",
-        group: "Config",
-        purpose: "Provides a controlled upload path for platform video assets with metadata capture at upload time, avoiding orphaned files in S3.",
-        bullets: [
-          "File picker with drag-and-drop zone — accepts MP4, MOV up to 10 GB",
-          "Metadata form: title, description, visibility tier, linked lesson or product",
-          "Upload progress bar with transcoding status indicator and estimated time remaining"
-        ]
-      },
+     
+    
       {
         name: "sla-incident-detail",
         label: "SLA Incident Detail",
@@ -7380,18 +7555,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Post-incident report field — internal notes on root cause and remediation steps taken"
         ]
       },
-      {
-        name: "alert-config",
-        label: "Alert Configuration",
-        description: "Admin panel for configuring platform monitoring alerts. Admins set thresholds for metrics like error rate, booking failure rate, and payment decline rate, and choose notification channels (email, Slack, PagerDuty).",
-        group: "Config",
-        purpose: "Ensures the engineering and ops teams are automatically notified when platform health metrics breach safe thresholds, reducing mean time to detection.",
-        bullets: [
-          "Alert rules list with metric, threshold, comparison operator, and notification channel",
-          "Channel selector: email address, Slack webhook URL, or PagerDuty integration key",
-          "Test alert button — fires a simulated alert to verify the channel is reachable"
-        ]
-      },
+      
       {
         name: "ingress-chart-new",
         label: "New Ingress Chart",
@@ -7428,18 +7592,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Auto-generated natal chart preview with save and publish confirmation"
         ]
       },
-      {
-        name: "onboarding-config",
-        label: "Onboarding Configuration",
-        description: "Admin panel for managing the onboarding checklist steps shown to new diviners and trainees after first login. Admins can add, remove, reorder, and toggle steps, and set which role sees each step.",
-        group: "Config",
-        purpose: "Allows the product team to iterate on the onboarding experience without a code deploy.",
-        bullets: [
-          "Step list with drag-and-drop reorder and role visibility toggles per step",
-          "Step editor: title, description, CTA label, and target URL",
-          "Completion rate per step showing what percentage of new users complete each item"
-        ]
-      },
+     
      {
   "name": "admin_revenue_dashboard",
   "label": "Revenue Dashboard",
