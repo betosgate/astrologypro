@@ -1,9 +1,9 @@
 /**
- * /admin/session/[bookingId] — Smart router.
+ * /admin/session/[bookingId] - compatibility smart router.
  *
- * The single URL every "Open Service" link points to. Resolves the booking's
- * service template category and redirects to the right category-specific
- * session page. Server-rendered, no UI.
+ * Older "Open Service" links pointed here. New diviner-facing links use
+ * /service/session/[bookingId]. This route keeps bookmarked/admin links
+ * working and redirects into the standalone service surface.
  *
  * Auth: delegates to requireDivinerOrAdminForBooking — same guard used by
  * the concrete session pages. Unauthenticated / unauthorized callers are
@@ -21,7 +21,7 @@ import {
 } from "@/lib/service-toolkit-mapping";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Open Service — AstrologyPro" };
+export const metadata = { title: "Open Service - AstrologyPro" };
 
 interface PageProps {
   params: Promise<{ bookingId: string }>;
@@ -30,7 +30,7 @@ interface PageProps {
 export default async function SmartSessionRouter({ params }: PageProps) {
   const { bookingId } = await params;
 
-  // Rollout gate (CLAUDE.md §8). Flipping the flag must stop new traffic to
+  // Rollout gate (CLAUDE.md section 8). Flipping the flag must stop new traffic to
   // the toolkit, not just hide UI. UI buttons go away via getSessionLinkForBooking,
   // but a bookmarked URL would still hit this router — 404 it.
   if (!isToolkitEnabled()) notFound();
@@ -51,6 +51,7 @@ export default async function SmartSessionRouter({ params }: PageProps) {
     bookingId,
     templateSlug,
     category,
+    routeBasePath: "/service",
   });
 
   if (!resolution) {

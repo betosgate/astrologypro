@@ -1,5 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import { ensureCurrentMonthTransitsForMember } from "@/lib/community/ensure-monthly-transits";
+import { isValidMonthlyTransit } from "@/lib/community/chart-validators";
 import {
   Card,
   CardContent,
@@ -70,6 +72,45 @@ export default async function TransitsPage() {
   const now = new Date();
   const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 
+  // ── Lazy fallback (community-monthly-transit-architecture Task 05 T4) ───
+  //
+  // If this member has eligible family natal charts but no current-month
+  // summary rows yet — typical for someone who subscribed mid-month, or
+  // who just added a family member after the 1st-of-month cron ran — kick
+  // off the shared catch-up service before we render. The service is
+  // idempotent + skip-if-current, so this is safe even if cron also runs.
+  //
+  // We only call the service when the cheap pre-check shows it's needed,
+  // to avoid an extra RPC on every page view. If the service errors we
+  // log and continue — the page still renders the existing state and the
+  // user can hit the URL again to retry.
+  const { count: eligibleFamilyCount } = await supabase
+    .from("community_family_members")
+    .select("id", { count: "exact", head: true })
+    .eq("member_id", member.id)
+    .eq("natal_status", "generated")
+    .not("natal_chart", "is", null);
+
+  const { count: existingTransitCount } = await supabase
+    .from("monthly_transits")
+    .select("id", { count: "exact", head: true })
+    .eq("month", currentMonth);
+
+  const needsCatchUp =
+    (eligibleFamilyCount ?? 0) > 0 &&
+    (existingTransitCount ?? 0) < (eligibleFamilyCount ?? 0);
+
+  if (needsCatchUp) {
+    try {
+      await ensureCurrentMonthTransitsForMember(member.id);
+    } catch (err) {
+      console.warn(
+        "[transits/page] lazy fallback failed:",
+        err instanceof Error ? err.message : err
+      );
+    }
+  }
+
   // Get this month's transits for all family members
   const { data: transits } = await supabase
     .from("monthly_transits")
@@ -77,7 +118,12 @@ export default async function TransitsPage() {
     .eq("month", currentMonth)
     .order("id");
 
-  const familyTransits = (transits ?? []) as unknown as TransitRow[];
+  // Filter out legacy/dummy rows whose transit_data doesn't pass the
+  // current production-shape guard. Stale rows surface as "no current
+  // summary" instead of broken UI — Task 03 + Task 06.
+  const familyTransits = (
+    (transits ?? []) as unknown as TransitRow[]
+  ).filter((row) => isValidMonthlyTransit(row.transit_data, currentMonth));
 
   // Check if family members exist but have no transits yet
   const { count: familyCount } = await supabase

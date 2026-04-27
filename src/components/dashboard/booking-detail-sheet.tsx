@@ -778,7 +778,7 @@ export function BookingDetailSheet({
           {/* ── Open Service (toolkit) — diviner-only, hidden when unmapped ─ */}
           {!isClientView && sessionLink && (
             <Button asChild variant="secondary" className="w-full">
-              <Link href={sessionLink}>
+              <Link href={sessionLink} target="_blank" rel="noopener noreferrer">
                 <Sparkles className="mr-2 size-4" />
                 Open Service
                 <ExternalLink className="ml-2 size-3 opacity-70" />
