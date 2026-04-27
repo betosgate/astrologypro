@@ -96,7 +96,7 @@ export default function EditRitualPage() {
     <div className="space-y-6">
       <div>
         <Link href="/admin/rituals" className="text-sm text-muted-foreground hover:text-foreground">
-          ← Back to Rituals
+          ← Back to Ritual Configurations
         </Link>
         <h1 className="mt-2 text-2xl font-bold tracking-tight">Edit Ritual Invocation</h1>
       </div>

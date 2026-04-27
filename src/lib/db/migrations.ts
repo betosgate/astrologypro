@@ -74,6 +74,7 @@ import { MIGRATION_SQL as MIG_20260423000005_ACC } from "@/data/migrations/20260
 import { MIGRATION_SQL as MIG_20260424000001_ODC } from "@/data/migrations/20260424000001_phone_sessions_outbound_diviner_call";
 import { MIGRATION_SQL as MIG_20260424000002_AAR } from "@/data/migrations/20260424000002_astro_ai_responses";
 import { MIGRATION_SQL as MIG_20260427000001_SRL } from "@/data/migrations/20260427000001_saved_report_linkage";
+import { MIGRATION_SQL as MIG_20260427000002_RAC } from "@/data/migrations/20260427000002_ritual_admin_config";
 import { MIGRATION_SQL as MIG_20260424000010_ACV2A } from "@/data/migrations/20260424000010_affiliate_commission_v2_additive";
 import { MIGRATION_SQL as MIG_20260424009001_ACV2D } from "@/data/migrations/20260424009001_affiliate_commission_v2_destructive";
 import { MIGRATION_SQL as MIG_20260427000002_ARV2A } from "@/data/migrations/20260427000002_affiliate_rls_v2_alignment";
@@ -678,6 +679,14 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Additive. Adds natal_report_id/natal_report_generated_at/natal_report_status to community_family_members; full_report_id/full_report_generated_at/full_report_status to monthly_transits; report_id/report_type/report_generated_at/report_status to relationship_charts. CHECK-constrained statuses (missing|generating|generated|failed|stale|locked_for_review) and report_type (friendship|romantic|partnership). Creates community_relationship_reports child table so a single pair can have multiple report types simultaneously, with unique (person_a_id, person_b_id, report_type) and a person_a_id < person_b_id sort guard. Indexed for 'find report by id' and 'list by member+status' patterns. RLS: service_role full; authenticated members see only their own household rows. Existing chart_data / natal_chart / transit_data columns are untouched so legacy rows remain viewable during rollout. Rollback: DROP COLUMN ... and DROP TABLE community_relationship_reports.",
     sortKey: "20260427000001",
     sql: MIG_20260427000001_SRL,
+  },
+  "20260427000002_ritual_admin_config": {
+    id: "20260427000002_ritual_admin_config",
+    title: "Ritual admin configuration (definitions + media assets + tag mappings) with seeds",
+    description:
+      "Additive. Creates three tables to move ritual presentation/asset mapping out of hardcoded constants and into admin-managed records: ritual_definitions (metadata + playback_policy_json + final_override link + label overrides), ritual_media_assets (upload OR external_url with mutually-exclusive CHECK), and ritual_asset_mappings ((tag_key | step_role) → asset_id, scoped 'global' or 'ritual_definition' with partial unique indexes per scope). Triggers bump updated_at, RLS allows service_role full + authenticated read of published/active rows so the runtime resolver works under user sessions. Seeds the four current ritual definitions (3 static + 1 dynamic, all final_override DISABLED so existing playlist behaviour is preserved), seeds 37 ritual_media_assets pointing at the existing S3 URLs from src/lib/community/ritual-video-map.ts, and seeds matching global tag_key → asset_id mappings so the runtime resolver can read DB-only for known tags. Rollback: DROP each table.",
+    sortKey: "20260427000002",
+    sql: MIG_20260427000002_RAC,
   },
   "20260427000002_affiliate_rls_v2_alignment": {
     id: "20260427000002_affiliate_rls_v2_alignment",
