@@ -180,43 +180,52 @@ export function AvailabilityPreview({
   const canGoPrev = new Date(year, month, 1) > today;
 
   return (
-    <div className="mx-auto max-w-lg">
+    // Width bumped from max-w-lg to max-w-3xl so the calendar reads as a
+    // proper hero-scale element instead of a sidebar widget. All inner
+    // sizing scales up with sm/md breakpoints so it still fits mobile.
+    <div className="mx-auto max-w-3xl">
       {/* Calendar */}
-      <div className="glass-card rounded-xl p-4">
+      <div className="glass-card rounded-2xl p-5 sm:p-7 md:p-8">
         {/* Month header */}
-        <div className="mb-3 flex items-center justify-between">
+        <div className="mb-5 flex items-center justify-between">
           <button
             onClick={prevMonth}
             disabled={!canGoPrev}
-            className="rounded p-1 text-[#b8bcd0]/50 transition-colors hover:text-[#c9a84c] disabled:opacity-30"
+            aria-label="Previous month"
+            className="rounded-lg p-2 text-[#b8bcd0]/50 transition-colors hover:text-[#c9a84c] disabled:opacity-30"
           >
-            <ChevronLeft className="size-4" />
+            <ChevronLeft className="size-5 md:size-6" />
           </button>
-          <span className="text-sm font-semibold text-[#f5f0e8]">
+          <span className="text-lg md:text-xl font-semibold tracking-wide text-[#f5f0e8]">
             {MONTHS[month]} {year}
           </span>
           <button
             onClick={nextMonth}
-            className="rounded p-1 text-[#b8bcd0]/50 transition-colors hover:text-[#c9a84c]"
+            aria-label="Next month"
+            className="rounded-lg p-2 text-[#b8bcd0]/50 transition-colors hover:text-[#c9a84c]"
           >
-            <ChevronRight className="size-4" />
+            <ChevronRight className="size-5 md:size-6" />
           </button>
         </div>
 
         {/* Day headers */}
-        <div className="mb-1 grid grid-cols-7 gap-1">
+        <div className="mb-2 grid grid-cols-7 gap-1.5 md:gap-2">
           {DAYS.map((d) => (
-            <div key={d} className="py-1 text-center text-[10px] font-medium uppercase tracking-wider text-[#b8bcd0]/40">
+            <div
+              key={d}
+              className="py-2 text-center text-xs md:text-sm font-medium uppercase tracking-wider text-[#b8bcd0]/50"
+            >
               {d}
             </div>
           ))}
         </div>
 
-        {/* Day grid */}
-        <div className="grid grid-cols-7 gap-1">
+        {/* Day grid — square-ish cells via aspect-square so the calendar
+            scales gracefully with the wrapper width. */}
+        <div className="grid grid-cols-7 gap-1.5 md:gap-2">
           {/* Empty cells before first day */}
           {Array.from({ length: firstDay }).map((_, i) => (
-            <div key={`empty-${i}`} />
+            <div key={`empty-${i}`} className="aspect-square" />
           ))}
           {/* Day cells */}
           {Array.from({ length: daysInMonth }).map((_, i) => {
@@ -232,9 +241,9 @@ export function AvailabilityPreview({
                 key={day}
                 disabled={isPast || !isAvailable}
                 onClick={() => setSelectedDate(dateStr)}
-                className={`relative rounded-md py-1.5 text-xs transition-all ${
+                className={`relative aspect-square rounded-lg text-sm md:text-base transition-all ${
                   isSelected
-                    ? "bg-[#c9a84c] font-bold text-black"
+                    ? "bg-[#c9a84c] font-bold text-black shadow-[0_0_18px_rgba(201,168,76,0.35)]"
                     : isAvailable
                     ? "text-[#f5f0e8] hover:bg-[#c9a84c]/20"
                     : isPast
@@ -244,7 +253,7 @@ export function AvailabilityPreview({
               >
                 {day}
                 {isAvailable && !isSelected && (
-                  <span className="absolute bottom-0.5 left-1/2 size-1 -translate-x-1/2 rounded-full bg-[#c9a84c]/60" />
+                  <span className="absolute bottom-1.5 left-1/2 size-1.5 -translate-x-1/2 rounded-full bg-[#c9a84c]/70" />
                 )}
               </button>
             );
@@ -252,8 +261,8 @@ export function AvailabilityPreview({
         </div>
 
         {loadingDates && (
-          <div className="mt-2 flex items-center justify-center gap-2 text-xs text-[#b8bcd0]/40">
-            <div className="size-3 animate-spin rounded-full border border-[#c9a84c]/30 border-t-[#c9a84c]" />
+          <div className="mt-4 flex items-center justify-center gap-2 text-sm text-[#b8bcd0]/50">
+            <div className="size-4 animate-spin rounded-full border border-[#c9a84c]/30 border-t-[#c9a84c]" />
             Loading availability...
           </div>
         )}

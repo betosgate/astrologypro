@@ -117,7 +117,19 @@ export default function LiveStreamPage() {
   async function toggleLive() {
     setTogglingLive(true);
     const newIsLive = !liveState.is_live;
-    const newLivePlatforms = newIsLive ? liveState.live_platforms : [];
+    // When going live, default to every platform the diviner has explicitly
+    // enabled (toggle = on). The selection panel below lets them narrow this
+    // further if needed, but defaulting here means a freshly configured
+    // diviner can hit "Go Live" right after enabling YouTube without first
+    // having to tick a separate checkbox.
+    const enabledPlatformKeys = platforms
+      .filter((p) => p.is_enabled)
+      .map((p) => p.platform);
+    const newLivePlatforms = newIsLive
+      ? liveState.live_platforms.length > 0
+        ? liveState.live_platforms
+        : enabledPlatformKeys
+      : [];
 
     try {
       const res = await fetch("/api/dashboard/live-status", {
@@ -154,6 +166,25 @@ export default function LiveStreamPage() {
       ? [...liveState.live_platforms.filter((p) => p !== platformId), platformId]
       : liveState.live_platforms.filter((p) => p !== platformId);
 
+    // Pre-Go-Live selection (offline): the server only persists
+    // `live_platforms` while there's an actual `live_sessions` row with
+    // status='live'. If we POST while offline, the server's
+    // syncDivinerLiveMirror forces live_platforms back to [] and the
+    // response wipes our pick — making the checkbox feel unclickable.
+    // Keep the selection in local state until the user clicks Go Live;
+    // toggleLive() reads liveState.live_platforms when sending the
+    // initial Go Live request.
+    if (!liveState.is_live) {
+      setLiveState({
+        ...liveState,
+        live_platforms: newLivePlatforms,
+      });
+      return;
+    }
+
+    // While actually live we do hit the server so mid-stream changes
+    // (e.g. add Facebook Live to an in-progress YouTube broadcast) get
+    // persisted and reflected on the public profile.
     try {
       const res = await fetch("/api/dashboard/live-status", {
         method: "POST",
@@ -379,11 +410,30 @@ export default function LiveStreamPage() {
             </div>
           )}
 
-          {/* Platform checkboxes when live */}
-          {liveState.is_live && activePlatformIds.length > 0 && (
-            <div className="rounded-lg border border-green-500/20 bg-green-500/5 p-4">
-              <p className="mb-3 text-sm font-medium text-green-400">
-                Which platforms are you currently streaming on?
+          {/*
+            Platform-selection panel.
+            Shown any time the diviner has at least one configured platform —
+            not only when already live. Previously this was gated on
+            `liveState.is_live`, which made it impossible to pre-select
+            platforms before the first Go Live click (the server then
+            rejected with "Select at least one allowed live platform").
+          */}
+          {activePlatformIds.length > 0 && (
+            <div
+              className={`rounded-lg border p-4 ${
+                liveState.is_live
+                  ? "border-green-500/20 bg-green-500/5"
+                  : "border-white/10 bg-white/[0.03]"
+              }`}
+            >
+              <p
+                className={`mb-3 text-sm font-medium ${
+                  liveState.is_live ? "text-green-400" : "text-foreground"
+                }`}
+              >
+                {liveState.is_live
+                  ? "Which platforms are you currently streaming on?"
+                  : "Pick the platforms you'll go live on"}
               </p>
               <div className="flex flex-wrap gap-3">
                 {activePlatformIds.map((pid) => {

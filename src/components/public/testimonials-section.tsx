@@ -130,9 +130,16 @@ export async function TestimonialsSection({
   const featured = testimonials.filter((t) => t.is_featured);
   const regular = testimonials.filter((t) => !t.is_featured);
 
+  // `id="reviews"` matches the StickyNav anchor so clicking the
+  // "Reviews" nav button scrolls here. The legacy `#testimonials`
+  // anchor is preserved as an inner span below for back-compat with
+  // any old shared links.
   return (
-    <section id="testimonials" className="py-10 md:py-14">
+    <section id="reviews" className="py-10 md:py-14">
       <div className="mx-auto max-w-6xl px-4">
+        {/* Back-compat anchor for any links that pointed at the old
+            #testimonials id before this section was renamed to #reviews. */}
+        <span id="testimonials" aria-hidden className="block h-0 w-0" />
         <h2 className="mb-2 text-center font-display text-3xl font-semibold text-cream md:text-4xl">
           What Clients Are Saying
         </h2>
