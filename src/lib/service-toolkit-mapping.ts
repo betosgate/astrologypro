@@ -131,9 +131,9 @@ export function requiresPartnerBirthData(
  * service has no toolkit mapping. Callers (UI, email) use `null` as the
  * signal to hide the "Open Service" link.
  *
- * Note: this returns the diviner-facing smart-router URL
- * `/dashboard/session/[bookingId]` regardless of category. Admin-scoped
- * `/admin/session/[bookingId]` remains as a backwards-compatible alias.
+ * Note: this returns the standalone smart-router URL
+ * `/service/session/[bookingId]` regardless of category. Admin/dashboard
+ * session URLs remain as backwards-compatible aliases.
  */
 export function getSessionLinkForBooking(input: {
   bookingId: string;
@@ -142,7 +142,7 @@ export function getSessionLinkForBooking(input: {
 }): string | null {
   if (!isToolkitEnabled()) return null;
   if (!isToolkitMappable(input.templateSlug, input.category)) return null;
-  return `/dashboard/session/${input.bookingId}`;
+  return `/service/session/${input.bookingId}`;
 }
 
 /**
@@ -180,10 +180,10 @@ export async function resolveToolkitForBooking(
     bookingId: string;
     templateSlug: string;
     category: string;
-    routeBasePath?: "/admin" | "/dashboard";
+    routeBasePath?: "/admin" | "/dashboard" | "/service";
   },
 ): Promise<ToolkitResolution | null> {
-  const routeBasePath = input.routeBasePath ?? "/dashboard";
+  const routeBasePath = input.routeBasePath ?? "/service";
   if (input.category === "astrology") {
     const tabSlug = ASTROLOGY_TAB_MAP[input.templateSlug];
     if (!tabSlug) return null;

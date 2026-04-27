@@ -154,14 +154,14 @@ test("requiresPartnerBirthData: false for missing slug", () => {
 
 // ─── getSessionLinkForBooking + rollout gate ─────────────────────────────────
 
-test("getSessionLinkForBooking: returns dashboard smart-router URL for mapped service", () => {
+test("getSessionLinkForBooking: returns standalone smart-router URL for mapped service", () => {
   withEnv(undefined, () => {
     const link = getSessionLinkForBooking({
       bookingId: "abc-123",
       templateSlug: "nativity-birth-chart",
       category: "astrology",
     });
-    assert.equal(link, "/dashboard/session/abc-123");
+    assert.equal(link, "/service/session/abc-123");
   });
 });
 
