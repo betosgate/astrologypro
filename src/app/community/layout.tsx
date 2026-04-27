@@ -12,13 +12,20 @@ import { PortalLogoutButton } from "@/components/portal/logout-button";
 import { OnboardingGuard } from "@/components/community/onboarding-guard";
 import { SectionContainer } from "@/components/shared/section-container";
 import { SubscriptionExpiredView } from "@/components/shared/subscription-expired-view";
+import { getPendingContractDestination } from "@/lib/contract-orchestration";
 
 export const metadata = { title: "Community - AstrologyPro" };
+export const dynamic = "force-dynamic";
+
 
 export default async function CommunityLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
+
+  // Contract check
+  const contractDest = await getPendingContractDestination(user.id, "/community");
+  if (contractDest) redirect(contractDest);
 
   // Use maybeSingle so a missing membership row redirects cleanly instead of
   // throwing a PostgREST single-row error.
@@ -27,6 +34,11 @@ export default async function CommunityLayout({ children }: { children: React.Re
     .select("id, full_name, first_name, membership_type, membership_status, onboarding_completed, stripe_subscription_id")
     .eq("user_id", user.id)
     .maybeSingle();
+
+
+  console.log("[CommunityLayout] user.id =", user.id, "onboarding_completed =", member?.onboarding_completed);
+
+
 
   if (!member) redirect("/get-started");
   // PM-only gate: legacy Mystery School-only users must use /mystery-school
@@ -179,7 +191,7 @@ export default async function CommunityLayout({ children }: { children: React.Re
             </div>
           </div>
         </header>
-        <SectionContainer as="main" verticalPadding="lg">
+        <SectionContainer as="main" size="fluid" verticalPadding="md">
           {children}
         </SectionContainer>
       </div>

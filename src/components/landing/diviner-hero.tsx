@@ -8,6 +8,8 @@ interface DivinerHeroProps {
   displayName: string;
   hasServices?: boolean;
   bookHref?: string;
+  /** Pre-built `?ref=<code>` query string (empty when no ref). */
+  refParam?: string;
   tagline: string | null;
   avatarUrl: string | null;
   coverImageUrl: string | null;
@@ -30,6 +32,7 @@ export function DivinerHero({
   displayName,
   hasServices = true,
   bookHref = "#booking",
+  refParam = "",
   tagline,
   avatarUrl,
   coverImageUrl,
@@ -71,7 +74,7 @@ export function DivinerHero({
       {/* Top navigation bar */}
       <nav className="sticky top-0 z-40 border-b border-white/5 bg-[#06080f]/80 backdrop-blur-xl">
         <div className="mx-auto flex h-12 max-w-6xl items-center justify-between px-4">
-          <Link href={`/${username}`} className="flex items-center gap-2">
+          <Link href={`/${username}${refParam}`} className="flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-[#c9a84c]" />
             <span className="font-display text-sm font-semibold text-[#f5f0e8]">{displayName}</span>
           </Link>

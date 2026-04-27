@@ -61,7 +61,13 @@ ALTER TABLE service_landing_page_sections
   ON DELETE CASCADE;
 
 -- STEP 3 — Drop landing_page_id FK + column now that service_template_id
--- carries the parent reference.
+-- carries the parent reference. The public-read RLS policy joins through
+-- landing_page_id → service_landing_pages; drop it first (it would block
+-- the column drop with "2BP01: cannot drop column"). A V2 equivalent
+-- that reads from diviner_services.is_published is recreated after the
+-- rename in STEP 11.5.
+DROP POLICY IF EXISTS slps_public_read ON service_landing_page_sections;
+
 ALTER TABLE service_landing_page_sections
   DROP CONSTRAINT IF EXISTS service_landing_page_sections_landing_page_id_fkey;
 
@@ -123,6 +129,23 @@ DROP INDEX IF EXISTS idx_slps_diviner_template_slot_order;
 CREATE INDEX IF NOT EXISTS idx_dsb_diviner_template_slot_order
   ON diviner_service_blocks (diviner_id, service_template_id, slot, display_order)
   WHERE is_enabled = true;
+
+-- STEP 11.5 — Recreate the public-read policy that was dropped in STEP 3.
+-- V2 surface: readable iff the block is enabled + approved AND the parent
+-- diviner_service is enabled + published. No more page-level publish/
+-- moderation gate (container table is gone).
+CREATE POLICY dsb_public_read ON diviner_service_blocks FOR SELECT
+  USING (
+    is_enabled = TRUE
+    AND moderation_status = 'approved'
+    AND EXISTS (
+      SELECT 1 FROM diviner_services ds
+      WHERE ds.diviner_id = diviner_service_blocks.diviner_id
+        AND ds.template_id = diviner_service_blocks.service_template_id
+        AND ds.is_enabled = TRUE
+        AND ds.is_published = TRUE
+    )
+  );
 
 -- STEP 12 — Final COMMENT.
 COMMENT ON TABLE diviner_service_blocks IS

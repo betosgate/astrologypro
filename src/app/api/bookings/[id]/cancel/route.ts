@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAdminUser } from "@/lib/admin-auth";
+import { resolveBookingViewer, type BookingViewerRole } from "@/lib/booking-access";
+import { issueBookingRefund, type RefundInitiatorRole } from "@/lib/booking-refund";
 
 export const dynamic = "force-dynamic";
 
@@ -12,38 +14,76 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   const { data: booking, error: bErr } = await admin
     .from("bookings")
-    .select("id, diviner_id, client_id, status, duration_minutes, google_calendar_event_id, outlook_calendar_event_id, booking_token, scheduled_at, questionnaire_responses, metadata, clients(full_name, email), diviners(display_name, username), services(name)")
+    .select("id, diviner_id, client_id, status, duration_minutes, stripe_payment_intent_id, base_price, refund_amount, refunded_at, refund_reason, google_calendar_event_id, outlook_calendar_event_id, booking_token, scheduled_at, questionnaire_responses, metadata, clients(full_name, email), diviners(display_name, username, user_id), services(name)")
     .eq("id", id)
     .single();
 
   if (bErr || !booking) return NextResponse.json({ error: "Booking not found" }, { status: 404 });
-  if (booking.status === "canceled") return NextResponse.json({ error: "Already canceled" }, { status: 422 });
+
+  // Already canceled: surface the existing cancel/refund state so the UI can
+  // show "already cancelled and refunded" without attempting another refund.
+  if (booking.status === "canceled") {
+    return NextResponse.json({
+      success: true,
+      alreadyCanceled: true,
+      refund: booking.refunded_at
+        ? {
+            amount: (booking.refund_amount as number | null) ?? (booking.base_price as number | null),
+            refundedAt: booking.refunded_at as string,
+            reason: (booking.refund_reason as string | null) ?? null,
+          }
+        : null,
+    });
+  }
+
   if (booking.status === "completed") return NextResponse.json({ error: "Cannot cancel a completed booking" }, { status: 422 });
 
-  // Auth: token OR authenticated
+  // Auth: token OR authenticated client/diviner/admin
   let authorized = false;
+  let actorUserId: string | null = null;
+  let actorRole: BookingViewerRole | null = null;
   if (body.booking_token && body.booking_token === booking.booking_token) {
     authorized = true;
+    actorRole = "client";
   } else {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
       const adminUser = await getAdminUser();
-      if (adminUser) authorized = true;
-      if (booking.client_id === user.id) authorized = true;
-      const { data: diviner } = await admin.from("diviners").select("id").eq("user_id", user.id).single();
-      if (diviner?.id === booking.diviner_id) authorized = true;
+      const access = await resolveBookingViewer(admin, id, user, !!adminUser);
+      if (access) {
+        authorized = true;
+        actorUserId = user.id;
+        actorRole = access.role;
+      }
     }
   }
   if (!authorized) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
 
-  // Update booking status
+  // Update booking status + record who initiated so the drawer can answer
+  // "cancelled by whom" without a separate audit table join.
   await admin.from("bookings").update({
     status: "canceled",
     canceled_at: new Date().toISOString(),
     cancellation_reason: body.reason ?? null,
+    canceled_by_user_id: actorUserId,
+    canceled_by_role: actorRole ?? "system",
     updated_at: new Date().toISOString(),
   }).eq("id", id);
+
+  // Auto-refund any outstanding payment. The helper is idempotent: if the
+  // booking was already refunded (e.g. by /api/stripe/refund earlier) or has
+  // no payment, it no-ops and reports the existing state. The "client" actor
+  // role isn't recognized by the refund ledger, so token-authed clients are
+  // recorded as "system"-initiated.
+  const refundInitiatorRole: RefundInitiatorRole =
+    actorRole === "admin" || actorRole === "diviner" ? actorRole : "system";
+  const refundResult = await issueBookingRefund({
+    bookingId: id,
+    initiatedByUserId: actorUserId,
+    initiatedByRole: refundInitiatorRole,
+    reason: body.reason ?? "Booking cancellation refund",
+  });
 
   // Delete calendar events (fire and forget)
   if (booking.google_calendar_event_id) {
@@ -102,5 +142,52 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     }).catch(() => {});
   }
 
-  return NextResponse.json({ success: true });
+  // Notify the diviner that a booking was cancelled. This is essential when
+  // the client cancels via their booking-token link — otherwise the diviner
+  // would only find out by refreshing the dashboard.
+  const divinerUserId = (booking.diviners as { user_id?: string } | null)?.user_id;
+  if (divinerUserId) {
+    (async () => {
+      try {
+        const { data: divinerAuth } = await admin.auth.admin.getUserById(divinerUserId);
+        const divinerEmail = divinerAuth?.user?.email;
+        if (!divinerEmail) return;
+        const scheduledAtDisplay = new Date(booking.scheduled_at).toLocaleString("en-US", {
+          weekday: "long",
+          month: "long",
+          day: "numeric",
+          year: "numeric",
+          hour: "numeric",
+          minute: "2-digit",
+        });
+        const dashboardUrl = `${appUrl}/dashboard/bookings`;
+        const { sendCancellationNotificationToDiviner } = await import("@/lib/email");
+        await sendCancellationNotificationToDiviner({
+          to: divinerEmail,
+          divinerName,
+          clientName,
+          serviceName,
+          scheduledAt: scheduledAtDisplay,
+          cancelReason: body.reason,
+          dashboardUrl,
+        });
+      } catch {
+        // fire-and-forget
+      }
+    })();
+  }
+
+  return NextResponse.json({
+    success: true,
+    alreadyCanceled: false,
+    refund:
+      refundResult.issued || refundResult.alreadyRefunded
+        ? {
+            amount: refundResult.refundAmount,
+            refundedAt: refundResult.refundedAt,
+            reason: refundResult.refundReason,
+            alreadyRefunded: refundResult.alreadyRefunded,
+          }
+        : null,
+  });
 }

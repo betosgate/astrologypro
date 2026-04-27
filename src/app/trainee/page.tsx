@@ -28,6 +28,7 @@ import Link from "next/link";
 import { RoleUpgradeBanners } from "@/components/dashboard/role-upgrade-banners";
 import { TabbieAppointmentSection } from "@/components/trainee/tabbie-appointment-section";
 import { TraineeAppointmentsSection } from "@/components/trainee/trainee-appointments-section";
+import { RoleSwitcher } from "@/components/dashboard/role-switcher";
 
 export const metadata = { title: "Trainee Dashboard - AstrologyPro" };
 
@@ -402,6 +403,7 @@ export default async function TraineeDashboardPage() {
           {user.email === "trainee1@test.astrologypro.com" && (
             <TrainingDebugControls />
           )}
+          <RoleSwitcher />
           <Badge
             variant={
               trainee.training_status === "active" ? "default" : "secondary"

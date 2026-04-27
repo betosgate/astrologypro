@@ -6,8 +6,8 @@ import {
   createChimeMeeting,
   getChimeMeeting,
   listChimeAttendees,
-  startChimeRecording,
 } from "@/lib/chime-meetings";
+import { ensureSingleChimeRecordingPipeline } from "@/lib/chime-recording-pipeline";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +26,6 @@ export async function POST(request: NextRequest) {
 
     let role: "diviner" | "client";
     let externalUserId: string;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let booking: any;
 
     // ── Token-based access: unauthenticated client join ───────────────────────
@@ -125,17 +124,18 @@ export async function POST(request: NextRequest) {
     // These are independent AWS/DB calls — no need to wait sequentially.
     const attendeePromise = createChimeAttendee(activeMeetingId, externalUserId);
 
-    // Recording: start when diviner joins and no pipeline exists yet
+    // Recording: start when the diviner joins, guarded by a DB reservation so
+    // two browser tabs or retries cannot create two capture pipelines.
     const recordingPromise =
-      role === "diviner" && !booking.chime_pipeline_id
-        ? startChimeRecording(activeMeetingId, `recordings/${bookingId}`).catch(
-            (err: unknown) => {
-              const name = (err as { name?: string }).name ?? "Error";
-              const msg = err instanceof Error ? err.message : String(err);
-              console.error(`[join-meeting] Failed to start recording: ${name}: ${msg}`);
-              return null;
-            }
-          )
+      role === "diviner"
+        ? ensureSingleChimeRecordingPipeline({
+            table: "bookings",
+            sessionId: bookingId,
+            meetingId: activeMeetingId,
+            s3KeyPrefix: `recordings/${bookingId}`,
+            currentPipelineId: booking.chime_pipeline_id,
+            logLabel: "join-meeting",
+          })
         : Promise.resolve(null);
 
     // Session start time
@@ -144,8 +144,10 @@ export async function POST(request: NextRequest) {
       .select("session_started_at")
       .eq("id", bookingId)
       .single()
-      .then(({ data: sessionRow }) => sessionRow?.session_started_at ?? null)
-      .catch(() => null);
+      .then(
+        ({ data: sessionRow }) => sessionRow?.session_started_at ?? null,
+        () => null,
+      );
 
     // Diviner presence check (client only)
     const presencePromise =
@@ -162,29 +164,25 @@ export async function POST(request: NextRequest) {
         presencePromise,
       ]);
 
-    // Persist recording pipeline ARN
-    if (recording?.pipelineArn) {
+    if (recording?.status === "started") {
       console.log(
-        `[join-meeting] Recording pipeline started: id=${recording.pipelineId} arn=${recording.pipelineArn}`
+        `[join-meeting] Recording pipeline started: id=${recording.pipelineId} arn=${recording.pipelineArn}`,
       );
-      admin
-        .from("bookings")
-        .update({ chime_pipeline_id: recording.pipelineArn })
-        .eq("id", bookingId)
-        .then(() => {})
-        .catch(() => {});
     }
 
     // Session start time — persist if first join
-    let sessionStartedAt: string = existingStartedAt ?? new Date().toISOString();
+    const sessionStartedAt: string =
+      existingStartedAt ?? new Date().toISOString();
     if (!existingStartedAt) {
-      admin
+      void admin
         .from("bookings")
         .update({ session_started_at: sessionStartedAt })
         .eq("id", bookingId)
         .is("session_started_at", null)
-        .then(() => {})
-        .catch(() => {});
+        .then(
+          () => {},
+          () => {},
+        );
     }
 
     // Diviner presence

@@ -31,6 +31,14 @@ export interface BookingAccessResult {
   bookingId: string;
   divinerId: string | null;
   clientId: string | null;
+  /**
+   * Which table the booking lives in. Callers that need to read more
+   * columns than the viewer helper provides should use this to decide
+   * whether to SELECT from `bookings` or `admin_bookings`.
+   *
+   * Defaults to "bookings" so existing call sites keep working unchanged.
+   */
+  source: "bookings" | "admin_bookings";
 }
 
 /**
@@ -45,64 +53,114 @@ export async function resolveBookingViewer(
   user: User,
   isAdmin: boolean,
 ): Promise<BookingAccessResult | null> {
-  // Admin short-circuit — admins can read any booking.
-  if (isAdmin) {
-    const { data: booking } = await admin
-      .from("bookings")
-      .select("id, diviner_id, client_id")
-      .eq("id", bookingId)
-      .maybeSingle();
-    if (!booking) return null;
-    return {
-      role: "admin",
-      bookingId: booking.id as string,
-      divinerId: (booking.diviner_id as string | null) ?? null,
-      clientId: (booking.client_id as string | null) ?? null,
-    };
-  }
-
+  // ── Primary: `bookings` (legacy diviner flow) ────────────────────────────
   const { data: booking } = await admin
     .from("bookings")
     .select("id, diviner_id, client_id")
     .eq("id", bookingId)
     .maybeSingle();
-  if (!booking) return null;
 
-  // Diviner path — user.id → diviners.id, compare against booking.diviner_id.
-  const { data: diviner } = await admin
-    .from("diviners")
-    .select("id")
-    .eq("user_id", user.id)
-    .maybeSingle();
-
-  if (diviner?.id && (booking.diviner_id as string | null) === diviner.id) {
-    return {
-      role: "diviner",
-      bookingId: booking.id as string,
-      divinerId: (booking.diviner_id as string | null) ?? null,
-      clientId: (booking.client_id as string | null) ?? null,
-    };
-  }
-
-  // Client path — compare the authenticated email against the client row
-  // linked to this booking. Email is read from supabase.auth, never from a
-  // client-supplied field.
-  const authEmail = user.email?.trim().toLowerCase();
-  if (authEmail && booking.client_id) {
-    const { data: client } = await admin
-      .from("clients")
-      .select("id, email")
-      .eq("id", booking.client_id as string)
-      .maybeSingle();
-    const clientEmail = (client?.email as string | undefined)?.trim().toLowerCase();
-    if (clientEmail && clientEmail === authEmail) {
+  if (booking) {
+    if (isAdmin) {
       return {
-        role: "client",
+        role: "admin",
         bookingId: booking.id as string,
         divinerId: (booking.diviner_id as string | null) ?? null,
         clientId: (booking.client_id as string | null) ?? null,
+        source: "bookings",
       };
     }
+
+    // Diviner path — user.id → diviners.id, compare against booking.diviner_id.
+    const { data: diviner } = await admin
+      .from("diviners")
+      .select("id")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (diviner?.id && (booking.diviner_id as string | null) === diviner.id) {
+      return {
+        role: "diviner",
+        bookingId: booking.id as string,
+        divinerId: (booking.diviner_id as string | null) ?? null,
+        clientId: (booking.client_id as string | null) ?? null,
+        source: "bookings",
+      };
+    }
+
+    // Client path — compare the authenticated email against the client row
+    // linked to this booking. Email is read from supabase.auth, never from a
+    // client-supplied field.
+    const authEmail = user.email?.trim().toLowerCase();
+    if (authEmail && booking.client_id) {
+      const { data: client } = await admin
+        .from("clients")
+        .select("id, email")
+        .eq("id", booking.client_id as string)
+        .maybeSingle();
+      const clientEmail = (client?.email as string | undefined)
+        ?.trim()
+        .toLowerCase();
+      if (clientEmail && clientEmail === authEmail) {
+        return {
+          role: "client",
+          bookingId: booking.id as string,
+          divinerId: (booking.diviner_id as string | null) ?? null,
+          clientId: (booking.client_id as string | null) ?? null,
+          source: "bookings",
+        };
+      }
+    }
+
+    return null;
+  }
+
+  // ── Fallback: `admin_bookings` (admin↔trainee flow) ─────────────────────
+  // Same bookingId UUID space but a separate table. Same access rules
+  // translated: admin short-circuits, host-admin = "diviner" role, client-
+  // email match = "client" role.
+  const { data: adminBooking } = await admin
+    .from("admin_bookings")
+    .select("id, admin_user_id, client_email")
+    .eq("id", bookingId)
+    .maybeSingle();
+
+  if (!adminBooking) return null;
+
+  if (isAdmin) {
+    return {
+      role: "admin",
+      bookingId: adminBooking.id as string,
+      divinerId: (adminBooking.admin_user_id as string | null) ?? null,
+      clientId: null,
+      source: "admin_bookings",
+    };
+  }
+
+  // Host admin path — user.id === admin_bookings.admin_user_id.
+  if (user.id === adminBooking.admin_user_id) {
+    return {
+      role: "diviner",
+      bookingId: adminBooking.id as string,
+      divinerId: (adminBooking.admin_user_id as string | null) ?? null,
+      clientId: null,
+      source: "admin_bookings",
+    };
+  }
+
+  // Client-email path.
+  const authEmail = user.email?.trim().toLowerCase();
+  const bookingEmail = (adminBooking.client_email as string | null)
+    ?.trim()
+    .toLowerCase();
+  if (authEmail && bookingEmail && authEmail === bookingEmail) {
+    return {
+      role: "client",
+      bookingId: adminBooking.id as string,
+      divinerId: (adminBooking.admin_user_id as string | null) ?? null,
+      clientId: null,
+      source: "admin_bookings",
+    };
   }
 
   return null;

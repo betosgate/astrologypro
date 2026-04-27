@@ -43,6 +43,8 @@ interface RescheduleViewProps {
   bookingId: string;
   divinerId: string;
   divinerDisplayName: string;
+  /** Used to build the "Back" link for client-initiated reschedules. */
+  divinerUsername?: string;
   serviceName: string;
   durationMinutes: number;
   serviceId: string | null;
@@ -51,6 +53,20 @@ interface RescheduleViewProps {
   sessionNotes: string | null;
   existingAttendees: Attendee[];
   currentScheduledAt: string;
+  /**
+   * When set, the view is being used by a client via their email
+   * booking-manage link. The submit path switches to the token-authenticated
+   * `/api/bookings/{id}/reschedule` endpoint, and host-only controls (session
+   * notes, attendees, client name edits) are hidden.
+   */
+  bookingToken?: string | null;
+  /**
+   * Trainee/client session path: the viewer is the authenticated client
+   * (no email-link token), so we still use the public `/api/bookings/{id}/
+   * reschedule` endpoint (which accepts cookie auth via `resolveBookingViewer`)
+   * and hide host-only controls.
+   */
+  clientAuthFlow?: boolean;
 }
 
 function formatSlotTime(iso: string, timezone: string): string {
@@ -74,6 +90,7 @@ export function RescheduleView({
   bookingId,
   divinerId,
   divinerDisplayName,
+  divinerUsername,
   serviceName,
   durationMinutes,
   serviceId,
@@ -82,7 +99,10 @@ export function RescheduleView({
   sessionNotes,
   existingAttendees,
   currentScheduledAt,
+  bookingToken,
+  clientAuthFlow,
 }: RescheduleViewProps) {
+  const isClientFlow = !!bookingToken || !!clientAuthFlow;
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
@@ -145,40 +165,58 @@ export function RescheduleView({
     if (!selectedSlot) return;
     setSubmitting(true);
     try {
-      const slotDate = new Date(selectedSlot.start);
-      const newDate = format(slotDate, "yyyy-MM-dd");
-      const newTime = format(slotDate, "HH:mm");
+      if (isClientFlow) {
+        // Client path: use the public booking reschedule endpoint. It accepts
+        // either a booking_token (email-link path) or a cookie-authenticated
+        // client via resolveBookingViewer (trainee/dashboard path). No session
+        // notes / attendee edits — those are host-only concerns.
+        const clientPayload: Record<string, unknown> = {
+          scheduled_at: selectedSlot.start,
+        };
+        if (bookingToken) clientPayload.booking_token = bookingToken;
+        const res = await fetch(`/api/bookings/${bookingId}/reschedule`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify(clientPayload),
+        });
+        if (!res.ok) {
+          const d = await res.json();
+          throw new Error(d.error ?? "Failed to reschedule");
+        }
+      } else {
+        const slotDate = new Date(selectedSlot.start);
+        const newDate = format(slotDate, "yyyy-MM-dd");
+        const newTime = format(slotDate, "HH:mm");
 
-      const payload: Record<string, unknown> = {
-        new_date: newDate,
-        new_time: newTime,
-        timezone: clientTimezone,
-      };
+        const payload: Record<string, unknown> = {
+          new_date: newDate,
+          new_time: newTime,
+          timezone: clientTimezone,
+        };
 
-      // Include client name if changed
-      if (editName.trim() && editName.trim() !== (clientName ?? "").trim()) {
-        payload.client_name = editName.trim();
-      }
+        if (editName.trim() && editName.trim() !== (clientName ?? "").trim()) {
+          payload.client_name = editName.trim();
+        }
 
-      // Include session notes if changed
-      if (editNotes.trim() !== (sessionNotes ?? "").trim()) {
-        payload.session_notes = editNotes;
-      }
+        if (editNotes.trim() !== (sessionNotes ?? "").trim()) {
+          payload.session_notes = editNotes;
+        }
 
-      // Include attendees
-      const validAttendees = attendees.filter(
-        (a) => a.name.trim() || a.email.trim()
-      );
-      payload.attendees = validAttendees;
+        const validAttendees = attendees.filter(
+          (a) => a.name.trim() || a.email.trim()
+        );
+        payload.attendees = validAttendees;
 
-      const res = await fetch(`/api/dashboard/bookings/${bookingId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) {
-        const d = await res.json();
-        throw new Error(d.error ?? "Failed to reschedule");
+        const res = await fetch(`/api/dashboard/bookings/${bookingId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) {
+          const d = await res.json();
+          throw new Error(d.error ?? "Failed to reschedule");
+        }
       }
       setStep("done");
     } catch (err: unknown) {
@@ -211,12 +249,26 @@ export function RescheduleView({
             </p>
           )}
           <p className="text-sm text-muted-foreground">
-            The client has been notified by email.
+            {isClientFlow
+              ? `${divinerDisplayName} has been notified by email.`
+              : "The client has been notified by email."}
           </p>
           <Button asChild className="w-full mt-2">
-            <Link href="/dashboard/calendar">
+            <Link
+              href={
+                bookingToken
+                  ? `/booking/${bookingToken}`
+                  : clientAuthFlow
+                    ? "/trainee/sessions"
+                    : isClientFlow
+                      ? divinerUsername
+                        ? `/${divinerUsername}`
+                        : "/"
+                      : "/dashboard/calendar"
+              }
+            >
               <ArrowLeft className="mr-2 size-4" />
-              Back to Calendar
+              {isClientFlow ? "Back to Sessions" : "Back to Calendar"}
             </Link>
           </Button>
         </CardContent>
@@ -348,40 +400,45 @@ export function RescheduleView({
           </div>
         )}
 
-        <Separator />
+        {!isClientFlow && (
+          <>
+            <Separator />
 
-        {/* Primary client info */}
-        <div className="space-y-4">
-          <h4 className="text-sm font-semibold flex items-center gap-2">
-            <User className="size-4" />
-            Primary Attendee
-          </h4>
+            {/* Primary client info */}
+            <div className="space-y-4">
+              <h4 className="text-sm font-semibold flex items-center gap-2">
+                <User className="size-4" />
+                Primary Attendee
+              </h4>
 
-          <div className="space-y-2">
-            <Label htmlFor="reschedule-name" className="text-xs text-muted-foreground">
-              Name
-            </Label>
-            <Input
-              id="reschedule-name"
-              value={editName}
-              onChange={(e) => setEditName(e.target.value)}
-              placeholder="Client full name"
-              className="h-9"
-            />
-          </div>
+              <div className="space-y-2">
+                <Label htmlFor="reschedule-name" className="text-xs text-muted-foreground">
+                  Name
+                </Label>
+                <Input
+                  id="reschedule-name"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  placeholder="Client full name"
+                  className="h-9"
+                />
+              </div>
 
-          {clientEmail && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Mail className="size-3.5" />
-              <span>{clientEmail}</span>
-              <span className="text-[10px] text-muted-foreground/60">(read-only)</span>
+              {clientEmail && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Mail className="size-3.5" />
+                  <span>{clientEmail}</span>
+                  <span className="text-[10px] text-muted-foreground/60">(read-only)</span>
+                </div>
+              )}
             </div>
-          )}
-        </div>
+          </>
+        )}
 
-        <Separator />
+        {!isClientFlow && <Separator />}
 
         {/* Additional attendees */}
+        {!isClientFlow && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h4 className="text-sm font-semibold flex items-center gap-2">
@@ -449,10 +506,12 @@ export function RescheduleView({
             </div>
           ))}
         </div>
+        )}
 
-        <Separator />
+        {!isClientFlow && <Separator />}
 
         {/* Editable notes */}
+        {!isClientFlow && (
         <div className="space-y-2">
           <Label htmlFor="reschedule-notes" className="text-xs text-muted-foreground flex items-center gap-2">
             <FileText className="size-3.5" />
@@ -470,6 +529,7 @@ export function RescheduleView({
             Client will be emailed if notes change.
           </p>
         </div>
+        )}
 
         <Separator />
 

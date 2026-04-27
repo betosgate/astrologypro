@@ -20,6 +20,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import Link from "next/link";
 import {
   Sparkles,
   Telescope,
@@ -32,6 +33,12 @@ import {
 } from "lucide-react";
 import { BirthCityAutocomplete } from "@/components/community/birth-city-autocomplete";
 
+// Task 04: "natal" is no longer reachable from this component's generator
+// path. The Natal Chart CTA now deep-links into `/community/horoscope`, which
+// renders the shared HoroscopeToolkitPage (Task 02). We keep the literal in
+// the union for safety because `runGenerate` still accepts it as a backend
+// parameter — but the UI never dispatches a natal generate from here, so we
+// don't need two conflicting natal chart experiences on the dashboard.
 type ChartType = "natal" | "monthly" | "relationship";
 
 interface CityOption {
@@ -54,13 +61,6 @@ interface ResolvedBirthData {
   selfFamilyMemberId: string | null;
   missing: string[];
 }
-
-const SOURCE_LABELS: Record<ResolvedBirthData["source"], string> = {
-  family_self: "from your family profile",
-  past_booking: "from your past booking",
-  member_profile: "from your member profile",
-  none: "",
-};
 
 type ResultState =
   | { kind: "idle" }
@@ -207,8 +207,6 @@ export function ChartQuickActions() {
 
   // ── Render ────────────────────────────────────────────────────────────────
   const isLoading = (t: ChartType) => result.kind === "loading" && result.type === t;
-  const sourceLabel = birthData ? SOURCE_LABELS[birthData.source] : "";
-
   return (
     <>
       <Card>
@@ -218,14 +216,7 @@ export function ChartQuickActions() {
             <CardTitle className="text-base">Quick Chart Generation</CardTitle>
           </div>
           <CardDescription>
-            One-click charts using your saved birth data.{" "}
-            {birthData?.source && birthData.source !== "none" && (
-              <span className="inline-flex items-center gap-1 ml-1">
-                <Badge variant="outline" className="text-xs">
-                  {sourceLabel}
-                </Badge>
-              </span>
-            )}
+            One-click astrology tools using your saved birth data.
           </CardDescription>
         </CardHeader>
 
@@ -244,55 +235,56 @@ export function ChartQuickActions() {
 
           {/* Three action buttons */}
           <div className="grid gap-3 sm:grid-cols-3">
+            {/*
+              Task 04: Natal Chart deep-links to `/community/horoscope` (the
+              shared HoroscopeToolkitPage from Task 02) instead of dispatching
+              the legacy inline generator. We intentionally keep Monthly
+              Transits and Relationship Charts on the one-click generator
+              because they do not have a canonical toolkit route in this
+              surface and they do not duplicate any other UI.
+            */}
             <Button
+              asChild
               variant="outline"
               className="h-auto flex-col gap-2 py-4"
-              disabled={loading || isLoading("natal")}
-              onClick={() => handleGenerate("natal")}
             >
-              {isLoading("natal") ? (
-                <Loader2 className="size-6 animate-spin" />
-              ) : (
+              <Link href="/community/horoscope">
                 <Telescope className="size-6 text-primary" />
-              )}
-              <div className="text-center">
-                <p className="font-semibold text-sm">Natal Chart</p>
-                <p className="text-xs text-muted-foreground">Your birth chart</p>
-              </div>
+                <div className="text-center">
+                  <p className="font-semibold text-sm">Natal Chart</p>
+                  <p className="text-xs text-muted-foreground">
+                    View your birth chart
+                  </p>
+                </div>
+              </Link>
             </Button>
 
             <Button
+              asChild
               variant="outline"
-              className="h-auto flex-col gap-2 py-4"
-              disabled={loading || isLoading("monthly")}
-              onClick={() => handleGenerate("monthly")}
+              className="h-auto flex-col gap-2 py-4 cursor-pointer"
             >
-              {isLoading("monthly") ? (
-                <Loader2 className="size-6 animate-spin" />
-              ) : (
+              <Link href="/community/transits/detailed">
                 <CalendarDays className="size-6 text-primary" />
-              )}
-              <div className="text-center">
-                <p className="font-semibold text-sm">Monthly Transits</p>
-                <p className="text-xs text-muted-foreground">This month&apos;s forecast</p>
-              </div>
+                <div className="text-center">
+                  <p className="font-semibold text-sm">Monthly Transits</p>
+                  <p className="text-xs text-muted-foreground">View your monthly forecast</p>
+                </div>
+              </Link>
             </Button>
 
             <Button
+              asChild
               variant="outline"
-              className="h-auto flex-col gap-2 py-4"
-              disabled={loading || isLoading("relationship")}
-              onClick={() => handleGenerate("relationship")}
+              className="h-auto flex-col gap-2 py-4 cursor-pointer"
             >
-              {isLoading("relationship") ? (
-                <Loader2 className="size-6 animate-spin" />
-              ) : (
+              <Link href="/community/charts">
                 <Heart className="size-6 text-primary" />
-              )}
-              <div className="text-center">
-                <p className="font-semibold text-sm">Relationship Charts</p>
-                <p className="text-xs text-muted-foreground">All family pairs</p>
-              </div>
+                <div className="text-center">
+                  <p className="font-semibold text-sm">Relationship Charts</p>
+                  <p className="text-xs text-muted-foreground">Open your compatibility charts</p>
+                </div>
+              </Link>
             </Button>
           </div>
         </CardContent>

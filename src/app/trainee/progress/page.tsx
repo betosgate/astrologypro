@@ -1,5 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import {
   Card,
   CardContent,
@@ -10,276 +12,432 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { CheckCircle2, BookOpen, Award, TrendingUp } from "lucide-react";
+import { 
+  CheckCircle2, 
+  BookOpen, 
+  Award, 
+  TrendingUp, 
+  Video, 
+  Clock, 
+  ChevronRight,
+  Lock,
+  Trophy,
+  Calendar,
+  MonitorPlay,
+  GraduationCap
+} from "lucide-react";
 import Link from "next/link";
+import { cn } from "@/lib/utils";
 
 export const metadata = { title: "My Progress - AstrologyPro" };
 
+// ---------------------------------------------------------------------------
+// Types (Matching the programs API)
+// ---------------------------------------------------------------------------
+type TrainingLessonSummary = {
+  id: string;
+  title: string;
+  completed: boolean;
+  in_progress?: boolean;
+  is_locked: boolean;
+  quiz_passed: boolean | null;
+};
+
+type TrainingCategorySummary = {
+  id: string;
+  name: string;
+  completed: boolean;
+  is_locked: boolean;
+  total_lessons: number;
+  completed_lessons: number;
+  progress_pct: number;
+  lessons: TrainingLessonSummary[];
+};
+
+type TrainingProgramSummary = {
+  id: string;
+  name: string;
+  progress_pct: number;
+  completed_lessons: number;
+  total_lessons: number;
+  categories: TrainingCategorySummary[];
+};
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+async function fetchTrainingPrograms(): Promise<TrainingProgramSummary[]> {
+  const base = process.env.NEXT_PUBLIC_APP_URL ?? `http://localhost:${process.env.PORT ?? 3000}`;
+  const cookieStore = await cookies();
+  const cookieHeader = cookieStore.getAll().map((c) => `${c.name}=${c.value}`).join("; ");
+
+  const res = await fetch(`${base}/api/trainee/training/programs`, {
+    headers: { cookie: cookieHeader },
+    cache: "no-store",
+  });
+
+  if (!res.ok) return [];
+  const json = await res.json();
+  return Array.isArray(json.programs) ? json.programs : [];
+}
+
+function formatDate(iso: string) {
+  return new Date(iso).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Page
+// ---------------------------------------------------------------------------
 export default async function TraineeProgressPage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
   const { data: trainee } = await supabase
     .from("trainees")
-    .select("id, name, specialties, training_status, created_at, graduated_at")
+    .select("id, name, training_status, created_at, graduated_at")
     .eq("user_id", user.id)
     .single();
 
   if (!trainee) redirect("/join/trainee");
 
-  // Fetch all active categories + lessons
-  const { data: categories } = await supabase
-    .from("training_categories")
-    .select("id, name, description, priority, training_id")
-    .eq("is_active", true)
-    .order("priority", { ascending: true });
+  const admin = createAdminClient();
 
-  const { data: allLessons } = await supabase
-    .from("training_lessons")
-    .select("id, title, category_id")
-    .eq("is_active", true);
+  // 1. Fetch Parallel Data
+  const [trainingPrograms, practiceResult, quizAttemptsResult, activityResult] = await Promise.all([
+    fetchTrainingPrograms(),
+    // Practice Sessions (bookings for this trainee as a client)
+    admin
+      .from("bookings")
+      .select("id, status, scheduled_at")
+      .eq("client_email", user.email!)
+      .order("scheduled_at", { ascending: false }),
+    // Quiz attempts
+    admin
+      .from("quiz_attempts")
+      .select("score, passed, attempted_at, training_lessons(title)")
+      .eq("user_id", user.id)
+      .order("attempted_at", { ascending: false }),
+    // Add additional booking sources if needed for practice
+    admin
+      .from("admin_bookings")
+      .select("id, status, scheduled_at")
+      .eq("client_email", user.email!)
+      .order("scheduled_at", { ascending: false }),
+  ]);
 
-  // Fetch this trainee's progress
-  const lessonIds = (allLessons ?? []).map((l) => l.id);
-  const { data: progressRows } =
-    lessonIds.length > 0
-      ? await supabase
-          .from("trainee_lesson_progress")
-          .select("lesson_id, completed_at, quiz_score, quiz_passed")
-          .eq("trainee_id", trainee.id)
-          .in("lesson_id", lessonIds)
-      : { data: [] };
+  // Merge practice sessions from both standard and admin tables
+  const allPractice = [
+    ...(practiceResult.data ?? []).map(b => ({ ...b, type: "standard" })),
+    ...(activityResult.data ?? []).map(b => ({ ...b, type: "admin" }))
+  ].sort((a,b) => new Date(b.scheduled_at).getTime() - new Date(a.scheduled_at).getTime());
 
-  const progressMap = new Map(
-    (progressRows ?? []).map((p) => [p.lesson_id, p])
-  );
+  const completedPractice = allPractice.filter(b => b.status === "completed").length;
+  const upcomingPractice = allPractice.filter(b => b.status === "confirmed" || b.status === "pending").length;
 
-  const totalLessons = (allLessons ?? []).length;
-  const completedLessons = (progressRows ?? []).filter(
-    (p) => p.completed_at
-  ).length;
-  const overallPct =
-    totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
+  // Aggregate program stats
+  const totalLessons = trainingPrograms.reduce((s, p) => s + p.total_lessons, 0);
+  const completedLessons = trainingPrograms.reduce((s, p) => s + p.completed_lessons, 0);
+  const overallPct = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
+  
+  const quizAttempts = quizAttemptsResult.data ?? [];
+  const avgQuizScore = quizAttempts.length > 0 
+    ? Math.round(quizAttempts.reduce((s, a) => s + (a.score || 0), 0) / quizAttempts.length)
+    : null;
+
   const isGraduated = !!trainee.graduated_at;
 
-  const categoryStats = (categories ?? []).map((cat) => {
-    const lessons = (allLessons ?? []).filter((l) => l.category_id === cat.id);
-    const completed = lessons.filter((l) => progressMap.get(l.id)?.completed_at).length;
-    return { ...cat, lessons, total: lessons.length, completed };
-  });
-
   return (
-    <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4 flex-wrap">
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">My Progress</h1>
-          <p className="text-muted-foreground">
-            Track your training completion and quiz scores.
+          <h1 className="text-2xl font-bold tracking-tight">Academic Progress</h1>
+          <p className="text-muted-foreground text-sm">
+            Comprehensive overview of your training journey and session history.
           </p>
         </div>
         {isGraduated && (
-          <Button asChild>
+          <Button asChild className="shrink-0 bg-primary/95 hover:bg-primary shadow-lg shadow-primary/20">
             <Link href="/trainee/certificate">
               <Award className="mr-2 size-4" />
-              View Certificate
+              View Diploma
             </Link>
           </Button>
         )}
       </div>
 
-      {/* Overall summary */}
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription className="flex items-center gap-1.5">
-              <BookOpen className="size-3.5" />
-              Lessons Completed
+      {/* Graduation Banner */}
+      {isGraduated && (
+        <Card className="border-primary/30 bg-primary/[0.03] overflow-hidden relative">
+          <div className="absolute right-0 top-0 p-4 opacity-10">
+            <Trophy className="size-24 scale-150 rotate-12" />
+          </div>
+          <CardContent className="flex items-center gap-4 py-6">
+            <div className="flex size-14 shrink-0 items-center justify-center rounded-full bg-primary/10 ring-1 ring-primary/20">
+              <Award className="size-8 text-primary" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-lg font-bold text-primary tracking-tight">Congratulations!</h3>
+              <p className="max-w-md text-sm text-muted-foreground">
+                You have successfully completed the professional divination course. 
+                Your certification is now available for download.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Stats Cards */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Card className="border-border/50">
+          <CardHeader className="pb-2 space-y-0.5">
+            <CardDescription className="text-[10px] font-bold uppercase tracking-widest flex items-center gap-1.5 overflow-hidden">
+              <BookOpen className="size-3 text-primary shrink-0" />
+              Course Progress
             </CardDescription>
-            <CardTitle className="text-3xl">
-              {completedLessons}
-              <span className="text-lg text-muted-foreground font-normal">
-                /{totalLessons}
-              </span>
+            <CardTitle className="text-2xl font-bold">
+              {completedLessons}<span className="text-sm font-normal text-muted-foreground ml-1">/ {totalLessons}</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <Progress value={overallPct} className="h-2" />
-            <p className="mt-1.5 text-xs text-muted-foreground">
-              {overallPct}% complete
-            </p>
+            <Progress value={overallPct} className="h-1.5 bg-muted/50" />
+            <p className="mt-2 text-xs font-semibold text-primary">{overallPct}% Complete</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription className="flex items-center gap-1.5">
-              <TrendingUp className="size-3.5" />
-              Training Status
+        <Card className="border-border/50">
+          <CardHeader className="pb-2 space-y-0.5">
+            <CardDescription className="text-[10px] font-bold uppercase tracking-widest flex items-center gap-1.5">
+              <Video className="size-3 text-emerald-500 shrink-0" />
+              Practice Sessions
             </CardDescription>
-            <CardTitle className="text-lg mt-1">
-              <Badge
-                variant={isGraduated ? "default" : "secondary"}
-                className="text-sm"
-              >
-                {isGraduated
-                  ? "Graduated"
-                  : trainee.training_status ?? "active"}
-              </Badge>
+            <CardTitle className="text-2xl font-bold">{completedPractice}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-muted-foreground">Total completed</span>
+              {upcomingPractice > 0 && (
+                <span className="text-emerald-600 font-medium">+{upcomingPractice} upcoming</span>
+              )}
+            </div>
+            <div className="mt-2 text-[10px] text-muted-foreground/60 font-medium flex items-center gap-1">
+              <Clock className="size-2.5" />
+              Required for graduation
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-border/50">
+          <CardHeader className="pb-2 space-y-0.5">
+            <CardDescription className="text-[10px] font-bold uppercase tracking-widest flex items-center gap-1.5">
+              <CheckCircle2 className="size-3 text-amber-500 shrink-0" />
+              Quiz Performance
+            </CardDescription>
+            <CardTitle className="text-2xl font-bold">{avgQuizScore !== null ? `${avgQuizScore}%` : "---"}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-muted-foreground">Average across all</span>
+              <span className="font-medium">{quizAttempts.length} quizzes</span>
+            </div>
+            <Progress value={avgQuizScore ?? 0} className="h-1.5 mt-2 bg-muted/50" />
+          </CardContent>
+        </Card>
+
+        <Card className="border-border/50">
+          <CardHeader className="pb-2 space-y-0.5">
+            <CardDescription className="text-[10px] font-bold uppercase tracking-widest flex items-center gap-1.5">
+              <TrendingUp className="size-3 text-blue-500 shrink-0" />
+              Status
+            </CardDescription>
+            <CardTitle className="text-lg font-bold capitalize">
+              {isGraduated ? "Graduated" : trainee.training_status}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-xs text-muted-foreground">
-              Started{" "}
-              {new Date(trainee.created_at).toLocaleDateString("en-US", {
-                month: "long",
-                year: "numeric",
-              })}
+            <p className="text-xs text-muted-foreground flex items-center gap-1">
+              <Calendar className="size-3" />
+              Started {formatDate(trainee.created_at)}
             </p>
-            {isGraduated && (
-              <p className="text-xs text-primary font-medium mt-0.5">
-                Graduated{" "}
-                {new Date(trainee.graduated_at!).toLocaleDateString("en-US", {
-                  month: "long",
-                  day: "numeric",
-                  year: "numeric",
-                })}
+            {trainee.graduated_at && (
+              <p className="text-[10px] text-primary font-bold mt-1 uppercase tracking-tighter">
+                Completed {formatDate(trainee.graduated_at)}
               </p>
             )}
           </CardContent>
         </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription className="flex items-center gap-1.5">
-              <CheckCircle2 className="size-3.5" />
-              Avg Quiz Score
-            </CardDescription>
-            <CardTitle className="text-3xl">
-              {(() => {
-                const scored = (progressRows ?? []).filter(
-                  (p) => p.quiz_score !== null
-                );
-                if (scored.length === 0) return "—";
-                const avg = Math.round(
-                  scored.reduce((s, p) => s + (p.quiz_score ?? 0), 0) /
-                    scored.length
-                );
-                return `${avg}%`;
-              })()}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-xs text-muted-foreground">
-              Across{" "}
-              {(progressRows ?? []).filter((p) => p.quiz_score !== null).length}{" "}
-              quizzes taken
-            </p>
-          </CardContent>
-        </Card>
       </div>
 
-      {/* Graduation banner */}
-      {isGraduated && (
-        <Card className="border-primary/30 bg-primary/5">
-          <CardContent className="flex items-center gap-4 py-5">
-            <div className="flex size-12 shrink-0 items-center justify-center rounded-full bg-primary/10">
-              <Award className="size-6 text-primary" />
-            </div>
-            <div className="flex-1">
-              <p className="font-semibold text-primary">
-                Congratulations, {trainee.name?.split(" ")[0] ?? "Trainee"}!
-              </p>
-              <p className="text-sm text-muted-foreground">
-                You have completed the full training program.
-              </p>
-            </div>
-            <Button asChild size="sm">
-              <Link href="/trainee/certificate">View Certificate</Link>
-            </Button>
-          </CardContent>
-        </Card>
-      )}
+      <div className="grid gap-8 lg:grid-cols-3">
+        {/* Module Progress Breakdown */}
+        <div className="lg:col-span-2 space-y-6">
+          <div className="flex items-center justify-between border-b pb-2">
+            <h2 className="text-lg font-bold tracking-tight">Curriculum Modules</h2>
+            <Link href="/trainee/training" className="text-xs font-semibold text-primary hover:underline flex items-center gap-0.5">
+              Go to Training <ChevronRight className="size-3" />
+            </Link>
+          </div>
 
-      {/* Per-category breakdown */}
-      {categoryStats.length > 0 && (
-        <div className="space-y-4">
-          <h2 className="text-lg font-semibold">Module Breakdown</h2>
-          {categoryStats.map((cat) => {
-            const pct =
-              cat.total > 0
-                ? Math.round((cat.completed / cat.total) * 100)
-                : 0;
-            const catComplete = cat.total > 0 && cat.completed === cat.total;
-
-            return (
-              <Card key={cat.id}>
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <CardTitle className="text-base">{cat.name}</CardTitle>
-                    {catComplete ? (
-                      <Badge variant="default">Complete</Badge>
-                    ) : (
-                      <span className="text-sm text-muted-foreground">
-                        {cat.completed}/{cat.total}
-                      </span>
-                    )}
+          <div className="space-y-6">
+            {trainingPrograms.map(program => (
+              <div key={program.id} className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex size-9 items-center justify-center rounded-lg bg-muted/50 border">
+                    <GraduationCap className="size-5 text-muted-foreground" />
                   </div>
-                  <Progress value={pct} className="h-1.5" />
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-1">
-                    {cat.lessons.map((lesson) => {
-                      const p = progressMap.get(lesson.id);
-                      const done = !!p?.completed_at;
-                      return (
-                        <div
-                          key={lesson.id}
-                          className="flex items-center justify-between gap-3 rounded-md px-3 py-2 text-sm hover:bg-muted/40 transition-colors"
-                        >
-                          <div className="flex items-center gap-2 min-w-0">
-                            {done ? (
-                              <CheckCircle2 className="size-4 shrink-0 text-primary" />
-                            ) : (
-                              <div className="size-4 shrink-0 rounded-full border-2 border-muted-foreground/30" />
-                            )}
-                            <Link
-                              href={`/trainee/training/${(cat as typeof cat & { training_id?: string }).training_id ?? ""}/${cat.id}/${lesson.id}`}
-                              className="truncate hover:text-primary transition-colors"
-                            >
-                              {lesson.title}
-                            </Link>
+                  <div>
+                    <h3 className="text-sm font-bold leading-none">{program.name}</h3>
+                    <p className="text-[11px] text-muted-foreground mt-1 tabular-nums">
+                      {program.completed_lessons} of {program.total_lessons} lessons finished 
+                      {program.progress_pct > 0 && ` (${program.progress_pct}%)`}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {program.categories.map(category => (
+                    <Card key={category.id} className={cn(
+                      "bg-card/30 border-border/40 transition-all hover:border-border/80",
+                      category.is_locked && "opacity-60 grayscale-[0.5]"
+                    )}>
+                      <CardHeader className="p-4 pb-2">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <CardTitle className="text-xs font-bold truncate">{category.name}</CardTitle>
+                            <CardDescription className="text-[10px] font-medium flex items-center gap-1 mt-0.5">
+                              {category.completed_lessons} / {category.total_lessons} Lessons
+                            </CardDescription>
                           </div>
-                          {p?.quiz_score !== null && p?.quiz_score !== undefined && (
-                            <Badge
-                              variant={p.quiz_passed ? "default" : "secondary"}
-                              className="shrink-0 text-xs"
-                            >
-                              {p.quiz_score}%
-                            </Badge>
+                          {category.is_locked ? (
+                            <Lock className="size-3.5 text-muted-foreground" />
+                          ) : category.completed ? (
+                            <CheckCircle2 className="size-3.5 text-primary" />
+                          ) : null}
+                        </div>
+                      </CardHeader>
+                      <CardContent className="p-4 pt-0">
+                        <Progress value={category.progress_pct} className="h-1 bg-muted/40" />
+                        
+                        <div className="mt-3 flex flex-col gap-1.5">
+                          {category.lessons.slice(0, 3).map(lesson => (
+                            <div key={lesson.id} className="flex items-center justify-between gap-2">
+                              <span className={cn(
+                                "text-[10px] truncate",
+                                lesson.completed ? "text-primary font-medium" : "text-muted-foreground"
+                              )}>
+                                {lesson.title}
+                              </span>
+                              {lesson.completed && (
+                                <CheckCircle2 className="size-2.5 text-primary shrink-0" />
+                              )}
+                              {lesson.is_locked && (
+                                <Lock className="size-2.5 text-muted-foreground/40 shrink-0" />
+                              )}
+                            </div>
+                          ))}
+                          {category.total_lessons > 3 && (
+                            <span className="text-[9px] text-muted-foreground italic">
+                              + {category.total_lessons - 3} more lessons
+                            </span>
                           )}
                         </div>
-                      );
-                    })}
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
-      )}
 
-      {totalLessons === 0 && (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <p className="text-muted-foreground text-sm">
-              No training modules available yet. Check back soon.
-            </p>
-          </CardContent>
-        </Card>
-      )}
+        {/* Activity & Sidebars */}
+        <div className="space-y-6">
+          {/* Recent Quiz Activity */}
+          <Card className="shadow-sm border-border/40">
+            <CardHeader className="pb-3 border-b">
+              <CardTitle className="text-sm font-bold flex items-center gap-2">
+                <Trophy className="size-4 text-amber-500" />
+                Recent Quizzes
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="divide-y">
+                {quizAttempts.length > 0 ? (
+                  quizAttempts.slice(0, 5).map((attempt, idx) => (
+                    <div key={idx} className="flex items-center justify-between p-3.5 px-4 transition-colors hover:bg-muted/30">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[11px] font-bold truncate">
+                          {(attempt.training_lessons as any)?.title || "Untitled Lesson"}
+                        </p>
+                        <p className="text-[9px] text-muted-foreground mt-0.5">
+                          {formatDate(attempt.attempted_at)}
+                        </p>
+                      </div>
+                      <Badge variant={attempt.passed ? "default" : "secondary"} className="text-[9px] h-5 tabular-nums">
+                        {attempt.score}%
+                      </Badge>
+                    </div>
+                  ))
+                ) : (
+                  <div className="py-8 text-center px-4">
+                    <p className="text-[11px] text-muted-foreground">No quiz attempts yet.</p>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Recent Practice Activity */}
+          <Card className="shadow-sm border-border/40">
+            <CardHeader className="pb-3 border-b">
+              <CardTitle className="text-sm font-bold flex items-center gap-2">
+                <MonitorPlay className="size-4 text-emerald-500" />
+                Practice Sessions
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="divide-y">
+                {allPractice.length > 0 ? (
+                  allPractice.slice(0, 5).map((session, idx) => (
+                    <div key={idx} className="flex items-center justify-between p-3.5 px-4 transition-colors hover:bg-muted/30">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[11px] font-bold lowercase first-letter:uppercase truncate">
+                          {session.status} Reading
+                        </p>
+                        <p className="text-[9px] text-muted-foreground mt-0.5">
+                          {formatDate(session.scheduled_at)}
+                        </p>
+                      </div>
+                      <Badge variant={session.status === 'completed' ? 'secondary' : 'outline'} className="text-[9px] h-5 capitalize">
+                        {session.status}
+                      </Badge>
+                    </div>
+                  ))
+                ) : (
+                  <div className="py-8 text-center px-4">
+                    <p className="text-[11px] text-muted-foreground">No sessions scheduled.</p>
+                    <Button variant="link" size="sm" className="text-[10px] h-auto p-0 mt-1" asChild>
+                      <Link href="/trainee/sessions">Learn how to schedule</Link>
+                    </Button>
+                  </div>
+                )}
+              </div>
+              {allPractice.length > 5 && (
+                <div className="p-2 border-t text-center">
+                  <Button variant="ghost" size="xs" className="text-[10px] w-full" asChild>
+                    <Link href="/trainee/sessions">View All Sessions</Link>
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }

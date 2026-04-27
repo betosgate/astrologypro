@@ -157,18 +157,17 @@ export async function getDivinerPublishedLandingPages(
 export async function getDivinerServiceAccessMap(
   supabase: SupabaseClient,
   divinerId: string
-): Promise<Map<string, { is_enabled: boolean; is_published: boolean; publish_status: string }>> {
+): Promise<Map<string, { is_enabled: boolean; is_published: boolean }>> {
   const { data } = await supabase
     .from("diviner_services")
-    .select("template_id, is_enabled, is_published, publish_status")
+    .select("template_id, is_enabled, is_published")
     .eq("diviner_id", divinerId);
 
-  const map = new Map<string, { is_enabled: boolean; is_published: boolean; publish_status: string }>();
+  const map = new Map<string, { is_enabled: boolean; is_published: boolean }>();
   for (const row of data ?? []) {
     map.set(row.template_id, {
       is_enabled: row.is_enabled,
       is_published: row.is_published,
-      publish_status: row.publish_status,
     });
   }
   return map;
@@ -202,7 +201,6 @@ export interface DivinerServiceWithTemplate {
   price: number;
   is_enabled: boolean;
   is_published: boolean;
-  publish_status: string;
   enabled_at: string | null;
   disabled_at: string | null;
   notes: string | null;

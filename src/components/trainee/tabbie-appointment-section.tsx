@@ -30,6 +30,11 @@ type ApiResponse = {
   data: DashboardTabbieConfig | null;
 };
 
+type TraineeAppointmentsResponse = {
+  ok: boolean;
+  data?: Array<{ id: string }>;
+};
+
 function resolveVariantClasses(variant: DashboardTabbieConfig["highlightVariant"]) {
   switch (variant) {
     case "success":
@@ -66,10 +71,13 @@ function resolveVariantClasses(variant: DashboardTabbieConfig["highlightVariant"
 export function TabbieAppointmentSection({ trainingCompleted }: { trainingCompleted: boolean }) {
   const [config, setConfig] = useState<DashboardTabbieConfig | null>(null);
   const [isLoading, setIsLoading] = useState(trainingCompleted);
+  const [hasAppointments, setHasAppointments] = useState(false);
 
   useEffect(() => {
     if (!trainingCompleted) {
       setIsLoading(false);
+      setConfig(null);
+      setHasAppointments(false);
       return;
     }
 
@@ -77,15 +85,28 @@ export function TabbieAppointmentSection({ trainingCompleted }: { trainingComple
 
     async function loadConfig() {
       try {
-        const res = await fetch("/api/dashboard/tabbie-appointment-config", {
-          method: "GET",
-          credentials: "include",
-          cache: "no-store",
-        });
+        const [configRes, appointmentsRes] = await Promise.all([
+          fetch("/api/dashboard/tabbie-appointment-config", {
+            method: "GET",
+            credentials: "include",
+            cache: "no-store",
+          }),
+          fetch("/api/trainee/appointments", {
+            method: "GET",
+            credentials: "include",
+            cache: "no-store",
+          }),
+        ]);
 
-        if (!res.ok) return;
+        if (!cancelled && appointmentsRes.ok) {
+          const appointmentsJson =
+            (await appointmentsRes.json()) as TraineeAppointmentsResponse;
+          setHasAppointments(Boolean(appointmentsJson.data?.length));
+        }
 
-        const json = (await res.json()) as ApiResponse;
+        if (!configRes.ok) return;
+
+        const json = (await configRes.json()) as ApiResponse;
         if (cancelled || !json.ok || !json.data?.isEnabled) return;
 
         setConfig(json.data);
@@ -98,12 +119,33 @@ export function TabbieAppointmentSection({ trainingCompleted }: { trainingComple
 
     void loadConfig();
 
+    function handlePageShow() {
+      void loadConfig();
+    }
+
+    function handleVisibilityChange() {
+      if (document.visibilityState === "visible") {
+        void loadConfig();
+      }
+    }
+
+    window.addEventListener("pageshow", handlePageShow);
+    window.addEventListener("focus", handlePageShow);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
     return () => {
       cancelled = true;
+      window.removeEventListener("pageshow", handlePageShow);
+      window.removeEventListener("focus", handlePageShow);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [trainingCompleted]);
 
   if (!trainingCompleted || (!isLoading && !config)) {
+    return null;
+  }
+
+  if (!isLoading && hasAppointments) {
     return null;
   }
 

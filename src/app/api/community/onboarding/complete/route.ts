@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { syncProfileAcrossRoles } from "@/lib/profile-sync";
+import { tierToPlanType } from "@/lib/community/pm-entitlement";
 
 export const dynamic = "force-dynamic";
 
@@ -177,10 +178,12 @@ export async function POST(req: NextRequest) {
 
     const { data: member, error: memberErr } = await admin
       .from("community_members")
-      .select("id, membership_status, membership_type, plan_type, intake_data")
+      .select(
+        "id, membership_status, membership_type, plan_type, pm_tier_id, intake_data"
+      )
       .eq("user_id", user.id)
-      .eq("membership_type", "perennial_mandalism")
       .maybeSingle();
+
 
     if (memberErr) {
       console.error("[onboarding/complete] member lookup error:", memberErr);
@@ -276,6 +279,35 @@ export async function POST(req: NextRequest) {
       additionalInfo: trimStr(additionalInfo),
     };
 
+    // ── Safeguard: don't downgrade a paid Family entitlement ─────────────────
+    // Per audit note §5 risk #2: if pm_tier_id is already set to a Family tier,
+    // do NOT flip plan_type to 'individual' just because this onboarding run's
+    // household_limit computes to 0. Preserve the canonical tier's derived
+    // plan_type instead. Only onboarding runs that explicitly select a
+    // household-capable plan id should be allowed to flip the flag.
+    let nextPlanType: "individual" | "family" =
+      householdLimit > 0 ? "family" : "individual";
+
+    const existingTierId = (member as { pm_tier_id?: string | null })
+      .pm_tier_id ?? null;
+    if (existingTierId) {
+      const { data: existingTier } = await admin
+        .from("pm_plan_tiers")
+        .select("name")
+        .eq("id", existingTierId)
+        .maybeSingle();
+      const canonicalFromTier = tierToPlanType({
+        name: (existingTier?.name as string | undefined) ?? "",
+      });
+      if (canonicalFromTier === "family" && nextPlanType === "individual") {
+        console.warn(
+          `[onboarding/complete] refusing to downgrade plan_type: pm_tier_id=${existingTierId} resolves to '${existingTier?.name}' (canonical=family), onboarding household_limit=${householdLimit}. Keeping plan_type=family.`,
+          { user_id: user.id, member_id: member.id }
+        );
+        nextPlanType = "family";
+      }
+    }
+
     const updatePayload: Record<string, unknown> = {
       first_name: first_name.trim(),
       last_name: last_name.trim(),
@@ -293,7 +325,7 @@ export async function POST(req: NextRequest) {
       birth_country: trimStr(birth_country),
       relationship_status: trimStr(relationship_status),
       intake_data: intakeData,
-      plan_type: householdLimit > 0 ? "family" : "individual",
+      plan_type: nextPlanType,
       onboarding_completed: true,
     };
 

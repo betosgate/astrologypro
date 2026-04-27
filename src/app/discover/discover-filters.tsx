@@ -74,6 +74,19 @@ function GradientPlaceholder({ name }: { name: string }) {
 function DivinerCardGrid({ diviner }: { diviner: DivinerCard }) {
   const resolvedCoverImageUrl = getDivinerCoverImageUrl(diviner.coverImageUrl);
   const resolvedAvatarUrl = getDivinerAvatarUrl(diviner.avatarUrl);
+  const searchParams = useSearchParams();
+  const submissionId = searchParams.get("submission")?.trim() || "";
+  const templateSlug = searchParams.get("template")?.trim() || "";
+  const bookingParams = new URLSearchParams();
+  if (submissionId) bookingParams.set("submission", submissionId);
+  if (templateSlug) bookingParams.set("template", templateSlug);
+  const bookingQuery = bookingParams.toString();
+  const bookingHref =
+    diviner.matchedServiceSlug && templateSlug
+      ? `/${diviner.username}/book/${diviner.matchedServiceSlug}${
+          bookingQuery ? `?${bookingQuery}` : ""
+        }`
+      : `/${diviner.username}`;
   return (
     <article className="group flex flex-col overflow-hidden rounded-2xl border border-white/5 bg-[#0d1117]/60 transition-all hover:border-[#c9a84c]/30 hover:shadow-[0_0_30px_rgba(201,168,76,0.05)]">
       {/* Cover image / gradient */}
@@ -187,7 +200,7 @@ function DivinerCardGrid({ diviner }: { diviner: DivinerCard }) {
             asChild
             className="w-full bg-[#c9a84c] text-black hover:bg-[#e2c97e] font-semibold"
           >
-            <Link href={`/${diviner.username}`}>
+            <Link href={bookingHref}>
               Book a Reading
               <ArrowRight className="ml-1 size-3.5" aria-hidden="true" />
             </Link>
@@ -261,10 +274,14 @@ export function DiscoverFilters({
   diviners,
   total,
   preferredDiviner = null,
+  templateName = null,
+  templateCategory = null,
 }: {
   diviners: DivinerCard[];
   total: number;
   preferredDiviner?: DivinerCard | null;
+  templateName?: string | null;
+  templateCategory?: "astrology" | "tarot" | null;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -272,6 +289,8 @@ export function DiscoverFilters({
   const search = searchParams.get("search") ?? "";
   const type = (searchParams.get("type") ?? "all") as TypeFilter;
   const sort = (searchParams.get("sort") ?? "certified") as SortOption;
+  const templateSlug = searchParams.get("template") ?? "";
+  const submissionId = searchParams.get("submission") ?? "";
 
   const updateParams = useCallback(
     (updates: Record<string, string>) => {
@@ -305,8 +324,18 @@ export function DiscoverFilters({
   );
 
   const clearFilters = useCallback(() => {
-    router.replace("/discover", { scroll: false });
-  }, [router]);
+    const params = new URLSearchParams();
+    if (templateSlug) params.set("template", templateSlug);
+    if (submissionId) params.set("submission", submissionId);
+    const defaultType =
+      templateCategory === "astrology"
+        ? "astrologer"
+        : templateCategory === "tarot"
+          ? "tarot"
+          : "";
+    if (defaultType) params.set("type", defaultType);
+    router.replace(`/discover${params.size > 0 ? `?${params.toString()}` : ""}`, { scroll: false });
+  }, [router, submissionId, templateCategory, templateSlug]);
 
   const hasActiveFilters = search !== "" || type !== "all" || sort !== "certified";
 
@@ -370,6 +399,18 @@ export function DiscoverFilters({
     <div>
       {/* Preferred diviner — shown above filters when cookie is set */}
       {preferredDiviner && <PreferredDivinerBanner diviner={preferredDiviner} />}
+
+      {templateName && (
+        <div className="mb-6 rounded-2xl border border-[#c9a84c]/20 bg-[#c9a84c]/6 px-4 py-3 text-left">
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#c9a84c]/75">
+            Matched Service
+          </p>
+          <p className="mt-1 text-sm text-[#f5f0e8]">
+            Showing diviners who currently have an active published service for{" "}
+            <span className="font-semibold">{templateName}</span>.
+          </p>
+        </div>
+      )}
 
       {/* Filters bar */}
       <div className="mb-8 flex flex-wrap items-center gap-3">

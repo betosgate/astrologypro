@@ -13,6 +13,7 @@ import { applyRuntimePricesToServices } from "@/lib/runtime-service-pricing";
 import { isDivinerPayoutReadyForPaidServices } from "@/lib/payout-readiness";
 import { calculateMoneySplit } from "@/lib/money-split";
 import { getSessionLinkForBooking } from "@/lib/service-toolkit-mapping";
+import { resolveStampForBooking } from "@/lib/affiliate-stamp";
 import {
   generateBookingCallPin,
   getActiveChimePhoneNumber,
@@ -52,6 +53,14 @@ interface BookingPaymentBody {
   discount_token?: string;
   /** True when the slot is from an unscoped availability (no service linked). Skips charging. */
   freeSlot?: boolean;
+  /**
+   * Optional reference to a `service_template_intake_submissions` row.
+   * Set by the `/book/template/[slug]` shared-calendar flow so the saved
+   * intake remains linked to the created booking. Persisted to
+   * `bookings.metadata.intake_submission_id` so future toolkit modules
+   * can load the intake payload without needing a schema change.
+   */
+  submissionId?: string;
 }
 
 export async function POST(request: NextRequest) {
@@ -74,7 +83,18 @@ export async function POST(request: NextRequest) {
       booking_notes,
       discount_token,
       freeSlot,
+      submissionId: rawSubmissionId,
     } = body;
+
+    // Only accept a UUID-shaped value so a malformed query param can't
+    // poison the metadata blob.
+    const submissionId =
+      typeof rawSubmissionId === "string" &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        rawSubmissionId.trim(),
+      )
+        ? rawSubmissionId.trim()
+        : null;
     const questionnaireData = questionnaire ?? {};
 
     // Sanitize ref_code against cmp_XXXXXXXX pattern so random URL params
@@ -587,6 +607,30 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Resolve the commission rate stamp BEFORE the booking insert.
+    // If refCode is valid AND all five §3.8 conditions pass, the stamp
+    // fields get populated on the booking row at creation time and
+    // become the authoritative rate for commission payout when the
+    // Stripe webhook fires. If any condition fails, the stamp fields
+    // stay NULL and the booking will never earn commission — the
+    // diviner keeps 100% of the payment.
+    const stamp = await resolveStampForBooking(adminSupabase, {
+      refCode: refCode ?? null,
+      divinerId: resolvedDivinerId,
+      serviceId,
+    });
+    if (refCode && stamp.reason !== "stamped") {
+      console.log(
+        JSON.stringify({
+          event: "affiliate_stamp_skipped",
+          refCode,
+          reason: stamp.reason,
+          divinerId: resolvedDivinerId,
+          serviceId,
+        }),
+      );
+    }
+
     // Create booking record with pending status
     // Use admin client — guest bookers have no session so RLS would block the insert
     const { data: booking, error: bookingError } = await adminSupabase
@@ -608,9 +652,17 @@ export async function POST(request: NextRequest) {
           post_checkout_fields: purchaseConfig.postCheckoutFields,
           ...(availabilityTemplateTitle ? { availability_title: availabilityTemplateTitle } : {}),
           ...(availabilityTemplateDescription ? { availability_description: availabilityTemplateDescription } : {}),
+          ...(submissionId ? { intake_submission_id: submissionId } : {}),
         },
         ...(policyAcknowledgedAt ? { policy_acknowledged_at: policyAcknowledgedAt } : {}),
         ...(refCode ? { ref_code: refCode } : {}),
+        ...(stamp.reason === "stamped"
+          ? {
+              commission_source_assignment_id: stamp.source_assignment_id,
+              commission_rate_type_stamp: stamp.rate_type_stamp,
+              commission_rate_value_stamp: stamp.rate_value_stamp,
+            }
+          : {}),
         ...(callPin
           ? {
               call_pin: callPin.pin,

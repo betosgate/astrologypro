@@ -1,7 +1,11 @@
 /**
  * GET  /api/admin/landing-pages/[landingPageId]/sections
  * POST /api/admin/landing-pages/[landingPageId]/sections
- * Admin manages sections on behalf of any diviner.
+ * Admin manages blocks on behalf of any diviner.
+ *
+ * V2: the `[landingPageId]` path param is now a `service_template_id`. The
+ * container table was removed; blocks live under (diviner_id, service_template_id).
+ * POST requires a `diviner_id` body field to scope the insert.
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -25,18 +29,24 @@ async function resolveAdmin() {
   return { user, isAdmin: !!data };
 }
 
-export async function GET(_req: NextRequest, { params }: RouteParams) {
-  const { landingPageId } = await params;
+export async function GET(req: NextRequest, { params }: RouteParams) {
+  const { landingPageId: serviceTemplateId } = await params;
   const { user, isAdmin } = await resolveAdmin();
   if (!user) return NextResponse.json({ status: 401 }, { status: 401 });
   if (!isAdmin) return NextResponse.json({ status: 403 }, { status: 403 });
 
+  const divinerId = req.nextUrl.searchParams.get("diviner_id");
+
   const admin = createAdminClient();
-  const { data: sections, error } = await admin
-    .from("service_landing_page_sections")
+  let query = admin
+    .from("diviner_service_blocks")
     .select("*")
-    .eq("landing_page_id", landingPageId)
+    .eq("service_template_id", serviceTemplateId)
     .order("display_order", { ascending: true });
+
+  if (divinerId) query = query.eq("diviner_id", divinerId);
+
+  const { data: sections, error } = await query;
 
   if (error) return NextResponse.json({ status: 500, detail: error.message }, { status: 500 });
 
@@ -44,26 +54,23 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
 }
 
 export async function POST(req: NextRequest, { params }: RouteParams) {
-  const { landingPageId } = await params;
+  const { landingPageId: serviceTemplateId } = await params;
   const { user, isAdmin } = await resolveAdmin();
   if (!user) return NextResponse.json({ status: 401 }, { status: 401 });
   if (!isAdmin) return NextResponse.json({ status: 403 }, { status: 403 });
 
   const admin = createAdminClient();
 
-  const { data: page } = await admin
-    .from("service_landing_pages")
-    .select("id, diviner_id")
-    .eq("id", landingPageId)
-    .maybeSingle();
-
-  if (!page) return NextResponse.json({ status: 404, title: "Landing page not found" }, { status: 404 });
-
   let body: Record<string, unknown>;
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ status: 422, title: "Invalid JSON" }, { status: 422 });
+  }
+
+  const divinerId = typeof body.diviner_id === "string" ? body.diviner_id : "";
+  if (!divinerId) {
+    return NextResponse.json({ status: 422, title: "diviner_id is required" }, { status: 422 });
   }
 
   const sectionType = typeof body.section_type === "string" ? body.section_type : "";
@@ -82,30 +89,26 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
   const safeHtml = rawHtml ? sanitizeSectionHtml(rawHtml) : null;
 
   const { data: existing } = await admin
-    .from("service_landing_page_sections")
+    .from("diviner_service_blocks")
     .select("display_order")
-    .eq("landing_page_id", landingPageId)
+    .eq("diviner_id", divinerId)
+    .eq("service_template_id", serviceTemplateId)
     .order("display_order", { ascending: false })
     .limit(1);
 
   const maxOrder = existing?.[0]?.display_order ?? 0;
 
   const { data: created, error } = await admin
-    .from("service_landing_page_sections")
+    .from("diviner_service_blocks")
     .insert({
-      landing_page_id: landingPageId,
-      diviner_id: page.diviner_id,
+      diviner_id: divinerId,
+      service_template_id: serviceTemplateId,
       section_type: sectionType,
       title: body.title ?? null,
-      subtitle: body.subtitle ?? null,
       content_json: contentJson,
       body_html: safeHtml,
       display_order: maxOrder + 10,
       is_enabled: true,
-      is_system: typeDef.is_system,
-      is_draft: true,
-      draft_content_json: contentJson,
-      draft_body_html: safeHtml,
       created_by: user.id,
       updated_by: user.id,
     })

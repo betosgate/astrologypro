@@ -9426,6 +9426,277 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "School recognition — practitioners and school leaders can see your streak milestones and acknowledge them"
         ]
       },
+
+    // --------------------nativity_birth_chart screens--------------------//
+  {
+    "name": "nativity_birth_chart",
+    "label": "Nativity Birth Chart",
+    "description": "A complete Western natal chart reading tool where users enter birth date, time, and place to generate charts, planetary placements, houses, aspects, and AI-based interpretations.",
+    "group": "Community & Worship",
+    "subModule": "Nativity Birth Chart",
+    "purpose": "Helps users understand their personal birth chart by turning birth details into a structured astrological reading with charts, tables, and detailed written interpretations.",
+    "bullets": [
+      "Birth data form captures date of birth, time of birth, place of birth, and optional area of inquiry",
+      "Generate Reading action starts the full chart calculation and interpretation flow",
+      "Designed as the main entry point for creating a personal natal chart reading",
+      "Supports location search and selection for accurate chart generation",
+      "Keeps the setup process simple so new users can start with only essential birth inputs",
+      "Acts as the starting screen before chart wheels, tables, and interpretations appear",
+      "Optional inquiry box lets the user guide the reading toward a life concern or question"
+    ]
+  },
+  {
+    "name": "nativity_chart_wheels",
+    "label": "Natal Wheel Charts",
+    "description": "Dual visual chart display showing the natal wheel in graphical form, including zodiac signs, houses, planets, and aspect lines.",
+    "group": "Community & Worship",
+    "subModule": "Nativity Birth Chart",
+    "purpose": "Gives users a visual way to inspect their birth chart structure instead of only reading tables and text explanations.",
+    "bullets": [
+      "Shows circular natal chart wheels with houses and zodiac divisions",
+      "Displays planetary placements and geometric aspect connections",
+      "Useful for users who want both symbolic and visual chart analysis",
+      "Lets users visually compare sign locations, houses, and planetary spread",
+      "Highlights chart structure in a format familiar to astrology learners and practitioners",
+      "Supports easier pattern recognition for clusters, oppositions, and angular emphasis",
+      "Helps bridge technical data and intuitive visual understanding"
+    ]
+  },
+  {
+    "name": "nativity_planet_information",
+    "label": "Planet Information",
+    "description": "A structured planet table listing each planet and point with sign, full degree, house, normalized degree, speed, and retrograde status.",
+    "group": "Community & Worship",
+    "subModule": "Nativity Birth Chart",
+    "purpose": "Makes technical planetary placement data easy to review in one organized section before reading deeper interpretations.",
+    "bullets": [
+      "Lists planets such as Moon, Mercury, Venus, Sun, Mars, Jupiter, Saturn, Uranus, Neptune, Pluto, Node, Chiron, and Part of Fortune",
+      "Shows exact technical values including sign, degree, house placement, speed, and retrograde state",
+      "Useful for quick reference and advanced chart verification",
+      "Helps users confirm the exact placement behind each written interpretation",
+      "Makes it easy to scan planets row by row without reading long narrative text first",
+      "Useful for both beginners and advanced users who want raw chart data",
+      "Creates a clean reference point for later planet, house, and aspect analysis"
+    ]
+  },
+  {
+    "name": "nativity_planet_interpretations",
+    "label": "Planet Interpretations",
+    "description": "Detailed written readings for each planetary placement, explaining how the planet behaves in its zodiac sign, house, degree, and motion.",
+    "group": "Community & Worship",
+    "subModule": "Nativity Birth Chart",
+    "purpose": "Translates raw astrological data into clear meaning so users can understand the emotional, mental, and spiritual significance of each placement.",
+    "bullets": [
+      "Long-form explanation blocks for planets such as Moon and Sun",
+      "Explains sign placement, house meaning, degree influence, and planetary speed in readable language",
+      "Includes Show More actions for expanding large interpretation text",
+      "Helps users understand personality patterns behind technical chart values",
+      "Breaks down emotional, mental, creative, and life-direction themes by planet",
+      "Makes the reading feel personal instead of purely mathematical",
+      "Useful for self-reflection, spiritual study, and one-to-one astrology sessions"
+    ]
+  },
+  {
+    "name": "nativity-horoscope-analysis",
+    "label": "Deep Astrological Analysis",
+    "description": "A detailed horoscope reading view inside the Nativity Birth Chart flow, where users can read extended AI-generated interpretations for planetary placements while still seeing supporting chart data and related interpretation cards in the background.",
+    "group": "Community & Worship",
+    "subModule": "Nativity Birth Chart",
+    "purpose": "Gives users a focused space to read a deeper explanation of a planetary placement without losing the context of the overall birth chart reading.",
+    "bullets": [
+      "Opens as a centered modal overlay titled 'Deep Astrological Analysis'",
+      "Shows long-form interpretation text in a scrollable reading area",
+      "Keeps the horoscope page visible in the background for context",
+      "Includes a close control so the user can return to the main reading view",
+      "Supports deeper exploration beyond the shorter interpretation cards shown on the page",
+      "Helps users focus on one placement at a time without navigating away from the chart",
+      "May include a related visual section such as 'Picture Representation' below the text analysis",
+      "Useful for users who want a more advanced or expanded explanation of planetary meaning"
+    ]
+  },
+  {
+    "name": "nativity-planet-reading-card",
+    "label": "Planet Reading Card",
+    "description": "An individual interpretation card for a planetary placement, such as the Sun, showing a readable summary of the placement in sign and house, with controls for expanding the text and opening related decan content.",
+    "group": "Community & Worship",
+    "subModule": "Nativity Birth Chart",
+    "purpose": "Helps users read the meaning of one placement at a time in a simple, easy-to-follow format, while also linking that placement to deeper decan symbolism.",
+    "bullets": [
+      "Displays the planet name prominently, such as 'Sun'",
+      "Shows a written interpretation of the planet in its sign and house placement",
+      "Includes a 'Show More' button to expand or continue reading long interpretation text",
+      "A triangle icon beside the planet heading indicates related decan content is available",
+      "Clicking the triangle icon opens a decan modal connected to that planetary placement",
+      "Makes it easy for users to move from standard natal interpretation into deeper symbolic analysis",
+      "Keeps the reading approachable by presenting one focused interpretation block at a time",
+      "Supports both casual users and advanced learners through layered reading depth"
+    ]
+  },
+  {
+    "name": "nativity-planet-decan-modal",
+    "label": "Planet Decan Modal",
+    "description": "A modal window that opens from the triangle icon on a planet reading card, showing the decan connected to that planetary placement with symbolic text and image-based esoteric interpretation.",
+    "group": "Community & Worship",
+    "subModule": "Nativity Birth Chart",
+    "purpose": "Lets users explore the decan behind a planetary placement and understand its tarot, symbolic, and mythic correspondences in a dedicated modal view.",
+    "bullets": [
+      "Opens as a modal after clicking the triangle icon on the planet reading card",
+      "Shows a decan-specific title such as 'Sun Decans in Gemini'",
+      "Explains the exact decan range and related calendar span",
+      "Includes interpretation sections for decan influence, tarot correspondence, mundane force, and mythic or spiritual symbolism",
+      "Provides an Image/Text toggle so users can switch between visual and written presentation modes",
+      "Displays related artwork or tarot-style imagery inside the modal",
+      "Includes a close button to return to the main planet interpretation card",
+      "Supports a richer symbolic reading layer beyond the standard natal interpretation",
+      "Helps users connect astrology with decans, tarot, and esoteric teaching systems",
+      "Useful for deeper spiritual study and guided symbolic exploration inside the birth chart feature"
+    ]
+  },
+  {
+    "name": "nativity_house_information",
+    "label": "House Information",
+    "description": "A house table showing each of the 12 houses with its zodiac sign and cusp degree.",
+    "group": "Community & Worship",
+    "subModule": "Nativity Birth Chart",
+    "purpose": "Helps users understand how the chart is divided into life areas and which sign rules each house cusp.",
+    "bullets": [
+      "Lists House 1 through House 12 in a structured table",
+      "Shows corresponding zodiac sign and exact degree for each house",
+      "Acts as the base reference for house-based interpretation sections",
+      "Helps users locate where each life topic begins in the chart",
+      "Makes the house system easier to read before moving into deeper meaning",
+      "Useful for understanding ascendant-based chart structure",
+      "Provides the technical backbone for house interpretation and house occupancy views"
+    ]
+  },
+  {
+    "name": "nativity_house_occupancy_map",
+    "label": "House Occupancy Map",
+    "description": "A visual house layout showing which planets and points fall into each house, alongside house signs and degrees.",
+    "group": "Community & Worship",
+    "subModule": "Nativity Birth Chart",
+    "purpose": "Makes it easier to see planetary distribution across the houses without reading multiple separate tables.",
+    "bullets": [
+      "Displays houses in sequence with sign symbols and cusp degrees",
+      "Shows planetary placements aligned under the houses they occupy",
+      "Useful for spotting concentration of energy across chart life areas",
+      "Helps users quickly notice empty houses and heavily activated houses",
+      "Adds an at-a-glance view of where chart emphasis is strongest",
+      "Supports easier comparison between house rulers and house occupants",
+      "Useful for chart walkthroughs where visual grouping matters"
+    ]
+  },
+  {
+    "name": "nativity_house_interpretations",
+    "label": "House Interpretations",
+    "description": "Written interpretation cards for each house, explaining what it means for a specific zodiac sign to rule that area of life.",
+    "group": "Community & Worship",
+    "subModule": "Nativity Birth Chart",
+    "purpose": "Turns the house cusp data into practical meaning about identity, money, communication, and other life themes.",
+    "bullets": [
+      "Includes readable explanations for houses like House 1, House 2, and House 3",
+      "Combines house meaning with zodiac sign influence",
+      "Provides Show More buttons for longer house-based guidance",
+      "Helps users understand how each house shapes real-life experiences",
+      "Connects chart structure to themes like self-image, money, learning, family, work, and relationships",
+      "Makes the reading easier for non-technical users to follow",
+      "Creates practical interpretation blocks that can be read one house at a time"
+    ]
+  },
+  {
+  "name": "nativity-dharma-karma",
+  "label": "Dharma & Karma Reading",
+  "description": "A dedicated section inside the Nativity Birth Chart reading that explains the user's higher purpose and core life lessons through long-form spiritual interpretation.",
+  "group": "Community & Worship",
+  "subModule": "Nativity Birth Chart",
+  "purpose": "Helps users understand their soul direction, spiritual calling, and repeating karmic lessons by translating chart placements into clear personal guidance.",
+  "bullets": [
+    "Shows two separate interpretation panels: one for Dharma and one for Karma",
+    "Dharma section explains the user's higher path, purpose, and meaningful direction in life",
+    "Karma section explains repeating lessons, growth struggles, and patterns the user is meant to work through",
+    "Combines multiple chart placements, houses, signs, and aspects into one readable spiritual summary",
+    "Uses long-form written guidance instead of only technical astrology data",
+    "Includes a Show More button so the user can expand the reading for deeper interpretation",
+    "Helps connect planetary placements with life mission, service, discipline, and personal evolution",
+    "Makes spiritual astrology easier to understand for users who are not advanced astrologers",
+    "Supports self-reflection by showing how purpose and challenge work together in the chart",
+    "Acts as part of the full AI-generated nativity reading experience alongside planets, houses, and aspects"
+  ]
+},
+  {
+    "name": "nativity_aspect_information",
+    "label": "Aspect Information",
+    "description": "A full aspect table showing relationships between planets and points, including orb, degree difference, aspect type, and proximity indicator.",
+    "group": "Community & Worship",
+    "subModule": "Nativity Birth Chart",
+    "purpose": "Helps users understand how chart placements interact with each other through supportive or challenging angular relationships.",
+    "bullets": [
+      "Lists aspect pairs such as Sun square Moon and Moon trine Jupiter",
+      "Shows orb values, degree comparisons, and aspect type labels",
+      "Includes color-based aspect proximity guidance for quick reading",
+      "Makes it easier to tell which aspects are stronger or weaker",
+      "Helps users identify major internal tensions and harmonious gifts in the chart",
+      "Supports technical review before reading aspect interpretations",
+      "Useful for understanding the energetic relationship between two placements"
+    ]
+  },
+  {
+    "name": "nativity_aspect_interpretations",
+    "label": "Aspect Interpretations",
+    "description": "Written meaning blocks for specific aspects, explaining emotional, psychological, and spiritual dynamics between two placements.",
+    "group": "Community & Worship",
+    "subModule": "Nativity Birth Chart",
+    "purpose": "Explains how planetary relationships shape the user's personality, inner tension, gifts, and growth patterns.",
+    "bullets": [
+      "Includes detailed interpretation sections such as Sun square Moon and Moon trine Jupiter",
+      "Explains challenging and harmonious patterns in easy language",
+      "Uses expandable reading cards for deeper insight",
+      "Helps users understand how two placements work together or clash",
+      "Translates aspect math into personal meaning and life themes",
+      "Useful for emotional self-understanding and relationship to inner conflict",
+      "Shows how chart complexity becomes a path for growth rather than confusion"
+    ]
+  },
+  {
+  "name": "nativity-angles-reading",
+  "label": "Ascendant, Midheaven & Vertex Reading",
+  "description": "A focused interpretation section inside the Nativity Birth Chart reading that explains key chart angles such as the Ascendant, Midheaven, and Vertex, along with their degrees and deeper meaning.",
+  "group": "Community & Worship",
+  "subModule": "Nativity Birth Chart",
+  "purpose": "Helps users understand the most important chart angles that shape identity, life direction, public path, and meaningful encounters.",
+  "bullets": [
+    "Shows the degree values for Ascendant, Midheaven, and Vertex in a summary row at the top",
+    "Presents a dedicated interpretation block for each angle, starting with a large heading such as 'Ascendant'",
+    "Explains the sign placement and exact degree in simple written language",
+    "Connects the Ascendant reading to personality, self-expression, first impressions, and personal presence",
+    "May reference important supporting aspects that influence the angle, such as trines, squares, or conjunctions",
+    "Helps users understand how their outer identity and life direction are shaped astrologically",
+    "Breaks advanced angle interpretation into readable long-form content instead of only raw chart data",
+    "Makes technical chart points easier to understand for non-expert users",
+    "Supports deeper self-reflection by linking chart angles with real-life behavior and patterns",
+    "Works as part of the larger AI-generated natal reading experience"
+  ]
+},
+  {
+    "name": "nativity_lilith_analysis",
+    "label": "Lilith Analysis",
+    "description": "A focused interpretation section for Lilith, showing sign, degree, house, speed, and a deep written reading about shadow, intensity, and inner emotional truth.",
+    "group": "Community & Worship",
+    "subModule": "Nativity Birth Chart",
+    "purpose": "Gives users a deeper psychological and spiritual reading around hidden instincts, taboo patterns, personal power, and emotional depth.",
+    "bullets": [
+      "Shows Lilith data in table format with sign, house, degree, and motion details",
+      "Provides a long-form interpretation of Lilith placement meaning",
+      "Useful for shadow work, inner healing, and advanced natal reading depth",
+      "Explores themes that may not appear in basic personality readings",
+      "Helps users reflect on hidden emotional patterns and deeper sensitivity",
+      "Adds depth for advanced users looking beyond standard planet interpretation",
+      "Supports transformational and inner-work focused astrology study"
+    ]
+  },
+
+
+
       {
         name: "pm-notifications",
         label: "Notification Centre",
@@ -9681,7 +9952,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
       "Build custom ritual sequences",
       "Track graduation progress",
     ],
-    keyPages: ["Decans Grid", "Training Center", "Ritual Builder", "Graduation"],
+    keyPages: ["Decans", "Foundation Training", "Graduation", "Ritual Builder"],
     groups: [
       {
         groupLabel: "Mastery",
@@ -9691,286 +9962,213 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
       },
     ],
     screens: [
-      { 
-        name: "decans", 
-        label: "Decans Grid", 
-        description: "Visual map of the 36 decans.", 
-        group: "Mastery",
-        purpose: "A comprehensive esoteric dashboard visualizing the Egyptian decan system and their corresponding spiritual hierarchies.",
-        bullets: [
-          "Interactive 36-decan mastery grid interface",
-          "Detailed decan mythology and correspondences",
-          "Temporal decan-hour tracking and ritual timing",
-          "Student-level decan mastery progress visualization"
-        ]
-      },
-      { 
-        name: "center", 
-        label: "Training Center", 
-        description: "Learning management.", 
-        group: "Curriculum",
-        purpose: "The central hub for students to manage their advancement through the platform's esoteric curriculum.",
-        bullets: [
-          "Curriculum-level progress tracking and analytics",
-          "Lesson repository with status and grading logs",
-          "Mentor feedback and review communication panel",
-          "Self-paced learning path and milestone roadmap"
-        ]
-      },
-      { 
-        name: "lesson", 
-        label: "Lesson View", 
-        description: "Structured lesson content.", 
-        group: "Curriculum",
-        purpose: "An immersive learning environment for absorbing specific spiritual doctrines and technical esoteric training.",
-        bullets: [
-          "Multimedia-rich lesson delivery (Text, Video, PDF)",
-          "Integrated student note-taking and journaling",
-          "Knowledge-check quizzes and examination modules",
-          "Discussion board integration for specific lessons"
-        ]
-      },
-      { 
-        name: "builder", 
-        label: "Ritual Builder", 
-        description: "Drag-and-drop ritual designer.", 
-        group: "Mastery",
-        purpose: "A sophisticated technical tool that allows students to construct their own astrological and spiritual ritual sequences.",
-        bullets: [
-          "Drag-and-drop ritual component architecture",
-          "Astrological timing engine for precise rituals",
-          "Ritual sequence validation and error checking",
-          "Personalized ritual template export and sharing"
-        ]
-      },
-      {
-        name: "ms-dashboard",
-        label: "Mystery School Dashboard",
-        description: "Your home screen after login as a Mystery School student — current decan status, foundation week progress, and upcoming decan windows.",
-        group: "Overview",
-        purpose: "Provides the student an at-a-glance summary of where they are in the curriculum and what is active right now.",
-        bullets: [
-          "Active decan card showing current window open/close dates",
-          "Foundation quarter progress with weeks completed out of 12",
-          "Quick-links to this week's foundation audio and ritual"
-        ]
-      },
-      {
-        name: "ms-subscription",
-        label: "Subscription & Billing",
-        description: "Manage your Mystery School subscription — view billing date, plan amount, and cancel or resume access.",
-        group: "Account",
-        purpose: "Full transparency on what you pay and when, with self-serve cancel and resume controls.",
-        bullets: [
-          "Monthly subscription amount and next billing date",
-          "One-time initiation fee receipt for your records",
-          "Cancel subscription with retained access until period end"
-        ]
-      },
-      {
-        name: "ms-settings",
-        label: "MS Account Settings",
-        description: "Update your display name, timezone, and notification preferences for Mystery School content.",
-        group: "Account",
-        purpose: "Personalise your experience so decan window reminders fire at the right local time.",
-        bullets: [
-          "Timezone picker so window open/close times display correctly",
-          "Email notification toggle for decan preview and grace period alerts",
-          "Display name shown on your graduation certificate"
-        ]
-      },
-      {
-        name: "ms-foundation-audio",
-        label: "Foundation Week Audio Player",
-        description: "Each of the 12 foundation weeks includes an audio teaching by Beto — listen directly in the portal.",
-        group: "Training",
-        purpose: "Guided audio instruction makes the curriculum accessible without requiring a video setup.",
-        bullets: [
-          "Embedded audio player with playback speed control",
-          "Beto photo card displayed alongside the audio for context",
-          "Progress saved — resume from where you left off on any device"
-        ]
-      },
-      {
-        name: "ms-decan-grid",
-        label: "36 Decan Mastery Grid",
-        description: "The full 36-decan grid showing which decans you have completed, which are active now, and which are upcoming.",
-        group: "Training",
-        purpose: "A birds-eye view of the entire year's curriculum mapped to zodiac sign and ruling planet.",
-        bullets: [
-          "36 cards arranged by zodiac order — green for complete, amber for active, grey for upcoming",
-          "Click any active or completed decan to view its detail page",
-          "Your completion count shown prominently above the grid"
-        ]
-      },
-      {
-        name: "ms-journal",
-        label: "Decan Journal",
-        description: "After completing the ritual and scrying session, record your personal observations and insights in the structured journal.",
-        group: "Training",
-        purpose: "Journalling is required as the final step of each decan completion and becomes part of your permanent record.",
-        bullets: [
-          "Prompted fields: themes observed, entities encountered, insights received",
-          "Private entry — only visible to you and assigned admin",
-          "Once submitted, marks the decan as fully complete"
-        ]
-      },
-      {
-        name: "decan-ritual-page",
-        label: "Decan Ritual Page",
-        description: "Guided ritual page for the current active decan. Presents the full ritual sequence: opening invocation, planetary working, contemplative practice, and closing. Students mark each step complete as they go.",
-        group: "Decans",
-        purpose: "Structures the ritual component of each decan study so students engage with it as a living practice rather than a reading exercise.",
-        bullets: [
-          "Step-by-step ritual sequence with instructional text for each phase",
-          "Materials and preparation checklist displayed before the ritual begins",
-          "Step completion checkboxes — all steps must be checked to enable journal submission"
-        ]
-      },
-      {
-        name: "decan-scrying-page",
-        label: "Decan Scrying Page",
-        description: "Guided scrying exercise tied to the active decan's planetary intelligence. Provides a timed meditation prompt, a visual focal point, and a free-text field for recording visions and impressions received during the practice.",
-        group: "Decans",
-        purpose: "Integrates a contemplative inner-work component into the decan curriculum to balance textual study with direct experiential practice.",
-        bullets: [
-          "Timed meditation countdown (configurable 5, 10, or 20 minutes) with ambient sound option",
-          "Decan sigil or symbol displayed as the visual focal point during the session",
-          "Impression recording field — auto-saves every 30 seconds and feeds into the journal"
-        ]
-      },
-      {
-        name: "decan-journal-write",
-        label: "Decan Journal Write",
-        description: "Journal submission page for the current decan. Students record their ritual observations, scrying impressions, and personal reflections. On submit the decan is marked complete and submitted for admin review if graduation-eligible.",
-        group: "Decans",
-        purpose: "Creates the formal record of the student's decan work, which is reviewed during the graduation process to assess depth of engagement.",
-        bullets: [
-          "Prompted journal structure: Ritual observations, Scrying impressions, Personal insights",
-          "Rich-text editor with minimum word guidance (not enforced, but recommended 200 words)",
-          "Submit button with confirmation modal explaining that entries cannot be edited after submission"
-        ]
-      },
-      {
-        name: "foundation-task-complete",
-        label: "Foundation Task Complete",
-        description: "Completion screen shown after a student finishes a Foundation Week task. Displays a congratulatory message, the task they completed, their updated Foundation progress bar, and the next task to unlock.",
-        group: "Foundation",
-        purpose: "Provides positive reinforcement at each Foundation milestone to build momentum and reduce early-stage drop-off.",
-        bullets: [
-          "Task title and completion checkmark with a congratulatory headline",
-          "Foundation progress bar updated to reflect the newly completed task",
-          "Next task preview card with a CTA to begin it immediately"
-        ]
-      },
-      {
-        name: "ms-subscription-manage",
-        label: "Mystery School Subscription Management",
-        description: "Self-service subscription management page for Mystery School students. Shows the current plan, billing date, payment method on file, and options to pause, cancel, or upgrade to an annual plan.",
-        group: "Settings",
-        purpose: "Gives students control over their subscription without needing to contact support, reducing churn caused by friction in the cancellation process.",
-        bullets: [
-          "Current plan, price, and next billing date displayed prominently",
-          "Payment method card with update button (opens Stripe hosted form)",
-          "Pause and Cancel options with clear impact explanation for each action"
-        ]
-      },
-      {
-        name: "decans-by-sign",
-        label: "Decans by Sign",
-        description: "Reference page showing all 36 decans organised by zodiac sign. Each sign has three decan cards with the ruling planet, associated symbolism, and the student's completion status. Acts as a curriculum map.",
-        group: "Decans",
-        purpose: "Helps students navigate the full decan curriculum at a glance and understand how their progress maps across the zodiac.",
-        bullets: [
-          "Sign sections with three decan cards each, colour-coded by completion status",
-          "Decan card: number, name, ruling planet, brief description, and locked/active/complete badge",
-          "Progress summary: X of 36 decans complete, shown at the top of the page"
-        ]
-      },
-      {
-        name: "ritual-builder-step-1",
-        label: "Ritual Builder Step 1 — Intent",
-        description: "First step of the student-facing ritual builder. The student selects a planetary intelligence to work with, states their ritual intention, and chooses a working type (petition, gratitude, banishing, or invocation).",
-        group: "Builder",
-        purpose: "Guides students through building a personalised ritual by starting with clear intent, ensuring the working has a defined purpose before the structure is assembled.",
-        bullets: [
-          "Planetary selector with glyph and brief description of each planet's domain",
-          "Intent text field with guidance prompts to help students articulate their working clearly",
-          "Working type selector with a plain-English explanation of each type"
-        ]
-      },
-      {
-        name: "ritual-builder-step-2",
-        label: "Ritual Builder Step 2 — Structure",
-        description: "Second step of the ritual builder where the student assembles the ritual sequence from a library of components: invocations, correspondences, actions, and closings. The assembled ritual can be saved and used later.",
-        group: "Builder",
-        purpose: "Teaches students to construct rituals structurally rather than following a script, deepening their practical understanding of planetary magic.",
-        bullets: [
-          "Component library sorted by ritual phase: Opening, Working, Closing",
-          "Drag-and-drop builder canvas where students sequence their chosen components",
-          "Save as personal ritual button — stores the built ritual in the student's private library"
-        ]
-      },
-      {
-        name: "ms-center",
-        label: "Mystery School Center",
-        description: "The main navigation hub for Mystery School students. Displays the current decan, foundation progress, upcoming Sunday Service, and quick links to the decan study, ritual, builder, and journal pages.",
-        group: "Dashboard",
-        purpose: "Orients students each time they log in by surfacing where they are in the curriculum and what action to take next.",
-        bullets: [
-          "Current decan card with active status and a Go to Decan CTA",
-          "Foundation progress bar and next unlocking milestone",
-          "Upcoming Sunday Service countdown with RSVP button"
-        ]
-      },
-      {
-        name: "ms-community",
-        label: "Mystery School Community",
-        description: "Community discussion space exclusive to Mystery School students. Organised by topic channels including general, decan-by-decan discussions, ritual questions, and graduation support. Moderated by admin and senior students.",
-        group: "Community",
-        purpose: "Creates a peer support environment where students at similar stages can share observations and support each other through the curriculum.",
-        bullets: [
-          "Channel list with unread message counts",
-          "Threaded discussion view within each channel",
-          "Mention and direct message capabilities for student-to-student interaction"
-        ]
-      },
-      {
-        name: "ms-help",
-        label: "Mystery School Help",
-        description: "Help centre specific to Mystery School students. Contains FAQs about the curriculum, decan progression rules, graduation requirements, and subscription billing. Includes a contact form for escalation.",
-        group: "Settings",
-        purpose: "Reduces admin support burden by providing structured answers to the most common Mystery School student questions.",
-        bullets: [
-          "Curriculum FAQ covering decan unlocking, journal requirements, and graduation eligibility",
-          "Subscription FAQ covering billing, pausing, and cancellation impact on progress",
-          "Contact form pre-populated with the student's account and current decan for faster support triage"
-        ]
-      },
-      {
-        name: "ms-decan-progress-chart",
-        label: "Decan Progress Chart",
-        description: "Visual chart showing the student's completion progress across all 36 decans. Displays a wheel or grid view with completed, active, and locked decans marked. Highlights the graduation milestone decans.",
-        group: "Dashboard",
-        purpose: "Gives students a motivating visual representation of their long-term progress to sustain engagement across the multi-year curriculum.",
-        bullets: [
-          "36-segment wheel or grid with colour coding: complete (filled), active (highlighted), locked (dim)",
-          "Graduation milestone markers at decan 12, 24, and 36",
-          "Estimated completion date based on current average completion pace"
-        ]
-      },
-      {
-        name: "ms-profile",
-        label: "Mystery School Profile",
-        description: "Student profile page within the Mystery School portal showing their display name, avatar, current decan, completed decan count, and any badges earned. Editable by the student for name and avatar.",
-        group: "Settings",
-        purpose: "Gives students an identity within the Mystery School community that reflects their progress and encourages continued engagement.",
-        bullets: [
-          "Avatar upload and display name editor",
-          "Progress summary: decans complete, current active decan, graduation status",
-          "Earned badges displayed as a trophy shelf — hover shows the criteria for each badge"
-        ]
-      },
+    {
+  "name": "ms-dashboard",
+  "label": "Mystery School Decan Dashboard",
+  "description": "The main Mystery School home screen where students track their decan journey, subscription details, active decan, next decan, and full 36-decan progression.",
+  "group": "Overview",
+  "purpose": "This screen is used as the student's main entry point into the Mystery School experience. It helps the student immediately understand where they are in the program, how many decans are completed, which decan is currently active, what is coming next, and how their full 36-decan path is structured across the zodiac wheel.",
+  "bullets": [
+    "Journey header shows the main Mystery School identity and the student's current decan progress",
+    "Progress summary displays completed decans count and overall percentage completed",
+    "Subscription section shows important membership details such as current status, enrolled date, billing amount, next renewal date, and assigned cohort",
+    "Manage Subscription button gives quick access to billing or membership control actions",
+    "Current Decan card highlights the student's active decan with zodiac sign, decan title, tarot/planet reference, active date range, and current work status",
+    "Continue Work action helps the student jump directly back into the active decan experience",
+    "Coming Up section previews the next decan so the student knows what unlocks next",
+    "All 36 Decans grid shows the complete full-path curriculum across all zodiac signs",
+    "Grid layout groups decans sign by sign, making the full journey easier to understand visually",
+    "Each decan cell uses status indicators so the student can quickly see whether a decan is active, in grace, preview, upcoming, completed, missed, or locked",
+    "Legend at the bottom explains each progress color and icon so the status system is easy to understand",
+    "Left sidebar navigation provides access to major Mystery School areas such as Decans, Training, and Graduation",
+    "This screen is useful because it gives the student one simple dashboard to understand progress, current focus, upcoming study, and long-term curriculum structure without opening multiple pages"
+  ]
+},
+     {
+  "name": "ms-subscription",
+  "label": "Subscription & Billing",
+  "description": "The subscription section inside the Mystery School dashboard that shows the student's billing status, enrollment details, renewal date, cohort, and account access summary.",
+  "group": "Account",
+  "purpose": "This section is used to keep important membership and billing information visible while the student works through the Mystery School decan curriculum. It helps the student quickly confirm whether the subscription is active, when they enrolled, what they are paying, when the next renewal happens, and which cohort they belong to. It also gives direct access to subscription management without leaving the dashboard.",
+  "bullets": [
+    "Subscription header clearly separates billing and membership details from learning progress details",
+    "Status field shows the current membership state, such as Active, so the student knows whether access is valid",
+    "Enrolled field shows the original join date of the student's Mystery School subscription",
+    "Billing field shows the recurring monthly plan amount and can also display an enrollment payment or one-time starting fee",
+    "Next Renewal field tells the student when the next billing or renewal date will happen",
+    "Cohort field shows the assigned learning batch or intake group, such as Spring 2027",
+    "Card layout makes each billing detail easy to scan quickly without opening account settings",
+    "Manage Subscription button gives the student a direct action to open billing management or self-service subscription controls",
+    "This section is useful because students often need quick access to membership information while studying, especially for checking active access, payment schedule, and cohort placement"
+  ]
+},
+      
+  {
+    "name": "ms-decan-grid",
+    "label": "36 Decan Grid",
+    "description": "The full Mystery School decan progress map, showing all 36 decans grouped under the 12 zodiac signs with visible status markers and navigation states.",
+    "group": "Decans",
+    "purpose": "This section helps students understand where they are in the full decan journey at a glance. It shows which decan is active now, which one is coming next, and which future decans are still locked. It works like a roadmap of the entire Mystery School cycle so the student can clearly see progress sign by sign and decan by decan.",
+    "bullets": [
+      "All 36 decans are arranged under the 12 zodiac signs, with 3 decans shown for each sign",
+      "The currently active decan is highlighted clearly so the student knows where to focus now",
+      "Preview and upcoming states help the student see what is next before it becomes active",
+      "Locked decans visually show content that cannot be opened yet",
+      "The grid gives a full-program view instead of forcing the student to open each decan one by one",
+      "Color and icon states make it easier to understand progress without reading extra text",
+      "The layout supports long-term planning because the student can see the full yearly structure",
+      "This section is useful because it turns the full Mystery School curriculum into a simple visual journey map"
+    ]
+  },
+  {
+    "name": "decan-detail_v1",
+    "label": "Decan Detail",
+    "description": "The main page for one specific decan, where the student sees the active decan identity, timing, work items, and learning actions connected to that decan.",
+    "group": "Decans",
+    "purpose": "This page is used to bring the student's current decan work into one focused place. It explains what decan is active, how long it remains active, and what required tasks belong to it. It helps the student move from general dashboard progress into actual learning and completion work.",
+    "bullets": [
+      "Shows the decan name, sign, ruling planet, and tarot correspondence for the selected decan",
+      "Displays the active date range so the student knows the current study window",
+      "Can show remaining time or countdown for the active decan period",
+      "Provides access to the required work items linked to the decan, such as ritual, scrying, and journal",
+      "Acts as the main entry point for completing that decan's practice tasks",
+      "Helps the student stay focused on one decan instead of the full curriculum at once",
+      "Can reflect status information such as active, preview, completed, missed, or locked depending on access state",
+      "This page is useful because it converts the decan from a simple grid item into a working study page with actionable content"
+    ]
+  },
+  {
+    "name": "decan-ritual-page_v1",
+    "label": "Decan Ritual Runner",
+    "description": "The guided ritual experience for a single decan, where the student moves through ritual work in a structured step-by-step format.",
+    "group": "Decans",
+    "purpose": "This page is used to help the student complete the ritual part of the decan in a calm, focused, guided way. Instead of mixing ritual instructions with all other decan content, it creates a dedicated ritual flow so the student can concentrate on one step at a time and mark that work as completed.",
+    "bullets": [
+      "Provides a separate ritual-focused experience connected to the selected decan",
+      "Can break the ritual into ordered steps so the student knows what to do next",
+      "Supports guided progression instead of showing the whole ritual as one large block",
+      "Helps reduce distraction by isolating ritual practice from other journal tasks",
+      "Ritual completion can update the student's decan progress status",
+      "The flow makes the ritual easier to follow, especially for first-time students",
+      "Can act as a structured learning tool rather than just a text instruction page",
+      "This page is useful because ritual work is often better completed in sequence, not in a general dashboard layout"
+    ]
+  },
+  // {
+  //   "name": "decan-scrying-page",
+  //   "label": "Scrying Journal",
+  //   "description": "The journal section where the student records symbolic impressions, visions, or reflective observations connected to the active decan and its tarot relationship.",
+  //   "group": "Decans",
+  //   "purpose": "This page is used to capture the student's inner symbolic experience during the decan. It supports reflective and intuitive work by giving the student a place to write down impressions, card-based observations, and personal meaning connected to the practice. It serves as one of the required decan completion steps.",
+  //   "bullets": [
+  //     "Gives the student a dedicated space to write scrying or symbolic reflection notes",
+  //     "Connects the student's experience with the assigned tarot card or decan symbolism",
+  //     "Supports reflective practice rather than only ritual action",
+  //     "Can be used to submit a required journal entry for decan completion",
+  //     "Encourages students to record subtle experiences that may otherwise be forgotten",
+  //     "Helps build continuity between tarot symbolism and personal insight",
+  //     "Can validate submission requirements before allowing completion",
+  //     "This page is useful because it turns private symbolic experience into a trackable part of the student's decan work"
+  //   ]
+  // },
+  // {
+  //   "name": "decan-journal-write",
+  //   "label": "Mundane Impact Journal",
+  //   "description": "The written reflection area where the student records how the current decan is showing up in real life through events, relationships, work, or personal perception.",
+  //   "group": "Decans",
+  //   "purpose": "This page is used to connect the spiritual and symbolic decan work with everyday lived experience. It encourages the student to notice how the decan influences outer life, not only inner ritual or tarot work. This helps complete the decan as an applied practice instead of only a theoretical lesson.",
+  //   "bullets": [
+  //     "Provides a structured writing space for real-world decan reflections",
+  //     "Helps students record how the decan appears in daily life, work, relationships, or inner shifts",
+  //     "Balances symbolic practice with practical life observation",
+  //     "Acts as one of the required completion items for the decan journey",
+  //     "Encourages students to connect astrology with lived experience",
+  //     "Can include multiple reflection prompts or required sections before submission",
+  //     "Supports deeper integration of the decan beyond the ritual itself",
+  //     "This page is useful because it helps the student understand not just what the decan means, but how it is actually being lived"
+  //   ]
+  // },
+
+   
+  {
+    "name": "ms-foundation-training",
+    "label": "Foundation Training",
+    "description": "The /mystery-school/training page showing the Foundation Q1 learning journey with a 12-week sequence, current progress, weekly unlock flow, and per-week task completion summary.",
+    "group": "Foundation",
+    "purpose": "Helps students move through the Mystery School foundation program in the correct order by showing which week is active now, which weeks are locked, and how much of the 12-week training has been completed.",
+    "bullets": [
+      "Header block shows the Foundation Training title, quarter name, current week indicator, total completed weeks, and the overall training progress bar",
+      "Week cards are displayed from Week 1 through Week 12 so students can clearly see the full structure of the foundation journey",
+      "The currently available week appears expanded and shows its title, subtitle, and task progress summary such as how many tasks are complete",
+      "Future weeks appear locked, helping students understand that the program opens in sequence rather than all at once",
+      "Each week card represents a specific learning theme, making the curriculum easier to follow step by step",
+      "The progress bar at the top gives a quick visual summary of overall completion across all 12 weeks",
+      "The design keeps the student focused on the current week while still showing what is coming later in the program",
+      "This screen is useful because it combines roadmap, progress tracking, and weekly access control in one place"
+    ]
+  },
+  {
+    "name": "ms-foundation-audio",
+    "label": "Foundation Week Audio",
+    "description": "Audio teaching content can be presented inside an expanded foundation week so students can listen to the lesson as part of that week's learning flow.",
+    "group": "Foundation",
+    "purpose": "Allows weekly teaching material to be delivered in an easy-to-follow format directly inside the active foundation week without forcing students to leave the training page.",
+    "bullets": [
+      "Audio content belongs inside an expanded unlocked week rather than on a separate screen",
+      "The audio teaching is tied to a specific foundation week so students can listen in the right order",
+      "Audio can support the written week topic and task flow as part of one guided learning experience",
+      "When present, the weekly lesson area helps students study the teaching before completing their week tasks",
+      "This image mainly shows the expanded week area where audio would appear, even though the audio player itself is not visible in this screenshot",
+      "This section is useful because it keeps teaching content connected to the weekly training structure"
+    ]
+  },
+
+      // {
+      //   name: "foundation-task-complete",
+      //   label: "Foundation Task Completion",
+      //   description: "Inline task completion inside expanded foundation week cards. The selected task is marked done and the week/foundation progress updates immediately.",
+      //   group: "Foundation",
+      //   purpose: "Keeps students moving through the foundation program without leaving the training page.",
+      //   bullets: [
+      //     "Checklist button marks individual tasks complete",
+      //     "Completed tasks show check icon, completion date, and struck-through title",
+      //     "When all tasks in a week are done, the next week unlocks"
+      //   ]
+      // },
+     
+     
+  {
+    "name": "ms-graduation",
+    "label": "Graduation",
+    "description": "The Mystery School graduation page that shows overall completion, foundation progress, decan progress, remaining requirements, and the next actions a student can take before graduating.",
+    "group": "Graduation",
+    "purpose": "Helps the student clearly understand what is still required before earning graduation status by showing progress across Foundation Q1 and the 36 Decans in one place.",
+    "bullets": [
+      "Header section explains the graduation goal: complete all 12 foundation weeks and all 36 decans to receive the Priest or Priestess title",
+      "Overall completion progress bar gives a quick visual summary of total graduation progress",
+      "Your Progress card separates the two major requirements: Foundation Q1 progress and 36 Decans progress",
+      "Requirement counters show exact numbers completed out of the total, such as 0/12 weeks and 0/36 decans",
+      "Remaining Requirements section makes unfinished items easy to understand at a glance",
+      "Foundation Training button gives a direct path back to the foundation learning flow",
+      "Decan Training button gives a direct path back to the decan learning flow",
+      "This page is useful because it acts like a graduation checklist and prevents confusion about what still needs to be finished"
+    ]
+  },
+  {
+    "name": "ritual-builder",
+    "label": "Post-Graduation Ritual Builder",
+    "description": "A locked post-graduation feature preview shown on the graduation page, explaining that the Ritual Builder becomes available only after the student completes all graduation requirements.",
+    "group": "Graduation",
+    "purpose": "Shows students that an advanced ritual-building tool will unlock after graduation and gives them a clear incentive to complete the full Mystery School curriculum.",
+    "bullets": [
+      "The feature appears as a locked teaser card on the graduation page",
+      "The card clearly states that access unlocks only after graduation",
+      "The description explains that graduates will be able to design personal rituals using a larger ritual component library",
+      "The preview mentions examples such as planetary invocations, decan workings, seasonal rites, and custom steps",
+      "This section is useful because it shows the reward that becomes available after completing the program"
+    ]
+  },
+   
     ],
   },
   {
@@ -10262,32 +10460,557 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
       },
     ],
     screens: [
-      {
-        name: "trainee-hub",
-        label: "Trainee Dashboard",
-        description: "Personal command center for training progress, current lesson focus, recent completions, quiz performance, mentor context, and graduation readiness.",
-        group: "Dashboard",
-        purpose: "This is the trainee's day-to-day starting point. It combines curriculum progress, recent activity, mentor assignment, practice-session prompts, and next-step calls to action so the learner knows exactly what to do next.",
-        bullets: [
-          "Overall progress cards summarize accessible lessons, completed lessons, study time, quiz pass rate, and training status",
-          "Next training target links the learner back into the correct program and category without manual searching",
-          "Recent activity combines lesson completions and quiz attempts into one timeline",
-          "Mentor and Tabbie appointment cards surface supervised-practice context when applicable"
-        ]
-      },
-      {
-        name: "training-center",
-        label: "Training Center",
-        description: "Program catalog showing every accessible training program with lesson counts, category counts, progress rings, and continue/start actions.",
-        group: "Training",
-        purpose: "This page is the learner's curriculum index. It shows which programs are available, how far each one has progressed, what category is currently active, and whether the learner should start, continue, or review a program.",
-        bullets: [
-          "Top summary splits all accessible lessons into Not Started, Ongoing, and Completed",
-          "Program cards show circular progress, categories, lesson counts, and completion badges",
-          "Current in-progress category appears as an amber status strip on active programs",
-          "CTA changes between Start Program, Continue, and Review Program based on learner state"
-        ]
-      },
+{
+  "name": "trainee-hub_v1",
+  "label": "Trainee Dashboard",
+  "description": "Main learner home screen shown after a trainee enters the trainee portal. It gives a clear overview of banners, appointments, training progress, mentor status, shortcuts, and recent learning activity.",
+  "group": "Dashboard",
+  "purpose": "This dashboard is the trainee's main entry screen. It helps the learner quickly understand where they are in training, what options are available right now, and which action they may want to take next. It is designed so the trainee can see learning progress, optional offers, appointments, and recent activity without opening multiple pages.",
+  "bullets": [
+    "Trainee entry dashboard: this is the first main screen a trainee sees after entering the trainee portal.",
+    "Left sidebar navigation: the trainee can move quickly to Dashboard, Training, Practice Sessions, Progress, Quiz History, Library Resources, Certificate, and My Profile.",
+    "Welcome area: the top section shows the dashboard title and trainee welcome message so the learner knows they are inside their personal training space.",
+    "Status and admin/testing badges: the top-right area may show badges such as bypass, reset, and graduation state depending on the current account or environment setup.",
+    "Dual promotional banners: the trainee sees two top banners on this dashboard.",
+    "Diviner banner: the first banner promotes the option to launch a divination practice and become a diviner.",
+    "Perennial Mandalism banner: the second banner promotes joining the Perennial Mandalism community for spiritual content, live events, and deeper practice.",
+    "User choice flow: the trainee can choose either banner based on personal interest, or ignore both and continue normal training.",
+    "Optional pathway meaning: these banners are optional opportunities and are separate from the trainee's required lesson progression.",
+    "My Appointments block: this section shows upcoming and past appointments, including appointment name, status, date, time, duration, and a Details action.",
+    "Training Progress block: this section gives a summary of the trainee's full learning progress in one place.",
+    "Progress details: it shows overall completion percentage, total completed lessons, number of started programs, finished programs, quiz score average, and total study time.",
+    "Mentor block: this area tells the trainee whether a mentor has already been assigned or if assignment is still pending.",
+    "Mentor guidance text: when no mentor is assigned, the dashboard explains that an administrator may connect the trainee with a mentor later.",
+    "Quick action cards: the middle dashboard cards give one-click shortcuts to the most important trainee pages.",
+    "Practice Sessions card: opens supervised practice reading or session-related activities.",
+    "My Progress card: opens a deeper breakdown of skills, completed modules, and learning feedback.",
+    "Resources card: opens study materials, guides, charts, and reference content needed during learning.",
+    "My Profile card: lets the trainee manage personal profile details and training-related settings or specialties.",
+    "Recent Activity block: shows the trainee's latest completed lessons or other recent study actions in timeline format.",
+    "Daily use purpose: this dashboard is built to help the trainee understand the current situation quickly and decide what to do next.",
+    "Walkthrough note: when explaining this screen, it should be clearly mentioned that this dashboard belongs to the trainee role and that the two banners at the top are selectable optional paths for the trainee."
+  ]
+},
+
+
+{
+  "name": "trainee-dashboard-trainee-plus-diviner",
+  "label": "Trainee Dashboard (Trainee + Diviner)",
+  "description": "This dashboard is shown to a new user who has both trainee access and diviner access. In this scenario, the trainee enters the trainee portal and sees a simplified dashboard with only the Perennial Mandalism notification banner at the top.",
+  "group": "Dashboard",
+  "purpose": "This dashboard helps a dual-role user begin training while also being aware of the Perennial Mandalism community offer. It keeps the learning experience focused by showing the core trainee blocks and only one top notification banner instead of multiple promotional banners.",
+  "bullets": [
+    "This screen is the trainee dashboard for a user who has both trainee and diviner access.",
+    "When this type of new trainee logs in, the system shows only the Perennial Mandalism banner at the top of the dashboard.",
+    "The user does not see the separate 'Become a Diviner' banner in this scenario because the account already belongs to a trainee plus diviner flow.",
+    "The purple Perennial Mandalism banner is used as the only top notification banner and highlights access to spiritual content, live community events, and deeper practice.",
+    "The Training Progress block gives the learner a quick overview of current completion status, including completed lessons, started programs, quiz average, and total study time.",
+    "The Continue Learning block helps the trainee return directly to the lesson or program they were working on most recently.",
+    "The Continue button takes the user back into their current learning flow, while the View All button opens the broader training area.",
+    "The Mentor block informs the trainee whether a mentor has been assigned yet and explains that an administrator may connect them with a mentor later.",
+    "The Practice Sessions card is a shortcut for scheduling and reviewing supervised practice readings or session-based activities.",
+    "The My Progress card gives the trainee direct access to a more detailed progress view, including completed modules and feedback.",
+    "The Resources card opens study materials, guides, and supporting learning references available to the trainee.",
+    "The My Profile card lets the trainee manage their trainee profile information and specialties.",
+    "The Recent Activity block shows the latest learning actions, such as completed lessons and quiz results, so the trainee can quickly review recent work.",
+    "This scenario should be explained clearly in the walkthrough so users understand that a trainee with diviner access will see a cleaner dashboard layout with only the Perennial Mandalism notification banner shown at the top."
+  ]
+},
+
+
+  {
+    "name": "trainee-dashboard-divination-banner",
+    "label": "Launch Your Divination Practice Banner",
+    "description": "Promotional dashboard banner that introduces the trainee to the professional divination upgrade path and invites them to start the setup flow.",
+    "group": "Dashboard",
+    "purpose": "This block is used to promote the trainee’s next professional step. It explains the value of upgrading into a diviner-facing offering and gives the learner a direct action button to open the plan-selection modal.",
+    "bullets": [
+      "1. This is the first promotional block on the trainee dashboard and is visually highlighted with a gold gradient to attract attention.",
+      "2. The section tag 'Professional Practice' tells the user that this block is related to career or practice-building opportunities beyond core training.",
+      "3. The main heading 'Launch Your Divination Practice' clearly explains the goal of the block.",
+      "4. The supporting text explains the value proposition: the trainee can get a branded page, booking system, HD video sessions, and payment processing in one platform.",
+      "5. The primary call-to-action button 'Become a Diviner' starts the upgrade journey and opens the plan-selection modal.",
+      "6. The close icon on the right allows the user to dismiss or hide this banner if they do not want to engage with it immediately.",
+      "7. This block functions as a conversion entry point from the dashboard into a paid professional-practice setup flow."
+    ]
+  },
+  {
+    "name": "trainee-diviner-plan-modal-astrologer",
+    "label": "Become a Diviner Modal - Astrologer Plan Selected",
+    "description": "Plan-selection modal that appears after clicking the 'Become a Diviner' button, showing available divination plans with the Astrologer option currently selected.",
+    "group": "Dashboard",
+    "purpose": "This modal helps the trainee choose a professional divination course plan before payment. It allows the user to compare plan options, review the selected package, understand what is included, and continue to Stripe checkout.",
+    "bullets": [
+      "1. The modal title 'Become a Diviner' confirms that the user has entered the professional-practice purchase flow.",
+      "2. The intro text explains that the trainee must choose a Professional Divination Course plan and that payment unlocks the diviner setup and onboarding path.",
+      "3. The 'Choose Your Option' section presents multiple selectable plans so the user can compare available professional tracks.",
+      "4. In this screen, the 'Astrologer' plan is selected, indicated by the highlighted card and selected state marker.",
+      "5. The available plans shown are The Tarot Reader, The Oracle, and The Astrologer, each with a short audience description and pricing.",
+      "6. The 'What You're Unlocking' section updates dynamically based on the selected plan and now shows the Astrologer package details.",
+      "7. The Astrologer package preview includes the selected plan name, pricing, course type, and the key included capabilities such as natal and return readings, relationship synastry, and transit or horary work.",
+      "8. The primary action button 'Continue to Payment' moves the trainee into the payment step, which opens through Stripe Checkout.",
+      "9. The close icon in the modal header allows the user to exit the flow without purchasing.",
+      "10. This screen is meant to guide the user from interest to informed plan selection before committing to payment."
+    ]
+  },
+  {
+    "name": "trainee-diviner-plan-modal-tarot-reader",
+    "label": "Become a Diviner Modal - Tarot Reader Plan Selected",
+    "description": "Plan-selection modal that appears after clicking the 'Become a Diviner' button, showing available divination plans with the Tarot Reader option currently selected.",
+    "group": "Dashboard",
+    "purpose": "This version of the modal demonstrates the same upgrade flow, but with a different plan chosen. It helps the trainee review Tarot Reader pricing, package scope, and included learning outcomes before continuing to payment.",
+    "bullets": [
+      "1. The modal remains in the same 'Become a Diviner' purchase flow, but the selected plan has changed.",
+      "2. The 'Choose Your Option' section again displays the available tracks: The Tarot Reader, The Oracle, and The Astrologer.",
+      "3. In this screen, 'The Tarot Reader' is selected, shown by the highlighted plan card and active selection indicator.",
+      "4. Each plan card includes the plan name, a brief description of the intended practitioner type, and the pricing structure.",
+      "5. The 'What You're Unlocking' section updates based on the chosen plan and now displays the Tarot Reader package details.",
+      "6. The Tarot Reader package section shows the selected plan name, one-time and recurring price, course type, and included reading formats or spread types.",
+      "7. The feature list under the package explains what this plan enables, such as card spreads, relationship spreads, and freelance tarot session capabilities.",
+      "8. The 'Continue to Payment' button remains the final call to action and sends the user to Stripe Checkout to complete the purchase.",
+      "9. This modal step helps the trainee validate that they picked the correct specialization before moving into payment.",
+      "10. The close icon provides an exit path if the trainee wants to cancel or revisit the decision later."
+    ]
+  },
+
+{
+  "name": "trainee-diviner-payment",
+  "label": "Plan Payment Checkout",
+  "description": "After choosing a diviner plan, the trainee is taken to the payment checkout screen to complete the subscription and setup fee payment.",
+  "group": "Dashboard",
+  "purpose": "This screen is used to finish the selected diviner plan purchase. It clearly shows the total amount, monthly recurring fee, selected currency, payment form, and final subscribe action before the user moves to the next step.",
+  "bullets": [
+    "Shows the selected diviner plan payment checkout after plan selection.",
+    "Displays the full payable amount at the top so the user can confirm the total before paying.",
+    "Shows the recurring monthly subscription amount separately under the main total.",
+    "Lets the user view or switch available currency options such as INR and USD.",
+    "Lists the selected course or plan details with itemized pricing.",
+    "Includes contact information so the user can confirm which email is linked to the purchase.",
+    "Provides payment method fields for card number, expiry date, CVV, cardholder name, and country or region.",
+    "May offer faster checkout options such as Link for returning users.",
+    "Includes optional saved-information settings for faster future checkout.",
+    "The Subscribe button completes the payment process.",
+    "After successful payment, the user is moved to the next screen in the diviner onboarding or setup flow."
+  ]
+},
+
+
+  {
+    "name": "trainee-diviner-pending-contract",
+    "label": "Pending Diviner Contract",
+    "description": "After completing payment, the user is taken to the pending contract screen where they must review the Diviner Service Agreement before entering the portal.",
+    "group": "Dashboard",
+    "purpose": "This screen ensures the user reads the required service agreement before continuing to the role-specific portal selection step.",
+    "bullets": [
+      "Shows the Pending Contracts page after payment completion.",
+      "Displays a message explaining that required agreements must be completed before entering the portal.",
+      "Shows the Diviner Service Agreement inside a scrollable contract panel.",
+      "Includes agreement details such as effective date and version number.",
+      "Explains the independent contractor relationship between the diviner and platform.",
+      "Describes the services the diviner may provide through the platform.",
+      "Shows commission and payout terms inside the agreement.",
+      "The Accept and Continue button remains unavailable until the user scrolls through the full contract.",
+      "Guides the user to read the full contract before accepting.",
+      "This is the first agreement step before portal access is granted."
+    ]
+  },
+  {
+    "name": "trainee-diviner-contract-signature",
+    "label": "Diviner Agreement Signature",
+    "description": "After scrolling to the bottom of the Diviner Service Agreement, the user can enter their full legal name to provide an electronic signature.",
+    "group": "Dashboard",
+    "purpose": "This screen collects the user's electronic signature to confirm agreement acceptance before continuing to portal selection.",
+    "bullets": [
+      "Shows the bottom section of the Diviner Service Agreement.",
+      "Displays final agreement sections such as confidentiality, account termination, dispute resolution, and contact details.",
+      "Includes a full legal name input field for signing the agreement.",
+      "Explains that typing the name and clicking accept provides an electronic signature.",
+      "Shows the Accept and Continue button below the signature area.",
+      "The user must complete the required signature field before continuing.",
+      "Confirms that the user agrees to the terms listed above.",
+      "This step completes the contract signing requirement after payment.",
+      "After acceptance, the user is moved to the portal selection screen."
+    ]
+  },
+  {
+    "name": "trainee-diviner-contract-signed",
+    "label": "Diviner Agreement Signed",
+    "description": "The user enters their full legal name in the signature field, enabling them to accept the agreement and continue.",
+    "group": "Dashboard",
+    "purpose": "This screen confirms that the agreement signature field has been filled and the user is ready to submit the signed contract.",
+    "bullets": [
+      "Shows the Diviner Service Agreement after the user has reached the bottom of the contract.",
+      "Displays the full legal name entered in the signature field.",
+      "Uses the typed name as the user's electronic signature.",
+      "Enables the Accept and Continue button after required signing information is provided.",
+      "Reminds the user that accepting means agreeing to the contract terms.",
+      "Completes the agreement acceptance step for diviner onboarding.",
+      "After clicking Accept and Continue, the signed agreement is submitted.",
+      "Once the agreement is completed, the user can proceed to choose their portal."
+    ]
+  },
+  {
+    "name": "trainee-diviner-portal-selection",
+    "label": "Choose Your Portal",
+    "description": "After completing payment and signing the required agreement, the user is taken to the portal selection screen to choose which available area they want to enter.",
+    "group": "Dashboard",
+    "purpose": "This screen lets users with access to multiple roles choose the correct portal, such as Diviner or Trainee Portal, before continuing.",
+    "bullets": [
+      "Shows the portal selection screen after payment and agreement completion.",
+      "Displays the main website navigation at the top.",
+      "Shows a clear heading asking the user to choose their portal.",
+      "Explains that the user has access to multiple areas.",
+      "Provides a Diviner option with an Enter button.",
+      "Provides a Trainee Portal option with an Enter button.",
+      "Lets the user enter the selected role-specific portal.",
+      "Includes a Manage my account link for account settings.",
+      "This screen appears after all required onboarding steps are completed.",
+      "Choosing a portal sends the user into the selected dashboard area."
+    ]
+  },
+
+  
+  {
+    "name": "diviner-dashboard-overview",
+    "label": "Diviner Dashboard Overview",
+    "description": "After choosing the Diviner portal, the user enters the Diviner dashboard where they can manage sessions, clients, services, profile completion, and practice-related tools.",
+    "group": "Dashboard",
+    "purpose": "This screen gives the diviner a complete overview of their practice and provides quick access to all main Diviner portal features.",
+    "bullets": [
+      "Shows the Diviner dashboard after the user selects the Diviner portal.",
+      "Displays the main sidebar navigation for overview, calendar, orders, clients, check-ins, sessions, services, landing pages, media gallery, rituals, astrology tools, marketing, insights, testimonials, and finance.",
+      "Shows certification and community promotion banners at the top.",
+      "Displays today's sessions so the diviner can quickly check upcoming work.",
+      "Shows planetary returns for the next 30 days.",
+      "Provides a public profile link for the diviner page.",
+      "Includes a Complete Your Profile section with profile setup tasks.",
+      "Shows profile completion progress such as 0/8 or percentage complete.",
+      "Lists required setup items like uploading a profile photo, writing a bio, setting a tagline, adding specialties, creating services, collecting testimonials, connecting Stripe, and connecting Google Calendar.",
+      "Helps the diviner prepare their profile and services before actively working with clients."
+    ]
+  },
+  {
+    "name": "diviner-dashboard-portal-switcher",
+    "label": "Portal Access Switcher",
+    "description": "Inside the dashboard, the user can open the portal switcher to change access between Diviner and Trainee Portal.",
+    "group": "Dashboard",
+    "purpose": "This dropdown allows users with multiple portal access to switch between their Diviner workspace and Trainee Portal for completing training lessons.",
+    "bullets": [
+      "Shows the portal switcher dropdown from the top-right dashboard area.",
+      "Displays the currently selected portal with a check mark.",
+      "Shows Diviner as the active portal when the user is inside the Diviner dashboard.",
+      "Provides Trainee Portal as another available option.",
+      "Allows the user to switch from Diviner to Trainee Portal.",
+      "The Trainee Portal is used to continue or complete training lessons.",
+      "After selecting Trainee Portal, the user can access training content and lesson completion flow.",
+      "Helps users move between working as a diviner and completing required training.",
+      "Supports users who have both Diviner and Trainee access under the same account.",
+      "Improves navigation without requiring logout or a new login."
+    ]
+  },
+{
+  "name": "trainee-dashboard-overview_v1",
+  "label": "Trainee Dashboard Overview",
+  "description": "After switching from the Diviner portal to the Trainee Portal, the user lands on the Trainee Dashboard where they can continue lessons, track training progress, attend practice sessions, review resources, and manage their trainee profile.",
+  "group": "Dashboard",
+  "purpose": "This dashboard acts as the central learning hub for trainees. It helps users monitor their certification journey, continue active lessons, view mentor information, access study materials, and track overall learning performance.",
+  "bullets": [
+    "Shows the Trainee Dashboard after the user switches from the Diviner portal to the Trainee Portal.",
+    "Displays the trainee account status such as Active Trainee.",
+    "Provides sidebar navigation for Dashboard, Training, Meeting Session, Progress, Quiz History, Library Resources, and My Profile.",
+    "The Training menu is used to access all training programs, lessons, and certification modules.",
+    "Meeting Session allows trainees to attend scheduled mentorship or practice sessions.",
+    "Progress helps users track completed modules, scores, and learning performance.",
+    "Quiz History stores quiz attempts, scores, and lesson assessment records.",
+    "Library Resources provides study materials, guides, charts, and learning references.",
+    "My Profile allows trainees to manage profile details, specialties, and personal information.",
+    "The top portal selector confirms the user is currently inside the Trainee Portal.",
+    "The community banner promotes exclusive trainee or spiritual community programs and learning opportunities.",
+    "The Training Progress block displays the user's overall certification progress.",
+    "Shows the percentage of lessons completed compared to the total available lessons.",
+    "Displays statistics such as programs started, quiz score average, and total learning time spent.",
+    "Helps trainees quickly understand how far they are in the certification journey.",
+    "The Continue Learning block helps users resume the most recent unfinished lesson or program.",
+    "Displays the current course or lesson title currently in progress.",
+    "The Continue button directly resumes the active lesson.",
+    "The View All button opens the complete training program list.",
+    "The Mentor block displays assigned mentor information for trainee guidance.",
+    "If no mentor is assigned, the dashboard informs the trainee that an administrator will assign one later.",
+    "Practice Sessions allows trainees to join supervised reading practice or live learning sessions.",
+    "My Progress provides detailed analytics about completed lessons, modules, and feedback.",
+    "Resources gives quick access to educational content and learning references.",
+    "My Profile helps the trainee manage account settings and profile customization.",
+    "The Recent Activity block displays recently completed lessons, quizzes, and training milestones.",
+    "Shows activity timestamps such as completed lessons and passed quizzes.",
+    "Helps trainees review recent accomplishments and continue consistent learning progress.",
+    "The entire dashboard is designed to guide trainees from beginner learning stages toward becoming fully certified diviners."
+  ]
+},
+  
+{
+  "name": "trainee-dashboard-training-progress-continue-learning",
+  "label": "Training Progress and Continue Learning",
+  "description": "On the Trainee Dashboard, the user can view training progress and continue the current lesson by clicking the Continue button in the Continue Learning block.",
+  "group": "Dashboard",
+  "purpose": "This dashboard section helps the trainee understand their training completion status and quickly navigate to the training module to continue and complete lessons.",
+  "bullets": [
+    "The Training Progress block shows the trainee's overall learning completion.",
+    "Displays progress percentage and completed lessons, such as 7% — 3 of 43 lessons.",
+    "Shows how many programs have been started.",
+    "Shows how many programs or lessons are completed.",
+    "Displays the trainee's average quiz score.",
+    "Shows total training time spent.",
+    "The Continue Learning block displays the current lesson the trainee should continue.",
+    "Shows the lesson name, such as The 12 Zodiac Signs.",
+    "Shows the related training category, such as Astrology Fundamentals.",
+    "The Continue button navigates the user to the training module.",
+    "From the training module, the user can continue and complete the selected lesson.",
+    "The View All button allows the user to see all available training programs or lessons.",
+    "This block is placed on the Dashboard for quick access to ongoing training."
+  ]
+},
+
+
+
+
+  {
+    "name": "trainee-training-completion-book-appointment_v1",
+    "label": "Training Completion Appointment Request",
+    "description": "After completing all training lessons, the trainee is prompted to book a post-training appointment with the administrator.",
+    "group": "Dashboard",
+    "purpose": "This dashboard section helps trainees schedule a required review appointment with the admin after finishing the certification training journey.",
+    "bullets": [
+      "Appears after the trainee completes all required training lessons.",
+      "Displays a congratulatory message for completing the training journey.",
+      "Informs the trainee that the next step is to book a one-on-one appointment with the administrator.",
+      "Explains that the appointment is required to review training progress and discuss next steps.",
+      "The Book Appointment with Admin button starts the scheduling process.",
+      "The Training Progress block below shows 100% completion status.",
+      "Displays completed lessons such as 43 of 43 lessons completed.",
+      "Shows learning statistics including completed programs, quiz average, and total training time.",
+      "This block acts as the final dashboard step before trainee graduation or certification review."
+    ]
+  },
+  {
+    "name": "trainee-admin-appointment-calendar-selection",
+    "label": "Admin Appointment Calendar Selection",
+    "description": "After clicking the booking button, the trainee is taken to the appointment scheduling screen where they can select an available date and time.",
+    "group": "Dashboard",
+    "purpose": "This screen allows trainees to reserve a meeting slot with the administrator for post-training review and certification discussion.",
+    "bullets": [
+      "Displays the appointment booking calendar interface.",
+      "Shows the next available appointment dates.",
+      "Allows the trainee to navigate between calendar months.",
+      "Highlights selectable available dates.",
+      "Displays available appointment times for the selected day.",
+      "Shows the administrator availability schedule and timezone.",
+      "Lets the trainee select a preferred appointment time slot.",
+      "Supports booking appointments based on available admin schedule.",
+      "This screen is used after training completion to schedule the required review session."
+    ]
+  },
+  {
+    "name": "trainee-admin-appointment-confirmation-form",
+    "label": "Admin Appointment Booking Form",
+    "description": "After selecting a date and time, the trainee fills in booking details and confirms the appointment request.",
+    "group": "Dashboard",
+    "purpose": "This screen collects booking information required to finalize the trainee's post-training appointment with the administrator.",
+    "bullets": [
+      "Shows the selected appointment date and time.",
+      "Displays the timezone and appointment duration.",
+      "Includes a name input field for the trainee.",
+      "Displays the trainee email linked to the account.",
+      "Allows the trainee to add optional notes for the appointment.",
+      "Provides a Change time option to select another slot.",
+      "The Confirm booking button finalizes the appointment request.",
+      "This step confirms the trainee's selected meeting schedule before submission.",
+      "Used as the final form step before appointment confirmation."
+    ]
+  },
+  {
+    "name": "trainee-admin-appointment-booking-success",
+    "label": "Appointment Booking Confirmation",
+    "description": "After successfully confirming the booking, the trainee sees the appointment confirmation screen with meeting details and next steps.",
+    "group": "Dashboard",
+    "purpose": "This screen confirms that the trainee's post-training appointment has been successfully scheduled with the administrator.",
+    "bullets": [
+      "Displays a successful booking confirmation message.",
+      "Confirms that the appointment has been recorded on the host calendar.",
+      "Shows the scheduled meeting date, time, timezone, and duration.",
+      "Displays any notes submitted during booking.",
+      "Provides next-step instructions for the trainee.",
+      "Explains that meeting details will be shared before the session.",
+      "Provides guidance for rescheduling if required.",
+      "Confirms that the trainee can safely close the page.",
+      "Acts as the final confirmation step in the post-training appointment workflow."
+    ]
+  },
+
+
+
+
+
+  
+
+
+  // ------------------Training Module Screens ------------------//
+  {
+    "name": "training-center_v1",
+    "label": "Training Center",
+    "description": "Program catalog showing all available training programs with lesson counts, category counts, progress status, and start actions.",
+    "group": "Training",
+    "purpose": "This page works as the trainee's main learning catalog. The user can see all training programs, check completion status, and start or continue lessons from one place.",
+    "bullets": [
+      "Shows the Training Center page inside the Trainee Portal.",
+      "Displays total lesson status at the top: Not Started, Ongoing, and Completed.",
+      "Shows total lesson progress such as 0/43 lessons and 0% complete.",
+      "Lists all available training programs in card format.",
+      "Each program card shows program name, short description, category count, lesson count, and completed lesson count.",
+      "Each card includes a circular progress indicator.",
+      "The Start Program button opens the selected training program.",
+      "Programs can include astrology, tarot, divination, and test certification training.",
+      "This screen helps trainees choose which training program they want to begin or review."
+    ]
+  },
+  {
+    "name": "training-lesson-content-completed",
+    "label": "Training Lesson Content",
+    "description": "Lesson detail screen showing the selected lesson content, image or media, description, quiz status, and category progress.",
+    "group": "Training",
+    "purpose": "This screen lets the trainee study an individual lesson and complete the required quiz. It also shows whether the lesson and quiz are already completed.",
+    "bullets": [
+      "Shows the selected training lesson inside the Training module.",
+      "Displays the lesson title and estimated duration.",
+      "Shows the lesson description below the title.",
+      "Includes lesson media or image content for learning.",
+      "Displays written lesson content below the media section.",
+      "Shows the Lesson Quiz section for assessment.",
+      "If the quiz is already completed, it shows Quiz already passed.",
+      "Displays a Passed status badge for the completed quiz.",
+      "Shows completed lesson items below the current lesson.",
+      "The right-side category panel shows category progress such as 3/3 completed.",
+      "Helps trainees understand which lessons are completed and which lesson they are currently viewing."
+    ]
+  },
+  {
+    "name": "training-lesson-review-content",
+    "label": "Training Lesson Review",
+    "description": "Completed lesson review screen where the trainee can revisit lesson content, media, and passed quiz status.",
+    "group": "Training",
+    "purpose": "This screen allows trainees to review completed training content after finishing the lesson and passing the quiz.",
+    "bullets": [
+      "Shows a completed lesson with a Complete status badge.",
+      "Displays lesson media such as an astrology or planet-related image.",
+      "Shows the lesson description and supporting content.",
+      "Displays the quiz section with Passed status.",
+      "Confirms that the quiz has already been completed for the lesson.",
+      "Shows other lessons in the same category as completed.",
+      "Allows the trainee to revisit learning material without retaking completed work.",
+      "The category panel on the right confirms progress for the current category.",
+      "Useful for reviewing training material before final certification or admin appointment."
+    ]
+  },
+
+
+    //  ----------------Session Module Screens ------------------//
+
+      
+  {
+    "name": "trainee-meeting-session-list",
+    "label": "Meeting Session List",
+    "description": "After booking is completed, the trainee can open the Meeting Session module to view the confirmed meeting and join it.",
+    "group": "Sessions",
+    "purpose": "This screen helps the trainee find their upcoming admin meeting and start the joining process.",
+    "bullets": [
+      "Shows the confirmed upcoming meeting session.",
+      "Displays the meeting date and time.",
+      "Shows the meeting status as Confirmed.",
+      "Displays meeting details such as host name, duration, method, and booking ID.",
+      "The Join Session button opens the meeting joining screen.",
+      "This card is created after the trainee successfully books an appointment with the admin."
+    ]
+  },
+  {
+    "name": "trainee-meeting-recording-consent",
+    "label": "Session Recording Consent",
+    "description": "After clicking Join Session, the trainee is taken to a consent screen before entering the live meeting.",
+    "group": "Sessions",
+    "purpose": "This screen asks the trainee to accept recording consent because the session may be recorded for future review.",
+    "bullets": [
+      "Shows the appointment header with client name, meeting date, time, and duration.",
+      "Displays a Session Recording Consent message.",
+      "Explains that the session will be recorded for the trainee's benefit.",
+      "Shows basic session details such as appointment type and duration.",
+      "The I Consent — Join Session button confirms consent and continues to the meeting room.",
+      "The trainee cannot enter the session until consent is accepted."
+    ]
+  },
+  {
+    "name": "trainee-meeting-waiting-room",
+    "label": "Meeting Waiting Room",
+    "description": "After accepting recording consent, the trainee enters the waiting room until the admin joins or accepts the meeting.",
+    "group": "Sessions",
+    "purpose": "This screen confirms that the trainee is connected and waiting for the admin to start the session.",
+    "bullets": [
+      "Shows the trainee is waiting for the admin or host.",
+      "Displays a message such as Waiting for tabby.",
+      "Confirms the trainee is connected to the meeting room.",
+      "Explains that the session will start automatically when the admin joins.",
+      "Shows the appointment duration.",
+      "The page updates automatically, so the trainee does not need to refresh."
+    ]
+  },
+  {
+    "name": "trainee-meeting-connecting",
+    "label": "Meeting Connecting Screen",
+    "description": "After the admin accepts or joins the session, the trainee sees the meeting interface while the live session connects.",
+    "group": "Sessions",
+    "purpose": "This screen shows the transition from waiting room to active meeting session.",
+    "bullets": [
+      "Shows the live appointment interface.",
+      "Displays recording status at the top.",
+      "Shows meeting title, host name, joined status, timer, and participant count.",
+      "Shows a Connecting to session message while the video room loads.",
+      "Displays meeting controls such as microphone, camera, and screen share.",
+      "Shows a side panel with diviner or admin details.",
+      "Includes notes and chat areas for session communication."
+    ]
+  },
+  {
+    "name": "trainee-meeting-live-session",
+    "label": "Live Meeting Session",
+    "description": "After the connection completes, the trainee joins the live meeting with the admin.",
+    "group": "Sessions",
+    "purpose": "This screen allows the trainee and admin to communicate through the live appointment session.",
+    "bullets": [
+      "Shows the active live video meeting.",
+      "Displays the admin or host video tile.",
+      "Shows the trainee tile inside the meeting area.",
+      "Displays joined status and participant count.",
+      "Shows the meeting timer and total session duration.",
+      "Provides microphone, camera, and screen share controls.",
+      "Includes a side panel showing the assigned admin or diviner.",
+      "Allows the trainee to write private session notes.",
+      "Includes chat support for text communication during the session."
+    ]
+  },
+  {
+    "name": "trainee-meeting-screen-sharing",
+    "label": "Meeting Screen Sharing",
+    "description": "During the live meeting, the trainee can share their screen with the admin.",
+    "group": "Sessions",
+    "purpose": "This screen helps the trainee present their screen during the session when they need to show progress, documents, or training-related work.",
+    "bullets": [
+      "Shows that the trainee is presenting their screen.",
+      "Displays a clear message that others can see the screen.",
+      "Shows a Stop Sharing button to end screen sharing.",
+      "Keeps the meeting timer and recording status visible.",
+      "Shows participant video tiles on the side while screen sharing.",
+      "Keeps microphone, camera, and screen share controls available.",
+      "Allows the trainee to continue using notes and chat during screen sharing.",
+      "Useful when the trainee needs to show training progress, questions, or account details to the admin."
+    ]
+  },
       {
         name: "program-workspace",
         label: "Program Workspace",
@@ -10302,97 +11025,311 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Completing a lesson refreshes progress and can auto-advance the learner to the next available lesson"
         ]
       },
-      {
-        name: "progress",
-        label: "Progress Tracker",
-        description: "Progress dashboard with overall lesson completion, training status, average quiz score, and module-by-module breakdown.",
-        group: "Progress",
-        purpose: "This view gives trainees a transparent record of where they stand. It is useful for checking completion gaps, reviewing which modules still need attention, and confirming readiness for graduation.",
-        bullets: [
-          "Summary cards show lessons completed, active/graduated training status, and average quiz score",
-          "Graduation banner appears when all requirements are complete",
-          "Module breakdown lists each category with completion counts and progress bars",
-          "Lesson rows link directly back into the corresponding training path"
-        ]
-      },
-      {
-        name: "quiz-history",
-        label: "Quiz History",
-        description: "Complete attempt history across lesson quizzes, including pass/fail status, score, attempt number, date, and time taken.",
-        group: "Assessment",
-        purpose: "This page turns quiz performance into a study record. Trainees can see how many quizzes they have attempted, which ones were passed, where retakes happened, and how scores trend over time.",
-        bullets: [
-          "Top badges summarize total time, pass rate, retakes, and graduated status when applicable",
-          "Stat cards show total attempts, passed attempts, average score, and best score",
-          "Attempt list records lesson title, date, duration, attempt number, raw score, percentage, and pass/fail icon",
-          "Score colors highlight strong, moderate, and low performance for quick self-review"
-        ]
-      },
-      {
-        name: "resources",
-        label: "Learning Resources",
-        description: "Central library for lesson assets and study guides available through the trainee's accessible programs.",
-        group: "Assessment",
-        purpose: "This page saves trainees from hunting through individual lessons for files. It gathers downloadable PDFs, documents, images, external links, video references, and study guides into one resource library.",
-        bullets: [
-          "Quick links jump back to Training Center, My Progress, and Certificate when available",
-          "Lesson assets are grouped by type with file-type icon, lesson, category, file size, and open/download action",
-          "Study Guides section lists lessons with attached PDFs or videos",
-          "Empty states explain when mentors/admins have not attached materials yet"
-        ]
-      },
-      {
-        name: "sessions",
-        label: "Practice Sessions",
-        description: "Mentor-supervised practice session area with upcoming bookings, past sessions, session status, and join links when active.",
-        group: "Sessions",
-        purpose: "Practice sessions are where trainees apply the curriculum with mentor oversight. This page explains what is scheduled, what has already happened, and how to join eligible live sessions.",
-        bullets: [
-          "Upcoming Sessions list shows service, mentor/diviner, date, time, duration, and booking status",
-          "Join button appears only during the allowed window around the scheduled session",
-          "Past Sessions records completed, cancelled, and no-show sessions with status indicators",
-          "How to Schedule section explains the mentor-led booking workflow"
-        ]
-      },
-      {
-        name: "graduation",
-        label: "Graduation Readiness",
-        description: "Graduation page that either shows certificate details for graduated trainees or the not-yet-graduated path back to training.",
-        group: "Certification",
-        purpose: "This is the formal completion checkpoint. Before graduation, it clearly directs trainees back to required training. After graduation, it becomes the certificate summary with verification code and completion record.",
-        bullets: [
-          "Not-yet-graduated state explains that all programs must be completed first",
-          "Graduated state lists completed programs, lessons completed, award date, and certificate code",
-          "Verification URL and copy action are shown when a certificate code exists",
-          "Back-to-training action keeps incomplete trainees focused on the next requirement"
-        ]
-      },
-      {
-        name: "certificate",
-        label: "Certificate of Completion",
-        description: "Printable certificate page available to graduated trainees after all training requirements are satisfied.",
-        group: "Certification",
-        purpose: "This is the formal credential screen for a completed trainee. It presents the school identity, trainee name, awarded designation, training statistics, covered astrology and tarot programs, certificate ID, verification URL, and print/share actions.",
-        bullets: [
-          "Certificate header uses admin-managed school name, tagline, and visual seal",
-          "Trainee name, award date, designation, and certificate ID identify the credential",
-          "Training stats and program lists summarize the completed certification scope",
-          "Print and share controls support saving the certificate as a PDF and sharing its verification link"
-        ]
-      },
-      {
-        name: "trainee-profile",
-        label: "Trainee Profile",
-        description: "Editable trainee identity page covering personal information, profile completion, package access, specialties, goals, birth data, mentor, and training status.",
-        group: "Settings",
-        purpose: "The profile page controls how a trainee appears to mentors and internal teams. It also exposes package limits, profile completion gaps, training progress, mentor details, and account metadata.",
-        bullets: [
-          "Profile completion bar identifies missing onboarding fields",
-          "Personal information editor manages name, bio, avatar, username, phone, timezone, goals, specialties, and birth data",
-          "Package notice explains which categories and specialties are available to this trainee",
-          "Training status and mentor cards summarize progress, graduation, mentor identity, and next navigation"
-        ]
-      },
+    
+
+
+      
+  {
+    "name": "academic-progress-overview",
+    "label": "Academic Progress Overview",
+    "description": "Main academic progress dashboard showing the trainee's overall learning journey, lesson completion, quiz performance, and curriculum activity.",
+    "group": "Progress",
+    "purpose": "This page helps trainees quickly understand their complete training progress, active learning status, quiz performance, and graduation readiness.",
+    "bullets": [
+      "Shows the Academic Progress dashboard inside the Trainee Portal.",
+      "Displays overall course progress with completed lessons out of total lessons.",
+      "Shows total completed practice sessions.",
+      "Displays quiz performance percentage across all quizzes.",
+      "Shows trainee account status such as Active.",
+      "Displays the trainee start date.",
+      "The Curriculum Modules section lists all available training programs and lesson groups.",
+      "Recent Quizzes shows recently attempted quizzes with score percentages.",
+      "Practice Sessions section displays scheduled or completed practice sessions.",
+      "The Go to Training button navigates directly to the Training module.",
+      "Helps trainees monitor learning performance and certification readiness from one place."
+    ]
+  },
+  {
+    "name": "progress-curriculum-modules-overview",
+    "label": "Curriculum Modules Overview",
+    "description": "Curriculum section showing all training modules, lesson groups, and current lesson completion progress.",
+    "group": "Progress",
+    "purpose": "This section helps trainees understand how lessons are grouped into certification programs and track completion status for each module.",
+    "bullets": [
+      "Shows grouped curriculum modules inside the Academic Progress page.",
+      "Displays program names such as Sanket Biswas and Diviner Certification Program.",
+      "Each module card shows completed lessons out of total lessons.",
+      "Lesson titles are listed inside each module card.",
+      "Locked lesson icons indicate lessons not yet accessible.",
+      "Progress circles help identify module completion status.",
+      "Recent Quizzes panel displays recently completed quizzes and scores.",
+      "This section helps trainees understand which modules are incomplete and which lessons remain pending."
+    ]
+  },
+  {
+    "name": "progress-foundations-of-astrology",
+    "label": "Foundations of Astrology Progress",
+    "description": "Progress section for the Foundations of Astrology training program showing lesson categories and astrology learning topics.",
+    "group": "Progress",
+    "purpose": "This section tracks trainee progress through beginner astrology learning modules and foundational concepts.",
+    "bullets": [
+      "Displays the Foundations of Astrology program progress.",
+      "Shows completed lessons compared to total lessons.",
+      "Includes lesson categories such as Introduction to the Birth Chart, Planetary Aspects, and Transits and Progressions.",
+      "Shows lesson topics like zodiac signs, birth charts, planetary meanings, conjunctions, oppositions, trines, and eclipses.",
+      "Locked icons indicate lessons not yet unlocked.",
+      "Progress indicators help trainees understand current learning position.",
+      "Useful for tracking beginner and intermediate astrology education progress."
+    ]
+  },
+  {
+    "name": "progress-tarot-mastery",
+    "label": "Tarot Mastery Progress",
+    "description": "Progress section for Tarot Mastery training programs showing tarot lesson groups, card studies, and reading techniques.",
+    "group": "Progress",
+    "purpose": "This section helps trainees track tarot-focused learning programs and understand progress across tarot reading lessons.",
+    "bullets": [
+      "Displays the Tarot Mastery training program.",
+      "Shows lesson categories such as Major Arcana Deep Dive, Minor Arcana and Court Cards, and Reading Spreads.",
+      "Includes lesson topics about tarot card meanings and tarot spread techniques.",
+      "Displays completed lesson counts and remaining lessons.",
+      "Progress circles indicate module completion status.",
+      "Locked lesson icons indicate unavailable or future lessons.",
+      "Helps trainees monitor tarot reading education progress and skill development."
+    ]
+  },
+  {
+    "name": "progress-advanced-divination-track",
+    "label": "Advanced Divination Track",
+    "description": "Advanced training progress section covering predictive astrology, intuitive reading, tarot spread design, and certification modules.",
+    "group": "Progress",
+    "purpose": "This section tracks advanced-level divination training and helps trainees prepare for higher-level certification skills.",
+    "bullets": [
+      "Displays advanced-level training modules inside the Academic Progress page.",
+      "Includes Tarot Mastery Track, Advanced Divination, and Test Certification sections.",
+      "Shows advanced lesson groups such as Predictive Astrology and Intuitive Reading Techniques.",
+      "Includes topics like Solar Returns, Lunar Returns, Profections, intuition development, and ethics in readings.",
+      "Displays advanced tarot spread design and reading strategy lessons.",
+      "Shows completed and remaining lesson counts for each advanced module.",
+      "Locked icons indicate lessons that require progression or prerequisites.",
+      "The Test Certification section represents final certification assessment training.",
+      "Helps trainees track progress toward advanced diviner certification and graduation."
+    ]
+  },
+
+
+  {
+  "name": "quiz-history-summary-cards",
+  "label": "Quiz History Summary",
+  "description": "The Quiz History summary section provides a quick overview of the trainee's overall quiz performance across all completed lessons.",
+  "group": "Assessment",
+  "purpose": "This section helps trainees quickly understand their quiz statistics, performance quality, and certification readiness without opening each individual quiz attempt.",
+  "bullets": [
+    "Shows a high-level summary of all trainee quiz activity.",
+    "Displays the total number of quiz attempts completed by the trainee.",
+    "Shows how many quizzes were successfully passed.",
+    "Displays the trainee's average quiz score percentage.",
+    "Shows the highest score achieved across all quizzes.",
+    "Displays total quiz completion time.",
+    "Shows the overall pass rate percentage.",
+    "Helps trainees quickly review learning performance at a glance.",
+    "Useful for tracking overall academic progress and training success.",
+    "Acts as the main performance overview section at the top of the Quiz History page."
+  ]
+},
+
+{
+  "name": "trainee-quiz-history",
+  "label": "Quiz History",
+  "description": "Quiz History shows the trainee's complete quiz attempt record across all completed lessons.",
+  "group": "Assessment",
+  "purpose": "This page helps trainees review their quiz performance, pass rate, scores, attempt history, and completed lesson assessments in one place.",
+  "bullets": [
+    "Shows the complete quiz attempt history for the trainee.",
+    "Displays total quiz time spent, such as 4m 31s.",
+    "Shows overall pass rate, such as 100%.",
+    "Displays Total Attempts count.",
+    "Shows how many quizzes were passed.",
+    "Displays average quiz score percentage.",
+    "Shows the best score achieved.",
+    "Lists all quiz attempts in chronological order.",
+    "Each quiz row shows the lesson or quiz title.",
+    "Each quiz row shows the attempt date.",
+    "Some rows show time spent on the quiz attempt.",
+    "Each row displays score details such as 6/6 - 100% or 8/10 - 80%.",
+    "Green check icons indicate passed quiz attempts.",
+    "Helps the trainee understand which quizzes are completed and how well they performed.",
+    "Useful for tracking certification readiness and reviewing past learning results."
+  ]
+},
+    
+  {
+    "name": "library-resources-quick-links-assets",
+    "label": "Library Resources and Lesson Assets",
+    "description": "The Library Resources page provides quick access links, downloadable lesson assets, study PDFs, and supporting learning materials attached to training lessons.",
+    "group": "Assessment",
+    "purpose": "This page helps trainees quickly access learning materials, downloadable files, training references, and important lesson resources from one place.",
+    "bullets": [
+      "Shows Quick Links for Training Center, My Progress, and Certificate pages.",
+      "Allows trainees to quickly navigate to important training sections.",
+      "Displays Lesson Assets section containing downloadable lesson files.",
+      "Lists PDF study resources connected to accessible training lessons.",
+      "Each asset row shows the lesson or resource title.",
+      "Displays related training category and lesson information.",
+      "Shows file sizes for downloadable resources.",
+      "The Download button allows trainees to save lesson files locally.",
+      "PDF badges help identify downloadable document resources.",
+      "Useful for offline study, revision, and certification preparation."
+    ]
+  },
+  {
+    "name": "library-study-guides-overview",
+    "label": "Study Guides Overview",
+    "description": "Study Guides section showing training lessons with attached PDFs, videos, and direct links to continue learning.",
+    "group": "Assessment",
+    "purpose": "This section helps trainees access guided lesson content, video recordings, and downloadable materials connected to their training programs.",
+    "bullets": [
+      "Displays lesson study guide cards for available training lessons.",
+      "Each card shows the lesson title and related training program.",
+      "Displays lesson duration in minutes.",
+      "PDF buttons open downloadable lesson documents.",
+      "Video buttons open attached lesson recordings or video content.",
+      "Go to training links navigate directly to the lesson inside the Training module.",
+      "Includes lessons from astrology, tarot mastery, diviner certification, and communication programs.",
+      "Helps trainees quickly continue learning without manually searching for lessons.",
+      "Supports both video-based and document-based learning."
+    ]
+  },
+  {
+    "name": "library-study-guides-advanced-lessons",
+    "label": "Advanced Study Guides",
+    "description": "Advanced lesson resource section showing higher-level astrology, tarot, and divination study materials with training navigation links.",
+    "group": "Assessment",
+    "purpose": "This section provides trainees with advanced learning resources, downloadable guides, and direct access to specialized training lessons.",
+    "bullets": [
+      "Displays advanced study lesson cards with astrology and tarot topics.",
+      "Includes lessons such as Cups and Swords, The 12 Houses, Creating Custom Spreads, Profections and Firdaria, Ethics and Boundaries in Readings, and The 12 Zodiac Signs.",
+      "Shows lesson duration for each advanced lesson.",
+      "Provides PDF download access for lesson study material.",
+      "Provides Video access for recorded lesson content.",
+      "Go to training links open the lesson directly in the Training module.",
+      "Helps trainees continue advanced certification learning.",
+      "Useful for revision, skill improvement, and deeper topic understanding.",
+      "Supports advanced astrology, tarot reading, predictive astrology, and intuitive reading education."
+    ]
+  },
+
+     
+      // {
+      //   name: "graduation",
+      //   label: "Graduation Readiness",
+      //   description: "Graduation page that either shows certificate details for graduated trainees or the not-yet-graduated path back to training.",
+      //   group: "Certification",
+      //   purpose: "This is the formal completion checkpoint. Before graduation, it clearly directs trainees back to required training. After graduation, it becomes the certificate summary with verification code and completion record.",
+      //   bullets: [
+      //     "Not-yet-graduated state explains that all programs must be completed first",
+      //     "Graduated state lists completed programs, lessons completed, award date, and certificate code",
+      //     "Verification URL and copy action are shown when a certificate code exists",
+      //     "Back-to-training action keeps incomplete trainees focused on the next requirement"
+      //   ]
+      // },
+     {
+  "name": "certificate_v1",
+  "label": "Certificate of Completion",
+  "description": "Printable certificate page available to graduated trainees after all training, practice, and certification requirements are completed.",
+  "group": "Certification",
+  "purpose": "This screen presents the trainee's official certification credential. It confirms the completed course, awarded designation, training statistics, covered astrology and tarot programs, certificate ID, verification URL, and available share or download actions.",
+  "bullets": [
+    "Shows the official certificate after the trainee completes all certification requirements.",
+    "Displays the school or organization name, tagline, and certificate branding.",
+    "Shows the trainee name clearly in the center of the certificate.",
+    "Displays the awarded course name, such as Astrology & Tarot Consulting Certification Course.",
+    "Shows the final designation, such as Certified Divination Consultant.",
+    "Includes completed training statistics such as study hours, live classroom hours, readings performed, and certification programs.",
+    "Lists astrology programs completed during certification.",
+    "Lists tarot programs completed during certification.",
+    "Displays the head master or authority name.",
+    "Shows the official seal area.",
+    "Displays the certificate conferral date.",
+    "Includes a certificate authenticity ID.",
+    "Provides a verification URL so others can confirm the certificate online.",
+    "Back to Progress returns the trainee to the progress page.",
+    "Share Certificate allows the trainee to share the certificate or verification link.",
+    "Download PDF allows the trainee to save the certificate as a printable PDF."
+  ]
+},
+      
+  {
+    "name": "trainee-profile-overview",
+    "label": "Trainee Profile Overview",
+    "description": "My Profile page where the trainee can manage personal details, profile completion, account information, and training status.",
+    "group": "Settings",
+    "purpose": "This page helps trainees update their profile, complete missing onboarding fields, review training status, and access progress or certificate pages.",
+    "bullets": [
+      "Shows the trainee profile management page.",
+      "Displays profile completion percentage at the top.",
+      "Highlights missing profile fields that still need to be completed.",
+      "Includes personal information fields for the trainee.",
+      "Shows account information such as email, username, member since date, training status, and graduation date.",
+      "Displays training completion status and certificate access.",
+      "Helps the trainee keep their profile ready for mentors, admins, and future clients."
+    ]
+  },
+  {
+    "name": "trainee-profile-completion",
+    "label": "Profile Completion Status",
+    "description": "Profile completion block showing how much of the trainee profile is complete and which fields are still missing.",
+    "group": "Settings",
+    "purpose": "This block helps the trainee quickly identify incomplete profile fields and finish required onboarding information.",
+    "bullets": [
+      "Shows profile completion percentage, such as 33%.",
+      "Displays completed fields count, such as 3 of 9 fields complete.",
+      "Uses a progress bar to show completion visually.",
+      "Lists missing fields like Timezone, Bio, Profile Photo, Date of Birth, Birth Time, and Birth City.",
+      "Helps the trainee understand what information is still required.",
+      "Encourages the trainee to complete the profile before full onboarding or client-facing use."
+    ]
+  },
+  {
+    "name": "trainee-personal-information",
+    "label": "Personal Information Editor",
+    "description": "Editable profile form where the trainee manages package details, display name, bio, specialties, phone, timezone, goals, and birth information.",
+    "group": "Settings",
+    "purpose": "This section allows the trainee to update personal and training-related information used by mentors, admins, and future client-facing areas.",
+    "bullets": [
+      "Shows the current package, such as Astrology + Tarot.",
+      "Displays allowed categories connected to the trainee package.",
+      "Shows personal profile completion status for this section.",
+      "Allows the trainee to upload or update a profile photo.",
+      "Allows editing the display name.",
+      "Provides a bio field for describing the trainee to mentors and future clients.",
+      "Shows selected specialties and allows editing them.",
+      "Includes phone number and timezone fields.",
+      "Includes training goals so the trainee can describe what they are working toward.",
+      "Collects birth date, birth time, and birth city.",
+      "Save changes button stores the updated profile information."
+    ]
+  },
+  {
+    "name": "trainee-account-training-status",
+    "label": "Account and Training Status",
+    "description": "Account and training status section showing trainee account metadata, graduation status, completed lessons, and certificate access.",
+    "group": "Settings",
+    "purpose": "This section helps the trainee confirm account details, check graduation status, view training completion, and open progress or certificate pages.",
+    "bullets": [
+      "Shows account email and username.",
+      "Displays when the trainee became a member.",
+      "Shows training status such as graduated.",
+      "Displays the graduation date.",
+      "Shows training completion percentage such as 100%.",
+      "Displays completed lessons, such as 52 of 52 lessons complete.",
+      "Confirms all lessons are complete.",
+      "Shows mentor assignment status.",
+      "View full progress opens the detailed progress page.",
+      "View certificate opens the completed certification certificate."
+    ]
+  }
+
     ],
   },
   {

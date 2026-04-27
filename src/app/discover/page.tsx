@@ -5,6 +5,8 @@ import { MarketingHeader } from "@/components/marketing/header";
 import { MarketingFooter } from "@/components/marketing/footer";
 import { DiscoverFilters } from "./discover-filters";
 import { APP_URL } from "@/lib/constants";
+import { getBaseServiceTemplateSlug } from "@/lib/service-template-form";
+import { canPubliclySellService } from "@/lib/payout-readiness";
 
 // Cookie read requires dynamic rendering — cannot use ISR
 export const dynamic = "force-dynamic";
@@ -46,6 +48,9 @@ export interface DivinerCard {
   reviewCount: number;
   averageRating: number | null;
   completedSessions: number;
+  availabilityConfigured?: boolean;
+  matchedServiceSlug?: string | null;
+  matchedTemplateSlug?: string | null;
 }
 
 async function getActiveDiviners(): Promise<DivinerCard[]> {
@@ -165,6 +170,190 @@ async function getActiveDiviners(): Promise<DivinerCard[]> {
   return cards;
 }
 
+async function getTemplateMatchedDiviners(templateSlug: string): Promise<{
+  templateName: string | null;
+  templateCategory: "astrology" | "tarot" | null;
+  diviners: DivinerCard[];
+}> {
+  const admin = createAdminClient();
+  const trimmedSlug = templateSlug.trim();
+  const baseSlug = getBaseServiceTemplateSlug(trimmedSlug);
+
+  const [baseTemplateResult, requestedTemplateResult] = await Promise.all([
+    admin
+      .from("service_templates")
+      .select("id, name, slug, category")
+      .eq("slug", baseSlug)
+      .eq("is_active", true)
+      .maybeSingle(),
+    admin
+      .from("service_templates")
+      .select("id, name, slug, category")
+      .eq("slug", trimmedSlug)
+      .eq("is_active", true)
+      .maybeSingle(),
+  ]);
+  const template = baseTemplateResult.data;
+  const displayTemplate = requestedTemplateResult.data ?? template;
+
+  if (!template) {
+    return { templateName: null, templateCategory: null, diviners: [] };
+  }
+
+  const { data: services, error } = await admin
+    .from("services")
+    .select(
+      "id, slug, base_price, category, duration_minutes, diviner_id, template_id, " +
+        "diviners!inner(id, username, display_name, tagline, bio, avatar_url, cover_image_url, specialties, is_certified, is_active, onboarding_completed, account_status, charges_enabled, payouts_enabled, stripe_account_id)",
+    )
+    .eq("template_id", template.id)
+    .eq("is_active", true);
+
+  if (error || !services || services.length === 0) {
+    return {
+      templateName: displayTemplate?.name ?? null,
+      templateCategory: (displayTemplate?.category as "astrology" | "tarot" | null) ?? null,
+      diviners: [],
+    };
+  }
+
+  const { data: divinerServices } = await admin
+    .from("diviner_services")
+    .select("diviner_id")
+    .eq("template_id", template.id)
+    .eq("is_enabled", true)
+    .eq("is_published", true);
+
+  const publishedDivinerIds = new Set((divinerServices ?? []).map((row) => row.diviner_id as string));
+
+  const visibleServices = (services as Array<Record<string, unknown>>).filter((row) => {
+    const divinerId = (row.diviner_id as string) ?? "";
+    if (!publishedDivinerIds.has(divinerId)) return false;
+
+    const divinerRelation = row.diviners;
+    const diviner = Array.isArray(divinerRelation) ? divinerRelation[0] : divinerRelation;
+    if (!diviner || typeof diviner !== "object") return false;
+
+    return canPubliclySellService(row, diviner as Record<string, unknown>);
+  });
+
+  if (visibleServices.length === 0) {
+    return {
+      templateName: displayTemplate?.name ?? null,
+      templateCategory: (displayTemplate?.category as "astrology" | "tarot" | null) ?? null,
+      diviners: [],
+    };
+  }
+
+  const divinerIds = visibleServices
+    .map((row) => ((row.diviner_id as string) ?? ""))
+    .filter(Boolean);
+
+  const [{ data: testimonials }, { data: bookings }, { data: templates }, { data: weeklySlots }] =
+    await Promise.all([
+      admin
+        .from("testimonials")
+        .select("diviner_id, rating")
+        .in("diviner_id", divinerIds)
+        .eq("status", "approved"),
+      admin
+        .from("bookings")
+        .select("diviner_id")
+        .in("diviner_id", divinerIds)
+        .eq("status", "completed"),
+      admin
+        .from("availability_templates")
+        .select("diviner_id, owner_id, is_active")
+        .or(divinerIds.map((id) => `diviner_id.eq.${id},owner_id.eq.${id}`).join(","))
+        .eq("is_active", true),
+      admin
+        .from("availability_slots")
+        .select("diviner_id, owner_id, is_active")
+        .or(divinerIds.map((id) => `diviner_id.eq.${id},owner_id.eq.${id}`).join(","))
+        .eq("is_active", true),
+    ]);
+
+  const ratingsByDiviner = new Map<string, number[]>();
+  for (const row of testimonials ?? []) {
+    const key = row.diviner_id as string | null;
+    if (!key) continue;
+    if (!ratingsByDiviner.has(key)) ratingsByDiviner.set(key, []);
+    if (typeof row.rating === "number") ratingsByDiviner.get(key)?.push(row.rating);
+  }
+
+  const completedSessionsByDiviner = new Map<string, number>();
+  for (const row of bookings ?? []) {
+    const key = row.diviner_id as string | null;
+    if (!key) continue;
+    completedSessionsByDiviner.set(key, (completedSessionsByDiviner.get(key) ?? 0) + 1);
+  }
+
+  const availabilityByDiviner = new Set<string>();
+  for (const row of [...(templates ?? []), ...(weeklySlots ?? [])]) {
+    const key =
+      (typeof row.diviner_id === "string" && row.diviner_id) ||
+      (typeof row.owner_id === "string" && row.owner_id) ||
+      "";
+    if (key) availabilityByDiviner.add(key);
+  }
+
+  const cards = visibleServices.map((row) => {
+    const divinerRelation = row.diviners;
+    const diviner = (Array.isArray(divinerRelation)
+      ? divinerRelation[0]
+      : divinerRelation) as Record<string, unknown>;
+    const divinerId = diviner.id as string;
+    const ratings = ratingsByDiviner.get(divinerId) ?? [];
+    const category = row.category as string;
+
+    return {
+      username: diviner.username as string,
+      displayName: diviner.display_name as string,
+      tagline: (diviner.tagline as string | null) ?? null,
+      bio: (diviner.bio as string | null) ?? null,
+      avatarUrl: (diviner.avatar_url as string | null) ?? null,
+      coverImageUrl: (diviner.cover_image_url as string | null) ?? null,
+      isCertified: diviner.is_certified === true,
+      specialties: Array.isArray(diviner.specialties) ? (diviner.specialties as string[]) : [],
+      subType: category === "tarot" ? "tarot" : "astrologer",
+      startingPrice: Number(row.base_price ?? 0),
+      reviewCount: ratings.length,
+      averageRating:
+        ratings.length > 0
+          ? ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length
+          : null,
+      completedSessions: completedSessionsByDiviner.get(divinerId) ?? 0,
+      availabilityConfigured: availabilityByDiviner.has(divinerId),
+      matchedServiceSlug: (row.slug as string) ?? null,
+      matchedTemplateSlug: template.slug as string,
+    } satisfies DivinerCard;
+  });
+
+  cards.sort((left, right) => {
+    if ((left.availabilityConfigured ?? false) !== (right.availabilityConfigured ?? false)) {
+      return left.availabilityConfigured ? -1 : 1;
+    }
+    if (left.isCertified !== right.isCertified) {
+      return left.isCertified ? -1 : 1;
+    }
+    const leftRating = left.averageRating ?? 0;
+    const rightRating = right.averageRating ?? 0;
+    if (Math.abs(rightRating - leftRating) > 0.001) {
+      return rightRating - leftRating;
+    }
+    if (right.completedSessions !== left.completedSessions) {
+      return right.completedSessions - left.completedSessions;
+    }
+    return (left.startingPrice ?? Number.MAX_SAFE_INTEGER) - (right.startingPrice ?? Number.MAX_SAFE_INTEGER);
+  });
+
+  return {
+    templateName: (displayTemplate?.name as string | null) ?? null,
+    templateCategory: (displayTemplate?.category as "astrology" | "tarot" | null) ?? null,
+    diviners: cards,
+  };
+}
+
 async function getPreferredDiviner(username: string): Promise<DivinerCard | null> {
   const admin = createAdminClient();
 
@@ -244,12 +433,22 @@ async function getPreferredDiviner(username: string): Promise<DivinerCard | null
   };
 }
 
-export default async function DiscoverPage() {
+interface PageProps {
+  searchParams: Promise<{ template?: string; submission?: string; type?: string; search?: string; sort?: string }>;
+}
+
+export default async function DiscoverPage({ searchParams }: PageProps) {
   const cookieStore = await cookies();
   const preferredUsername = cookieStore.get("preferred_diviner")?.value ?? null;
+  const params = await searchParams;
+  const templateSlug = params.template?.trim() || "";
 
-  const [diviners, preferredDiviner] = await Promise.all([
-    getActiveDiviners(),
+  const [{ diviners, templateName, templateCategory }, preferredDiviner] = await Promise.all([
+    templateSlug ? getTemplateMatchedDiviners(templateSlug) : getActiveDiviners().then((rows) => ({
+      diviners: rows,
+      templateName: null,
+      templateCategory: null,
+    })),
     preferredUsername ? getPreferredDiviner(preferredUsername) : Promise.resolve(null),
   ]);
 
@@ -262,11 +461,12 @@ export default async function DiscoverPage() {
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_30%,rgba(201,168,76,0.08)_0%,transparent_60%)]" />
         <div className="relative mx-auto max-w-4xl px-4 text-center">
           <h1 className="font-display text-4xl font-bold text-[#f5f0e8] md:text-5xl">
-            Find a Diviner
+            {templateName ? `Choose a Diviner for ${templateName}` : "Find a Diviner"}
           </h1>
           <p className="mx-auto mt-4 max-w-lg text-lg text-[#b8bcd0]/70">
-            Browse certified astrologers, tarot readers, and oracle practitioners.
-            Book a personal reading today.
+            {templateName
+              ? "Only diviners with an active, publicly bookable matching service are shown here."
+              : "Browse certified astrologers, tarot readers, and oracle practitioners. Book a personal reading today."}
           </p>
         </div>
       </section>
@@ -276,7 +476,9 @@ export default async function DiscoverPage() {
         <DiscoverFilters
           diviners={diviners}
           total={diviners.length}
-          preferredDiviner={preferredDiviner}
+          preferredDiviner={templateSlug ? null : preferredDiviner}
+          templateName={templateName}
+          templateCategory={templateCategory}
         />
       </section>
 

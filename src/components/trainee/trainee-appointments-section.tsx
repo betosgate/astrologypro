@@ -8,10 +8,26 @@ import { BookingDetailSheet } from "@/components/dashboard/booking-detail-sheet"
 
 interface TraineeAppointment {
   id: string;
+  source: "bookings" | "admin_bookings";
   status: string;
   scheduled_at: string;
   duration_minutes: number;
   diviner_id: string | null;
+  diviner_username: string | null;
+  /**
+   * Server-computed calendar reschedule page URL:
+   *   - Diviner booking → `/{divinerUsername}/reschedule/{id}`
+   *   - Admin booking   → `/book/{adminUsername}/reschedule/{id}`
+   * Null when we can't resolve a host username, in which case the drawer
+   * falls back to its inline datetime form.
+   */
+  reschedule_href: string | null;
+  /**
+   * Server-computed video-session join URL.
+   *   - Diviner booking → `/{divinerUsername}/session/{id}`
+   *   - Admin booking   → `/book/{adminUsername}/session/{id}`
+   */
+  join_href: string | null;
   service_id: string | null;
   service_name: string | null;
   client_id: string | null;
@@ -86,6 +102,26 @@ export function TraineeAppointmentsSection() {
 
   useEffect(() => {
     load();
+
+    function handlePageShow() {
+      void load();
+    }
+
+    function handleVisibilityChange() {
+      if (document.visibilityState === "visible") {
+        void load();
+      }
+    }
+
+    window.addEventListener("pageshow", handlePageShow);
+    window.addEventListener("focus", handlePageShow);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener("pageshow", handlePageShow);
+      window.removeEventListener("focus", handlePageShow);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
   }, [load]);
 
   // Hide the whole section when there are no appointments — this keeps
@@ -147,7 +183,15 @@ export function TraineeAppointmentsSection() {
                   </p>
                 </div>
                 <BookingDetailSheet
+                  detailsOnly={a.source === "admin_bookings"}
+                  actionBasePath={
+                    a.source === "admin_bookings"
+                      ? `/api/trainee/appointments/admin-bookings/${a.id}`
+                      : null
+                  }
                   viewerRole="client"
+                  rescheduleHref={a.reschedule_href ?? null}
+                  joinHref={a.join_href ?? null}
                   booking={{
                     id: a.id,
                     scheduled_at: a.scheduled_at,
@@ -162,6 +206,7 @@ export function TraineeAppointmentsSection() {
                     client_id: a.client_id,
                     service_name: a.service_name ?? "Appointment",
                     metadata: a.metadata,
+                    username: a.diviner_username ?? undefined,
                   }}
                 />
               </div>

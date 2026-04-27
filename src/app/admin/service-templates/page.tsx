@@ -42,10 +42,10 @@ import {
   Trash2,
   ChevronUp,
   ChevronDown,
-  Search,
   RefreshCw,
   Copy,
   ExternalLink,
+  MoreHorizontal,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -54,6 +54,12 @@ import {
   AdminResetButton,
   useAdminTableParams,
 } from "@/components/admin/admin-table-parts";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -90,6 +96,7 @@ export default function ServiceTemplatesPage() {
   const [loading, setLoading] = useState(true);
   const [category, setCategory] = useState("all");
   const [statusFilter, setStatus] = useState("all");
+  const [scopeFilter, setScopeFilter] = useState("all");
   const [pageSize, setPageSize] = useState(25);
 
   const [deleteTarget, setDeleteTarget] = useState<ServiceTemplateRow | null>(null);
@@ -102,6 +109,7 @@ export default function ServiceTemplatesPage() {
       if (currentQ) params.set("search", currentQ);
       if (category !== "all") params.set("category", category);
       if (statusFilter !== "all") params.set("is_active", statusFilter === "active" ? "true" : "false");
+      if (scopeFilter !== "all") params.set("scope", scopeFilter);
       params.set("sort_by", currentSort);
       params.set("sort_dir", currentDir);
       params.set("page", String(currentPage));
@@ -117,7 +125,7 @@ export default function ServiceTemplatesPage() {
     } finally {
       setLoading(false);
     }
-  }, [currentQ, category, statusFilter, currentSort, currentDir, currentPage, pageSize]);
+  }, [currentQ, category, statusFilter, scopeFilter, currentSort, currentDir, currentPage, pageSize]);
 
   useEffect(() => {
     fetchTemplates();
@@ -164,6 +172,7 @@ export default function ServiceTemplatesPage() {
   function handleReset() {
     setCategory("all");
     setStatus("all");
+    setScopeFilter("all");
     pushParams({ q: "", sortBy: "display_order", sortDir: "asc", page: "1" });
   }
 
@@ -181,7 +190,13 @@ export default function ServiceTemplatesPage() {
     window.open(`${APP_URL}${getServiceTemplatePublicPath(template.slug)}`, "_blank", "noopener,noreferrer");
   }
 
-  const hasActiveFilters = currentQ !== "" || category !== "all" || statusFilter !== "all" || currentSort !== "display_order" || currentDir !== "asc";
+  const hasActiveFilters =
+    currentQ !== "" ||
+    category !== "all" ||
+    statusFilter !== "all" ||
+    scopeFilter !== "all" ||
+    currentSort !== "display_order" ||
+    currentDir !== "asc";
 
   function SortIcon({ col }: { col: string }) {
     if (currentSort !== col) return null;
@@ -205,6 +220,9 @@ export default function ServiceTemplatesPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button asChild variant="outline" size="sm">
+            <Link href="/admin/service-template-intakes">Intake Submissions</Link>
+          </Button>
           <AdminResetButton hasActiveFilters={hasActiveFilters} onReset={handleReset} />
           <Button
             variant="outline"
@@ -254,6 +272,16 @@ export default function ServiceTemplatesPage() {
             <SelectItem value="all">All Status</SelectItem>
             <SelectItem value="active">Active</SelectItem>
             <SelectItem value="inactive">Inactive</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Select value={scopeFilter} onValueChange={setScopeFilter}>
+          <SelectTrigger className="w-full sm:w-44">
+            <SelectValue placeholder="Template Type" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Templates</SelectItem>
+            <SelectItem value="general">General Only</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -358,50 +386,51 @@ export default function ServiceTemplatesPage() {
                   </TableCell>
                   <TableCell className="text-right">
                     <div
-                      className="flex justify-end gap-1"
+                      className="flex justify-end"
                       onClick={(e) => e.stopPropagation()}
                     >
-                      {isGeneralServiceTemplateSlug(t.slug) && (
-                        <>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleCopyPublicUrl(t)}
-                            disabled={!t.is_active}
-                            title={t.is_active ? "Copy public URL" : "Template is inactive"}
-                          >
-                            <Copy className="h-3.5 w-3.5" />
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreHorizontal className="h-4 w-4" />
+                            <span className="sr-only">Actions</span>
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            disabled={!t.is_active}
-                            onClick={() => handleOpenPublicUrl(t)}
-                            title={t.is_active ? "Open public page" : "Template is inactive"}
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          {isGeneralServiceTemplateSlug(t.slug) && (
+                            <DropdownMenuItem
+                              onClick={() => handleCopyPublicUrl(t)}
+                              disabled={!t.is_active}
+                            >
+                              <Copy className="mr-2 h-4 w-4" />
+                              Copy public URL
+                            </DropdownMenuItem>
+                          )}
+                          {isGeneralServiceTemplateSlug(t.slug) && (
+                            <DropdownMenuItem
+                              onClick={() => handleOpenPublicUrl(t)}
+                              disabled={!t.is_active}
+                            >
+                              <ExternalLink className="mr-2 h-4 w-4" />
+                              Open public page
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuItem asChild>
+                            <Link href={`/admin/service-templates/${t.id}`}>
+                              <Pencil className="mr-2 h-4 w-4" />
+                              Edit template
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="text-destructive focus:text-destructive"
+                            onClick={() => setDeleteTarget(t)}
+                            disabled={t.diviner_count > 0}
                           >
-                            <ExternalLink className="h-3.5 w-3.5" />
-                          </Button>
-                        </>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        asChild
-                      >
-                        <Link href={`/admin/service-templates/${t.id}`}>
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Link>
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-destructive hover:text-destructive"
-                        onClick={() => setDeleteTarget(t)}
-                        disabled={t.diviner_count > 0}
-                        title={t.diviner_count > 0 ? "Cannot deactivate — diviners are using this template" : "Deactivate template"}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Deactivate template
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </TableCell>
                 </TableRow>

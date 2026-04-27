@@ -48,6 +48,7 @@ import { DashboardFeedPreview } from "@/components/community/dashboard-feed-prev
 import { getCommunityDashboardFeed } from "@/lib/dashboard-content";
 import { calcFamilyProfileCompletion } from "@/lib/community/family-profile-completion";
 import { formatBirthPlace } from "@/lib/community/birth-location";
+import { SectionContainer } from "@/components/shared/section-container";
 
 export const metadata = { title: "Community - AstrologyPro" };
 export const dynamic = "force-dynamic";
@@ -124,6 +125,15 @@ function capitalize(value: string | null | undefined): string {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
+function getRelationshipBadgeClasses(rel: string): string {
+  const r = rel.toLowerCase();
+  if (r === "self" || r === "primary") return "bg-amber-500/20 text-amber-500 border-amber-500/30";
+  if (r === "spouse" || r === "partner") return "bg-purple-500/20 text-purple-400 border-purple-500/30";
+  if (r === "son" || r === "boy") return "bg-blue-500/20 text-blue-400 border-blue-500/30";
+  if (r === "daughter" || r === "girl") return "bg-rose-500/20 text-rose-400 border-rose-500/30";
+  return "bg-slate-500/20 text-slate-400 border-slate-500/30";
+}
+
 const AVATAR_COLORS = [
   "bg-rose-500/15 text-rose-600",
   "bg-violet-500/15 text-violet-600",
@@ -174,13 +184,17 @@ export default async function CommunityDashboardPage() {
 
   // Read only columns that exist in the current community_members schema.
   // The removed cancel_* fields were causing valid members to be redirected.
+  // We also pull birth_* fields here so the dashboard Profile Completion
+  // block reads from the same table /community/profile writes to, instead of
+  // the best-effort-synced `clients` row.
   const { data: member } = await supabase
     .from("community_members")
     .select(
-      "id, full_name, email, membership_type, membership_status, plan_type, joined_at, expires_at, pm_tier_id, current_period_end, extra_member_count"
+      "id, full_name, email, membership_type, membership_status, plan_type, joined_at, expires_at, pm_tier_id, current_period_end, extra_member_count, date_of_birth, birth_time, birth_city"
     )
     .eq("user_id", user.id)
     .maybeSingle();
+
 
   if (!member) redirect("/get-started");
 
@@ -228,11 +242,14 @@ export default async function CommunityDashboardPage() {
       .eq("user_id", user.id)
       .single(),
 
-    // Family members — full fields for profile completion rings
+    // Family members — full fields for profile completion rings.
+    // `user_id` is selected so the top-summary family chip row can
+    // deduplicate the primary member if they were also added as a
+    // family-member row (community-dashboard-family-chips Task 02).
     supabase
       .from("community_family_members")
       .select(
-        "id, full_name, relationship, date_of_birth, birth_time, birth_city, birth_country, natal_chart"
+        "id, user_id, full_name, relationship, date_of_birth, birth_time, birth_city, birth_country, natal_chart"
       )
       .eq("member_id", member.id)
       .limit(10),
@@ -482,11 +499,39 @@ export default async function CommunityDashboardPage() {
   }
   const daysRemaining = daysUntil(renewalDate);
 
-  // ── Legacy profile completion percentage (birth-data-only ring) ──────────
+  // ── Dashboard birth-data readiness ring ──────────────────────────────────
+  // Canonical source: community_members (what /community/profile saves to).
+  // Falling back to `clients` first caused a dashboard/profile mismatch where
+  // /community/profile showed 100% but /community showed 0% because the
+  // best-effort cross-role sync had not yet populated the `clients` row.
+  const memberBirthFields = {
+    date_of_birth:
+      (member as { date_of_birth?: string | null }).date_of_birth ?? null,
+    birth_time:
+      (member as { birth_time?: string | null }).birth_time ?? null,
+    birth_city:
+      (member as { birth_city?: string | null }).birth_city ?? null,
+  };
+  const hasDob = Boolean(
+    memberBirthFields.date_of_birth &&
+      String(memberBirthFields.date_of_birth).trim() !== ""
+  );
+  const hasBirthTime = Boolean(
+    memberBirthFields.birth_time &&
+      String(memberBirthFields.birth_time).trim() !== ""
+  );
+  const hasBirthCity = Boolean(
+    memberBirthFields.birth_city &&
+      String(memberBirthFields.birth_city).trim() !== ""
+  );
   let profilePct = 0;
-  if (client?.birth_date) profilePct += 34;
-  if (client?.birth_time) profilePct += 33;
-  if (client?.birth_city) profilePct += 33;
+  if (hasDob) profilePct += 34;
+  if (hasBirthTime) profilePct += 33;
+  if (hasBirthCity) profilePct += 33;
+  const profileMissingFields: string[] = [];
+  if (!hasDob) profileMissingFields.push("Date of birth");
+  if (!hasBirthTime) profileMissingFields.push("Birth time");
+  if (!hasBirthCity) profileMissingFields.push("Birth city");
 
   // ── Full profile completion data (weighted, for ProfileCompletionCard) ────
   const hasPhoto = Boolean(
@@ -494,9 +539,7 @@ export default async function CommunityDashboardPage() {
       String(user.user_metadata.avatar_url).trim() !== ""
   );
   const pcHasFullName = Boolean(member.full_name && member.full_name.trim() !== "");
-  const pcHasBirthData = Boolean(
-    client?.birth_date && client?.birth_time && client?.birth_city
-  );
+  const pcHasBirthData = hasDob && hasBirthTime && hasBirthCity;
   const pcHasNatalChart = pcFamilyMembers.some(
     (fm) =>
       fm.natal_chart != null &&
@@ -532,7 +575,7 @@ export default async function CommunityDashboardPage() {
       label: "Natal chart generated",
       completed: pcHasNatalChart,
       pct: 20,
-      action_url: "/community/family",
+      action_url: "/community/charts",
     },
     {
       key: "family_member",
@@ -546,7 +589,7 @@ export default async function CommunityDashboardPage() {
       label: "Relationship chart generated",
       completed: pcHasRelationshipChart,
       pct: 15,
-      action_url: "/community/family",
+      action_url: "/community/charts",
     },
   ];
 
@@ -624,25 +667,45 @@ export default async function CommunityDashboardPage() {
       ];
 
   // ── Own chart completeness (server-side, no polling needed) ───────────────
+  //
+  // Community Dashboard Task 02 (2026-04-24):
+  // The logged-in PM member's natal-readiness must be derived from
+  // `community_members` (the PM member record that `/community/profile`
+  // reads and writes), not from `clients` (a broader client-domain record
+  // that can be stale, missing, or unsynced for PM members).
+  //
+  // Reuse the already-derived booleans `hasDob`, `hasBirthTime`, and
+  // `hasBirthCity` computed earlier from `memberBirthFields` so the card,
+  // the profile-completion widget, and the progress bar all agree on a
+  // single source of truth for the PM member's own birth data.
+  //
+  // Scope: only the logged-in PM member's own cosmic blueprint card.
+  // Household/family-member chart logic is intentionally left unchanged.
   const ownChartMissingFields: string[] = [];
-  if (!client?.birth_date) ownChartMissingFields.push("date of birth");
-  if (!client?.birth_time) ownChartMissingFields.push("birth time");
-  if (!client?.birth_city) ownChartMissingFields.push("birth city");
+  if (!hasDob) ownChartMissingFields.push("date of birth");
+  if (!hasBirthTime) ownChartMissingFields.push("birth time");
+  if (!hasBirthCity) ownChartMissingFields.push("birth city");
   const ownChartReady = ownChartMissingFields.length === 0;
   const relationshipChartCount = pcRelCharts.length;
 
   // ── Quick actions definition ───────────────────────────────────────────────
+  //
+  // Task 04: natal chart + transits now point at the canonical toolkit routes
+  // delivered in Tasks 02 (`/community/horoscope`) and existing
+  // `/community/transits`. The "missing birth data" branch still points to
+  // `/community/profile` because the user needs to complete their profile
+  // before the toolkit page can render a chart.
   const quickActions = [
     {
       icon: ownChartReady ? Star : Sparkles,
-      label: ownChartReady ? "View Charts" : "Generate Chart",
-      href: ownChartReady ? "/community/family" : "/community/profile",
+      label: ownChartReady ? "View Chart" : "Generate Chart",
+      href: "/community/charts",
       highlight: !ownChartReady,
     },
     {
       icon: TrendingUp,
       label: "Transits",
-      href: "/community/family",
+      href: "/community/transits",
       highlight: false,
     },
     {
@@ -671,8 +734,94 @@ export default async function CommunityDashboardPage() {
     },
   ];
 
+  // ── Family Chips Data for Top Card ───────────────────────────────────────
+  //
+  // community-dashboard-family-chips (2026-04-24):
+  //   Task 02 — dedup Self. A family-member row can duplicate the primary
+  //             member in two legitimate ways: it was invited (fm.user_id
+  //             matches auth.uid()), or legacy rows share the same name.
+  //             We skip both.
+  //   Task 03 — deterministic order: Self → Spouse/Partner → children →
+  //             others → missing-role.
+  //   Task 04 — flag missing-role chips so the renderer can show a distinct
+  //             "Missing role" treatment instead of the old grey "Member".
+  //
+  // `relationshipPriority` sorts within known groups and is stable for
+  // unknown strings (they all land in the same "others" bucket so their
+  // relative order is preserved from the DB query).
+  const normalizeRel = (rel: string | null | undefined): string =>
+    (rel ?? "").trim().toLowerCase();
+
+  const relationshipPriority = (rel: string): number => {
+    const r = normalizeRel(rel);
+    if (r === "self" || r === "primary") return 0;
+    if (r === "spouse" || r === "partner") return 1;
+    if (
+      r === "child" ||
+      r === "children" ||
+      r === "son" ||
+      r === "boy" ||
+      r === "daughter" ||
+      r === "girl"
+    )
+      return 2;
+    if (r === "") return 4; // missing — after known groups
+    return 3; // everything else (parent, sibling, friend, other)
+  };
+
+  type FamilyChip = {
+    id: string;
+    name: string;
+    relationship: string;
+    missingRelationship: boolean;
+    sortKey: number;
+    isMock?: boolean;
+  };
+
+  const primarySelfName = (member.full_name ?? "").trim().toLowerCase();
+
+  const buildRealChips = (): FamilyChip[] => {
+    const chips: FamilyChip[] = [
+      {
+        id: member.id,
+        name: member.full_name || "Self",
+        relationship: "Self",
+        missingRelationship: false,
+        sortKey: 0,
+      },
+    ];
+
+    for (const fm of familyMembers) {
+      // Dedup against primary member — stable id first, name fallback.
+      const isSameAsPrimaryByUser =
+        (fm as { user_id?: string | null }).user_id != null &&
+        (fm as { user_id?: string | null }).user_id === user.id;
+      const isSameAsPrimaryByName =
+        primarySelfName !== "" &&
+        (fm.full_name ?? "").trim().toLowerCase() === primarySelfName;
+      if (isSameAsPrimaryByUser || isSameAsPrimaryByName) continue;
+
+      const rel = (fm.relationship ?? "").trim();
+      const missing = rel === "";
+      chips.push({
+        id: fm.id,
+        name: fm.full_name || "Unknown",
+        relationship: missing ? "" : capitalize(rel),
+        missingRelationship: missing,
+        sortKey: relationshipPriority(rel),
+      });
+    }
+
+    return chips.sort((a, b) => a.sortKey - b.sortKey);
+  };
+
+  const familyChipData: FamilyChip[] =
+    planType === "family" && familyMembers.length > 0 ? buildRealChips() : [];
+  const showFamilyEmptyState = planType === "family" && familyMembers.length === 0;
+
   return (
-    <div className="space-y-8">
+    <SectionContainer verticalPadding="none" className="px-0 sm:px-0 lg:px-0">
+      <div className="space-y-8">
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
@@ -685,7 +834,6 @@ export default async function CommunityDashboardPage() {
             })}
           </p>
         </div>
-
       </div>
 
       {/* ═══════════════════════════════════════════════════════════════════
@@ -770,6 +918,112 @@ export default async function CommunityDashboardPage() {
             </div>
           </div>
         </div>
+
+        {/* Family Members Row (community-dashboard-family-chips) */}
+        {/*
+          Task 05 — the visible "Family Members" text label is removed;
+            the people icon carries a title/aria-label as its sole anchor.
+          Task 06 — more breathing room: mt-6 pushes the row away from
+            the metadata row above, gap-4 widens the gap between the row
+            and the divider below. gap-y-2 on the chip wrap keeps multi-
+            line wraps readable on small screens.
+        */}
+        {familyChipData.length > 0 && (
+          <div className="mt-6 flex flex-col gap-4">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-2">
+              <span
+                title="Family members"
+                aria-label="Family members"
+                role="img"
+                className="inline-flex items-center mr-1 shrink-0"
+              >
+                <Users
+                  className="size-4 text-muted-foreground"
+                  aria-hidden="true"
+                />
+              </span>
+              {familyChipData.map((chip) => {
+                const chipContent = (
+                  <>
+                    <User className="size-3.5 text-muted-foreground" aria-hidden="true" />
+                    <span className="text-sm font-medium text-foreground">{chip.name}</span>
+                    {/*
+                      Task 04 — missing-role chip is visually distinct from
+                      the grey fallback. The amber dashed border + italic
+                      label + hover/focus title tells the user the row is
+                      real but the relationship field hasn't been filled
+                      in yet, without looking like a hard error.
+                    */}
+                    {chip.missingRelationship ? (
+                      <Badge
+                        variant="outline"
+                        className="text-[10px] px-1.5 py-0 h-4 min-h-0 rounded-full font-medium italic border border-dashed border-amber-500/50 bg-amber-500/10 text-amber-700"
+                        title="Relationship is missing for this member"
+                      >
+                        Missing: relationship
+                      </Badge>
+                    ) : (
+                      <Badge
+                        variant="outline"
+                        className={`text-[10px] px-1.5 py-0 h-4 min-h-0 rounded-full font-medium border ${getRelationshipBadgeClasses(
+                          chip.relationship
+                        )}`}
+                      >
+                        {chip.relationship}
+                      </Badge>
+                    )}
+                  </>
+                );
+
+                if (chip.missingRelationship) {
+                  return (
+                    <Link
+                      key={chip.id}
+                      href={`/community/family?edit=${encodeURIComponent(chip.id)}`}
+                      title={`Complete profile for ${chip.name}`}
+                      className="flex items-center gap-2 rounded-full border border-amber-500/40 bg-amber-500/5 pl-2.5 pr-1 py-1 transition-colors hover:border-amber-500/60 hover:bg-amber-500/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      {chipContent}
+                    </Link>
+                  );
+                }
+
+                return (
+                  <div
+                    key={chip.id}
+                    className="flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 pl-2.5 pr-1 py-1"
+                  >
+                    {chipContent}
+                  </div>
+                );
+              })}
+            </div>
+            <div className="h-px w-full bg-border/50" />
+          </div>
+        )}
+
+        {showFamilyEmptyState && (
+          <div className="mt-6 flex flex-col gap-4">
+            <div className="rounded-2xl border border-dashed border-primary/30 bg-primary/5 px-4 py-4 sm:px-5">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-foreground">
+                    No family members added yet
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Your Family plan is active. Add your first household member to
+                    start generating charts together.
+                  </p>
+                </div>
+                <Button asChild size="sm" className="w-full sm:w-auto">
+                  <Link href="/community/family">Add Family Member</Link>
+                </Button>
+              </div>
+            </div>
+            <div className="h-px w-full bg-border/50" />
+          </div>
+        )}
+
         {/* Quick action buttons */}
         <div className="mt-3 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
           <Button asChild variant="outline" size="sm" className="w-full sm:w-auto">
@@ -778,12 +1032,16 @@ export default async function CommunityDashboardPage() {
               My Profile
             </Link>
           </Button>
-          <Button asChild variant="outline" size="sm" className="w-full sm:w-auto">
+          {/* Client update 2026-04-24:
+              Hide "Manage Subscription" from the top summary quick actions in
+              section one. Keep the implementation commented for now instead of
+              deleting so it can be restored easily if requirements change. */}
+          {/* <Button asChild variant="outline" size="sm" className="w-full sm:w-auto">
             <Link href="/community/plan">
               <CreditCard className="mr-1.5 size-3.5" />
               Manage Subscription
             </Link>
-          </Button>
+          </Button> */}
           <Button asChild variant="outline" size="sm" className="w-full sm:w-auto">
             <Link href="/astrologers">
               <Compass className="mr-1.5 size-3.5" />
@@ -996,13 +1254,21 @@ export default async function CommunityDashboardPage() {
               <Link
                 key={action.label}
                 href={action.href}
-                className={`flex flex-col items-center gap-2 rounded-xl border p-3 text-center transition-colors hover:border-primary/40 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                className={`group relative flex flex-col items-center gap-2 rounded-xl border p-3 text-center transition-all hover:border-primary/40 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                   action.highlight
-                    ? "border-primary/30 bg-primary/5"
+                    ? "border-primary/30 bg-card shadow-[0_2px_8px_-2px_rgba(0,0,0,0.05)]"
                     : "border-border bg-card"
                 }`}
               >
-                <div className={`flex size-9 items-center justify-center rounded-full ${action.highlight ? "bg-primary/15" : "bg-muted"}`}>
+                {/* Pending action indicator dot */}
+                {action.highlight && (
+                  <span className="absolute -top-0.5 -right-0.5 flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                  </span>
+                )}
+
+                <div className={`flex size-9 items-center justify-center rounded-full transition-transform group-hover:scale-110 ${action.highlight ? "bg-primary/15" : "bg-muted"}`}>
                   <Icon className={`size-4 ${action.highlight ? "text-primary" : "text-muted-foreground"}`} aria-hidden="true" />
                 </div>
                 <span className="text-[11px] font-medium leading-tight text-foreground">
@@ -1026,7 +1292,11 @@ export default async function CommunityDashboardPage() {
         {/* Profile Progress + Astro Charts */}
         <div className="grid gap-4 sm:grid-cols-2">
           {/* Profile Completion Progress Ring */}
-          <ProfileProgressSection profilePct={profilePct} membersCount={otherMembers.length} />
+          <ProfileProgressSection
+            profilePct={profilePct}
+            membersCount={memberCount}
+            missingFields={profileMissingFields}
+          />
 
           {/* Astro Charts polling/display */}
           <AstroChartsSection />
@@ -1034,7 +1304,12 @@ export default async function CommunityDashboardPage() {
 
         {/* Own natal chart status */}
         <div className="grid gap-3 sm:grid-cols-2">
-          {ownChartReady ? (
+          {/* Client update 2026-04-24:
+              Hide the standalone own-chart status card for now. This was the
+              green "Your Natal Chart / Birth data complete" block. Keep the
+              implementation commented instead of deleting it so the dashboard
+              can restore this state card later if requirements change. */}
+          {/* {ownChartReady ? (
             <Card className="border-emerald-500/30 bg-emerald-500/5">
               <CardContent className="flex items-center gap-4 py-4">
                 <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-emerald-500/15">
@@ -1042,9 +1317,9 @@ export default async function CommunityDashboardPage() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold leading-tight">Your Natal Chart</p>
-                  <p className="text-xs text-emerald-600 mt-0.5">Birth data complete — ready to generate</p>
+                  <p className="text-xs text-emerald-600 mt-0.5">Birth data complete — open your chart</p>
                   <Button asChild variant="link" size="sm" className="h-auto p-0 mt-1 text-xs text-primary">
-                    <Link href="/community/family">View Charts →</Link>
+                    <Link href="/community/horoscope">View Chart →</Link>
                   </Button>
                 </div>
                 <Badge variant="outline" className="shrink-0 text-xs border-emerald-500/40 text-emerald-700">
@@ -1052,7 +1327,8 @@ export default async function CommunityDashboardPage() {
                 </Badge>
               </CardContent>
             </Card>
-          ) : (
+          ) : ( */}
+          {ownChartReady ? null : (
             <Card className="border-dashed border-amber-500/20">
               <CardContent className="flex flex-col items-center gap-3 py-6 text-center">
                 <div className="flex size-12 items-center justify-center rounded-full bg-amber-500/15">
@@ -1078,7 +1354,11 @@ export default async function CommunityDashboardPage() {
           )}
 
           {/* Relationship charts quick stat */}
-          {relationshipChartCount > 0 ? (
+          {/* Client update 2026-04-24:
+              Hide the standalone ready-state relationship-chart stat card for
+              now. Keep the implementation commented instead of deleting it so
+              this quick-summary card can be restored later if needed. */}
+          {/* {relationshipChartCount > 0 ? (
             <Card>
               <CardContent className="flex items-center gap-4 py-4">
                 <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-violet-500/10">
@@ -1098,7 +1378,8 @@ export default async function CommunityDashboardPage() {
                 </span>
               </CardContent>
             </Card>
-          ) : (
+          ) : ( */}
+          {relationshipChartCount > 0 ? null : (
             <Card className="border-dashed">
               <CardContent className="flex flex-col items-center gap-3 py-5 text-center">
                 <div className="flex size-10 items-center justify-center rounded-full bg-violet-500/10">
@@ -1121,8 +1402,11 @@ export default async function CommunityDashboardPage() {
           )}
         </div>
 
-        {/* Western Horoscope deep-link */}
-        <Card className="border-sky-500/20 bg-sky-500/5">
+        {/* Client update 2026-04-24:
+            Hide the standalone "Western Natal Chart" promo card for now.
+            Keep the implementation commented instead of deleting it so this
+            entry point can be restored easily if requirements change. */}
+        {/* <Card className="border-sky-500/20 bg-sky-500/5">
           <CardContent className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3 min-w-0">
               <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-sky-500/20">
@@ -1149,7 +1433,7 @@ export default async function CommunityDashboardPage() {
               </Link>
             </Button>
           </CardContent>
-        </Card>
+        </Card> */}
       </section>
 
       {/* ═══════════════════════════════════════════════════════════════════
@@ -1322,6 +1606,32 @@ export default async function CommunityDashboardPage() {
                   const profileComplete = completionPct >= 100;
                   const avatarColor = AVATAR_COLORS[idx % AVATAR_COLORS.length];
 
+                  // Community Family UX Task 02 (2026-04-24):
+                  // Build a compact missing-field summary for incomplete
+                  // cards. `completion.missing` is the source of truth
+                  // (from calcFamilyProfileCompletion) — we only format
+                  // labels for card layout (lowercase, strip the parenthetical
+                  // hint on "Birth time (or mark unknown)"). The card line
+                  // shows up to two fields inline and "+N more" when the
+                  // list is longer, so it never overflows the grid layout.
+                  const missingDisplay = completion.missing.map((label) =>
+                    label.replace(/\s*\(.*?\)\s*$/, "").toLowerCase()
+                  );
+                  const missingSummary = (() => {
+                    if (missingDisplay.length === 0) return null;
+                    if (missingDisplay.length <= 2) {
+                      return missingDisplay.join(", ");
+                    }
+                    const head = missingDisplay.slice(0, 2).join(", ");
+                    return `${head} +${missingDisplay.length - 2} more`;
+                  })();
+
+                  // Community Family UX Task 04 (2026-04-24):
+                  // Deep-link incomplete-member corrective CTAs to the family
+                  // index with an edit query param so `/community/family`
+                  // opens the inline edit state for the exact member.
+                  const completeProfileHref = `/community/family?edit=${encodeURIComponent(m.id)}`;
+
                   return (
                     <Card key={m.id} className="transition-colors hover:border-primary/30">
                       <CardContent className="py-4 px-4 space-y-3">
@@ -1392,9 +1702,34 @@ export default async function CommunityDashboardPage() {
                             <p className="text-xs text-muted-foreground leading-snug">
                               Profile {profileComplete ? "complete" : "incomplete"}
                             </p>
+                            {/*
+                              Task 02 — missing-field summary for incomplete
+                              members. `truncate` + `title` makes sure rare
+                              long strings still fit the card and remain
+                              discoverable on hover.
+                            */}
+                            {!profileComplete && missingSummary && (
+                              <p
+                                className="text-[11px] text-amber-600/90 leading-snug mt-0.5 truncate"
+                                title={`Missing: ${missingDisplay.join(", ")}`}
+                              >
+                                Missing: {missingSummary}
+                              </p>
+                            )}
+                            {/*
+                              Task 03 — helper line on the complete-but-no-chart
+                              state so the user sees at a glance that chart
+                              generation is the next step, not more profile
+                              editing.
+                            */}
+                            {profileComplete && !hasNatalChart && (
+                              <p className="text-[11px] text-muted-foreground leading-snug mt-0.5">
+                                Ready to generate chart
+                              </p>
+                            )}
                             {!profileComplete && (
                               <Button asChild variant="link" size="sm" className="h-auto p-0 mt-0.5 text-xs text-primary">
-                                <Link href={`/community/family/${m.id}`}>
+                                <Link href={completeProfileHref}>
                                   Complete Profile →
                                 </Link>
                               </Button>
@@ -1755,6 +2090,7 @@ export default async function CommunityDashboardPage() {
           </a>
         </Button>
       </div>
-    </div>
+      </div>
+    </SectionContainer>
   );
 }

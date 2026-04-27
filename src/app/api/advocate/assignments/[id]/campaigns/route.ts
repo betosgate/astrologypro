@@ -15,7 +15,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { generateCampaignCode } from "@/lib/campaign-code";
-import { isAffiliateAssignmentV2Enabled } from "@/lib/feature-flags";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -62,9 +61,6 @@ async function resolveAffiliate() {
 }
 
 export async function POST(req: NextRequest, { params }: RouteParams) {
-  if (!isAffiliateAssignmentV2Enabled()) {
-    return NextResponse.json({ error: "Feature disabled" }, { status: 503 });
-  }
   const { id: assignmentId } = await params;
   const ctx = await resolveAffiliate();
   if (!ctx) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -136,24 +132,35 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
 
   // Insert the campaign
   const now = new Date().toISOString();
+  // Assignment stores ('percent','flat'); affiliate_campaigns.commission_type
+  // check constraint uses the legacy ('percentage','fixed') vocabulary. Map
+  // across the boundary without mutating the snapshot.
+  const assignmentCommissionType =
+    (assignment.commission_type as "percent" | "flat") ?? "percent";
+  const campaignCommissionType =
+    assignmentCommissionType === "flat" ? "fixed" : "percentage";
   const insertPayload: Record<string, unknown> = {
     diviner_id: assignment.diviner_id,
     name: body.name.trim(),
     description: body.description?.trim() || null,
     status: "active",
-    commission_type:
-      (assignment.commission_type as "percent" | "flat") ?? "percent",
+    commission_type: campaignCommissionType,
     commission_value: Number(assignment.commission_value),
     // Owner fields — affiliate-owned campaign
     owner_type: "affiliate",
     owner_affiliate_id: affiliateId,
     owner_affiliate_type: affiliateType,
     commission_value_snapshot: Number(assignment.commission_value),
-    commission_type_snapshot:
-      (assignment.commission_type as "percent" | "flat") ?? "percent",
+    commission_type_snapshot: assignmentCommissionType,
     source_assignment_id: assignment.id,
-    // Destination inherited
+    // Destination inherited. The chk_destination_profile / chk_destination_service
+    // constraints require exactly one of destination_profile_id /
+    // destination_service_template_id to be set, and the other NULL.
     destination_type: assignment.destination_type,
+    destination_profile_id:
+      assignment.destination_type === "PROFILE"
+        ? assignment.diviner_id
+        : null,
     destination_service_template_id:
       assignment.destination_type === "SERVICE"
         ? assignment.destination_id

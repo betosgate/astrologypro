@@ -69,10 +69,18 @@ export async function GET(req: NextRequest) {
       .gte("created_at", since)
       .order("created_at", { ascending: false })
       .limit(200),
+    // Unpaid-commission list. Post System A retirement there's no
+    // pending/approved state machine — every non-reversed conversion
+    // is effectively "unpaid" until Phase 2's Stripe auto-split wires
+    // the paid_at column. Resolving the diviner display info goes
+    // through the campaign since campaign_conversions has no
+    // diviner_id of its own.
     admin
-      .from("affiliate_commissions")
-      .select("id, affiliate_id, diviner_id, commission_amount_cents, status, created_at, diviner_affiliates(name, email), diviners(display_name, username)")
-      .in("status", ["pending", "approved"])
+      .from("campaign_conversions")
+      .select(
+        "id, affiliate_id, commission_amount_cents, created_at, campaign:affiliate_campaigns(diviner_id, diviner:diviners(display_name, username))",
+      )
+      .is("reversed_at", null)
       .gte("created_at", since)
       .order("created_at", { ascending: false })
       .limit(100),
@@ -99,10 +107,23 @@ export async function GET(req: NextRequest) {
     telephonyByDiviner.set(key, current);
   }
 
-  const affiliateByDiviner = new Map<string, { divinerName: string; username: string | null; commissionCount: number; pendingAmountCents: number }>();
-  for (const row of pendingAffiliate) {
-    const diviner = row.diviners as { display_name?: string | null; username?: string | null } | null;
-    const key = row.diviner_id ?? "unknown";
+  const affiliateByDiviner = new Map<
+    string,
+    { divinerName: string; username: string | null; commissionCount: number; pendingAmountCents: number }
+  >();
+  type PendingRow = {
+    commission_amount_cents: number | null;
+    campaign: {
+      diviner_id: string | null;
+      diviner: { display_name?: string | null; username?: string | null } | null;
+    } | { diviner_id: string | null; diviner: { display_name?: string | null; username?: string | null } | null }[] | null;
+  };
+  for (const row of pendingAffiliate as unknown as PendingRow[]) {
+    const campaign = Array.isArray(row.campaign) ? row.campaign[0] ?? null : row.campaign;
+    const diviner = Array.isArray(campaign?.diviner)
+      ? campaign?.diviner?.[0] ?? null
+      : campaign?.diviner ?? null;
+    const key = campaign?.diviner_id ?? "unknown";
     const current = affiliateByDiviner.get(key) ?? {
       divinerName: diviner?.display_name ?? "Unknown diviner",
       username: diviner?.username ?? null,

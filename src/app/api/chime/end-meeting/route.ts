@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { endChimeMeeting, stopChimeRecording, startChimeConcatenation } from "@/lib/chime-meetings";
+import { waitForUsableChimePipelineId } from "@/lib/chime-recording-pipeline";
 import { PRICING } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
@@ -68,11 +69,17 @@ export async function POST(request: NextRequest) {
     // pipeline abruptly. AWS would only have the first few seconds of
     // segments flushed, producing a 5-second recording for a 3-minute call.
     if (booking.chime_meeting_id) {
+      const capturePipelineArn = await waitForUsableChimePipelineId({
+        table: "bookings",
+        sessionId: bookingId,
+        currentPipelineId: booking.chime_pipeline_id,
+      });
+
       // Step 1: Stop the capture pipeline gracefully so all segments flush to S3
-      if (booking.chime_pipeline_id) {
+      if (capturePipelineArn) {
         try {
-          await stopChimeRecording(booking.chime_pipeline_id);
-          console.log(`[end-meeting] Capture pipeline stopped: ${booking.chime_pipeline_id}`);
+          await stopChimeRecording(capturePipelineArn);
+          console.log(`[end-meeting] Capture pipeline stopped: ${capturePipelineArn}`);
         } catch (err) {
           // ConflictException means it's already stopped — safe to continue
           const errName = (err as { name?: string }).name ?? "";
@@ -80,21 +87,26 @@ export async function POST(request: NextRequest) {
             console.error("[end-meeting] Failed to stop capture pipeline:", err);
           }
         }
-      }
 
-      // Step 2: Trigger concatenation — merges all segment files into a single
-      // MP4: recordings/{bookingId}/final/. Runs asynchronously on AWS;
-      // sync-recordings cron picks up the result.
-      if (booking.chime_pipeline_id) {
+        // Step 2: grace period. AWS writes the last 1–2 composited-video
+        // fragments asynchronously after the Delete call returns. Kicking off
+        // concatenation immediately picks up whatever happens to be on S3 at
+        // that instant, which was producing the short "final" MP4. A few
+        // seconds is enough for the in-flight fragments to settle.
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+
+        // Step 3: Trigger concatenation — merges all segment files into a single
+        // MP4: recordings/{bookingId}/final/. Runs asynchronously on AWS;
+        // sync-recordings cron picks up the result.
         try {
-          await startChimeConcatenation(booking.chime_pipeline_id, bookingId);
+          await startChimeConcatenation(capturePipelineArn, bookingId);
           console.log(`[end-meeting] Concatenation pipeline started for booking ${bookingId}`);
         } catch (err) {
           console.error("[end-meeting] Failed to start concatenation:", err);
         }
       }
 
-      // Step 3: Delete the meeting LAST — after pipeline is stopped and
+      // Step 4: Delete the meeting LAST — after pipeline is stopped and
       // concatenation is queued
       try {
         await endChimeMeeting(booking.chime_meeting_id);

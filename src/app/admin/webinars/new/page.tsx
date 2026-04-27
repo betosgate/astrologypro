@@ -74,7 +74,7 @@ export default function NewWebinarPage() {
         <h1 className="mt-2 text-2xl font-bold tracking-tight">New Webinar</h1>
       </div>
 
-      <Card className="max-w-2xl">
+      <Card>
         <CardHeader>
           <CardTitle>Webinar Details</CardTitle>
         </CardHeader>

@@ -9,18 +9,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { isAffiliateAssignmentV2Enabled } from "@/lib/feature-flags";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
-
-function featureGate() {
-  if (isAffiliateAssignmentV2Enabled()) return null;
-  return NextResponse.json(
-    { error: "Feature disabled" },
-    { status: 503 }
-  );
-}
 
 async function getDiviner() {
   const supabase = await createClient();
@@ -31,7 +22,7 @@ async function getDiviner() {
   const admin = createAdminClient();
   const { data: diviner } = await admin
     .from("diviners")
-    .select("id, user_id")
+    .select("id, user_id, display_name")
     .eq("user_id", user.id)
     .maybeSingle();
   return diviner ? { user, diviner, admin } : null;
@@ -59,7 +50,10 @@ export async function GET() {
     return NextResponse.json({ assignments: [] });
   }
 
-  // Join: affiliate names (one lookup per type), service template names, click/conversion counts
+  // Resolve affiliate display info + destination labels, and aggregate KPIs
+  // strictly through the campaign -> source_assignment_id chain so the
+  // numbers attached to each assignment row belong ONLY to campaigns that
+  // were created under that assignment.
   const affIds = [...new Set(rows.map((r) => r.affiliate_id as string))];
   const tplIds = [
     ...new Set(
@@ -68,8 +62,9 @@ export async function GET() {
         .map((r) => r.destination_id as string)
     ),
   ];
+  const assignmentIds = rows.map((r) => r.id as string);
 
-  const [advocatesRes, divAffRes, templatesRes, clicksRes, conversionsRes] =
+  const [advocatesRes, divAffRes, templatesRes, campaignsRes] =
     await Promise.all([
       affIds.length > 0
         ? admin.from("social_advocates").select("id, name, email").in("id", affIds)
@@ -81,16 +76,11 @@ export async function GET() {
         ? admin.from("service_templates").select("id, name").in("id", tplIds)
         : Promise.resolve({ data: [] }),
       admin
-        .from("campaign_clicks")
-        .select("affiliate_id, destination_type, destination_id, is_bot, is_unique_click")
+        .from("affiliate_campaigns")
+        .select("id, source_assignment_id")
         .eq("diviner_id", diviner.id)
-        .in("affiliate_id", affIds.length > 0 ? affIds : ["00000000-0000-0000-0000-000000000000"])
-        .gte("clicked_at", since30d),
-      admin
-        .from("campaign_conversions")
-        .select("affiliate_id, commission_amount_cents, order_amount_cents, campaign_id")
-        .in("affiliate_id", affIds.length > 0 ? affIds : ["00000000-0000-0000-0000-000000000000"])
-        .gte("converted_at", since30d),
+        .eq("owner_type", "affiliate")
+        .in("source_assignment_id", assignmentIds),
     ]);
 
   const nameByAff = new Map<string, { name: string; email: string; type: "social_advocate" | "diviner_affiliate" }>();
@@ -105,28 +95,82 @@ export async function GET() {
     (templatesRes.data ?? []).map((t: { id: string; name: string }) => [t.id, t.name])
   );
 
-  // Aggregate clicks/conversions per (affiliate_id, scope). For PROFILE we
-  // count clicks where destination_type='PROFILE'; for SERVICE we match
-  // destination_id.
-  type ClickRow = { affiliate_id: string; destination_type: string; destination_id: string | null; is_bot: boolean | null; is_unique_click: boolean | null };
-  const clicks = (clicksRes.data ?? []) as ClickRow[];
-  type ConvRow = { affiliate_id: string; commission_amount_cents: number | null; order_amount_cents: number | null; campaign_id: string };
-  const conversions = (conversionsRes.data ?? []) as ConvRow[];
+  const campaignRows = (campaignsRes.data ?? []) as Array<{
+    id: string;
+    source_assignment_id: string | null;
+  }>;
+  const campaignsByAssignment = new Map<string, string[]>();
+  const assignmentByCampaign = new Map<string, string>();
+  for (const c of campaignRows) {
+    if (!c.source_assignment_id) continue;
+    assignmentByCampaign.set(c.id, c.source_assignment_id);
+    const arr = campaignsByAssignment.get(c.source_assignment_id) ?? [];
+    arr.push(c.id);
+    campaignsByAssignment.set(c.source_assignment_id, arr);
+  }
+  const campaignIds = campaignRows.map((c) => c.id);
+
+  // Aggregate clicks/conversions per campaign, then fold into per-assignment
+  // totals. Assignments with zero campaigns still appear with zero KPIs.
+  const clicksByCampaign = new Map<string, { clicks: number; unique: number }>();
+  const convByCampaign = new Map<string, { count: number; commission: number }>();
+
+  if (campaignIds.length > 0) {
+    const [clicksRes, conversionsRes] = await Promise.all([
+      admin
+        .from("campaign_clicks")
+        .select("campaign_id, is_bot, is_unique_click")
+        .in("campaign_id", campaignIds)
+        .gte("clicked_at", since30d),
+      admin
+        .from("campaign_conversions")
+        .select("campaign_id, commission_amount_cents, reversed_at")
+        .in("campaign_id", campaignIds)
+        .gte("converted_at", since30d),
+    ]);
+
+    for (const c of (clicksRes.data ?? []) as Array<{
+      campaign_id: string;
+      is_bot: boolean | null;
+      is_unique_click: boolean | null;
+    }>) {
+      if (c.is_bot) continue;
+      const entry = clicksByCampaign.get(c.campaign_id) ?? { clicks: 0, unique: 0 };
+      entry.clicks++;
+      if (c.is_unique_click) entry.unique++;
+      clicksByCampaign.set(c.campaign_id, entry);
+    }
+
+    for (const c of (conversionsRes.data ?? []) as Array<{
+      campaign_id: string;
+      commission_amount_cents: number | null;
+      reversed_at: string | null;
+    }>) {
+      if (c.reversed_at) continue;
+      const entry = convByCampaign.get(c.campaign_id) ?? { count: 0, commission: 0 };
+      entry.count++;
+      entry.commission += Number(c.commission_amount_cents ?? 0);
+      convByCampaign.set(c.campaign_id, entry);
+    }
+  }
 
   const enriched = rows.map((r) => {
     const aff = nameByAff.get(r.affiliate_id as string);
-    const matchingClicks = clicks.filter((c) => {
-      if (c.affiliate_id !== r.affiliate_id) return false;
-      if (r.destination_type === "PROFILE") return c.destination_type === "PROFILE";
-      return c.destination_type === "SERVICE" && c.destination_id === r.destination_id;
-    });
-    const humanClicks = matchingClicks.filter((c) => !c.is_bot);
-    const uniqueClicks = humanClicks.filter((c) => c.is_unique_click);
-    const matchingConvs = conversions.filter((c) => c.affiliate_id === r.affiliate_id);
-    const commissionCents = matchingConvs.reduce(
-      (s, c) => s + Number(c.commission_amount_cents ?? 0),
-      0
-    );
+    const assignmentCampaigns = campaignsByAssignment.get(r.id as string) ?? [];
+
+    let clicks = 0, unique = 0, conversions = 0, commissionCents = 0;
+    for (const cid of assignmentCampaigns) {
+      const k = clicksByCampaign.get(cid);
+      if (k) {
+        clicks += k.clicks;
+        unique += k.unique;
+      }
+      const cv = convByCampaign.get(cid);
+      if (cv) {
+        conversions += cv.count;
+        commissionCents += cv.commission;
+      }
+    }
 
     return {
       id: r.id,
@@ -147,9 +191,9 @@ export async function GET() {
       revoked_at: r.revoked_at,
       notes: r.notes,
       kpis_30d: {
-        clicks: humanClicks.length,
-        unique_clicks: uniqueClicks.length,
-        conversions: matchingConvs.length,
+        clicks,
+        unique_clicks: unique,
+        conversions,
         commission_cents: commissionCents,
       },
     };
@@ -160,8 +204,6 @@ export async function GET() {
 
 // ───────────────────────────────── POST ────────────────────────────────────
 export async function POST(req: NextRequest) {
-  const blocked = featureGate();
-  if (blocked) return blocked;
   const ctx = await getDiviner();
   if (!ctx) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const { user, diviner, admin } = ctx;
@@ -298,6 +340,48 @@ export async function POST(req: NextRequest) {
       { error: insertErr?.message ?? "Failed to create assignment" },
       { status: 500 }
     );
+  }
+
+  // Fire `affiliate.assigned` notification (fire-and-forget; never fail the POST).
+  if (affiliateType === "diviner_affiliate") {
+    try {
+      const { getAffiliateAccountForJunction } = await import(
+        "@/lib/affiliate-accounts"
+      );
+      const { notifyAffiliate, formatRate } = await import(
+        "@/lib/affiliate-notifications"
+      );
+
+      const account = await getAffiliateAccountForJunction(admin, affiliateId);
+
+      let productLabel = `${diviner.display_name ?? "the diviner"}'s profile`;
+      if (destinationType === "SERVICE" && destinationId) {
+        const { data: template } = await admin
+          .from("service_templates")
+          .select("name")
+          .eq("id", destinationId)
+          .maybeSingle();
+        productLabel = (template?.name as string) ?? "a service";
+      }
+
+      if (account?.user_id) {
+        await notifyAffiliate({
+          admin,
+          userId: account.user_id,
+          affiliateAccountId: account.id,
+          toEmail: account.email,
+          kind: "affiliate.assigned",
+          title: `New affiliate assignment on ${productLabel}`,
+          body: `${diviner.display_name ?? "A diviner"} has assigned you to ${productLabel} at ${formatRate(commissionType, commissionValue)}. You can now create tracking campaigns for this product from your affiliate portal.`,
+          actionUrl: "/affiliate/assignments",
+        });
+      }
+    } catch (err) {
+      console.error("[POST affiliate-assignments] notification failed", {
+        assignmentId: inserted.id,
+        err: err instanceof Error ? err.message : String(err),
+      });
+    }
   }
 
   return NextResponse.json({ id: inserted.id }, { status: 201 });

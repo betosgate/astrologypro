@@ -3,14 +3,32 @@ import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
+type ChartStatus = "ready" | "empty" | "pending" | "failed";
+
 /**
  * GET /api/community/astro-charts
  *
  * Returns:
- * - natalChart: the first family member that has natal_chart data
- * - monthlyTransit: this month's transit record for that member
+ * - natalChart  : the first family member that has natal_chart data, else null
+ *                 (kept for backward compatibility with older clients).
+ * - natalCharts : full list of family members that have natal_chart data
+ *                 (used by the dashboard member-carousel UI added in
+ *                 community-natal-carousel Task 02). Empty array when no
+ *                 charts exist yet — never null.
+ * - monthlyTransit: this month's transit record for the first ready member,
+ *                 else null.
+ * - status.natal / status.transit:
+ *     "ready"   — data is available
+ *     "empty"   — no data exists yet and no background generation is running;
+ *                 the dashboard should render its empty state and stop polling
+ *     "pending" — reserved for real background jobs; kept for future use
+ *     "failed"  — an upstream read errored
  *
  * Used by the dashboard polling component (AstroChartsSection).
+ *
+ * Empty results are a normal outcome (a member may have zero family rows, or
+ * the monthly transit for the current month may not have been generated yet),
+ * so we use .maybeSingle() / array reads that tolerate zero-row responses.
  */
 export async function GET() {
   const supabase = await createClient();
@@ -24,53 +42,95 @@ export async function GET() {
     .from("community_members")
     .select("id, membership_status")
     .eq("user_id", user.id)
-    .single();
+    .maybeSingle();
 
   if (!member || member.membership_status !== "active") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  // Find first family member with a natal chart
-  const { data: familyWithChart } = await supabase
+  // Pull every family member that has a natal chart, ordered by
+  // created_at so the carousel ordering is stable across refreshes.
+  // An empty array is a valid "no chart yet" signal — not an error.
+  const { data: familyWithCharts, error: familyError } = await supabase
     .from("community_family_members")
-    .select("id, full_name, date_of_birth, natal_chart")
+    .select("id, full_name, date_of_birth, natal_chart, created_at")
     .eq("member_id", member.id)
     .not("natal_chart", "is", null)
-    .limit(1)
-    .single();
+    .order("created_at", { ascending: true });
 
-  let natalChart = null;
-  let monthlyTransit = null;
+  type NatalChartItem = {
+    id: string;
+    full_name: string;
+    date_of_birth: string;
+    natal_chart: Record<string, unknown>;
+  };
 
-  if (familyWithChart) {
-    natalChart = {
-      id: familyWithChart.id,
-      full_name: familyWithChart.full_name,
-      date_of_birth: familyWithChart.date_of_birth,
-      natal_chart: familyWithChart.natal_chart,
-    };
+  let natalChart: NatalChartItem | null = null;
+  let natalCharts: NatalChartItem[] = [];
+  let monthlyTransit: {
+    id: string;
+    member_id: string;
+    month: string;
+    transit_data: Record<string, unknown>;
+    created_at: string;
+  } | null = null;
 
-    // Look up this month's transit for that family member
+  let natalStatus: ChartStatus;
+  let transitStatus: ChartStatus;
+
+  if (familyError) {
+    console.error("[community/astro-charts] family read error:", familyError);
+    natalStatus = "failed";
+    transitStatus = "failed";
+  } else if (!familyWithCharts || familyWithCharts.length === 0) {
+    // No family member has a natal chart yet — not a loading state.
+    natalStatus = "empty";
+    // Without a natal chart there is nothing to transit against.
+    transitStatus = "empty";
+  } else {
+    natalCharts = familyWithCharts.map((row) => ({
+      id: row.id,
+      full_name: row.full_name,
+      date_of_birth: row.date_of_birth,
+      natal_chart: row.natal_chart,
+    }));
+    // First chart kept on the legacy `natalChart` field for back-compat.
+    natalChart = natalCharts[0] ?? null;
+    natalStatus = "ready";
+
+    // Monthly transit is still scoped to the first ready member so the
+    // existing Monthly Transit card behaviour is unchanged.
     const now = new Date();
     const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 
-    const { data: transit } = await supabase
+    const { data: transit, error: transitError } = await supabase
       .from("monthly_transits")
       .select("id, month, transit_data, created_at")
-      .eq("member_id", familyWithChart.id)
+      .eq("member_id", natalCharts[0].id)
       .eq("month", currentMonth)
-      .single();
+      .maybeSingle();
 
-    if (transit) {
+    if (transitError) {
+      console.error("[community/astro-charts] transit read error:", transitError);
+      transitStatus = "failed";
+    } else if (transit) {
       monthlyTransit = {
         id: transit.id,
-        member_id: familyWithChart.id,
+        member_id: natalCharts[0].id,
         month: transit.month,
         transit_data: transit.transit_data,
         created_at: transit.created_at,
       };
+      transitStatus = "ready";
+    } else {
+      transitStatus = "empty";
     }
   }
 
-  return NextResponse.json({ natalChart, monthlyTransit });
+  return NextResponse.json({
+    natalChart,
+    natalCharts,
+    monthlyTransit,
+    status: { natal: natalStatus, transit: transitStatus },
+  });
 }

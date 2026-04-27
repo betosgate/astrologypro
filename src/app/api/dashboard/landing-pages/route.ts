@@ -83,40 +83,27 @@ export async function GET(req: NextRequest) {
   > = {};
 
   if (templateIds.length > 0) {
-    const { data: landingPages } = await admin
-      .from("service_landing_pages")
-      .select("id, service_template_id")
+    const { data: blocks } = await admin
+      .from("diviner_service_blocks")
+      .select("service_template_id, slot, updated_at")
       .eq("diviner_id", diviner.id)
-      .in("service_template_id", templateIds);
+      .in("service_template_id", templateIds)
+      .eq("is_enabled", true);
 
-    const lpIdToTemplate: Record<string, string> = {};
-    for (const lp of landingPages ?? []) {
-      lpIdToTemplate[lp.id] = lp.service_template_id;
-    }
-
-    const lpIds = Object.keys(lpIdToTemplate);
-    if (lpIds.length > 0) {
-      const { data: blocks } = await admin
-        .from("service_landing_page_sections")
-        .select("landing_page_id, slot, is_enabled, updated_at")
-        .in("landing_page_id", lpIds)
-        .eq("is_enabled", true);
-
-      for (const b of blocks ?? []) {
-        const templateId = lpIdToTemplate[b.landing_page_id];
-        if (!templateId) continue;
-        if (!blockCounts[templateId]) {
-          blockCounts[templateId] = { about_diviner: 0, extra: 0, last_edited_at: null };
-        }
-        if (b.slot === "about_diviner") blockCounts[templateId].about_diviner++;
-        else if (b.slot === "extra") blockCounts[templateId].extra++;
-        if (
-          b.updated_at &&
-          (!blockCounts[templateId].last_edited_at ||
-            b.updated_at > blockCounts[templateId].last_edited_at!)
-        ) {
-          blockCounts[templateId].last_edited_at = b.updated_at;
-        }
+    for (const b of blocks ?? []) {
+      const templateId = b.service_template_id as string;
+      if (!templateId) continue;
+      if (!blockCounts[templateId]) {
+        blockCounts[templateId] = { about_diviner: 0, extra: 0, last_edited_at: null };
+      }
+      if (b.slot === "about_diviner") blockCounts[templateId].about_diviner++;
+      else if (b.slot === "extra") blockCounts[templateId].extra++;
+      if (
+        b.updated_at &&
+        (!blockCounts[templateId].last_edited_at ||
+          b.updated_at > blockCounts[templateId].last_edited_at!)
+      ) {
+        blockCounts[templateId].last_edited_at = b.updated_at;
       }
     }
   }

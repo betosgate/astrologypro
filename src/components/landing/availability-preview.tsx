@@ -30,6 +30,8 @@ interface AvailabilityPreviewProps {
   serviceName?: string;
   /** When true, show availability from all templates regardless of serviceId */
   allSlots?: boolean;
+  /** Pre-built `?ref=<code>` query string (empty when no ref). */
+  refParam?: string;
 }
 
 interface TimeSlot {
@@ -80,7 +82,11 @@ export function AvailabilityPreview({
   durationMinutes,
   serviceName,
   allSlots,
+  refParam = "",
 }: AvailabilityPreviewProps) {
+  // Slot links already carry `?date=...&time=...` so any ref has to be
+  // joined with '&'; keep a matching amp-form derived from the same value.
+  const refAmp = refParam ? refParam.replace(/^\?/, "&") : "";
   const [currentMonth, setCurrentMonth] = useState(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
@@ -217,7 +223,7 @@ export function AvailabilityPreview({
             const day = i + 1;
             const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
             const isPast = new Date(year, month, day) < today;
-            const isAvailable = availableDates.has(dateStr);
+            const isAvailable = !isPast && availableDates.has(dateStr);
             const isSelected = selectedDate === dateStr;
             const isToday = new Date(year, month, day).toDateString() === new Date().toDateString();
 
@@ -353,7 +359,7 @@ export function AvailabilityPreview({
                         return (
                           <Link
                             key={slot.start}
-                            href={`/${username}${slotPath}?date=${selectedDate}&time=${encodeURIComponent(slot.start)}`}
+                            href={`/${username}${slotPath}?date=${selectedDate}&time=${encodeURIComponent(slot.start)}${refAmp}`}
                             className="rounded-lg border border-white/8 bg-white/5 px-2 py-2 text-center text-xs font-medium text-[#f5f0e8] transition-all hover:border-[#c9a84c]/30 hover:bg-[#c9a84c]/10 hover:text-[#c9a84c]"
                           >
                             {formatSlotTime(slot.start)}
@@ -409,7 +415,7 @@ export function AvailabilityPreview({
       {/* See all link */}
       <div className="mt-3 text-center">
         <Link
-          href={`/${username}${bookPath}`}
+          href={`/${username}${bookPath}${refParam}`}
           className="inline-flex items-center gap-1.5 text-xs font-medium text-[#c9a84c]/70 transition-colors hover:text-[#c9a84c]"
         >
           {allSlots ? "See All Available Times & Book" : `See All ${serviceName ?? "Available"} Times & Book`}

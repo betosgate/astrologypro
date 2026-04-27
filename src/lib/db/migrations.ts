@@ -52,7 +52,28 @@ import { MIGRATION_SQL as MIG_20260421000021 } from "@/data/migrations/202604210
 import { MIGRATION_SQL as MIG_20260421000040 } from "@/data/migrations/20260421000040_repair_landing_page_publish_drift";
 import { MIGRATION_SQL as MIG_20260421000050 } from "@/data/migrations/20260421000050_landing_page_slots_additive";
 import { MIGRATION_SQL as MIG_20260421000030_LPS } from "@/data/migrations/20260421000030_landing_page_slots_additive";
+import { MIGRATION_SQL as MIG_20260428000001_LPC } from "@/data/migrations/20260428000001_landing_page_cleanup_destructive";
+import { MIGRATION_SQL as MIG_20260428000002_FK } from "@/data/migrations/20260428000002_drop_section_type_fk";
 import { MIGRATION_SQL as MIG_20260422000001 } from "@/data/migrations/20260422000001_service_template_image_url";
+import { MIGRATION_SQL as MIG_20260422000002 } from "@/data/migrations/20260422000002_booking_cancel_refund_audit";
+import { MIGRATION_SQL as MIG_20260422000003 } from "@/data/migrations/20260422000003_service_template_intake_forms";
+import { MIGRATION_SQL as MIG_20260422000004 } from "@/data/migrations/20260422000004_service_template_intake_submissions";
+import { MIGRATION_SQL as MIG_20260422000005 } from "@/data/migrations/20260422000005_admin_bookings_chime_fields";
+import { MIGRATION_SQL as MIG_20260422000006 } from "@/data/migrations/20260422000006_add_birth_country_to_community_members";
+import { MIGRATION_SQL as MIG_20260422000007 } from "@/data/migrations/20260422000007_repair_community_members_birth_country";
+import { MIGRATION_SQL as MIG_20260423000001 } from "@/data/migrations/20260423000001_chime_recording_extras";
+import { MIGRATION_SQL as MIG_20260423000002 } from "@/data/migrations/20260423000002_backfill_plan_type_from_pm_tier";
+import { MIGRATION_SQL as MIG_20260423000003 } from "@/data/migrations/20260423000003_admin_bookings_status_completed";
+import { MIGRATION_SQL as MIG_20260424000001_STCIM } from "@/data/migrations/20260424000001_service_template_content_image_matrix";
+import { MIGRATION_SQL as MIG_20260428000100 } from "@/data/migrations/20260428000100_fix_diviner_fields_length";
+import { MIGRATION_SQL as MIG_20260423000001_AIR } from "@/data/migrations/20260423000001_affiliate_identity_refactor";
+import { MIGRATION_SQL as MIG_20260423000002_RLS } from "@/data/migrations/20260423000002_fix_diviner_affiliates_rls";
+import { MIGRATION_SQL as MIG_20260423000003_INV } from "@/data/migrations/20260423000003_affiliate_invite_rpc";
+import { MIGRATION_SQL as MIG_20260423000004_FIX } from "@/data/migrations/20260423000004_fix_invite_rpc_ambiguity";
+import { MIGRATION_SQL as MIG_20260423000005_ACC } from "@/data/migrations/20260423000005_accept_rpc";
+import { MIGRATION_SQL as MIG_20260424000001_ODC } from "@/data/migrations/20260424000001_phone_sessions_outbound_diviner_call";
+import { MIGRATION_SQL as MIG_20260424000002_AAR } from "@/data/migrations/20260424000002_astro_ai_responses";
+import { MIGRATION_SQL as MIG_20260424000010_ACV2A } from "@/data/migrations/20260424000010_affiliate_commission_v2_additive";
 
 /**
  * Allowlisted migrations that the admin migration runner can execute.
@@ -517,6 +538,174 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Adds nullable image_url to service_templates so admin-managed template pages can use uploaded hero images instead of relying only on slug-based static service art.",
     sortKey: "20260422000001",
     sql: MIG_20260422000001,
+  },
+  "20260422000002_booking_cancel_refund_audit": {
+    id: "20260422000002_booking_cancel_refund_audit",
+    title: "Booking cancel/refund audit fields",
+    description:
+      "Additive columns on bookings: canceled_by_user_id, canceled_by_role, stripe_refund_id, refunded_by_user_id, refunded_by_role. Lets the booking-details drawer answer 'who cancelled, who refunded, which Stripe refund was it' without joining refund_events. Role-level CHECK constraints keep values to the allowlist (admin/diviner/client/system for canceled_by; admin/diviner/system for refunded_by). No existing columns are touched.",
+    sortKey: "20260422000002",
+    sql: MIG_20260422000002,
+  },
+  "20260422000003_service_template_intake_forms": {
+    id: "20260422000003_service_template_intake_forms",
+    title: "Service template intake forms",
+    description:
+      "Adds form_enabled and form_config to service_templates, constrains form_config to JSON objects, and backfills astrology templates with structured intake presets mapped from the product slug. Supports the admin template form builder and public pre-booking intake flow.",
+    sortKey: "20260422000003",
+    sql: MIG_20260422000003,
+  },
+  "20260422000004_service_template_intake_submissions": {
+    id: "20260422000004_service_template_intake_submissions",
+    title: "Service template intake submissions",
+    description:
+      "Creates service_template_intake_submissions for product-form leads captured from public service template pages. Stores template metadata, toolkit mapping, normalized summary columns, full JSON payload, status, and submission timestamps for admin review workflows.",
+    sortKey: "20260422000004",
+    sql: MIG_20260422000004,
+  },
+  "20260422000005_admin_bookings_chime_fields": {
+    id: "20260422000005_admin_bookings_chime_fields",
+    title: "Admin bookings Chime video fields",
+    description:
+      "Additive columns on admin_bookings (chime_meeting_id, chime_external_meeting_id, video_provider) so admin-hosted sessions can run through the same Chime pipeline as diviner-hosted ones instead of being limited to a Google Calendar meet link. Safe to re-run.",
+    sortKey: "20260422000005",
+    sql: MIG_20260422000005,
+  },
+  "20260422000006_add_birth_country_to_community_members": {
+    id: "20260422000006_add_birth_country_to_community_members",
+    title: "Add birth_country to community_members",
+    description:
+      "Additive column required by the shared HoroscopeToolkitPage (/community/horoscope) and resolveUserBirthData(). Unblocks the /community/profile form from persisting Birth Country and resolves the 'missing Birth country' card after the member completes the profile. Idempotent via ADD COLUMN IF NOT EXISTS — safe to re-run. Companion migration 20260421000010_repair_family_birth_country handles the sibling community_family_members.birth_country back-fill.",
+    sortKey: "20260422000006",
+    sql: MIG_20260422000006,
+  },
+  "20260422000007_repair_community_members_birth_country": {
+    id: "20260422000007_repair_community_members_birth_country",
+    title: "Repair community_members birth_country",
+    description:
+      "One-time data repair for community_members rows where birth_country IS NULL and birth_city ends with a recognized country suffix (e.g. 'Dublin, Ireland'). Never overwrites an existing birth_country; ambiguous labels are skipped. Includes a targeted repair for the known active PM account whose city label lacks a country suffix. Safe to re-run.",
+    sortKey: "20260422000007",
+    sql: MIG_20260422000007,
+  },
+  "20260423000001_chime_recording_extras": {
+    id: "20260423000001_chime_recording_extras",
+    title: "Chime recording extras (admin_bookings + phone_sessions)",
+    description:
+      "Adds chime_pipeline_id, recording_url, recording_share_id, session_started_at, ended_at, actual_duration_minutes to admin_bookings; chime_pipeline_id + recording_share_id to phone_sessions. Required so the admin↔trainee video flow and the voice (PSTN) flow can persist the Chime Media Capture Pipeline ARN and the S3 recording URL — without these, the end-meeting concatenation has nowhere to write the pipeline ARN and the sync-recordings cron can't publish the final URL. Safe to re-run.",
+    sortKey: "20260423000001",
+    sql: MIG_20260423000001,
+  },
+  "20260423000002_backfill_plan_type_from_pm_tier": {
+    id: "20260423000002_backfill_plan_type_from_pm_tier",
+    title: "Backfill legacy plan_type from canonical pm_tier_id",
+    description:
+      "Task 04 of the community-pm-entitlement-state-sync bundle. Updates community_members.plan_type to match the canonical pm_plan_tiers.name mapping (Family → 'family', everything else → 'individual') ONLY for rows where pm_tier_id is set and the stored plan_type disagrees. Rows with NULL pm_tier_id or an unresolved tier id are skipped and logged via RAISE NOTICE. Idempotent — safe to re-run after every deploy. Does not delete or schema-alter any columns.",
+    sortKey: "20260423000002",
+    sql: MIG_20260423000002,
+  },
+  "20260423000003_admin_bookings_status_completed": {
+    id: "20260423000003_admin_bookings_status_completed",
+    title: "Extend admin_bookings.status to completed / no_show / in_progress",
+    description:
+      "Drops and re-adds the admin_bookings_status_check CHECK constraint to allow 'completed', 'no_show', and 'in_progress' alongside the original 'confirmed' / 'canceled'. Required so /api/chime/admin-bookings/end can flip status to 'completed' after a Chime session ends — without this the status stayed at 'confirmed' forever and the trainee/admin UI showed the wrong badge. Additive, idempotent, safe to re-run.",
+    sortKey: "20260423000003",
+    sql: MIG_20260423000003,
+  },
+  "20260424000001_service_template_content_image_matrix": {
+    id: "20260424000001_service_template_content_image_matrix",
+    title: "Service template content + image matrix",
+    description:
+      "Seeds standardized descriptions, long descriptions, included bullets, audience bullets, FAQ entries, SEO metadata, and shared image_url values for all 19 canonical service templates plus their 19 general variants. Safe to re-run because every row is updated by stable slug.",
+    sortKey: "20260424000001",
+    sql: MIG_20260424000001_STCIM,
+  },
+  "20260428000001_landing_page_cleanup_destructive": {
+    id: "20260428000001_landing_page_cleanup_destructive",
+    title: "⚠️ DESTRUCTIVE — Landing page V2 cleanup (Deploy 2)",
+    description:
+      "DESTRUCTIVE. Run only after the paired V2 code refactor is deployed and the existing landing-page content is disposable. Drops the Deploy-1 view diviner_service_blocks, backfills service_template_id onto service_landing_page_sections from landing_page_id, drops landing_page_id + its FK, drops the service_landing_pages container table CASCADE, drops diviner_services.publish_status, purges rows violating the tighter section_type ('text'|'image'|'html') and slot NOT NULL CHECK constraints, renames service_landing_page_sections → diviner_service_blocks (physical table), drops deprecated columns (is_system, is_draft, draft_*, published_*, instance_key, subtitle, images), tightens CHECKs, and rebuilds the slot+order index. Single BEGIN/COMMIT — rolls back on any failure. NOT idempotent.",
+    sortKey: "20260428000001",
+    sql: MIG_20260428000001_LPC,
+  },
+  "20260428000002_drop_section_type_fk": {
+    id: "20260428000002_drop_section_type_fk",
+    title: "Drop legacy section_type FK + orphan registry table",
+    description:
+      "Follow-up to 20260428000001. Drops the legacy FK diviner_service_blocks.section_type → section_type_config.type (left behind by the rename — it still referenced the V1 registry seeded with hero/bio/pricing/etc, which blocked inserts of the V2 types text/image/html). Also drops the now-orphan section_type_config table (no live code references it). Idempotent.",
+    sortKey: "20260428000002",
+    sql: MIG_20260428000002_FK,
+  },
+  "20260428000100_fix_diviner_fields_length": {
+    id: "20260428000100_fix_diviner_fields_length",
+    title: "Fix diviners field length (plan_id, status, phone)",
+    description:
+      "Increases the length of plan_id, subscription_status, phone, and username columns in the diviners table to TEXT or VARCHAR(50). Resolves 'value too long for type character varying(20)' errors during trainee-to-diviner upgrade.",
+    sortKey: "20260428000100",
+    sql: MIG_20260428000100,
+  },
+  "20260423000005_accept_rpc": {
+    id: "20260423000005_accept_rpc",
+    title: "Affiliate accept RPC + user_id trigger guard — Task 03",
+    description:
+      "Adds consume_invite_and_activate_junction RPC (atomic: claim invite via UPDATE...RETURNING, activate junction, link canonical account to auth user) plus guard_affiliate_account_user_link trigger on affiliate_accounts. The trigger rejects any UPDATE OF user_id unless the transaction has set the GUC app.allow_affiliate_account_user_link='true'. The RPC is the only code path that sets that GUC via SET LOCAL, so affiliate_accounts.user_id can only be changed via an explicit invite-accept — enforcing D5 (no silent linking by email match alone) at the DB layer. Error codes: P0003 invite_not_claimable (expired/revoked/consumed/unknown), P0004 account_already_linked_to_different_user, P0005 external write attempt to user_id. Must run AFTER 20260423000001. SECURITY DEFINER. Idempotent via CREATE OR REPLACE + DROP TRIGGER IF EXISTS.",
+    sortKey: "20260423000005",
+    sql: MIG_20260423000005_ACC,
+  },
+  "20260424000001_phone_sessions_outbound_diviner_call": {
+    id: "20260424000001_phone_sessions_outbound_diviner_call",
+    title: "Phone sessions: direction flag + outbound_diviner_call session_type",
+    description:
+      "Additive. Adds phone_sessions.direction VARCHAR(12) NOT NULL DEFAULT 'inbound' with CHECK ('inbound','outbound'); relaxes phone_sessions.session_type CHECK to additionally allow 'outbound_diviner_call' alongside existing 'scheduled_dialin'/'standalone'; adds a composite index on (diviner_id, direction, status). Required by POST /api/chime/voice/call-client and the new Call-client row action on /dashboard/bookings so diviner-originated PSTN legs are distinguishable from client-originated inbound calls. Rollback: DROP COLUMN direction (CHECK extension is safe to leave in place).",
+    sortKey: "20260424000001",
+    sql: MIG_20260424000001_ODC,
+  },
+  "20260424000002_astro_ai_responses": {
+    id: "20260424000002_astro_ai_responses",
+    title: "Astro AI responses persistence (replaces legacy NestJS save endpoint)",
+    description:
+      "Additive. Creates public.astro_ai_responses table for persisting AI-generated astrological reports (toolname, ai_response JSONB, formData, astro_api_data, natal_chart, summary, multiple chart-image URLs, share URL, timestamps). Adds a nullable user_id FK to auth.users so rows can be attributed to a creator without breaking the legacy spec-shape. Enables RLS with: service_role full; authenticated SELECT-by-id (the UUID acts as the share key, matching the spec's 'password-protected shared links via _id' design); INSERT/UPDATE/DELETE scoped to user_id = auth.uid(). Adds a BEFORE UPDATE trigger that bumps updated_at, an index on (user_id, created_at DESC) for 'my recent reports' lookups, and a partial index on toolname. Required by POST /api/astro-ai/save-astro-ai-response and POST /api/astro-ai/fetch-save-astro-ai-response. Rollback: DROP TRIGGER, DROP FUNCTION, DROP TABLE.",
+    sortKey: "20260424000002",
+    sql: MIG_20260424000002_AAR,
+  },
+  "20260423000004_fix_invite_rpc_ambiguity": {
+    id: "20260423000004_fix_invite_rpc_ambiguity",
+    title: "Fix column/variable ambiguity in invite RPCs (Task 02 follow-up)",
+    description:
+      "Recreates the four invite RPCs (create/resend/resend-by-junction/revoke) with `#variable_conflict use_column` pragma. Their RETURNS TABLE columns share names with real table columns (invite_id, junction_id, affiliate_account_id, email) — without the pragma any unqualified reference inside the function body throws PG 42702 'column reference is ambiguous'. Signatures unchanged so Task 02 API routes work as shipped. Must run AFTER 20260423000003. CREATE OR REPLACE — idempotent.",
+    sortKey: "20260423000004",
+    sql: MIG_20260423000004_FIX,
+  },
+  "20260423000003_affiliate_invite_rpc": {
+    id: "20260423000003_affiliate_invite_rpc",
+    title: "Affiliate invite RPCs (create/resend/resend-by-junction/revoke) — Task 02",
+    description:
+      "Adds four SECURITY DEFINER functions backing the invite flow: create_affiliate_invite (upsert canonical account + insert pending junction + issue hashed token), resend_affiliate_invite (revoke prior + issue new, bump resent_count), resend_affiliate_invite_by_junction (first-invite for legacy-pending junctions predating the 2026-04-23 flow), revoke_affiliate_invite (mark revoked + delete junction if zero commissions else suspend). All enforce caller ownership (diviner_id = caller) and raise specific SQLSTATE codes: P0001 (blocked or missing required field), P0002 (junction_exists), P0003 (not_found_or_not_owned), P0004 (already_consumed), P0006 (legacy-pending-invalid). Dual-writes legacy diviner_affiliates.{name,email,phone} for pre-Task-06 readers. Runs AFTER 20260423000001 + 20260423000002. Idempotent via CREATE OR REPLACE.",
+    sortKey: "20260423000003",
+    sql: MIG_20260423000003_INV,
+  },
+  "20260423000002_fix_diviner_affiliates_rls": {
+    id: "20260423000002_fix_diviner_affiliates_rls",
+    title: "Fix buggy diviner_own_affiliates RLS policy (2026-04-23 follow-up)",
+    description:
+      "Rewrites the pre-existing diviner_own_affiliates SELECT policy on diviner_affiliates. Original condition auth.uid() = diviner_id is wrong — diviner_id is a diviners.id, not an auth.users.id, so it never matches and authed diviner sessions saw 0 junction rows via RLS. Previously harmless (all server reads use service_role), but the 2026-04-23 diviner_sees_linked_accounts policy on affiliate_accounts has an EXISTS subquery through diviner_affiliates that runs under caller RLS — the bug made it return empty. Fix: route through diviners.user_id = auth.uid(). Must run AFTER 20260423000001. Idempotent.",
+    sortKey: "20260423000002",
+    sql: MIG_20260423000002_RLS,
+  },
+  "20260423000001_affiliate_identity_refactor": {
+    id: "20260423000001_affiliate_identity_refactor",
+    title: "Affiliate Identity Refactor — canonical affiliate_accounts + invites + junction reshape",
+    description:
+      "Introduces canonical affiliate_accounts identity table (email CITEXT UNIQUE, user_id UUID UNIQUE, platform-wide status, profile + payout fields). Adds affiliate_invites (hashed SHA-256 tokens, 14d expiry). Reshapes diviner_affiliates into a junction via additive ALTER (affiliate_account_id FK + invited_at + accepted_at). Backfills the 14 existing diviner_affiliates rows into the new model: one canonical account per unique email, auth.users link attempted by email match, decisions logged in _affiliate_backfill_audit. RLS on both new tables (service_role all + self-select/update + diviner-linked). Reuses aff_updated_at() trigger. Strictly additive — no DROPs, no FK rewiring; all downstream FKs on diviner_affiliates.id remain untouched. End-of-migration assertion fails loudly if any junction row is left without affiliate_account_id. Idempotent: IF NOT EXISTS guards + WHERE affiliate_account_id IS NULL on the backfill UPDATEs. Sprint plan: docs/tasks/2026-04-23/affiliate-identity-refactor/. Task 02 adds create_affiliate_invite RPC, Task 03 adds consume_invite_and_activate_junction RPC + user-link trigger guard.",
+    sortKey: "20260423000001",
+    sql: MIG_20260423000001_AIR,
+  },
+  "20260424000010_affiliate_commission_v2_additive": {
+    id: "20260424000010_affiliate_commission_v2_additive",
+    title: "Affiliate Commission v2 — additive (rate history, booking stamp, admin action log)",
+    description:
+      "Task 01a of the Affiliate Commission v2 sprint. Strictly additive. Creates diviner_service_affiliate_rate_history (full rate-edit audit keyed on assignment_id) and admin_action_log (force-revoke / force-archive / reverse events). Adds three stamp columns to bookings (commission_source_assignment_id, commission_rate_type_stamp, commission_rate_value_stamp) so the rate that pays out on a conversion is captured at booking creation time, not resolved live at webhook (spec §3.8). Adds rate_type_used + rate_value_used on campaign_conversions for permanent webhook-time audit. Extends affiliate_campaigns.status CHECK to allow 'archived'. Hardens campaign_conversions.campaign_id FK from ON DELETE CASCADE to ON DELETE RESTRICT so hard-delete of a campaign with conversions errors rather than cascade-wiping history. RLS: service_role ALL on both new tables, plus diviner/affiliate scoped SELECT on rate history and admin-only SELECT on action log. Idempotent: IF NOT EXISTS guards, DO blocks on policy + constraint work, end-of-migration sanity check raises if any of the four required additions didn't land. Spec: docs/specs/affiliate-commission-system.md (v1.2).",
+    sortKey: "20260424000010",
+    sql: MIG_20260424000010_ACV2A,
   },
 };
 

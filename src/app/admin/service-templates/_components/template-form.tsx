@@ -1,13 +1,14 @@
 "use client";
 
 import Image from "next/image";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -17,13 +18,7 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Progress } from "@/components/ui/progress";
 import {
   Plus,
   X,
@@ -31,9 +26,17 @@ import {
   Loader2,
   Upload,
   Expand,
+  ExternalLink,
 } from "lucide-react";
 import { toast } from "sonner";
 import { ServiceTemplatePublicPage } from "@/components/services/service-template-public-page";
+import {
+  getAstrologyTemplateFormPreset,
+  getBaseServiceTemplateSlug,
+  getServiceTemplateToolkitTabSlug,
+  normalizeServiceTemplateFormConfig,
+  type ServiceTemplateFormConfig,
+} from "@/lib/service-template-form";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -58,6 +61,8 @@ export interface TemplateFormData {
   faq: { question: string; answer: string }[];
   seo_title: string;
   seo_description: string;
+  form_enabled: boolean;
+  form_config: ServiceTemplateFormConfig | null;
   is_active: boolean;
 }
 
@@ -82,6 +87,8 @@ export const DEFAULT_FORM: TemplateFormData = {
   faq: [],
   seo_title: "",
   seo_description: "",
+  form_enabled: true,
+  form_config: null,
   is_active: true,
 };
 
@@ -123,12 +130,53 @@ export function TemplateForm({ initialData, templateId, divinerCount = 0 }: Temp
   const [form, setForm] = useState<TemplateFormData>({
     ...DEFAULT_FORM,
     ...initialData,
+    form_config: normalizeServiceTemplateFormConfig(initialData?.form_config ?? null),
   });
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadStatus, setUploadStatus] = useState<string | null>(null);
   const [imageDialogOpen, setImageDialogOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const imageOverlayRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (imageDialogOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [imageDialogOpen]);
+
+  useEffect(() => {
+    if (!imageDialogOpen) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setImageDialogOpen(false);
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [imageDialogOpen]);
+
+  useEffect(() => {
+    if (form.category !== "astrology" || !form.form_enabled) return;
+
+    const normalized = normalizeServiceTemplateFormConfig(form.form_config);
+    if (normalized) return;
+
+    const preset = getAstrologyTemplateFormPreset(form.slug);
+    if (!preset) return;
+
+    setForm((current) => ({ ...current, form_config: preset }));
+  }, [form.category, form.slug, form.form_enabled, form.form_config]);
 
   // ── Auto-slug from name (create mode only) ────────────────────────────────
   function handleNameChange(name: string) {
@@ -183,6 +231,40 @@ export function TemplateForm({ initialData, templateId, divinerCount = 0 }: Temp
     setForm((f) => ({ ...f, faq: f.faq.filter((_, i) => i !== idx) }));
   }
 
+  function updateFormConfig(updater: (current: ServiceTemplateFormConfig) => ServiceTemplateFormConfig) {
+    setForm((current) => {
+      const baseConfig =
+        normalizeServiceTemplateFormConfig(current.form_config) ??
+        getAstrologyTemplateFormPreset(current.slug) ??
+        {
+          version: 1,
+          kind: "astrology_intake" as const,
+          mode: "single" as const,
+          fields: {
+            areaOfInquiry: false,
+            question: false,
+            futureWeek: false,
+            futureMonth: false,
+          },
+        };
+
+      return {
+        ...current,
+        form_config: updater(baseConfig),
+      };
+    });
+  }
+
+  function resetAstrologyFormPreset() {
+    const preset = getAstrologyTemplateFormPreset(form.slug);
+    if (!preset) {
+      toast.error("No astrology preset is available for this slug yet.");
+      return;
+    }
+    setForm((current) => ({ ...current, form_config: preset }));
+    toast.success("Intake form reset to the product preset.");
+  }
+
   async function handleTemplateImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -194,23 +276,69 @@ export function TemplateForm({ initialData, templateId, divinerCount = 0 }: Temp
     }
 
     setUploadingImage(true);
+    setUploadProgress(0);
+    setUploadStatus("Preparing upload…");
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("kind", "card");
+      const json = await new Promise<{ url: string }>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("kind", "card");
 
-      const res = await fetch("/api/admin/tarot/upload", {
-        method: "POST",
-        body: formData,
+        xhr.open("POST", "/api/admin/tarot/upload");
+
+        xhr.upload.addEventListener("progress", (event) => {
+          if (!event.lengthComputable) return;
+          setUploadProgress(Math.min(95, Math.round((event.loaded / event.total) * 95)));
+        });
+
+        xhr.upload.addEventListener("load", () => {
+          setUploadProgress(95);
+          setUploadStatus("Processing image…");
+        });
+
+        xhr.onerror = () => reject(new Error("Upload failed"));
+        xhr.onload = () => {
+          let response: unknown = null;
+          try {
+            response = JSON.parse(xhr.responseText);
+          } catch {
+            reject(new Error("Upload failed"));
+            return;
+          }
+
+          if (xhr.status < 200 || xhr.status >= 300) {
+            const message =
+              response &&
+              typeof response === "object" &&
+              "error" in response &&
+              typeof response.error === "string"
+                ? response.error
+                : "Upload failed";
+            reject(new Error(message));
+            return;
+          }
+
+          if (!response || typeof response !== "object" || !("url" in response) || typeof response.url !== "string") {
+            reject(new Error("Upload failed"));
+            return;
+          }
+
+          setUploadProgress(100);
+          setUploadStatus("Upload complete.");
+          resolve({ url: response.url });
+        };
+
+        xhr.send(formData);
       });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error ?? "Upload failed");
 
       setForm((f) => ({ ...f, image_url: json.url }));
       toast.success("Template image uploaded");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Upload failed");
     } finally {
+      setUploadProgress(0);
+      setUploadStatus(null);
       setUploadingImage(false);
       e.target.value = "";
     }
@@ -257,6 +385,8 @@ export function TemplateForm({ initialData, templateId, divinerCount = 0 }: Temp
         faq: form.faq.filter((f) => f.question || f.answer),
         seo_title: form.seo_title || null,
         seo_description: form.seo_description || null,
+        form_enabled: form.form_enabled,
+        form_config: normalizeServiceTemplateFormConfig(form.form_config),
         is_active: form.is_active,
       };
 
@@ -300,6 +430,11 @@ export function TemplateForm({ initialData, templateId, divinerCount = 0 }: Temp
   }
 
   // ── Render ────────────────────────────────────────────────────────────────
+  const resolvedFormConfig = normalizeServiceTemplateFormConfig(form.form_config);
+  const astrologyFormPreset = getAstrologyTemplateFormPreset(form.slug);
+  const toolkitTabSlug = getServiceTemplateToolkitTabSlug(form.slug);
+  const supportsAstrologyBuilder = form.category === "astrology";
+
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
       {/* Basic Info */}
@@ -339,7 +474,7 @@ export function TemplateForm({ initialData, templateId, divinerCount = 0 }: Temp
               value={form.category}
               onValueChange={(v) => setForm((f) => ({ ...f, category: v as "astrology" | "tarot" }))}
             >
-              <SelectTrigger>
+              <SelectTrigger className="w-full">
                 <SelectValue placeholder="Select category" />
               </SelectTrigger>
               <SelectContent>
@@ -361,7 +496,7 @@ export function TemplateForm({ initialData, templateId, divinerCount = 0 }: Temp
                 }))
               }
             >
-              <SelectTrigger>
+              <SelectTrigger className="w-full">
                 <SelectValue placeholder="None" />
               </SelectTrigger>
               <SelectContent>
@@ -476,6 +611,159 @@ export function TemplateForm({ initialData, templateId, divinerCount = 0 }: Temp
 
       <Separator />
 
+      <section className="space-y-4">
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-1">
+            <h2 className="text-lg font-semibold">Intake Form</h2>
+            <p className="text-sm text-muted-foreground">
+              Controls whether CTA buttons open a structured pre-booking form or go straight to booking.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Switch
+              id="form_enabled"
+              checked={form.form_enabled}
+              onCheckedChange={(value) => setForm((current) => ({ ...current, form_enabled: value }))}
+            />
+            <Label htmlFor="form_enabled">Enable Form</Label>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border bg-muted/20 p-4 space-y-4">
+          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+            <Badge variant={form.form_enabled ? "default" : "secondary"}>
+              {form.form_enabled ? "Enabled" : "Disabled"}
+            </Badge>
+            <Badge variant="outline">
+              {supportsAstrologyBuilder ? "Astrology Builder" : "Tarot Placeholder"}
+            </Badge>
+            {toolkitTabSlug && (
+              <Badge variant="outline" className="font-mono">
+                {toolkitTabSlug}
+              </Badge>
+            )}
+          </div>
+
+          {!form.form_enabled ? (
+            <p className="text-sm text-muted-foreground">
+              The public CTA will skip the form section and go directly to the booking route.
+            </p>
+          ) : supportsAstrologyBuilder ? (
+            <>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-medium">Astrology Intake Preset</p>
+                  <p className="text-xs text-muted-foreground">
+                    Person 1 is always required. Couple mode automatically adds Person 2.
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={resetAstrologyFormPreset}
+                  disabled={!astrologyFormPreset}
+                >
+                  Reset To Preset
+                </Button>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Form Mode</Label>
+                  <Select
+                    value={resolvedFormConfig?.mode ?? "single"}
+                    onValueChange={(value) =>
+                      updateFormConfig((current) => ({
+                        ...current,
+                        mode: value === "couple" ? "couple" : "single",
+                      }))
+                    }
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="single">Single Person</SelectItem>
+                      <SelectItem value="couple">Couple</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="rounded-xl border bg-background/60 p-3 text-sm text-muted-foreground">
+                  <p className="font-medium text-foreground">Required birth blocks</p>
+                  <p className="mt-1">
+                    {resolvedFormConfig?.mode === "couple"
+                      ? "Person 1 and Person 2 birth details."
+                      : "Person 1 birth details only."}
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-2">
+                {[
+                  {
+                    key: "areaOfInquiry",
+                    label: "Area of Inquiry",
+                    hint: "Optional context for the reading focus.",
+                  },
+                  {
+                    key: "question",
+                    label: "Specific Question",
+                    hint: "Required when enabled. Best for horary-style requests.",
+                  },
+                  {
+                    key: "futureWeek",
+                    label: "Future Week",
+                    hint: "Useful for weekly transit products.",
+                  },
+                  {
+                    key: "futureMonth",
+                    label: "Future Month",
+                    hint: "Useful for monthly transit products.",
+                  },
+                ].map((field) => (
+                  <label
+                    key={field.key}
+                    className="flex items-start gap-3 rounded-xl border bg-background/60 p-4"
+                  >
+                    <Checkbox
+                      checked={
+                        resolvedFormConfig?.fields[
+                          field.key as keyof ServiceTemplateFormConfig["fields"]
+                        ] ?? false
+                      }
+                      onCheckedChange={(checked) =>
+                        updateFormConfig((current) => ({
+                          ...current,
+                          fields: {
+                            ...current.fields,
+                            [field.key]: checked === true,
+                          },
+                        }))
+                      }
+                    />
+                    <span className="space-y-1">
+                      <span className="block text-sm font-medium text-foreground">
+                        {field.label}
+                      </span>
+                      <span className="block text-xs text-muted-foreground">
+                        {field.hint}
+                      </span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </>
+          ) : (
+            <div className="rounded-xl border bg-background/60 p-4 text-sm text-muted-foreground">
+              Tarot templates can keep the form toggle enabled for future use, but the astrology-only builder is intentionally hidden until tarot field requirements are defined. Public CTA buttons will fall back to booking until a supported form config exists.
+            </div>
+          )}
+        </div>
+      </section>
+
+      <Separator />
+
       {/* Display */}
       <section className="space-y-4">
         <h2 className="text-lg font-semibold">Display</h2>
@@ -492,7 +780,7 @@ export function TemplateForm({ initialData, templateId, divinerCount = 0 }: Temp
                 }))
               }
             >
-              <SelectTrigger>
+              <SelectTrigger className="w-full">
                 <SelectValue placeholder="Select icon" />
               </SelectTrigger>
               <SelectContent>
@@ -642,10 +930,13 @@ export function TemplateForm({ initialData, templateId, divinerCount = 0 }: Temp
 
       <section className="space-y-4">
         <div className="flex items-start justify-between gap-3">
-          <div>
+          <div className="space-y-1">
             <h2 className="text-lg font-semibold">Template Image</h2>
             <p className="text-sm text-muted-foreground">
               Upload the hero image shown in the public template page and live preview.
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Accepted: JPG, PNG, WebP, GIF. Maximum size: 10 MB.
             </p>
           </div>
           <Button
@@ -671,67 +962,142 @@ export function TemplateForm({ initialData, templateId, divinerCount = 0 }: Temp
           />
         </div>
 
-        {form.image_url ? (
-          <>
-            <div className="group relative w-full max-w-sm overflow-hidden rounded-2xl border bg-muted/20">
+        <div className="rounded-2xl border bg-muted/10 p-4">
+          {uploadingImage && (
+            <div className="mb-4 rounded-xl border bg-background/60 p-3">
+              <div className="mb-2 flex items-center justify-between gap-3 text-xs text-muted-foreground">
+                <span>{uploadStatus ?? "Uploading image..."}</span>
+                <span>{uploadProgress}%</span>
+              </div>
+              <Progress value={uploadProgress} className="h-2 bg-white/10" />
+            </div>
+          )}
+
+          {form.image_url ? (
+            <div className="flex flex-col gap-4 md:flex-row md:items-center">
               <button
                 type="button"
-                className="relative block aspect-[4/3] w-full"
+                className="group relative h-28 w-full overflow-hidden rounded-xl border bg-muted/20 md:w-44 md:shrink-0"
                 onClick={() => setImageDialogOpen(true)}
               >
                 <Image
                   src={form.image_url}
                   alt={form.name || "Template image preview"}
                   fill
-                  className="object-cover"
-                  sizes="(max-width: 768px) 100vw, 384px"
+                  className="object-cover transition-transform duration-200 group-hover:scale-[1.02]"
+                  sizes="176px"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-background/40 via-transparent to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
-                <span className="absolute bottom-3 right-3 inline-flex items-center gap-1 rounded-full bg-background/85 px-2.5 py-1 text-xs font-medium text-foreground shadow-sm">
-                  <Expand className="h-3.5 w-3.5" />
-                  View
+                <div className="absolute inset-0 bg-gradient-to-t from-background/60 via-background/10 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
+                <span className="absolute bottom-2 right-2 inline-flex items-center gap-1 rounded-full bg-background/85 px-2 py-1 text-[11px] font-medium text-foreground shadow-sm">
+                  <Expand className="h-3 w-3" />
+                  Preview
                 </span>
               </button>
-              <Button
-                type="button"
-                variant="destructive"
-                size="icon"
-                className="absolute right-3 top-3 h-8 w-8 rounded-full shadow-sm"
-                onClick={handleRemoveTemplateImage}
-              >
-                <X className="h-4 w-4" />
-              </Button>
+              <div className="flex min-w-0 flex-1 flex-col gap-3">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium">Current Hero Image</p>
+                  <p className="text-xs text-muted-foreground">
+                    Used on the public template page and in the live preview.
+                  </p>
+                  <p className="break-all text-xs text-muted-foreground">{form.image_url}</p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setImageDialogOpen(true)}
+                  >
+                    <Expand className="mr-2 h-4 w-4" />
+                    Preview Image
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploadingImage}
+                  >
+                    <Upload className="mr-2 h-4 w-4" />
+                    Replace
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="text-destructive hover:text-destructive"
+                    onClick={handleRemoveTemplateImage}
+                  >
+                    <X className="mr-2 h-4 w-4" />
+                    Remove
+                  </Button>
+                </div>
+              </div>
             </div>
+          ) : (
+            <div className="flex min-h-24 items-center justify-center rounded-xl border border-dashed bg-muted/20 px-4 text-sm text-muted-foreground">
+              No template image uploaded yet.
+            </div>
+          )}
 
-            <Dialog open={imageDialogOpen} onOpenChange={setImageDialogOpen}>
-              <DialogContent className="max-w-5xl border-white/10 bg-cosmos-950 p-0 text-white">
-                <DialogHeader className="px-6 pt-6">
-                  <DialogTitle>{form.name || "Template Image"}</DialogTitle>
-                  <DialogDescription className="text-silver/60">
-                    Public hero image preview
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="px-6 pb-6">
-                  <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-cosmos-900">
-                    <div className="relative aspect-[16/10] w-full">
-                      <Image
-                        src={form.image_url}
-                        alt={form.name || "Template image"}
-                        fill
-                        className="object-contain"
-                        sizes="(max-width: 1280px) 100vw, 1200px"
-                      />
-                    </div>
+          {imageDialogOpen && form.image_url ? (
+            <div
+              ref={imageOverlayRef}
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+              onClick={(event) => {
+                if (event.target === imageOverlayRef.current) {
+                  setImageDialogOpen(false);
+                }
+              }}
+              role="dialog"
+              aria-modal="true"
+              aria-label={`Preview: ${form.name || "Template image"}`}
+            >
+              <div className="relative flex h-[85vh] w-full max-w-5xl flex-col rounded-lg border bg-background shadow-xl">
+                <div className="flex items-center justify-between border-b px-4 py-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">
+                      {form.name || "Template Image"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Public hero image preview
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      asChild
+                      className="gap-1.5 text-xs"
+                    >
+                      <a href={form.image_url} target="_blank" rel="noopener noreferrer">
+                        <ExternalLink className="size-3.5" />
+                        Open in tab
+                      </a>
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setImageDialogOpen(false)}
+                      aria-label="Close preview"
+                    >
+                      <X className="size-4" />
+                    </Button>
                   </div>
                 </div>
-              </DialogContent>
-            </Dialog>
-          </>
-        ) : (
-          <div className="flex h-48 items-center justify-center rounded-2xl border border-dashed bg-muted/20 text-sm text-muted-foreground">
-            No template image uploaded yet.
-          </div>
-        )}
+
+                <div className="flex flex-1 items-center justify-center overflow-hidden rounded-b-lg bg-black p-4 md:p-6">
+                  <img
+                    src={form.image_url}
+                    alt={form.name || "Template image"}
+                    className="max-h-full max-w-full rounded-md object-contain"
+                  />
+                </div>
+              </div>
+            </div>
+          ) : null}
+        </div>
       </section>
 
       <Separator />
@@ -793,7 +1159,6 @@ export function TemplateForm({ initialData, templateId, divinerCount = 0 }: Temp
             embedded
             disableLinks
             diviners={[]}
-            emptyStateMessage="Preview mode: public diviner cards will appear here once practitioners offer this template."
             template={{
               category: form.category || "astrology",
               name: form.name.trim() || "Service Name Preview",
@@ -801,6 +1166,8 @@ export function TemplateForm({ initialData, templateId, divinerCount = 0 }: Temp
               description: form.description.trim() || "Short description preview.",
               long_description: form.long_description.trim() || null,
               image_url: form.image_url.trim() || null,
+              form_enabled: form.form_enabled,
+              form_config: normalizeServiceTemplateFormConfig(form.form_config),
               duration_minutes: Number.parseInt(form.duration_minutes, 10) || 60,
               base_price: Number.parseFloat(form.base_price) || 0,
               overage_rate: form.overage_rate ? Number.parseFloat(form.overage_rate) : null,

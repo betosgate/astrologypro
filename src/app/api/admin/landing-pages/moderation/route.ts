@@ -34,55 +34,31 @@ export async function GET(req: NextRequest) {
   const limit = Math.min(100, Math.max(1, parseInt(sp.get("limit") ?? "50", 10)));
   const cursor = sp.get("cursor") ?? null;
 
-  // Flagged landing pages
-  let pageQuery = admin
-    .from("service_landing_pages")
-    .select("id, diviner_id, service_template_id, moderation_status, moderation_note, updated_at")
-    .eq("moderation_status", status)
-    .order("updated_at", { ascending: false })
-    .limit(limit);
-
-  if (diviner_id) pageQuery = pageQuery.eq("diviner_id", diviner_id);
-  if (template_id) pageQuery = pageQuery.eq("service_template_id", template_id);
-  if (cursor) pageQuery = pageQuery.lt("updated_at", cursor);
-
-  const { data: pages } = await pageQuery;
-
-  // Flagged sections
+  // V2: moderation is per-block only. Page-level moderation is gone.
   let sectionQuery = admin
-    .from("service_landing_page_sections")
-    .select("id, landing_page_id, diviner_id, section_type, moderation_status, moderation_note, updated_at, content_json, title")
+    .from("diviner_service_blocks")
+    .select("id, service_template_id, diviner_id, section_type, moderation_status, moderation_note, updated_at, content_json, title")
     .eq("moderation_status", status)
     .order("updated_at", { ascending: false })
     .limit(limit);
 
   if (diviner_id) sectionQuery = sectionQuery.eq("diviner_id", diviner_id);
+  if (template_id) sectionQuery = sectionQuery.eq("service_template_id", template_id);
   if (cursor) sectionQuery = sectionQuery.lt("updated_at", cursor);
 
   const { data: sections } = await sectionQuery;
 
-  const items = [
-    ...(pages ?? []).map((p) => ({
-      type: "page" as const,
-      landing_page_id: p.id,
-      diviner_id: p.diviner_id,
-      service_template_id: p.service_template_id,
-      moderation_status: p.moderation_status,
-      moderation_note: p.moderation_note,
-      submitted_at: p.updated_at,
-    })),
-    ...(sections ?? []).map((s) => ({
-      type: "section" as const,
-      landing_page_id: s.landing_page_id,
-      section_id: s.id,
-      diviner_id: s.diviner_id,
-      section_type: s.section_type,
-      content_preview: s.title ?? (s.content_json as Record<string, unknown>)?.heading ?? s.section_type,
-      moderation_status: s.moderation_status,
-      moderation_note: s.moderation_note,
-      submitted_at: s.updated_at,
-    })),
-  ].sort((a, b) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime());
+  const items = (sections ?? []).map((s) => ({
+    type: "section" as const,
+    service_template_id: s.service_template_id,
+    section_id: s.id,
+    diviner_id: s.diviner_id,
+    section_type: s.section_type,
+    content_preview: s.title ?? (s.content_json as Record<string, unknown>)?.heading ?? s.section_type,
+    moderation_status: s.moderation_status,
+    moderation_note: s.moderation_note,
+    submitted_at: s.updated_at,
+  }));
 
   const allDates = items.map((i) => i.submitted_at);
   const nextCursor = allDates.length > 0 ? allDates[allDates.length - 1] : null;

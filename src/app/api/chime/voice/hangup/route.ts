@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { endChimeMeeting } from "@/lib/chime-meetings";
+import {
+  endChimeMeeting,
+  stopChimeRecording,
+  startChimeConcatenation,
+} from "@/lib/chime-meetings";
+import { waitForUsableChimePipelineId } from "@/lib/chime-recording-pipeline";
 
 export const dynamic = "force-dynamic";
 
@@ -9,10 +14,21 @@ export const dynamic = "force-dynamic";
  * POST /api/chime/voice/hangup
  * Called by ChimePhoneWidget when the diviner clicks "Hang Up".
  *
- * 1. Ends the Chime meeting (which disconnects all participants including PSTN caller)
- * 2. Marks the phone session as "completed"
- * 3. Marks any remaining "ringing" notifications as "declined"
+ * Teardown order (same as end-meeting for video):
+ *   1. Stop capture pipeline (flushes remaining audio segments to S3)
+ *   2. Grace period so AWS can finish writing the last fragments
+ *   3. Start concatenation pipeline (merges segments → final MP4 in
+ *      recordings/<phoneSessionId>/final/)
+ *   4. Delete the Chime meeting (disconnects PSTN caller + diviner)
+ *   5. Mark session completed
+ *
+ * Reversing #1 and #4 truncates the recording — AWS tears the capture
+ * pipeline down abruptly when the meeting is deleted and only already-
+ * flushed segments are kept.
  */
+
+const CONCAT_GRACE_MS = 3000;
+
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
@@ -49,10 +65,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Fetch session to get chime_meeting_id
+    // Fetch session to get chime_meeting_id + chime_pipeline_id
     const { data: session } = await admin
       .from("phone_sessions")
-      .select("id, diviner_id, chime_meeting_id, started_at, status")
+      .select(
+        "id, diviner_id, chime_meeting_id, chime_pipeline_id, started_at, status"
+      )
       .eq("id", phoneSessionId)
       .single();
 
@@ -63,8 +81,52 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // End the Chime meeting — this disconnects all attendees including the PSTN caller
+    // ── Recording + meeting teardown ─────────────────────────────────────────
     if (session.chime_meeting_id) {
+      const capturePipelineArn = await waitForUsableChimePipelineId({
+        table: "phone_sessions",
+        sessionId: phoneSessionId,
+        currentPipelineId: session.chime_pipeline_id,
+      });
+
+      // Step 1: stop capture pipeline (flush remaining segments to S3).
+      if (capturePipelineArn) {
+        try {
+          await stopChimeRecording(capturePipelineArn);
+          console.log(
+            `[chime/voice/hangup] Capture pipeline stopped: ${capturePipelineArn}`
+          );
+        } catch (err) {
+          const errName = (err as { name?: string }).name ?? "";
+          if (errName !== "ConflictException") {
+            console.error(
+              "[chime/voice/hangup] Failed to stop capture pipeline:",
+              err
+            );
+          }
+        }
+
+        // Step 2: grace period for final-fragment flush.
+        await new Promise((resolve) => setTimeout(resolve, CONCAT_GRACE_MS));
+
+        // Step 3: start concatenation pipeline.
+        try {
+          await startChimeConcatenation(
+            capturePipelineArn,
+            phoneSessionId
+          );
+          console.log(
+            `[chime/voice/hangup] Concatenation started for phone session ${phoneSessionId}`
+          );
+        } catch (err) {
+          console.error(
+            "[chime/voice/hangup] Failed to start concatenation:",
+            err
+          );
+        }
+      }
+
+      // Step 4: delete the Chime meeting LAST.
       try {
         await endChimeMeeting(session.chime_meeting_id);
         console.log(
@@ -85,7 +147,7 @@ export async function POST(request: NextRequest) {
       (Date.now() - startedAt.getTime()) / 1000
     );
 
-    // Mark session as completed
+    // Step 5: mark session as completed
     await admin
       .from("phone_sessions")
       .update({

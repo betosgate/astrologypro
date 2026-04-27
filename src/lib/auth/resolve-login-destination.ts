@@ -212,7 +212,6 @@ export async function resolveLoginDestination({
         .from("community_members")
         .select("id, membership_type, membership_status, onboarding_completed")
         .eq("user_id", userId)
-        .eq("membership_type", "perennial_mandalism")
         .maybeSingle()
         .then((r) => r.data),
       adminClient

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { requireAdmin } from "@/lib/admin-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -26,6 +27,7 @@ export const metadata = { title: "Bookings — Admin" };
 export const dynamic = "force-dynamic";
 
 interface BookingsSearchParams {
+  view?: string;
   status?: string;
   diviner_id?: string;
   from?: string;
@@ -68,6 +70,19 @@ type HydratedBookingRow = BookingRow & {
     birth_city?: string | null;
   } | null;
   services: { id: string; name: string; template_id?: string | null } | null;
+};
+
+type AdminCalendarBookingRow = {
+  id: string;
+  scheduled_at: string;
+  duration_minutes: number;
+  timezone: string | null;
+  status: string;
+  client_name: string;
+  client_email: string;
+  client_note: string | null;
+  google_calendar_event_id: string | null;
+  created_at: string;
 };
 
 function fmtDate(iso: string) {
@@ -184,6 +199,57 @@ async function getBookings(params: BookingsSearchParams) {
   };
 }
 
+async function getAdminCalendarBookings(
+  params: BookingsSearchParams,
+  adminUserId: string | null,
+) {
+  const admin = createAdminClient();
+  const page = Math.max(1, parseInt(params.page ?? "1", 10));
+  const offset = (page - 1) * PAGE_SIZE;
+
+  if (!adminUserId) {
+    return { bookings: [] as AdminCalendarBookingRow[], total: 0, page };
+  }
+
+  let query: any = admin
+    .from("admin_bookings")
+    .select(
+      "id, scheduled_at, duration_minutes, timezone, status, client_name, client_email, client_note, google_calendar_event_id, created_at",
+      { count: "exact" }
+    )
+    .eq("admin_user_id", adminUserId)
+    .order("scheduled_at", { ascending: false })
+    .range(offset, offset + PAGE_SIZE - 1);
+
+  if (params.status && params.status !== "all") {
+    query = query.eq("status", params.status);
+  }
+  if (params.from) {
+    query = query.gte("scheduled_at", new Date(params.from).toISOString());
+  }
+  if (params.to) {
+    const toDate = new Date(params.to);
+    toDate.setHours(23, 59, 59, 999);
+    query = query.lte("scheduled_at", toDate.toISOString());
+  }
+  if (params.search?.trim()) {
+    const search = params.search.trim();
+    query = query.or(`client_name.ilike.%${search}%,client_email.ilike.%${search}%`);
+  }
+
+  const { data, error, count } = await query;
+  if (error) {
+    console.error("[admin/bookings page] admin_bookings query failed:", error);
+    return { bookings: [] as AdminCalendarBookingRow[], total: 0, page };
+  }
+
+  return {
+    bookings: (data ?? []) as AdminCalendarBookingRow[],
+    total: count ?? 0,
+    page,
+  };
+}
+
 async function getDivinerOptions() {
   const admin = createAdminClient();
   const { data } = await admin
@@ -193,17 +259,41 @@ async function getDivinerOptions() {
   return (data ?? []) as Array<{ id: string; display_name: string }>;
 }
 
-async function getMonthlyStats() {
+async function getMonthlyStats(
+  adminUserId: string | null,
+  isMyView: boolean,
+) {
   const admin = createAdminClient();
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
   const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999).toISOString();
 
-  const { data } = await admin
+  if (isMyView) {
+    const { data } = adminUserId
+      ? await admin
+          .from("admin_bookings")
+          .select("status")
+          .eq("admin_user_id", adminUserId)
+          .gte("scheduled_at", monthStart)
+          .lte("scheduled_at", monthEnd)
+      : { data: [] as Array<{ status: string }> };
+
+    const rows = data ?? [];
+    return {
+      total: rows.length,
+      confirmed: rows.filter((b) => b.status === "confirmed").length,
+      completed: 0,
+      revenue: 0,
+    };
+  }
+
+  let query: any = admin
     .from("bookings")
     .select("status, total_amount")
     .gte("scheduled_at", monthStart)
     .lte("scheduled_at", monthEnd);
+
+  const { data } = await query;
 
   const rows = data ?? [];
   return {
@@ -222,11 +312,40 @@ export default async function AdminBookingsPage({
   searchParams: Promise<BookingsSearchParams>;
 }) {
   const params = await searchParams;
-  const [{ bookings, total, page }, divinerOptions, stats] = await Promise.all([
-    getBookings(params),
-    getDivinerOptions(),
-    getMonthlyStats(),
-  ]);
+  const view = params.view === "my" ? "my" : "all";
+  const adminUser = await requireAdmin();
+  const admin = createAdminClient();
+
+  const { data: currentDiviner } = adminUser
+    ? await admin
+        .from("diviners")
+        .select("id")
+        .eq("user_id", adminUser.id)
+        .maybeSingle()
+    : { data: null };
+
+  const currentDivinerId = (currentDiviner?.id as string | undefined) ?? null;
+  const adminCalendarResultPromise =
+    view === "my"
+      ? getAdminCalendarBookings({ ...params, view }, adminUser?.id ?? null)
+      : Promise.resolve(null);
+  const legacyBookingsResultPromise =
+    view === "all"
+      ? getBookings({ ...params, view })
+      : Promise.resolve(null);
+
+  const [adminCalendarResult, legacyBookingsResult, divinerOptions, stats] =
+    await Promise.all([
+      adminCalendarResultPromise,
+      legacyBookingsResultPromise,
+      getDivinerOptions(),
+      getMonthlyStats(adminUser?.id ?? null, view === "my"),
+    ]);
+
+  const adminCalendarBookings = adminCalendarResult?.bookings ?? [];
+  const bookings = legacyBookingsResult?.bookings ?? [];
+  const total = adminCalendarResult?.total ?? legacyBookingsResult?.total ?? 0;
+  const page = adminCalendarResult?.page ?? legacyBookingsResult?.page ?? 1;
 
   const bookingIds = bookings.map((booking) => booking.id);
   const divinerIds = [...new Set(bookings.map((booking) => booking.diviner_id).filter(Boolean))] as string[];
@@ -378,6 +497,7 @@ export default async function AdminBookingsPage({
 
   function pageUrl(p: number) {
     const sp = new URLSearchParams({
+      ...(view ? { view } : {}),
       ...(params.status ? { status: params.status } : {}),
       ...(params.diviner_id ? { diviner_id: params.diviner_id } : {}),
       ...(params.from ? { from: params.from } : {}),
@@ -393,7 +513,27 @@ export default async function AdminBookingsPage({
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Bookings</h1>
-          <p className="text-sm text-muted-foreground">All bookings across all diviners</p>
+          <p className="text-sm text-muted-foreground">
+            {view === "my"
+              ? "Your bookings only"
+              : "All bookings across all diviners"}
+          </p>
+        </div>
+        <div className="inline-flex rounded-lg border bg-background p-1">
+          <Button
+            asChild
+            size="sm"
+            variant={view === "my" ? "default" : "ghost"}
+          >
+            <Link href="/admin/bookings?view=my">My Bookings</Link>
+          </Button>
+          <Button
+            asChild
+            size="sm"
+            variant={view === "all" ? "default" : "ghost"}
+          >
+            <Link href="/admin/bookings?view=all">All Bookings</Link>
+          </Button>
         </div>
       </div>
 
@@ -439,6 +579,7 @@ export default async function AdminBookingsPage({
       <Card>
         <CardContent className="pt-4">
           <form method="GET" action="/admin/bookings" className="flex flex-wrap gap-3 items-end">
+            <input type="hidden" name="view" value={view} />
             <div className="flex flex-col gap-1">
               <label className="text-xs text-muted-foreground">Client name / email</label>
               <input
@@ -464,21 +605,23 @@ export default async function AdminBookingsPage({
                 <option value="no_show">No Show</option>
               </select>
             </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-xs text-muted-foreground">Diviner</label>
-              <select
-                name="diviner_id"
-                defaultValue={params.diviner_id ?? ""}
-                className="h-9 rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-              >
-                <option value="">All diviners</option>
-                {divinerOptions.map((d) => (
-                  <option key={d.id} value={d.id}>
-                    {d.display_name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {view === "all" && (
+              <div className="flex flex-col gap-1">
+                <label className="text-xs text-muted-foreground">Diviner</label>
+                <select
+                  name="diviner_id"
+                  defaultValue={params.diviner_id ?? ""}
+                  className="h-9 rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+                  <option value="">All diviners</option>
+                  {divinerOptions.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.display_name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
             <div className="flex flex-col gap-1">
               <label className="text-xs text-muted-foreground">From</label>
               <input
@@ -499,7 +642,7 @@ export default async function AdminBookingsPage({
             </div>
             <Button type="submit" size="sm">Filter</Button>
             <Button type="button" variant="ghost" size="sm" asChild>
-              <Link href="/admin/bookings">Clear</Link>
+              <Link href={`/admin/bookings?view=${view}`}>Clear</Link>
             </Button>
           </form>
         </CardContent>
@@ -513,7 +656,7 @@ export default async function AdminBookingsPage({
                 <TableRow>
                   <TableHead>Date / Time</TableHead>
                   <TableHead>Client</TableHead>
-                  <TableHead>Diviner</TableHead>
+                  {view === "all" && <TableHead>Diviner</TableHead>}
                   <TableHead>Service</TableHead>
                   <TableHead>Duration</TableHead>
                   <TableHead>Price</TableHead>
@@ -522,7 +665,77 @@ export default async function AdminBookingsPage({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {hydratedBookings.length === 0 ? (
+                {view === "my" ? (
+                  adminCalendarBookings.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="py-12 text-center text-muted-foreground">
+                        No bookings found
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    adminCalendarBookings.map((b) => (
+                      <TableRow key={b.id}>
+                        <TableCell className="whitespace-nowrap text-sm">{fmtDate(b.scheduled_at)}</TableCell>
+                        <TableCell>
+                          <div className="text-sm font-medium">{b.client_name || "—"}</div>
+                          <div className="text-xs text-muted-foreground">{b.client_email || "—"}</div>
+                        </TableCell>
+                        <TableCell className="text-sm">Admin Calendar</TableCell>
+                        <TableCell className="text-sm">{b.duration_minutes}m</TableCell>
+                        <TableCell className="text-sm">—</TableCell>
+                        <TableCell>
+                          <StatusBadge status={b.status} />
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            <BookingDetailSheet
+                              detailsOnly
+                              actionBasePath={`/api/admin/my-bookings/${b.id}`}
+                              joinHref={`/api/admin/my-bookings/${b.id}/join`}
+                              viewerRole="admin"
+                              booking={{
+                                id: b.id,
+                                scheduled_at: b.scheduled_at,
+                                status: b.status,
+                                duration: b.duration_minutes,
+                                amount: 0,
+                                payment_intent_id: null,
+                                notes: b.client_note ?? null,
+                                booking_notes: null,
+                                session_notes: null,
+                                client_session_notes: null,
+                                client_name: b.client_name || "Unknown",
+                                client_email: b.client_email || "",
+                                client_id: null,
+                                service_name: "Admin Calendar",
+                                refund_amount: null,
+                                refunded_at: null,
+                                refund_reason: null,
+                                birth_date: null,
+                                birth_time: null,
+                                birth_city: null,
+                                questionnaire_responses: null,
+                                previous_session_count: 0,
+                                last_session_date: null,
+                                username: "admin",
+                                metadata: {
+                                  source_table: "admin_bookings",
+                                  timezone: b.timezone,
+                                  google_calendar_event_id: b.google_calendar_event_id,
+                                  created_at: b.created_at,
+                                },
+                                stripe_payment_intent_id: null,
+                                base_price: null,
+                              }}
+                              linkedOrder={null}
+                              sessionLink={null}
+                            />
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )
+                ) : hydratedBookings.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={8} className="py-12 text-center text-muted-foreground">
                       No bookings found

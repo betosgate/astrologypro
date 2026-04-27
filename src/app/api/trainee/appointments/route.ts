@@ -1,9 +1,12 @@
 /**
  * GET /api/trainee/appointments
  *
- * Returns the authenticated trainee's booked appointments (any booking
- * whose client.email matches the authenticated user's email) so the
- * trainee dashboard can show them after the Tabbie booking flow.
+ * Returns the authenticated trainee's booked appointments by matching
+ * the authenticated user's email against stored client email fields.
+ *
+ * Supports both:
+ * - legacy `bookings` rows linked through `clients.email`
+ * - newer `admin_bookings` rows stored with `client_email`
  *
  * Authentication: supabase.auth.getUser() — same pattern as the rest
  * of the codebase. The email is read from the auth record, NEVER from
@@ -18,6 +21,62 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
+
+interface MatchedClient {
+  id: string;
+  email: string;
+  full_name: string | null;
+}
+
+interface LegacyBookingRow {
+  id: string;
+  diviner_id: string | null;
+  owner_id?: string | null;
+  client_id: string | null;
+  service_id: string | null;
+  scheduled_at: string;
+  duration_minutes: number | null;
+  status: string;
+  base_price: number | null;
+  total_amount: number | null;
+  booking_notes: string | null;
+  metadata: Record<string, unknown> | null;
+  created_at: string;
+  services:
+    | {
+        id: string;
+        name: string;
+        slug: string | null;
+        duration_minutes: number | null;
+        template_id: string | null;
+      }
+    | Array<{
+        id: string;
+        name: string;
+        slug: string | null;
+        duration_minutes: number | null;
+        template_id: string | null;
+      }>
+    | null;
+  clients: MatchedClient | MatchedClient[] | null;
+  diviners:
+    | { username: string | null }
+    | Array<{ username: string | null }>
+    | null;
+}
+
+interface AdminBookingRow {
+  id: string;
+  admin_user_id: string;
+  client_name: string;
+  client_email: string;
+  client_note: string | null;
+  scheduled_at: string;
+  duration_minutes: number;
+  timezone: string | null;
+  status: string;
+  created_at: string;
+}
 
 export async function GET() {
   const supabase = await createClient();
@@ -42,64 +101,217 @@ export async function GET() {
 
   const admin = createAdminClient();
 
-  // Step 1: find every clients row that matches the trainee email.
-  //   We do not join — some deployments store the client email on the
-  //   clients table, some on bookings directly. Handle both.
+  // Resolve the matching client rows first so the response can include
+  // the canonical client record data even when the appointment came
+  // from the newer admin_bookings flow.
   const { data: clientRows } = await admin
     .from("clients")
-    .select("id")
+    .select("id, email, full_name")
     .ilike("email", email);
-  const clientIds = ((clientRows ?? []) as Array<{ id: string }>).map((c) => c.id);
+  const matchedClients = ((clientRows ?? []) as MatchedClient[]).map((client) => ({
+    id: client.id,
+    email: client.email,
+    full_name: client.full_name ?? null,
+  }));
+  const clientIds = matchedClients.map((client) => client.id);
 
-  // Step 2: load every booking that (a) has a client_id matching those
-  // rows OR (b) has that email embedded in metadata.clientEmail as a fallback
-  // for older rows. We select generously; the trainee UI filters/renders
-  // as needed.
-  let bookings: Array<Record<string, unknown>> = [];
+  let bookings: LegacyBookingRow[] = [];
   if (clientIds.length > 0) {
     const { data } = await admin
       .from("bookings")
       .select(
-        `id, diviner_id, client_id, service_id, scheduled_at, duration_minutes,
+        `id, diviner_id, owner_id, client_id, service_id, scheduled_at, duration_minutes,
          status, base_price, total_amount, booking_notes, metadata, created_at,
          services:service_id ( id, name, slug, duration_minutes, template_id ),
-         clients:client_id ( id, email, full_name )`
+         clients:client_id ( id, email, full_name ),
+         diviners:diviner_id ( username )`
       )
       .in("client_id", clientIds)
       .order("scheduled_at", { ascending: false });
-    bookings = (data ?? []) as Array<Record<string, unknown>>;
+    bookings = (data ?? []) as LegacyBookingRow[];
   }
+
+  // Backfill diviner usernames for any bookings where the embed returned
+  // nothing — happens when the diviner_id → owner_id rename leaves some rows
+  // with owner_id populated and diviner_id null, so the embed join yields
+  // nothing. Without this, booking.username is undefined on the client and
+  // the drawer falls back to the inline datetime form instead of the
+  // calendar reschedule page.
+  const divinerUsernameById = new Map<string, string>();
+  const missingDivinerIds = new Set<string>();
+  for (const row of bookings) {
+    const embedded = Array.isArray(row.diviners)
+      ? row.diviners[0] ?? null
+      : row.diviners;
+    if (embedded?.username) {
+      if (row.diviner_id) divinerUsernameById.set(row.diviner_id, embedded.username);
+      if (row.owner_id) divinerUsernameById.set(row.owner_id, embedded.username);
+      continue;
+    }
+    const fallbackKey = row.diviner_id ?? row.owner_id ?? null;
+    if (fallbackKey && !divinerUsernameById.has(fallbackKey)) {
+      missingDivinerIds.add(fallbackKey);
+    }
+  }
+  if (missingDivinerIds.size > 0) {
+    const { data: divinerRows } = await admin
+      .from("diviners")
+      .select("id, username")
+      .in("id", Array.from(missingDivinerIds));
+    for (const row of divinerRows ?? []) {
+      if (row.username) divinerUsernameById.set(row.id as string, row.username as string);
+    }
+  }
+
+  const { data: adminBookingRows, error: adminBookingsError } = await admin
+    .from("admin_bookings")
+    .select(
+      "id, admin_user_id, client_name, client_email, client_note, scheduled_at, duration_minutes, timezone, status, created_at"
+    )
+    .ilike("client_email", email)
+    .order("scheduled_at", { ascending: false });
+
+  // Resolve admin usernames so trainees can deep-link to the calendar
+  // reschedule page at `/book/<admin-username>/reschedule/<booking-id>`.
+  const adminUserIds = new Set<string>();
+  for (const row of adminBookingRows ?? []) {
+    if (row.admin_user_id) adminUserIds.add(row.admin_user_id as string);
+  }
+  const adminUsernameByUserId = new Map<string, string>();
+  if (adminUserIds.size > 0) {
+    const { data: adminUserRows } = await admin
+      .from("admin_users")
+      .select("user_id, username")
+      .in("user_id", Array.from(adminUserIds));
+    for (const row of adminUserRows ?? []) {
+      if (row.user_id && row.username) {
+        adminUsernameByUserId.set(row.user_id as string, row.username as string);
+      }
+    }
+  }
+
+  const adminBookingsMissing =
+    !!adminBookingsError &&
+    adminBookingsError.message.toLowerCase().includes("admin_bookings");
+  const adminBookings = adminBookingsMissing
+    ? []
+    : ((adminBookingRows ?? []) as AdminBookingRow[]);
+
+  const normalizedLegacy = bookings.map((booking) => {
+    const service = Array.isArray(booking.services)
+      ? booking.services[0] ?? null
+      : booking.services;
+    const client = Array.isArray(booking.clients)
+      ? booking.clients[0] ?? null
+      : booking.clients;
+    const diviner = Array.isArray(booking.diviners)
+      ? booking.diviners[0] ?? null
+      : booking.diviners;
+    const resolvedUsername =
+      diviner?.username ??
+      (booking.diviner_id
+        ? divinerUsernameById.get(booking.diviner_id) ?? null
+        : null) ??
+      (booking.owner_id
+        ? divinerUsernameById.get(booking.owner_id) ?? null
+        : null);
+
+    const rescheduleHref = resolvedUsername
+      ? `/${resolvedUsername}/reschedule/${booking.id}`
+      : null;
+    const joinHref = resolvedUsername
+      ? `/${resolvedUsername}/session/${booking.id}`
+      : null;
+
+    return {
+      id: booking.id,
+      source: "bookings" as const,
+      status: booking.status,
+      scheduled_at: booking.scheduled_at,
+      duration_minutes: Number(booking.duration_minutes ?? 0),
+      diviner_id: booking.diviner_id ?? null,
+      diviner_username: resolvedUsername,
+      reschedule_href: rescheduleHref,
+      join_href: joinHref,
+      service_id: booking.service_id ?? null,
+      service_name: service?.name ?? null,
+      client_id: booking.client_id ?? null,
+      client_name: client?.full_name ?? null,
+      client_email: client?.email ?? email,
+      client: client
+        ? {
+            id: client.id,
+            email: client.email,
+            full_name: client.full_name ?? null,
+          }
+        : null,
+      base_price: Number(booking.base_price ?? 0),
+      total_amount: Number(booking.total_amount ?? 0),
+      booking_notes: booking.booking_notes ?? null,
+      metadata: booking.metadata ?? null,
+      created_at: booking.created_at,
+    };
+  });
+
+  const normalizedAdmin = adminBookings.map((booking) => {
+    const matchedClient =
+      matchedClients.find(
+        (client) => client.email.trim().toLowerCase() === email
+      ) ?? null;
+
+    const adminUsername =
+      booking.admin_user_id
+        ? adminUsernameByUserId.get(booking.admin_user_id as string) ?? null
+        : null;
+    const rescheduleHref = adminUsername
+      ? `/book/${adminUsername}/reschedule/${booking.id}`
+      : null;
+    const joinHref = adminUsername
+      ? `/book/${adminUsername}/session/${booking.id}`
+      : null;
+
+    return {
+      id: booking.id,
+      source: "admin_bookings" as const,
+      status: booking.status,
+      scheduled_at: booking.scheduled_at,
+      duration_minutes: Number(booking.duration_minutes ?? 0),
+      diviner_id: booking.admin_user_id ?? null,
+      diviner_username: adminUsername,
+      reschedule_href: rescheduleHref,
+      join_href: joinHref,
+      service_id: null,
+      service_name: "Appointment",
+      client_id: matchedClient?.id ?? null,
+      client_name: booking.client_name ?? matchedClient?.full_name ?? null,
+      client_email: booking.client_email ?? matchedClient?.email ?? email,
+      client: matchedClient
+        ? {
+            id: matchedClient.id,
+            email: matchedClient.email,
+            full_name: matchedClient.full_name ?? null,
+          }
+        : null,
+      base_price: 0,
+      total_amount: 0,
+      booking_notes: booking.client_note ?? null,
+      metadata: {
+        source_table: "admin_bookings",
+        timezone: booking.timezone ?? null,
+      },
+      created_at: booking.created_at,
+    };
+  });
+
+  const data = [...normalizedLegacy, ...normalizedAdmin].sort(
+    (a, b) =>
+      new Date(b.scheduled_at).getTime() - new Date(a.scheduled_at).getTime()
+  );
 
   return NextResponse.json({
     ok: true,
-    data: bookings.map((b) => {
-      const svc = b.services as
-        | { id: string; name: string; slug: string | null; duration_minutes: number | null; template_id: string | null }
-        | Array<{ id: string; name: string; slug: string | null; duration_minutes: number | null; template_id: string | null }>
-        | null;
-      const client = b.clients as
-        | { id: string; email: string; full_name: string | null }
-        | Array<{ id: string; email: string; full_name: string | null }>
-        | null;
-      const flatSvc = Array.isArray(svc) ? svc[0] ?? null : svc;
-      const flatClient = Array.isArray(client) ? client[0] ?? null : client;
-      return {
-        id: b.id as string,
-        status: b.status as string,
-        scheduled_at: b.scheduled_at as string,
-        duration_minutes: Number(b.duration_minutes ?? 0),
-        diviner_id: b.diviner_id as string | null,
-        service_id: b.service_id as string | null,
-        service_name: flatSvc?.name ?? null,
-        client_id: (b.client_id as string | null) ?? null,
-        client_name: flatClient?.full_name ?? null,
-        client_email: flatClient?.email ?? null,
-        base_price: Number(b.base_price ?? 0),
-        total_amount: Number(b.total_amount ?? 0),
-        booking_notes: (b.booking_notes as string | null) ?? null,
-        metadata: (b.metadata as Record<string, unknown> | null) ?? null,
-        created_at: b.created_at as string,
-      };
-    }),
+    email,
+    matched_clients: matchedClients,
+    data,
   });
 }

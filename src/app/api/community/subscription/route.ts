@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { resolveEntitlementFromRow } from "@/lib/community/pm-entitlement";
 
 export const dynamic = "force-dynamic";
 
@@ -8,6 +9,10 @@ export const dynamic = "force-dynamic";
  * GET /api/community/subscription
  *
  * Returns the authenticated user's community membership/subscription details.
+ * Per `tasks/23.04.2026/community-pm-entitlement-state-sync/00-audit-note.md`,
+ * `plan_type`, `plan_label`, `amount`, and `max_members` are derived from the
+ * canonical `pm_tier_id → pm_plan_tiers` row when available, falling back to
+ * the legacy `plan_type` column only when no tier resolves.
  *
  * Response shape:
  * {
@@ -26,7 +31,10 @@ export const dynamic = "force-dynamic";
  * }
  */
 
-const PLAN_AMOUNTS: Record<string, Record<string, number>> = {
+// Legacy amount / label / max_members used only when no pm_plan_tier is
+// resolved (Mystery School, or PM members who have never been through a
+// Stripe flow — e.g. admin-provisioned households).
+const LEGACY_PLAN_AMOUNTS: Record<string, Record<string, number>> = {
   perennial_mandalism: { individual: 9.97, family: 19.97 },
   mystery_school: { individual: 27.0, family: 27.0 },
 };
@@ -42,7 +50,7 @@ const PLAN_LABELS: Record<string, Record<string, string>> = {
   },
 };
 
-const MAX_MEMBERS: Record<string, number> = {
+const LEGACY_MAX_MEMBERS: Record<string, number> = {
   individual: 1,
   family: 5,
 };
@@ -63,7 +71,7 @@ export async function GET() {
     const { data: member, error } = await admin
       .from("community_members")
       .select(
-        "id, membership_type, membership_status, plan_type, stripe_subscription_id, joined_at, expires_at"
+        "id, membership_type, membership_status, plan_type, pm_tier_id, stripe_subscription_id, joined_at, expires_at"
       )
       .eq("user_id", user.id)
       .single();
@@ -76,7 +84,23 @@ export async function GET() {
     }
 
     const membershipType = (member.membership_type ?? "perennial_mandalism") as string;
-    const planType = (member.plan_type ?? "individual") as string;
+    const isMysterySchool = membershipType === "mystery_school";
+
+    // Resolve canonical entitlement. For MS users this still returns a result,
+    // but we don't use the tier for amount/label — MS pricing is not tier-based.
+    const entitlement = await resolveEntitlementFromRow(admin, {
+      pm_tier_id: (member.pm_tier_id as string | null) ?? null,
+      plan_type: (member.plan_type as string | null) ?? null,
+    });
+
+    if (entitlement.hasDrift) {
+      console.warn(
+        `[community/subscription] entitlement drift on member ${member.id}: tier='${entitlement.tier?.name}' (canonical=${entitlement.planTypeCanonical}) vs legacy plan_type=${entitlement.planTypeLegacy}`
+      );
+    }
+
+    // Canonical plan_type is what the UI should render.
+    const planType = entitlement.planTypeCanonical;
 
     // Count family members (only relevant for family plan)
     let memberCount = 1;
@@ -92,7 +116,6 @@ export async function GET() {
     // Derive renewal_date: prefer expires_at, else derive from Stripe if available
     let renewalDate: string | null = member.expires_at ?? null;
 
-    // If no expires_at stored but subscription is active and Stripe ID exists, fetch from Stripe
     if (!renewalDate && member.stripe_subscription_id && member.membership_status === "active") {
       try {
         const { stripe } = await import("@/lib/stripe/client");
@@ -107,15 +130,27 @@ export async function GET() {
       }
     }
 
+    // Amount: PM uses the canonical tier's base_price_usd when resolved.
+    // MS and legacy-fallback PM use the hardcoded LEGACY_PLAN_AMOUNTS map.
     const amount =
-      PLAN_AMOUNTS[membershipType]?.[planType] ??
-      PLAN_AMOUNTS["perennial_mandalism"]["individual"];
+      !isMysterySchool && entitlement.tier?.base_price_usd != null
+        ? Number(entitlement.tier.base_price_usd)
+        : LEGACY_PLAN_AMOUNTS[membershipType]?.[planType] ??
+          LEGACY_PLAN_AMOUNTS["perennial_mandalism"]["individual"];
 
+    // Label: prefer the tier's own name when available (already user-facing).
     const planLabel =
-      PLAN_LABELS[membershipType]?.[planType] ??
-      PLAN_LABELS["perennial_mandalism"]["individual"];
+      !isMysterySchool && entitlement.tier?.name
+        ? `Perennial Mandalism — ${entitlement.tier.name}`
+        : PLAN_LABELS[membershipType]?.[planType] ??
+          PLAN_LABELS["perennial_mandalism"]["individual"];
 
-    const maxMembers = planType === "family" ? MAX_MEMBERS["family"] : MAX_MEMBERS["individual"];
+    const maxMembers =
+      !isMysterySchool && entitlement.tier?.max_total_members != null
+        ? entitlement.tier.max_total_members
+        : planType === "family"
+          ? LEGACY_MAX_MEMBERS["family"]
+          : LEGACY_MAX_MEMBERS["individual"];
 
     return NextResponse.json({
       subscription: {

@@ -36,7 +36,13 @@ export async function GET(
   const { data, error } = await admin
     .from("diviner_affiliates")
     .select(
-      "id, diviner_id, user_id, name, email, phone, status, notes, default_commission_type, default_commission_value, created_at, updated_at"
+      `id, diviner_id, user_id, name, email, phone, status, notes,
+       default_commission_type, default_commission_value,
+       affiliate_account_id, invited_at, accepted_at,
+       created_at, updated_at,
+       account:affiliate_accounts (
+         id, user_id, email, name, phone, avatar_url, status, tax_form_status
+       )`
     )
     .eq("id", id)
     .eq("diviner_id", diviner.id)
@@ -49,7 +55,104 @@ export async function GET(
     );
   }
 
-  return NextResponse.json({ data });
+  // Additive canonical fields + partnership_count + latest_invite. Response
+  // shape stays backward-compatible — existing UI callers read name/email/
+  // phone/user_id/status from the top level.
+  const row = data as unknown as {
+    id: string;
+    diviner_id: string;
+    user_id: string | null;
+    name: string | null;
+    email: string | null;
+    phone: string | null;
+    status: string;
+    notes: string | null;
+    default_commission_type: string | null;
+    default_commission_value: number | null;
+    affiliate_account_id: string | null;
+    invited_at: string | null;
+    accepted_at: string | null;
+    created_at: string;
+    updated_at: string;
+    account: {
+      id: string;
+      user_id: string | null;
+      email: string;
+      name: string;
+      phone: string | null;
+      avatar_url: string | null;
+      status: string;
+      tax_form_status: string;
+    } | null;
+  };
+
+  // Count how many OTHER diviners partner with this same canonical account
+  let partnershipCount = 0;
+  if (row.affiliate_account_id) {
+    const { count } = await admin
+      .from("diviner_affiliates")
+      .select("*", { count: "exact", head: true })
+      .eq("affiliate_account_id", row.affiliate_account_id)
+      .neq("id", row.id);
+    partnershipCount = count ?? 0;
+  }
+
+  // Latest non-consumed invite for pending rows
+  let latestInvite: {
+    id: string;
+    expires_at: string;
+    revoked_at: string | null;
+    resent_count: number;
+    created_at: string;
+  } | null = null;
+  if (row.status === "pending") {
+    const { data: inv } = await admin
+      .from("affiliate_invites")
+      .select("id, expires_at, revoked_at, resent_count, created_at")
+      .eq("junction_id", row.id)
+      .is("consumed_at", null)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    latestInvite = inv
+      ? {
+          id: inv.id,
+          expires_at: inv.expires_at,
+          revoked_at: inv.revoked_at,
+          resent_count: inv.resent_count ?? 0,
+          created_at: inv.created_at,
+        }
+      : null;
+  }
+
+  // Flatten canonical fields into top-level (prefer account when present)
+  const flat = {
+    id: row.id,
+    diviner_id: row.diviner_id,
+    status: row.status,
+    notes: row.notes,
+    default_commission_type: row.default_commission_type,
+    default_commission_value: row.default_commission_value,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+    invited_at: row.invited_at,
+    accepted_at: row.accepted_at,
+    // Preferred canonical, fallback to legacy
+    name: row.account?.name ?? row.name ?? "",
+    email: row.account?.email ?? row.email ?? "",
+    phone: row.account?.phone ?? row.phone ?? null,
+    user_id: row.account?.user_id ?? row.user_id ?? null,
+    // Additive canonical fields
+    affiliate_account_id: row.account?.id ?? row.affiliate_account_id ?? null,
+    avatar_url: row.account?.avatar_url ?? null,
+    account_status: row.account?.status ?? null,
+    tax_form_status: row.account?.tax_form_status ?? null,
+    // Task-04 specific
+    partnership_count: partnershipCount,
+    latest_invite: latestInvite,
+  };
+
+  return NextResponse.json({ data: flat });
 }
 
 // PATCH /api/dashboard/affiliates/[id]

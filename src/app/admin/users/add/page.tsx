@@ -214,7 +214,7 @@ export default function AddUserPage() {
               <div className="space-y-2">
                 <Label>State *</Label>
                 <Select value={state} onValueChange={setState}>
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue placeholder="Select state" />
                   </SelectTrigger>
                   <SelectContent>
@@ -252,7 +252,7 @@ export default function AddUserPage() {
               <div className="space-y-2">
                 <Label>Gender *</Label>
                 <Select value={gender} onValueChange={setGender}>
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue placeholder="Select gender" />
                   </SelectTrigger>
                   <SelectContent>
@@ -266,7 +266,7 @@ export default function AddUserPage() {
               <div className="space-y-2">
                 <Label>User Type *</Label>
                 <Select value={userType} onValueChange={setUserType}>
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue placeholder="Select user type" />
                   </SelectTrigger>
                   <SelectContent>

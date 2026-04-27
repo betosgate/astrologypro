@@ -68,6 +68,35 @@ All accounts are active and confirmed. Use the credentials below to log in at an
 | trainee4@test.astrologypro.com | TestUser123! | test-trainee-4 |
 | trainee5@test.astrologypro.com | TestUser123! | test-trainee-5 |
 
+### Affiliates — portal: `/affiliate`
+
+Seeded by `node scripts/seed-affiliate-accounts.mjs` (idempotent). Covers every
+lifecycle state of the 2026-04-23 identity model. Password for the claimed
+accounts is the same as other test users: `TestUser123!`.
+
+| Email | Password | Partnerships | Junction status | Canonical state |
+|---|---|---|---|---|
+| affiliate-solo@test.astrologypro.com | TestUser123! | test-diviner-1 | active | active (claimed) |
+| affiliate-multi@test.astrologypro.com | TestUser123! | test-diviner-1, 2, 3 | active (all 3) | active (claimed) |
+| affiliate-pending@test.astrologypro.com | TestUser123! | test-diviner-1 | pending | unclaimed, valid invite |
+| affiliate-expired@test.astrologypro.com | TestUser123! | test-diviner-2 | pending | unclaimed, expired invite |
+| affiliate-unclaimed@test.astrologypro.com | *(no auth)* | test-diviner-4 | active | unclaimed (grandfathered) |
+| affiliate-suspended@test.astrologypro.com | TestUser123! | test-diviner-5 | suspended | active (claimed) |
+| affiliate-blocked@test.astrologypro.com | TestUser123! | test-diviner-1 | active | **blocked** platform-wide |
+
+Notes:
+
+- The `affiliate-unclaimed` persona has no Supabase auth user — it simulates
+  a row backfilled from `diviner_affiliates` where the corresponding person
+  never signed up. Log in as any diviner and you'll see it on
+  `/dashboard/affiliates` with a pending/active treatment.
+- `affiliate-multi` is the multi-diviner test bed — log in and
+  `/affiliate/partnerships` should show 3 cards.
+- `affiliate-pending` and `affiliate-expired` drive UI state for the
+  row-action dropdown (Resend / Copy / Revoke).
+- `affiliate-blocked` exercises the platform-wide block path — diviners
+  can't invite this email, the portal shows a suspended gate.
+
 ---
 
 ## Dashboard QA Accounts — Fully Seeded (seed-dashboard-data.mjs)

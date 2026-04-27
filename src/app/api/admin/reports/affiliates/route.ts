@@ -145,9 +145,15 @@ export async function GET(req: NextRequest) {
     }
 
     // ── 2. Diviner Affiliates ───────────────────────────────────────────────
+    // migrated-to-canonical-accounts: 2026-04-23 (Task 06)
+    // Join affiliate_accounts for canonical identity; code below reads
+    // a.name/a.email through the flattened helper.
     let affQuery = db
       .from("diviner_affiliates")
-      .select("id, diviner_id, name, email, status, default_commission_value, created_at");
+      .select(
+        `id, diviner_id, name, email, status, default_commission_value, created_at,
+         account:affiliate_accounts ( name, email )`
+      );
     if (since) {
       affQuery = affQuery.gte("created_at", since.toISOString());
     }
@@ -158,10 +164,16 @@ export async function GET(req: NextRequest) {
     const totalDivinerAffiliates = dAffRows.length;
     const activeDivinerAffiliates = dAffRows.filter((a) => a.status === "active").length;
 
-    // Fetch all commissions in period
+    // Fetch all conversions in period. Post System A, the ledger is
+    // `campaign_conversions`. It doesn't carry diviner_id, so we join
+    // the campaign to pull the owning diviner. Reversed conversions
+    // contribute to a separate reversedCents bucket; "paid" semantics
+    // don't exist in Phase 1 (Stripe auto-split deferred to Phase 2).
     let commQuery = db
-      .from("affiliate_commissions")
-      .select("id, affiliate_id, diviner_id, commission_amount_cents, status, created_at")
+      .from("campaign_conversions")
+      .select(
+        "id, affiliate_id, commission_amount_cents, reversed_at, created_at, campaign:affiliate_campaigns(diviner_id)",
+      )
       .order("created_at", { ascending: false })
       .order("id", { ascending: false });
     if (since) {
@@ -170,38 +182,52 @@ export async function GET(req: NextRequest) {
     const { data: commissions, error: commErr } = await commQuery;
     if (commErr) throw commErr;
 
-    const commRows = commissions ?? [];
+    type ConversionRow = {
+      id: string;
+      affiliate_id: string;
+      commission_amount_cents: number | null;
+      reversed_at: string | null;
+      created_at: string;
+      campaign: { diviner_id: string | null } | { diviner_id: string | null }[] | null;
+    };
+    const commRows = (commissions ?? []) as unknown as ConversionRow[];
 
-    // Aggregate per affiliate
+    // Aggregate per affiliate junction (affiliate_id = diviner_affiliates.id)
     const affAggMap = new Map<
       string,
-      { totalCents: number; paidCents: number; count: number; divinerId: string }
+      { totalCents: number; reversedCents: number; count: number; divinerId: string }
     >();
     let totalCommissionsCents = 0;
-    let totalPaidCents = 0;
+    let totalPaidCents = 0; // always 0 in Phase 1
 
     for (const c of commRows) {
       const cents = Number(c.commission_amount_cents ?? 0);
-      totalCommissionsCents += cents;
-      if (c.status === "paid") totalPaidCents += cents;
+      const campaign = Array.isArray(c.campaign) ? c.campaign[0] : c.campaign;
+      const divinerId = campaign?.diviner_id ?? "unknown";
+      const isReversed = !!c.reversed_at;
+      if (!isReversed) totalCommissionsCents += cents;
 
-      const aid = c.affiliate_id as string;
+      const aid = c.affiliate_id;
       const existing = affAggMap.get(aid);
       if (existing) {
-        existing.totalCents += cents;
-        if (c.status === "paid") existing.paidCents += cents;
-        existing.count += 1;
+        if (isReversed) existing.reversedCents += cents;
+        else {
+          existing.totalCents += cents;
+          existing.count += 1;
+        }
       } else {
         affAggMap.set(aid, {
-          totalCents: cents,
-          paidCents: c.status === "paid" ? cents : 0,
-          count: 1,
-          divinerId: c.diviner_id as string,
+          totalCents: isReversed ? 0 : cents,
+          reversedCents: isReversed ? cents : 0,
+          count: isReversed ? 0 : 1,
+          divinerId,
         });
       }
     }
 
-    // Aggregate per diviner
+    // Aggregate per diviner. `paidCents` is no longer computable in
+    // Phase 1 (no payout ledger until Stripe auto-split lands). Keep
+    // the shape at 0 so downstream consumers don't crash.
     const divinerAggMap = new Map<
       string,
       { affiliateIds: Set<string>; totalCents: number; paidCents: number }
@@ -212,12 +238,11 @@ export async function GET(req: NextRequest) {
       if (existing) {
         existing.affiliateIds.add(affId);
         existing.totalCents += agg.totalCents;
-        existing.paidCents += agg.paidCents;
       } else {
         divinerAggMap.set(did, {
           affiliateIds: new Set([affId]),
           totalCents: agg.totalCents,
-          paidCents: agg.paidCents,
+          paidCents: 0,
         });
       }
     }
@@ -269,14 +294,24 @@ export async function GET(req: NextRequest) {
       })
       .sort((a, b) => b.totalCommissions - a.totalCommissions);
 
-    // Build top affiliates
-    const affLookup = new Map(dAffRows.map((a) => [a.id, a]));
+    // Build top affiliates — prefer canonical account identity where present
+    type AffRow = {
+      id: string;
+      diviner_id: string;
+      name: string | null;
+      email: string | null;
+      status: string;
+      default_commission_value: number | null;
+      created_at: string;
+      account?: { name?: string; email?: string } | null;
+    };
+    const affLookup = new Map((dAffRows as unknown as AffRow[]).map((a) => [a.id, a]));
     const topAffiliates: TopAffiliate[] = Array.from(affAggMap.entries())
       .map(([affId, agg]) => {
         const info = affLookup.get(affId);
         return {
           id: affId,
-          name: info?.name ?? "Unknown",
+          name: info?.account?.name ?? info?.name ?? "Unknown",
           divinerName: divinerNameMap.get(agg.divinerId) ?? "Unknown",
           commissions: round2(agg.totalCents / 100),
           conversions: agg.count,

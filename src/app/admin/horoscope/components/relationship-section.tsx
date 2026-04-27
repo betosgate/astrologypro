@@ -9,7 +9,7 @@ import { ShowMoreModal, useShowMore } from "./show-more-modal";
 
 import { SmartHeading } from "./astro-icons";
 import { cn } from "@/lib/utils";
-import { getRelationshipBgClass } from "../utils";
+import { getRelationshipBgClass, normalizeInterpretationText } from "../utils";
 
 export function RelationshipSection({ aiMap, areaOfInquiry, tabSlug, checkDacen, onDecanClick, rawData }: {
   aiMap: Record<string, any>; areaOfInquiry?: string; tabSlug: string;
@@ -41,6 +41,7 @@ export function RelationshipSection({ aiMap, areaOfInquiry, tabSlug, checkDacen,
 
         {items.map((item: any, i: number) => {
           const itemTitle = item.title ?? item.name;
+          const itemText = normalizeInterpretationText(item.data ?? item.interpretation ?? item.description);
           const bgClass = getRelationshipBgClass(itemTitle ?? title, tabSlug, sectionKey);
           const normalizedItemTitle = String(itemTitle ?? "").trim().toLowerCase();
           const isTimingSummaryCard = isBusiness && sectionKey === "timing_and_transits" && ["summary", "recommendations"].includes(normalizedItemTitle);
@@ -99,9 +100,9 @@ export function RelationshipSection({ aiMap, areaOfInquiry, tabSlug, checkDacen,
                 <div className="flex items-center justify-center gap-2 mb-1">
                   {!itemTitle && <h4 className="text-xs font-semibold uppercase tracking-wider text-center">{title}</h4>}
                 </div>
-                <p className="leading-relaxed">{item.data ?? item.interpretation ?? item.description}</p>
+                <p className="leading-relaxed">{itemText}</p>
                 <div className="mt-1.5 flex justify-center border-t border-black/10 pt-2">
-                  <button onClick={() => trigger(itemTitle ?? title, item.data ?? item.interpretation ?? "", item, areaOfInquiry, undefined, false, undefined, tabSlug, rawData)} className="horoscope-show-more">Show More</button>
+                  <button onClick={() => trigger(itemTitle ?? title, itemText, item, areaOfInquiry, undefined, false, undefined, tabSlug, rawData)} className="horoscope-show-more">Show More</button>
                 </div>
               </div>
             </div>

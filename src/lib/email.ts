@@ -1539,6 +1539,88 @@ export async function sendCancellationConfirmation({
   });
 }
 
+// ── Diviner Notification: Client Rescheduled ─────────────────────────────────
+export async function sendRescheduleNotificationToDiviner({
+  to,
+  divinerName,
+  clientName,
+  serviceName,
+  previousDate,
+  newDate,
+  dashboardUrl,
+}: {
+  to: string;
+  divinerName: string;
+  clientName: string;
+  serviceName: string;
+  previousDate: string;
+  newDate: string;
+  dashboardUrl: string;
+}) {
+  const content = `
+    <p style="margin:0 0 16px;color:#d4d4d8;">Hi ${divinerName},</p>
+    <p style="margin:0 0 16px;color:#a1a1aa;"><strong style="color:#f4f4f5;">${clientName}</strong> has rescheduled their <strong style="color:#f4f4f5;">${serviceName}</strong> session.</p>
+    ${infoCard(`<strong style="color:#e4e4e7;">Previous Time</strong><br>${previousDate}<br><br><strong style="color:#e4e4e7;">New Time</strong><br>${newDate}`)}
+    <p style="margin:24px 0 0;font-size:13px;color:#9ca3af;">Your calendar has been updated. Open the dashboard to view or manage the booking.</p>
+  `;
+
+  return sendEmail({
+    to,
+    subject: `Rescheduled by ${clientName}: ${serviceName}`,
+    html: buildEmailHtml({
+      title: "Client Rescheduled a Session",
+      preheader: `${clientName} moved their ${serviceName} to ${newDate}.`,
+      content,
+      ctaText: "Open Dashboard",
+      ctaUrl: dashboardUrl,
+      footer: `AstrologyPro &mdash; Run Your Divination Business`,
+    }),
+  });
+}
+
+// ── Diviner Notification: Client Cancelled ───────────────────────────────────
+export async function sendCancellationNotificationToDiviner({
+  to,
+  divinerName,
+  clientName,
+  serviceName,
+  scheduledAt,
+  cancelReason,
+  dashboardUrl,
+}: {
+  to: string;
+  divinerName: string;
+  clientName: string;
+  serviceName: string;
+  scheduledAt: string;
+  cancelReason?: string;
+  dashboardUrl: string;
+}) {
+  const reasonBlock = cancelReason
+    ? infoCard(`<strong style="color:#e4e4e7;">Reason from client</strong><br>${cancelReason}`)
+    : "";
+
+  const content = `
+    <p style="margin:0 0 16px;color:#d4d4d8;">Hi ${divinerName},</p>
+    <p style="margin:0 0 16px;color:#a1a1aa;"><strong style="color:#f4f4f5;">${clientName}</strong> has cancelled their <strong style="color:#f4f4f5;">${serviceName}</strong> session scheduled for <strong style="color:#f4f4f5;">${scheduledAt}</strong>.</p>
+    ${reasonBlock}
+    <p style="margin:16px 0 0;color:#a1a1aa;">Your calendar has been updated and the slot is now free again.</p>
+  `;
+
+  return sendEmail({
+    to,
+    subject: `Cancelled by ${clientName}: ${serviceName}`,
+    html: buildEmailHtml({
+      title: "Client Cancelled a Session",
+      preheader: `${clientName} cancelled their ${serviceName}.`,
+      content,
+      ctaText: "Open Dashboard",
+      ctaUrl: dashboardUrl,
+      footer: `AstrologyPro &mdash; Run Your Divination Business`,
+    }),
+  });
+}
+
 // ── 24-Hour / 1-Hour Session Reminder ────────────────────────────────────────
 export async function sendSessionReminder({
   to,
@@ -2939,12 +3021,28 @@ export async function sendComboBundleWelcome({
 
 // ── Affiliate Invitation Email ──────────────────────────────────────────────
 
+/**
+ * Escapes untrusted strings before embedding in the email HTML template.
+ * Covers the OWASP HTML-context character set. Used by sendAffiliateInvitation
+ * so diviner display names and personal messages can't inject markup.
+ */
+function escapeHtmlForEmail(input: string): string {
+  return input
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 interface AffiliateInvitationParams {
   to: string;
   affiliateName: string;
   divinerName: string;
   message?: string;
   acceptUrl: string;
+  /** When the accept link expires. Rendered as a friendly "… expires on …" note. */
+  expiresAt?: Date | string;
 }
 
 // ── Advocate — Welcome on signup ─────────────────────────────────────────────
@@ -3063,19 +3161,44 @@ export async function sendAffiliateInvitation({
   divinerName,
   message,
   acceptUrl,
+  expiresAt,
 }: AffiliateInvitationParams) {
-  const personalNote = message
+  // HTML-escape every untrusted field. Affiliate/diviner display names and
+  // free-text messages pass through user input and would otherwise inject
+  // markup into the email body.
+  const safeAffiliateName = escapeHtmlForEmail(affiliateName);
+  const safeDivinerName = escapeHtmlForEmail(divinerName);
+  const safeMessage = message ? escapeHtmlForEmail(message) : "";
+
+  const personalNote = safeMessage
     ? `
     ${sectionHeading("Personal Note")}
-    <p style="margin:0 0 16px;color:#a1a1aa;font-style:italic;">&ldquo;${message}&rdquo;</p>
+    <p style="margin:0 0 16px;color:#a1a1aa;font-style:italic;">&ldquo;${safeMessage}&rdquo;</p>
   `
     : "";
 
+  // Friendly expiry text (pre-escaped, no user input)
+  let expiryBlock = "";
+  if (expiresAt) {
+    const expiryDate = expiresAt instanceof Date ? expiresAt : new Date(expiresAt);
+    if (!Number.isNaN(expiryDate.getTime())) {
+      const humanExpiry = expiryDate.toLocaleDateString("en-US", {
+        month: "long",
+        day: "numeric",
+        year: "numeric",
+      });
+      expiryBlock = `
+      <p style="margin:16px 0 0;font-size:13px;color:#9ca3af;">
+        This invitation expires on <strong style="color:#d4d4d8;">${humanExpiry}</strong>.
+      </p>`;
+    }
+  }
+
   const content = `
-    <p style="margin:0 0 16px;color:#d4d4d8;">Hi ${affiliateName},</p>
+    <p style="margin:0 0 16px;color:#d4d4d8;">Hi ${safeAffiliateName},</p>
 
     <p style="margin:0 0 16px;color:#a1a1aa;">
-      <strong style="color:#f4f4f5;">${divinerName}</strong> has invited you to join their
+      <strong style="color:#f4f4f5;">${safeDivinerName}</strong> has invited you to join their
       affiliate program on AstrologyPro. As an affiliate partner, you&rsquo;ll earn
       commissions on referrals you send their way.
     </p>
@@ -3089,6 +3212,8 @@ export async function sendAffiliateInvitation({
       <li style="margin-bottom:6px;">Earn commissions on every booking or signup from your referrals</li>
     </ol>
 
+    ${expiryBlock}
+
     <p style="margin-top:16px;font-size:13px;color:#9ca3af;">
       If you did not expect this invitation, you can safely ignore this email.
     </p>
@@ -3096,10 +3221,10 @@ export async function sendAffiliateInvitation({
 
   return sendEmail({
     to,
-    subject: `${divinerName} invited you to their affiliate program on AstrologyPro`,
+    subject: `${safeDivinerName} invited you to be an affiliate partner on AstrologyPro`,
     html: buildEmailHtml({
       title: "You've Been Invited as an Affiliate Partner",
-      preheader: `${divinerName} wants you to join their affiliate program.`,
+      preheader: `${safeDivinerName} wants you to join their affiliate program.`,
       content,
       ctaText: "Accept Invitation",
       ctaUrl: acceptUrl,

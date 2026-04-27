@@ -26,9 +26,8 @@ interface SearchParams {
   mode?: string;
 }
 
-function normalizeMode(mode: string | undefined): RelationshipMode {
-  if (mode === "romantic" || mode === "business") return mode;
-  return "friendship";
+function isRelationshipMode(mode: string | undefined): mode is RelationshipMode {
+  return mode === "romantic" || mode === "friendship" || mode === "business";
 }
 
 export default async function CommunityRelationshipDetailPage({
@@ -42,7 +41,11 @@ export default async function CommunityRelationshipDetailPage({
     redirect("/community/charts");
   }
 
-  const selectedMode = normalizeMode(mode);
+  if (!isRelationshipMode(mode)) {
+    redirect("/community/charts");
+  }
+
+  const selectedMode = mode;
   const selectedSlug = RELATIONSHIP_TAB_MAP[selectedMode];
   const allowedSlugs = [
     selectedSlug,
@@ -129,9 +132,10 @@ export default async function CommunityRelationshipDetailPage({
       </Link>
 
       <HoroscopeToolkitPage
-        basePath={`/community/charts/detailed?personAId=${encodeURIComponent(personAId)}&personBId=${encodeURIComponent(personBId)}`}
+        basePath={`/community/charts/detailed?personAId=${encodeURIComponent(personAId)}&personBId=${encodeURIComponent(personBId)}&mode=${selectedMode}`}
         allowedSlugs={allowedSlugs}
         initialPrefill={encodeURIComponent(JSON.stringify(prefill))}
+        readOnlyBirthData={true}
       />
     </div>
   );

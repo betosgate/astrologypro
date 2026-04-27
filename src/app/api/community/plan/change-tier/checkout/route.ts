@@ -24,6 +24,9 @@ export const runtime = "nodejs";
 
 export async function POST(request: NextRequest) {
   try {
+    const origin = request.headers.get("origin") || APP_URL;
+    const baseUrl = origin.endsWith("/") ? origin.slice(0, -1) : origin;
+
     const supabase = await createClient();
     const {
       data: { user },
@@ -105,8 +108,8 @@ export async function POST(request: NextRequest) {
       // Mirror metadata onto the subscription itself so later webhook
       // events (customer.subscription.updated, etc.) can identify the flow.
       subscription_data: { metadata },
-      success_url: `${APP_URL}/community/plan?conversion=success&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${APP_URL}/community/plan?conversion=cancelled`,
+      success_url: `${baseUrl}/community/plan?conversion=success&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${baseUrl}/community/plan?conversion=cancelled`,
     });
 
     if (!session.url) {

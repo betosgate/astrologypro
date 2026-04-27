@@ -52,7 +52,7 @@ export async function getUserPortals(
     }
   }
 
-  const [diviner, client, advocate, community, mysteryStudent, trainee] = await Promise.all([
+  const [diviner, client, advocate, community, mysteryStudent, trainee, affiliate] = await Promise.all([
     supabase.from("diviners").select("id").eq("user_id", userId).maybeSingle(),
     supabase.from("clients").select("id").eq("user_id", userId).maybeSingle(),
     supabase
@@ -72,6 +72,11 @@ export async function getUserPortals(
       .eq("user_id", userId)
       .maybeSingle(),
     supabase.from("trainees").select("id").eq("user_id", userId).maybeSingle(),
+    supabase
+      .from("affiliate_accounts")
+      .select("id, status")
+      .eq("user_id", userId)
+      .maybeSingle(),
   ]);
 
   const portals: UserPortal[] = [];
@@ -134,6 +139,10 @@ export async function getUserPortals(
 
   if (trainee.data)
     portals.push({ role: "trainee", label: "Trainee Portal", href: "/trainee" });
+
+  if (affiliate.data && affiliate.data.status === "active") {
+    portals.push({ role: "affiliate", label: "Affiliate Portal", href: "/affiliate" });
+  }
 
   return portals;
 }

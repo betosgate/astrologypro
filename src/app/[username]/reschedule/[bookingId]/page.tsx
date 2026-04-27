@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import { RescheduleView } from "@/components/booking/reschedule-view";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -9,10 +10,12 @@ export const dynamic = "force-dynamic";
 
 interface PageProps {
   params: Promise<{ username: string; bookingId: string }>;
+  searchParams: Promise<{ token?: string }>;
 }
 
-export default async function ReschedulePage({ params }: PageProps) {
+export default async function ReschedulePage({ params, searchParams }: PageProps) {
   const { username, bookingId } = await params;
+  const { token } = await searchParams;
   const admin = createAdminClient();
 
   const { data: diviner } = await admin
@@ -27,13 +30,42 @@ export default async function ReschedulePage({ params }: PageProps) {
   const { data: booking } = await admin
     .from("bookings")
     .select(
-      "id, scheduled_at, duration_minutes, session_notes, questionnaire_responses, metadata, services(id, name), clients(full_name, email)"
+      "id, scheduled_at, duration_minutes, session_notes, questionnaire_responses, metadata, booking_token, client_id, services(id, name), clients(full_name, email)"
     )
     .eq("id", bookingId)
     .eq("owner_id", diviner.id)
     .single();
 
   if (!booking) notFound();
+
+  // The reschedule page is accessed by three distinct viewers:
+  //   1. Diviner from the dashboard — cookie-auth, they own the booking.
+  //   2. Client via email booking-manage link — unauthenticated, booking_token
+  //      in the URL authorizes them.
+  //   3. Trainee/client from their own dashboard — cookie-auth against the
+  //      booking's client email.
+  // For (2) we thread the token into RescheduleView; for (3) we flag a
+  // clientAuthFlow so the view submits to the public endpoint with cookies.
+  const bookingTokenForClient =
+    token && token === (booking as { booking_token?: string }).booking_token
+      ? token
+      : null;
+
+  let clientAuthFlow = false;
+  if (!bookingTokenForClient) {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    const authEmail = user?.email?.trim().toLowerCase() ?? null;
+    const bookingClient = (booking as Record<string, unknown>).clients as
+      | { email?: string | null }
+      | null;
+    const clientEmail = bookingClient?.email?.trim().toLowerCase() ?? null;
+    if (authEmail && clientEmail && authEmail === clientEmail) {
+      clientAuthFlow = true;
+    }
+  }
 
   const svc = (booking as Record<string, unknown>).services as {
     id: string;
@@ -61,9 +93,17 @@ export default async function ReschedulePage({ params }: PageProps) {
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-purple-950">
       <div className="mx-auto max-w-4xl px-4 py-8">
         <Button asChild variant="ghost" size="sm" className="mb-6 gap-2">
-          <Link href="/dashboard/calendar">
+          <Link
+            href={
+              bookingTokenForClient
+                ? `/booking/${bookingTokenForClient}`
+                : clientAuthFlow
+                  ? "/trainee/sessions"
+                  : "/dashboard/calendar"
+            }
+          >
             <ArrowLeft className="size-4" />
-            Back to Calendar
+            {bookingTokenForClient || clientAuthFlow ? "Back to Sessions" : "Back to Calendar"}
           </Link>
         </Button>
 
@@ -77,7 +117,13 @@ export default async function ReschedulePage({ params }: PageProps) {
           <p className="text-muted-foreground">
             Picking a new time for{" "}
             <strong className="text-foreground">{serviceName}</strong>
-            {clientName ? (
+            {bookingTokenForClient ? (
+              <>
+                {" "}
+                with{" "}
+                <strong className="text-foreground">{diviner.display_name}</strong>
+              </>
+            ) : clientName ? (
               <>
                 {" "}
                 with{" "}
@@ -105,6 +151,7 @@ export default async function ReschedulePage({ params }: PageProps) {
           bookingId={bookingId}
           divinerId={diviner.id}
           divinerDisplayName={diviner.display_name}
+          divinerUsername={diviner.username}
           serviceName={serviceName}
           durationMinutes={booking.duration_minutes}
           serviceId={serviceId}
@@ -113,6 +160,8 @@ export default async function ReschedulePage({ params }: PageProps) {
           sessionNotes={sessionNotes}
           existingAttendees={existingAttendees}
           currentScheduledAt={booking.scheduled_at}
+          bookingToken={bookingTokenForClient}
+          clientAuthFlow={clientAuthFlow}
         />
       </div>
     </div>

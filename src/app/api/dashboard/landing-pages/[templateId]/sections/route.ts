@@ -35,7 +35,6 @@ import {
 } from "@/lib/html-sanitizer";
 import {
   countBlocksInSlot,
-  ensureLandingPageContainer,
   getDivinerBlocksForOwner,
   nextDisplayOrderInSlot,
 } from "@/lib/diviner-service-blocks";
@@ -78,7 +77,7 @@ async function verifyTemplateAccess(
 ) {
   const { data: ds } = await admin
     .from("diviner_services")
-    .select("is_enabled")
+    .select("is_enabled, is_published")
     .eq("diviner_id", divinerId)
     .eq("template_id", templateId)
     .maybeSingle();
@@ -94,7 +93,7 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
   if (!diviner) return problem(403, "Diviner profile not found");
 
   const admin = createAdminClient();
-  const { ok } = await verifyTemplateAccess(admin, diviner.id, templateId);
+  const { ok, ds } = await verifyTemplateAccess(admin, diviner.id, templateId);
   if (!ok) {
     return problem(403, "Forbidden", "This service template is not enabled for your account");
   }
@@ -110,6 +109,7 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
   return NextResponse.json({
     diviner: { username: diviner.username },
     service_template: { slug: template?.slug ?? null },
+    is_published: ds?.is_published === true,
     slots: Object.values(SLOTS),
     block_types: Object.values(SECTION_TYPES).map((t) => ({
       type: t.type,
@@ -192,57 +192,46 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     }
   }
 
+  // Image and HTML blocks can be created empty — the UI flow is "click type,
+  // then fill content in the editor panel". The PATCH handler enforces
+  // non-empty values on save for blocks that need them.
   let safeHtml: string | null = null;
   if (sectionType === "html") {
     const raw = typeof body.body_html === "string" ? body.body_html : "";
-    if (!raw.trim()) {
-      return problem(422, "Missing HTML", "HTML blocks require a non-empty body_html value.");
-    }
-    try {
-      safeHtml = sanitizeDivinerHtmlStrict(raw);
-    } catch (err) {
-      if (err instanceof HtmlSanitizationError) {
-        return problem(
-          422,
-          "Invalid HTML",
-          "Your HTML contains tags or attributes we don't allow. Remove them and resubmit.",
-          { stripped_example: err.strippedExample },
-        );
+    if (raw.trim()) {
+      try {
+        safeHtml = sanitizeDivinerHtmlStrict(raw);
+      } catch (err) {
+        if (err instanceof HtmlSanitizationError) {
+          return problem(
+            422,
+            "Invalid HTML",
+            "Your HTML contains tags or attributes we don't allow. Remove them and resubmit.",
+            { stripped_example: err.strippedExample },
+          );
+        }
+        throw err;
       }
-      throw err;
     }
   }
 
   const primaryImageUrl =
-    typeof body.primary_image_url === "string" ? body.primary_image_url : null;
-  if (sectionType === "image" && !primaryImageUrl) {
-    return problem(
-      422,
-      "Missing image",
-      "Image blocks require a primary_image_url. Upload through /upload first.",
-    );
-  }
-
-  // ── Lazy-create the container row (Deploy-1 FK satisfaction) ────────────────
-  const landingPageId = await ensureLandingPageContainer(
-    admin,
-    diviner.id,
-    templateId,
-    user.id,
-  );
+    typeof body.primary_image_url === "string" && body.primary_image_url
+      ? body.primary_image_url
+      : null;
 
   // ── Determine display_order ────────────────────────────────────────────────
   const displayOrder =
     typeof body.display_order === "number"
       ? body.display_order
-      : await nextDisplayOrderInSlot(admin, landingPageId, slot as BlockSlot);
+      : await nextDisplayOrderInSlot(admin, diviner.id, templateId, slot as BlockSlot);
 
   // ── Insert ─────────────────────────────────────────────────────────────────
   const { data: created, error } = await admin
-    .from("service_landing_page_sections")
+    .from("diviner_service_blocks")
     .insert({
-      landing_page_id: landingPageId,
       diviner_id: diviner.id,
+      service_template_id: templateId,
       section_type: sectionType,
       slot,
       title,
@@ -251,16 +240,11 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       primary_image_url: primaryImageUrl,
       display_order: displayOrder,
       is_enabled: true,
-      is_system: false,
-      // Deploy-1 compat: legacy columns still NOT NULL in some envs.
-      is_draft: false,
-      draft_content_json: contentJson ?? typeDef.default_content,
-      draft_body_html: safeHtml,
       created_by: user.id,
       updated_by: user.id,
     })
     .select(
-      "id, diviner_id, section_type, slot, title, content_json, body_html, primary_image_url, display_order, is_enabled, moderation_status, moderation_note, created_at, updated_at",
+      "id, diviner_id, service_template_id, section_type, slot, title, content_json, body_html, primary_image_url, display_order, is_enabled, moderation_status, moderation_note, created_at, updated_at",
     )
     .single();
 

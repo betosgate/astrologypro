@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { ArrowRight, X, Check, Loader2, GraduationCap, Star, Users, BookOpen, Video, Award, Clock, Infinity, Sparkles, Calendar, Music2, Globe, Lock } from "lucide-react";
 import {
   Dialog,
@@ -11,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { DivinerUpgradeModal } from "@/components/trainee/diviner-upgrade-modal";
 
 interface RoleUpgradeBannersProps {
   isDiviner: boolean;
@@ -74,10 +77,10 @@ function TraineeUpgradeModal({ open, onClose }: { open: boolean; onClose: () => 
             asChild
             className="shrink-0 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white font-bold shadow-lg shadow-emerald-500/30"
           >
-            <a href="/join/trainee">
+            <Link href="/join/trainee">
               Apply Now
               <ArrowRight className="ml-1.5 size-3.5" />
-            </a>
+            </Link>
           </Button>
         </div>
       </DialogContent>
@@ -87,31 +90,90 @@ function TraineeUpgradeModal({ open, onClose }: { open: boolean; onClose: () => 
 
 // ── Perennial Mandalism Modal ─────────────────────────────────────────────────
 
-type PmPlan = "individual" | "family";
+interface PricingPlan {
+  plan_id: string;
+  display_name: string;
+  recurring_amount: number;
+  recurring_currency: string;
+  recurring_interval: string;
+  features: string[];
+}
 
-const PM_PLANS: { key: PmPlan; label: string; price: string; sub: string; members: string }[] = [
-  { key: "individual", label: "Individual", price: "$9.97", sub: "/month", members: "1 member" },
-  { key: "family",     label: "Family",     price: "$19.97", sub: "/month", members: "Up to 5 members" },
-];
+function parsePmHighlights(html: string | null): string[] {
+  if (!html) return [];
+  const liMatches = html.match(/<li\b[^>]*>([\s\S]*?)<\/li>/gi);
+  const pMatches = html.match(/<p\b[^>]*>([\s\S]*?)<\/p>/gi);
+  const matches = liMatches?.length ? liMatches : pMatches ?? [];
 
-const PM_FEATURES = [
-  { icon: Lock,     text: "Exclusive spiritual content library" },
-  { icon: Calendar, text: "Live community events & sacred rituals" },
-  { icon: Users,    text: "Private members-only community forum" },
-  { icon: Star,     text: "Monthly member Q&A with community leaders" },
-  { icon: Sparkles, text: "Early access to new teachings & content" },
-  { icon: Music2,   text: "Digital ritual tools, meditations & resources" },
-  { icon: Globe,    text: "Connect with like-minded seekers worldwide" },
-  { icon: Award,    text: "Members-only discounts on services" },
-];
+  return matches
+    .map((entry) =>
+      entry
+        .replace(/<\/?(li|p)\b[^>]*>/gi, "")
+        .replace(/<[^>]+>/g, "")
+        .replace(/&amp;/g, "&")
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">")
+        .trim(),
+    )
+    .filter(Boolean);
+}
+
+function formatPmPrice(amount: number | null, currency: string | null) {
+  if (amount == null) return null;
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: (currency ?? "USD").toUpperCase(),
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(amount);
+}
 
 function PmUpgradeModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const [selectedPlan, setSelectedPlan] = useState<PmPlan>("individual");
-  const [loading, setLoading] = useState(false);
+  const pathname = usePathname();
+  const [plans, setPlans] = useState<any[]>([]);
+  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
+  const [loadingPlans, setLoadingPlans] = useState(false);
+  const [loadingCheckout, setLoadingCheckout] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Fetch plans on open
+  useEffect(() => {
+    if (open) {
+      fetchPlans();
+    }
+  }, [open]);
+
+  async function fetchPlans() {
+    setLoadingPlans(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/pricing?keys=perennial_mandalism_community", { cache: "no-store" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Failed to load plans");
+
+      const item = data.items?.[0];
+      const fetchedPlans = item?.plans || [];
+
+      const processedPlans = fetchedPlans.map((p: any) => ({
+        ...p,
+        highlights: parsePmHighlights(p.html_description)
+      }));
+
+      setPlans(processedPlans);
+
+      // Default selection: individual or first available
+      const individual = processedPlans.find((p: any) => p.plan_id.includes("individual"));
+      setSelectedPlanId(individual?.plan_id ?? processedPlans[0]?.plan_id ?? null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load pricing.");
+    } finally {
+      setLoadingPlans(false);
+    }
+  }
+
   async function handleCheckout() {
-    setLoading(true);
+    if (!selectedPlanId) return;
+    setLoadingCheckout(true);
     setError(null);
     try {
       const res = await fetch("/api/community/checkout", {
@@ -119,111 +181,217 @@ function PmUpgradeModal({ open, onClose }: { open: boolean; onClose: () => void 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           membershipType: "perennial_mandalism",
-          planType: selectedPlan,
+          planId: selectedPlanId,
+          sourcePortal: pathname.startsWith("/trainee")
+            ? "trainee"
+            : pathname.startsWith("/dashboard")
+              ? "diviner"
+              : "switch",
         }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Could not start checkout");
-      if (data.checkout_url) {
-        window.location.href = data.checkout_url;
+      if (data.url) {
+        window.location.href = data.url;
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
-      setLoading(false);
+      setLoadingCheckout(false);
     }
   }
 
+  const activePlan = plans.find((p) => p.plan_id === selectedPlanId);
+
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v && !loading) onClose(); }}>
-      <DialogContent className="max-w-lg p-0 overflow-hidden border-violet-500/20 bg-gradient-to-b from-violet-950/95 to-slate-950/95 backdrop-blur-xl">
+    <Dialog open={open} onOpenChange={(v) => { if (!v && !loadingCheckout) onClose(); }}>
+      <DialogContent className="!w-[calc(100vw-2rem)] sm:!w-[calc(100vw-4rem)] !max-w-[820px] p-0 overflow-hidden border-violet-500/20 bg-gradient-to-b from-violet-950/95 to-slate-950/95 backdrop-blur-xl">
+        <div className="flex max-h-[90vh] flex-col overflow-hidden">
         {/* Header */}
-        <div className="relative overflow-hidden bg-gradient-to-r from-violet-900/60 to-purple-900/40 px-6 pt-6 pb-5 border-b border-violet-500/15">
+        <div className="relative shrink-0 overflow-hidden bg-gradient-to-r from-violet-900/95 to-purple-900/80 px-6 py-6 border-b border-violet-500/15 backdrop-blur-xl">
           <div className="pointer-events-none absolute -right-10 -top-10 size-40 rounded-full bg-violet-400/10 blur-3xl" />
-          <div className="pointer-events-none absolute -bottom-6 right-20 size-24 rounded-full bg-purple-500/10 blur-2xl" />
+          <div className="pointer-events-none absolute -bottom-6 right-20 size-28 rounded-full bg-purple-500/10 blur-2xl" />
           <DialogHeader className="relative">
             <Badge className="mb-3 w-fit bg-violet-500/15 text-violet-400 border-violet-500/30 text-[10px] font-bold tracking-widest uppercase hover:bg-violet-500/15">
               Exclusive Community
             </Badge>
-            <DialogTitle className="text-xl font-bold text-violet-50">
+            <DialogTitle className="flex items-center gap-2 text-2xl font-bold text-violet-50">
+              <Sparkles className="size-5 text-violet-300" />
               Join Perennial Mandalism
             </DialogTitle>
-            <DialogDescription className="text-sm text-white/60 mt-1">
+            <DialogDescription className="mt-1 max-w-2xl text-sm text-white/65">
               Access exclusive spiritual content, live events, and a private community of seekers.
             </DialogDescription>
           </DialogHeader>
         </div>
 
-        {/* Features */}
-        <div className="px-6 pt-5 pb-4 space-y-3">
-          <p className="text-xs font-semibold uppercase tracking-wider text-violet-400/80">What you get</p>
-          <ul className="grid grid-cols-2 gap-x-4 gap-y-2">
-            {PM_FEATURES.map(({ icon: Icon, text }) => (
-              <li key={text} className="flex items-start gap-2">
-                <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-violet-500/15">
-                  <Check className="size-3 text-violet-400" />
-                </span>
-                <span className="text-xs text-white/70 leading-snug">{text}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
+          <div className="flex flex-col">
+            {/* Plan selector */}
+            <div className="min-w-0 border-b border-white/10 px-6 py-5">
+              <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-violet-400/80">Choose your plan</p>
 
-        {/* Plan selector */}
-        <div className="px-6 pb-4 space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-wider text-violet-400/80">Choose your plan</p>
-          <div className="grid grid-cols-2 gap-3">
-            {PM_PLANS.map((plan) => (
-              <button
-                key={plan.key}
-                type="button"
-                onClick={() => setSelectedPlan(plan.key)}
-                className={`relative rounded-lg border p-4 text-left transition-all ${
-                  selectedPlan === plan.key
-                    ? "border-violet-500/60 bg-violet-500/15 ring-1 ring-violet-500/40"
-                    : "border-white/10 bg-white/5 hover:border-violet-500/30"
-                }`}
-              >
-                {selectedPlan === plan.key && (
-                  <span className="absolute top-2 right-2 flex size-4 items-center justify-center rounded-full bg-violet-500">
-                    <Check className="size-2.5 text-white" />
-                  </span>
-                )}
-                <p className="text-sm font-bold text-white">{plan.label}</p>
-                <p className="text-xs text-white/50 mb-2">{plan.members}</p>
-                <p className="text-lg font-bold text-violet-300">
-                  {plan.price}
-                  <span className="text-xs font-normal text-white/40">{plan.sub}</span>
-                </p>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* CTA */}
-        <div className="border-t border-violet-500/15 bg-violet-950/30 px-6 py-4 space-y-2">
-          {error && (
-            <p className="text-xs text-red-400 text-center">{error}</p>
-          )}
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-xs text-white/40">Cancel anytime. No contracts.</p>
-            <Button
-              onClick={handleCheckout}
-              disabled={loading}
-              className="shrink-0 bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-400 hover:to-purple-500 text-white font-bold shadow-lg shadow-violet-500/30"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="mr-1.5 size-3.5 animate-spin" />
-                  Redirecting…
-                </>
+              {loadingPlans ? (
+                <div className="flex min-h-[200px] items-center justify-center text-sm text-white/60">
+                  <Loader2 className="mr-2 size-4 animate-spin text-violet-400" />
+                  Loading live pricing…
+                </div>
+              ) : plans.length === 0 ? (
+                <div className="rounded-lg border border-red-500/20 bg-red-500/5 p-4 text-sm text-red-200">
+                  {error ?? "No active Perennial Mandalism plans are configured."}
+                </div>
               ) : (
-                <>
-                  Subscribe Now
-                  <ArrowRight className="ml-1.5 size-3.5" />
-                </>
+                <div className="space-y-3">
+                  {plans.map((plan) => {
+                    const selected = plan.plan_id === selectedPlanId;
+                    return (
+                      <button
+                        key={plan.plan_id}
+                        type="button"
+                        onClick={() => setSelectedPlanId(plan.plan_id)}
+                        className={`w-full rounded-xl border p-4 text-left transition-all ${
+                          selected
+                            ? "border-violet-500/60 bg-violet-500/12 ring-1 ring-violet-500/35"
+                            : "border-white/10 bg-white/5 hover:border-violet-400/30 hover:bg-white/[0.07]"
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <p className="text-base font-bold text-white">{plan.display_name}</p>
+                              {plan.plan_id.includes("family") && (
+                                <Badge className="border-violet-500/30 bg-violet-500/15 text-[10px] uppercase tracking-widest text-violet-200 hover:bg-violet-500/15">
+                                  Family
+                                </Badge>
+                              )}
+                            </div>
+                            {plan.description && (
+                              <p className="mt-1 text-sm text-white/55">{plan.description}</p>
+                            )}
+                          </div>
+                          <span
+                            className={`mt-1 flex size-5 shrink-0 items-center justify-center rounded-full border ${
+                              selected
+                                ? "border-violet-300 bg-violet-400 text-slate-950"
+                                : "border-white/20 text-transparent"
+                            }`}
+                          >
+                            <Check className="size-3.5" />
+                          </span>
+                        </div>
+                        <div className="mt-3">
+                          {plan.recurring_amount > 0 ? (
+                            <div className="flex flex-col">
+                              <p className="text-lg font-bold text-violet-200">
+                                {formatPmPrice(plan.recurring_amount, plan.recurring_currency)}
+                                <span className="text-sm font-normal text-white/40">/{plan.recurring_interval || "mo"}</span>
+                              </p>
+                              {plan.onetime_amount > 0 && (
+                                <p className="text-xs text-white/40">
+                                  + {formatPmPrice(plan.onetime_amount, plan.onetime_currency)} setup
+                                </p>
+                              )}
+                            </div>
+                          ) : (
+                            <p className="text-lg font-bold text-violet-200">
+                              {formatPmPrice(plan.onetime_amount, plan.onetime_currency)}
+                              <span className="text-sm font-normal text-white/40"> one-time</span>
+                            </p>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
               )}
-            </Button>
+            </div>
+
+            {/* Features list */}
+            <div className="min-w-0 border-b border-white/10 px-6 py-5">
+              <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-violet-400/80">What you’re unlocking</p>
+
+              {activePlan ? (
+                <div className="space-y-4">
+                  <div className="rounded-xl border border-violet-500/15 bg-white/[0.04] p-4">
+                    <p className="text-sm font-semibold text-white">{activePlan.display_name}</p>
+                    <div className="mt-1">
+                      {activePlan.recurring_amount > 0 ? (
+                         <div className="flex flex-col">
+                            <p className="text-xl font-bold text-violet-200">
+                              {formatPmPrice(activePlan.recurring_amount, activePlan.recurring_currency)}
+                              <span className="text-sm font-normal text-white/40">/{activePlan.recurring_interval || "mo"}</span>
+                            </p>
+                            {activePlan.onetime_amount > 0 && (
+                              <p className="text-sm text-white/40">
+                                + {formatPmPrice(activePlan.onetime_amount, activePlan.onetime_currency)} setup fee
+                              </p>
+                            )}
+                         </div>
+                      ) : (
+                        <p className="text-xl font-bold text-violet-200">
+                          {formatPmPrice(activePlan.onetime_amount, activePlan.onetime_currency)}
+                          <span className="text-sm font-normal text-white/40"> one-time</span>
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <ul className="space-y-2.5">
+                    {(activePlan.highlights?.length > 0
+                      ? activePlan.highlights
+                      : [
+                          "Exclusive spiritual content library",
+                          "Live community events & sacred rituals",
+                          "Private community forum",
+                          "Early access to teachings",
+                          "Worldwide seeker network",
+                        ]
+                    ).map((highlight: string) => (
+                      <li key={highlight} className="flex items-start gap-3">
+                        <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-violet-500/15">
+                          <Check className="size-3 text-violet-400" />
+                        </span>
+                        <span className="text-sm leading-relaxed text-white/72">{highlight}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : (
+                <div className="rounded-xl border border-white/10 bg-white/[0.04] p-4 text-sm text-white/60">
+                  Select a plan to review its details.
+                </div>
+              )}
+            </div>
+
+            {/* CTA */}
+            <div className="min-w-0 px-6 py-5">
+              <div className="rounded-xl border border-violet-500/15 bg-white/[0.04] p-4">
+                {error && (
+                  <p className="mb-3 text-sm text-red-300">{error}</p>
+                )}
+                <Button
+                  onClick={handleCheckout}
+                  disabled={loadingPlans || loadingCheckout || !activePlan}
+                  className="w-full bg-gradient-to-r from-violet-500 to-purple-500 font-bold text-white hover:from-violet-400 hover:to-purple-400 shadow-lg shadow-violet-500/20"
+                >
+                  {loadingCheckout ? (
+                    <>
+                      <Loader2 className="mr-2 size-4 animate-spin" />
+                      Redirecting…
+                    </>
+                  ) : (
+                    <>
+                      Continue to Payment
+                      <ArrowRight className="ml-2 size-4" />
+                    </>
+                  )}
+                </Button>
+                <p className="mt-2 text-center text-xs text-white/40">
+                  Secure payment via Stripe Checkout. Cancel anytime.
+                </p>
+              </div>
+            </div>
           </div>
+        </div>
         </div>
       </DialogContent>
     </Dialog>
@@ -399,6 +567,10 @@ export function RoleUpgradeBanners({
       {/* Modals */}
       <TraineeUpgradeModal
         open={openModal === "trainee"}
+        onClose={() => setOpenModal(null)}
+      />
+      <DivinerUpgradeModal
+        open={openModal === "diviner"}
         onClose={() => setOpenModal(null)}
       />
       <PmUpgradeModal

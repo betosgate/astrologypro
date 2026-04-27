@@ -87,7 +87,36 @@ interface ChimeSessionRoomProps {
    * Computed server-side via getSessionLinkForBooking().
    */
   sessionLink?: string | null;
+  /**
+   * Override for the Chime attendee-provisioning endpoint. Defaults to
+   * `/api/chime/join-meeting` (legacy `bookings` table). Admin-hosted
+   * sessions point this at `/api/chime/admin-bookings/join`, which reads
+   * from `admin_bookings` and enforces admin-host ↔ client-email auth.
+   */
+  joinApiPath?: string;
+  /**
+   * Override for the session-teardown endpoint called when the host clicks
+   * "End Session". Defaults to `/api/chime/end-meeting` (legacy `bookings`
+   * table). Admin-hosted sessions point this at `/api/chime/admin-bookings/end`
+   * so the teardown reads/writes `admin_bookings`. Both endpoints perform
+   * the same teardown sequence: stop capture pipeline → wait → concat → delete
+   * Chime meeting.
+   */
+  endApiPath?: string;
+  /**
+   * When true, the in-session billing / overage / session-notes
+   * integrations are suppressed — admin-hosted bookings have no price,
+   * no overage, and no `bookings.session_notes` column to write to.
+   */
+  disableBillingAndNotes?: boolean;
 }
+
+type VideoTile = {
+  tileId: number;
+  isLocal: boolean;
+  isContent: boolean;
+  boundAttendeeId: string | null;
+};
 
 export function ChimeSessionRoom({
   bookingId,
@@ -106,6 +135,9 @@ export function ChimeSessionRoom({
   questionnaire,
   clientBirthData,
   sessionLink,
+  joinApiPath = "/api/chime/join-meeting",
+  endApiPath = "/api/chime/end-meeting",
+  disableBillingAndNotes = false,
 }: ChimeSessionRoomProps) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const videoContainerRef = useRef<HTMLDivElement>(null);
@@ -131,6 +163,9 @@ export function ChimeSessionRoom({
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
+  const isScreenSharingRef = useRef(false);
+  const localScreenStreamRef = useRef<MediaStream | null>(null);
+  const screenShareStartLockRef = useRef(false);
   const [isMobile, setIsMobile] = useState(false);
   const [mobileChatOpen, setMobileChatOpen] = useState(false);
   const [chimeSdkReady, setChimeSdkReady] = useState(false);
@@ -143,7 +178,8 @@ export function ChimeSessionRoom({
   const startTimeRef = useRef<Date | null>(null);
   const participantMapRef = useRef<Map<string, string>>(new Map());
   // React-managed tile list — drives the video layout instead of raw DOM manipulation
-  const [tiles, setTiles] = useState<{ tileId: number; isLocal: boolean; isContent: boolean }[]>([]);
+  const [tiles, setTiles] = useState<VideoTile[]>([]);
+  const tilesRef = useRef<VideoTile[]>([]);
   const videoElemRefs = useRef<Map<number, HTMLVideoElement>>(new Map());
 
   // ── Live captions (AWS Transcribe Streaming) ─────────────────────────────
@@ -189,6 +225,7 @@ export function ChimeSessionRoom({
 
   // Bind each tracked tile to its <video> element whenever tiles list changes
   useEffect(() => {
+    tilesRef.current = tiles;
     tiles.forEach(({ tileId }) => {
       const el = videoElemRefs.current.get(tileId);
       if (el && meetingSessionRef.current) {
@@ -198,6 +235,10 @@ export function ChimeSessionRoom({
       }
     });
   }, [tiles]);
+
+  useEffect(() => {
+    isScreenSharingRef.current = isScreenSharing;
+  }, [isScreenSharing]);
 
   // Safety net #1 — derive isDivinerPresent from participants state.
   // The direct setIsDivinerPresent() inside the presence callback is the fast
@@ -242,9 +283,10 @@ export function ChimeSessionRoom({
         );
 
         // Fetch fresh meeting + attendee from API
-        const meetingResponse = await fetch("/api/chime/join-meeting", {
+        const meetingResponse = await fetch(joinApiPath, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          credentials: "include",
           body: JSON.stringify({ bookingId, clientToken }),
         });
 
@@ -380,6 +422,32 @@ export function ChimeSessionRoom({
           }
         );
 
+        // Screen-share handoff — when another participant requests control,
+        // stop the local content share before their new share starts.
+        meetingSession.audioVideo.realtimeSubscribeToReceiveDataMessage(
+          "screen-share-control",
+          (dataMessage: any) => {
+            const payload =
+              typeof dataMessage.data === "string"
+                ? dataMessage.data
+                : new TextDecoder().decode(dataMessage.data as Uint8Array);
+            try {
+              const msg = JSON.parse(payload);
+              if (msg.type !== "takeover") return;
+              if (!isScreenSharingRef.current) return;
+
+              meetingSession.audioVideo.stopContentShare();
+              localScreenStreamRef.current?.getTracks().forEach((track) => track.stop());
+              localScreenStreamRef.current = null;
+              isScreenSharingRef.current = false;
+              setIsScreenSharing(false);
+              toast.info("Screen share switched to another participant.");
+            } catch {
+              // Ignore malformed control messages.
+            }
+          }
+        );
+
         // Chat data messaging — receive messages from the other participant
         meetingSession.audioVideo.realtimeSubscribeToReceiveDataMessage(
           "chat",
@@ -471,16 +539,19 @@ export function ChimeSessionRoom({
               setTiles((prev) => prev.filter((t) => t.tileId !== tileState.tileId));
               return;
             }
+            const nextTile: VideoTile = {
+              tileId: tileState.tileId,
+              isLocal: Boolean(tileState.localTile),
+              isContent: Boolean(tileState.isContent),
+              boundAttendeeId: tileState.boundAttendeeId ?? null,
+            };
             setTiles((prev) => {
-              if (prev.some((t) => t.tileId === tileState.tileId)) return prev;
-              return [
-                ...prev,
-                {
-                  tileId: tileState.tileId,
-                  isLocal: Boolean(tileState.localTile),
-                  isContent: Boolean(tileState.isContent),
-                },
-              ];
+              if (prev.some((t) => t.tileId === tileState.tileId)) {
+                return prev.map((tile) =>
+                  tile.tileId === tileState.tileId ? nextTile : tile
+                );
+              }
+              return [...prev, nextTile];
             });
           },
           videoTileWasRemoved: (tileId: number) => {
@@ -491,8 +562,16 @@ export function ChimeSessionRoom({
 
         // Content share observer
         meetingSession.audioVideo.addContentShareObserver({
-          contentShareDidStart: () => setIsScreenSharing(true),
-          contentShareDidStop: () => setIsScreenSharing(false),
+          contentShareDidStart: () => {
+            isScreenSharingRef.current = true;
+            setIsScreenSharing(true);
+          },
+          contentShareDidStop: () => {
+            localScreenStreamRef.current?.getTracks().forEach((track) => track.stop());
+            localScreenStreamRef.current = null;
+            isScreenSharingRef.current = false;
+            setIsScreenSharing(false);
+          },
         } as any);
 
         // 4. Start
@@ -546,10 +625,35 @@ export function ChimeSessionRoom({
 
   const handleToggleScreenShare = useCallback(async () => {
     if (!meetingSessionRef.current) return;
-    if (isScreenSharing) {
+    if (isScreenSharingRef.current) {
       meetingSessionRef.current.audioVideo.stopContentShare();
+      localScreenStreamRef.current?.getTracks().forEach((track) => track.stop());
+      localScreenStreamRef.current = null;
+      isScreenSharingRef.current = false;
+      setIsScreenSharing(false);
     } else {
+      if (screenShareStartLockRef.current) return;
+      screenShareStartLockRef.current = true;
       try {
+        const hasAnyContentShare = tilesRef.current.some((tile) => tile.isContent);
+        if (hasAnyContentShare) {
+          try {
+            meetingSessionRef.current.audioVideo.realtimeSendDataMessage(
+              "screen-share-control",
+              JSON.stringify({ type: "takeover", requestedAt: Date.now() }),
+              5_000
+            );
+          } catch { /* non-critical */ }
+
+          const deadline = Date.now() + 1_500;
+          while (
+            tilesRef.current.some((tile) => tile.isContent && !tile.isLocal) &&
+            Date.now() < deadline
+          ) {
+            await new Promise((resolve) => setTimeout(resolve, 150));
+          }
+        }
+
         // Use getDisplayMedia directly so we can pass selfBrowserSurface: 'exclude'.
         // This removes the current tab from the Chrome picker entirely, which is the
         // industry-standard fix (Chrome 107+) for the infinite-mirror problem.
@@ -561,13 +665,32 @@ export function ChimeSessionRoom({
           // @ts-expect-error — selfBrowserSurface is a Chrome 107+ constraint not yet in TS types
           selfBrowserSurface: "exclude",
         });
+        localScreenStreamRef.current = stream;
+        stream.getVideoTracks()[0]?.addEventListener(
+          "ended",
+          () => {
+            meetingSessionRef.current?.audioVideo.stopContentShare();
+            localScreenStreamRef.current = null;
+            isScreenSharingRef.current = false;
+            setIsScreenSharing(false);
+          },
+          { once: true }
+        );
         await meetingSessionRef.current.audioVideo.startContentShare(stream);
+        isScreenSharingRef.current = true;
+        setIsScreenSharing(true);
       } catch {
+        localScreenStreamRef.current?.getTracks().forEach((track) => track.stop());
+        localScreenStreamRef.current = null;
+        isScreenSharingRef.current = false;
+        setIsScreenSharing(false);
         // User dismissed the picker, browser denied permission, or
         // selfBrowserSurface is unsupported — no-op
+      } finally {
+        screenShareStartLockRef.current = false;
       }
     }
-  }, [isScreenSharing]);
+  }, []);
 
   // ── Helper: broadcast caption data to the other participant via Chime ────
   // ── Helper: broadcast caption data to the other participant via Chime ────
@@ -766,6 +889,10 @@ export function ChimeSessionRoom({
           5_000
         );
       } catch { /* non-critical */ }
+      try { meetingSessionRef.current.audioVideo.stopContentShare(); } catch { /* non-critical */ }
+      localScreenStreamRef.current?.getTracks().forEach((track) => track.stop());
+      localScreenStreamRef.current = null;
+      isScreenSharingRef.current = false;
       try { await meetingSessionRef.current.audioVideo.stopVideoInput(); } catch { /* non-critical */ }
       try { await meetingSessionRef.current.audioVideo.stopAudioInput(); } catch { /* non-critical */ }
       try { meetingSessionRef.current.audioVideo.stopLocalVideoTile(); } catch { /* non-critical */ }
@@ -774,7 +901,7 @@ export function ChimeSessionRoom({
     }
 
     try {
-      await fetch("/api/chime/end-meeting", {
+      await fetch(endApiPath, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -788,7 +915,7 @@ export function ChimeSessionRoom({
     } catch {
       toast.error("Failed to save session data. Please contact support.");
     }
-  }, [bookingId, elapsedMinutes, sessionNotes, chatMessages]);
+  }, [bookingId, elapsedMinutes, sessionNotes, chatMessages, endApiPath]);
 
   const handleSendChat = () => {
     const text = chatInput.trim();
@@ -822,6 +949,7 @@ export function ChimeSessionRoom({
 
   // ── Save session notes to DB ──────────────────────────────────────────
   const handleSaveNotes = useCallback(async () => {
+    if (disableBillingAndNotes) return; // admin_bookings have no notes column
     if (!sessionNotes.trim() && !notesSaved) return; // nothing to save
     setNotesSaving(true);
     setNotesSaved(false);
@@ -898,14 +1026,22 @@ export function ChimeSessionRoom({
 
           <div className="mt-6 rounded-xl border border-zinc-700/50 bg-zinc-800/50 p-4 text-center text-sm">
             <p className="font-semibold text-primary">Session Details</p>
-            <p className="mt-1.5 text-zinc-300">
-              {serviceName} &middot; {scheduledDuration} min &middot; $
-              {basePrice.toFixed(2)}
-            </p>
-            <p className="mt-1 text-xs text-zinc-500">
-              ${overageRate.toFixed(2)}/min after {scheduledDuration}{" "}
-              minutes
-            </p>
+            {disableBillingAndNotes ? (
+              <p className="mt-1.5 text-zinc-300">
+                {serviceName} &middot; {scheduledDuration} min
+              </p>
+            ) : (
+              <>
+                <p className="mt-1.5 text-zinc-300">
+                  {serviceName} &middot; {scheduledDuration} min &middot; $
+                  {basePrice.toFixed(2)}
+                </p>
+                <p className="mt-1 text-xs text-zinc-500">
+                  ${overageRate.toFixed(2)}/min after {scheduledDuration}{" "}
+                  minutes
+                </p>
+              </>
+            )}
           </div>
 
           <button
@@ -971,17 +1107,21 @@ export function ChimeSessionRoom({
             <p className="mt-1 text-3xl font-bold text-zinc-100">
               {formatTime(elapsedMinutes, elapsedSeconds)}
             </p>
-            {isOvertime && (
+            {isOvertime && !disableBillingAndNotes && (
               <p className="mt-1 text-sm text-amber-400">
                 +{overtimeMinutes} overtime minutes ($
                 {(overtimeMinutes * overageRate).toFixed(2)})
               </p>
             )}
-            <div className="my-4 h-px bg-zinc-700/50" />
-            <p className="text-xs uppercase tracking-wider text-zinc-500">Total</p>
-            <p className="mt-1 text-2xl font-bold text-primary">
-              ${totalCost.toFixed(2)}
-            </p>
+            {!disableBillingAndNotes && (
+              <>
+                <div className="my-4 h-px bg-zinc-700/50" />
+                <p className="text-xs uppercase tracking-wider text-zinc-500">Total</p>
+                <p className="mt-1 text-2xl font-bold text-primary">
+                  ${totalCost.toFixed(2)}
+                </p>
+              </>
+            )}
           </div>
 
           <p className="mt-4 text-sm text-zinc-400">
@@ -992,10 +1132,10 @@ export function ChimeSessionRoom({
           {role === "client" && (
             <div className="mt-6 space-y-2.5">
               <a
-                href="/portal/bookings"
+                href={joinApiPath.includes("/admin-bookings/") ? "/trainee" : "/portal/bookings"}
                 className="flex w-full items-center justify-center rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground shadow-lg transition-all hover:bg-primary/90"
               >
-                View My Bookings
+                {joinApiPath.includes("/admin-bookings/") ? "Back to Learning Portal" : "View My Bookings"}
               </a>
               <a
                 href={`/${username}`}
@@ -1007,7 +1147,7 @@ export function ChimeSessionRoom({
           )}
           {role === "diviner" && (
             <a
-              href="/dashboard/bookings"
+              href={joinApiPath.includes("/admin-bookings/") ? "/admin/my-bookings" : "/dashboard/bookings"}
               className="mt-6 flex w-full items-center justify-center rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground shadow-lg transition-all hover:bg-primary/90"
             >
               Back to Dashboard
@@ -1102,7 +1242,10 @@ export function ChimeSessionRoom({
           <div className="rounded-xl border border-primary/20 bg-primary/5 px-8 py-5 text-sm backdrop-blur-sm">
             <p className="font-semibold text-primary">{serviceName}</p>
             <p className="mt-1.5 text-zinc-400">
-              {scheduledDuration} min &middot; ${basePrice.toFixed(2)}
+              {scheduledDuration} min
+              {!disableBillingAndNotes && (
+                <> &middot; ${basePrice.toFixed(2)}</>
+              )}
             </p>
           </div>
 
@@ -1197,7 +1340,10 @@ export function ChimeSessionRoom({
           {isOvertime && (
             <div className="absolute left-4 top-4 z-10 flex items-center gap-2 rounded-full bg-amber-500/90 px-4 py-2 text-xs font-semibold text-black shadow-lg backdrop-blur-sm">
               <AlertTriangle className="h-3.5 w-3.5" />
-              +{overtimeMinutes} min overtime (${(overtimeMinutes * overageRate).toFixed(2)}/min)
+              +{overtimeMinutes} min overtime
+              {!disableBillingAndNotes && (
+                <> (${(overtimeMinutes * overageRate).toFixed(2)}/min)</>
+              )}
             </div>
           )}
 
@@ -1647,30 +1793,32 @@ export function ChimeSessionRoom({
       {/* Desktop Sidebar */}
       {showSidebar && !isMobile && (
         <div className="flex w-80 flex-col border-l border-zinc-800/60 bg-zinc-900/95">
-          {/* Billing info */}
-          <div className="border-b border-zinc-800/60 p-4">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-zinc-400">Base</span>
-              <span className="text-zinc-200">
-                ${basePrice.toFixed(2)} / {scheduledDuration} min
-              </span>
-            </div>
-            {isOvertime && (
-              <div className="mt-1.5 flex items-center justify-between text-sm">
-                <span className="text-amber-400">Overtime</span>
-                <span className="text-amber-400">
-                  +${(overtimeMinutes * overageRate).toFixed(2)}
+          {/* Billing info (suppressed for admin-hosted sessions) */}
+          {!disableBillingAndNotes && (
+            <div className="border-b border-zinc-800/60 p-4">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-zinc-400">Base</span>
+                <span className="text-zinc-200">
+                  ${basePrice.toFixed(2)} / {scheduledDuration} min
                 </span>
               </div>
-            )}
-            <div className="mt-2 flex items-center justify-between rounded-lg bg-zinc-800/50 px-3 py-2">
-              <span className="flex items-center gap-1.5 text-sm font-medium text-zinc-300">
-                <DollarSign className="h-4 w-4 text-primary" />
-                Running Total
-              </span>
-              <span className="text-lg font-bold text-primary">${totalCost.toFixed(2)}</span>
+              {isOvertime && (
+                <div className="mt-1.5 flex items-center justify-between text-sm">
+                  <span className="text-amber-400">Overtime</span>
+                  <span className="text-amber-400">
+                    +${(overtimeMinutes * overageRate).toFixed(2)}
+                  </span>
+                </div>
+              )}
+              <div className="mt-2 flex items-center justify-between rounded-lg bg-zinc-800/50 px-3 py-2">
+                <span className="flex items-center gap-1.5 text-sm font-medium text-zinc-300">
+                  <DollarSign className="h-4 w-4 text-primary" />
+                  Running Total
+                </span>
+                <span className="text-lg font-bold text-primary">${totalCost.toFixed(2)}</span>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Client info (diviner only) */}
           {role === "diviner" && (
@@ -1770,31 +1918,33 @@ export function ChimeSessionRoom({
               <SheetTitle className="text-zinc-200">Session Info</SheetTitle>
             </SheetHeader>
             <div className="flex flex-col overflow-y-auto">
-              <div className="border-b border-zinc-800/60 p-4">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-zinc-400">Base</span>
-                  <span className="text-zinc-200">
-                    ${basePrice.toFixed(2)} / {scheduledDuration} min
-                  </span>
-                </div>
-                {isOvertime && (
-                  <div className="mt-1.5 flex items-center justify-between text-sm">
-                    <span className="text-amber-400">Overtime</span>
-                    <span className="text-amber-400">
-                      +${(overtimeMinutes * overageRate).toFixed(2)}
+              {!disableBillingAndNotes && (
+                <div className="border-b border-zinc-800/60 p-4">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-zinc-400">Base</span>
+                    <span className="text-zinc-200">
+                      ${basePrice.toFixed(2)} / {scheduledDuration} min
                     </span>
                   </div>
-                )}
-                <div className="mt-2 flex items-center justify-between rounded-lg bg-zinc-800/50 px-3 py-2">
-                  <span className="flex items-center gap-1.5 text-sm font-medium text-zinc-300">
-                    <DollarSign className="h-4 w-4 text-primary" />
-                    Running Total
-                  </span>
-                  <span className="text-lg font-bold text-primary">
-                    ${totalCost.toFixed(2)}
-                  </span>
+                  {isOvertime && (
+                    <div className="mt-1.5 flex items-center justify-between text-sm">
+                      <span className="text-amber-400">Overtime</span>
+                      <span className="text-amber-400">
+                        +${(overtimeMinutes * overageRate).toFixed(2)}
+                      </span>
+                    </div>
+                  )}
+                  <div className="mt-2 flex items-center justify-between rounded-lg bg-zinc-800/50 px-3 py-2">
+                    <span className="flex items-center gap-1.5 text-sm font-medium text-zinc-300">
+                      <DollarSign className="h-4 w-4 text-primary" />
+                      Running Total
+                    </span>
+                    <span className="text-lg font-bold text-primary">
+                      ${totalCost.toFixed(2)}
+                    </span>
+                  </div>
                 </div>
-              </div>
+              )}
 
               {role === "diviner" && (
                 <div className="border-b border-zinc-800/60 p-4">

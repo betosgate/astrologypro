@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -29,6 +28,7 @@ import {
   extractCountryFromCityLabel,
 } from "@/components/community/birth-city-autocomplete";
 import { formatBirthPlace } from "@/lib/community/birth-location";
+import { SectionContainer } from "@/components/shared/section-container";
 
 type FamilyMember = {
   id: string;
@@ -58,11 +58,20 @@ const EMPTY_FORM = {
   notes: "",
 };
 
-const FAMILY_LIMIT = 5;
+const LEGACY_FALLBACK_LIMIT = 5;
+
+type FamilyEntitlement = {
+  isFamilyEntitled: boolean;
+  tierId: string | null;
+  tierName: string | null;
+  /** Tier's max_total_members — primary + family. */
+  maxMembers: number;
+  hasLegacyDrift: boolean;
+};
 
 export default function CommunityFamilyPage() {
   const [members, setMembers] = useState<FamilyMember[]>([]);
-  const [planType, setPlanType] = useState<string | null>(null);
+  const [entitlement, setEntitlement] = useState<FamilyEntitlement | null>(null);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -71,19 +80,71 @@ export default function CommunityFamilyPage() {
   const [deleting, setDeleting] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [pendingEditId, setPendingEditId] = useState<string | null>(null);
+  const formCardRef = useRef<HTMLDivElement | null>(null);
 
-  async function load() {
-    setLoading(true);
+  function clearPendingEditQueryParam() {
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    if (!url.searchParams.has("edit")) return;
+    url.searchParams.delete("edit");
+    const nextUrl = `${url.pathname}${url.search}${url.hash}`;
+    window.history.replaceState(window.history.state, "", nextUrl);
+  }
+
+  async function load(options?: { skipLoadingState?: boolean }) {
+    if (!options?.skipLoadingState) {
+      setLoading(true);
+    }
     const res = await fetch("/api/community/family");
     if (res.ok) {
       const data = await res.json();
       setMembers(data.members ?? []);
-      setPlanType(data.planType ?? null);
+      setEntitlement((data.entitlement as FamilyEntitlement | null) ?? null);
     }
     setLoading(false);
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    let cancelled = false;
+
+    async function initialLoad() {
+      const res = await fetch("/api/community/family");
+      if (cancelled) return;
+
+      if (res.ok) {
+        const data = await res.json();
+        if (cancelled) return;
+        setMembers(data.members ?? []);
+        setEntitlement((data.entitlement as FamilyEntitlement | null) ?? null);
+      }
+
+      if (!cancelled) {
+        setLoading(false);
+      }
+    }
+
+    void initialLoad();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const frame = window.requestAnimationFrame(() => {
+      const editId = new URLSearchParams(window.location.search).get("edit");
+      if (editId) {
+        setPendingEditId(editId);
+      }
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+    };
+  }, []);
 
   function startAdd() {
     setForm({ ...EMPTY_FORM });
@@ -92,7 +153,7 @@ export default function CommunityFamilyPage() {
     setError(null);
   }
 
-  function startEdit(m: FamilyMember) {
+  function startEdit(m: FamilyMember, options?: { scrollToForm?: boolean }) {
     setForm({
       fullName: m.full_name,
       dateOfBirth: m.date_of_birth,
@@ -107,7 +168,28 @@ export default function CommunityFamilyPage() {
     setEditingId(m.id);
     setShowForm(true);
     setError(null);
+    if (options?.scrollToForm) {
+      requestAnimationFrame(() => {
+        formCardRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      });
+    }
   }
+
+  useEffect(() => {
+    if (!pendingEditId || loading) return;
+
+    const member = members.find((item) => item.id === pendingEditId);
+    clearPendingEditQueryParam();
+    requestAnimationFrame(() => {
+      setPendingEditId(null);
+      if (!member) return;
+      setExpandedId(member.id);
+      startEdit(member, { scrollToForm: true });
+    });
+  }, [loading, members, pendingEditId]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -144,11 +226,20 @@ export default function CommunityFamilyPage() {
     setDeleting(null);
   }
 
-  const isFamily = planType === "family";
-  const atLimit = members.length >= FAMILY_LIMIT;
+  // Canonical entitlement (from /api/community/family). The legacy `planType`
+  // field is still returned for backwards-compat but we never gate on it here.
+  const isFamily = entitlement?.isFamilyEntitled === true;
+  // maxMembers is primary+family; subtract 1 for family-only headcount. Fall
+  // back to the legacy 5 when no entitlement is present.
+  const familyLimit =
+    entitlement?.maxMembers != null
+      ? Math.max(0, entitlement.maxMembers - 1)
+      : LEGACY_FALLBACK_LIMIT;
+  const atLimit = members.length >= familyLimit;
 
   return (
-    <div className="space-y-6">
+    <SectionContainer verticalPadding="none" className="px-0 sm:px-0 lg:px-0">
+      <div className="space-y-6">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <div className="flex items-center gap-2">
@@ -167,16 +258,21 @@ export default function CommunityFamilyPage() {
         )}
       </div>
 
-      {/* Plan notice for individual members */}
-      {planType === "individual" && (
-        <Card className="border-amber-400/30 bg-amber-50/40">
+      {/* Plan notice for individual members — shown only when entitlement has
+          been resolved AND the user is NOT Family-entitled. Avoids showing
+          the "Individual" banner to a legitimate Family user during the brief
+          loading window. */}
+      {entitlement && !entitlement.isFamilyEntitled && (
+        <Card className="border-amber-500/40 bg-amber-500/10 dark:bg-amber-950/20">
           <CardContent className="flex items-start gap-3 py-4">
-            <Info className="size-5 shrink-0 text-amber-600 mt-0.5" />
+            <Info className="size-5 shrink-0 text-amber-500 mt-0.5" />
             <div>
-              <p className="font-medium text-amber-800 text-sm">Individual Plan</p>
-              <p className="text-sm text-amber-700">
-                Upgrade to the Family Plan to add up to 5 family members and
-                generate charts for everyone.
+              <p className="font-medium text-amber-900 dark:text-amber-200 text-sm">
+                Individual Plan
+              </p>
+              <p className="text-sm text-amber-800 dark:text-amber-300/90">
+                Upgrade to the Family Plan to add family members and generate
+                charts for everyone.
               </p>
             </div>
           </CardContent>
@@ -185,6 +281,7 @@ export default function CommunityFamilyPage() {
 
       {/* Add / Edit form */}
       {showForm && (
+        <div ref={formCardRef}>
         <Card>
           <CardHeader>
             <CardTitle className="text-base">
@@ -242,7 +339,7 @@ export default function CommunityFamilyPage() {
                     }
                   />
                   {!form.birthTime && (
-                    <p className="text-xs text-amber-600">
+                    <p className="text-xs text-amber-700 dark:text-amber-300">
                       Add birth time for greater chart accuracy
                     </p>
                   )}
@@ -281,7 +378,7 @@ export default function CommunityFamilyPage() {
                     placeholder="Country"
                   />
                   {!form.birthCountry && form.birthCity && (
-                    <p className="text-xs text-amber-600">
+                    <p className="text-xs text-amber-700 dark:text-amber-300">
                       Add birth country so the family profile can be marked complete.
                     </p>
                   )}
@@ -349,6 +446,7 @@ export default function CommunityFamilyPage() {
             </form>
           </CardContent>
         </Card>
+        </div>
       )}
 
       {/* Member list */}
@@ -366,7 +464,7 @@ export default function CommunityFamilyPage() {
               <h2 className="font-semibold">No family members yet</h2>
               <p className="mt-1 text-sm text-muted-foreground">
                 {isFamily
-                  ? "Add up to 5 family members to generate natal charts for everyone."
+                  ? `Add up to ${familyLimit} family member${familyLimit === 1 ? "" : "s"} to generate natal charts for everyone.`
                   : "Upgrade to the Family Plan to add family members."}
               </p>
             </div>
@@ -381,7 +479,7 @@ export default function CommunityFamilyPage() {
       ) : (
         <div className="space-y-3">
           <div className="flex items-center justify-between text-sm text-muted-foreground">
-            <span>{members.length}/{FAMILY_LIMIT} family members</span>
+            <span>{members.length}/{familyLimit} family members</span>
             {isFamily && !atLimit && !showForm && (
               <Button size="sm" variant="outline" onClick={startAdd}>
                 <Plus className="mr-1.5 size-3.5" />
@@ -454,8 +552,8 @@ export default function CommunityFamilyPage() {
                         </div>
                       )}
                       {!m.birth_time && (
-                        <div className="flex items-center gap-1.5 text-amber-600">
-                          <Info className="size-3.5 shrink-0" />
+                        <div className="flex items-center gap-1.5 text-amber-700 dark:text-amber-300">
+                          <Info className="size-3.5 shrink-0 text-amber-500" />
                           <span className="text-xs">
                             Add birth time for greater chart accuracy
                           </span>
@@ -517,5 +615,6 @@ export default function CommunityFamilyPage() {
         </div>
       )}
     </div>
+    </SectionContainer>
   );
 }

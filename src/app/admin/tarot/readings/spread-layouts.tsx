@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -20,6 +20,22 @@ interface LayoutProps {
   cardBackUrl: string;
 }
 
+function useMaxWidth(maxWidth: number) {
+  const [matches, setMatches] = useState(false);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia(`(max-width: ${maxWidth}px)`);
+    const onChange = (event: MediaQueryListEvent) => setMatches(event.matches);
+
+    setMatches(mediaQuery.matches);
+    mediaQuery.addEventListener("change", onChange);
+
+    return () => mediaQuery.removeEventListener("change", onChange);
+  }, [maxWidth]);
+
+  return matches;
+}
+
 // ─── Shared Card Slot Component ───────────────────────────────────────────────
 
 function CardSlot({
@@ -29,8 +45,8 @@ function CardSlot({
   onReveal,
   onCardClick,
   cardBackUrl,
-  cardWidth = 150,
-  cardHeight = 220,
+  cardWidth = 200,
+  cardHeight = 290,
   rotateCard = false,
 }: {
   index: number;
@@ -159,7 +175,7 @@ export function FiveCardLayout({ positionLabels, drawnCards, onReveal, onCardCli
         {/* INSIDE group: cards 1 & 2 */}
         <div className="flex flex-col items-center gap-3">
           <h3 className="text-sm font-bold uppercase tracking-widest text-emerald-400 border-b border-emerald-500/40 pb-1 px-4">Inside</h3>
-          <div className="flex gap-4 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4">
+          <div className="flex gap-4 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4 max-[599px]:flex-col">
             {[0, 1].map((i) => (
               <CardSlot key={i} index={i} label={positionLabels[i]} drawn={drawnCards[i]} onReveal={onReveal} onCardClick={onCardClick} cardBackUrl={cardBackUrl} cardWidth={CW} cardHeight={CH} />
             ))}
@@ -169,7 +185,7 @@ export function FiveCardLayout({ positionLabels, drawnCards, onReveal, onCardCli
         {/* OUTSIDE group: cards 3 & 4 */}
         <div className="flex flex-col items-center gap-3">
           <h3 className="text-sm font-bold uppercase tracking-widest text-amber-400 border-b border-amber-500/40 pb-1 px-4">Outside</h3>
-          <div className="flex gap-4 rounded-xl border border-amber-500/20 bg-amber-500/5 p-4">
+          <div className="flex gap-4 rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 max-[599px]:flex-col">
             {[2, 3].map((i) => (
               <CardSlot key={i} index={i} label={positionLabels[i]} drawn={drawnCards[i]} onReveal={onReveal} onCardClick={onCardClick} cardBackUrl={cardBackUrl} cardWidth={CW} cardHeight={CH} />
             ))}
@@ -206,15 +222,15 @@ export function HorseshoeLayout({ positionLabels, drawnCards, onReveal, onCardCl
   //       [1]                  [5]
   //            [2]        [4]
   //                 [3]
-  const CW = 160;
-  const CH = 230;
+  const CW = 180;
+  const CH = 260;
   // Total card height = image + label (~40%) + borders
-  const totalH = CH + Math.round(CH * 0.4) + 10;
-  const ROW_GAP = totalH + 20; // each row starts after previous card fully ends + 20px spacing
+  const totalH = CH + Math.round(CH * 0.2) + 0;
+  const ROW_GAP = totalH + 0; // each row starts after previous card fully ends + 20px spacing
   return (
-    <div className="relative mx-auto" style={{ width: 1000, minHeight: ROW_GAP * 3 + totalH }}>
+    <div className="relative mx-auto max-[1445px]:!w-full max-[1199px]:!min-h-auto" style={{ width: 1000, minHeight: ROW_GAP * 2.85 + totalH }}>
       {/* Desktop: absolute positioning */}
-      <div className="hidden lg:block relative" style={{ height: ROW_GAP * 3 + totalH }}>
+      <div className="block max-[1199px]:hidden relative max-[1199px]:!h-auto" style={{ height: ROW_GAP * 2.85 + totalH }}>
         {/* Row 0: top — far left and far right */}
         <div className="absolute" style={{ left: 0, top: 0 }}>
           <CardSlot index={0} label={positionLabels[0]} drawn={drawnCards[0]} onReveal={onReveal} onCardClick={onCardClick} cardBackUrl={cardBackUrl} cardWidth={CW} cardHeight={CH} />
@@ -242,13 +258,13 @@ export function HorseshoeLayout({ positionLabels, drawnCards, onReveal, onCardCl
         </div>
       </div>
       {/* Tablet */}
-      <div className="hidden md:flex lg:hidden flex-wrap justify-center gap-6">
+      <div className="hidden max-[1199px]:flex max-[768px]:hidden flex-wrap justify-center gap-6">
         {positionLabels.map((label, i) => (
           <CardSlot key={i} index={i} label={label} drawn={drawnCards[i]} onReveal={onReveal} onCardClick={onCardClick} cardBackUrl={cardBackUrl} cardWidth={140} cardHeight={200} />
         ))}
       </div>
       {/* Mobile */}
-      <div className="flex md:hidden flex-wrap justify-center gap-4">
+      <div className=" hidden max-[768px]:flex flex-wrap justify-center gap-4">
         {positionLabels.map((label, i) => (
           <CardSlot key={i} index={i} label={label} drawn={drawnCards[i]} onReveal={onReveal} onCardClick={onCardClick} cardBackUrl={cardBackUrl} cardWidth={120} cardHeight={170} />
         ))}
@@ -270,8 +286,8 @@ export function ForwardReviewLayout({ positionLabels, drawnCards, onReveal, onCa
   //   3 (Strength): top-right area, rotated 40deg
   //   5 (Navigation): bottom-left area, rotated 135deg
   //   4 (Advice): bottom-right area, rotated 133deg
-  const CW = 160;
-  const CH = 230;
+  const CW = 180;
+  const CH = 260;
 
   // Card positions: [left%, top%, rotation]
   const positions: [number, number, number][] = [
@@ -287,7 +303,7 @@ export function ForwardReviewLayout({ positionLabels, drawnCards, onReveal, onCa
   return (
     <div className="flex flex-col items-center">
       {/* Desktop: radial/star layout */}
-      <div className="hidden lg:block relative mx-auto" style={{ width: 1000, height: 1200 }}>
+      <div className="block max-[1400px]:hidden relative mx-auto max-[1445px]:!w-full" style={{ width: 1000, height: 1200 }}>
         {positionLabels.map((label, i) => {
           const pos = positions[i];
           if (!pos) return null;
@@ -309,7 +325,7 @@ export function ForwardReviewLayout({ positionLabels, drawnCards, onReveal, onCa
       </div>
 
       {/* Tablet / Mobile: simple grid fallback */}
-      <div className="flex lg:hidden flex-wrap justify-center gap-4">
+      <div className="hidden max-[1400px]:flex flex-wrap justify-center gap-4">
         {positionLabels.map((label, i) => (
           <CardSlot key={i} index={i} label={label} drawn={drawnCards[i]} onReveal={onReveal} onCardClick={onCardClick} cardBackUrl={cardBackUrl} cardWidth={130} cardHeight={190} />
         ))}
@@ -326,15 +342,17 @@ export function RelationshipLayout({ positionLabels, drawnCards, onReveal, onCar
   //              [8 Hopes]                        ← centered lower
   //   [0] [1] [2] [3] [4]                        ← full width row
   //          [6]     [7]                          ← centered bottom
-  const CW = 140;
-  const CH = 200;
+const is599OrBelow = useMaxWidth(399);
+  const is1440OrBelow = useMaxWidth(1540);
+  const CW = is599OrBelow ? 210 : is1440OrBelow ? 150 : 180;
+  const CH = is599OrBelow ? 310 : is1440OrBelow ? 210 : 260;
 
   return (
     <div className="flex flex-col items-center">
       {/* Desktop */}
-      <div className="hidden md:flex flex-col items-center gap-6">
+      <div className=" flex flex-col items-center gap-6 max-[1399px]:hidden">
         {/* Top section: 6 and 10 raised, 9 lower between them */}
-        <div className="relative w-full" style={{ maxWidth: 800, height: CH + CH * 0.4 + 80 }}>
+        <div className="relative w-full max-[1540.98px]:!h-[272px]" style={{ maxWidth: 800, height: CH * 0 + 322 }}>
           {/* Card 6 (Beliefs) — top left */}
           <div className="absolute" style={{ left: 0, top: 0 }}>
             <CardSlot index={5} label={positionLabels[5]} drawn={drawnCards[5]} onReveal={onReveal} onCardClick={onCardClick} cardBackUrl={cardBackUrl} cardWidth={CW} cardHeight={CH} />
@@ -365,9 +383,9 @@ export function RelationshipLayout({ positionLabels, drawnCards, onReveal, onCar
       </div>
 
       {/* Mobile: 2 columns */}
-      <div className="grid md:hidden grid-cols-2 gap-4 justify-items-center">
+      <div className="hidden max-[1399px]:grid grid-cols-5 gap-4 justify-items-center max-[768px]:grid-cols-2 max-[399px]:grid-cols-1">
         {positionLabels.map((label, i) => (
-          <CardSlot key={i} index={i} label={label} drawn={drawnCards[i]} onReveal={onReveal} onCardClick={onCardClick} cardBackUrl={cardBackUrl} cardWidth={120} cardHeight={170} />
+          <CardSlot key={i} index={i} label={label} drawn={drawnCards[i]} onReveal={onReveal} onCardClick={onCardClick} cardBackUrl={cardBackUrl} cardWidth={120} cardHeight={170}/>
         ))}
       </div>
     </div>
@@ -384,10 +402,14 @@ export function CelticCrossLayout({ positionLabels, drawnCards, onReveal, onCard
   //  Row 4:              [2]                    [6]
   // Card 1 (Problem) placed below card 0, no rotation
 
-  const CW = 140;
-  const CH = 200;
-  const SCW = 130;
-  const SCH = 180;
+const is599OrBelow = useMaxWidth(337);
+const is1440OrBelow = useMaxWidth(1540);
+
+const CW = is599OrBelow ? 210 : is1440OrBelow ? 150 : 180;
+const CH = is599OrBelow ? 310 : is1440OrBelow ? 210 : 260;
+
+const SCW = CW;
+const SCH = CH;
 
   return (
     <div className="flex flex-col items-center">
@@ -442,8 +464,10 @@ export function AstrologicalLayout({ positionLabels, drawnCards, onReveal, onCar
   // grp4: [9 Capricorn (top center)] — [3 Cancer (bottom center)]   vertical axis
   // grp5: [8 Sagittarius (top-right outer)] — [4 Leo (bottom-right outer)]
   // grp6: [7 Scorpio (top-right inner)] — [5 Virgo (bottom-right inner)]
-  const CW = 150;
-  const CH = 210;
+  const is599OrBelow = useMaxWidth(399);
+  const is1440OrBelow = useMaxWidth(1540);
+  const CW = is599OrBelow ? 210 : is1440OrBelow ? 150 : 180;
+  const CH = is599OrBelow ? 310 : is1440OrBelow ? 210 : 260;
 
   // Layout: 7 columns evenly spaced — Aries, Pisces/Taurus, Aquarius/Gemini, Cap/Cancer, Sag/Leo, Scorpio/Virgo, Libra
   // Each column is CW (150px), gap between columns ~30px
@@ -452,58 +476,59 @@ export function AstrologicalLayout({ positionLabels, drawnCards, onReveal, onCar
   // Col positions (% of container): 0=0%, 1=16.6%, 2=33.3%, 3=50%, 4=66.6%, 5=83.3%, 6=100%
 
   return (
-    <div className="flex flex-col items-center">
+    <div className="flex w-full flex-col items-center overflow-x-hidden">
       {/* Desktop: zodiac wheel */}
-      <div className="hidden lg:block relative mx-auto" style={{ width: 1150, height: 1700 }}>
+      <div className="relative mx-auto hidden w-full min-[1401px]:block" style={{ height: 1700 }}>
 
         {/* Col 3 (center): Capricorn (top) + Cancer (bottom) — full height */}
-        <div className="absolute left-1/2 -translate-x-1/2 top-0 flex flex-col justify-between items-center" style={{ height: 1700 }}>
+        <div className="absolute left-1/2 -translate-x-1/2 top-[calc(var(--spacing)*48)] flex flex-col justify-between items-center max-[1499px]:!top-[calc(var(--spacing)*73)] max-[1499px]:!h-[1120px]" style={{ height: 1370 }}>
           <CardSlot index={9} label={positionLabels[9]} drawn={drawnCards[9]} onReveal={onReveal} onCardClick={onCardClick} cardBackUrl={cardBackUrl} cardWidth={CW} cardHeight={CH} />
           <CardSlot index={3} label={positionLabels[3]} drawn={drawnCards[3]} onReveal={onReveal} onCardClick={onCardClick} cardBackUrl={cardBackUrl} cardWidth={CW} cardHeight={CH} />
         </div>
 
         {/* Col 2: Aquarius (top) + Gemini (bottom) */}
-        <div className="absolute flex flex-col justify-between items-center" style={{ left: '33%', transform: 'translateX(-50%)', top: '13%', height: '74%' }}>
+        <div className="absolute flex flex-col justify-between items-center max-[1499px]:!top-[23%] max-[1499px]:!h-[55%]" style={{ left: '33%', transform: 'translateX(-50%)', top: '19%', height: '65%' }}>
           <CardSlot index={10} label={positionLabels[10]} drawn={drawnCards[10]} onReveal={onReveal} onCardClick={onCardClick} cardBackUrl={cardBackUrl} cardWidth={CW} cardHeight={CH} />
           <CardSlot index={2} label={positionLabels[2]} drawn={drawnCards[2]} onReveal={onReveal} onCardClick={onCardClick} cardBackUrl={cardBackUrl} cardWidth={CW} cardHeight={CH} />
         </div>
 
         {/* Col 4: Sagittarius (top) + Leo (bottom) */}
-        <div className="absolute flex flex-col justify-between items-center" style={{ left: '67%', transform: 'translateX(-50%)', top: '13%', height: '74%' }}>
+        <div className="absolute flex flex-col justify-between items-center max-[1499px]:!top-[23%] max-[1499px]:!h-[55%]" style={{ left: '67%', transform: 'translateX(-50%)', top: '19%', height: '65%' }}>
           <CardSlot index={8} label={positionLabels[8]} drawn={drawnCards[8]} onReveal={onReveal} onCardClick={onCardClick} cardBackUrl={cardBackUrl} cardWidth={CW} cardHeight={CH} />
           <CardSlot index={4} label={positionLabels[4]} drawn={drawnCards[4]} onReveal={onReveal} onCardClick={onCardClick} cardBackUrl={cardBackUrl} cardWidth={CW} cardHeight={CH} />
         </div>
 
         {/* Col 1: Pisces (top) + Taurus (bottom) — inner left */}
-        <div className="absolute flex flex-col justify-between items-center" style={{ left: '17%', transform: 'translateX(-50%)', top: '24%', height: '52%' }}>
+        <div className="absolute flex flex-col justify-between items-center max-[1499px]:!top-[30%] max-[1499px]:!h-[43%]" style={{ left: '17%', transform: 'translateX(-50%)', top: '27%', height: '49%' }}>
           <CardSlot index={11} label={positionLabels[11]} drawn={drawnCards[11]} onReveal={onReveal} onCardClick={onCardClick} cardBackUrl={cardBackUrl} cardWidth={CW} cardHeight={CH} />
           <CardSlot index={1} label={positionLabels[1]} drawn={drawnCards[1]} onReveal={onReveal} onCardClick={onCardClick} cardBackUrl={cardBackUrl} cardWidth={CW} cardHeight={CH} />
         </div>
 
         {/* Col 5: Scorpio (top) + Virgo (bottom) — inner right */}
-        <div className="absolute flex flex-col justify-between items-center" style={{ left: '83%', transform: 'translateX(-50%)', top: '24%', height: '52%' }}>
+
+        <div className="absolute flex flex-col justify-between items-center max-[1499px]:!top-[30%] max-[1499px]:!h-[43%]" style={{ left: '83%', transform: 'translateX(-50%)', top: '27%', height: '49%' }}>
           <CardSlot index={7} label={positionLabels[7]} drawn={drawnCards[7]} onReveal={onReveal} onCardClick={onCardClick} cardBackUrl={cardBackUrl} cardWidth={CW} cardHeight={CH} />
           <CardSlot index={5} label={positionLabels[5]} drawn={drawnCards[5]} onReveal={onReveal} onCardClick={onCardClick} cardBackUrl={cardBackUrl} cardWidth={CW} cardHeight={CH} />
         </div>
 
         {/* Col 0 + Col 6: Aries (left) + Libra (right) — horizontal axis */}
-        <div className="absolute w-full flex justify-between items-center" style={{ top: '50%', transform: 'translateY(-50%)' }}>
+        <div className="absolute inset-x-0 flex items-center justify-between px-3" style={{ top: '51.3%', transform: 'translateY(-50%)' }}>
           <CardSlot index={0} label={positionLabels[0]} drawn={drawnCards[0]} onReveal={onReveal} onCardClick={onCardClick} cardBackUrl={cardBackUrl} cardWidth={CW} cardHeight={CH} />
           <CardSlot index={6} label={positionLabels[6]} drawn={drawnCards[6]} onReveal={onReveal} onCardClick={onCardClick} cardBackUrl={cardBackUrl} cardWidth={CW} cardHeight={CH} />
         </div>
       </div>
 
       {/* Tablet: 4x3 grid */}
-      <div className="hidden md:grid lg:hidden grid-cols-4 gap-6 justify-items-center">
+      <div className="hidden w-full max-[1401px]:grid  grid-cols-4 gap-6 justify-items-center max-[768px]:hidden">
         {positionLabels.map((label, i) => (
           <CardSlot key={i} index={i} label={label} drawn={drawnCards[i]} onReveal={onReveal} onCardClick={onCardClick} cardBackUrl={cardBackUrl} cardWidth={140} cardHeight={200} />
         ))}
       </div>
 
       {/* Mobile: 2 columns */}
-      <div className="grid md:hidden grid-cols-2 gap-4 justify-items-center">
-        {positionLabels.map((label, i) => (
-          <CardSlot key={i} index={i} label={label} drawn={drawnCards[i]} onReveal={onReveal} onCardClick={onCardClick} cardBackUrl={cardBackUrl} cardWidth={130} cardHeight={190} />
+      <div className="grid md:hidden grid-cols-2 gap-4 justify-items-center max-[599px]:grid-cols-1">
+        {positionLabels.map((label, i) =>(
+          <CardSlot key={i} index={i} label={label} drawn={drawnCards[i]} onReveal={onReveal} onCardClick={onCardClick} cardBackUrl={cardBackUrl} cardWidth={is599OrBelow ? 210 : 130} cardHeight={is599OrBelow ? 310 : 190} />
         ))}
       </div>
     </div>

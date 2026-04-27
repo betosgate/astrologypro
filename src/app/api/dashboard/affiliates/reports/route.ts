@@ -1,3 +1,18 @@
+// GET /api/dashboard/affiliates/reports — diviner-scoped affiliate report.
+//
+// 2026-04-24: rewired onto System B (campaign_clicks + campaign_conversions
+// + affiliate_campaigns). System A (affiliate_commissions +
+// affiliate_referral_links + affiliate_payouts) retired — see
+// docs/specs/affiliate-commission-system.md §9.
+//
+// Response shape changes:
+// - `summary.totalCommissionsPaid` removed (no payout ledger in Phase 1;
+//   Stripe auto-split is deferred to Phase 2).
+// - `topLinks` renamed `topCampaigns` and reports `campaign_code` +
+//   `name` instead of `slug` + `url`.
+// - Per-affiliate `pendingCommission` replaced with `reversedCommission`
+//   (no pending state, only earned/reversed).
+
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -5,8 +20,6 @@ import { createAdminClient } from "@/lib/supabase/admin";
 export const dynamic = "force-dynamic";
 
 /**
- * GET /api/dashboard/affiliates/reports
- *
  * Returns affiliate performance metrics for the authenticated diviner.
  * Query params: period=30d|90d|1y|all (default: 30d)
  */
@@ -24,7 +37,6 @@ export async function GET(request: Request) {
 
   const admin = createAdminClient();
 
-  // Resolve diviner record
   const { data: diviner, error: divinerError } = await admin
     .from("diviners")
     .select("id")
@@ -38,71 +50,90 @@ export async function GET(request: Request) {
     );
   }
 
-  // Parse period filter
   const { searchParams } = new URL(request.url);
   const period = searchParams.get("period") ?? "30d";
   const periodStart = getPeriodStart(period);
 
-  // Fetch all data in parallel
-  const [affiliatesRes, commissionsRes, linksRes, payoutsRes] = await Promise.all([
+  const [affiliatesRes, conversionsRes, campaignsRes, clicksRes] = await Promise.all([
     admin
       .from("diviner_affiliates")
-      .select("id, name, email, status, created_at")
+      .select(
+        `id, name, email, status, created_at,
+         account:affiliate_accounts ( id, name, email )`
+      )
       .eq("diviner_id", diviner.id),
     admin
-      .from("affiliate_commissions")
-      .select("id, affiliate_id, order_amount_cents, commission_amount_cents, status, created_at")
-      .eq("diviner_id", diviner.id),
+      .from("campaign_conversions")
+      .select(
+        "id, affiliate_id, campaign_id, order_amount_cents, commission_amount_cents, reversed_at, created_at"
+      )
+      .eq("affiliate_type", "diviner_affiliate"),
     admin
-      .from("affiliate_referral_links")
-      .select("id, affiliate_id, slug, url, clicks, conversions, is_active, created_at")
-      .eq("diviner_id", diviner.id),
+      .from("affiliate_campaigns")
+      .select(
+        "id, owner_affiliate_id, owner_affiliate_type, campaign_code, name, status, is_active:status"
+      )
+      .eq("diviner_id", diviner.id)
+      .eq("owner_type", "affiliate")
+      .eq("owner_affiliate_type", "diviner_affiliate"),
     admin
-      .from("affiliate_payouts")
-      .select("amount_cents, status")
-      .eq("diviner_id", diviner.id),
+      .from("campaign_clicks")
+      .select("id, affiliate_id, campaign_id, created_at")
+      .eq("diviner_id", diviner.id)
+      .eq("affiliate_type", "diviner_affiliate"),
   ]);
 
   if (affiliatesRes.error) {
     return NextResponse.json(
-      { type: "https://httpstatuses.io/500", title: "Database error", detail: affiliatesRes.error.message, status: 500 },
+      {
+        type: "https://httpstatuses.io/500",
+        title: "Database error",
+        detail: affiliatesRes.error.message,
+        status: 500,
+      },
       { status: 500 }
     );
   }
 
   const allAffiliates = affiliatesRes.data ?? [];
-  const allCommissions = commissionsRes.data ?? [];
-  const allLinks = linksRes.data ?? [];
-  const allPayouts = payoutsRes.data ?? [];
+  const allConversions = conversionsRes.data ?? [];
+  const allCampaigns = campaignsRes.data ?? [];
+  const allClicks = clicksRes.data ?? [];
 
-  // Filter commissions by period
-  const commissions = periodStart
-    ? allCommissions.filter((c) => c.created_at >= periodStart)
-    : allCommissions;
+  // Filter allConversions to only those on this diviner's campaigns.
+  // (conversionsRes is not diviner-scoped — campaign_conversions doesn't carry diviner_id.)
+  const divinerCampaignIds = new Set(allCampaigns.map((c) => c.id));
+  const divinerConversions = allConversions.filter((c) =>
+    divinerCampaignIds.has(c.campaign_id)
+  );
 
-  // Filter links clicks by period (we use link-level totals; for period filtering
-  // we use the affiliate_clicks table if a period is set — but since the links table
-  // stores cumulative clicks, we only period-filter commissions and use link totals as-is)
+  // Filter conversions + clicks by period
+  const conversions = periodStart
+    ? divinerConversions.filter((c) => c.created_at >= periodStart)
+    : divinerConversions;
+  const clicks = periodStart
+    ? allClicks.filter((c) => c.created_at >= periodStart)
+    : allClicks;
 
   // ---- Build summary ----
   const totalAffiliates = allAffiliates.length;
   const activeAffiliates = allAffiliates.filter((a) => a.status === "active").length;
 
-  const totalClicks = allLinks.reduce((sum, l) => sum + (Number(l.clicks) || 0), 0);
-  const totalConversions = commissions.filter(
-    (c) => c.status === "approved" || c.status === "paid"
-  ).length;
-  const conversionRate = totalClicks > 0 ? Math.round((totalConversions / totalClicks) * 1000) / 10 : 0;
+  const totalClicks = clicks.length;
+  const totalConversions = conversions.filter((c) => !c.reversed_at).length;
+  const conversionRate =
+    totalClicks > 0
+      ? Math.round((totalConversions / totalClicks) * 1000) / 10
+      : 0;
 
-  const totalCommissionsPaid = allPayouts.reduce(
-    (sum, p) => sum + (Number(p.amount_cents) || 0),
-    0
-  );
-  const totalCommissionsPending = commissions
-    .filter((c) => c.status === "pending" || c.status === "approved")
+  const totalCommissionsEarned = conversions
+    .filter((c) => !c.reversed_at)
+    .reduce((sum, c) => sum + (Number(c.commission_amount_cents) || 0), 0);
+  const totalCommissionsReversed = conversions
+    .filter((c) => c.reversed_at)
     .reduce((sum, c) => sum + (Number(c.commission_amount_cents) || 0), 0);
 
-  const totalRevenue = commissions.reduce(
+  const totalRevenue = conversions.reduce(
     (sum, c) => sum + (Number(c.order_amount_cents) || 0),
     0
   );
@@ -113,8 +144,8 @@ export async function GET(request: Request) {
     totalClicks,
     totalConversions,
     conversionRate,
-    totalCommissionsPaid,
-    totalCommissionsPending,
+    totalCommissionsEarned,
+    totalCommissionsReversed,
     totalRevenue,
   };
 
@@ -125,64 +156,69 @@ export async function GET(request: Request) {
       clicks: number;
       conversions: number;
       totalCommission: number;
-      pendingCommission: number;
+      reversedCommission: number;
       lastActivity: string | null;
     }
   >();
 
-  // Initialize from affiliate list
   for (const aff of allAffiliates) {
     affiliateMap.set(aff.id, {
       clicks: 0,
       conversions: 0,
       totalCommission: 0,
-      pendingCommission: 0,
+      reversedCommission: 0,
       lastActivity: null,
     });
   }
 
-  // Aggregate link clicks per affiliate
-  for (const link of allLinks) {
-    const entry = affiliateMap.get(link.affiliate_id);
-    if (entry) {
-      entry.clicks += Number(link.clicks) || 0;
-    }
+  for (const k of clicks) {
+    if (!k.affiliate_id) continue;
+    const entry = affiliateMap.get(k.affiliate_id);
+    if (entry) entry.clicks += 1;
   }
 
-  // Aggregate commissions per affiliate
-  for (const c of commissions) {
+  for (const c of conversions) {
     const entry = affiliateMap.get(c.affiliate_id);
     if (!entry) continue;
-
-    if (c.status === "approved" || c.status === "paid") {
+    const amount = Number(c.commission_amount_cents) || 0;
+    if (c.reversed_at) {
+      entry.reversedCommission += amount;
+    } else {
       entry.conversions += 1;
-      entry.totalCommission += Number(c.commission_amount_cents) || 0;
-    }
-    if (c.status === "pending" || c.status === "approved") {
-      entry.pendingCommission += Number(c.commission_amount_cents) || 0;
+      entry.totalCommission += amount;
     }
     if (!entry.lastActivity || c.created_at > entry.lastActivity) {
       entry.lastActivity = c.created_at;
     }
   }
 
-  const affiliates = allAffiliates.map((aff) => {
+  type AffiliateRow = {
+    id: string;
+    name: string | null;
+    email: string | null;
+    status: string;
+    created_at: string;
+    account: { id: string; name: string; email: string } | null;
+  };
+  const affiliates = (allAffiliates as unknown as AffiliateRow[]).map((aff) => {
     const stats = affiliateMap.get(aff.id)!;
     return {
       id: aff.id,
-      name: aff.name,
-      email: aff.email,
+      name: aff.account?.name ?? aff.name ?? "",
+      email: aff.account?.email ?? aff.email ?? "",
       status: aff.status,
       clicks: stats.clicks,
       conversions: stats.conversions,
-      conversionRate: stats.clicks > 0 ? Math.round((stats.conversions / stats.clicks) * 1000) / 10 : 0,
+      conversionRate:
+        stats.clicks > 0
+          ? Math.round((stats.conversions / stats.clicks) * 1000) / 10
+          : 0,
       totalCommission: stats.totalCommission,
-      pendingCommission: stats.pendingCommission,
+      reversedCommission: stats.reversedCommission,
       lastActivity: stats.lastActivity,
     };
   });
 
-  // Sort by totalCommission descending
   affiliates.sort((a, b) => b.totalCommission - a.totalCommission);
 
   // ---- Monthly breakdown ----
@@ -191,22 +227,26 @@ export async function GET(request: Request) {
     { clicks: number; conversions: number; commissions: number; revenue: number }
   >();
 
-  for (const c of commissions) {
-    const month = c.created_at.slice(0, 7); // "YYYY-MM"
+  for (const k of clicks) {
+    const month = k.created_at.slice(0, 7);
+    if (!monthlyMap.has(month)) {
+      monthlyMap.set(month, { clicks: 0, conversions: 0, commissions: 0, revenue: 0 });
+    }
+    monthlyMap.get(month)!.clicks += 1;
+  }
+  for (const c of conversions) {
+    const month = c.created_at.slice(0, 7);
     if (!monthlyMap.has(month)) {
       monthlyMap.set(month, { clicks: 0, conversions: 0, commissions: 0, revenue: 0 });
     }
     const entry = monthlyMap.get(month)!;
-    if (c.status === "approved" || c.status === "paid") {
+    if (!c.reversed_at) {
       entry.conversions += 1;
       entry.commissions += Number(c.commission_amount_cents) || 0;
     }
     entry.revenue += Number(c.order_amount_cents) || 0;
   }
 
-  // We cannot easily split link clicks by month from cumulative totals,
-  // so monthly clicks are set to 0 (would require affiliate_clicks table aggregation).
-  // For a future improvement, query affiliate_clicks grouped by month.
   const monthly = Array.from(monthlyMap.entries())
     .map(([month, data]) => ({
       month,
@@ -217,14 +257,24 @@ export async function GET(request: Request) {
     }))
     .sort((a, b) => a.month.localeCompare(b.month));
 
-  // ---- Top referral links ----
-  const topLinks = allLinks
-    .filter((l) => l.is_active)
-    .map((l) => ({
-      slug: l.slug,
-      url: l.url,
-      clicks: Number(l.clicks) || 0,
-      conversions: Number(l.conversions) || 0,
+  // ---- Top campaigns ----
+  const campaignClicksMap = new Map<string, number>();
+  const campaignConvsMap = new Map<string, number>();
+  for (const k of clicks) {
+    if (!k.campaign_id) continue;
+    campaignClicksMap.set(k.campaign_id, (campaignClicksMap.get(k.campaign_id) ?? 0) + 1);
+  }
+  for (const c of conversions) {
+    if (c.reversed_at) continue;
+    campaignConvsMap.set(c.campaign_id, (campaignConvsMap.get(c.campaign_id) ?? 0) + 1);
+  }
+  const topCampaigns = allCampaigns
+    .filter((c) => c.status === "active")
+    .map((c) => ({
+      campaign_code: c.campaign_code,
+      name: c.name,
+      clicks: campaignClicksMap.get(c.id) ?? 0,
+      conversions: campaignConvsMap.get(c.id) ?? 0,
     }))
     .sort((a, b) => b.clicks - a.clicks)
     .slice(0, 10);
@@ -233,7 +283,7 @@ export async function GET(request: Request) {
     summary,
     affiliates,
     monthly,
-    topLinks,
+    topCampaigns,
   });
 }
 

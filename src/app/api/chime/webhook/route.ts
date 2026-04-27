@@ -78,7 +78,12 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      if (recordingUrl) {
+      const shouldPersistRecording =
+        !!recordingUrl &&
+        !!s3Key &&
+        !s3Key.includes("/composited-video/");
+
+      if (shouldPersistRecording) {
         const shareId = generateShareId();
 
         // Find booking by chime_meeting_id and update

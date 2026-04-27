@@ -19,18 +19,12 @@ export async function getCommunityProfileCompletion(
   admin: AdminClient,
   userId: string
 ): Promise<CommunityProfileCompletionData | null> {
-  const [memberResult, clientResult] = await Promise.all([
-    admin
-      .from("community_members")
-      .select("id, full_name")
-      .eq("user_id", userId)
-      .maybeSingle(),
-    admin
-      .from("clients")
-      .select("birth_date, birth_time, birth_city")
-      .eq("user_id", userId)
-      .maybeSingle(),
-  ]);
+  const memberResult = await admin
+    .from("community_members")
+    .select("id, full_name, date_of_birth, birth_time, birth_city")
+    .eq("user_id", userId)
+    .maybeSingle();
+
 
   const member = memberResult.data;
   if (!member) return null;
@@ -48,13 +42,12 @@ export async function getCommunityProfileCompletion(
       .limit(1),
   ]);
 
-  const client = clientResult.data;
   const familyMembers = familyMembersResult.data ?? [];
   const relationshipCharts = relationshipChartResult.data ?? [];
 
   const hasFullName = Boolean(member.full_name && member.full_name.trim() !== "");
   const hasBirthData = Boolean(
-    client?.birth_date && client?.birth_time && client?.birth_city
+    member.date_of_birth && member.birth_time && member.birth_city
   );
   const hasNatalChart = familyMembers.some(
     (familyMember) =>

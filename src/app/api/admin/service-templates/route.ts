@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminUser } from "@/lib/admin-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { resolveServiceTemplateFormConfig } from "@/lib/service-template-form";
 
 export const dynamic = "force-dynamic";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GET /api/admin/service-templates
 // Returns all service templates with diviner usage counts.
-// Query params: ?search=&category=&is_active=&sort_by=&sort_dir=
+// Query params: ?search=&category=&is_active=&scope=&sort_by=&sort_dir=
 // ─────────────────────────────────────────────────────────────────────────────
 
 export async function GET(req: NextRequest) {
@@ -20,6 +21,7 @@ export async function GET(req: NextRequest) {
   const search = searchParams.get("search") ?? "";
   const category = searchParams.get("category") ?? "";
   const isActive = searchParams.get("is_active") ?? "";
+  const scope = searchParams.get("scope") ?? "";
   const sortBy = searchParams.get("sort_by") ?? "display_order";
   const sortDir = searchParams.get("sort_dir") === "desc" ? false : true;
   const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
@@ -52,6 +54,9 @@ export async function GET(req: NextRequest) {
     query = query.eq("is_active", true);
   } else if (isActive === "false") {
     query = query.eq("is_active", false);
+  }
+  if (scope === "general") {
+    query = query.ilike("slug", "general-%");
   }
 
   // Apply pagination
@@ -145,6 +150,11 @@ export async function POST(req: NextRequest) {
   }
 
   const admin = createAdminClient();
+  const normalizedFormConfig = resolveServiceTemplateFormConfig({
+    category: typeof category === "string" ? category : null,
+    slug,
+    form_config: body.form_config,
+  });
 
   // ── Slug uniqueness check ────────────────────────────────────────────────────
   const { data: existing } = await admin
@@ -158,7 +168,12 @@ export async function POST(req: NextRequest) {
       // Reactivate the existing deactivated template instead of creating a duplicate
       const { data: reactivated, error: reactivateErr } = await admin
         .from("service_templates")
-        .update({ ...buildUpdatePayload(body, user.id), is_active: true, updated_by: user.id })
+        .update({
+          ...buildUpdatePayload(body, user.id),
+          form_config: normalizedFormConfig,
+          is_active: true,
+          updated_by: user.id,
+        })
         .eq("id", existing.id)
         .select()
         .single();
@@ -197,6 +212,8 @@ export async function POST(req: NextRequest) {
     faq: Array.isArray(body.faq) ? body.faq : [],
     seo_title: typeof body.seo_title === "string" ? body.seo_title.slice(0, 70) : null,
     seo_description: typeof body.seo_description === "string" ? body.seo_description.slice(0, 160) : null,
+    form_enabled: body.form_enabled !== false,
+    form_config: normalizedFormConfig,
     is_active: true,
     created_by: user.id,
     updated_by: user.id,
@@ -238,6 +255,7 @@ function buildUpdatePayload(body: Record<string, unknown>, userId: string) {
   if (Array.isArray(body.faq)) payload.faq = body.faq;
   if (typeof body.seo_title === "string") payload.seo_title = body.seo_title.slice(0, 70) || null;
   if (typeof body.seo_description === "string") payload.seo_description = body.seo_description.slice(0, 160) || null;
+  if (body.form_enabled != null) payload.form_enabled = body.form_enabled === true;
   if (body.is_active != null) payload.is_active = body.is_active === true;
 
   return payload;

@@ -1,38 +1,96 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { sendFamilyMemberInvite } from "@/lib/email";
+import {
+  resolveEntitlementFromRow,
+  type PmEntitlement,
+} from "@/lib/community/pm-entitlement";
 
 export const dynamic = "force-dynamic";
 
 export const runtime = "nodejs";
 
-const FAMILY_PLAN_LIMIT = 5;
+/**
+ * Safe ceiling when we can't resolve any tier AND the member's legacy
+ * `plan_type` says family. Matches the historical FAMILY_PLAN_LIMIT.
+ */
+const LEGACY_FALLBACK_FAMILY_LIMIT = 5;
 
-async function getMember(supabase: Awaited<ReturnType<typeof createClient>>) {
+async function getMemberAndEntitlement() {
+  const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { user: null, member: null };
+  if (!user) {
+    return { user: null, member: null, entitlement: null, supabase };
+  }
+
+  // Canonical resolver needs service-role access so RLS doesn't hide the
+  // tier row from a regular user. The `community_members` row itself is
+  // readable by the owner via the auth-scoped client.
+  const admin = createAdminClient();
 
   const { data: member } = await supabase
     .from("community_members")
-    .select("id, membership_status, plan_type")
+    .select("id, membership_status, pm_tier_id, plan_type")
     .eq("user_id", user.id)
     .single();
 
-  return { user, member };
+  if (!member) return { user, member: null, entitlement: null, supabase };
+
+  const entitlement = await resolveEntitlementFromRow(admin, {
+    pm_tier_id: (member.pm_tier_id as string | null) ?? null,
+    plan_type: (member.plan_type as string | null) ?? null,
+  });
+
+  if (entitlement.hasDrift) {
+    console.warn(
+      `[community/family] entitlement drift on member ${member.id}: tier='${entitlement.tier?.name}' (canonical=${entitlement.planTypeCanonical}) vs legacy plan_type=${entitlement.planTypeLegacy}`
+    );
+  }
+
+  return { user, member, entitlement, supabase };
+}
+
+function buildFamilyPayload(
+  members: unknown[],
+  entitlement: PmEntitlement,
+) {
+  const maxMembers =
+    entitlement.tier?.max_total_members ??
+    (entitlement.isFamilyEntitled ? LEGACY_FALLBACK_FAMILY_LIMIT : 1);
+
+  return {
+    members,
+    // Legacy field — older consumers read `planType` directly. Returning the
+    // canonical derivation keeps UIs that didn't migrate correct.
+    planType: entitlement.planTypeCanonical,
+    // Canonical fields — new consumers should use these.
+    entitlement: {
+      isFamilyEntitled: entitlement.isFamilyEntitled,
+      tierId: entitlement.tier?.id ?? null,
+      tierName: entitlement.tier?.name ?? null,
+      maxMembers,
+      // True when the row is out-of-sync (Task 04 backfill target).
+      hasLegacyDrift: entitlement.hasDrift,
+    },
+  };
 }
 
 /**
  * GET /api/community/family
- * Returns all family members for the authenticated community member.
+ * Returns all family members for the authenticated community member AND
+ * canonical entitlement state (is_family_entitled, max_members, tier).
  */
 export async function GET() {
-  const supabase = await createClient();
-  const { member } = await getMember(supabase);
-  if (!member) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (member.membership_status !== "active")
+  const { member, entitlement, supabase } = await getMemberAndEntitlement();
+  if (!member || !entitlement) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  if (member.membership_status !== "active") {
     return NextResponse.json({ error: "Inactive membership" }, { status: 403 });
+  }
 
   const { data, error } = await supabase
     .from("community_family_members")
@@ -43,29 +101,57 @@ export async function GET() {
     .order("created_at", { ascending: true });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ members: data ?? [], planType: member.plan_type });
+  return NextResponse.json(buildFamilyPayload(data ?? [], entitlement));
 }
 
 /**
  * POST /api/community/family
- * Add a family member. Family plan: max 5 members.
+ * Add a family member. Rejects non-Family-entitled members with 403 —
+ * this is the server-side gate the UI currently only hides with CSS.
  */
 export async function POST(request: NextRequest) {
-  const supabase = await createClient();
-  const { member } = await getMember(supabase);
-  if (!member) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (member.membership_status !== "active")
+  const { member, entitlement, supabase } = await getMemberAndEntitlement();
+  if (!member || !entitlement) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  if (member.membership_status !== "active") {
     return NextResponse.json({ error: "Inactive membership" }, { status: 403 });
+  }
 
-  // Enforce limit
+  // ── Canonical entitlement gate ──────────────────────────────────────────
+  // UI hiding the "Add member" button is not security — the POST must also
+  // refuse non-Family users. Audit note §5 risk #6.
+  if (!entitlement.isFamilyEntitled) {
+    return NextResponse.json(
+      {
+        error:
+          "Your current plan does not include family members. Upgrade to a Family plan to add household members.",
+        code: "not_family_entitled",
+      },
+      { status: 403 }
+    );
+  }
+
+  // ── Household-size ceiling ──────────────────────────────────────────────
+  // Prefer the tier's max_total_members (includes the primary, so subtract 1
+  // for family-only headcount). Fall back to the legacy constant only when
+  // no tier is resolved.
+  const tierMaxTotal = entitlement.tier?.max_total_members ?? null;
+  const familyOnlyLimit =
+    tierMaxTotal != null
+      ? Math.max(0, tierMaxTotal - 1) // subtract the primary
+      : LEGACY_FALLBACK_FAMILY_LIMIT;
+
   const { count } = await supabase
     .from("community_family_members")
     .select("id", { count: "exact", head: true })
     .eq("member_id", member.id);
 
-  if ((count ?? 0) >= FAMILY_PLAN_LIMIT) {
+  if ((count ?? 0) >= familyOnlyLimit) {
     return NextResponse.json(
-      { error: `Family plan allows up to ${FAMILY_PLAN_LIMIT} members` },
+      {
+        error: `Your plan allows up to ${familyOnlyLimit} family member${familyOnlyLimit === 1 ? "" : "s"}.`,
+      },
       { status: 422 }
     );
   }
@@ -143,7 +229,6 @@ export async function POST(request: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   // Task 10: auto-send household signup invite if an email was supplied at creation time.
-  // The invite is automatic — the primary user does not need to press a separate "send invite" button.
   const normalizedInviteEmail = inviteEmail?.trim().toLowerCase();
   if (data && normalizedInviteEmail && normalizedInviteEmail.includes("@")) {
     const inviteToken = crypto.randomUUID();

@@ -17,7 +17,6 @@ import {
 import { ClipboardList, Loader2, RotateCcw, CheckCircle2, NotebookPen, CreditCard, RefreshCw, CalendarClock, XCircle, Send, Receipt, Video, Clock, Share2, Download, FileText, Copy, Sparkles, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { SegmentVideoPlayer } from "@/components/dashboard/segment-video-player";
 
 const statusColors: Record<string, string> = {
   pending: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20",
@@ -73,15 +72,41 @@ interface BookingDetailProps {
    */
   sessionLink?: string | null;
   /**
+   * Use the same slide-over UI for booking-like records that should not
+   * call the standard /api/bookings/* mutation/read APIs. This keeps the
+   * drawer presentation consistent while suppressing booking-specific
+   * actions and follow-up fetches.
+   */
+  detailsOnly?: boolean;
+  /**
+   * Optional alternate base path for cancel/reschedule actions. Used by
+   * admin calendar bookings, which are stored outside the legacy
+   * `bookings` table but should still use the same slide-over controls.
+   */
+  actionBasePath?: string | null;
+  /**
    * Who is viewing the sheet. Defaults to `"diviner"` so the existing
    * diviner dashboard and admin console keep full functionality without
-   * opting in. When set to `"client"` the sheet renders read-only —
-   * mutation actions (reschedule / cancel / refund / session-notes /
-   * send-note / sync-payment / sync-recording / join-session / open-
-   * service) are hidden, and the diviner-private session-notes field is
-   * suppressed. Used by the /trainee "See Details" drawer.
+   * opting in. When set to `"client"` the sheet hides host-only actions
+   * such as refund, notes, sync, join-session, and open-service, but it
+   * still allows self-service reschedule and cancellation for the
+   * trainee/client booking drawer.
    */
   viewerRole?: "diviner" | "admin" | "client";
+  /**
+   * Explicit override for the Reschedule button's navigation target. When
+   * provided, the drawer turns the button into a Link to this href and
+   * skips its own host-type detection. Used by the trainee dashboard,
+   * which mixes diviner-owned and admin-owned bookings that live at
+   * different reschedule URLs.
+   */
+  rescheduleHref?: string | null;
+  /**
+   * Explicit join-session target. Used for booking-like records that do
+   * not use the legacy `/{username}/session/{bookingId}` path but still
+   * need the same prominent join action in the drawer.
+   */
+  joinHref?: string | null;
 }
 
 // Format an ISO string into the value expected by <input type="datetime-local">
@@ -89,6 +114,27 @@ function toDatetimeLocal(iso: string): string {
   const d = new Date(iso);
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+interface CancellationActor {
+  role: "admin" | "diviner" | "client" | "system" | null;
+  name: string | null;
+}
+
+interface CancellationDetails {
+  status: string;
+  cancellation: {
+    canceledAt: string;
+    reason: string | null;
+    canceledBy: CancellationActor;
+  } | null;
+  refund: {
+    amount: number | null;
+    refundedAt: string;
+    reason: string | null;
+    stripeRefundId: string | null;
+    refundedBy: CancellationActor;
+  } | null;
 }
 
 interface SessionDetails {
@@ -102,8 +148,9 @@ interface SessionDetails {
 }
 
 /**
- * Self-contained recording player. Auto-loads segments from S3 on mount
- * and plays them seamlessly as one video via SegmentVideoPlayer.
+ * Self-contained recording player. Prefers the final concatenated MP4 and
+ * only asks the API to recover/check that final asset when the DB URL is
+ * missing.
  */
 function RecordingSection({
   bookingId,
@@ -125,32 +172,38 @@ function RecordingSection({
    */
   canSync?: boolean;
 }) {
-  const [segments, setSegments] = useState<{ key: string; size: number; url: string }[] | null>(null);
+  const [resolvedUrl, setResolvedUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const finalUrl = recordingUrl ?? resolvedUrl;
 
-  // Auto-load segments when component mounts
-  const loadSegments = useCallback(async () => {
+  const loadRecording = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
+      if (recordingUrl) {
+        setLoading(false);
+        return;
+      }
+
       const res = await fetch(`/api/bookings/${bookingId}/recording-segments`);
       const data = await res.json();
-      if (data.segments?.length > 0) {
-        setSegments(data.segments);
+      if (typeof data.recording_url === "string" && data.recording_url) {
+        setResolvedUrl(data.recording_url);
       } else {
-        setError("No recording segments found in S3");
+        setResolvedUrl(null);
+        setError("Recording is still being processed");
       }
     } catch {
       setError("Failed to load recording");
     } finally {
       setLoading(false);
     }
-  }, [bookingId]);
+  }, [bookingId, recordingUrl]);
 
   useEffect(() => {
-    loadSegments();
-  }, [loadSegments]);
+    loadRecording();
+  }, [loadRecording]);
 
   return (
     <div className="rounded-lg border border-border bg-muted/20 p-3 space-y-3">
@@ -164,16 +217,19 @@ function RecordingSection({
           <Loader2 className="size-5 animate-spin text-muted-foreground" />
           <span className="ml-2 text-sm text-muted-foreground">Loading recording…</span>
         </div>
-      ) : segments && segments.length > 0 ? (
+      ) : finalUrl ? (
         <>
-          <SegmentVideoPlayer segments={segments} />
-          {recordingUrl && (
-            <a href={recordingUrl} download target="_blank" rel="noopener noreferrer">
-              <Button size="sm" variant="outline" className="w-full gap-2">
-                <Download className="size-3.5" />Download Recording
-              </Button>
-            </a>
-          )}
+          <video
+            src={finalUrl}
+            controls
+            preload="metadata"
+            className="w-full rounded-lg bg-black"
+          />
+          <a href={finalUrl} download target="_blank" rel="noopener noreferrer">
+            <Button size="sm" variant="outline" className="w-full gap-2">
+              <Download className="size-3.5" />Download Recording
+            </Button>
+          </a>
           {shareId && (
             <Button size="sm" variant="ghost" className="w-full gap-2 text-xs text-muted-foreground"
               onClick={() => {
@@ -187,7 +243,7 @@ function RecordingSection({
       ) : error ? (
         <div className="space-y-2">
           <p className="text-sm text-muted-foreground">{error}</p>
-          <Button size="sm" variant="outline" className="w-full gap-2" onClick={loadSegments}>
+          <Button size="sm" variant="outline" className="w-full gap-2" onClick={loadRecording}>
             <RefreshCw className="size-3.5" />Retry
           </Button>
           {!recordingUrl && canSync && (
@@ -216,7 +272,11 @@ export function BookingDetailSheet({
   booking,
   linkedOrder,
   sessionLink,
+  detailsOnly = false,
+  actionBasePath = null,
   viewerRole = "diviner",
+  rescheduleHref = null,
+  joinHref = null,
 }: BookingDetailProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -235,11 +295,43 @@ export function BookingDetailSheet({
       .then((d) => setSessionDetails(d))
       .catch(() => setSessionDetails(null))
       .finally(() => setLoadingSession(false));
-  }, [open, booking.id, sessionDetails]);
+  }, [open, booking.id, sessionDetails, detailsOnly]);
+
+  // Fetch cancellation + refund audit so we can show who/when/refund-id.
+  // Skipped for `detailsOnly` because those rows live outside the standard
+  // bookings table (admin calendar, etc.) and don't share this audit.
+  useEffect(() => {
+    if (!open || detailsOnly) return;
+    if (booking.status !== "canceled" && !booking.refunded_at) return;
+    let cancelled = false;
+    fetch(`/api/bookings/${booking.id}/cancellation-details`, {
+      credentials: "include",
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: CancellationDetails | null) => {
+        if (!cancelled && d) setCancellationDetails(d);
+      })
+      .catch(() => {
+        if (!cancelled) setCancellationDetails(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, booking.id, booking.status, booking.refunded_at, detailsOnly]);
   const [showRefundForm, setShowRefundForm] = useState(false);
   const [refundReason, setRefundReason] = useState("");
   const [refunding, setRefunding] = useState(false);
   const [refunded, setRefunded] = useState(!!booking.refunded_at);
+  const [refundAmount, setRefundAmount] = useState<number | null>(
+    booking.refund_amount ?? null
+  );
+  const [refundedAt, setRefundedAt] = useState<string | null>(
+    booking.refunded_at ?? null
+  );
+  const [refundReasonDisplay, setRefundReasonDisplay] = useState<string | null>(
+    booking.refund_reason ?? null
+  );
+  const [cancellationDetails, setCancellationDetails] = useState<CancellationDetails | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [syncingRecording, setSyncingRecording] = useState(false);
   const [sessionNotes, setSessionNotes] = useState(booking.session_notes ?? "");
@@ -302,12 +394,27 @@ export function BookingDetailSheet({
       const data = await res.json();
 
       if (!res.ok) {
+        // Already refunded? Surface the existing refund state so the drawer
+        // switches to the "Refunded" display without re-issuing anything.
+        if (data.alreadyRefunded) {
+          setRefunded(true);
+          setRefundAmount(data.amount ?? null);
+          setRefundedAt(data.refundedAt ?? null);
+          setRefundReasonDisplay(data.refundReason ?? null);
+          setShowRefundForm(false);
+          toast.info("This booking has already been refunded");
+          router.refresh();
+          return;
+        }
         toast.error(data.error ?? "Failed to issue refund");
         return;
       }
 
       toast.success(`Refund of ${formatCurrency(data.amount)} issued successfully`);
       setRefunded(true);
+      setRefundAmount(data.amount ?? null);
+      setRefundedAt(data.refundedAt ?? null);
+      setRefundReasonDisplay(refundReason.trim());
       setShowRefundForm(false);
       router.refresh();
     } catch {
@@ -324,9 +431,12 @@ export function BookingDetailSheet({
     }
     // Convert datetime-local value (local time) to ISO string
     const isoDate = new Date(newScheduledAt).toISOString();
+    const rescheduleUrl = actionBasePath
+      ? `${actionBasePath}/reschedule`
+      : `/api/bookings/${booking.id}/reschedule`;
     setRescheduling(true);
     try {
-      const res = await fetch(`/api/bookings/${booking.id}/reschedule`, {
+      const res = await fetch(rescheduleUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ scheduled_at: isoDate }),
@@ -353,33 +463,13 @@ export function BookingDetailSheet({
     }
     setCanceling(true);
     try {
-      // Auto-refund: if paid and not yet refunded, issue refund first
-      const shouldRefund =
-        !!booking.payment_intent_id &&
-        booking.amount > 0 &&
-        !refunded;
-
-      if (shouldRefund) {
-        const refundRes = await fetch("/api/stripe/refund", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            bookingId: booking.id,
-            reason: cancelReason.trim(),
-          }),
-        });
-        const refundData = await refundRes.json();
-        if (!refundRes.ok) {
-          toast.error(refundData.error ?? "Failed to process refund. Cancellation aborted.");
-          return;
-        }
-        setRefunded(true);
-      }
-
-      // Cancel the booking
-      const cancelRes = await fetch(`/api/bookings/${booking.id}/cancel`, {
+      const cancelUrl = actionBasePath
+        ? `${actionBasePath}/cancel`
+        : `/api/bookings/${booking.id}/cancel`;
+      const cancelRes = await fetch(cancelUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ reason: cancelReason.trim() }),
       });
       const cancelData = await cancelRes.json();
@@ -388,7 +478,40 @@ export function BookingDetailSheet({
         return;
       }
 
-      toast.success(shouldRefund ? "Booking cancelled and refund issued" : "Booking cancelled");
+      // Server returns refund details when the cancel triggered an auto-refund
+      // OR when the booking was already canceled with an existing refund. In
+      // either case, surface the refund block so the user never sees an
+      // ambiguous "cancelled" state for a paid booking.
+      const refund = cancelData.refund as
+        | {
+            amount: number | null;
+            refundedAt: string | null;
+            reason: string | null;
+            alreadyRefunded?: boolean;
+          }
+        | null;
+
+      if (refund && refund.refundedAt) {
+        setRefunded(true);
+        setRefundAmount(refund.amount ?? null);
+        setRefundedAt(refund.refundedAt);
+        setRefundReasonDisplay(refund.reason ?? null);
+      }
+
+      if (cancelData.alreadyCanceled) {
+        toast.info(
+          refund?.refundedAt
+            ? "This booking was already cancelled and refunded"
+            : "This booking was already cancelled"
+        );
+      } else {
+        toast.success(
+          refund?.refundedAt
+            ? `Booking cancelled and ${formatCurrency(refund.amount ?? 0)} refunded`
+            : "Booking cancelled"
+        );
+      }
+
       setCanceled(true);
       setShowCancelForm(false);
       router.refresh();
@@ -426,27 +549,39 @@ export function BookingDetailSheet({
     }
   }
 
-  // Mutation capabilities are fully suppressed in the client view —
-  // trainees / clients viewing their own booking can see the details
-  // but cannot reschedule, cancel, refund, sync payment, etc. Those
-  // actions belong to the host on /dashboard/bookings or admin.
   const canReschedule =
-    !isClientView &&
+    (!detailsOnly || !!actionBasePath) &&
     ["pending", "confirmed"].includes(booking.status) &&
     !canceled;
 
+  // Both diviners and clients/trainees get the full calendar-picker reschedule
+  // page (routed under the diviner profile slug). Admin "my bookings" rows
+  // live outside the standard bookings table and have their own reschedule
+  // calendar at /admin/my-bookings/{id}/reschedule — driven by the
+  // /api/book/{adminUsername}/* availability endpoints. Any remaining case
+  // (admin calendar bookings without a dedicated page) falls back to the
+  // inline datetime form.
+  const useCalendarReschedulePage =
+    canReschedule && !actionBasePath && !!booking.username;
+  const adminRescheduleHref =
+    canReschedule && actionBasePath?.startsWith("/api/admin/my-bookings/")
+      ? `/admin/my-bookings/${booking.id}/reschedule`
+      : null;
+
   const canCancel =
-    !isClientView &&
+    (!detailsOnly || !!actionBasePath) &&
     ["pending", "confirmed", "in_progress"].includes(booking.status) &&
     !canceled;
 
   const canRefund =
+    !detailsOnly &&
     !isClientView &&
     booking.status === "completed" &&
     booking.amount > 0 &&
     !refunded;
 
   const canSyncPayment =
+    !detailsOnly &&
     !isClientView &&
     booking.status === "pending" &&
     booking.amount > 0 &&
@@ -526,7 +661,7 @@ export function BookingDetailSheet({
                 <Loader2 className="size-4 animate-spin text-muted-foreground" />
                 <p className="text-sm text-muted-foreground">Loading session details…</p>
               </div>
-            ) : sessionDetails?.chime_meeting_id ? (
+            ) : (sessionDetails?.chime_meeting_id || sessionDetails?.recording_url || sessionDetails?.recording_share_id) ? (
               <>
                 <div className="rounded-lg border border-border bg-muted/20 p-3 space-y-2">
                   <div className="flex items-center gap-1.5 mb-1">
@@ -618,9 +753,16 @@ export function BookingDetailSheet({
           </div>
 
           {/* ── Join Session (upcoming/in-progress only) ─────────────── */}
-          {!isClientView &&
-            ["confirmed", "in_progress", "pending"].includes(booking.status) &&
-            booking.username && (
+          {["confirmed", "in_progress", "pending"].includes(booking.status) &&
+            (joinHref || (!detailsOnly && booking.username)) && (
+              joinHref ? (
+                <Button asChild className="w-full">
+                  <a href={joinHref}>
+                    <Video className="mr-2 size-4" />
+                    Join Session
+                  </a>
+                </Button>
+              ) : (
               <Button
                 className="w-full"
                 onClick={() => {
@@ -630,6 +772,7 @@ export function BookingDetailSheet({
                 <Video className="mr-2 size-4" />
                 Join Session
               </Button>
+              )
             )}
 
           {/* ── Open Service (toolkit) — diviner-only, hidden when unmapped ─ */}
@@ -701,10 +844,41 @@ export function BookingDetailSheet({
           {(canReschedule || canCancel || canRefund) && !showRescheduleForm && !showCancelForm && !showRefundForm && (
             <div className="flex flex-col gap-2">
               {canReschedule && (
-                <Button variant="outline" className="w-full gap-2" onClick={() => setShowRescheduleForm(true)}>
-                  <CalendarClock className="size-4" />
-                  Reschedule
-                </Button>
+                rescheduleHref ? (
+                  <Button asChild variant="outline" className="w-full gap-2">
+                    <Link href={rescheduleHref}>
+                      <CalendarClock className="size-4" />
+                      Reschedule
+                    </Link>
+                  </Button>
+                ) : useCalendarReschedulePage ? (
+                  <Button
+                    asChild
+                    variant="outline"
+                    className="w-full gap-2"
+                  >
+                    <Link href={`/${booking.username}/reschedule/${booking.id}`}>
+                      <CalendarClock className="size-4" />
+                      Reschedule
+                    </Link>
+                  </Button>
+                ) : adminRescheduleHref ? (
+                  <Button
+                    asChild
+                    variant="outline"
+                    className="w-full gap-2"
+                  >
+                    <Link href={adminRescheduleHref}>
+                      <CalendarClock className="size-4" />
+                      Reschedule
+                    </Link>
+                  </Button>
+                ) : (
+                  <Button variant="outline" className="w-full gap-2" onClick={() => setShowRescheduleForm(true)}>
+                    <CalendarClock className="size-4" />
+                    Reschedule
+                  </Button>
+                )
               )}
               {canCancel && (
                 <Button
@@ -732,7 +906,11 @@ export function BookingDetailSheet({
           {canReschedule && showRescheduleForm && (
             <div className="space-y-3 rounded-lg border bg-muted/30 p-4">
               <h4 className="text-sm font-semibold">Reschedule Booking</h4>
-              <p className="text-xs text-muted-foreground">Select a new date and time. The client will be notified by email.</p>
+              <p className="text-xs text-muted-foreground">
+                {isClientView
+                  ? "Select your new preferred date and time, then confirm to reschedule this appointment."
+                  : "Select a new date and time. The client will be notified by email."}
+              </p>
               <div className="space-y-1.5">
                 <Label htmlFor="new-datetime">New Date & Time</Label>
                 <input
@@ -758,14 +936,16 @@ export function BookingDetailSheet({
           {canCancel && showCancelForm && (
             <div className="space-y-3 rounded-lg border border-red-500/20 bg-red-500/5 p-4">
               <h4 className="text-sm font-semibold text-red-500">Cancel Booking</h4>
-              {booking.payment_intent_id && booking.amount > 0 && !refunded ? (
+              {!isClientView && booking.payment_intent_id && booking.amount > 0 && !refunded ? (
                 <p className="text-xs text-muted-foreground">
                   This booking has a payment of <strong>{formatCurrency(booking.amount)}</strong>.
                   Cancelling will automatically issue a full refund to {booking.client_name}. This action cannot be undone.
                 </p>
               ) : (
                 <p className="text-xs text-muted-foreground">
-                  The booking will be cancelled and the client will be notified. This action cannot be undone.
+                  {isClientView
+                    ? "This appointment will be cancelled after confirmation. Please add a short reason."
+                    : "The booking will be cancelled and the client will be notified. This action cannot be undone."}
                 </p>
               )}
               <div className="space-y-2">
@@ -774,7 +954,7 @@ export function BookingDetailSheet({
               </div>
               <div className="flex gap-2">
                 <Button size="sm" variant="destructive" onClick={handleCancel} disabled={canceling}>
-                  {canceling ? <><Loader2 className="mr-1.5 size-3.5 animate-spin" />Processing…</> : (booking.payment_intent_id && booking.amount > 0 && !refunded ? "Cancel & Refund" : "Confirm Cancellation")}
+                  {canceling ? <><Loader2 className="mr-1.5 size-3.5 animate-spin" />Processing…</> : (!isClientView && booking.payment_intent_id && booking.amount > 0 && !refunded ? "Cancel & Refund" : "Confirm Cancellation")}
                 </Button>
                 <Button size="sm" variant="outline" onClick={() => { setShowCancelForm(false); setCancelReason(""); }}>Go Back</Button>
               </div>
@@ -801,16 +981,150 @@ export function BookingDetailSheet({
             </div>
           )}
 
-          {/* ── Refund status ─────────────────────────────────────────── */}
-          {refunded && (
-            <div className="rounded-lg border border-green-500/20 bg-green-500/5 p-3">
+          {/* ── Cancellation audit ────────────────────────────────────── */}
+          {canceled && (
+            <div className="rounded-lg border border-red-500/20 bg-red-500/5 p-3 space-y-1.5">
+              <div className="flex items-center gap-2">
+                <XCircle className="size-4 text-red-500" />
+                <p className="text-sm font-medium text-red-500">
+                  {refunded ? "Cancelled & Refunded" : "Cancelled"}
+                </p>
+              </div>
+              {cancellationDetails?.cancellation?.canceledAt && (
+                <p className="text-xs text-muted-foreground">
+                  <span className="text-muted-foreground/70">Cancelled at:</span>{" "}
+                  {formatDateTime(cancellationDetails.cancellation.canceledAt)}
+                </p>
+              )}
+              {cancellationDetails?.cancellation?.canceledBy?.name && (
+                <p className="text-xs text-muted-foreground">
+                  <span className="text-muted-foreground/70">Cancelled by:</span>{" "}
+                  <span className="font-medium text-foreground/80">
+                    {cancellationDetails.cancellation.canceledBy.name}
+                  </span>
+                  {cancellationDetails.cancellation.canceledBy.role && (
+                    <span className="ml-1 text-muted-foreground/60">
+                      ({cancellationDetails.cancellation.canceledBy.role})
+                    </span>
+                  )}
+                </p>
+              )}
+              {cancellationDetails?.cancellation?.reason && (
+                <p className="text-xs text-muted-foreground">
+                  <span className="text-muted-foreground/70">Reason:</span>{" "}
+                  {cancellationDetails.cancellation.reason}
+                </p>
+              )}
+
+              {!refunded && (
+                <p className="mt-2 rounded-md bg-red-500/10 px-2 py-1.5 text-xs text-muted-foreground">
+                  {booking.payment_intent_id && booking.amount > 0
+                    ? "No refund was issued. The payment was not captured or has already been refunded elsewhere — check your Stripe dashboard if this looks wrong."
+                    : "No refund was needed — this booking had no captured payment."}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* ── Refund audit (standalone refund, no cancellation) ─────── */}
+          {!canceled && refunded && (
+            <div className="rounded-lg border border-green-500/20 bg-green-500/5 p-3 space-y-1.5">
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="size-4 text-green-500" />
                 <p className="text-sm font-medium text-green-500">Refunded</p>
               </div>
-              {booking.refund_amount && <p className="mt-1 text-xs text-muted-foreground">Amount: {formatCurrency(booking.refund_amount)}</p>}
-              {booking.refunded_at && <p className="text-xs text-muted-foreground">Date: {formatDateTime(booking.refunded_at)}</p>}
-              {booking.refund_reason && <p className="mt-1 text-xs text-muted-foreground">Reason: {booking.refund_reason}</p>}
+              {refundAmount != null && refundAmount > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  <span className="text-muted-foreground/70">Amount:</span>{" "}
+                  <span className="font-medium text-foreground/80">
+                    {formatCurrency(refundAmount)}
+                  </span>
+                </p>
+              )}
+              {refundedAt && (
+                <p className="text-xs text-muted-foreground">
+                  <span className="text-muted-foreground/70">Refunded at:</span>{" "}
+                  {formatDateTime(refundedAt)}
+                </p>
+              )}
+              {cancellationDetails?.refund?.refundedBy?.name && (
+                <p className="text-xs text-muted-foreground">
+                  <span className="text-muted-foreground/70">Refunded by:</span>{" "}
+                  <span className="font-medium text-foreground/80">
+                    {cancellationDetails.refund.refundedBy.name}
+                  </span>
+                  {cancellationDetails.refund.refundedBy.role && (
+                    <span className="ml-1 text-muted-foreground/60">
+                      ({cancellationDetails.refund.refundedBy.role})
+                    </span>
+                  )}
+                </p>
+              )}
+              {cancellationDetails?.refund?.stripeRefundId && (
+                <p className="text-xs text-muted-foreground">
+                  <span className="text-muted-foreground/70">Stripe refund id:</span>{" "}
+                  <span className="font-mono text-foreground/70 break-all">
+                    {cancellationDetails.refund.stripeRefundId}
+                  </span>
+                </p>
+              )}
+              {refundReasonDisplay && (
+                <p className="text-xs text-muted-foreground">
+                  <span className="text-muted-foreground/70">Reason:</span>{" "}
+                  {refundReasonDisplay}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* ── Refund details block when part of a cancellation ─────── */}
+          {canceled && refunded && (
+            <div className="rounded-lg border border-green-500/20 bg-green-500/5 p-3 space-y-1.5">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="size-4 text-green-500" />
+                <p className="text-sm font-medium text-green-500">Refund</p>
+              </div>
+              {refundAmount != null && refundAmount > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  <span className="text-muted-foreground/70">Amount:</span>{" "}
+                  <span className="font-medium text-foreground/80">
+                    {formatCurrency(refundAmount)}
+                  </span>
+                </p>
+              )}
+              {refundedAt && (
+                <p className="text-xs text-muted-foreground">
+                  <span className="text-muted-foreground/70">Refunded at:</span>{" "}
+                  {formatDateTime(refundedAt)}
+                </p>
+              )}
+              {cancellationDetails?.refund?.refundedBy?.name && (
+                <p className="text-xs text-muted-foreground">
+                  <span className="text-muted-foreground/70">Refunded by:</span>{" "}
+                  <span className="font-medium text-foreground/80">
+                    {cancellationDetails.refund.refundedBy.name}
+                  </span>
+                  {cancellationDetails.refund.refundedBy.role && (
+                    <span className="ml-1 text-muted-foreground/60">
+                      ({cancellationDetails.refund.refundedBy.role})
+                    </span>
+                  )}
+                </p>
+              )}
+              {cancellationDetails?.refund?.stripeRefundId && (
+                <p className="text-xs text-muted-foreground">
+                  <span className="text-muted-foreground/70">Stripe refund id:</span>{" "}
+                  <span className="font-mono text-foreground/70 break-all">
+                    {cancellationDetails.refund.stripeRefundId}
+                  </span>
+                </p>
+              )}
+              {refundReasonDisplay && (
+                <p className="text-xs text-muted-foreground">
+                  <span className="text-muted-foreground/70">Reason:</span>{" "}
+                  {refundReasonDisplay}
+                </p>
+              )}
             </div>
           )}
 
@@ -828,7 +1142,7 @@ export function BookingDetailSheet({
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Status</p>
-                  {booking.refunded_at ? (
+                  {refunded || refundedAt ? (
                     <span className="inline-flex items-center rounded-full border border-red-500/20 bg-red-500/10 px-2 py-0.5 text-xs font-medium text-red-500">Refunded</span>
                   ) : ["confirmed", "completed", "in_progress"].includes(booking.status) ? (
                     <span className="inline-flex items-center rounded-full border border-green-500/20 bg-green-500/10 px-2 py-0.5 text-xs font-medium text-green-500">Paid</span>
@@ -885,13 +1199,6 @@ export function BookingDetailSheet({
               <p className="text-sm">{booking.notes}</p>
             </div>
           )}
-          {booking.booking_notes && (
-            <div className="rounded-lg bg-amber-500/10 border border-amber-500/20 p-3">
-              <p className="text-xs font-medium text-amber-400 mb-1">Client Notes</p>
-              <p className="text-sm text-muted-foreground">{booking.booking_notes}</p>
-            </div>
-          )}
-
           {/* ── Session Notes (completed only, diviner/admin only) ───── */}
           {!isClientView && booking.status === "completed" && (
             <div className="space-y-2">
@@ -937,18 +1244,6 @@ export function BookingDetailSheet({
               <Button size="sm" onClick={handleSendNote} disabled={sendingNote || !clientNote.trim()} className="gap-1.5">
                 {sendingNote ? <><Loader2 className="size-3.5 animate-spin" />Sending…</> : <><Send className="size-3.5" />Send to Client</>}
               </Button>
-            </div>
-          )}
-
-          {/* ── Client-view footer: safe guidance when mutation UI is
-                hidden. ───────────────────────────────────────────────── */}
-          {isClientView && (
-            <div className="rounded-lg border border-border bg-muted/20 p-3">
-              <p className="text-xs text-muted-foreground">
-                Need to reschedule, cancel, or manage this appointment?
-                Reply to your booking confirmation email or contact the
-                host directly.
-              </p>
             </div>
           )}
 

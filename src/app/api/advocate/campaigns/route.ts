@@ -7,8 +7,12 @@ export const dynamic = "force-dynamic";
 /**
  * GET /api/advocate/campaigns
  *
- * Returns campaign participation and earnings for the authenticated advocate.
- * Query params: period=30d|90d|1y|all (default: 30d)
+ * V2 model: returns affiliate-owned campaigns for the authenticated
+ * affiliate (social_advocate OR diviner_affiliate) along with their
+ * aggregated click/conversion/commission stats for the requested period.
+ *
+ * Source of truth: affiliate_campaigns WHERE owner_type='affiliate'.
+ * Legacy campaign_affiliates is NOT consulted here.
  */
 export async function GET(req: NextRequest) {
   const supabase = await createClient();
@@ -23,16 +27,38 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  // Resolve advocate record (include referral_code for share links)
-  const { data: advocate } = await supabase
+  const db = createAdminClient();
+
+  // Resolve affiliate identity — social_advocate first, then diviner_affiliate
+  const { data: advocate } = await db
     .from("social_advocates")
     .select("id, referral_code")
     .eq("user_id", user.id)
-    .single();
+    .maybeSingle();
 
-  if (!advocate) {
+  let affiliateId: string | null = null;
+  let affiliateType: "social_advocate" | "diviner_affiliate" | null = null;
+  let referralCode: string | null = null;
+
+  if (advocate) {
+    affiliateId = advocate.id as string;
+    affiliateType = "social_advocate";
+    referralCode = (advocate.referral_code as string | null) ?? null;
+  } else {
+    const { data: divAff } = await db
+      .from("diviner_affiliates")
+      .select("id")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    if (divAff) {
+      affiliateId = divAff.id as string;
+      affiliateType = "diviner_affiliate";
+    }
+  }
+
+  if (!affiliateId || !affiliateType) {
     return NextResponse.json(
-      { type: "https://httpstatuses.io/404", title: "Advocate not found", status: 404 },
+      { type: "https://httpstatuses.io/404", title: "Affiliate not found", status: 404 },
       { status: 404 }
     );
   }
@@ -41,22 +67,30 @@ export async function GET(req: NextRequest) {
   const period = searchParams.get("period") ?? "30d";
   const since = periodToDate(period);
 
-  const db = createAdminClient();
+  const appUrl =
+    process.env.NEXT_PUBLIC_APP_URL ??
+    process.env.NEXT_PUBLIC_SITE_URL ??
+    "https://astrologypro.com";
 
   try {
-    // Fetch campaigns this advocate is part of
-    const { data: campaignLinks, error: linkErr } = await db
-      .from("campaign_affiliates")
-      .select("campaign_id, custom_commission_value")
-      .eq("affiliate_id", advocate.id)
-      .eq("affiliate_type", "social_advocate");
+    // Load affiliate-owned campaigns for this affiliate
+    const { data: campaignsData, error: campaignsErr } = await db
+      .from("affiliate_campaigns")
+      .select(
+        `id, diviner_id, name, status, start_date, end_date, campaign_code,
+         commission_type, commission_value, commission_type_snapshot,
+         commission_value_snapshot, target_product_type, destination_type,
+         destination_service_template_id`
+      )
+      .eq("owner_type", "affiliate")
+      .eq("owner_affiliate_id", affiliateId)
+      .eq("owner_affiliate_type", affiliateType);
 
-    if (linkErr) throw linkErr;
+    if (campaignsErr) throw campaignsErr;
 
-    const links = campaignLinks ?? [];
-    const campaignIds = links.map((l) => l.campaign_id);
+    const allCampaigns = campaignsData ?? [];
 
-    if (campaignIds.length === 0) {
+    if (allCampaigns.length === 0) {
       return NextResponse.json({
         summary: {
           campaignsJoined: 0,
@@ -66,133 +100,143 @@ export async function GET(req: NextRequest) {
           pendingEarnings: 0,
         },
         campaigns: [],
+        referralCode: referralCode ?? "",
+        appUrl,
       });
     }
 
-    // Fetch campaign details and conversions in parallel
-    const [campaignsRes, conversionsRes] = await Promise.all([
-      db
-        .from("affiliate_campaigns")
-        .select("id, diviner_id, name, status, start_date, end_date, commission_type, commission_value, target_product_type, utm_campaign, utm_source, utm_medium")
-        .in("id", campaignIds),
-      db
-        .from("campaign_conversions")
-        .select("id, campaign_id, order_amount_cents, commission_amount_cents, converted_at")
-        .eq("affiliate_id", advocate.id)
-        .eq("affiliate_type", "social_advocate"),
+    const campaignIds = allCampaigns.map((c) => c.id as string);
+    const divinerIds = [
+      ...new Set(
+        allCampaigns.map((c) => c.diviner_id as string | null).filter(Boolean) as string[]
+      ),
+    ];
+    const templateIds = [
+      ...new Set(
+        allCampaigns
+          .map((c) => c.destination_service_template_id as string | null)
+          .filter(Boolean) as string[]
+      ),
+    ];
+
+    const sinceIso = since ? since.toISOString() : null;
+
+    const [divinersRes, templatesRes, conversionsRes] = await Promise.all([
+      divinerIds.length > 0
+        ? db
+            .from("diviners")
+            .select("id, display_name, username")
+            .in("id", divinerIds)
+        : Promise.resolve({ data: [] as Array<{ id: string; display_name: string | null; username: string | null }> }),
+      templateIds.length > 0
+        ? db.from("service_templates").select("id, name").in("id", templateIds)
+        : Promise.resolve({ data: [] as Array<{ id: string; name: string }> }),
+      (async () => {
+        let q = db
+          .from("campaign_conversions")
+          .select("id, campaign_id, commission_amount_cents, converted_at, reversed_at")
+          .in("campaign_id", campaignIds);
+        if (sinceIso) q = q.gte("converted_at", sinceIso);
+        return q;
+      })(),
     ]);
 
-    if (campaignsRes.error) throw campaignsRes.error;
-    if (conversionsRes.error) throw conversionsRes.error;
+    if ("error" in conversionsRes && conversionsRes.error) throw conversionsRes.error;
 
-    const allCampaigns = campaignsRes.data ?? [];
-    const allConversions = conversionsRes.data ?? [];
-
-    // Filter conversions by period
-    const conversions = since
-      ? allConversions.filter((c) => new Date(c.converted_at) >= since)
-      : allConversions;
-
-    // Fetch diviner names
-    const divinerIds = [...new Set(allCampaigns.map((c) => c.diviner_id).filter(Boolean))];
     const divinerNameMap = new Map<string, string>();
-    if (divinerIds.length > 0) {
-      const { data: diviners } = await db
-        .from("diviners")
-        .select("id, display_name")
-        .in("id", divinerIds);
-      for (const d of diviners ?? []) {
-        divinerNameMap.set(d.id, d.display_name ?? "Unknown");
-      }
+    const divinerUserMap = new Map<string, string | null>();
+    for (const d of (divinersRes.data ?? []) as Array<{ id: string; display_name: string | null; username: string | null }>) {
+      divinerNameMap.set(d.id, d.display_name ?? d.username ?? "Diviner");
+      divinerUserMap.set(d.id, d.username);
+    }
+    const templateNameMap = new Map<string, string>();
+    for (const t of (templatesRes.data ?? []) as Array<{ id: string; name: string }>) {
+      templateNameMap.set(t.id, t.name);
     }
 
-    // Build per-campaign conversion map
-    const campaignConvMap = new Map<
-      string,
-      { count: number; earned: number }
-    >();
+    // Build per-campaign conversion map (exclude reversed conversions
+    // from earnings — they were already reversed out).
+    const campaignConvMap = new Map<string, { count: number; earned: number }>();
+    const conversions = (conversionsRes.data ?? []) as Array<{
+      campaign_id: string;
+      commission_amount_cents: number | null;
+      reversed_at: string | null;
+    }>;
     for (const c of conversions) {
+      if (c.reversed_at) continue;
       const entry = campaignConvMap.get(c.campaign_id) ?? { count: 0, earned: 0 };
       entry.count += 1;
       entry.earned += Number(c.commission_amount_cents ?? 0);
       campaignConvMap.set(c.campaign_id, entry);
     }
 
-    // Build custom commission map
-    const customCommMap = new Map<string, number | null>();
-    for (const l of links) {
-      customCommMap.set(l.campaign_id, l.custom_commission_value ?? null);
-    }
-
-    // ---- Summary ----
+    // Summary
     let totalConversions = 0;
     let totalEarnedCents = 0;
-
     for (const [, stats] of campaignConvMap) {
       totalConversions += stats.count;
       totalEarnedCents += stats.earned;
     }
-
     const activeCampaigns = allCampaigns.filter((c) => c.status === "active").length;
-
-    // Pending earnings: for simplicity, we treat all earned as "pending" since
-    // we don't have a paid flag on campaign_conversions.
-    // If a payout system exists, this would be adjusted.
-    const pendingEarningsCents = totalEarnedCents;
 
     const summary = {
       campaignsJoined: allCampaigns.length,
       activeCampaigns,
       totalConversions,
       totalEarned: round2(totalEarnedCents / 100),
-      pendingEarnings: round2(pendingEarningsCents / 100),
+      // Without a payout flag on campaign_conversions, treat all credited
+      // earnings as pending.
+      pendingEarnings: round2(totalEarnedCents / 100),
     };
 
-    // ---- Campaign list ----
-    const referralCodeForLinks = advocate.referral_code ?? "";
-    const appUrlForLinks = process.env.NEXT_PUBLIC_APP_URL ?? "https://astrologypro.com";
-
+    // Shape rows for the UI
+    const appUrlNormalized = appUrl.replace(/\/$/, "");
     const campaigns = allCampaigns.map((camp) => {
-      const stats = campaignConvMap.get(camp.id) ?? { count: 0, earned: 0 };
-      const customComm = customCommMap.get(camp.id);
-      const commissionRate = customComm ?? Number(camp.commission_value ?? 0);
-
-      // Build unique share link for this advocate + campaign
-      const utmParams = new URLSearchParams({
-        ref: referralCodeForLinks,
-        ...(camp.utm_campaign ? { utm_campaign: camp.utm_campaign } : {}),
-        ...(camp.utm_source ? { utm_source: camp.utm_source } : {}),
-        ...(camp.utm_medium ? { utm_medium: camp.utm_medium } : {}),
-      });
-      const shareLink = `${appUrlForLinks}/?${utmParams.toString()}`;
-      const subId = camp.utm_campaign ?? camp.id.slice(0, 8);
+      const stats = campaignConvMap.get(camp.id as string) ?? { count: 0, earned: 0 };
+      const divinerName =
+        (camp.diviner_id && divinerNameMap.get(camp.diviner_id as string)) ?? "Diviner";
+      // Prefer the frozen snapshot; fall back to the live rate so we never
+      // show zero when a legacy row is missing a snapshot.
+      const rawType =
+        (camp.commission_type_snapshot as string | null) ??
+        (camp.commission_type as string | null) ??
+        "percent";
+      const rawValue =
+        camp.commission_value_snapshot != null
+          ? Number(camp.commission_value_snapshot)
+          : Number(camp.commission_value ?? 0);
+      // The UI's fmtCommission() checks for `fixed`; normalize both
+      // vocabularies to the legacy keyword the UI expects.
+      const commissionType =
+        rawType === "flat" || rawType === "fixed" ? "fixed" : "percentage";
 
       return {
-        campaignId: camp.id,
-        campaignName: camp.name,
-        divinerName: camp.diviner_id
-          ? divinerNameMap.get(camp.diviner_id) ?? "Unknown"
-          : "Platform",
-        isDivinerCampaign: !!camp.diviner_id,
-        targetProductType: camp.target_product_type ?? "general",
-        status: camp.status,
-        startDate: camp.start_date,
+        campaignId: camp.id as string,
+        campaignName: (camp.name as string) ?? "Untitled campaign",
+        divinerName,
+        // All V2 affiliate-owned campaigns are tied to a diviner via their
+        // source assignment.
+        isDivinerCampaign: true,
+        targetProductType: (camp.target_product_type as string | null) ?? "general",
+        status: (camp.status as string) ?? "active",
+        startDate: (camp.start_date as string | null) ?? null,
         myConversions: stats.count,
         myEarnings: round2(stats.earned / 100),
-        commissionRate,
-        commissionType: camp.commission_type,
-        shareLink,
-        subId,
+        commissionRate: rawValue,
+        commissionType,
+        shareLink: `${appUrlNormalized}/r/${camp.campaign_code}`,
+        subId: (camp.campaign_code as string) ?? (camp.id as string).slice(0, 8),
       };
     });
 
-    // Sort by earnings descending
     campaigns.sort((a, b) => b.myEarnings - a.myEarnings);
 
-    const referralCode = advocate.referral_code ?? "";
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://astrologypro.com";
-
-    return NextResponse.json({ summary, campaigns, referralCode, appUrl });
+    return NextResponse.json({
+      summary,
+      campaigns,
+      referralCode: referralCode ?? "",
+      appUrl,
+    });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Internal error";
     return NextResponse.json(
