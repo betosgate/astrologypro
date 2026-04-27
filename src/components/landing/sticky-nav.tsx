@@ -77,8 +77,25 @@ export function StickyNav({
       e.preventDefault();
       const el = document.getElementById(id);
       if (el) {
+        // Section is already mounted — scroll right away. We still
+        // update the URL hash so deep-linking / back-button work.
         el.scrollIntoView({ behavior: "smooth", block: "start" });
+        if (window.location.hash !== `#${id}`) {
+          history.replaceState(null, "", `#${id}`);
+        }
+        return;
       }
+
+      // Section isn't in the DOM yet (e.g. the testimonials anchor lives
+      // inside a tab that hasn't been activated). Set the hash and
+      // dispatch hashchange so listeners (like PublicContentTabs) can
+      // mount the right subtree and then scroll once it exists.
+      const oldUrl = window.location.href;
+      window.location.hash = id;
+      const newUrl = window.location.href;
+      window.dispatchEvent(
+        new HashChangeEvent("hashchange", { oldURL: oldUrl, newURL: newUrl }),
+      );
     },
     []
   );

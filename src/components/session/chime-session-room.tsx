@@ -42,6 +42,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { TestimonialFormToggle } from "@/components/public/testimonial-form-toggle";
 
 /** Lightweight tooltip wrapper — wraps any interactive element with a Radix tooltip */
 function Tip({ label, children, side = "top" }: { label: string; children: React.ReactNode; side?: "top" | "bottom" | "left" | "right" }) {
@@ -1130,7 +1131,30 @@ export function ChimeSessionRoom({
           </p>
 
           {role === "client" && (
-            <div className="mt-6 space-y-2.5">
+            <div className="mt-6 space-y-3">
+              {/*
+                Review prompt — capture testimonials while the experience
+                is fresh. Reuses the public TestimonialFormToggle so the
+                same validation, rate limiting, and admin moderation flow
+                apply. Hidden for admin-hosted (training) bookings since
+                those aren't paid client engagements with the diviner.
+              */}
+              {!joinApiPath.includes("/admin-bookings/") && username && (
+                <div className="rounded-xl border border-zinc-700/50 bg-zinc-800/50 p-4 text-left">
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-400">
+                    How was your reading?
+                  </p>
+                  <p className="mb-3 text-xs text-zinc-500 leading-relaxed">
+                    Your review helps {divinerName} reach more clients —
+                    and helps others find the right guidance.
+                  </p>
+                  <TestimonialFormToggle
+                    divinerUsername={username}
+                    divinerName={divinerName}
+                  />
+                </div>
+              )}
+
               <a
                 href={joinApiPath.includes("/admin-bookings/") ? "/trainee" : "/portal/bookings"}
                 className="flex w-full items-center justify-center rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground shadow-lg transition-all hover:bg-primary/90"

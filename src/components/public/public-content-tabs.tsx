@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 interface PublicContentTabsProps {
   media: React.ReactNode;
@@ -8,6 +8,19 @@ interface PublicContentTabsProps {
   defaultTab?: "media" | "testimonials";
 }
 
+/**
+ * The Media / Testimonials tab toggle on a diviner profile. Only the
+ * currently-active tab's content is mounted, which means the
+ * <section id="reviews"> from TestimonialsSection only exists in the DOM
+ * when the testimonials tab is active.
+ *
+ * That gating used to break the StickyNav "Reviews" link: clicking it
+ * called document.getElementById("reviews") → null → scrollIntoView
+ * silently no-op'd. The hash listener below fixes it: any time the URL
+ * hash points at the reviews/testimonials anchor (on first load OR after
+ * a click), we flip to the testimonials tab and then scroll once it has
+ * mounted.
+ */
 export function PublicContentTabs({
   media,
   testimonials,
@@ -16,6 +29,35 @@ export function PublicContentTabs({
   const [activeTab, setActiveTab] = useState<"media" | "testimonials">(
     defaultTab,
   );
+
+  useEffect(() => {
+    function syncFromHash() {
+      if (typeof window === "undefined") return;
+      const hash = window.location.hash.toLowerCase();
+      if (hash !== "#reviews" && hash !== "#testimonials") return;
+
+      // Switch tab so the testimonials subtree mounts.
+      setActiveTab("testimonials");
+
+      // Scroll once React has a chance to commit the new tab content.
+      // We use requestAnimationFrame inside requestAnimationFrame to
+      // wait one full paint — by that point the section element exists.
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          const el = document.getElementById("reviews");
+          if (el) {
+            el.scrollIntoView({ behavior: "smooth", block: "start" });
+          }
+        });
+      });
+    }
+
+    // Run once on mount in case the page was loaded with the hash already
+    // present (e.g. someone shared a /[username]#reviews link).
+    syncFromHash();
+    window.addEventListener("hashchange", syncFromHash);
+    return () => window.removeEventListener("hashchange", syncFromHash);
+  }, []);
 
   return (
     <section id="media-testimonials" className="py-10 md:py-14">
