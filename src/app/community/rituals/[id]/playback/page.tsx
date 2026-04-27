@@ -55,7 +55,7 @@ export default async function CommunityRitualPlaybackPage({
 
   if (error || !ritual) {
     return (
-      <div className="mx-auto max-w-2xl space-y-4">
+      <div className="mx-auto max-w-5xl space-y-4">
         <Button asChild variant="ghost" size="sm">
           <Link href="/community/rituals">
             <ArrowLeft className="mr-1.5 size-4" />
