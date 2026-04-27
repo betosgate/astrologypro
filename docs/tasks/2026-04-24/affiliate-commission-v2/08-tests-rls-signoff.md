@@ -2,9 +2,9 @@
 
 - Status: Partial — Part A (RLS), Part C (unit), and Part E (scripts)
   shipped 2026-04-27. Part A flagged a real RLS gap; alignment migration
-  `supabase/migrations/20260427000001_affiliate_rls_v2_alignment.sql`
+  `supabase/migrations/20260427000002_affiliate_rls_v2_alignment.sql`
   written. Apply via `node scripts/run-migration.js
-  supabase/migrations/20260427000001_affiliate_rls_v2_alignment.sql`
+  supabase/migrations/20260427000002_affiliate_rls_v2_alignment.sql`
   before the 5 affiliate-side SELECT tests pass. Part B (8 flow files)
   and Part D (Playwright E2E) deferred — bulk of behavior already
   covered by smoke + RLS.
