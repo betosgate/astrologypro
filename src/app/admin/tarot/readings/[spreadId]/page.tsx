@@ -33,6 +33,7 @@ interface DrawnCard {
 
 const CARD_BACK_URL =
   "https://all-frontend-assets.s3.amazonaws.com/transcendentpagan/assets/images/TarotCardBG.jpg";
+const PAGE_SHELL_CLASS = "mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8";
 
 // ─── Fisher-Yates shuffle ─────────────────────────────────────────────────────
 
@@ -141,8 +142,10 @@ export function TarotSpreadReadingPage({
   // ── Loading ──
   if (state === "loading") {
     return (
-      <div className="flex justify-center py-16">
-        <Loader2 className="size-8 animate-spin text-indigo-400/60" />
+      <div className={PAGE_SHELL_CLASS}>
+        <div className="flex justify-center py-16">
+          <Loader2 className="size-8 animate-spin text-indigo-400/60" />
+        </div>
       </div>
     );
   }
@@ -150,11 +153,13 @@ export function TarotSpreadReadingPage({
   // ── Error ──
   if (state === "error" || !spread) {
     return (
-      <div className="space-y-4 text-center py-16">
-        <p className="text-lg font-semibold">Spread not found.</p>
-        <Button asChild variant="outline">
-          <Link href={listHref}>Browse Spreads</Link>
-        </Button>
+      <div className={PAGE_SHELL_CLASS}>
+        <div className="space-y-4 text-center py-16">
+          <p className="text-lg font-semibold">Spread not found.</p>
+          <Button asChild variant="outline">
+            <Link href={listHref}>Browse Spreads</Link>
+          </Button>
+        </div>
       </div>
     );
   }
@@ -162,7 +167,7 @@ export function TarotSpreadReadingPage({
   // ── Revealed — just show "Begin Another Reading" (practice mode, no save) ──
   if (state === "revealed") {
     return (
-      <div className="space-y-6">
+      <div className={`${PAGE_SHELL_CLASS} space-y-6`}>
         <div className="flex items-center justify-between">
           <div>
             <Link href={listHref} className="text-sm text-muted-foreground hover:text-foreground">
@@ -172,7 +177,7 @@ export function TarotSpreadReadingPage({
           </div>
         </div>
 
-        <div className="rounded-2xl border border-[#343a45] bg-[#1a1e27] p-6 md:p-10 overflow-hidden -mx-4 md:-mx-10 lg:-mx-16">
+        <div className="rounded-2xl border border-[#343a45] bg-[#1a1e27] p-6 md:p-10 overflow-hidden">
           <SpreadLayout
             spreadName={spread.name}
             cardCount={spread.card_count}
@@ -197,7 +202,7 @@ export function TarotSpreadReadingPage({
 
   // ── Drawing screen ────────────────────────────────────────────────────────
   return (
-    <div className="space-y-6">
+    <div className={`${PAGE_SHELL_CLASS} space-y-6`}>
       <div className="flex items-center justify-between">
         <div>
           <Link href={listHref} className="text-sm text-muted-foreground hover:text-foreground">
