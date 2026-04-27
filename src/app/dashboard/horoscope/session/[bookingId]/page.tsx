@@ -131,7 +131,7 @@ export default async function DashboardHoroscopeSessionPage({
 
   const template = booking.service_templates;
   if (!template || template.category !== "astrology") {
-    redirect(`/dashboard/session/${bookingId}`);
+    redirect(`/service/session/${bookingId}`);
   }
 
   const tabSlug = ASTROLOGY_TAB_MAP[template.slug];
@@ -151,5 +151,5 @@ export default async function DashboardHoroscopeSessionPage({
   };
 
   const encoded = encodeURIComponent(JSON.stringify(prefill));
-  redirect(`/dashboard/horoscope?tab=${tabSlug}&prefill=${encoded}`);
+  redirect(`/service/horoscope?tab=${tabSlug}&prefill=${encoded}`);
 }

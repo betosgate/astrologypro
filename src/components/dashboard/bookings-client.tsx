@@ -589,6 +589,8 @@ export function BookingsClient({
                           {sessionLinksByBookingId[booking.id as string] && (
                             <Link
                               href={sessionLinksByBookingId[booking.id as string]!}
+                              target="_blank"
+                              rel="noopener noreferrer"
                               className="inline-flex h-8 items-center gap-1 rounded-md border border-primary/30 bg-primary/10 px-2 text-xs font-medium text-primary transition-colors hover:bg-primary/20"
                               title="Open the toolkit session for this booking"
                             >
