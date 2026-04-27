@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import {
+  isValidNatalChart,
+  isValidMonthlyTransit,
+} from "@/lib/community/chart-validators";
 
 export const dynamic = "force-dynamic";
 
@@ -88,42 +92,68 @@ export async function GET() {
     // Without a natal chart there is nothing to transit against.
     transitStatus = "empty";
   } else {
-    natalCharts = familyWithCharts.map((row) => ({
-      id: row.id,
-      full_name: row.full_name,
-      date_of_birth: row.date_of_birth,
-      natal_chart: row.natal_chart,
-    }));
-    // First chart kept on the legacy `natalChart` field for back-compat.
-    natalChart = natalCharts[0] ?? null;
-    natalStatus = "ready";
+    // community-chart-cache-and-regeneration Task 06 (2026-04-27):
+    // Filter out rows whose stored natal_chart JSON does NOT match the
+    // current production shape — they're legacy/dummy and would mislead
+    // the dashboard into treating them as ready. Such members are surfaced
+    // as "no chart" so the user is offered regeneration instead of a
+    // stale render.
+    natalCharts = familyWithCharts
+      .filter((row) => isValidNatalChart(row.natal_chart))
+      .map((row) => ({
+        id: row.id,
+        full_name: row.full_name,
+        date_of_birth: row.date_of_birth,
+        natal_chart: row.natal_chart,
+      }));
 
-    // Monthly transit is still scoped to the first ready member so the
-    // existing Monthly Transit card behaviour is unchanged.
-    const now = new Date();
-    const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-
-    const { data: transit, error: transitError } = await supabase
-      .from("monthly_transits")
-      .select("id, month, transit_data, created_at")
-      .eq("member_id", natalCharts[0].id)
-      .eq("month", currentMonth)
-      .maybeSingle();
-
-    if (transitError) {
-      console.error("[community/astro-charts] transit read error:", transitError);
-      transitStatus = "failed";
-    } else if (transit) {
-      monthlyTransit = {
-        id: transit.id,
-        member_id: natalCharts[0].id,
-        month: transit.month,
-        transit_data: transit.transit_data,
-        created_at: transit.created_at,
-      };
-      transitStatus = "ready";
-    } else {
+    if (natalCharts.length === 0) {
+      // All stored charts failed validation → treat as empty.
+      natalStatus = "empty";
       transitStatus = "empty";
+    } else {
+      // First chart kept on the legacy `natalChart` field for back-compat.
+      natalChart = natalCharts[0] ?? null;
+      natalStatus = "ready";
+
+      // Monthly transit is still scoped to the first ready member so the
+      // existing Monthly Transit card behaviour is unchanged.
+      const now = new Date();
+      const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+
+      // community-chart-cache-and-regeneration Task 01 (2026-04-27):
+      // monthly_transits keys family-member rows via `family_member_id`
+      // (see migration + cron at src/app/api/cron/monthly-transits).
+      // The previous `member_id` filter never matched a row, so the
+      // dashboard always rendered the empty state even when a transit
+      // existed. Switching the FK column makes existing rows visible.
+      const { data: transit, error: transitError } = await supabase
+        .from("monthly_transits")
+        .select("id, month, transit_data, created_at")
+        .eq("family_member_id", natalCharts[0].id)
+        .eq("month", currentMonth)
+        .maybeSingle();
+
+      if (transitError) {
+        console.error("[community/astro-charts] transit read error:", transitError);
+        transitStatus = "failed";
+      } else if (
+        transit &&
+        // Task 06 — guard against legacy dummy transit rows.
+        isValidMonthlyTransit(transit.transit_data, currentMonth)
+      ) {
+        monthlyTransit = {
+          id: transit.id,
+          member_id: natalCharts[0].id,
+          month: transit.month,
+          transit_data: transit.transit_data,
+          created_at: transit.created_at,
+        };
+        transitStatus = "ready";
+      } else {
+        // No row, or row exists but doesn't pass shape validation.
+        transitStatus = "empty";
+      }
     }
   }
 

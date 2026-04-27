@@ -70,7 +70,15 @@ export default async function BookingsPage() {
       ? admin.from("clients").select("id, full_name, email, phone, birth_date, birth_time, birth_city").in("id", clientIds)
       : Promise.resolve({ data: [] as any[] }),
     serviceIds.length > 0
-      ? admin.from("services").select("id, name, template_id").in("id", serviceIds)
+      ? admin
+          .from("services")
+          // `duration_minutes` is the source of truth for the service's
+          // standard length. The bookings list uses it to render the
+          // Duration column instead of the per-row `bookings.duration_minutes`,
+          // which can be stale or wrong when a booking was inserted by an
+          // older code path that miscomputed it.
+          .select("id, name, template_id, duration_minutes")
+          .in("id", serviceIds)
       : Promise.resolve({ data: [] as any[] }),
   ]);
 
