@@ -55,7 +55,6 @@ export default function RitualDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [showSacredSpaceOverlay, setShowSacredSpaceOverlay] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -78,7 +77,7 @@ export default function RitualDetailPage() {
     current_step?: number;
     is_complete?: boolean;
     reset?: boolean;
-  }) {
+  }): Promise<RitualConfig | null> {
     setSaving(true);
     const response = await fetch(`/api/community/rituals/${id}`, {
       method: "PATCH",
@@ -89,29 +88,22 @@ export default function RitualDetailPage() {
     if (response.ok) {
       const data = await response.json();
       setRitual(data.ritual);
+      setSaving(false);
+      return data.ritual as RitualConfig;
     }
 
     setSaving(false);
+    return null;
   }
 
   function handleBegin() {
-    if (!ritual) return;
-    const playlist = buildRitualPlaylist(ritual.ritual_tags);
-    if (playlist.length > 1) {
-      setShowSacredSpaceOverlay(true);
-      return;
-    }
-
     router.push(`/community/rituals/${id}/playback`);
   }
 
-  function handleBeginAfterOverlay() {
-    setShowSacredSpaceOverlay(false);
+  async function handlePerformAgain() {
+    const updatedRitual = await patchStep({ reset: true });
+    if (!updatedRitual) return;
     router.push(`/community/rituals/${id}/playback`);
-  }
-
-  async function handleReset() {
-    await patchStep({ reset: true });
   }
 
   const playlist = useMemo(
@@ -130,7 +122,7 @@ export default function RitualDetailPage() {
 
   if (error || !ritual) {
     return (
-      <div className="max-w-2xl space-y-4">
+      <div className="mx-auto max-w-5xl space-y-4">
         <div className="flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
           <AlertCircle className="size-4 shrink-0" />
           {error ?? "Ritual not found."}
@@ -165,99 +157,17 @@ export default function RitualDetailPage() {
     return value + (suffixes[(remainder - 20) % 10] || suffixes[remainder] || suffixes[0]);
   };
 
-  if (showSacredSpaceOverlay) {
-    return (
-      <div className="fixed inset-0 z-50 flex flex-col items-center justify-center overflow-hidden bg-background">
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-amber-950/60 via-background to-purple-950/40" />
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_40%,rgba(245,158,11,0.12),transparent_65%)]" />
-
-        <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-          <div
-            className="size-72 animate-ping rounded-full border border-amber-500/10"
-            style={{ animationDuration: "3s" }}
-          />
-        </div>
-        <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-          <div
-            className="size-96 animate-ping rounded-full border border-amber-500/5"
-            style={{ animationDuration: "4.5s" }}
-          />
-        </div>
-
-        <div className="relative z-10 flex max-w-lg flex-col items-center gap-8 px-6 text-center">
-          <div className="flex size-24 items-center justify-center rounded-3xl bg-gradient-to-br from-amber-500/20 to-orange-500/10 ring-2 ring-amber-500/20 shadow-2xl shadow-amber-500/10">
-            <Flame className="size-12 text-amber-300" aria-hidden="true" />
-          </div>
-
-          <div className="space-y-3">
-            <h2 className="text-3xl font-bold tracking-tight text-white">
-              Prepare Sacred Space
-            </h2>
-            <p className="mx-auto max-w-sm leading-relaxed text-muted-foreground">
-              Take a moment to center yourself and prepare your space before
-              beginning{" "}
-              <span className="font-semibold text-amber-300">
-                {ritual.ritual_name}
-              </span>
-              .
-            </p>
-            <p className="text-sm text-muted-foreground/60">
-              This ritual has{" "}
-              <span className="font-medium text-foreground/60">
-                {totalSteps} step{totalSteps !== 1 ? "s" : ""}
-              </span>
-              . Complete them in sacred order.
-            </p>
-          </div>
-
-          <div className="max-h-40 w-full space-y-2 overflow-y-auto rounded-2xl border border-amber-500/10 bg-white/5 p-4 backdrop-blur-md">
-            {playlist.map((item, index) => (
-              <div
-                key={`${item.tag}-${index}`}
-                className="flex items-center gap-3 rounded-lg px-3 py-1.5 text-left text-sm"
-              >
-                <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-amber-500/20 text-xs font-bold text-amber-400">
-                  {index + 1}
-                </span>
-                <span className="truncate text-white/70">{item.title}</span>
-              </div>
-            ))}
-          </div>
-
-          <div className="flex flex-wrap justify-center gap-3">
-            <Button
-              size="lg"
-              onClick={handleBeginAfterOverlay}
-              className="bg-gradient-to-r from-amber-500 to-orange-500 px-8 text-base font-semibold text-white shadow-xl shadow-amber-500/20 hover:from-amber-400 hover:to-orange-400"
-            >
-              <Flame className="mr-2 size-5" />
-              Begin the Ritual
-            </Button>
-            <Button
-              variant="ghost"
-              size="lg"
-              onClick={() => setShowSacredSpaceOverlay(false)}
-              className="text-muted-foreground hover:text-foreground"
-            >
-              Not Yet
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   if (isComplete) {
     const completionCount = ritual.execution_count;
 
     return (
-      <div className="max-w-2xl space-y-6">
-        <Link
+      <div className="mx-auto max-w-5xl space-y-6">
+        {/* <Link
           href="/community/rituals"
           className="text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
         >
           My Rituals
-        </Link>
+        </Link> */}
 
         <div className="relative overflow-hidden rounded-2xl border border-amber-500/20 bg-gradient-to-br from-amber-950/30 via-background to-purple-950/20 px-8 py-14 text-center shadow-xl">
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_0%,rgba(245,158,11,0.1),transparent_70%)]" />
@@ -287,7 +197,7 @@ export default function RitualDetailPage() {
             </div>
             <div className="flex flex-wrap justify-center gap-3">
               <Button
-                onClick={handleReset}
+                onClick={handlePerformAgain}
                 disabled={saving}
                 variant="outline"
                 className="border-amber-500/30 text-amber-400 hover:bg-amber-500/10"
@@ -314,13 +224,13 @@ export default function RitualDetailPage() {
 
   if (isInProgress) {
     return (
-      <div className="max-w-2xl space-y-6">
-        <Link
+      <div className="mx-auto max-w-5xl space-y-6">
+        {/* <Link
           href="/community/rituals"
           className="text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
         >
           My Rituals
-        </Link>
+        </Link> */}
 
         <div>
           <div className="mt-3 flex items-center gap-3">
@@ -433,14 +343,14 @@ export default function RitualDetailPage() {
   }
 
   return (
-    <div className="max-w-2xl space-y-6">
+    <div className="mx-auto max-w-5xl space-y-6">
       <div>
-        <Link
+        {/* <Link
           href="/community/rituals"
           className="text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
         >
           My Rituals
-        </Link>
+        </Link> */}
         <div className="mt-3 flex items-center gap-3">
           <div className="flex size-11 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500/25 to-orange-500/15 ring-1 ring-amber-500/20">
             <Flame className="size-5 text-amber-400" />
@@ -487,7 +397,7 @@ export default function RitualDetailPage() {
               {playlist.map((item, index) => (
                 <li
                   key={`${item.tag}-${index}`}
-                  className="flex items-start gap-3 rounded-xl border border-border/40 bg-muted/10 px-3 py-2.5 text-sm"
+                  className="flex items-center gap-3 rounded-xl border border-border/40 bg-muted/10 px-3 py-2.5 text-sm"
                 >
                   <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-amber-500/15 text-xs font-bold text-amber-400 ring-1 ring-amber-500/20">
                     {index + 1}

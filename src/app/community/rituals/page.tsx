@@ -57,6 +57,9 @@ function getDisplayTags(ritualName: string, tags: string[]): string[] {
 export default function CommunityRitualsPage() {
   const router = useRouter();
   const [rituals, setRituals] = useState<RitualRow[]>([]);
+  const [expandedTagRitualIds, setExpandedTagRitualIds] = useState<Set<string>>(
+    () => new Set()
+  );
   const [ritualNameOptions, setRitualNameOptions] = useState<string[]>([]);
   const [loadingInitial, setLoadingInitial] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -69,6 +72,9 @@ export default function CommunityRitualsPage() {
     useState<RitualStatusFilter>("all");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [appliedDateFrom, setAppliedDateFrom] = useState("");
+  const [appliedDateTo, setAppliedDateTo] = useState("");
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
 
   const nextOffsetRef = useRef(0);
   const hasMoreRef = useRef(false);
@@ -83,14 +89,25 @@ export default function CommunityRitualsPage() {
     if (selectedStatus !== "all") {
       params.set("status", selectedStatus);
     }
-    if (dateFrom) {
-      params.set("dateFrom", dateFrom);
-    }
-    if (dateTo) {
-      params.set("dateTo", dateTo);
+    if (appliedDateFrom && appliedDateTo) {
+      params.set("dateFrom", appliedDateFrom);
+      params.set("dateTo", appliedDateTo);
     }
     return params.toString();
-  }, [selectedRitualName, selectedStatus, dateFrom, dateTo]);
+  }, [appliedDateFrom, appliedDateTo, selectedRitualName, selectedStatus]);
+
+  useEffect(() => {
+    if (dateFrom && dateTo) {
+      setAppliedDateFrom((previous) => (previous === dateFrom ? previous : dateFrom));
+      setAppliedDateTo((previous) => (previous === dateTo ? previous : dateTo));
+      return;
+    }
+
+    if (!dateFrom && !dateTo && (appliedDateFrom || appliedDateTo)) {
+      setAppliedDateFrom("");
+      setAppliedDateTo("");
+    }
+  }, [appliedDateFrom, appliedDateTo, dateFrom, dateTo]);
 
   const fetchPage = useCallback(
     async (offset: number, reset: boolean): Promise<void> => {
@@ -153,6 +170,7 @@ export default function CommunityRitualsPage() {
       } finally {
         if (reset) {
           setLoadingInitial(false);
+          setHasLoadedOnce(true);
         } else {
           loadingMoreRef.current = false;
           setLoadingMore(false);
@@ -211,6 +229,18 @@ export default function CommunityRitualsPage() {
     await fetchPage(0, true);
   }
 
+  function toggleExpandedTags(ritualId: string) {
+    setExpandedTagRitualIds((previous) => {
+      const next = new Set(previous);
+      if (next.has(ritualId)) {
+        next.delete(ritualId);
+      } else {
+        next.add(ritualId);
+      }
+      return next;
+    });
+  }
+
   const hasActiveFilters =
     selectedRitualName !== "all" ||
     selectedStatus !== "all" ||
@@ -218,7 +248,7 @@ export default function CommunityRitualsPage() {
     dateTo !== "";
 
   return (
-    <div className="space-y-8">
+    <div className="mx-auto max-w-7xl space-y-8">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <div className="flex items-center gap-3">
@@ -252,7 +282,7 @@ export default function CommunityRitualsPage() {
         </div>
       )}
 
-      {!loadingInitial && rituals.length > 0 && (
+      {hasLoadedOnce && (
         <div className="rounded-2xl border border-amber-500/10 bg-gradient-to-r from-amber-950/15 via-card to-card p-4">
           <div className="flex flex-wrap items-end gap-3">
             <div className="min-w-[220px] flex-1">
@@ -339,11 +369,11 @@ export default function CommunityRitualsPage() {
         </div>
       )}
 
-      {loadingInitial ? (
+      {loadingInitial && !hasLoadedOnce ? (
         <div className="flex justify-center py-16">
           <Loader2 className="size-6 animate-spin text-amber-400/60" />
         </div>
-      ) : rituals.length === 0 ? (
+      ) : rituals.length === 0 && !hasActiveFilters ? (
         <div className="relative overflow-hidden rounded-2xl border border-amber-500/20 bg-gradient-to-br from-amber-950/30 via-background to-orange-950/20 px-8 py-14 text-center shadow-xl">
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_0%,rgba(245,158,11,0.1),transparent_70%)]" />
           <div className="relative flex flex-col items-center gap-5">
@@ -374,7 +404,14 @@ export default function CommunityRitualsPage() {
             {totalCount !== 1 ? "s" : ""}
           </p>
 
-          {rituals.map((ritual) => {
+          {loadingInitial && hasLoadedOnce ? (
+            <div className="flex justify-center py-10">
+              <Loader2 className="size-6 animate-spin text-amber-400/60" />
+            </div>
+          ) : null}
+
+          {!loadingInitial &&
+            rituals.map((ritual) => {
             const isInProgress = ritual.current_step > 0 && !ritual.is_complete;
             const isCompleted = ritual.is_complete && ritual.last_executed_at;
             const displayTags = getDisplayTags(
@@ -385,6 +422,11 @@ export default function CommunityRitualsPage() {
             const completedSteps = isCompleted
               ? totalSteps
               : Math.max(ritual.current_step - 1, 0);
+            const tagsExpanded = expandedTagRitualIds.has(ritual.id);
+            const visibleTags = tagsExpanded
+              ? displayTags
+              : displayTags.slice(0, 3);
+            const hiddenTagCount = Math.max(displayTags.length - 3, 0);
 
             return (
               <div
@@ -434,7 +476,7 @@ export default function CommunityRitualsPage() {
                       </div>
 
                       <div className="mt-1.5 flex flex-wrap gap-1">
-                        {displayTags.slice(0, 3).map((tag) => (
+                        {visibleTags.map((tag) => (
                           <Badge
                             key={tag}
                             variant="secondary"
@@ -443,13 +485,33 @@ export default function CommunityRitualsPage() {
                             {tag.replace(/_/g, " ")}
                           </Badge>
                         ))}
-                        {displayTags.length > 3 && (
-                          <Badge
-                            variant="outline"
-                            className="px-1.5 py-0.5 text-[10px] text-muted-foreground"
+                        {hiddenTagCount > 0 && !tagsExpanded && (
+                          <button
+                            type="button"
+                            onClick={() => toggleExpandedTags(ritual.id)}
+                            className="rounded-md"
                           >
-                            +{displayTags.length - 3} more
-                          </Badge>
+                            <Badge
+                              variant="outline"
+                              className="cursor-pointer px-1.5 py-0.5 text-[10px] text-muted-foreground hover:bg-muted/40"
+                            >
+                              +{hiddenTagCount} more
+                            </Badge>
+                          </button>
+                        )}
+                        {tagsExpanded && hiddenTagCount > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => toggleExpandedTags(ritual.id)}
+                            className="rounded-md"
+                          >
+                            <Badge
+                              variant="outline"
+                              className="cursor-pointer px-1.5 py-0.5 text-[10px] text-muted-foreground hover:bg-muted/40"
+                            >
+                              Show less
+                            </Badge>
+                          </button>
                         )}
                       </div>
                     </div>
@@ -498,10 +560,12 @@ export default function CommunityRitualsPage() {
             );
           })}
 
-          {rituals.length === 0 && (
+          {!loadingInitial && rituals.length === 0 && (
             <div className="rounded-2xl border border-amber-500/10 bg-gradient-to-r from-amber-950/10 via-card to-card px-6 py-10 text-center">
               <p className="text-sm text-muted-foreground">
-                No rituals match the current filters.
+                {hasActiveFilters
+                  ? "No rituals match the current filters."
+                  : "No rituals yet."}
               </p>
             </div>
           )}
