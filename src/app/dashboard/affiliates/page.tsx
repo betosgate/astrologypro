@@ -58,6 +58,7 @@ import {
   XCircle,
   AlertTriangle,
   Lock,
+  Plus,
 } from "lucide-react";
 import {
   createInvite,
@@ -85,7 +86,7 @@ interface Affiliate {
   created_at: string;
   // Additive from Task 04
   affiliate_account_id: string | null;
-  account_status: "unclaimed" | "active" | "suspended" | "blocked" | null;
+  account_status: "unclaimed" | "active" | "blocked" | null;
   user_id: string | null;
   avatar_url: string | null;
   invited_at: string | null;
@@ -323,6 +324,12 @@ export default function DashboardAffiliatesPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button asChild variant="outline">
+            <Link href="/dashboard/affiliates/new">
+              <Plus className="mr-2 size-4" aria-hidden />
+              Assign affiliate
+            </Link>
+          </Button>
           <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
             <DialogTrigger asChild>
               <Button
