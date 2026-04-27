@@ -42,7 +42,7 @@ export default async function TarotSessionPage({ params }: PageProps) {
   const template = booking.service_templates;
   if (!template || template.category !== "tarot") {
     // Wrong category — this route is tarot-only. Use the smart router.
-    redirect(`/dashboard/session/${bookingId}`);
+    redirect(`/service/session/${bookingId}`);
   }
 
   const admin = createAdminClient();
@@ -58,7 +58,7 @@ export default async function TarotSessionPage({ params }: PageProps) {
   // bookingId + fromBooking. They're included for later enhancements
   // (reading persistence, client-name banner) without breaking today.
   const url = new URL(
-    `/dashboard/tarot/readings/${resolved.spreadId}`,
+    `/service/tarot/readings/${resolved.spreadId}`,
     "http://placeholder.local",
   );
   url.searchParams.set("bookingId", bookingId);

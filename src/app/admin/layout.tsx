@@ -17,7 +17,7 @@ export const metadata = {
 // ─── Diviner-accessible session subroutes ────────────────────────────────────
 //
 // These legacy `/admin/*` subroutes may still be reached by old links or
-// bookmarks. New "Open Service" buttons use `/dashboard/session/[bookingId]`.
+// bookmarks. New "Open Service" buttons use `/service/session/[bookingId]`.
 // The pages themselves enforce per-booking ownership via
 // requireDivinerOrAdminForBooking() — see:
 //   - src/app/admin/session/[bookingId]/page.tsx          (smart router)

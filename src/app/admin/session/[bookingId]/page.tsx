@@ -2,9 +2,8 @@
  * /admin/session/[bookingId] - compatibility smart router.
  *
  * Older "Open Service" links pointed here. New diviner-facing links use
- * /dashboard/session/[bookingId]. This route keeps bookmarked/admin links
- * working and redirects into the dashboard-owned session surface so non-admin
- * diviners never depend on admin route chrome.
+ * /service/session/[bookingId]. This route keeps bookmarked/admin links
+ * working and redirects into the standalone service surface.
  *
  * Auth: delegates to requireDivinerOrAdminForBooking — same guard used by
  * the concrete session pages. Unauthenticated / unauthorized callers are
@@ -52,7 +51,7 @@ export default async function SmartSessionRouter({ params }: PageProps) {
     bookingId,
     templateSlug,
     category,
-    routeBasePath: "/dashboard",
+    routeBasePath: "/service",
   });
 
   if (!resolution) {

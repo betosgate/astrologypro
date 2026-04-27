@@ -30,7 +30,7 @@ export default async function DashboardTarotSessionPage({ params }: PageProps) {
 
   const template = booking.service_templates;
   if (!template || template.category !== "tarot") {
-    redirect(`/dashboard/session/${bookingId}`);
+    redirect(`/service/session/${bookingId}`);
   }
 
   const admin = createAdminClient();
@@ -38,7 +38,7 @@ export default async function DashboardTarotSessionPage({ params }: PageProps) {
   if (!resolved) notFound();
 
   const url = new URL(
-    `/dashboard/tarot/readings/${resolved.spreadId}`,
+    `/service/tarot/readings/${resolved.spreadId}`,
     "http://placeholder.local",
   );
   url.searchParams.set("bookingId", bookingId);
