@@ -73,7 +73,10 @@ import { MIGRATION_SQL as MIG_20260423000004_FIX } from "@/data/migrations/20260
 import { MIGRATION_SQL as MIG_20260423000005_ACC } from "@/data/migrations/20260423000005_accept_rpc";
 import { MIGRATION_SQL as MIG_20260424000001_ODC } from "@/data/migrations/20260424000001_phone_sessions_outbound_diviner_call";
 import { MIGRATION_SQL as MIG_20260424000002_AAR } from "@/data/migrations/20260424000002_astro_ai_responses";
+import { MIGRATION_SQL as MIG_20260427000001_SRL } from "@/data/migrations/20260427000001_saved_report_linkage";
 import { MIGRATION_SQL as MIG_20260424000010_ACV2A } from "@/data/migrations/20260424000010_affiliate_commission_v2_additive";
+import { MIGRATION_SQL as MIG_20260424009001_ACV2D } from "@/data/migrations/20260424009001_affiliate_commission_v2_destructive";
+import { MIGRATION_SQL as MIG_20260427000002_ARV2A } from "@/data/migrations/20260427000002_affiliate_rls_v2_alignment";
 
 /**
  * Allowlisted migrations that the admin migration runner can execute.
@@ -667,6 +670,22 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
     sortKey: "20260424000002",
     sql: MIG_20260424000002_AAR,
   },
+  "20260427000001_saved_report_linkage": {
+    id: "20260427000001_saved_report_linkage",
+    title: "Saved report linkage (community domain ↔ astro_ai_responses)",
+    description:
+      "Additive. Adds natal_report_id/natal_report_generated_at/natal_report_status to community_family_members; full_report_id/full_report_generated_at/full_report_status to monthly_transits; report_id/report_type/report_generated_at/report_status to relationship_charts. CHECK-constrained statuses (missing|generating|generated|failed|stale|locked_for_review) and report_type (friendship|romantic|partnership). Creates community_relationship_reports child table so a single pair can have multiple report types simultaneously, with unique (person_a_id, person_b_id, report_type) and a person_a_id < person_b_id sort guard. Indexed for 'find report by id' and 'list by member+status' patterns. RLS: service_role full; authenticated members see only their own household rows. Existing chart_data / natal_chart / transit_data columns are untouched so legacy rows remain viewable during rollout. Rollback: DROP COLUMN ... and DROP TABLE community_relationship_reports.",
+    sortKey: "20260427000001",
+    sql: MIG_20260427000001_SRL,
+  },
+  "20260427000002_affiliate_rls_v2_alignment": {
+    id: "20260427000002_affiliate_rls_v2_alignment",
+    title: "Affiliate RLS v2 alignment (commission v2 sprint)",
+    description:
+      "Aligns affiliate-side SELECT policies with the v2 junction model. Pre-v2 policies assumed *.affiliate_id = auth.users.id; v2 changed affiliate_id to point at diviner_affiliates.id (the junction). Replaces the broken diviner_service_affiliates_select_affiliate policy and adds 5 missing policies: affiliate_sees_own_campaigns + affiliate_inserts_own_campaigns + affiliate_updates_own_campaigns on affiliate_campaigns; affiliate_sees_own_clicks on campaign_clicks; affiliate_sees_own_conversions on campaign_conversions. All resolve auth.uid() → affiliate_accounts.user_id → diviner_affiliates.id. The API was always service-role (RLS bypass) so no production regression — but spec §8 promised affiliates can read their slice via auth client and that promise was unfulfilled. Caught by Task 08 RLS test suite. Idempotent + sanity-checked.",
+    sortKey: "20260427000002",
+    sql: MIG_20260427000002_ARV2A,
+  },
   "20260423000004_fix_invite_rpc_ambiguity": {
     id: "20260423000004_fix_invite_rpc_ambiguity",
     title: "Fix column/variable ambiguity in invite RPCs (Task 02 follow-up)",
@@ -706,6 +725,14 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Task 01a of the Affiliate Commission v2 sprint. Strictly additive. Creates diviner_service_affiliate_rate_history (full rate-edit audit keyed on assignment_id) and admin_action_log (force-revoke / force-archive / reverse events). Adds three stamp columns to bookings (commission_source_assignment_id, commission_rate_type_stamp, commission_rate_value_stamp) so the rate that pays out on a conversion is captured at booking creation time, not resolved live at webhook (spec §3.8). Adds rate_type_used + rate_value_used on campaign_conversions for permanent webhook-time audit. Extends affiliate_campaigns.status CHECK to allow 'archived'. Hardens campaign_conversions.campaign_id FK from ON DELETE CASCADE to ON DELETE RESTRICT so hard-delete of a campaign with conversions errors rather than cascade-wiping history. RLS: service_role ALL on both new tables, plus diviner/affiliate scoped SELECT on rate history and admin-only SELECT on action log. Idempotent: IF NOT EXISTS guards, DO blocks on policy + constraint work, end-of-migration sanity check raises if any of the four required additions didn't land. Spec: docs/specs/affiliate-commission-system.md (v1.2).",
     sortKey: "20260424000010",
     sql: MIG_20260424000010_ACV2A,
+  },
+  "20260424009001_affiliate_commission_v2_destructive": {
+    id: "20260424009001_affiliate_commission_v2_destructive",
+    title: "Affiliate Commission v2 — destructive (drop System A tables, trim status enums)",
+    description:
+      "Task 01b of the Affiliate Commission v2 sprint. **DESTRUCTIVE** — drops 6 System A tables (affiliate_commission_history, affiliate_commissions, affiliate_payouts, affiliate_payout_items, affiliate_clicks, affiliate_referral_links) with CASCADE. Defensive backfill collapses any 'suspended' affiliate_accounts.status values to 'blocked' before trimming the enum to (unclaimed | active | blocked). Trims affiliate_campaigns.status to (active | paused | archived | expired); pre-existing 'draft' rows become 'active', 'completed' becomes 'archived'. Relaxes affiliate_campaigns_owner_consistency CHECK so the snapshot columns are no longer required (rate now lives on the booking stamp per spec v1.2). The snapshot columns themselves are NOT dropped — the advocate service still writes them, and dropping them is deferred to a future cross-service cleanup. Run AFTER 01a additive + Tasks 02 + 04 + 07-Phase-A have shipped. Idempotent (DROP IF EXISTS, status updates are no-ops on already-clean data, CHECK swap uses IF EXISTS). End-of-migration sanity check raises if anything didn't drop or any out-of-range status survived.",
+    sortKey: "20260424009001",
+    sql: MIG_20260424009001_ACV2D,
   },
 };
 

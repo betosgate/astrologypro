@@ -3,15 +3,15 @@
  *
  * Diviner-facing tarot reading page scoped to a specific booking.
  *
- * Strategy: redirect to the existing /admin/tarot/readings/[spreadId] page,
+ * Strategy: redirect to the dashboard tarot reading page,
  * which ALREADY renders exactly one spread (single-spread UI). Extra query
  * params carry the booking context for later enhancement (persistence,
  * "reading for <client name>" banner). The existing page ignores unknown
  * params, so no code change to the reading client is required.
  *
- * Auth: requireDivinerOrAdminForBooking. The smart router at /admin/session/
- * also enforces this, but callers CAN bookmark this URL directly, so we guard
- * here too (defense in depth, CLAUDE.md §3).
+ * Auth: requireDivinerOrAdminForBooking. The dashboard smart router also
+ * enforces this, but callers CAN bookmark this URL directly, so we guard here
+ * too.
  */
 
 import { redirect, notFound } from "next/navigation";
@@ -42,7 +42,7 @@ export default async function TarotSessionPage({ params }: PageProps) {
   const template = booking.service_templates;
   if (!template || template.category !== "tarot") {
     // Wrong category — this route is tarot-only. Use the smart router.
-    redirect(`/admin/session/${bookingId}`);
+    redirect(`/service/session/${bookingId}`);
   }
 
   const admin = createAdminClient();
@@ -58,7 +58,7 @@ export default async function TarotSessionPage({ params }: PageProps) {
   // bookingId + fromBooking. They're included for later enhancements
   // (reading persistence, client-name banner) without breaking today.
   const url = new URL(
-    `/admin/tarot/readings/${resolved.spreadId}`,
+    `/service/tarot/readings/${resolved.spreadId}`,
     "http://placeholder.local",
   );
   url.searchParams.set("bookingId", bookingId);

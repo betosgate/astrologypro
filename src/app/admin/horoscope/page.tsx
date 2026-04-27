@@ -1822,6 +1822,75 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
 
 // ─── Transit Section ──────────────────────────────────────────────────────────
 
+type TransitAiCard = {
+  date: string | null;
+  title: string;
+  interpretation: string;
+  raw: unknown;
+};
+
+function pickString(record: Record<string, unknown>, keys: string[]): string | null {
+  for (const key of keys) {
+    const value = record[key];
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
+  return null;
+}
+
+function extractTransitAiCards(input: unknown): TransitAiCard[] {
+  const cards: TransitAiCard[] = [];
+
+  function collect(node: unknown, inheritedDate: string | null = null) {
+    const parsed = parseAiJsonResponse(node);
+    if (parsed !== node) {
+      collect(parsed, inheritedDate);
+      return;
+    }
+
+    if (Array.isArray(node)) {
+      node.forEach((entry) => collect(entry, inheritedDate));
+      return;
+    }
+
+    if (!node || typeof node !== "object") return;
+
+    const record = node as Record<string, unknown>;
+    const date =
+      pickString(record, ["date", "transit_date", "month", "period"]) ??
+      inheritedDate;
+
+    for (const key of ["transits", "items", "entries", "data"]) {
+      if (Array.isArray(record[key])) collect(record[key], date);
+    }
+
+    const title =
+      pickString(record, ["aspecttitle", "aspectTitle", "aspect_title", "heading", "title", "aspect"]) ??
+      "";
+    const interpretation = normalizeInterpretationText(
+      record.interpretation ??
+        record.interpret ??
+        record.body_text ??
+        record.body ??
+        record.content ??
+        record.description ??
+        record.text ??
+        record.forecast
+    );
+
+    if (!title && !interpretation) return;
+
+    cards.push({
+      date,
+      title: title || "Transit Interpretation",
+      interpretation,
+      raw: node,
+    });
+  }
+
+  collect(input);
+  return cards.filter((card) => card.interpretation.trim());
+}
+
 function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, areaOfInquiry, checkDacen, onDecanClick, transitWheelSvg, setChartModal }: {
   data: any; lunarMetrics?: any; aiData: any; lunarAiData?: any; tabSlug: string; areaOfInquiry?: string;
   checkDacen: (p: string, s: string) => boolean;
@@ -1833,6 +1902,7 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
   const isWeekly = tabSlug === "tropical_transits_weekly_v2";
   const label = isWeekly ? "Weekly Transits" : "Monthly Transits";
   const isMonthlyV3 = tabSlug === "tropical_transits_monthly_v3";
+  const monthlyTransitAiCards = isMonthlyV3 ? extractTransitAiCards(aiData) : [];
 
   function toTimestamp(value: unknown): number {
     if (typeof value !== "string" || !value.trim()) return Number.POSITIVE_INFINITY;
@@ -2032,37 +2102,71 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
 
       {/* Future Tropical Transits Monthly Relation Table — specifically for monthly v3 */}
       {tabSlug === "tropical_transits_monthly_v3" && transitRows.length > 0 && (
-        <div className="horoscope-table-container">
-          <div className="horoscope-table-header">
-            <h3>Future Tropical Transits Monthly Relation</h3>
+        <div className="space-y-4">
+          <div className="horoscope-table-container">
+            <div className="horoscope-table-header">
+              <h3>Future Tropical Transits Monthly Relation</h3>
+            </div>
+            <div className="horoscope-table-wrapper">
+              <table className="horoscope-table">
+                <thead>
+                  <tr>
+                    {["Date", "Natal Planet", "Type", "Transit Planet"].map((h) => (
+                      <th key={h}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {transitRows.map((row: any, i: number) => {
+                    const tPlanet = row.transit_planet ?? row.transiting_planet ?? "";
+                    const nPlanet = row.natal_planet ?? row.aspected_planet ?? "";
+                    const aspType = row.type ?? row.aspect ?? "";
+                    const dt = row.date ?? row.transit_date ?? "";
+                    return (
+                      <tr key={i}>
+                        <td className="td-mono">{dt || "—"}</td>
+                        <td>{nPlanet ? <PlanetSymbol name={nPlanet} /> : "—"}</td>
+                        <td><AspectSymbol type={aspType} /></td>
+                        <td>{tPlanet ? <PlanetSymbol name={tPlanet} /> : "—"}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
-          <div className="horoscope-table-wrapper">
-            <table className="horoscope-table">
-              <thead>
-                <tr>
-                  {["Date", "Natal Planet", "Type", "Transit Planet"].map((h) => (
-                    <th key={h}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {transitRows.map((row: any, i: number) => {
-                  const tPlanet = row.transit_planet ?? row.transiting_planet ?? "";
-                  const nPlanet = row.natal_planet ?? row.aspected_planet ?? "";
-                  const aspType = row.type ?? row.aspect ?? "";
-                  const dt = row.date ?? row.transit_date ?? "";
-                  return (
-                    <tr key={i}>
-                      <td className="td-mono">{dt || "—"}</td>
-                      <td>{nPlanet ? <PlanetSymbol name={nPlanet} /> : "—"}</td>
-                      <td><AspectSymbol type={aspType} /></td>
-                      <td>{tPlanet ? <PlanetSymbol name={tPlanet} /> : "—"}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+
+          {!aiData && (
+            <SectionSkeleton title="Future Tropical Transits Monthly Relation Interpretation" />
+          )}
+          {aiData === "error" && (
+            <SectionError title="Future Tropical Transits Monthly Relation Interpretation" />
+          )}
+          {monthlyTransitAiCards.length > 0 && (
+            <div className="space-y-3">
+              {monthlyTransitAiCards.map((card, i) => (
+                <div key={`${card.date ?? "date"}-${card.title}-${i}`} className="rounded-lg border overflow-hidden">
+                  <div className="px-4 py-3 horoscope-interp-header flex items-center justify-center">
+                    <div className="flex flex-col items-center gap-2 text-center">
+
+                      <SmartHeading title={card.title} textSize="text-[22px]" iconSize="size-7" className="text-black" />
+                    </div>
+                  </div>
+                  <div className="interp-gradient-default px-4 py-3 pb-8" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 400, lineHeight: '26px', color: '#000' }}>
+                    <p className="leading-relaxed whitespace-pre-line">{card.interpretation}</p>
+                    <div className="mt-2 flex justify-center pt-2 border-t border-black/10">
+                      <button
+                        onClick={() => trigger(card.title, card.interpretation, card.raw, areaOfInquiry)}
+                        className="horoscope-show-more"
+                      >
+                        Show More
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -2155,9 +2259,9 @@ function TransitSection({ data, lunarMetrics, aiData, lunarAiData, tabSlug, area
       )}
 
       {/* AI interpretation cards */}
-      {!aiData && <SectionSkeleton title={`${label} Interpretation`} />}
-      {aiData === "error" && <SectionError title={`${label} Interpretation`} />}
-      {Array.isArray(aiData) && aiData.map((item: any, i: number) => {
+      {!isMonthlyV3 && !aiData && <SectionSkeleton title={`${label} Interpretation`} />}
+      {!isMonthlyV3 && aiData === "error" && <SectionError title={`${label} Interpretation`} />}
+      {!isMonthlyV3 && Array.isArray(aiData) && aiData.map((item: any, i: number) => {
         const title = item.aspecttitle ?? item.title ?? item.aspect ?? "";
         const interpretation = normalizeInterpretationText(item.interpretation ?? item.data ?? "");
         if (!interpretation) return null;
@@ -3398,6 +3502,15 @@ export function HoroscopeToolkitPage({
       // and raw data to avoid repeated AI costs. The external endpoint is the
       // legacy CloudFront-fronted NestJS API. We fire-and-forget because a
       // save failure should not block the user from seeing their results.
+      //
+      // community-monthly-transit-architecture Task 02 partial (2026-04-27):
+      // We ALSO fire the same payload at the local Supabase-backed
+      // /api/astro-ai/save-astro-ai-response so the report is reusable
+      // via /api/astro-ai/lookup-saved on subsequent visits. Both legacy
+      // and local saves are fire-and-forget — neither blocks the user
+      // and either failing alone does not affect the displayed result.
+      // The legacy save remains in place; the lookup/read repointing is
+      // intentionally a follow-up so this UI is not refactored here.
       if (currentTab.slug === "tropical_transits_monthly_v3") {
         try {
           const savePayload = {
@@ -3416,6 +3529,13 @@ export function HoroscopeToolkitPage({
               body: JSON.stringify(savePayload),
             },
           ).catch(() => { });
+
+          // Parallel local save — same payload shape, different URL.
+          fetch("/api/astro-ai/save-astro-ai-response", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(savePayload),
+          }).catch(() => { });
         } catch {
           /* ignore save errors */
         }
@@ -3453,6 +3573,13 @@ export function HoroscopeToolkitPage({
               body: JSON.stringify(savePayload),
             },
           ).catch(() => { });
+
+          // Parallel local save — see comment above for rationale.
+          fetch("/api/astro-ai/save-astro-ai-response", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(savePayload),
+          }).catch(() => { });
         } catch {
           /* ignore save errors */
         }

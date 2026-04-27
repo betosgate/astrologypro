@@ -798,7 +798,11 @@ export default async function AdminBookingsPage({
                             />
                             {sessionLinksByBookingId[b.id] ? (
                               <Button variant="outline" size="sm" asChild>
-                                <Link href={sessionLinksByBookingId[b.id]!}>
+                                <Link
+                                  href={sessionLinksByBookingId[b.id]!}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                >
                                   <Sparkles className="h-3.5 w-3.5" />
                                   Open Service
                                 </Link>

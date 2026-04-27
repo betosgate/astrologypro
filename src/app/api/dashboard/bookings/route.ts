@@ -81,7 +81,7 @@ export async function GET(request: NextRequest) {
          base_price,
          total_amount,
          session_notes,
-         services(id, name, category),
+         services(id, name, category, duration_minutes),
          clients(id, full_name, email)`
       )
       .eq("owner_id", ownerId)

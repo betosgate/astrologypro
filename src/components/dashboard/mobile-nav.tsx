@@ -22,6 +22,7 @@ import {
   Wallet,
   Target,
   BarChart3,
+  Bell,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -44,6 +45,7 @@ const moreNavItems = [
   { label: "Landing Pages", href: "/dashboard/landing-pages", icon: LayoutTemplate },
   { label: "Campaigns", href: "/dashboard/campaigns", icon: Target },
   { label: "Analytics", href: "/dashboard/analytics", icon: BarChart3 },
+  { label: "Notifications", href: "/dashboard/notifications", icon: Bell },
   { label: "Profile", href: "/dashboard/profile", icon: User },
   { label: "Settings", href: "/dashboard/settings", icon: Settings },
   { label: "Testimonials", href: "/dashboard/testimonials", icon: MessageSquare },

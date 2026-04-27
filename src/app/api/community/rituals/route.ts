@@ -1,10 +1,33 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import {
+  buildRitualIdentityKey,
+  normalizeRitualTags,
+} from "@/lib/community/ritual-identity";
 
 export const dynamic = "force-dynamic";
 
-// GET /api/community/rituals — list current user's ritual configurations
-export async function GET() {
+/**
+ * GET /api/community/rituals
+ *
+ * Lists the current user's ritual configurations.
+ *
+ * Query params (all optional — when none are provided the response shape
+ * stays exactly as it was before pagination was introduced, so existing
+ * callers do not break):
+ *   - limit  : page size (1..100). When provided, response includes
+ *              `count`, `nextOffset`, `hasMore` for infinite-scroll UIs.
+ *   - offset : zero-based offset into the result set. Defaults to 0.
+ *   - ritualName : exact ritual name filter
+ *   - status     : one of completed | in-progress | never-performed
+ *   - dateFrom   : inclusive created_at lower bound (YYYY-MM-DD)
+ *   - dateTo     : inclusive created_at upper bound (YYYY-MM-DD)
+ *
+ * Ordering is deterministic: `created_at DESC, id DESC`. The `id` tie-
+ * breaker (per project rule #16) guarantees stable pagination even when
+ * multiple rows share a `created_at` timestamp.
+ */
+export async function GET(req: NextRequest) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -21,19 +44,167 @@ export async function GET() {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const { data, error } = await supabase
+  // Parse pagination params. Pagination is opt-in: if no `limit` is
+  // supplied we return the full list (legacy behavior).
+  const url = new URL(req.url);
+  const rawLimit = url.searchParams.get("limit");
+  const rawOffset = url.searchParams.get("offset");
+  const ritualName = url.searchParams.get("ritualName")?.trim() ?? "";
+  const status = url.searchParams.get("status")?.trim() ?? "";
+  const dateFrom = url.searchParams.get("dateFrom")?.trim() ?? "";
+  const dateTo = url.searchParams.get("dateTo")?.trim() ?? "";
+  const paginated = rawLimit !== null;
+
+  let limit = 0;
+  let offset = 0;
+
+  if (paginated) {
+    const parsedLimit = Number.parseInt(rawLimit ?? "", 10);
+    if (!Number.isFinite(parsedLimit) || parsedLimit <= 0) {
+      return NextResponse.json(
+        { error: "limit must be a positive integer" },
+        { status: 422 }
+      );
+    }
+    // Cap page size so a malicious client can't ask for the whole table.
+    limit = Math.min(parsedLimit, 100);
+
+    if (rawOffset !== null) {
+      const parsedOffset = Number.parseInt(rawOffset, 10);
+      if (!Number.isFinite(parsedOffset) || parsedOffset < 0) {
+        return NextResponse.json(
+          { error: "offset must be a non-negative integer" },
+          { status: 422 }
+        );
+      }
+      offset = parsedOffset;
+    }
+  }
+
+  if (
+    status.length > 0 &&
+    status !== "completed" &&
+    status !== "in-progress" &&
+    status !== "never-performed"
+  ) {
+    return NextResponse.json(
+      { error: "status must be completed, in-progress, or never-performed" },
+      { status: 422 }
+    );
+  }
+
+  if (dateFrom && Number.isNaN(Date.parse(`${dateFrom}T00:00:00.000Z`))) {
+    return NextResponse.json(
+      { error: "dateFrom must be a valid YYYY-MM-DD date" },
+      { status: 422 }
+    );
+  }
+
+  if (dateTo && Number.isNaN(Date.parse(`${dateTo}T23:59:59.999Z`))) {
+    return NextResponse.json(
+      { error: "dateTo must be a valid YYYY-MM-DD date" },
+      { status: 422 }
+    );
+  }
+
+  // Build the base query. We always order by (created_at DESC, id DESC)
+  // for deterministic pagination — the trailing `id` is the unique tie-
+  // breaker required by project rule #16.
+  let query = supabase
     .from("user_ritual_configurations")
     .select(
-      "id, ritual_name, ritual_tags, created_at, updated_at, last_executed_at, execution_count, current_step, is_complete"
+      "id, ritual_name, ritual_tags, created_at, updated_at, last_executed_at, execution_count, current_step, is_complete",
+      paginated ? { count: "exact" } : undefined
     )
     .eq("user_id", user.id)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: false });
 
+  if (ritualName) {
+    query = query.eq("ritual_name", ritualName);
+  }
+
+  if (status === "completed") {
+    query = query.eq("is_complete", true);
+  } else if (status === "in-progress") {
+    query = query.eq("is_complete", false).gt("current_step", 0);
+  } else if (status === "never-performed") {
+    query = query.eq("is_complete", false).eq("current_step", 0);
+  }
+
+  if (dateFrom) {
+    query = query.gte("created_at", `${dateFrom}T00:00:00.000Z`);
+  }
+
+  if (dateTo) {
+    query = query.lte("created_at", `${dateTo}T23:59:59.999Z`);
+  }
+
+  if (paginated) {
+    query = query.range(offset, offset + limit - 1);
+  }
+
+  const { data, error, count } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ rituals: data ?? [] });
+
+  const rituals = data ?? [];
+
+  if (!paginated) {
+    // Legacy callers (and anything we may have missed) keep the old shape.
+    return NextResponse.json({ rituals });
+  }
+
+  const { data: ritualNameRows, error: ritualNamesError } = await supabase
+    .from("user_ritual_configurations")
+    .select("ritual_name")
+    .eq("user_id", user.id)
+    .order("ritual_name", { ascending: true });
+
+  if (ritualNamesError) {
+    return NextResponse.json(
+      { error: ritualNamesError.message },
+      { status: 500 }
+    );
+  }
+
+  const ritualNames = Array.from(
+    new Set((ritualNameRows ?? []).map((row) => row.ritual_name).filter(Boolean))
+  );
+
+  const totalCount = count ?? 0;
+  const nextOffset = offset + rituals.length;
+  const hasMore = nextOffset < totalCount;
+
+  return NextResponse.json({
+    rituals,
+    ritualNames,
+    count: totalCount,
+    nextOffset,
+    hasMore,
+  });
 }
 
-// POST /api/community/rituals — create a new ritual configuration
+/**
+ * POST /api/community/rituals
+ *
+ * Idempotent create. If a ritual with the same canonical identity
+ * (ritual_name + normalized ritual_tags) already exists for this user,
+ * the existing record is returned instead of inserting a duplicate.
+ *
+ * When multiple historical duplicates exist (older rows from before this
+ * change shipped), we deterministically prefer the OLDEST one — that
+ * preserves the user's original ritual record and any execution state
+ * already attached to it.
+ *
+ * Response shape:
+ *   { ritual: <row>, created: boolean }
+ *
+ * `created: false` means we resolved to an existing ritual.
+ * `created: true`  means we inserted a brand new row.
+ *
+ * The status code is 200 when reusing, 201 when creating — consistent
+ * with HTTP semantics.
+ */
 export async function POST(req: NextRequest) {
   const supabase = await createClient();
   const {
@@ -56,24 +227,85 @@ export async function POST(req: NextRequest) {
     ritual_tags?: string[];
   };
 
-  if (!ritual_name || !Array.isArray(ritual_tags) || ritual_tags.length === 0) {
+  if (
+    typeof ritual_name !== "string" ||
+    ritual_name.trim().length === 0 ||
+    !Array.isArray(ritual_tags) ||
+    ritual_tags.length === 0
+  ) {
     return NextResponse.json(
       { error: "ritual_name and ritual_tags are required" },
       { status: 422 }
     );
   }
 
-  const { data, error } = await supabase
+  // Compute the canonical identity for the request.
+  const incomingKey = buildRitualIdentityKey(ritual_name, ritual_tags);
+  const incomingNormalizedTags = normalizeRitualTags(ritual_tags);
+  if (incomingNormalizedTags.length === 0) {
+    return NextResponse.json(
+      { error: "ritual_tags must contain at least one non-empty tag" },
+      { status: 422 }
+    );
+  }
+
+  // Look up existing rituals with the same name for this user. We
+  // narrow by `ritual_name` in SQL to keep the scan small, then compare
+  // the canonical tag set in JS — this avoids relying on the raw tag
+  // ordering that was historically stored, which could differ between
+  // rows even for the same logical ritual.
+  //
+  // Order ASC so the first match is the OLDEST duplicate (see doc above).
+  const { data: existingRows, error: lookupError } = await supabase
+    .from("user_ritual_configurations")
+    .select(
+      "id, ritual_name, ritual_tags, created_at, updated_at, last_executed_at, execution_count, current_step, is_complete"
+    )
+    .eq("user_id", user.id)
+    .eq("ritual_name", ritual_name.trim())
+    .order("created_at", { ascending: true })
+    .order("id", { ascending: true });
+
+  if (lookupError) {
+    return NextResponse.json({ error: lookupError.message }, { status: 500 });
+  }
+
+  const match = (existingRows ?? []).find(
+    (row) =>
+      buildRitualIdentityKey(row.ritual_name, row.ritual_tags ?? []) ===
+      incomingKey
+  );
+
+  if (match) {
+    return NextResponse.json(
+      { ritual: match, created: false },
+      { status: 200 }
+    );
+  }
+
+  // No duplicate found — insert a new row. We persist the tags exactly
+  // as the client sent them (preserving the UI's intentional ordering
+  // for display), and rely on `buildRitualIdentityKey` for future
+  // dedupe lookups rather than mutating storage.
+  const { data: inserted, error: insertError } = await supabase
     .from("user_ritual_configurations")
     .insert({
       user_id: user.id,
       community_member_id: member.id,
-      ritual_name,
+      ritual_name: ritual_name.trim(),
       ritual_tags,
     })
-    .select("id, ritual_name, ritual_tags, created_at")
+    .select(
+      "id, ritual_name, ritual_tags, created_at, updated_at, last_executed_at, execution_count, current_step, is_complete"
+    )
     .single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ ritual: data }, { status: 201 });
+  if (insertError) {
+    return NextResponse.json({ error: insertError.message }, { status: 500 });
+  }
+
+  return NextResponse.json(
+    { ritual: inserted, created: true },
+    { status: 201 }
+  );
 }

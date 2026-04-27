@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   Card,
@@ -11,20 +11,16 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { Separator } from "@/components/ui/separator";
 import {
   Flame,
   Loader2,
   AlertCircle,
-  ChevronLeft,
-  ChevronRight,
-  Check,
   RotateCcw,
   Sparkles,
+  Play,
 } from "lucide-react";
 import { formatDate } from "@/lib/format";
-import { RitualVideoPlayer } from "@/components/community/ritual-video-player";
+import { buildRitualPlaylist } from "@/lib/community/ritual-video-map";
 
 type RitualConfig = {
   id: string;
@@ -36,15 +32,6 @@ type RitualConfig = {
   execution_count: number;
   current_step: number;
   is_complete: boolean;
-};
-
-type Invocation = {
-  id: string;
-  name: string;
-  description: string | null;
-  instructions: string | null;
-  priority: number;
-  video_url: string | null;
 };
 
 function getDisplayTags(ritualName: string, tags: string[]): string[] {
@@ -59,58 +46,29 @@ function getDisplayTags(ritualName: string, tags: string[]): string[] {
   return primaryTags.length > 0 ? primaryTags : tags;
 }
 
-// Canonical ordering: Opening -> Gate -> Invocation/Banishing -> Closing
-function canonicalSort(invocations: Invocation[]): Invocation[] {
-  const rank = (name: string): number => {
-    if (name.includes("Opening")) return 0;
-    if (name.includes("Gate")) return 1;
-    if (name.includes("Closing")) return 3;
-    return 2;
-  };
-
-  return [...invocations].sort((a, b) => {
-    const diff = rank(a.name) - rank(b.name);
-    if (diff !== 0) return diff;
-    return (a.priority ?? 0) - (b.priority ?? 0);
-  });
-}
-
 export default function RitualDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const id = params?.id as string;
 
   const [ritual, setRitual] = useState<RitualConfig | null>(null);
-  const [invocations, setInvocations] = useState<Invocation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
-  const [showSacredSpaceOverlay, setShowSacredSpaceOverlay] = useState(false);
 
   useEffect(() => {
     if (!id) return;
 
     void (async () => {
-      const res = await fetch(`/api/community/rituals/${id}`);
-      if (!res.ok) {
+      const response = await fetch(`/api/community/rituals/${id}`);
+      if (!response.ok) {
         setError("Ritual not found.");
         setLoading(false);
         return;
       }
 
-      const data = await res.json();
+      const data = await response.json();
       setRitual(data.ritual);
-      setInvocations(canonicalSort(data.invocations ?? []));
-
-      const nextRitual: RitualConfig = data.ritual;
-      if (nextRitual.is_complete) {
-        setStep((data.invocations?.length ?? 0) + 1);
-      } else if (nextRitual.current_step > 0) {
-        setStep(nextRitual.current_step);
-      } else {
-        setStep(0);
-      }
-
       setLoading(false);
     })();
   }, [id]);
@@ -119,58 +77,39 @@ export default function RitualDetailPage() {
     current_step?: number;
     is_complete?: boolean;
     reset?: boolean;
-  }) {
+  }): Promise<RitualConfig | null> {
     setSaving(true);
-    const res = await fetch(`/api/community/rituals/${id}`, {
+    const response = await fetch(`/api/community/rituals/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
 
-    if (res.ok) {
-      const data = await res.json();
+    if (response.ok) {
+      const data = await response.json();
       setRitual(data.ritual);
+      setSaving(false);
+      return data.ritual as RitualConfig;
     }
 
     setSaving(false);
+    return null;
   }
 
-  async function handleBegin() {
-    if (invocations.length > 1) {
-      setShowSacredSpaceOverlay(true);
-      return;
-    }
-
-    setStep(1);
-    await patchStep({ current_step: 1 });
+  function handleBegin() {
+    router.push(`/community/rituals/${id}/playback`);
   }
 
-  async function handleBeginAfterOverlay() {
-    setShowSacredSpaceOverlay(false);
-    setStep(1);
-    await patchStep({ current_step: 1 });
+  async function handlePerformAgain() {
+    const updatedRitual = await patchStep({ reset: true });
+    if (!updatedRitual) return;
+    router.push(`/community/rituals/${id}/playback`);
   }
 
-  async function handleNext() {
-    const nextStep = step + 1;
-    setStep(nextStep);
-    await patchStep({ current_step: nextStep });
-  }
-
-  async function handleComplete() {
-    const completeStep = invocations.length + 1;
-    setStep(completeStep);
-    await patchStep({ current_step: completeStep, is_complete: true });
-  }
-
-  async function handleReset() {
-    setStep(0);
-    await patchStep({ reset: true });
-  }
-
-  function handlePrevious() {
-    setStep((currentStep) => Math.max(0, currentStep - 1));
-  }
+  const playlist = useMemo(
+    () => (ritual ? buildRitualPlaylist(ritual.ritual_tags) : []),
+    [ritual]
+  );
 
   if (loading) {
     return (
@@ -183,7 +122,7 @@ export default function RitualDetailPage() {
 
   if (error || !ritual) {
     return (
-      <div className="max-w-2xl space-y-4">
+      <div className="mx-auto max-w-5xl space-y-4">
         <div className="flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
           <AlertCircle className="size-4 shrink-0" />
           {error ?? "Ritual not found."}
@@ -195,98 +134,22 @@ export default function RitualDetailPage() {
     );
   }
 
-  if (showSacredSpaceOverlay) {
-    return (
-      <div className="fixed inset-0 z-50 flex flex-col items-center justify-center overflow-hidden bg-background">
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-amber-950/60 via-background to-purple-950/40" />
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_40%,rgba(245,158,11,0.12),transparent_65%)]" />
-
-        <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-          <div
-            className="size-72 animate-ping rounded-full border border-amber-500/10"
-            style={{ animationDuration: "3s" }}
-          />
-        </div>
-        <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-          <div
-            className="size-96 animate-ping rounded-full border border-amber-500/5"
-            style={{ animationDuration: "4.5s" }}
-          />
-        </div>
-
-        <div className="relative z-10 flex max-w-lg flex-col items-center gap-8 px-6 text-center">
-          <div className="flex size-24 items-center justify-center rounded-3xl bg-gradient-to-br from-amber-500/20 to-orange-500/10 ring-2 ring-amber-500/20 shadow-2xl shadow-amber-500/10">
-            <Flame className="size-12 text-amber-300" aria-hidden="true" />
-          </div>
-
-          <div className="space-y-3">
-            <h2 className="text-3xl font-bold tracking-tight text-white">
-              Prepare Sacred Space
-            </h2>
-            <p className="mx-auto max-w-sm leading-relaxed text-muted-foreground">
-              Take a moment to center yourself and prepare your space before
-              beginning{" "}
-              <span className="font-semibold text-amber-300">
-                {ritual.ritual_name}
-              </span>
-              .
-            </p>
-            <p className="text-sm text-muted-foreground/60">
-              This ritual has{" "}
-              <span className="font-medium text-foreground/60">
-                {invocations.length} step{invocations.length !== 1 ? "s" : ""}
-              </span>
-              . Complete them in sacred order.
-            </p>
-          </div>
-
-          <div className="max-h-40 w-full space-y-2 overflow-y-auto rounded-2xl border border-amber-500/10 bg-white/5 p-4 backdrop-blur-md">
-            {invocations.map((invocation, index) => (
-              <div
-                key={invocation.id}
-                className="flex items-center gap-3 rounded-lg px-3 py-1.5 text-left text-sm"
-              >
-                <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-amber-500/20 text-xs font-bold text-amber-400">
-                  {index + 1}
-                </span>
-                <span className="truncate text-white/70">
-                  {invocation.name.replace(/_/g, " ")}
-                </span>
-              </div>
-            ))}
-          </div>
-
-          <div className="flex flex-wrap justify-center gap-3">
-            <Button
-              size="lg"
-              onClick={handleBeginAfterOverlay}
-              className="bg-gradient-to-r from-amber-500 to-orange-500 px-8 text-base font-semibold text-white shadow-xl shadow-amber-500/20 hover:from-amber-400 hover:to-orange-400"
-            >
-              <Flame className="mr-2 size-5" />
-              Begin the Ritual
-            </Button>
-            <Button
-              variant="ghost"
-              size="lg"
-              onClick={() => setShowSacredSpaceOverlay(false)}
-              className="text-muted-foreground hover:text-foreground"
-            >
-              Not Yet
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const totalSteps = invocations.length;
-  const isComplete = step > totalSteps;
-  const isActive = step > 0 && step <= totalSteps;
-  const isPrep = step === 0;
-  const currentInvocation = isActive ? invocations[step - 1] : null;
+  const totalSteps = playlist.length;
+  const isInProgress = ritual.current_step > 0 && !ritual.is_complete;
+  const isComplete = ritual.is_complete;
+  const completedSteps = isComplete
+    ? totalSteps
+    : Math.max(ritual.current_step - 1, 0);
+  const nextStepNumber =
+    totalSteps === 0
+      ? 0
+      : Math.min(Math.max(ritual.current_step, 1), totalSteps);
   const progressPct =
-    totalSteps > 0 ? Math.round((step / totalSteps) * 100) : 0;
+    totalSteps > 0 ? Math.round((completedSteps / totalSteps) * 100) : 0;
   const displayTags = getDisplayTags(ritual.ritual_name, ritual.ritual_tags);
+  const lastPerformedLabel = ritual.last_executed_at
+    ? formatDate(ritual.last_executed_at)
+    : "Never";
 
   const ordinal = (value: number) => {
     const suffixes = ["th", "st", "nd", "rd"];
@@ -298,13 +161,13 @@ export default function RitualDetailPage() {
     const completionCount = ritual.execution_count;
 
     return (
-      <div className="max-w-2xl space-y-6">
-        <Link
+      <div className="mx-auto max-w-5xl space-y-6">
+        {/* <Link
           href="/community/rituals"
           className="text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
         >
           My Rituals
-        </Link>
+        </Link> */}
 
         <div className="relative overflow-hidden rounded-2xl border border-amber-500/20 bg-gradient-to-br from-amber-950/30 via-background to-purple-950/20 px-8 py-14 text-center shadow-xl">
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_0%,rgba(245,158,11,0.1),transparent_70%)]" />
@@ -334,7 +197,7 @@ export default function RitualDetailPage() {
             </div>
             <div className="flex flex-wrap justify-center gap-3">
               <Button
-                onClick={handleReset}
+                onClick={handlePerformAgain}
                 disabled={saving}
                 variant="outline"
                 className="border-amber-500/30 text-amber-400 hover:bg-amber-500/10"
@@ -359,118 +222,119 @@ export default function RitualDetailPage() {
     );
   }
 
-  if (isActive) {
-    const isLastStep = step === totalSteps;
-
+  if (isInProgress) {
     return (
-      <div className="max-w-2xl space-y-6">
-        <Link
+      <div className="mx-auto max-w-5xl space-y-6">
+        {/* <Link
           href="/community/rituals"
           className="text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
         >
           My Rituals
-        </Link>
+        </Link> */}
+
+        <div>
+          <div className="mt-3 flex items-center gap-3">
+            <div className="flex size-11 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500/25 to-orange-500/15 ring-1 ring-amber-500/20">
+              <Flame className="size-5 text-amber-400" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight">
+                {ritual.ritual_name}
+              </h1>
+              <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                <span>
+                  {completedSteps} of {totalSteps} completed
+                </span>
+                <span>&middot;</span>
+                <span>Next step: {nextStepNumber}</span>
+                {ritual.execution_count > 0 && (
+                  <>
+                    <span>&middot;</span>
+                    <span>{ritual.execution_count}x performed</span>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
 
         <Card className="overflow-hidden border-amber-500/20 bg-gradient-to-br from-amber-950/10 to-card">
           <CardHeader className="pb-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <Badge
-                  variant="outline"
-                  className="border-amber-500/30 bg-amber-950/20 px-1.5 text-[10px] text-amber-400"
-                >
-                  Step {step} of {totalSteps}
-                </Badge>
-              </div>
+              <Badge
+                variant="outline"
+                className="border-amber-500/30 bg-amber-950/20 px-1.5 text-[10px] text-amber-400"
+              >
+                In Progress - {completedSteps} of {totalSteps} completed
+              </Badge>
               <span className="text-xs font-semibold text-amber-400/80">
                 {progressPct}%
               </span>
             </div>
-            <Progress
-              value={progressPct}
-              className="h-1.5 bg-muted/40 [&>div]:bg-gradient-to-r [&>div]:from-amber-500 [&>div]:to-orange-500"
-            />
           </CardHeader>
-
           <CardContent className="space-y-5">
-            <div>
-              <div className="flex items-center gap-3">
-                <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-amber-500/15 ring-1 ring-amber-500/20">
-                  <Flame className="size-4 text-amber-400" />
-                </div>
-                <h2 className="text-xl font-bold tracking-tight">
-                  {currentInvocation?.name?.replace(/_/g, " ") ?? `Step ${step}`}
-                </h2>
-              </div>
+            <p className="text-sm text-muted-foreground">
+              Continue your ritual from the next unfinished video. Playback will
+              reopen directly at step {nextStepNumber}.
+            </p>
 
-              {currentInvocation?.description && (
-                <p className="mt-3 pl-12 text-sm text-muted-foreground">
-                  {currentInvocation.description}
-                </p>
-              )}
+            <div className="space-y-2">
+              {playlist.map((item, index) => {
+                const completed = index < completedSteps;
+                const current = index === completedSteps;
+
+                return (
+                  <div
+                    key={`${item.tag}-${index}`}
+                    className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 text-sm ${
+                      completed
+                        ? "border-emerald-500/20 bg-emerald-500/5"
+                        : current
+                        ? "border-amber-500/30 bg-amber-500/10"
+                        : "border-border/40 bg-muted/10"
+                    }`}
+                  >
+                    <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-amber-500/15 text-xs font-bold text-amber-400 ring-1 ring-amber-500/20">
+                      {index + 1}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium">{item.title}</p>
+                    </div>
+                    {completed ? (
+                      <Badge
+                        variant="secondary"
+                        className="bg-emerald-500/10 text-[10px] text-emerald-400"
+                      >
+                        Completed
+                      </Badge>
+                    ) : current ? (
+                      <Badge
+                        variant="secondary"
+                        className="bg-amber-500/10 text-[10px] text-amber-400"
+                      >
+                        Next
+                      </Badge>
+                    ) : null}
+                  </div>
+                );
+              })}
             </div>
 
-            {currentInvocation?.video_url && (
-              <RitualVideoPlayer
-                videoUrl={currentInvocation.video_url}
-                stepName={currentInvocation.name.replace(/_/g, " ")}
-                isLastStep={isLastStep}
-                onEnded={isLastStep ? handleComplete : handleNext}
-              />
-            )}
-
-            {currentInvocation?.instructions && (
-              <>
-                <Separator className="bg-amber-500/10" />
-                <div>
-                  <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-amber-400/60">
-                    Instructions
-                  </p>
-                  <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">
-                    {currentInvocation.instructions}
-                  </p>
-                </div>
-              </>
-            )}
-
-            <Separator className="bg-amber-500/10" />
-
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex flex-wrap gap-3">
               <Button
-                variant="ghost"
-                size="sm"
-                onClick={handlePrevious}
-                disabled={step <= 1}
-                className="text-muted-foreground"
+                onClick={() => router.push(`/community/rituals/${id}/playback`)}
+                className="bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow-md hover:from-amber-500 hover:to-orange-500"
               >
-                <ChevronLeft className="mr-1.5 size-4" />
-                Previous
+                <Play className="mr-2 size-4" />
+                Continue
               </Button>
-
-              {isLastStep ? (
-                <Button
-                  onClick={handleComplete}
-                  disabled={saving}
-                  className="bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-md hover:from-green-500 hover:to-emerald-500"
-                >
-                  {saving ? (
-                    <Loader2 className="mr-2 size-4 animate-spin" />
-                  ) : (
-                    <Check className="mr-2 size-4" />
-                  )}
-                  Complete Ritual
-                </Button>
-              ) : (
-                <Button
-                  onClick={handleNext}
-                  disabled={saving}
-                  className="bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow hover:from-amber-500 hover:to-orange-500"
-                >
-                  {saving && <Loader2 className="mr-2 size-4 animate-spin" />}
-                  Next Step
-                  <ChevronRight className="ml-1.5 size-4" />
-                </Button>
-              )}
+              <Button
+                asChild
+                variant="outline"
+                className="border-amber-500/30 text-amber-400 hover:bg-amber-500/10"
+              >
+                <Link href="/community/rituals">Back to My Rituals</Link>
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -478,21 +342,15 @@ export default function RitualDetailPage() {
     );
   }
 
-  void isPrep;
-
-  const lastPerformedLabel = ritual.last_executed_at
-    ? formatDate(ritual.last_executed_at)
-    : "Never";
-
   return (
-    <div className="max-w-2xl space-y-6">
+    <div className="mx-auto max-w-5xl space-y-6">
       <div>
-        <Link
+        {/* <Link
           href="/community/rituals"
           className="text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
         >
           My Rituals
-        </Link>
+        </Link> */}
         <div className="mt-3 flex items-center gap-3">
           <div className="flex size-11 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500/25 to-orange-500/15 ring-1 ring-amber-500/20">
             <Flame className="size-5 text-amber-400" />
@@ -533,45 +391,33 @@ export default function RitualDetailPage() {
           )}
         </CardHeader>
 
-        {totalSteps > 0 && (
+        {totalSteps > 0 ? (
           <CardContent>
             <ol className="space-y-2">
-              {invocations.map((invocation, index) => (
+              {playlist.map((item, index) => (
                 <li
-                  key={invocation.id}
-                  className="flex items-start gap-3 rounded-xl border border-border/40 bg-muted/10 px-3 py-2.5 text-sm"
+                  key={`${item.tag}-${index}`}
+                  className="flex items-center gap-3 rounded-xl border border-border/40 bg-muted/10 px-3 py-2.5 text-sm"
                 >
                   <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-amber-500/15 text-xs font-bold text-amber-400 ring-1 ring-amber-500/20">
                     {index + 1}
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="font-medium">
-                      {invocation.name.replace(/_/g, " ")}
-                    </p>
-                    {invocation.description && (
-                      <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">
-                        {invocation.description}
-                      </p>
-                    )}
+                    <p className="font-medium">{item.title}</p>
                   </div>
-                  {(invocation.name.includes("Opening") ||
-                    invocation.name.includes("Closing")) && (
+                  {item.kind === "opening" || item.kind === "closing" ? (
                     <Badge
                       variant="secondary"
                       className="ml-auto shrink-0 self-center bg-amber-500/10 text-[10px] text-amber-400/80"
                     >
-                      {invocation.name.includes("Opening")
-                        ? "Opening"
-                        : "Closing"}
+                      {item.kind === "opening" ? "Opening" : "Closing"}
                     </Badge>
-                  )}
+                  ) : null}
                 </li>
               ))}
             </ol>
           </CardContent>
-        )}
-
-        {totalSteps === 0 && (
+        ) : (
           <CardContent>
             <div className="flex flex-wrap gap-1.5">
               {displayTags.map((tag) => (

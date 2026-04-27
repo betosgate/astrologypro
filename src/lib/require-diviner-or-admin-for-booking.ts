@@ -133,8 +133,8 @@ async function getDivinerIdForUser(userId: string): Promise<string | null> {
 
 /**
  * Main guard. Call this at the top of a server component/page for
- * /admin/session/[bookingId], /admin/horoscope/session/[bookingId],
- * or /admin/tarot/session/[bookingId]. It will either return the loaded
+ * /service/session/[bookingId], category-specific service session routes, or
+ * their legacy /dashboard and /admin aliases. It will either return the loaded
  * booking + user, or redirect and never return.
  */
 export async function requireDivinerOrAdminForBooking(
@@ -146,7 +146,7 @@ export async function requireDivinerOrAdminForBooking(
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    redirect(`/login?next=${encodeURIComponent(`/admin/session/${bookingId}`)}`);
+    redirect(`/login?next=${encodeURIComponent(`/service/session/${bookingId}`)}`);
   }
 
   // 2. Load the booking first — we'll need it for the diviner check.
