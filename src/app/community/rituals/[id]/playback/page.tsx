@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import { RitualPlaylistPlayer } from "@/components/community/ritual-playlist-player";
 import { buildRitualPlaylist } from "@/lib/community/ritual-video-map";
+import { resolveAssetsForTags } from "@/lib/community/ritual-asset-resolver";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Begin the Ritual" };
@@ -73,7 +74,39 @@ export default async function CommunityRitualPlaybackPage({
     ? (ritual.ritual_tags as string[])
     : [];
 
+  // Build the playlist via the canonical ordering helper (still
+  // code-managed — preserves the planet/zodiac sequencing rules per the
+  // spec direction "keep in code"). Then re-point each item's URL via
+  // the admin-managed resolver. The resolver falls back to the same
+  // hardcoded URL the helper returned, so when no admin overrides exist
+  // the runtime behaviour is identical to before.
   const playlist = buildRitualPlaylist(tags);
+
+  // community-ritual-admin-config (2026-04-27):
+  // Resolve every tag through the DB-first asset resolver. Per-ritual
+  // overrides aren't wired yet (the user_ritual_configurations row has
+  // no ritual_definition_id today); the resolver falls back to global
+  // mapping → code map automatically.
+  if (playlist.length > 0) {
+    try {
+      const resolved = await resolveAssetsForTags(playlist.map((p) => p.tag));
+      for (const item of playlist) {
+        const hit = resolved.get(item.tag);
+        if (hit) {
+          item.videoUrl = hit.url;
+          item.missing = false;
+          if (hit.title) item.title = hit.title;
+        }
+      }
+    } catch (err) {
+      // Resolver failures are non-fatal — the playlist already has the
+      // hardcoded fallback URLs from buildRitualPlaylist. Log and move on.
+      console.warn(
+        "[community/rituals/playback] asset resolver failed:",
+        err instanceof Error ? err.message : err
+      );
+    }
+  }
 
   // Resume mode: convert the persisted `current_step` (1-indexed, with 0 =
   // never started) to a 0-indexed step count clamped to the actual playlist.

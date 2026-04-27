@@ -642,7 +642,16 @@ export default async function DivinerPage({ params, searchParams }: PageProps) {
       {activeTab === "home" ? (
         <>
           <section className="py-10 md:py-14">
-            <div className="mx-auto grid max-w-6xl gap-6 px-4 lg:grid-cols-[1.15fr,0.85fr]">
+            {/*
+              Two-column pitch row: "Why Clients Book" (wider) + "Trust Signals"
+              (narrower). The previous arbitrary value `lg:grid-cols-[1.15fr,0.85fr]`
+              used a comma between tracks — Tailwind's arbitrary
+              grid-template-columns syntax requires underscores, so the class
+              was being silently dropped and the two cards stacked full-width.
+              Switched to the underscore form, and dropped the breakpoint from
+              `lg` to `md` so the side-by-side layout kicks in earlier.
+            */}
+            <div className="mx-auto grid max-w-6xl gap-6 px-4 md:grid-cols-[1.15fr_0.85fr]">
               <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6 md:p-8">
                 <p className="text-xs uppercase tracking-[0.24em] text-gold/70">
                   Why Clients Book
@@ -895,7 +904,7 @@ export default async function DivinerPage({ params, searchParams }: PageProps) {
             }
             testimonials={
               testimonialsBlocked ? (
-                <section id="testimonials" className="py-10 md:py-14">
+                <section id="reviews" className="py-10 md:py-14">
                   <div className="mx-auto max-w-6xl px-4">
                     <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-10 text-center">
                       <h2 className="font-display text-2xl font-semibold text-cream">
