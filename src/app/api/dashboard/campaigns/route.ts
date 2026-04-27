@@ -150,7 +150,7 @@ export async function GET(request: Request) {
       .from("tracking_links")
       .update({ is_active: false })
       .in("campaign_id", expiredIds)
-      .then(() => {}, () => {});
+      .then(() => { }, () => { });
   }
 
   return NextResponse.json({ data: enriched, nextCursor, hasMore });
@@ -307,8 +307,8 @@ export async function POST(request: Request) {
 
   // ── Channel validation ──
   const validChannels = [
-    "facebook","instagram","whatsapp","youtube","email",
-    "twitter","tiktok","linkedin","direct","other",
+    "facebook", "instagram", "whatsapp", "youtube", "email",
+    "twitter", "tiktok", "linkedin", "direct", "other",
   ];
   if (channel !== undefined && !validChannels.includes(channel as string)) {
     return NextResponse.json(
@@ -329,9 +329,10 @@ export async function POST(request: Request) {
   // ── Build insert payload ──
   const insertPayload: Record<string, unknown> = {
     diviner_id: diviner.id,
+    owner_type: "diviner",
     name: (name as string).trim(),
     start_date,
-    status: "draft",
+    status: "active",
     created_by: user.id,
     updated_by: user.id,
   };

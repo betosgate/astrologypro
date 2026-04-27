@@ -13,6 +13,9 @@ import {
   Users,
   UserCircle,
   Handshake,
+  Package,
+  History,
+  Bell,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { PortalLogoutButton } from "@/components/portal/logout-button";
@@ -21,10 +24,13 @@ import { SectionContainer } from "@/components/shared/section-container";
 const navItems = [
   { href: "/affiliate", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { href: "/affiliate/partnerships", label: "Partnerships", icon: Users },
+  { href: "/affiliate/products", label: "Products", icon: Package },
+  { href: "/affiliate/campaigns", label: "Campaigns", icon: Megaphone },
   { href: "/affiliate/earnings", label: "Earnings", icon: DollarSign },
   { href: "/affiliate/commissions", label: "Commissions", icon: DollarSign },
   { href: "/affiliate/links", label: "Links", icon: LinkIcon },
-  { href: "/affiliate/campaigns", label: "Campaigns", icon: Megaphone },
+  { href: "/affiliate/rate-history", label: "Rate history", icon: History },
+  { href: "/affiliate/notifications", label: "Notifications", icon: Bell },
   { href: "/affiliate/profile", label: "Profile", icon: UserCircle },
 ];
 

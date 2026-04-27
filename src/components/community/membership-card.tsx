@@ -39,6 +39,8 @@ const STATUS_BADGE_CLASSES: Record<string, string> = {
   active: "bg-emerald-500/15 text-emerald-700 border-emerald-500/30",
   trialing: "bg-blue-500/15 text-blue-700 border-blue-500/30",
   past_due: "bg-amber-500/15 text-amber-700 border-amber-500/30",
+  cancelling: "bg-amber-500/15 text-amber-700 border-amber-500/30",
+  canceled: "bg-red-500/15 text-red-700 border-red-500/30",
   cancelled: "bg-red-500/15 text-red-700 border-red-500/30",
 };
 
@@ -59,6 +61,12 @@ function formatCurrency(amount: number, currency: string): string {
   }).format(amount);
 }
 
+function formatStatus(status: string): string {
+  if (status === "past_due") return "Past Due";
+  if (status === "canceled") return "Cancelled";
+  return status.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 export function MembershipCard({ subscription, userEmail }: MembershipCardProps) {
   const [portalLoading, setPortalLoading] = useState(false);
   const [portalError, setPortalError] = useState<string | null>(null);
@@ -69,8 +77,12 @@ export function MembershipCard({ subscription, userEmail }: MembershipCardProps)
     STATUS_BADGE_CLASSES[subscription.status] ??
     "bg-muted text-muted-foreground border-border";
 
-  const renewalLabel =
-    subscription.status === "cancelled" ? "Cancelled On" : "Renewal";
+  const dateLabel =
+    subscription.status === "cancelled" || subscription.status === "canceled"
+      ? "Cancelled On"
+      : subscription.status === "cancelling"
+        ? "Access Until"
+        : "Next Renewal";
 
   const isFamily = subscription.plan_type === "family";
   const canUpgrade =
@@ -107,6 +119,9 @@ export function MembershipCard({ subscription, userEmail }: MembershipCardProps)
             <h2 className="text-base font-semibold leading-tight">Your Membership</h2>
           </div>
 
+          <Badge variant="outline" className={statusClass}>
+            {formatStatus(subscription.status)}
+          </Badge>
         </div>
 
         <Separator />
@@ -134,7 +149,7 @@ export function MembershipCard({ subscription, userEmail }: MembershipCardProps)
           </div>
 
           <div>
-            <dt className="text-xs text-muted-foreground">Next {renewalLabel}</dt>
+            <dt className="text-xs text-muted-foreground">{dateLabel}</dt>
             <dd className="font-medium mt-0.5">{formatDate(subscription.renewal_date)}</dd>
           </div>
 
