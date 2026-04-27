@@ -78,6 +78,7 @@ import { MIGRATION_SQL as MIG_20260424000010_ACV2A } from "@/data/migrations/202
 import { MIGRATION_SQL as MIG_20260424009001_ACV2D } from "@/data/migrations/20260424009001_affiliate_commission_v2_destructive";
 import { MIGRATION_SQL as MIG_20260427000002_ARV2A } from "@/data/migrations/20260427000002_affiliate_rls_v2_alignment";
 import { MIGRATION_SQL as MIG_20260427000003_AJSP } from "@/data/migrations/20260427000003_affiliate_junction_select_policy";
+import { MIGRATION_SQL as MIG_20260427000004_ARSD } from "@/data/migrations/20260427000004_affiliate_rls_security_definer";
 
 /**
  * Allowlisted migrations that the admin migration runner can execute.
@@ -694,6 +695,14 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Follow-up to 20260427000002. The child-table policies it added all resolve through `diviner_affiliates → affiliate_accounts → user_id`, but `diviner_affiliates` itself only has a diviner-side SELECT policy. With no affiliate-side policy, the IN-subquery returned 0 rows under RLS for the authed affiliate session, making every child policy match nothing. Adds `affiliate_sees_own_junctions` on `diviner_affiliates` resolving `affiliate_account_id → user_id`. Idempotent + sanity-checked. Run AFTER 20260427000002.",
     sortKey: "20260427000003",
     sql: MIG_20260427000003_AJSP,
+  },
+  "20260427000004_affiliate_rls_security_definer": {
+    id: "20260427000004_affiliate_rls_security_definer",
+    title: "Affiliate RLS — break policy cycle with SECURITY DEFINER helpers",
+    description:
+      "Hot-fix for 20260427000003. After that migration, every authed query on the affiliate child tables raised 'infinite recursion detected in policy for relation diviner_affiliates' — `affiliate_accounts.diviner_sees_linked_accounts` queries diviner_affiliates, and the new `affiliate_sees_own_junctions` queries affiliate_accounts. Cycle. Introduces two SECURITY DEFINER helpers — `current_affiliate_junction_ids()` (SETOF UUID) and `current_affiliate_account_id()` (UUID) — that resolve auth.uid() → junction set / account id while bypassing inner RLS. Rewrites all 6 affiliate-side policies from 20260427000002 + 20260427000003 to call these helpers instead of inlined subqueries. Run AFTER 20260427000003.",
+    sortKey: "20260427000004",
+    sql: MIG_20260427000004_ARSD,
   },
   "20260423000004_fix_invite_rpc_ambiguity": {
     id: "20260423000004_fix_invite_rpc_ambiguity",
