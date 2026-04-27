@@ -487,12 +487,7 @@ export default function CommunityFamilyPage() {
         <div className="space-y-3">
           <div className="flex items-center justify-between text-sm text-muted-foreground">
             <span>{members.length}/{familyLimit} family members</span>
-            {isFamily && !atLimit && !showForm && (
-              <Button size="sm" variant="outline" onClick={startAdd}>
-                <Plus className="mr-1.5 size-3.5" />
-                Add
-              </Button>
-            )}
+
           </div>
           {members.map((m) => {
             const isOpen = expandedId === m.id;

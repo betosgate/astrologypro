@@ -119,9 +119,7 @@ export function MembershipCard({ subscription, userEmail }: MembershipCardProps)
             <h2 className="text-base font-semibold leading-tight">Your Membership</h2>
           </div>
 
-          <Badge variant="outline" className={statusClass}>
-            {formatStatus(subscription.status)}
-          </Badge>
+
         </div>
 
         <Separator />
