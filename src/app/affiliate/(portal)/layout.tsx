@@ -38,8 +38,8 @@ export default async function AffiliateLayout({
   // the UI can say "no affiliate identity found for this account".
   if (!account) redirect("/login?e=no_affiliate_account");
 
-  // Blocked / suspended / unclaimed accounts: show a read-only gate rather
-  // than redirecting in a loop. Status transitions back to 'active' restore
+  // Blocked / unclaimed accounts: show a read-only gate rather than
+  // redirecting in a loop. Status transitions back to 'active' restore
   // access on next navigation.
   if (account.status !== "active") {
     return (
@@ -49,12 +49,7 @@ export default async function AffiliateLayout({
           <strong className="text-foreground">{account.status}</strong>.
         </p>
         {account.status === "blocked" && (
-          <p>
-            Contact support if you believe this is a mistake.
-          </p>
-        )}
-        {account.status === "suspended" && (
-          <p>Reach out to support to discuss reinstatement.</p>
+          <p>Contact support if you believe this is a mistake.</p>
         )}
         {account.status === "unclaimed" && (
           <p>
