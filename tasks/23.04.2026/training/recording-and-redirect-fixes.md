@@ -11,14 +11,14 @@ Currently, when a session ends (e.g., at `/book/[username]/session/[bookingId]`)
 ### Solution
 Modify the `ChimeSessionRoom` component to conditionally set the redirect URL based on the `joinApiPath` or a new prop:
 - Check if `joinApiPath` includes `/admin-bookings/`.
-- If `role === 'diviner'`, redirect to `/admin/my-bookings`.
-- If `role === 'client'`, redirect to `/trainee`.
+- If `role === 'admin'`, redirect to `/admin/my-bookings`.
+- If `role === 'trainee'`, redirect to `/trainee`.
 - Otherwise, fallback to the standard `/dashboard/bookings` (for Diviners) and `/portal/bookings` (for standard Clients).
 
 ---
 
 ## 2. Admin Dashboard: Recording & Session Details
-### Issue
+### Issue   
 The "Booking Details" sidebar in `admin/my-bookings` was not displaying meeting recordings or actual session duration/metadata for completed meetings, making it difficult for admins to review past sessions.
 
 ### Solution
