@@ -46,6 +46,7 @@ import {
   RefreshCw,
   Copy,
   ExternalLink,
+  Loader2,
   MoreHorizontal,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -163,12 +164,12 @@ export default function ServiceTemplatesPage() {
       if (!res.ok) throw new Error(json.error ?? "Deactivate failed");
 
       toast.success(`"${deactivateTarget.name}" deactivated`);
-      setDeactivateTarget(null);
       fetchTemplates();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Deactivate failed");
     } finally {
       setDeactivating(false);
+      setDeactivateTarget(null);
     }
   }
 
@@ -191,12 +192,12 @@ export default function ServiceTemplatesPage() {
       if (!res.ok) throw new Error(json.error ?? "Delete failed");
 
       toast.success(`"${hardDeleteTarget.name}" deleted`);
-      setHardDeleteTarget(null);
       fetchTemplates();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Delete failed");
     } finally {
       setHardDeleting(false);
+      setHardDeleteTarget(null);
     }
   }
 
@@ -494,7 +495,13 @@ export default function ServiceTemplatesPage() {
       )}
 
       {/* Delete confirmation */}
-      <AlertDialog open={!!deactivateTarget} onOpenChange={(open) => !open && setDeactivateTarget(null)}>
+      <AlertDialog
+        open={!!deactivateTarget}
+        onOpenChange={(open) => {
+          if (deactivating) return;
+          if (!open) setDeactivateTarget(null);
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Deactivate &ldquo;{deactivateTarget?.name}&rdquo;?</AlertDialogTitle>
@@ -505,19 +512,35 @@ export default function ServiceTemplatesPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={deactivating}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={handleDeactivate}
+              onClick={(event) => {
+                event.preventDefault();
+                void handleDeactivate();
+              }}
               disabled={deactivating}
             >
-              {deactivating ? "Deactivating…" : "Deactivate"}
+              {deactivating ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deactivating…
+                </>
+              ) : (
+                "Deactivate"
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      <AlertDialog open={!!hardDeleteTarget} onOpenChange={(open) => !open && setHardDeleteTarget(null)}>
+      <AlertDialog
+        open={!!hardDeleteTarget}
+        onOpenChange={(open) => {
+          if (hardDeleting) return;
+          if (!open) setHardDeleteTarget(null);
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete &ldquo;{hardDeleteTarget?.name}&rdquo;?</AlertDialogTitle>
@@ -528,13 +551,23 @@ export default function ServiceTemplatesPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={hardDeleting}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={handleHardDelete}
+              onClick={(event) => {
+                event.preventDefault();
+                void handleHardDelete();
+              }}
               disabled={hardDeleting}
             >
-              {hardDeleting ? "Deleting…" : "Delete permanently"}
+              {hardDeleting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting…
+                </>
+              ) : (
+                "Delete permanently"
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
