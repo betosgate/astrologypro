@@ -77,6 +77,7 @@ import { MIGRATION_SQL as MIG_20260427000001_SRL } from "@/data/migrations/20260
 import { MIGRATION_SQL as MIG_20260424000010_ACV2A } from "@/data/migrations/20260424000010_affiliate_commission_v2_additive";
 import { MIGRATION_SQL as MIG_20260424009001_ACV2D } from "@/data/migrations/20260424009001_affiliate_commission_v2_destructive";
 import { MIGRATION_SQL as MIG_20260427000002_ARV2A } from "@/data/migrations/20260427000002_affiliate_rls_v2_alignment";
+import { MIGRATION_SQL as MIG_20260427000003_AJSP } from "@/data/migrations/20260427000003_affiliate_junction_select_policy";
 
 /**
  * Allowlisted migrations that the admin migration runner can execute.
@@ -685,6 +686,14 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Aligns affiliate-side SELECT policies with the v2 junction model. Pre-v2 policies assumed *.affiliate_id = auth.users.id; v2 changed affiliate_id to point at diviner_affiliates.id (the junction). Replaces the broken diviner_service_affiliates_select_affiliate policy and adds 5 missing policies: affiliate_sees_own_campaigns + affiliate_inserts_own_campaigns + affiliate_updates_own_campaigns on affiliate_campaigns; affiliate_sees_own_clicks on campaign_clicks; affiliate_sees_own_conversions on campaign_conversions. All resolve auth.uid() → affiliate_accounts.user_id → diviner_affiliates.id. The API was always service-role (RLS bypass) so no production regression — but spec §8 promised affiliates can read their slice via auth client and that promise was unfulfilled. Caught by Task 08 RLS test suite. Idempotent + sanity-checked.",
     sortKey: "20260427000002",
     sql: MIG_20260427000002_ARV2A,
+  },
+  "20260427000003_affiliate_junction_select_policy": {
+    id: "20260427000003_affiliate_junction_select_policy",
+    title: "Affiliate junction SELECT policy (RLS chain fix)",
+    description:
+      "Follow-up to 20260427000002. The child-table policies it added all resolve through `diviner_affiliates → affiliate_accounts → user_id`, but `diviner_affiliates` itself only has a diviner-side SELECT policy. With no affiliate-side policy, the IN-subquery returned 0 rows under RLS for the authed affiliate session, making every child policy match nothing. Adds `affiliate_sees_own_junctions` on `diviner_affiliates` resolving `affiliate_account_id → user_id`. Idempotent + sanity-checked. Run AFTER 20260427000002.",
+    sortKey: "20260427000003",
+    sql: MIG_20260427000003_AJSP,
   },
   "20260423000004_fix_invite_rpc_ambiguity": {
     id: "20260423000004_fix_invite_rpc_ambiguity",
