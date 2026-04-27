@@ -210,7 +210,7 @@ export default async function CommunityDashboardPage() {
     },
   };
   const PLAN_AMOUNTS: Record<string, Record<string, number>> = {
-    perennial_mandalism: { individual: 9.97, family: 19.97 },
+    perennial_mandalism: { individual: 19.95, family: 34.95 },
     mystery_school: { individual: 27.0, family: 27.0 },
   };
 
@@ -468,8 +468,13 @@ export default async function CommunityDashboardPage() {
     tier_name: tierName,
     status: member.membership_status ?? "active",
     amount:
-      PLAN_AMOUNTS[membershipType]?.[planType] ??
-      PLAN_AMOUNTS["perennial_mandalism"]["individual"],
+      isPerennial && pmTier
+        ? Number(pmTier.base_price_usd ?? 0) +
+          (member.extra_member_count ?? 0) * Number(pmTier.extra_per_member_usd ?? 0)
+        : isMysterySchool && mysterySchoolRecurringAmount
+        ? mysterySchoolRecurringAmount
+        : PLAN_AMOUNTS[membershipType]?.[planType] ??
+          PLAN_AMOUNTS["perennial_mandalism"]["individual"],
     currency: "usd",
     billing_cycle: "monthly",
     renewal_date: renewalDate,

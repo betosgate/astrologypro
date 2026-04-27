@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   Card,
@@ -77,6 +77,7 @@ function canonicalSort(invocations: Invocation[]): Invocation[] {
 
 export default function RitualDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const id = params?.id as string;
 
   const [ritual, setRitual] = useState<RitualConfig | null>(null);
@@ -135,20 +136,33 @@ export default function RitualDetailPage() {
     setSaving(false);
   }
 
-  async function handleBegin() {
+  // ── Begin handlers (2026-04-27) ────────────────────────────────────────
+  // Spec: docs/tasks/2026-04-27/01-perennial-mandalism-ritual-playlist-player-and-video-mapping.md
+  // The new flow opens a dedicated playback route that renders a video
+  // playlist with sequential locking. We preserve the existing prep
+  // overlay for multi-invocation rituals so users still get a moment to
+  // center themselves before the videos start.
+  //
+  // Notes on persistence:
+  //  - We DO NOT pre-patch `current_step: 1` here anymore. The new
+  //    playback page's onEnded handler patches `current_step` as the
+  //    user actually advances, which is more accurate and avoids
+  //    counting an "execution" before any video has played.
+  //  - The legacy in-page step UI further down this file remains
+  //    intact for now: if a ritual already has `current_step > 0`
+  //    persisted from before this change, that older flow still
+  //    works. New ritual sessions go straight to /playback.
+  function handleBegin() {
     if (invocations.length > 1) {
       setShowSacredSpaceOverlay(true);
       return;
     }
-
-    setStep(1);
-    await patchStep({ current_step: 1 });
+    router.push(`/community/rituals/${id}/playback`);
   }
 
-  async function handleBeginAfterOverlay() {
+  function handleBeginAfterOverlay() {
     setShowSacredSpaceOverlay(false);
-    setStep(1);
-    await patchStep({ current_step: 1 });
+    router.push(`/community/rituals/${id}/playback`);
   }
 
   async function handleNext() {
