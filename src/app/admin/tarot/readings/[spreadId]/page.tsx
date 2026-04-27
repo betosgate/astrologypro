@@ -47,7 +47,11 @@ function shuffle<T>(arr: T[]): T[] {
 
 // ─── Main Page (Practice Mode — no saving) ───────────────────────────────────
 
-export default function AdminSpreadReadingPage() {
+export function TarotSpreadReadingPage({
+  listHref = "/admin/tarot/readings",
+}: {
+  listHref?: string;
+}) {
   const params = useParams<{ spreadId: string }>();
 
   const [state, setState] = useState<ReadingState>("loading");
@@ -149,7 +153,7 @@ export default function AdminSpreadReadingPage() {
       <div className="space-y-4 text-center py-16">
         <p className="text-lg font-semibold">Spread not found.</p>
         <Button asChild variant="outline">
-          <Link href="/admin/tarot/readings">Browse Spreads</Link>
+          <Link href={listHref}>Browse Spreads</Link>
         </Button>
       </div>
     );
@@ -161,7 +165,7 @@ export default function AdminSpreadReadingPage() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <Link href="/admin/tarot/readings" className="text-sm text-muted-foreground hover:text-foreground">
+            <Link href={listHref} className="text-sm text-muted-foreground hover:text-foreground">
               ← Tarot Practice
             </Link>
             <h1 className="mt-1 text-2xl font-bold tracking-tight">{spread.name} — Complete</h1>
@@ -184,7 +188,7 @@ export default function AdminSpreadReadingPage() {
             Begin Another Reading
           </Button>
           <Button asChild variant="outline">
-            <Link href="/admin/tarot/readings">All Spreads</Link>
+            <Link href={listHref}>All Spreads</Link>
           </Button>
         </div>
       </div>
@@ -196,7 +200,7 @@ export default function AdminSpreadReadingPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <Link href="/admin/tarot/readings" className="text-sm text-muted-foreground hover:text-foreground">
+          <Link href={listHref} className="text-sm text-muted-foreground hover:text-foreground">
             ← Tarot Practice
           </Link>
           <h1 className="mt-1 text-2xl font-bold tracking-tight">{spread.name}</h1>
@@ -218,4 +222,8 @@ export default function AdminSpreadReadingPage() {
       </div>
     </div>
   );
+}
+
+export default function AdminSpreadReadingPage() {
+  return <TarotSpreadReadingPage />;
 }
