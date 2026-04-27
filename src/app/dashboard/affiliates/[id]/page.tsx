@@ -1,5 +1,24 @@
 "use client";
 
+// /dashboard/affiliates/[id]
+//
+// Diviner's per-affiliate detail. v2 model — drops the legacy "Referral
+// Links" + "Commission Ledger" + "Payout History" cards (System A) and
+// shows instead:
+//
+//   - Identity + pending-invite actions (unchanged)
+//   - KPI tiles scoped to the caller's slice (clicks, conversions,
+//     earned, reversed) from /api/dashboard/affiliate-reports/by-affiliate/[id]
+//   - Assignments + current rate per product
+//   - Rate-history timeline (spec §6.2)
+//   - Recent Conversions (caller's slice only) from
+//     /api/dashboard/affiliate-reports/conversions?affiliate_id=...
+//
+// "Record Payout" button is gone — Stripe auto-split handles payouts in
+// Phase 2.
+//
+// Spec: docs/specs/affiliate-commission-system.md §6.2 + §5 Flow G
+
 import { useEffect, useState, useCallback, use } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -12,8 +31,13 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -22,32 +46,21 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Loader2,
   ArrowLeft,
   DollarSign,
-  Link as LinkIcon,
-  Copy,
-  Plus,
-  Wallet,
-  Download,
   Mail,
   Clock,
   RefreshCw,
   XCircle,
-  User as UserIcon,
   Users as UsersIcon,
   Lock,
+  TrendingUp,
+  History,
+  Pencil,
 } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   resendInviteByJunction,
   revokeInvite,
@@ -63,11 +76,10 @@ interface Affiliate {
   default_commission_type: string;
   default_commission_value: number;
   created_at: string;
-  // Task 04 additive fields — canonical account + latest invite + partnerships
   affiliate_account_id: string | null;
   user_id: string | null;
   avatar_url: string | null;
-  account_status: "unclaimed" | "active" | "suspended" | "blocked" | null;
+  account_status: "unclaimed" | "active" | "blocked" | null;
   partnership_count: number;
   invited_at: string | null;
   accepted_at: string | null;
@@ -80,59 +92,107 @@ interface Affiliate {
   } | null;
 }
 
-interface ReferralLink {
-  id: string;
-  slug: string;
-  url: string;
-  product_id: string | null;
-  product_type: string | null;
-  clicks: number;
-  conversions: number;
-  is_active: boolean;
-  created_at: string;
+interface ReportPayload {
+  period: "30d" | "90d" | "1y" | "all";
+  kpis: {
+    clicks: number;
+    conversions: number;
+    earned_cents: number;
+    reversed_cents: number;
+  };
+  assignments: Array<{
+    id: string;
+    destination_type: string;
+    destination_id: string | null;
+    commission_type: "percentage" | "fixed";
+    commission_value: number;
+    is_active: boolean;
+    assigned_at: string | null;
+    revoked_at: string | null;
+  }>;
+  campaigns: Array<{
+    id: string;
+    campaign_code: string;
+    name: string | null;
+    status: string;
+    created_at: string;
+  }>;
+  rate_history: Array<{
+    id: string;
+    assignment_id: string;
+    old_commission_type: "percentage" | "fixed" | null;
+    old_commission_value: number | null;
+    new_commission_type: "percentage" | "fixed";
+    new_commission_value: number;
+    changed_at: string;
+    changed_by: string | null;
+    reason: string | null;
+  }>;
 }
 
-interface ServiceOption {
+interface Conversion {
   id: string;
-  name: string;
-  slug: string;
-  category: string;
-  is_active: boolean;
-}
-
-interface Commission {
-  id: string;
-  order_reference: string | null;
+  campaign_id: string;
+  booking_id: string | null;
   order_amount_cents: number;
-  commission_type: string;
-  commission_rate: number;
   commission_amount_cents: number;
-  status: string;
+  rate_type_used: "percentage" | "fixed";
+  rate_value_used: number;
+  reversed_at: string | null;
+  reversed_reason: string | null;
   created_at: string;
 }
 
-interface Payout {
-  id: string;
-  amount_cents: number;
-  method: string | null;
-  reference: string | null;
-  notes: string | null;
-  paid_at: string;
-}
-
-const STATUS_COLORS: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+const STATUS_COLORS: Record<
+  string,
+  "default" | "secondary" | "destructive" | "outline"
+> = {
   active: "default",
   pending: "outline",
   suspended: "secondary",
   blocked: "destructive",
+  revoked: "secondary",
 };
 
 function fmtCents(cents: number) {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(cents / 100);
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+  }).format(cents / 100);
 }
 
 function fmtDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  return new Date(iso).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function fmtDateTime(iso: string) {
+  return new Date(iso).toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function fmtRate(type: "percentage" | "fixed", value: number) {
+  return type === "percentage"
+    ? `${value}%`
+    : `${fmtCents(value)} fixed`;
+}
+
+function avatarInitials(name: string | null) {
+  if (!name) return "?";
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase() ?? "")
+    .join("");
 }
 
 export default function DashboardAffiliateDetailPage({
@@ -142,53 +202,41 @@ export default function DashboardAffiliateDetailPage({
 }) {
   const { id } = use(params);
   const [affiliate, setAffiliate] = useState<Affiliate | null>(null);
-  const [links, setLinks] = useState<ReferralLink[]>([]);
-  const [commissions, setCommissions] = useState<Commission[]>([]);
-  // Stripe auto-split (Phase 2) will provide the real payouts feed; until
-  // then keep an empty list so the Payout History card and Total Paid stat
-  // render in their pre-Phase-2 placeholder state.
-  const payouts: Payout[] = [];
+  const [report, setReport] = useState<ReportPayload | null>(null);
+  const [conversions, setConversions] = useState<Conversion[]>([]);
+  const [period, setPeriod] = useState<"30d" | "90d" | "1y" | "all">("90d");
   const [loading, setLoading] = useState(true);
-  const [generatingLink, setGeneratingLink] = useState(false);
-  const [linkDialogOpen, setLinkDialogOpen] = useState(false);
-  const [publicUsername, setPublicUsername] = useState("");
-  const [services, setServices] = useState<ServiceOption[]>([]);
-  const [linkType, setLinkType] = useState<"general" | "diviner_profile" | "diviner_service">("general");
-  const [selectedServiceId, setSelectedServiceId] = useState("");
+  const [invitationBusy, setInvitationBusy] = useState(false);
 
   const loadData = useCallback(async () => {
-    const [affRes, linksRes, commRes, profileRes, servicesRes] = await Promise.all([
+    const [affRes, reportRes, convRes] = await Promise.all([
       fetch(`/api/dashboard/affiliates/${id}`),
-      fetch(`/api/dashboard/affiliates/${id}/links`),
-      fetch(`/api/dashboard/affiliates/${id}/commissions`),
-      fetch("/api/onboarding/profile"),
-      fetch("/api/dashboard/services?active=true&limit=100"),
+      fetch(
+        `/api/dashboard/affiliate-reports/by-affiliate/${id}?period=${period}`,
+      ),
+      fetch(
+        `/api/dashboard/affiliate-reports/conversions?affiliate_id=${id}&limit=25`,
+      ),
     ]);
 
-    if (affRes.ok) setAffiliate((await affRes.json()).data);
-    if (linksRes.ok) setLinks((await linksRes.json()).data ?? []);
-    if (commRes.ok) setCommissions((await commRes.json()).data ?? []);
-    if (profileRes.ok) {
-      const json = await profileRes.json();
-      setPublicUsername(json.diviner?.username ?? "");
+    if (affRes.ok) {
+      const j = await affRes.json();
+      setAffiliate(j.data ?? null);
     }
-    if (servicesRes.ok) {
-      const json = await servicesRes.json();
-      setServices(json.services ?? []);
+    if (reportRes.ok) {
+      const j = await reportRes.json();
+      setReport((j.data as ReportPayload) ?? null);
+    }
+    if (convRes.ok) {
+      const j = await convRes.json();
+      setConversions((j.data as Conversion[]) ?? []);
     }
     setLoading(false);
-  }, [id]);
+  }, [id, period]);
 
   useEffect(() => {
-    const timeoutId = window.setTimeout(() => {
-      void loadData();
-    }, 0);
-
-    return () => window.clearTimeout(timeoutId);
+    void loadData();
   }, [loadData]);
-
-  // ── Task 04 row actions for pending invites ───────────────────────────────
-  const [invitationBusy, setInvitationBusy] = useState(false);
 
   async function handleResendInvite() {
     if (!affiliate) return;
@@ -226,7 +274,9 @@ export default function DashboardAffiliateDetailPage({
         toast.success("Invitation revoked. Returning to affiliates list.");
         window.location.href = "/dashboard/affiliates";
       } else {
-        toast.success("Invitation revoked. Partnership moved to Suspended (had commission history).");
+        toast.success(
+          "Invitation revoked. Partnership moved to Suspended (had commission history).",
+        );
         await loadData();
       }
     } catch (err) {
@@ -234,48 +284,6 @@ export default function DashboardAffiliateDetailPage({
     } finally {
       setInvitationBusy(false);
     }
-  }
-
-  function avatarInitials(name: string | null) {
-    if (!name) return "?";
-    return name
-      .split(/\s+/)
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((p) => p[0]?.toUpperCase() ?? "")
-      .join("");
-  }
-
-  async function handleGenerateLink() {
-    setGeneratingLink(true);
-    const payload =
-      linkType === "general"
-        ? {}
-        : linkType === "diviner_profile"
-          ? { product_type: "diviner_profile" }
-          : { product_type: "diviner_service", product_id: selectedServiceId };
-
-    const res = await fetch(`/api/dashboard/affiliates/${id}/links`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    if (res.ok) {
-      toast.success("Referral link generated");
-      setLinkDialogOpen(false);
-      setLinkType("general");
-      setSelectedServiceId("");
-      await loadData();
-    } else {
-      const error = await res.json().catch(() => null);
-      toast.error(error?.detail ?? "Failed to generate link");
-    }
-    setGeneratingLink(false);
-  }
-
-  function copyLink(url: string) {
-    navigator.clipboard.writeText(url);
-    toast.success("Link copied to clipboard");
   }
 
   if (loading) {
@@ -297,20 +305,14 @@ export default function DashboardAffiliateDetailPage({
     );
   }
 
-  const totalEarned = commissions.reduce((s, c) => s + c.commission_amount_cents, 0);
-  const totalPaid = payouts.reduce((s, p) => s + p.amount_cents, 0);
-  const pendingCommissions = commissions.filter((c) => c.status === "pending" || c.status === "approved");
-  const pendingTotal = pendingCommissions.reduce((s, c) => s + c.commission_amount_cents, 0);
-  const selectedService = services.find((service) => service.id === selectedServiceId) ?? null;
-
-  function describeLinkType(type: string | null) {
-    if (type === "diviner_profile") return "Diviner profile";
-    if (type === "diviner_service") return "Diviner service";
-    if (type === "package") return "Package";
-    if (type === "session") return "Session";
-    if (type === "subscription") return "Subscription";
-    return "General";
-  }
+  const kpis = report?.kpis ?? {
+    clicks: 0,
+    conversions: 0,
+    earned_cents: 0,
+    reversed_cents: 0,
+  };
+  const assignments = report?.assignments ?? [];
+  const rateHistory = report?.rate_history ?? [];
 
   return (
     <div className="space-y-6">
@@ -329,16 +331,25 @@ export default function DashboardAffiliateDetailPage({
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Badge variant={STATUS_COLORS[affiliate.status] ?? "outline"}>{affiliate.status}</Badge>
-          <span
-            title="Manual payouts retired — payouts now happen automatically via Stripe (coming soon)."
-            className="inline-flex"
+          <Badge variant={STATUS_COLORS[affiliate.status] ?? "outline"}>
+            {affiliate.status}
+          </Badge>
+          <Select
+            value={period}
+            onValueChange={(v) =>
+              setPeriod(v as "30d" | "90d" | "1y" | "all")
+            }
           >
-            <Button size="sm" disabled aria-disabled="true">
-              <DollarSign className="mr-2 size-4" />
-              Record Payout
-            </Button>
-          </span>
+            <SelectTrigger className="w-[120px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="30d">Last 30 days</SelectItem>
+              <SelectItem value="90d">Last 90 days</SelectItem>
+              <SelectItem value="1y">Last year</SelectItem>
+              <SelectItem value="all">All time</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
@@ -346,7 +357,9 @@ export default function DashboardAffiliateDetailPage({
       <Card>
         <CardHeader className="flex flex-row items-center gap-4 pb-4">
           <Avatar className="size-12">
-            {affiliate.avatar_url && <AvatarImage src={affiliate.avatar_url} alt="" />}
+            {affiliate.avatar_url && (
+              <AvatarImage src={affiliate.avatar_url} alt="" />
+            )}
             <AvatarFallback>{avatarInitials(affiliate.name)}</AvatarFallback>
           </Avatar>
           <div className="flex-1 space-y-1">
@@ -356,9 +369,13 @@ export default function DashboardAffiliateDetailPage({
                 <Mail className="size-3" aria-hidden /> {affiliate.email}
               </span>
               {affiliate.user_id ? (
-                <Badge variant="default" className="text-[10px]">Claimed</Badge>
+                <Badge variant="default" className="text-[10px]">
+                  Claimed
+                </Badge>
               ) : (
-                <Badge variant="outline" className="text-[10px]">Unclaimed</Badge>
+                <Badge variant="outline" className="text-[10px]">
+                  Unclaimed
+                </Badge>
               )}
               {affiliate.account_status === "blocked" && (
                 <span className="inline-flex items-center gap-1 text-destructive">
@@ -383,7 +400,7 @@ export default function DashboardAffiliateDetailPage({
         </CardHeader>
       </Card>
 
-      {/* Invitation card — only when junction is pending */}
+      {/* Pending invitation card */}
       {affiliate.status === "pending" && (
         <Card className="border-amber-400/40 bg-amber-50/50 dark:bg-amber-950/10">
           <CardHeader className="flex flex-row items-start justify-between pb-3">
@@ -398,16 +415,16 @@ export default function DashboardAffiliateDetailPage({
                     Invited{" "}
                     {affiliate.invited_at
                       ? fmtDate(affiliate.invited_at)
-                      : fmtDate(affiliate.latest_invite.created_at)}{" "}
-                    · expires {fmtDate(affiliate.latest_invite.expires_at)}
+                      : fmtDate(affiliate.latest_invite.created_at)}
+                    {" · "}expires{" "}
+                    {fmtDate(affiliate.latest_invite.expires_at)}
                     {affiliate.latest_invite.resent_count > 0 && (
                       <> · resent {affiliate.latest_invite.resent_count}×</>
                     )}
                     {new Date(affiliate.latest_invite.expires_at).getTime() <
                       Date.now() && (
                       <>
-                        {" "}
-                        ·{" "}
+                        {" · "}
                         <span className="font-medium text-amber-700">
                           Expired
                         </span>
@@ -424,7 +441,9 @@ export default function DashboardAffiliateDetailPage({
             <Button
               size="sm"
               onClick={handleResendInvite}
-              disabled={invitationBusy || affiliate.account_status === "blocked"}
+              disabled={
+                invitationBusy || affiliate.account_status === "blocked"
+              }
             >
               {invitationBusy ? (
                 <Loader2 className="mr-2 size-3.5 animate-spin" aria-hidden />
@@ -449,170 +468,110 @@ export default function DashboardAffiliateDetailPage({
         </Card>
       )}
 
-      {/* Summary */}
-      <div className="grid gap-4 sm:grid-cols-3">
+      {/* KPI tiles */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Total Earned</CardTitle>
-            <DollarSign className="size-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Clicks</CardTitle>
+            <TrendingUp className="size-4 text-muted-foreground" aria-hidden />
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold">{fmtCents(totalEarned)}</p>
-            <p className="text-xs text-muted-foreground">{commissions.length} commissions</p>
+            <p className="text-2xl font-bold">
+              {kpis.clicks.toLocaleString()}
+            </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Total Paid</CardTitle>
-            <Wallet className="size-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Conversions</CardTitle>
+            <TrendingUp className="size-4 text-muted-foreground" aria-hidden />
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold">{fmtCents(totalPaid)}</p>
+            <p className="text-2xl font-bold">{kpis.conversions}</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Pending Balance</CardTitle>
-            <Wallet className="size-4 text-amber-500" />
+            <CardTitle className="text-sm font-medium">Earned</CardTitle>
+            <DollarSign className="size-4 text-muted-foreground" aria-hidden />
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold text-amber-600">{fmtCents(pendingTotal)}</p>
+            <p className="text-2xl font-bold">{fmtCents(kpis.earned_cents)}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Reversed</CardTitle>
+            <DollarSign className="size-4 text-muted-foreground" aria-hidden />
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold text-muted-foreground">
+              {fmtCents(kpis.reversed_cents)}
+            </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Referral Links */}
+      {/* Assignments + current rate */}
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle>Referral Links</CardTitle>
-            <CardDescription>{links.length} link{links.length !== 1 ? "s" : ""}</CardDescription>
-          </div>
-          <Dialog open={linkDialogOpen} onOpenChange={setLinkDialogOpen}>
-            <Button size="sm" onClick={() => setLinkDialogOpen(true)}>
-              <Plus className="mr-2 size-4" />
-              Generate Link
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Assignments</CardTitle>
+              <CardDescription>
+                {assignments.length} assignment
+                {assignments.length !== 1 ? "s" : ""} — current rate per
+                product. Edit a rate from the Assignments tab.
+              </CardDescription>
+            </div>
+            <Button asChild size="sm" variant="outline">
+              <Link href="/dashboard/affiliates/assignments">
+                <Pencil className="mr-2 size-3.5" aria-hidden />
+                Manage assignments
+              </Link>
             </Button>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Generate Referral Link</DialogTitle>
-                <DialogDescription>
-                  Choose whether this affiliate should share your homepage flow, your public profile, or a specific service page.
-                </DialogDescription>
-              </DialogHeader>
-
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="link-type">Destination Type</Label>
-                  <select
-                    id="link-type"
-                    value={linkType}
-                    onChange={(event) => {
-                      const nextType = event.target.value as "general" | "diviner_profile" | "diviner_service";
-                      setLinkType(nextType);
-                      if (nextType !== "diviner_service") setSelectedServiceId("");
-                    }}
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  >
-                    <option value="general">General homepage flow</option>
-                    <option value="diviner_profile">Diviner profile</option>
-                    <option value="diviner_service">Specific diviner service</option>
-                  </select>
-                </div>
-
-                {linkType === "diviner_profile" ? (
-                  <div className="rounded-lg border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
-                    Destination preview: {publicUsername ? `/${publicUsername}` : "your public profile"}
-                  </div>
-                ) : null}
-
-                {linkType === "diviner_service" ? (
-                  <div className="space-y-2">
-                    <Label htmlFor="service-id">Service</Label>
-                    <select
-                      id="service-id"
-                      value={selectedServiceId}
-                      onChange={(event) => setSelectedServiceId(event.target.value)}
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    >
-                      <option value="">Select a service</option>
-                      {services.map((service) => (
-                        <option key={service.id} value={service.id}>
-                          {service.name} ({service.category})
-                        </option>
-                      ))}
-                    </select>
-                    {selectedService ? (
-                      <div className="rounded-lg border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
-                        Destination preview: {publicUsername ? `/${publicUsername}/services/${selectedService.slug}` : selectedService.name}
-                      </div>
-                    ) : null}
-                  </div>
-                ) : null}
-              </div>
-
-              <DialogFooter>
-                <Button
-                  onClick={handleGenerateLink}
-                  disabled={generatingLink || (linkType === "diviner_service" && !selectedServiceId)}
-                >
-                  {generatingLink ? (
-                    <Loader2 className="mr-2 size-4 animate-spin" />
-                  ) : (
-                    <Plus className="mr-2 size-4" />
-                  )}
-                  Generate Link
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+          </div>
         </CardHeader>
         <CardContent>
-          {links.length === 0 ? (
+          {assignments.length === 0 ? (
             <p className="py-4 text-center text-sm text-muted-foreground">
-              No referral links yet. Generate one above.
+              No products assigned to this affiliate yet.
             </p>
           ) : (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>URL</TableHead>
-                    <TableHead>Product</TableHead>
-                    <TableHead>Clicks</TableHead>
-                    <TableHead>Conversions</TableHead>
+                    <TableHead>Destination</TableHead>
+                    <TableHead>Current rate</TableHead>
+                    <TableHead>Assigned</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Copy</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {links.map((link) => (
-                    <TableRow key={link.id}>
+                  {assignments.map((a) => (
+                    <TableRow key={a.id}>
                       <TableCell>
-                        <span className="flex items-center gap-1.5 font-mono text-xs text-muted-foreground">
-                          <LinkIcon className="size-3 shrink-0" />
-                          {link.url}
-                        </span>
+                        <div className="font-medium">{a.destination_type}</div>
+                        {a.destination_id && (
+                          <div className="font-mono text-xs text-muted-foreground">
+                            {a.destination_id}
+                          </div>
+                        )}
                       </TableCell>
-                      <TableCell>{describeLinkType(link.product_type)}</TableCell>
-                      <TableCell>{link.clicks}</TableCell>
-                      <TableCell>{link.conversions}</TableCell>
+                      <TableCell className="font-medium">
+                        {fmtRate(a.commission_type, a.commission_value)}
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {a.assigned_at ? fmtDate(a.assigned_at) : "—"}
+                      </TableCell>
                       <TableCell>
-                        <Badge variant={link.is_active ? "default" : "secondary"}>
-                          {link.is_active ? "Active" : "Inactive"}
+                        <Badge
+                          variant={a.is_active ? "default" : "secondary"}
+                        >
+                          {a.is_active ? "active" : "revoked"}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="size-8"
-                          onClick={() => copyLink(link.url)}
-                          title="Copy link"
-                        >
-                          <Copy className="size-3.5" />
-                        </Button>
-                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -622,116 +581,111 @@ export default function DashboardAffiliateDetailPage({
         </CardContent>
       </Card>
 
-      {/* Commission Ledger */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle>Commission Ledger</CardTitle>
-            <CardDescription>{commissions.length} entries</CardDescription>
-          </div>
-          <Button
-            asChild
-            size="sm"
-            variant="outline"
-          >
-            <a
-              href={`/api/dashboard/affiliates/${id}/commissions/export`}
-              target="_blank"
-              rel="noopener noreferrer"
-              download
-            >
-              <Download className="mr-2 size-4" />
-              Export CSV
-            </a>
-          </Button>
-        </CardHeader>
-        <CardContent>
-          {commissions.length === 0 ? (
-            <p className="py-6 text-center text-sm text-muted-foreground">No commissions yet.</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Order Ref</TableHead>
-                    <TableHead>Order Amount</TableHead>
-                    <TableHead>Commission</TableHead>
-                    <TableHead>Rate</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Date</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {commissions.map((c) => (
-                    <TableRow key={c.id}>
-                      <TableCell className="font-mono text-xs">{c.order_reference ?? "—"}</TableCell>
-                      <TableCell>{fmtCents(c.order_amount_cents)}</TableCell>
-                      <TableCell className="font-medium">{fmtCents(c.commission_amount_cents)}</TableCell>
-                      <TableCell>
-                        {c.commission_type === "percentage" ? `${c.commission_rate}%` : `$${(Number(c.commission_rate) / 100).toFixed(2)} fixed`}
-                      </TableCell>
-                      <TableCell>
-                        {(() => {
-                          const commStatusClass: Record<string, string> = {
-                            pending: "bg-gray-500/10 text-gray-600 border-gray-500/20",
-                            on_hold: "bg-orange-500/10 text-orange-600 border-orange-500/20",
-                            approved: "bg-blue-500/10 text-blue-600 border-blue-500/20",
-                            paid: "bg-green-500/10 text-green-600 border-green-500/20",
-                            rejected: "bg-red-500/10 text-red-600 border-red-500/20",
-                            reversed: "bg-muted text-muted-foreground border-border",
-                          };
-                          return (
-                            <Badge variant="outline" className={`text-xs ${commStatusClass[c.status] ?? "bg-muted text-muted-foreground"}`}>
-                              {c.status}
-                            </Badge>
-                          );
-                        })()}
-                      </TableCell>
-                      <TableCell>{fmtDate(c.created_at)}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Payout History */}
+      {/* Rate history */}
       <Card>
         <CardHeader>
-          <CardTitle>Payout History</CardTitle>
-          <CardDescription>{payouts.length} payouts</CardDescription>
+          <CardTitle className="flex items-center gap-2">
+            <History className="size-4" aria-hidden />
+            Rate history
+          </CardTitle>
+          <CardDescription>
+            Reverse-chronological. Existing bookings keep the rate they were
+            stamped with — only NEW bookings use the current rate.
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          {payouts.length === 0 ? (
-            <div className="space-y-2 py-6 text-center text-sm text-muted-foreground">
-              <p>No payouts recorded yet.</p>
-              <p className="text-xs">
-                Stripe auto-split — coming soon. Affiliate payouts will be
-                processed automatically at the time of each referred sale.
-              </p>
-            </div>
+          {rateHistory.length === 0 ? (
+            <p className="py-4 text-center text-sm text-muted-foreground">
+              No rate edits yet.
+            </p>
           ) : (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Amount</TableHead>
-                    <TableHead>Method</TableHead>
-                    <TableHead>Reference</TableHead>
-                    <TableHead>Paid At</TableHead>
-                    <TableHead>Notes</TableHead>
+                    <TableHead>When</TableHead>
+                    <TableHead>From</TableHead>
+                    <TableHead>To</TableHead>
+                    <TableHead>Reason</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {payouts.map((p) => (
-                    <TableRow key={p.id}>
-                      <TableCell className="font-medium">{fmtCents(p.amount_cents)}</TableCell>
-                      <TableCell>{p.method ?? "—"}</TableCell>
-                      <TableCell className="font-mono text-xs">{p.reference ?? "—"}</TableCell>
-                      <TableCell>{fmtDate(p.paid_at)}</TableCell>
-                      <TableCell>{p.notes ?? "—"}</TableCell>
+                  {rateHistory.map((h) => (
+                    <TableRow key={h.id}>
+                      <TableCell className="text-sm">
+                        {fmtDateTime(h.changed_at)}
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {h.old_commission_type && h.old_commission_value !== null
+                          ? fmtRate(
+                              h.old_commission_type,
+                              h.old_commission_value,
+                            )
+                          : "—"}
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        {fmtRate(h.new_commission_type, h.new_commission_value)}
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {h.reason ?? "—"}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Recent conversions */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Recent conversions</CardTitle>
+          <CardDescription>
+            Newest first. Showing your slice only — conversions through other
+            diviners stay hidden.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {conversions.length === 0 ? (
+            <p className="py-6 text-center text-sm text-muted-foreground">
+              No conversions yet.
+            </p>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Order amount</TableHead>
+                    <TableHead>Rate used</TableHead>
+                    <TableHead>Commission</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {conversions.map((c) => (
+                    <TableRow key={c.id}>
+                      <TableCell className="text-sm">
+                        {fmtDate(c.created_at)}
+                      </TableCell>
+                      <TableCell>{fmtCents(c.order_amount_cents)}</TableCell>
+                      <TableCell className="text-sm">
+                        {fmtRate(c.rate_type_used, c.rate_value_used)}
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        {fmtCents(c.commission_amount_cents)}
+                      </TableCell>
+                      <TableCell>
+                        {c.reversed_at ? (
+                          <Badge variant="outline">
+                            reversed{c.reversed_reason ? ` · ${c.reversed_reason}` : ""}
+                          </Badge>
+                        ) : (
+                          <Badge variant="default">earned</Badge>
+                        )}
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
