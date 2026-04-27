@@ -16,6 +16,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Bell, Settings } from "lucide-react";
+import { MarkReadOnMount } from "./mark-read-on-mount";
 
 export const dynamic = "force-dynamic";
 
@@ -63,6 +64,7 @@ export default async function NotificationsInboxPage() {
 
   return (
     <div className="space-y-6">
+      <MarkReadOnMount unreadCount={unreadCount} />
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Notifications</h1>

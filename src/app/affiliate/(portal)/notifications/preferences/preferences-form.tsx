@@ -27,11 +27,9 @@ type PrefsState = Record<
 >;
 
 export function PreferencesForm({
-  accountId: _accountId,
   kinds,
   initialPrefs,
 }: {
-  accountId: string;
   kinds: KindMeta[];
   initialPrefs: PrefsState;
 }) {

@@ -101,11 +101,7 @@ export default async function NotificationPreferencesPage() {
           is on by default.
         </p>
       </header>
-      <PreferencesForm
-        accountId={ctx.account.id}
-        kinds={KINDS}
-        initialPrefs={initialPrefs}
-      />
+      <PreferencesForm kinds={KINDS} initialPrefs={initialPrefs} />
     </div>
   );
 }
