@@ -49,7 +49,6 @@ import { getCommunityDashboardFeed } from "@/lib/dashboard-content";
 import { calcFamilyProfileCompletion } from "@/lib/community/family-profile-completion";
 import { formatBirthPlace } from "@/lib/community/birth-location";
 import { SectionContainer } from "@/components/shared/section-container";
-import { RoleSwitcher } from "@/components/dashboard/role-switcher";
 
 export const metadata = { title: "Community - AstrologyPro" };
 export const dynamic = "force-dynamic";
@@ -817,43 +816,8 @@ export default async function CommunityDashboardPage() {
   };
 
   const familyChipData: FamilyChip[] =
-    planType === "family"
-      ? familyMembers.length > 0
-        ? buildRealChips()
-        : [
-            {
-              id: member.id,
-              name: member.full_name || "Self",
-              relationship: "Self",
-              missingRelationship: false,
-              sortKey: 0,
-            },
-            {
-              id: "mock-1",
-              name: "Anaya Ashton",
-              relationship: "Spouse",
-              missingRelationship: false,
-              sortKey: 1,
-              isMock: true,
-            },
-            {
-              id: "mock-2",
-              name: "Ethan Ashton",
-              relationship: "Son",
-              missingRelationship: false,
-              sortKey: 2,
-              isMock: true,
-            },
-            {
-              id: "mock-3",
-              name: "Mira Ashton",
-              relationship: "Daughter",
-              missingRelationship: false,
-              sortKey: 2,
-              isMock: true,
-            },
-          ]
-      : [];
+    planType === "family" && familyMembers.length > 0 ? buildRealChips() : [];
+  const showFamilyEmptyState = planType === "family" && familyMembers.length === 0;
 
   return (
     <SectionContainer verticalPadding="none" className="px-0 sm:px-0 lg:px-0">
@@ -870,7 +834,6 @@ export default async function CommunityDashboardPage() {
             })}
           </p>
         </div>
-        <RoleSwitcher />
       </div>
 
       {/* ═══════════════════════════════════════════════════════════════════
@@ -1034,6 +997,28 @@ export default async function CommunityDashboardPage() {
                   </div>
                 );
               })}
+            </div>
+            <div className="h-px w-full bg-border/50" />
+          </div>
+        )}
+
+        {showFamilyEmptyState && (
+          <div className="mt-6 flex flex-col gap-4">
+            <div className="rounded-2xl border border-dashed border-primary/30 bg-primary/5 px-4 py-4 sm:px-5">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-foreground">
+                    No family members added yet
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Your Family plan is active. Add your first household member to
+                    start generating charts together.
+                  </p>
+                </div>
+                <Button asChild size="sm" className="w-full sm:w-auto">
+                  <Link href="/community/family">Add Family Member</Link>
+                </Button>
+              </div>
             </div>
             <div className="h-px w-full bg-border/50" />
           </div>

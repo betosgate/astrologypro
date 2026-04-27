@@ -307,7 +307,7 @@ export function ServiceTemplatePublicPage(props: ServiceTemplatePublicPageProps)
               href={ctaHref}
               disabled={disableLinks}
               label={ctaLabel}
-              className="rounded-full bg-gold px-4 py-1.5 text-xs font-semibold text-cosmos-900 transition-colors hover:bg-gold-light"
+              className="flex rounded-full bg-gold px-4 py-1.5 text-xs font-semibold text-cosmos-900 transition-colors hover:bg-gold-light"
             />
           </div>
         </nav>
