@@ -1427,6 +1427,122 @@ Verify they're NOT present in Phase 1 — their absence is intentional:
 
 ---
 
+# SECTION N — TEST LOGISTICS
+
+Operational details so two testers running this checklist on different
+days produce comparable results.
+
+## N.1 Browser compatibility matrix
+
+Run the full checklist at least once per row:
+
+| Browser | Version | OS |
+|---|---|---|
+| Chrome | latest stable | macOS + Windows |
+| Safari | latest stable | macOS |
+| Firefox | latest stable | macOS |
+| Edge | latest stable | Windows |
+| Mobile Safari | iOS 17+ | iPhone |
+| Chrome Android | latest | Android 14+ |
+
+Spot-check one full role flow per browser; full per-page sweep on one
+desktop browser of choice.
+
+## N.2 Stripe test cards (for §L.3)
+
+Use these specific card numbers — testers should NOT improvise:
+
+| Scenario | Card | Notes |
+|---|---|---|
+| Happy path | `4242 4242 4242 4242` | Any future expiry, any CVC, any zip |
+| Card decline | `4000 0000 0000 9995` | Used to verify booking stays unconfirmed, no conversion written |
+| 3DS challenge | `4000 0000 0000 0341` | Verifies booking flow handles SCA |
+| Refund (after happy-path charge) | n/a — refund via Stripe Dashboard | Triggers `charge.refunded` webhook → §8.1 |
+| Dispute / chargeback | `4000 0000 0000 0259` | Triggers `charge.dispute.created` webhook |
+
+## N.3 Login + signup pages (`/login`, `/signup`)
+
+These predate v2 — light pass to confirm they still work:
+
+- [ ] Login form renders email + password inputs.
+- [ ] **"Forgot password?"** link visible and clickable.
+- [ ] Submit with bad password → error message generic ("Invalid
+      credentials"), doesn't leak whether email exists.
+- [ ] Submit with valid credentials → redirects to `?next=` if set,
+      else home.
+- [ ] OAuth buttons (Google etc.) if present render and don't error.
+- [ ] Signup form renders, submit creates user, lands on appropriate
+      onboarding.
+- [ ] Already-signed-in user visiting `/login` → redirected to home.
+
+## N.4 404 / error pages
+
+- [ ] Visit any URL listed in §F → renders branded 404 (logo +
+      navigation back to home), NOT raw Next.js default page.
+- [ ] Visit a known-good URL with a malformed UUID (e.g.
+      `/affiliate/campaigns/not-a-uuid`) → 404 or 422, not 500.
+- [ ] Force a 500 (e.g. break a query in dev) → branded error page
+      with **"Something went wrong"**, no stack trace leaked.
+
+## N.5 Test data reset between runs
+
+Before re-running this checklist, reset:
+
+- [ ] Notifications inbox for each test affiliate + diviner cleared
+      (or accept that prior runs' notifications persist).
+- [ ] Notification preferences reset to defaults (all-on for the
+      affiliate test users).
+- [ ] Test campaigns archived from prior runs are recreated as
+      `active` if needed.
+- [ ] Test bookings + conversions retained (history is cumulative;
+      this is fine for additive testing).
+- [ ] Browser cookies + localStorage cleared between role-swap runs to
+      avoid session bleed.
+
+## N.6 Bug reporting template
+
+When a check fails, log it as:
+
+```
+Step ID: <e.g. C.6 — Archive button>
+Browser/OS: <Chrome 124 / macOS 14.4>
+Expected: <quote the checklist line>
+Actual: <what happened>
+Repro: <minimal steps>
+Screenshot: <attach>
+Severity: P0 (blocker) | P1 (must-fix pre-ship) | P2 (post-ship OK)
+```
+
+File at: <project bug tracker URL — fill in before first run>.
+
+## N.7 Performance baselines
+
+Record and freeze BEFORE this sprint ships, so future runs catch
+regressions:
+
+| Page | LCP target | Recorded LCP |
+|---|---|---|
+| `/<diviner_username>` (cold) | < 2.5 s | _____ |
+| `/affiliate` (Dashboard) | < 2.5 s | _____ |
+| `/dashboard/affiliates/<id>` | < 2.5 s | _____ |
+| `/admin/reports/affiliates` | < 2.5 s | _____ |
+| `/admin/reports/affiliates/conversions` | < 2.5 s | _____ |
+
+| Action | INP target | Recorded INP |
+|---|---|---|
+| Apply filters on Conversions log | < 200 ms | _____ |
+| Open Reverse modal | < 200 ms | _____ |
+| Toggle a notification preference switch | < 200 ms | _____ |
+
+| Page | CLS target | Recorded CLS |
+|---|---|---|
+| Every page in this checklist | 0.0 | one row per page |
+
+Capture via Chrome DevTools → Lighthouse. Recorded values become the
+regression baseline for the next release tag.
+
+---
+
 # Sign-off
 
 This sprint can ship to production when:
