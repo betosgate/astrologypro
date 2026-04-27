@@ -63,6 +63,16 @@ affiliates from cookies, email addresses, or any other proxy.
   live assignment rate is always authoritative.
 - Legacy System A (slug-based referral links + separate commission ledger).
   Hard-deleted; see §9.
+- **Subscription / signup affiliate commissions.** Pre-Task-02, six
+  Stripe webhook handlers wrote `affiliate_commissions` rows on
+  non-booking events: community signup, combo bundle signup, perennial
+  community signup, diviner signup, weekly subscription create, weekly
+  subscription invoice. After Task 02 retired the legacy writers, those
+  flows credit no commission. **This is intentional.** The booking-
+  attribution model defined in §3.8 / §5 Flow E is the only commission
+  surface in scope. If subscription/signup attribution is wanted later,
+  it ships as a separate sprint with its own stamp model on the
+  subscription tables.
 
 ---
 
@@ -588,7 +598,8 @@ channel in `notification_preferences`.
 | `admin.override.campaign_archived` | Admin force-archives a campaign | in-app + email | Affiliate (owner) + diviner (of the underlying assignment) |
 
 All email sends go through the project's existing mail sender (AWS SES).
-Digests use a cron that runs daily at midnight UTC.
+Digests use a cron at `GET /api/cron/affiliate-conversion-digest`,
+scheduled in `vercel.json` to run daily at 00:00 UTC (`0 0 * * *`).
 
 Users can toggle each kind per-channel via `notification_preferences`
 (see §3.6). Defaults: every kind enabled on both channels.
@@ -688,6 +699,9 @@ This spec gets an update when Phase 2 starts scoping.
 
 Append-only. One line per concrete change. Newest first.
 
+- **2026-04-24** — Task 07 Phase B landed: 16 reporting API endpoints across `/api/admin/reports/affiliates/`, `/api/dashboard/affiliate-reports/`, `/api/affiliate/reports/`. Admin set: overview + by-diviner + by-affiliate (aggregated) + clicks + conversions + rate-history (paginated). Diviner set: overview + by-affiliate + by-affiliate/[id] + clicks + conversions, every query scoped through the caller's diviner_id with no cross-tenant leakage. Affiliate set: overview + my-products + rate-history + by-campaign + by-campaign/[id], scoped through caller's junction_ids. All list endpoints use cursor pagination on `(created_at DESC, id DESC)` per CLAUDE.md §16. Period filter `30d|90d|1y|all` (default 30d) via shared `src/lib/affiliate-report-period.ts`. RFC 9457 Problem+JSON errors. Phase C UI still deferred.
+- **2026-04-24** — Post-sprint cleanup: digest cron wired in `vercel.json` (`0 0 * * *` daily UTC). Subscription/signup affiliate commissions explicitly marked out of scope in §1 — pre-Task-02 the Stripe webhook wrote affiliate commissions on 6 non-booking flows (community/combo/perennial/diviner signups, weekly-subscription create + invoice); none of those have a System B equivalent and that's by design. If wanted later, separate sprint.
+- **2026-04-24** — Task 01b destructive migration drafted (`supabase/migrations/20260424009001_affiliate_commission_v2_destructive.sql`). Drops 6 System A tables (affiliate_commissions, affiliate_referral_links, affiliate_clicks, affiliate_payouts, affiliate_payout_items, affiliate_commission_history) with CASCADE. Trims `affiliate_accounts.status` to `unclaimed | active | blocked` and `affiliate_campaigns.status` to `active | paused | archived | expired`. Relaxes the `affiliate_campaigns_owner_consistency` CHECK so commission snapshots are no longer required on affiliate-owned rows (rate lives on the booking stamp per §3.8). The snapshot **columns** themselves are NOT dropped — the advocate service still writes them; column drop is deferred to a future cross-service cleanup. Idempotent + sanity-checked. Not yet applied — run via `/admin/db/migrations`.
 - **2026-04-24** — Task 07 Phase A landed. Five System-A-reading admin endpoints refactored/stubbed: `admin/reports/operations` + `admin/reports/affiliates` + `admin/refunds` rewired onto `campaign_conversions` (with reversed_at bucketing and diviner resolution via campaigns); `admin/reports/payouts` gracefully degrades `status`-based aggregation to "earned vs reversed" semantics (Phase 1 has no paid state); `admin/affiliates/[id]/payouts` stubbed to an empty-list GET + 410 POST until Phase 2 Stripe auto-split. Two admin emergency override endpoints built: `POST /api/admin/affiliate-assignments/[id]/revoke` and `POST /api/admin/affiliate-campaigns/[id]/archive` — both require 5-500 char reason, write `admin_action_log`, dual-notify diviner + affiliate (affiliate via per-kind pref-respecting helper; diviner via generic in-app notification). **System A is fully gone from live read/write paths — Task 01b destructive migration is now safe to run.** Reporting API buildout + UI pages deferred to follow-up sprint per scope decision.
 - **2026-04-24** — Task 06 landed: `/r/[code]` now pre-validates the campaign status + source_assignment.is_active BEFORE logging a click. Archived campaign or revoked assignment → 307 redirect to new `/link-not-active` static page (URL visibly changes; no spurious campaign_clicks row). New affiliate archive endpoint `PATCH /api/affiliate/campaigns/[id]` accepts only `{ status: 'archived' }` with strict owner_affiliate_id scope check. Also dropped the now-stale `commission_*_snapshot` reads from `/r/[code]`'s campaign SELECT in preparation for 01b.
 - **2026-04-24** — Task 05 landed: new `src/lib/affiliate-notifications.ts` routes events to in-app + email channels respecting per-kind prefs stored in `affiliate_accounts.notification_prefs`. PATCH `/api/dashboard/affiliate-assignments/[id]` now detects rate changes, inserts `diviner_service_affiliate_rate_history` rows, and fires `affiliate.rate_changed` + `affiliate.revoked` notifications with copy noting "future bookings" per spec §5 Flow G. POST `/api/dashboard/affiliate-assignments` fires `affiliate.assigned`. `creditAffiliateConversion` fires `affiliate.conversion` on successful credit (in-app immediate, email digested daily). New shared helper `src/lib/affiliate-reverse-conversion.ts` powers both `POST /api/admin/conversions/[id]/reverse` (writes `admin_action_log`) and Stripe refund/dispute hooks (TBD in Task 07 scope). New cron `GET /api/cron/affiliate-conversion-digest` sums a day's non-reversed conversions per affiliate and sends one email. `admin.override.*` kinds defined but not yet fired — will hook into Task 07 force-revoke / force-archive endpoints.

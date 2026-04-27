@@ -40,11 +40,13 @@ import {
   Plus,
   Pencil,
   Trash2,
+  PowerOff,
   ChevronUp,
   ChevronDown,
   RefreshCw,
   Copy,
   ExternalLink,
+  Loader2,
   MoreHorizontal,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -99,8 +101,10 @@ export default function ServiceTemplatesPage() {
   const [scopeFilter, setScopeFilter] = useState("all");
   const [pageSize, setPageSize] = useState(25);
 
-  const [deleteTarget, setDeleteTarget] = useState<ServiceTemplateRow | null>(null);
-  const [deleting, setDeleting] = useState(false);
+  const [deactivateTarget, setDeactivateTarget] = useState<ServiceTemplateRow | null>(null);
+  const [hardDeleteTarget, setHardDeleteTarget] = useState<ServiceTemplateRow | null>(null);
+  const [deactivating, setDeactivating] = useState(false);
+  const [hardDeleting, setHardDeleting] = useState(false);
 
   const fetchTemplates = useCallback(async () => {
     setLoading(true);
@@ -139,11 +143,11 @@ export default function ServiceTemplatesPage() {
     }
   }
 
-  async function handleDelete() {
-    if (!deleteTarget) return;
-    setDeleting(true);
+  async function handleDeactivate() {
+    if (!deactivateTarget) return;
+    setDeactivating(true);
     try {
-      const res = await fetch(`/api/admin/service-templates/${deleteTarget.id}`, {
+      const res = await fetch(`/api/admin/service-templates/${deactivateTarget.id}`, {
         method: "DELETE",
       });
       const json = await res.json();
@@ -157,15 +161,43 @@ export default function ServiceTemplatesPage() {
         );
         return;
       }
+      if (!res.ok) throw new Error(json.error ?? "Deactivate failed");
+
+      toast.success(`"${deactivateTarget.name}" deactivated`);
+      fetchTemplates();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Deactivate failed");
+    } finally {
+      setDeactivating(false);
+      setDeactivateTarget(null);
+    }
+  }
+
+  async function handleHardDelete() {
+    if (!hardDeleteTarget) return;
+    setHardDeleting(true);
+    try {
+      const res = await fetch(`/api/admin/service-templates/${hardDeleteTarget.id}?hard=true`, {
+        method: "DELETE",
+      });
+      const json = await res.json();
+
+      if (res.status === 409) {
+        const details = json.details ?? {};
+        toast.error(
+          `Cannot delete — related records exist (services: ${details.services ?? 0}, diviner mappings: ${details.diviner_services ?? 0}, intakes: ${details.intake_submissions ?? 0}).`
+        );
+        return;
+      }
       if (!res.ok) throw new Error(json.error ?? "Delete failed");
 
-      toast.success(`"${deleteTarget.name}" deactivated`);
-      setDeleteTarget(null);
+      toast.success(`"${hardDeleteTarget.name}" deleted`);
       fetchTemplates();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Delete failed");
     } finally {
-      setDeleting(false);
+      setHardDeleting(false);
+      setHardDeleteTarget(null);
     }
   }
 
@@ -422,12 +454,18 @@ export default function ServiceTemplatesPage() {
                             </Link>
                           </DropdownMenuItem>
                           <DropdownMenuItem
-                            className="text-destructive focus:text-destructive"
-                            onClick={() => setDeleteTarget(t)}
+                            onClick={() => setDeactivateTarget(t)}
                             disabled={t.diviner_count > 0}
                           >
-                            <Trash2 className="mr-2 h-4 w-4" />
+                            <PowerOff className="mr-2 h-4 w-4" />
                             Deactivate template
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="text-destructive focus:text-destructive"
+                            onClick={() => setHardDeleteTarget(t)}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete template
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -457,10 +495,16 @@ export default function ServiceTemplatesPage() {
       )}
 
       {/* Delete confirmation */}
-      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+      <AlertDialog
+        open={!!deactivateTarget}
+        onOpenChange={(open) => {
+          if (deactivating) return;
+          if (!open) setDeactivateTarget(null);
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Deactivate &ldquo;{deleteTarget?.name}&rdquo;?</AlertDialogTitle>
+            <AlertDialogTitle>Deactivate &ldquo;{deactivateTarget?.name}&rdquo;?</AlertDialogTitle>
             <AlertDialogDescription>
               This will hide the template from onboarding and service selection. It will not delete
               any existing diviner services. You can reactivate it later by creating a template with
@@ -468,13 +512,62 @@ export default function ServiceTemplatesPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={deactivating}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={handleDelete}
-              disabled={deleting}
+              onClick={(event) => {
+                event.preventDefault();
+                void handleDeactivate();
+              }}
+              disabled={deactivating}
             >
-              {deleting ? "Deactivating…" : "Deactivate"}
+              {deactivating ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deactivating…
+                </>
+              ) : (
+                "Deactivate"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={!!hardDeleteTarget}
+        onOpenChange={(open) => {
+          if (hardDeleting) return;
+          if (!open) setHardDeleteTarget(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete &ldquo;{hardDeleteTarget?.name}&rdquo;?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently removes the template record. It will be blocked if the template has
+              related services, diviner mappings, or intake submissions. Use deactivate if you only
+              need to hide the template.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={hardDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={(event) => {
+                event.preventDefault();
+                void handleHardDelete();
+              }}
+              disabled={hardDeleting}
+            >
+              {hardDeleting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting…
+                </>
+              ) : (
+                "Delete permanently"
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
