@@ -1119,6 +1119,25 @@ For every page in this checklist, verify:
       text, ≥ 3:1 for non-text).
 - [ ] Skeleton loaders don't trap focus or block keyboard nav.
 
+Stretch a11y checks (one full role pass each):
+- [ ] **Keyboard-only traversal** — login → create campaign → archive,
+      no mouse, no traps.
+- [ ] **Real screen reader** (VoiceOver / NVDA) over one affiliate flow
+      and one admin flow. Verifies announcements, headings, landmarks.
+- [ ] **Browser zoom 200%** — affiliate header doesn't break, admin
+      report tables remain usable, modals don't overflow viewport.
+- [ ] **Dark mode** — every page in this doc rendered in both light +
+      dark themes (sweep all status badges, alerts, KPI tiles).
+- [ ] **Filter deep-link / bookmark** — apply filters on
+      `/admin/reports/affiliates/conversions`, copy URL, paste in new
+      tab. **KNOWN LIMITATION:** filters live in `useState`, not URL
+      params, so state will reset. Document as expected behavior, not a
+      bug.
+- [ ] **Print** (`window.print()`) on report pages — confirm layout
+      renders or that print is intentionally not supported.
+- [ ] **RTL languages** — out of scope for v2 if not shipped; mark
+      "N/A" rather than untested.
+
 ---
 
 # SECTION J — TOAST INVENTORY
@@ -1167,12 +1186,258 @@ Each route's `<title>` (from layout `metadata` or page-specific):
 
 ---
 
+# SECTION L — LIFECYCLE & OPERATIONAL
+
+These cover the bits that aren't a single screen — auth flows, real
+data flowing through the system, multi-tab / cross-session behavior,
+and weird-input handling.
+
+## L.1 Login + logout (per role)
+
+For each role (affiliate / diviner / admin):
+- [ ] Login form accepts valid credentials → lands on the right
+      home page (`/affiliate`, `/dashboard`, `/admin`).
+- [ ] Login form rejects bad password without leaking which (email vs
+      password) was wrong.
+- [ ] **Login with `?next=<encoded-url>`** → after success, redirects
+      to that URL (not just home).
+- [ ] **Logout** button (every portal/dashboard) → session cleared,
+      redirected to login or marketing site.
+- [ ] After logout, hitting a protected URL redirects to login with
+      `?next=` set.
+- [ ] **Logout while a fetch is in flight** (e.g. on
+      `/affiliate/notifications` mid-mark-read) → no error toast for
+      the orphaned request; redirect happens cleanly.
+- [ ] **Session expiry mid-session** — wait out / invalidate the
+      session, then click any action → graceful 401 handling, redirect
+      to login (no white-screen).
+
+## L.2 Email delivery + content
+
+For each notification kind, open the actual email in test inbox and
+verify:
+- [ ] **Invitation email** — From address, subject mentions the
+      diviner, body has the personal message (if set), the accept link
+      uses `/affiliate/accept/<token>` and works on click.
+- [ ] **`affiliate.assigned`** — body names the product + rate
+      ("X% commission" or "$X flat"); CTA links to
+      `/affiliate/products`.
+- [ ] **`affiliate.rate_changed`** — body names old rate, new rate,
+      product. Sent IMMEDIATELY (not digested).
+- [ ] **`affiliate.revoked`** — body names the product + diviner.
+- [ ] **`affiliate.conversion`** — NO immediate email (verify SES log
+      shows zero send for this kind on credit time).
+- [ ] **Daily digest** (manual cron trigger) — single email per
+      affiliate, groups today's conversions, formats $ totals, has
+      an "All conversions" link to `/affiliate/earnings`.
+- [ ] **`affiliate.reversal`** — body names amount + product +
+      reason snippet.
+- [ ] **`admin.override.assignment_revoked`** — fires to BOTH affiliate
+      and diviner. Each email has appropriate addressee framing.
+- [ ] **`admin.override.campaign_archived`** — same dual-recipient.
+
+For each:
+- [ ] HTML renders correctly in Gmail / Outlook / Apple Mail.
+- [ ] Plain-text fallback present.
+- [ ] Unsubscribe / preferences link present and links to
+      `/affiliate/notifications/preferences`.
+- [ ] Footer has business legal address (CAN-SPAM compliance).
+
+## L.3 Stripe webhook end-to-end smoke
+
+One real run through the entire pipeline (production-like environment):
+- [ ] Affiliate creates a campaign → copies share URL.
+- [ ] Anonymous visitor opens share URL → 307 to service page,
+      `?ref=<code>` appended.
+- [ ] `campaign_clicks` row exists for that visitor.
+- [ ] Visitor signs up + books that service. Confirm `bookings` row has:
+  - `commission_source_assignment_id` populated
+  - `commission_rate_type_stamp` populated
+  - `commission_rate_value_stamp` populated
+- [ ] Visitor completes Stripe checkout. Webhook fires.
+- [ ] `campaign_conversions` row inserted with stamped rate values.
+- [ ] Affiliate's `/affiliate/notifications` shows the in-app
+      `affiliate.conversion` immediately.
+- [ ] No email sent for the conversion (deferred).
+- [ ] Diviner's `/dashboard/affiliates/<id>` shows the new conversion
+      under "Recent conversions".
+- [ ] Admin's `/admin/reports/affiliates/conversions` shows the new
+      row.
+
+## L.4 ref= persistence through checkout
+
+- [ ] Click `/r/<code>` → land on service page with `?ref=<code>`.
+- [ ] Navigate to a sibling page (e.g. profile page) — `ref` is still
+      preserved (cookie or query).
+- [ ] Open the booking flow — `ref` carried through.
+- [ ] Submit booking — `bookings.ref_code` matches the original.
+- [ ] **`ref` precedence**: if user clicks share URL A, then later
+      share URL B, then books → which one wins? Document and verify
+      (typically last-touch).
+- [ ] **Direct `?ref=<code>` URL** (no `/r/` redirect) → does it still
+      stamp? (Probably not — verify behavior is intentional.)
+
+## L.5 Multi-tab / concurrent sessions
+
+- [ ] **Notifications inbox in two tabs** for the same affiliate. Tab A
+      auto-marks-read on mount. Tab B already mounted. Trigger a new
+      notification. Verify:
+  - Tab A: shows the new "New" badge after the next page load.
+  - Tab B: badge does NOT appear in real-time (no websocket); shown
+    on next user action.
+- [ ] **Same admin opens Reverse modal in two tabs** for the same
+      conversion. Submit in Tab A → success. Submit in Tab B →
+      friendly 409 toast ("Conversion already reversed"), no stack
+      trace.
+- [ ] **Diviner and admin both edit the same affiliate**: diviner
+      changes rate while admin opens the assignment-detail page →
+      verify there's no version conflict UI (last write wins is
+      acceptable as long as it doesn't crash).
+
+## L.6 Pagination edge cases
+
+For each cursor-paginated table (admin clicks / conversions /
+rate-history; affiliate-side equivalents; diviner-side equivalents):
+- [ ] Click "Load more" → next page appended.
+- [ ] On the LAST page, the button is hidden.
+- [ ] Where "Prev" buttons exist (admin/affiliates list, diviner
+      assignments grouped tables) → going Next then Prev returns to
+      the same first-page rows in the same order.
+- [ ] **Filter change while on page 3** → resets back to page 1
+      (cursor reset). Confirmed visually.
+
+## L.7 Filter combinations
+
+On admin reports surfaces:
+- [ ] `/admin/reports/affiliates/conversions`: apply
+      `diviner_id + status=earned + date_from + date_to` together →
+      result is the intersection (not the union), and pagination
+      respects the combined filter.
+- [ ] Same for clicks: `country + is_bot=false + diviner_id` together.
+- [ ] **Filter that returns zero rows** → empty-state copy, no error.
+- [ ] **Filter with malformed date** → server 422, friendly toast.
+
+## L.8 Long content / Unicode / emoji
+
+- [ ] Campaign name with the full 120-char max → table renders without
+      breaking layout (truncates with ellipsis or wraps gracefully).
+- [ ] Diviner display name with emoji 🌙 → renders in nav, table cells,
+      notifications.
+- [ ] Affiliate name in Cyrillic / Arabic / Han → renders correctly
+      in tables and emails (email charset is UTF-8).
+- [ ] Reason field with the full 500-char max in override modal →
+      submits OK, full text stored in `admin_action_log`.
+- [ ] Notes field with 1000-char max in campaign create form →
+      submits OK.
+- [ ] Very long affiliate email → table cell doesn't blow up the
+      column width.
+
+## L.9 Currency / time-zone display
+
+- [ ] **Zero commission** ($0.00) — renders cleanly, no NaN.
+- [ ] **Reversed conversion** with reason of empty string vs null →
+      both render without "—undefined" artifacts.
+- [ ] **Very large total** (e.g. $999,999.00) — formatting with commas
+      stays correct.
+- [ ] **Negative cents** (shouldn't occur but defensive check) — UI
+      doesn't crash.
+- [ ] Relative timestamps "5m ago", "3h ago" — verified across two
+      user time zones (e.g. UTC and PT).
+- [ ] Absolute timestamps render in user's locale (e.g. "Apr 27, 2026
+      2:30 PM" in en-US, different format in en-GB).
+
+## L.10 Browser back / form-state preservation
+
+- [ ] After Archive on `/affiliate/campaigns/<id>` → click browser
+      Back. Page refetches and shows `archived` status (or refreshed
+      shell), not stale `active`.
+- [ ] After Reverse on an admin conversion row → click browser Back.
+      Conversion shows `reversed` status (or table re-renders).
+- [ ] **Fill the Invite dialog halfway** (Diviner /dashboard/affiliates),
+      close it without submitting → reopen → form is reset (expected),
+      OR remembers (unexpected — document either way).
+- [ ] **Fill /affiliate/campaigns/new** halfway, navigate to /products,
+      click "Create campaign" again → form starts fresh.
+- [ ] **Network failure mid-submit**: disconnect WiFi, hit Submit on
+      Assign Affiliate form → toast "Network error", form preserved,
+      can retry after reconnect.
+
+## L.11 Bot + unique click visible verification
+
+- [ ] curl-with-bot-UA hits `/r/<code>` → row in `campaign_clicks` with
+      `is_bot=true`. Visible in admin clicks log with **bot** badge.
+- [ ] Real browser hits `/r/<code>` → `is_bot=false`,
+      `is_unique_click=true` on first click in a session.
+- [ ] Same browser clicks the SAME share URL again within the session
+      → second click has `is_unique_click=false`.
+
+## L.12 Country detection
+
+- [ ] Cloudflare / proxy header (`cf-ipcountry` or equivalent) populates
+      `campaign_clicks.country`.
+- [ ] Admin clicks log filter `country=US` returns only US rows.
+- [ ] Click without resolvable country → row has `country=null`,
+      filter-by-country still works (excludes them).
+
+## L.13 Tax form status badge variants
+
+On `/affiliate/profile`, verify each `tax_form_status` value renders:
+- [ ] `not_collected` → badge shows "Tax: not_collected" (or human
+      label).
+- [ ] `pending` → badge.
+- [ ] `verified` → badge.
+- [ ] `rejected` → badge.
+
+(Set values directly in DB if no UI mutates them yet.)
+
+## L.14 Dialog interaction details
+
+- [ ] Override modal: typing in the textarea while submitting is
+      disabled → input is read-only or visually locked.
+- [ ] Override modal: clicking outside modal while NOT submitting
+      closes it; while submitting, modal stays.
+- [ ] Invite dialog (diviner): pressing Esc cancels (standard).
+- [ ] Sheet (admin Add Affiliate / diviner New Assignment): clicking
+      outside the sheet closes it.
+
+---
+
+# SECTION M — PHASE 2 ABSENCE VERIFICATION
+
+These features are deferred to Phase 2 (Stripe auto-split sprint).
+Verify they're NOT present in Phase 1 — their absence is intentional:
+
+- [ ] **No "Connect Stripe" / Stripe Connect onboarding** anywhere in
+      the affiliate or diviner portal for affiliate-side payouts.
+      (Diviner-side Stripe Connect for their own payouts may exist —
+      that's separate.)
+- [ ] **No "Affiliate payout history"** card on `/affiliate/earnings`.
+      Page should explicitly say "Payouts will arrive once Stripe
+      auto-split is enabled."
+- [ ] **No "Approve commission" / "Reject commission" admin action**
+      anywhere. Phase 1 has no approval state machine — only `earned`
+      vs `reversed`.
+- [ ] **No "Record Payout" button** on diviner per-affiliate detail
+      page (verified deleted in Delivery 3 cleanup).
+- [ ] **No "Manage Disputes" UI** (verified deleted in cleanup commit
+      `5f8c4f20`).
+- [ ] No commission-state badges of `pending`, `approved`, `paid`,
+      `rejected`, `on_hold`, or `adjusted` anywhere in v2 UI. Only
+      `earned` and `reversed` are valid.
+
+---
+
 # Sign-off
 
 This sprint can ship to production when:
 - [ ] Every section above is ticked.
 - [ ] All deletion-confirmation 404s in §F return correctly.
+- [ ] All Phase 2 absence checks in §M confirmed.
 - [ ] No P0/P1 visual regressions vs the spec or this doc.
-- [ ] Section I (accessibility) reviewed by someone who tabs through every page.
+- [ ] §I (accessibility) reviewed by someone who tabs through every page.
+- [ ] §L.3 (Stripe webhook end-to-end) executed at least once with
+      real data flowing all the way through.
+- [ ] §L.2 (email delivery) verified with at least one of each kind
+      actually opened and read in a test inbox.
 
 Tested by: ____________________  Browser/OS: __________  Date: __________
