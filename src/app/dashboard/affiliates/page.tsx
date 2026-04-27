@@ -1,8 +1,8 @@
 "use client";
 
 // Task 04 (2026-04-23): invite-only flow. Add-affiliate sheet removed. Row
-// dropdown with Resend / Copy link / Revoke / View. Agreement-gate banner
-// disables Invite until the diviner signs the affiliate partnership terms.
+// dropdown with Resend / Revoke / View. Agreement-gate banner disables
+// Invite until the diviner signs the affiliate partnership terms.
 // Sprint: docs/tasks/2026-04-23/affiliate-identity-refactor/04-diviner-ui-updates.md
 
 import { useEffect, useState, useCallback } from "react";
@@ -56,7 +56,6 @@ import {
   MoreHorizontal,
   RefreshCw,
   XCircle,
-  Copy,
   AlertTriangle,
   Lock,
 } from "lucide-react";
@@ -255,36 +254,6 @@ export default function DashboardAffiliatesPage() {
       await loadAffiliates();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to resend");
-    } finally {
-      setBusyRowId(null);
-    }
-  }
-
-  async function handleCopyLink(aff: Affiliate) {
-    if (
-      !confirm(
-        "This issues a fresh invitation and invalidates any prior invite email. Continue?",
-      )
-    )
-      return;
-    setBusyRowId(aff.id);
-    try {
-      const result = await resendInviteByJunction(aff.id);
-      // Raw token never returned — show the masked URL in a toast so the
-      // diviner sees where the email points. The actual email is what the
-      // invitee clicks.
-      toast.success(
-        `New invite sent to ${aff.email}. The clickable link is only in their email.`,
-        { duration: 8000 },
-      );
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      if ((result as any).accept_url_masked) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        navigator.clipboard?.writeText((result as any).accept_url_masked).catch(() => {});
-      }
-      await loadAffiliates();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed");
     } finally {
       setBusyRowId(null);
     }
@@ -666,10 +635,6 @@ export default function DashboardAffiliatesPage() {
                                       {derived === "pending_expired"
                                         ? "Resend (fresh token)"
                                         : "Resend invitation"}
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => handleCopyLink(aff)}>
-                                      <Copy className="mr-2 size-4" aria-hidden />
-                                      Copy accept link
                                     </DropdownMenuItem>
                                     <DropdownMenuSeparator />
                                     <DropdownMenuItem

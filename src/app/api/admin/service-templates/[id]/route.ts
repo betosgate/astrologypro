@@ -211,12 +211,13 @@ export async function PATCH(
 
 // ─────────────────────────────────────────────────────────────────────────────
 // DELETE /api/admin/service-templates/[id]
-// Soft-deletes (deactivates) the template.
-// Blocks if any diviner has it enabled.
+// Default: soft-deletes (deactivates) the template.
+// With ?hard=true: permanently deletes only when no related records exist.
+// Soft-delete blocks if any diviner has it enabled.
 // ─────────────────────────────────────────────────────────────────────────────
 
 export async function DELETE(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const user = await getAdminUser();
@@ -224,6 +225,76 @@ export async function DELETE(
 
   const { id } = await params;
   const admin = createAdminClient();
+  const hardDelete = req.nextUrl.searchParams.get("hard") === "true";
+
+  if (hardDelete) {
+    const [{ data: template, error: templateErr }, divinerServicesRes, servicesRes, intakesRes] =
+      await Promise.all([
+        admin
+          .from("service_templates")
+          .select("id, name")
+          .eq("id", id)
+          .maybeSingle(),
+        admin
+          .from("diviner_services")
+          .select("id, diviners(display_name)", { count: "exact" })
+          .eq("template_id", id),
+        admin
+          .from("services")
+          .select("id", { count: "exact" })
+          .eq("template_id", id),
+        admin
+          .from("service_template_intake_submissions")
+          .select("id", { count: "exact" })
+          .eq("template_id", id),
+      ]);
+
+    if (templateErr) {
+      return NextResponse.json({ error: templateErr.message }, { status: 500 });
+    }
+    if (!template) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+
+    if (divinerServicesRes.error) {
+      return NextResponse.json({ error: divinerServicesRes.error.message }, { status: 500 });
+    }
+    if (servicesRes.error) {
+      return NextResponse.json({ error: servicesRes.error.message }, { status: 500 });
+    }
+    if (intakesRes.error) {
+      return NextResponse.json({ error: intakesRes.error.message }, { status: 500 });
+    }
+
+    const divinerServiceCount = divinerServicesRes.count ?? 0;
+    const serviceCount = servicesRes.count ?? 0;
+    const intakeCount = intakesRes.count ?? 0;
+    if (divinerServiceCount > 0 || serviceCount > 0 || intakeCount > 0) {
+      return NextResponse.json(
+        {
+          error: "Cannot delete template with related records",
+          details: {
+            diviner_services: divinerServiceCount,
+            services: serviceCount,
+            intake_submissions: intakeCount,
+          },
+          affected_diviners: (divinerServicesRes.data ?? []).map((row) => row.diviners),
+        },
+        { status: 409 },
+      );
+    }
+
+    const { error: deleteErr } = await admin
+      .from("service_templates")
+      .delete()
+      .eq("id", id);
+
+    if (deleteErr) {
+      return NextResponse.json({ error: deleteErr.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true, deleted: true });
+  }
 
   // Check for active diviner_services rows
   const { data: activeServices } = await admin
