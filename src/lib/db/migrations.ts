@@ -74,8 +74,12 @@ import { MIGRATION_SQL as MIG_20260423000005_ACC } from "@/data/migrations/20260
 import { MIGRATION_SQL as MIG_20260424000001_ODC } from "@/data/migrations/20260424000001_phone_sessions_outbound_diviner_call";
 import { MIGRATION_SQL as MIG_20260424000002_AAR } from "@/data/migrations/20260424000002_astro_ai_responses";
 import { MIGRATION_SQL as MIG_20260427000001_SRL } from "@/data/migrations/20260427000001_saved_report_linkage";
+import { MIGRATION_SQL as MIG_20260427000002_RAC } from "@/data/migrations/20260427000002_ritual_admin_config";
 import { MIGRATION_SQL as MIG_20260424000010_ACV2A } from "@/data/migrations/20260424000010_affiliate_commission_v2_additive";
 import { MIGRATION_SQL as MIG_20260424009001_ACV2D } from "@/data/migrations/20260424009001_affiliate_commission_v2_destructive";
+import { MIGRATION_SQL as MIG_20260427000002_ARV2A } from "@/data/migrations/20260427000002_affiliate_rls_v2_alignment";
+import { MIGRATION_SQL as MIG_20260427000003_AJSP } from "@/data/migrations/20260427000003_affiliate_junction_select_policy";
+import { MIGRATION_SQL as MIG_20260427000004_ARSD } from "@/data/migrations/20260427000004_affiliate_rls_security_definer";
 
 /**
  * Allowlisted migrations that the admin migration runner can execute.
@@ -676,6 +680,38 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Additive. Adds natal_report_id/natal_report_generated_at/natal_report_status to community_family_members; full_report_id/full_report_generated_at/full_report_status to monthly_transits; report_id/report_type/report_generated_at/report_status to relationship_charts. CHECK-constrained statuses (missing|generating|generated|failed|stale|locked_for_review) and report_type (friendship|romantic|partnership). Creates community_relationship_reports child table so a single pair can have multiple report types simultaneously, with unique (person_a_id, person_b_id, report_type) and a person_a_id < person_b_id sort guard. Indexed for 'find report by id' and 'list by member+status' patterns. RLS: service_role full; authenticated members see only their own household rows. Existing chart_data / natal_chart / transit_data columns are untouched so legacy rows remain viewable during rollout. Rollback: DROP COLUMN ... and DROP TABLE community_relationship_reports.",
     sortKey: "20260427000001",
     sql: MIG_20260427000001_SRL,
+  },
+  "20260427000002_ritual_admin_config": {
+    id: "20260427000002_ritual_admin_config",
+    title: "Ritual admin configuration (definitions + media assets + tag mappings) with seeds",
+    description:
+      "Additive. Creates three tables to move ritual presentation/asset mapping out of hardcoded constants and into admin-managed records: ritual_definitions (metadata + playback_policy_json + final_override link + label overrides), ritual_media_assets (upload OR external_url with mutually-exclusive CHECK), and ritual_asset_mappings ((tag_key | step_role) → asset_id, scoped 'global' or 'ritual_definition' with partial unique indexes per scope). Triggers bump updated_at, RLS allows service_role full + authenticated read of published/active rows so the runtime resolver works under user sessions. Seeds the four current ritual definitions (3 static + 1 dynamic, all final_override DISABLED so existing playlist behaviour is preserved), seeds 37 ritual_media_assets pointing at the existing S3 URLs from src/lib/community/ritual-video-map.ts, and seeds matching global tag_key → asset_id mappings so the runtime resolver can read DB-only for known tags. Rollback: DROP each table.",
+    sortKey: "20260427000002",
+    sql: MIG_20260427000002_RAC,
+  },
+  "20260427000002_affiliate_rls_v2_alignment": {
+    id: "20260427000002_affiliate_rls_v2_alignment",
+    title: "Affiliate RLS v2 alignment (commission v2 sprint)",
+    description:
+      "Aligns affiliate-side SELECT policies with the v2 junction model. Pre-v2 policies assumed *.affiliate_id = auth.users.id; v2 changed affiliate_id to point at diviner_affiliates.id (the junction). Replaces the broken diviner_service_affiliates_select_affiliate policy and adds 5 missing policies: affiliate_sees_own_campaigns + affiliate_inserts_own_campaigns + affiliate_updates_own_campaigns on affiliate_campaigns; affiliate_sees_own_clicks on campaign_clicks; affiliate_sees_own_conversions on campaign_conversions. All resolve auth.uid() → affiliate_accounts.user_id → diviner_affiliates.id. The API was always service-role (RLS bypass) so no production regression — but spec §8 promised affiliates can read their slice via auth client and that promise was unfulfilled. Caught by Task 08 RLS test suite. Idempotent + sanity-checked.",
+    sortKey: "20260427000002",
+    sql: MIG_20260427000002_ARV2A,
+  },
+  "20260427000003_affiliate_junction_select_policy": {
+    id: "20260427000003_affiliate_junction_select_policy",
+    title: "Affiliate junction SELECT policy (RLS chain fix)",
+    description:
+      "Follow-up to 20260427000002. The child-table policies it added all resolve through `diviner_affiliates → affiliate_accounts → user_id`, but `diviner_affiliates` itself only has a diviner-side SELECT policy. With no affiliate-side policy, the IN-subquery returned 0 rows under RLS for the authed affiliate session, making every child policy match nothing. Adds `affiliate_sees_own_junctions` on `diviner_affiliates` resolving `affiliate_account_id → user_id`. Idempotent + sanity-checked. Run AFTER 20260427000002.",
+    sortKey: "20260427000003",
+    sql: MIG_20260427000003_AJSP,
+  },
+  "20260427000004_affiliate_rls_security_definer": {
+    id: "20260427000004_affiliate_rls_security_definer",
+    title: "Affiliate RLS — break policy cycle with SECURITY DEFINER helpers",
+    description:
+      "Hot-fix for 20260427000003. After that migration, every authed query on the affiliate child tables raised 'infinite recursion detected in policy for relation diviner_affiliates' — `affiliate_accounts.diviner_sees_linked_accounts` queries diviner_affiliates, and the new `affiliate_sees_own_junctions` queries affiliate_accounts. Cycle. Introduces two SECURITY DEFINER helpers — `current_affiliate_junction_ids()` (SETOF UUID) and `current_affiliate_account_id()` (UUID) — that resolve auth.uid() → junction set / account id while bypassing inner RLS. Rewrites all 6 affiliate-side policies from 20260427000002 + 20260427000003 to call these helpers instead of inlined subqueries. Run AFTER 20260427000003.",
+    sortKey: "20260427000004",
+    sql: MIG_20260427000004_ARSD,
   },
   "20260423000004_fix_invite_rpc_ambiguity": {
     id: "20260423000004_fix_invite_rpc_ambiguity",

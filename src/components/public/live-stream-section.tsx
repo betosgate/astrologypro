@@ -115,18 +115,62 @@ function PlatformEmbed({ config }: { config: StreamPlatformConfig }) {
     );
   }
 
+  // Public link for the "Watch live on …" escape hatch. Prefer the
+  // user-supplied stream_url when present; otherwise fall back to a
+  // useful canonical URL we can derive from what we have.
+  const externalUrl = (() => {
+    if (config.stream_url) {
+      // For YouTube the saved stream_url is often a Channel ID (UCxxx);
+      // turn that into a real link rather than dumping the bare ID.
+      if (config.platform === "youtube" && /^UC[\w-]{20,}$/.test(config.stream_url)) {
+        return `https://www.youtube.com/channel/${config.stream_url}/live`;
+      }
+      return config.stream_url;
+    }
+    return null;
+  })();
+
   return (
-    <div className="overflow-hidden rounded-xl border border-white/[0.07]">
-      <div className="relative w-full" style={{ paddingBottom: "56.25%" }}>
-        <iframe
-          className="absolute inset-0 h-full w-full"
-          src={embedUrl}
-          title={`${displayName} Live Stream`}
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowFullScreen
-          onError={() => setEmbedError(true)}
-        />
+    <div className="space-y-3">
+      {/*
+        Embed wrapper:
+        - Dark backdrop so the white "refused to connect" YouTube page is
+          less jarring on the dark theme. The user can still see the
+          escape hatch below it without the embed dominating the page.
+        - We do NOT rely on iframe onError — X-Frame-Options is a cross-
+          origin block, so the parent frame never receives an error
+          event. Instead we always render the "Watch live on …" link
+          below as a guaranteed-working alternative.
+      */}
+      <div className="overflow-hidden rounded-xl border border-white/[0.07] bg-cosmos-950">
+        <div className="relative w-full" style={{ paddingBottom: "56.25%" }}>
+          <iframe
+            className="absolute inset-0 h-full w-full"
+            src={embedUrl}
+            title={`${displayName} Live Stream`}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+            onError={() => setEmbedError(true)}
+          />
+        </div>
       </div>
+      {externalUrl && (
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-white/[0.07] bg-white/[0.02] px-4 py-2.5 text-xs text-silver/70">
+          <span>
+            Embed not loading? {platformLabel} sometimes blocks embedded
+            playback when the channel isn&apos;t actively broadcasting.
+          </span>
+          <a
+            href={externalUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-gold/40 px-3 py-1.5 text-xs font-medium text-gold transition-all hover:border-gold/70 hover:bg-gold/5"
+          >
+            Watch on {platformLabel}
+            <ExternalLink className="size-3" />
+          </a>
+        </div>
+      )}
     </div>
   );
 }

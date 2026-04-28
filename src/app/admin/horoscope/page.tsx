@@ -2750,14 +2750,18 @@ export interface HoroscopeToolkitPageProps {
   basePath?: string;
   allowedSlugs?: string[];
   initialPrefill?: string | null;
+  initialSavedReport?: Record<string, unknown> | null;
   readOnlyBirthData?: boolean;
+  communityNatalFamilyMemberId?: string | null;
 }
 
 export function HoroscopeToolkitPage({
   basePath = "/admin/horoscope",
   allowedSlugs,
   initialPrefill = null,
+  initialSavedReport = null,
   readOnlyBirthData = false,
+  communityNatalFamilyMemberId = null,
 }: HoroscopeToolkitPageProps = {}) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -2776,10 +2780,11 @@ export function HoroscopeToolkitPage({
 
   // Reset form and results when tab changes
   useEffect(() => {
+    if (initialSavedReport) return;
     setForm(defaultForm());
     setResults(null);
     setError(null);
-  }, [currentSlug]);
+  }, [currentSlug, initialSavedReport]);
   const isFormValid = (() => {
     const p1 = form.person1;
     if (!p1.dob || !p1.tob || !p1.city) return false;
@@ -2809,6 +2814,50 @@ export function HoroscopeToolkitPage({
   const [excludedHoraryDates, setExcludedHoraryDates] = useState<string>("");
   const [isSuggestingDate, setIsSuggestingDate] = useState(false);
 
+  useEffect(() => {
+    if (!initialSavedReport) return;
+
+    const formData =
+      initialSavedReport.form_data && typeof initialSavedReport.form_data === "object"
+        ? (initialSavedReport.form_data as Record<string, unknown>)
+        : {};
+    const astroApiData =
+      initialSavedReport.astro_api_data && typeof initialSavedReport.astro_api_data === "object"
+        ? (initialSavedReport.astro_api_data as Record<string, unknown>)
+        : {};
+    const aiResponse =
+      initialSavedReport.ai_response && typeof initialSavedReport.ai_response === "object"
+        ? (initialSavedReport.ai_response as Record<string, unknown>)
+        : {};
+
+    setResults({
+      ...formData,
+      city: form.person1?.city ?? formData.city ?? "",
+      natal_chart_data: astroApiData,
+      ai_interpretations: aiResponse,
+    });
+    setNatalSvg(
+      typeof initialSavedReport.free_natal_wheel_chart === "string"
+        ? initialSavedReport.free_natal_wheel_chart
+        : null,
+    );
+    setNatalSvgTransit(
+      typeof initialSavedReport.free_natal_wheel_chart_transit === "string"
+        ? initialSavedReport.free_natal_wheel_chart_transit
+        : null,
+    );
+    setShowChartBtn(
+      Boolean(
+        initialSavedReport.free_natal_wheel_chart ||
+          initialSavedReport.free_natal_wheel_chart_transit,
+      ),
+    );
+    setProgress([]);
+    setLoading(false);
+    setError(null);
+    setShowScrollTop(true);
+  }, [initialSavedReport, form.person1?.city]);
+
   const checkDacen = (planetName: string, signName: string) => {
     const normalizedPlanet = normalizeDecanValue(planetName);
     const normalizedSign = normalizeDecanValue(signName);
@@ -2822,11 +2871,12 @@ export function HoroscopeToolkitPage({
 
   // Reset on tab change
   useEffect(() => {
+    if (initialSavedReport) return;
     setResults(null); setNatalSvg(null); setNatalSvgTransit(null);
     setNatalSvgP2(null); setNatalSvgTransitP2(null);
     setReturnDate(null); setError(null); setProgress([]); setForm(defaultForm());
     setShowScrollTop(false); setShowChartBtn(false); setTransitChartSvg(null);
-  }, [currentSlug]);
+  }, [currentSlug, initialSavedReport]);
 
   // Booking-session prefill + auto-submit.
   // When the diviner is routed here from /admin/horoscope/session/[bookingId],
@@ -2840,13 +2890,13 @@ export function HoroscopeToolkitPage({
     try {
       const parsed = JSON.parse(decodeURIComponent(prefillParam)) as Partial<FormState>;
       setForm((prev) => ({ ...prev, ...parsed }));
-      setPendingAutoSubmit(true);
+      setPendingAutoSubmit(!initialSavedReport);
     } catch {
       // malformed prefill — ignore so the diviner can fill the form by hand
     }
     // Re-apply when the tab changes so restricted community wrappers keep the
     // saved pair/self data while switching between compatible report tabs.
-  }, [prefillParam, currentSlug]);
+  }, [prefillParam, currentSlug, initialSavedReport]);
 
   // Fire handleSubmit once the prefill has populated the form and it's valid.
   // We can't call handleSubmit() in the same effect that calls setForm() —
@@ -3025,6 +3075,7 @@ export function HoroscopeToolkitPage({
           callCompute("natal_wheel_chart", birth1 as unknown as Record<string, unknown>)
             .then((w) => {
               if (w?.chart_url) {
+                collected.freeNatalWheelChart = w.chart_url;
                 setNatalSvg(w.chart_url);
                 setShowChartBtn(true);
               }
@@ -3038,6 +3089,7 @@ export function HoroscopeToolkitPage({
             .then((freeResp) => {
               const svg = freeResp?.results?.output;
               if (svg) {
+                collected.freeNatalWheelChartForTrasit = svg;
                 setNatalSvgTransit(svg);
                 setShowChartBtn(true);
               }
@@ -3511,6 +3563,51 @@ export function HoroscopeToolkitPage({
       // and either failing alone does not affect the displayed result.
       // The legacy save remains in place; the lookup/read repointing is
       // intentionally a follow-up so this UI is not refactored here.
+      if (
+        currentTab.slug === "western_horoscope_v2" &&
+        communityNatalFamilyMemberId
+      ) {
+        try {
+          const savePayload = {
+            toolname: "western_horoscope_v2",
+            ai_response: collected.ai_interpretations ?? {},
+            formData: {
+              ...birth1,
+              city: form.person1?.city ?? "",
+              dateOfBirth: form.person1.dob,
+              birthTime: form.person1.tob,
+              birthCity: form.person1.city?.label ?? "",
+              birthLat: form.person1.city?.lat ?? null,
+              birthLng: form.person1.city?.lng ?? null,
+            },
+            astro_api_data: collected.natal_chart_data ?? {},
+            natal_chart: collected.natal_chart_data ?? {},
+            freeNatalWheelChart:
+              collected.freeNatalWheelChart ?? natalSvg ?? "",
+            freeNatalWheelChartForTrasit:
+              collected.freeNatalWheelChartForTrasit ?? natalSvgTransit ?? "",
+          };
+
+          const saveRes = await fetch("/api/community/saved-reports/natal/link", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              familyMemberId: communityNatalFamilyMemberId,
+              payload: savePayload,
+            }),
+          });
+          if (!saveRes.ok) {
+            const data = await saveRes.json().catch(() => null);
+            throw new Error(data?.error ?? "Failed to save natal report");
+          }
+          router.refresh();
+        } catch (err) {
+          throw err instanceof Error
+            ? err
+            : new Error("Failed to save natal report");
+        }
+      }
+
       if (currentTab.slug === "tropical_transits_monthly_v3") {
         try {
           const savePayload = {
@@ -3737,25 +3834,48 @@ export function HoroscopeToolkitPage({
 
                 {error && <p className="text-sm text-destructive rounded-md bg-destructive/10 px-3 py-2">{error}</p>}
 
-                <Button
-                  type="submit"
-                  disabled={loading || !isFormValid || readOnlyBirthData}
-                  className={cn(
-                    "w-full md:w-auto h-10 px-8 font-semibold transition-all shadow-md",
-                    loading || !isFormValid || readOnlyBirthData
-                      ? "bg-muted text-muted-foreground cursor-not-allowed opacity-70"
-                      : "bg-amber-500 hover:bg-amber-600 text-white hover:shadow-lg active:scale-95"
-                  )}
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="mr-2 size-4 animate-spin" />
-                      Processing Cosmic Data…
-                    </>
-                  ) : (
-                    "Generate Reading"
-                  )}
-                </Button>
+                {initialSavedReport ? (
+                  <Button
+                    type="button"
+                    disabled={loading || !isFormValid}
+                    onClick={() => void handleSubmit(undefined, false)}
+                    className={cn(
+                      "w-full md:w-auto h-10 px-8 font-semibold transition-all shadow-md",
+                      loading || !isFormValid
+                        ? "bg-muted text-muted-foreground cursor-not-allowed opacity-70"
+                        : "bg-amber-500 hover:bg-amber-600 text-white hover:shadow-lg active:scale-95"
+                    )}
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="mr-2 size-4 animate-spin" />
+                        Processing Cosmic Data…
+                      </>
+                    ) : (
+                      "Regenerate"
+                    )}
+                  </Button>
+                ) : (
+                  <Button
+                    type="submit"
+                    disabled={loading || !isFormValid || readOnlyBirthData}
+                    className={cn(
+                      "w-full md:w-auto h-10 px-8 font-semibold transition-all shadow-md",
+                      loading || !isFormValid || readOnlyBirthData
+                        ? "bg-muted text-muted-foreground cursor-not-allowed opacity-70"
+                        : "bg-amber-500 hover:bg-amber-600 text-white hover:shadow-lg active:scale-95"
+                    )}
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="mr-2 size-4 animate-spin" />
+                        Processing Cosmic Data…
+                      </>
+                    ) : (
+                      "Generate Reading"
+                    )}
+                  </Button>
+                )}
               </form>
             </CardContent>
           </Card>

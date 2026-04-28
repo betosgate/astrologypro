@@ -37,7 +37,7 @@ export default async function AdminRitualsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Ritual Invocations</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Ritual Configurations</h1>
           <p className="text-muted-foreground">Manage ritual invocations</p>
         </div>
         <Button asChild>
@@ -47,7 +47,7 @@ export default async function AdminRitualsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>All Rituals</CardTitle>
+          <CardTitle>All Ritual Configurations</CardTitle>
         </CardHeader>
         <CardContent>
           {!rituals || rituals.length === 0 ? (
