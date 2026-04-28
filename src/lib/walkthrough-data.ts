@@ -5708,9 +5708,24 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
       "Useful for keeping the Community Library connected to trusted learning resources and doctrine references"
     ]
   },
+{
+  name: "ritual_activity_v2",
+  label: "Ritual Activity",
+  description: "User ritual activity tracking for Perennial Mandalism dashboard rituals.",
+  group: "Community",
+ 
+  purpose: "Allows administrators to monitor all rituals created or started from the Perennial Mandalism dashboard, including user progress, selected ritual type, generated tags, creation date, and last playback activity.",
+  bullets: [
+    "Displays all user-created ritual records in a structured activity table with serial number, user details, ritual name, status, tags, created date, last played timestamp, and available actions.",
+    "Supports filtering by ritual type, user, status, created-from date, and created-to date so administrators can quickly locate specific ritual activity records.",
+    "Tracks ritual progress states such as Not Started and In Progress, helping admins understand whether users have begun or actively continued a ritual experience.",
+    "Shows generated ritual tags such as Ritual Opening, Fire Gate Invocation Ritual, Jupiter Invocation Ritual, Pentagram Banishing Ritual, and other selected gate or planetary components.",
+    "Includes created and last-played timestamps to help administrators review ritual engagement, playback recency, and incomplete user ritual sessions.",
+    "Provides row-level view actions for inspecting individual ritual sessions, generated playlist details, selected tags, and user-specific ritual activity history."
+  ]
+},
 
-
-      // Training
+      //------------- Training------------------//
       { 
         name: "training_lessons", 
         label: "Training Hub", 
