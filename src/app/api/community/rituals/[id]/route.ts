@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { resolveAssetsForTags } from "@/lib/community/ritual-asset-resolver";
 
 export const dynamic = "force-dynamic";
 
@@ -38,9 +39,22 @@ export async function GET(
     .eq("is_active", true)
     .order("priority", { ascending: true });
 
+  // Resolve assets via the admin-managed resolver (Phase 3 architecture)
+  const resolvedAssetsMap = await resolveAssetsForTags(ritual.ritual_tags);
+  const resolvedAssets = Object.fromEntries(
+    Array.from(resolvedAssetsMap.entries()).map(([tag, asset]) => [
+      tag,
+      {
+        title: asset.title,
+        url: asset.url,
+      },
+    ])
+  );
+
   return NextResponse.json({
     ritual,
     invocations: invocations ?? [],
+    resolvedAssets,
   });
 }
 

@@ -4,6 +4,12 @@ import {
   buildRitualIdentityKey,
   normalizeRitualTags,
 } from "@/lib/community/ritual-identity";
+import { listPublishedRitualDefinitions } from "@/lib/community/ritual-asset-resolver";
+import {
+  getStaticRitualTagsForKey,
+  isCommunityCreatableRitualKey,
+  PLANETARY_ZODIACAL_RITUAL_KEY,
+} from "@/lib/community/ritual-definition-options";
 
 export const dynamic = "force-dynamic";
 
@@ -222,9 +228,10 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { ritual_name, ritual_tags } = body as {
+  const { ritual_name, ritual_tags, ritual_definition_key } = body as {
     ritual_name?: string;
     ritual_tags?: string[];
+    ritual_definition_key?: string;
   };
 
   if (
@@ -245,6 +252,49 @@ export async function POST(req: NextRequest) {
   if (incomingNormalizedTags.length === 0) {
     return NextResponse.json(
       { error: "ritual_tags must contain at least one non-empty tag" },
+      { status: 422 }
+    );
+  }
+
+  const availableDefinitions = await listPublishedRitualDefinitions();
+  const matchedDefinition = availableDefinitions.find((definition) => {
+    if (ritual_definition_key) {
+      return definition.key === ritual_definition_key;
+    }
+
+    return definition.title.trim() === ritual_name.trim();
+  });
+
+  if (
+    !matchedDefinition ||
+    !isCommunityCreatableRitualKey(matchedDefinition.key)
+  ) {
+    return NextResponse.json(
+      { error: "This ritual configuration is not currently available" },
+      { status: 403 }
+    );
+  }
+
+  const staticTags = getStaticRitualTagsForKey(matchedDefinition.key);
+  if (staticTags) {
+    const expectedKey = buildRitualIdentityKey(
+      matchedDefinition.title,
+      staticTags
+    );
+    if (incomingKey !== expectedKey) {
+      return NextResponse.json(
+        { error: "Ritual tags do not match the selected configuration" },
+        { status: 422 }
+      );
+    }
+  } else if (matchedDefinition.key !== PLANETARY_ZODIACAL_RITUAL_KEY) {
+    return NextResponse.json(
+      { error: "This ritual configuration is not creatable from community" },
+      { status: 403 }
+    );
+  } else if (ritual_name.trim() !== matchedDefinition.title) {
+    return NextResponse.json(
+      { error: "Ritual name does not match the selected configuration" },
       { status: 422 }
     );
   }
