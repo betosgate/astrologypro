@@ -3108,10 +3108,67 @@ export function HoroscopeToolkitPage({
     setNatalSvgTransit(null);
     setNatalSvgP2(null);
     setNatalSvgTransitP2(null);
+    setTransitChartSvg(null);
     setReturnDate(null);
     setProgress([]);
     if (!keepExclusions) {
       setExcludedHoraryDates("");
+    }
+
+    // ── Saved-data short-circuit ─────────────────────────────────────────
+    // Before kicking off live compute + AI generation (which is slow and
+    // costs money on the AI side), ask the server whether we already have
+    // a saved astro_ai_responses row for this exact (toolname, person
+    // identity). If yes, hydrate all sections directly from the saved
+    // payload and return — no live calls, no token spend.
+    //
+    // Why we don't do this lookup at module scope:
+    //   The toolkit prefills form data from `?prefill=` or from server
+    //   props on first paint, but the user can also tweak person1/person2
+    //   between submits (different DOB, different city, etc.). Doing the
+    //   lookup at submit time guarantees we match what was actually
+    //   submitted, not the initial prefill.
+    //
+    // We swallow lookup errors and fall through to live generation —
+    // a server hiccup must never block the toolkit.
+    try {
+      addProgress("Checking for saved report…");
+      const matchRes = await fetchWithRetry("/api/admin/horoscope/match-saved", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          toolname: currentTab.slug,
+          type: currentTab.type,
+          person1: form.person1,
+          person2: currentTab.type === "two-person" ? form.person2 : null,
+          extras: {
+            areaOfInquiry: form.areaOfInquiry || undefined,
+            question: form.question || undefined,
+            futureWeek: form.futureWeek || undefined,
+            futureMonth: form.futureMonth || undefined,
+          },
+        }),
+      });
+      const matchJson = await matchRes.json().catch(() => ({}));
+      if (matchRes.ok && matchJson?.found && matchJson.res) {
+        const hydrated = hydrateSavedAstroReport(matchJson.res, currentTab.slug);
+        if (hydrated.results) {
+          addProgress("Loaded saved report ✓");
+          setResults(hydrated.results);
+          setNatalSvg(hydrated.natalSvg);
+          setNatalSvgTransit(hydrated.natalSvgTransit);
+          setNatalSvgP2(hydrated.natalSvgP2);
+          setNatalSvgTransitP2(hydrated.natalSvgTransitP2);
+          setTransitChartSvg(hydrated.transitChartSvg);
+          setReturnDate(hydrated.returnDate);
+          setShowChartBtn(hydrated.showChartButton);
+          setShowScrollTop(true);
+          setLoading(false);
+          return;
+        }
+      }
+    } catch {
+      // Fall through to live generation on any lookup failure.
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -3119,6 +3176,52 @@ export function HoroscopeToolkitPage({
 
     try {
       const birth1 = parseBirth(form.person1);
+      const isTwoPerson = currentTab.type === "two-person";
+      const birth2 = isTwoPerson ? parseBirth(form.person2) : null;
+
+      // Check if this report already exists
+      const checkFormData = isTwoPerson ? {
+        self: { ...form.person1, ...birth1 },
+        partner: { ...form.person2, ...birth2 },
+      } : {
+        ...form.person1,
+        ...birth1,
+      };
+
+      addProgress("Checking for existing report...");
+      const checkRes = await fetch("/api/admin/searched-toolkit/check", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          toolname: currentTab.slug,
+          form_data: checkFormData,
+        }),
+      });
+
+      if (checkRes.ok) {
+        const checkData = await checkRes.json();
+        if (checkData.status === "success" && checkData.result) {
+          addProgress("Found existing report! Restoring...");
+          const hydrated = hydrateSavedAstroReport(checkData.result, currentTab.slug);
+
+          if (hydrated.results) {
+            setResults(hydrated.results);
+            setNatalSvg(hydrated.natalSvg);
+            setNatalSvgTransit(hydrated.natalSvgTransit);
+            setNatalSvgP2(hydrated.natalSvgP2);
+            setNatalSvgTransitP2(hydrated.natalSvgTransitP2);
+            setTransitChartSvg(hydrated.transitChartSvg);
+            setReturnDate(hydrated.returnDate);
+            setShowChartBtn(hydrated.showChartButton);
+            setLoading(false);
+            return; // EXIT EARLY
+          }
+        }
+      }
+
+      // No existing report found, proceed with calculation
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const collected: Record<string, any> = {};
 
       // ── Single person ─────────────────────────────────────────────────────
       if (currentTab.type === "single") {
@@ -3477,8 +3580,7 @@ export function HoroscopeToolkitPage({
       }
 
       // ── Two person ────────────────────────────────────────────────────────
-      if (currentTab.type === "two-person") {
-        const birth2 = parseBirth(form.person2);
+      if (currentTab.type === "two-person" && birth2) {
         const relBase = {
           person1_birth: birth1,
           person2_birth: birth2,
@@ -3674,9 +3776,6 @@ export function HoroscopeToolkitPage({
       // This block captures all AI interpretations, chart URLs, and form data
       // into a single payload and persists it to both legacy and local stores.
       try {
-        const isTwoPerson = currentTab.type === "two-person";
-        const birth1 = parseBirth(form.person1);
-        const birth2 = isTwoPerson ? parseBirth(form.person2) : null;
 
         const formDataPayload = isTwoPerson ? {
           self: { ...form.person1, ...birth1 },
