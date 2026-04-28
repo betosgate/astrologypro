@@ -21,7 +21,6 @@
  */
 
 import {
-  isValidNatalChart,
   isValidMonthlyTransit,
   isValidRelationshipChart,
 } from "@/lib/community/chart-validators";
@@ -115,7 +114,14 @@ export interface RelationshipReportRow {
  */
 export function deriveNatalReportState(row: NatalReportRow): ChartReportState {
   const explicit = normalizeStatus(row.natal_report_status);
-  if (explicit) return explicit;
+  if (explicit && explicit !== "generated") return explicit;
+
+  const hasLinkedReport = Boolean(row.natal_report_id);
+
+  if (explicit === "generated") {
+    return hasLinkedReport ? "generated" : "stale";
+  }
+  if (hasLinkedReport) return "generated";
 
   const legacyStatus = (row.natal_status ?? "").toLowerCase();
   if (legacyStatus === "locked_for_review") return "locked_for_review";
@@ -123,7 +129,6 @@ export function deriveNatalReportState(row: NatalReportRow): ChartReportState {
   if (legacyStatus === "queued" || legacyStatus === "pending") return "generating";
 
   if (legacyStatus === "generated") {
-    if (isValidNatalChart(row.natal_chart)) return "generated";
     return "stale";
   }
 
@@ -141,16 +146,28 @@ export function deriveMonthlyReportState(
   expectedMonth?: string
 ): ChartReportState {
   const explicit = normalizeStatus(row.full_report_status);
-  if (explicit) return explicit;
+  if (explicit && explicit !== "generated") return explicit;
+
+  const hasLinkedReport = Boolean(row.full_report_id);
+  const hasValidLegacyTransit = isValidMonthlyTransit(
+    row.transit_data,
+    expectedMonth
+  );
+
+  if (explicit === "generated") {
+    return hasLinkedReport || hasValidLegacyTransit ? "generated" : "stale";
+  }
+  if (hasLinkedReport) return "generated";
 
   const genStatus = (row.generation_status ?? "").toLowerCase();
   if (genStatus === "pending") return "generating";
   if (genStatus === "failed") return "failed";
 
   if (genStatus === "generated" || genStatus === "notified") {
-    if (isValidMonthlyTransit(row.transit_data, expectedMonth)) return "generated";
+    if (hasValidLegacyTransit) return "generated";
     return "stale";
   }
+  if (hasValidLegacyTransit) return "generated";
 
   return "missing";
 }
@@ -164,11 +181,19 @@ export function deriveRelationshipReportState(
   row: RelationshipReportRow
 ): ChartReportState {
   const explicit = normalizeStatus(row.report_status);
-  if (explicit) return explicit;
+  if (explicit && explicit !== "generated") return explicit;
+
+  const hasLinkedReport = Boolean(row.report_id);
+  const hasValidLegacyChart = isValidRelationshipChart(row.chart_data);
+
+  if (explicit === "generated") {
+    return hasLinkedReport || hasValidLegacyChart ? "generated" : "stale";
+  }
+  if (hasLinkedReport) return "generated";
 
   if (row.invalidated_at) return "stale";
   if (row.chart_data == null) return "missing";
-  if (!isValidRelationshipChart(row.chart_data)) return "stale";
+  if (!hasValidLegacyChart) return "stale";
   return "generated";
 }
 

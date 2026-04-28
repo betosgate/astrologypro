@@ -17,6 +17,7 @@
     "test:affiliate-rls": "tsx --env-file=.env.local --test tests/integration/affiliate-rls.test.ts",
     "test:affiliate-commission-math": "tsx --test tests/unit/affiliate-commission-math.test.ts",
     "test:affiliate-commission": "npm run test:affiliate-commission-math && npm run test:affiliate-commission-v2-smoke && npm run test:affiliate-rls",
+    "cleanup:affiliate-test-data": "tsx --env-file=.env.local scripts/cleanup-affiliate-test-data.ts",
     "seed:affiliate-accounts": "node scripts/seed-affiliate-accounts.mjs",
     "seed": "tsx scripts/seed.ts",
     "migrate": "node scripts/run-migration.js",
