@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { useRouter, useSearchParams } from "next/navigation";
 import { format, parse, isValid } from "date-fns";
@@ -50,9 +50,11 @@ import {
 } from "./utils";
 import {
   fetchWithRetry, callCompute, callAI, callPlanetReturn,
-  callNatalWheel, callDecanLookup,
+  callNatalWheel, callDecanLookup, saveAstroAiResponse,
 } from "./api";
 import { buildAiPrompts } from "./build-ai-prompts";
+import { formStateFromSavedFormData } from "./saved-form-data";
+import { hydrateSavedAstroReport } from "./saved-report-data";
 import {
   ManualPlanetIcon, ManualZodiacIcon, PlanetSymbol, AspectSymbol,
   ZodiacSymbol, AstroHeaderParts, SmartHeading, WordAssociationChips,
@@ -1474,42 +1476,87 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
   const { modal, trigger, close } = useShowMore();
 
   // aiData: only solar_return_details comes from AI Lambda now
-  const detailsAi = aiData?.solar_return_details ?? null;
+  const detailsAi = unwrapSolarReturnAiResponse(aiData?.solar_return_details ?? null);
   // planet/aspects data come from AstrologyAPI results directly
   const planetAi = null; // not used anymore — see planetReport prop
   const aspectsAi = null; // not used anymore — see aspectsReport prop
 
-  function AiCards({ data, title, showMore = true }: { data: any; title: string; showMore?: boolean }) {
+  function unwrapSolarReturnAiResponse(input: unknown): unknown {
+    const parsed = parseAiJsonResponse(input);
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed) && "ai_response" in parsed) {
+      return parseAiJsonResponse((parsed as Record<string, unknown>).ai_response);
+    }
+    return parsed;
+  }
+
+  function formatSolarReturnAiTitle(value: string, fallback: string) {
+    const trimmed = value.trim();
+    if (!trimmed || trimmed === "0") return fallback;
+    return trimmed
+      .replace(/_/g, " ")
+      .replace(/\b\w/g, (char) => char.toUpperCase());
+  }
+
+  function extractSolarReturnAiCards(input: unknown, fallbackTitle: string) {
+    const parsed = unwrapSolarReturnAiResponse(input);
+    const sourceItems = Array.isArray(parsed)
+      ? parsed
+      : parsed && typeof parsed === "object"
+        ? Object.entries(parsed as Record<string, unknown>).map(([key, value]) => ({ [key]: value }))
+        : parsed
+          ? [{ [fallbackTitle]: parsed }]
+          : [];
+
+    return sourceItems.flatMap((entry: any, index: number) => {
+      if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+        const text = normalizeInterpretationText(entry);
+        return text ? [{ title: `${fallbackTitle} ${index + 1}`, text, raw: entry }] : [];
+      }
+
+      const explicitTitle = entry.title ?? entry.name ?? entry.heading;
+      const explicitText = normalizeInterpretationText(
+        entry.interpretation ?? entry.data ?? entry.forecast ?? entry.text,
+      );
+      if (explicitText) {
+        return [{
+          title: formatSolarReturnAiTitle(String(explicitTitle ?? `${fallbackTitle} ${index + 1}`), fallbackTitle),
+          text: explicitText,
+          raw: entry,
+        }];
+      }
+
+      return Object.entries(entry)
+        .filter(([key]) => !["index", "title", "name", "heading"].includes(key))
+        .map(([key, value]) => ({
+          title: formatSolarReturnAiTitle(key, `${fallbackTitle} ${index + 1}`),
+          text: normalizeInterpretationText(value),
+          raw: entry,
+        }))
+        .filter((card) => card.text);
+    });
+  }
+
+  function renderAiCards(data: any, title: string, showMore = true) {
     if (!data) return <SectionSkeleton title={title} />;
     if (data === "error") return <SectionError title={title} />;
-    const items: any[] = Array.isArray(data) ? data : [];
+    const items = extractSolarReturnAiCards(data, title);
+    if (items.length === 0) return null;
     return (
       <div className="space-y-2">
         {items.map((item: any, i: number) => (
-          (() => {
-            const derivedEntry = Object.entries(item ?? {}).find(([key, value]) => {
-              if (["title", "name", "interpretation", "data", "forecast"].includes(key)) return false;
-              return typeof value === "string";
-            });
-            const cardTitle = item.title ?? item.name ?? derivedEntry?.[0] ?? `${title} ${i + 1}`;
-            const cardText = normalizeInterpretationText(item.interpretation ?? item.data ?? item.forecast ?? derivedEntry?.[1] ?? "");
-
-            return (
-              <div key={i} className="rounded-lg border overflow-hidden">
-                <div className="px-4 py-3 horoscope-interp-header flex items-center justify-center">
-                  <SmartHeading title={cardTitle} textSize="text-[22px]" iconSize="size-7" className="text-black" />
+          <div key={`${item.title}-${i}`} className="rounded-lg border overflow-hidden">
+            <div className="px-4 py-3 horoscope-interp-header flex items-center justify-center">
+              <SmartHeading title={item.title} textSize="text-[22px]" iconSize="size-7" className="text-black" />
+            </div>
+            <div className="interp-gradient-default px-4 py-3 pb-8" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 400, lineHeight: '26px', color: '#000' }}>
+              <p className="leading-relaxed">{String(item.text)}</p>
+              {showMore && (
+                <div className="mt-2 flex justify-center border-t border-black/10 pt-2">
+                  <button onClick={() => trigger(item.title, String(item.text), item.raw, areaOfInquiry)} className="horoscope-show-more">Show More</button>
                 </div>
-                <div className="interp-gradient-default px-4 py-3 pb-8" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 400, lineHeight: '26px', color: '#000' }}>
-                  <p className="leading-relaxed">{String(cardText)}</p>
-                  {showMore && (
-                    <div className="mt-2 flex justify-center border-t border-black/10 pt-2">
-                      <button onClick={() => trigger(cardTitle, String(cardText), item, areaOfInquiry)} className="horoscope-show-more">Show More</button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })()
+              )}
+            </div>
+          </div>
         ))}
       </div>
     );
@@ -1713,7 +1760,7 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
               </div>
             )}
           </div>
-          {detailsAi && <AiCards data={detailsAi} title="Solar Return House Cusps Discussion" showMore={false} />}
+          {aiData && renderAiCards(detailsAi, "Solar Return Details Interpretation", false)}
         </div>
       )}
 
@@ -1868,13 +1915,13 @@ function extractTransitAiCards(input: unknown): TransitAiCard[] {
       "";
     const interpretation = normalizeInterpretationText(
       record.interpretation ??
-        record.interpret ??
-        record.body_text ??
-        record.body ??
-        record.content ??
-        record.description ??
-        record.text ??
-        record.forecast
+      record.interpret ??
+      record.body_text ??
+      record.body ??
+      record.content ??
+      record.description ??
+      record.text ??
+      record.forecast
     );
 
     if (!title && !interpretation) return;
@@ -2750,6 +2797,9 @@ export interface HoroscopeToolkitPageProps {
   basePath?: string;
   allowedSlugs?: string[];
   initialPrefill?: string | null;
+  initialSavedFormData?: unknown;
+  initialSavedReport?: unknown;
+  autoSubmitPrefill?: boolean;
   readOnlyBirthData?: boolean;
 }
 
@@ -2757,29 +2807,38 @@ export function HoroscopeToolkitPage({
   basePath = "/admin/horoscope",
   allowedSlugs,
   initialPrefill = null,
+  initialSavedFormData = null,
+  initialSavedReport = null,
+  autoSubmitPrefill = true,
   readOnlyBirthData = false,
 }: HoroscopeToolkitPageProps = {}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const resultRef = useRef<HTMLDivElement>(null);
 
-  const visibleTabs = allowedSlugs?.length
+  const matchedAllowedTabs = allowedSlugs?.length
     ? allowedSlugs
-        .map((slug) => TABS.find((tab) => tab.slug === slug))
-        .filter((tab): tab is TabDef => Boolean(tab))
+      .map((slug) => TABS.find((tab) => tab.slug === slug))
+      .filter((tab): tab is TabDef => Boolean(tab))
     : TABS;
+  const visibleTabs = matchedAllowedTabs.length ? matchedAllowedTabs : TABS;
   const fallbackTab = visibleTabs[0] ?? TABS[0];
-  const currentSlug = searchParams.get("tab") ?? fallbackTab.slug;
+  const requestedSlug = searchParams.get("tab");
+  const currentSlug =
+    requestedSlug && visibleTabs.some((tab) => tab.slug === requestedSlug)
+      ? requestedSlug
+      : fallbackTab.slug;
   const currentTab = visibleTabs.find((t) => t.slug === currentSlug) ?? fallbackTab;
+  const initialForm = useMemo<FormState>(
+    () => formStateFromSavedFormData(initialSavedFormData ?? initialSavedReport),
+    [initialSavedFormData, initialSavedReport]
+  );
+  const initialSavedToolkitState = useMemo(
+    () => hydrateSavedAstroReport(initialSavedReport, currentSlug),
+    [initialSavedReport, currentSlug]
+  );
 
-  const [form, setForm] = useState<FormState>(defaultForm());
-
-  // Reset form and results when tab changes
-  useEffect(() => {
-    setForm(defaultForm());
-    setResults(null);
-    setError(null);
-  }, [currentSlug]);
+  const [form, setForm] = useState<FormState>(() => initialForm);
   const isFormValid = (() => {
     const p1 = form.person1;
     if (!p1.dob || !p1.tob || !p1.city) return false;
@@ -2793,17 +2852,17 @@ export function HoroscopeToolkitPage({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [results, setResults] = useState<Record<string, any> | null>(null);
-  const [natalSvg, setNatalSvg] = useState<string | null>(null);
-  const [natalSvgTransit, setNatalSvgTransit] = useState<string | null>(null);
-  const [natalSvgP2, setNatalSvgP2] = useState<string | null>(null);
-  const [natalSvgTransitP2, setNatalSvgTransitP2] = useState<string | null>(null);
-  const [returnDate, setReturnDate] = useState<string | null>(null);
+  const [results, setResults] = useState<Record<string, any> | null>(() => initialSavedToolkitState.results);
+  const [natalSvg, setNatalSvg] = useState<string | null>(() => initialSavedToolkitState.natalSvg);
+  const [natalSvgTransit, setNatalSvgTransit] = useState<string | null>(() => initialSavedToolkitState.natalSvgTransit);
+  const [natalSvgP2, setNatalSvgP2] = useState<string | null>(() => initialSavedToolkitState.natalSvgP2);
+  const [natalSvgTransitP2, setNatalSvgTransitP2] = useState<string | null>(() => initialSavedToolkitState.natalSvgTransitP2);
+  const [returnDate, setReturnDate] = useState<string | null>(() => initialSavedToolkitState.returnDate);
   const [progress, setProgress] = useState<string[]>([]);
   const [showScrollTop, setShowScrollTop] = useState(false);
-  const [showChartBtn, setShowChartBtn] = useState(false);
+  const [showChartBtn, setShowChartBtn] = useState(() => initialSavedToolkitState.showChartButton);
   const [chartModal, setChartModal] = useState<string | null>(null);
-  const [transitChartSvg, setTransitChartSvg] = useState<string | null>(null);
+  const [transitChartSvg, setTransitChartSvg] = useState<string | null>(() => initialSavedToolkitState.transitChartSvg);
   const [dacenPsibality, setDacenPsibality] = useState<DecanPossibility[]>([]);
   const [decanPlanet, setDecanPlanet] = useState<{ name: string; sign: string } | null>(null);
   const [excludedHoraryDates, setExcludedHoraryDates] = useState<string>("");
@@ -2822,11 +2881,11 @@ export function HoroscopeToolkitPage({
 
   // Reset on tab change
   useEffect(() => {
-    setResults(null); setNatalSvg(null); setNatalSvgTransit(null);
-    setNatalSvgP2(null); setNatalSvgTransitP2(null);
-    setReturnDate(null); setError(null); setProgress([]); setForm(defaultForm());
-    setShowScrollTop(false); setShowChartBtn(false); setTransitChartSvg(null);
-  }, [currentSlug]);
+    setResults(initialSavedToolkitState.results); setNatalSvg(initialSavedToolkitState.natalSvg); setNatalSvgTransit(initialSavedToolkitState.natalSvgTransit);
+    setNatalSvgP2(initialSavedToolkitState.natalSvgP2); setNatalSvgTransitP2(initialSavedToolkitState.natalSvgTransitP2);
+    setReturnDate(initialSavedToolkitState.returnDate); setError(null); setProgress([]); setForm(initialForm);
+    setShowScrollTop(false); setShowChartBtn(initialSavedToolkitState.showChartButton); setTransitChartSvg(initialSavedToolkitState.transitChartSvg);
+  }, [currentSlug, initialForm, initialSavedToolkitState]);
 
   // Booking-session prefill + auto-submit.
   // When the diviner is routed here from /admin/horoscope/session/[bookingId],
@@ -2840,13 +2899,13 @@ export function HoroscopeToolkitPage({
     try {
       const parsed = JSON.parse(decodeURIComponent(prefillParam)) as Partial<FormState>;
       setForm((prev) => ({ ...prev, ...parsed }));
-      setPendingAutoSubmit(true);
+      if (autoSubmitPrefill) setPendingAutoSubmit(true);
     } catch {
       // malformed prefill — ignore so the diviner can fill the form by hand
     }
     // Re-apply when the tab changes so restricted community wrappers keep the
     // saved pair/self data while switching between compatible report tabs.
-  }, [prefillParam, currentSlug]);
+  }, [prefillParam, currentSlug, autoSubmitPrefill]);
 
   // Fire handleSubmit once the prefill has populated the form and it's valid.
   // We can't call handleSubmit() in the same effect that calls setForm() —
@@ -3026,6 +3085,7 @@ export function HoroscopeToolkitPage({
             .then((w) => {
               if (w?.chart_url) {
                 setNatalSvg(w.chart_url);
+                collected.natal_chart_url = w.chart_url;
                 setShowChartBtn(true);
               }
             })
@@ -3039,6 +3099,7 @@ export function HoroscopeToolkitPage({
               const svg = freeResp?.results?.output;
               if (svg) {
                 setNatalSvgTransit(svg);
+                collected.natal_transit_svg = svg;
                 setShowChartBtn(true);
               }
             })
@@ -3134,7 +3195,10 @@ export function HoroscopeToolkitPage({
                   };
                   const wheelRes = await callNatalWheel(transitWheelPayload);
                   const svg = wheelRes?.results?.output;
-                  if (svg) setTransitChartSvg(svg);
+                  if (svg) {
+                    setTransitChartSvg(svg);
+                    collected.transit_chart_svg = svg;
+                  }
                 }
               } catch (e) {
                 console.error("Weekly transit wheel error:", e);
@@ -3220,7 +3284,10 @@ export function HoroscopeToolkitPage({
                 };
                 const wheelRes = await callNatalWheel(transitWheelPayload);
                 const svg = wheelRes?.results?.output;
-                if (svg) setTransitChartSvg(svg);
+                if (svg) {
+                  setTransitChartSvg(svg);
+                  collected.transit_chart_svg = svg;
+                }
               } catch (e) {
                 console.error("Transit wheel error:", e);
               }
@@ -3441,23 +3508,45 @@ export function HoroscopeToolkitPage({
         // Person 1
         relTasks.push(
           callCompute("natal_wheel_chart", birth1 as unknown as Record<string, unknown>)
-            .then((w) => { if (w?.chart_url) { setNatalSvg(w.chart_url); setShowChartBtn(true); } })
+            .then((w) => {
+              if (w?.chart_url) {
+                setNatalSvg(w.chart_url);
+                collected.natal_chart_url = w.chart_url;
+                setShowChartBtn(true);
+              }
+            })
             .catch(() => { })
         );
         relTasks.push(
           callNatalWheel(freeWheelBody(form.person1) as unknown as Record<string, unknown>)
-            .then((r) => { if (r?.results?.output) { setNatalSvgTransit(r.results.output); setShowChartBtn(true); } })
+            .then((r) => {
+              if (r?.results?.output) {
+                setNatalSvgTransit(r.results.output);
+                collected.natal_transit_svg = r.results.output;
+                setShowChartBtn(true);
+              }
+            })
             .catch(() => { })
         );
         // Person 2
         relTasks.push(
           callCompute("natal_wheel_chart", birth2 as unknown as Record<string, unknown>)
-            .then((w) => { if (w?.chart_url) { setNatalSvgP2(w.chart_url); } })
+            .then((w) => {
+              if (w?.chart_url) {
+                setNatalSvgP2(w.chart_url);
+                collected.natal_chart_url_p2 = w.chart_url;
+              }
+            })
             .catch(() => { })
         );
         relTasks.push(
           callNatalWheel(freeWheelBody(form.person2) as unknown as Record<string, unknown>)
-            .then((r) => { if (r?.results?.output) { setNatalSvgTransitP2(r.results.output); } })
+            .then((r) => {
+              if (r?.results?.output) {
+                setNatalSvgTransitP2(r.results.output);
+                collected.natal_transit_svg_p2 = r.results.output;
+              }
+            })
             .catch(() => { })
         );
 
@@ -3475,7 +3564,7 @@ export function HoroscopeToolkitPage({
               json: p.json,
             };
             const aiRes = await callAI(aiPayload, form.areaOfInquiry || undefined);
-            let parsed = parseAiJsonResponse(aiRes.ai_response);
+            const parsed = parseAiJsonResponse(aiRes.ai_response);
             setResults((prev) => {
               const prevAi = prev?.ai_interpretations ?? {};
               return {
@@ -3483,6 +3572,10 @@ export function HoroscopeToolkitPage({
                 ai_interpretations: { ...prevAi, [p.key]: parsed },
               };
             });
+            collected.ai_interpretations = {
+              ...(collected.ai_interpretations as Record<string, unknown> ?? {}),
+              [p.key]: parsed,
+            };
           } catch {
             setResults((prev) => {
               const prevAi = prev?.ai_interpretations ?? {};
@@ -3491,6 +3584,10 @@ export function HoroscopeToolkitPage({
                 ai_interpretations: { ...prevAi, [p.key]: "error" },
               };
             });
+            collected.ai_interpretations = {
+              ...(collected.ai_interpretations as Record<string, unknown> ?? {}),
+              [p.key]: "error",
+            };
           }
         });
         await Promise.allSettled(aiPromises);
@@ -3511,78 +3608,65 @@ export function HoroscopeToolkitPage({
       // and either failing alone does not affect the displayed result.
       // The legacy save remains in place; the lookup/read repointing is
       // intentionally a follow-up so this UI is not refactored here.
-      if (currentTab.slug === "tropical_transits_monthly_v3") {
-        try {
-          const savePayload = {
-            toolname: "tropical_transits_monthly_v3",
-            ai_response: collected.ai_interpretations ?? {},
-            formData: birth1,
-            astro_api_data: collected.natal_chart_data ?? {},
-            freeNatalWheelChart: natalSvg ?? "",
-            freeNatalWheelChartForTrasit: natalSvgTransit ?? "",
-          };
-          fetchWithRetry(
-            "https://d36fwfwo4vnk9h.cloudfront.net/astro-ai/save-astro-AI-Response",
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(savePayload),
-            },
-          ).catch(() => { });
+      // ── UNIVERSAL SAVE BLOCK (fire-and-forget) ──────
+      // This block captures all AI interpretations, chart URLs, and form data
+      // into a single payload and persists it to both legacy and local stores.
+      try {
+        const isTwoPerson = currentTab.type === "two-person";
+        const birth1 = parseBirth(form.person1);
+        const birth2 = isTwoPerson ? parseBirth(form.person2) : null;
 
-          // Parallel local save — same payload shape, different URL.
-          fetch("/api/astro-ai/save-astro-ai-response", {
+        const ai_response_payload: any = {
+          ...(collected.ai_interpretations ?? {}),
+          natal_chart: isTwoPerson ? {
+            self: { status: true, chart_url: collected.natal_chart_url ?? "", msg: "Chart created successfully!" },
+            partner: { status: true, chart_url: collected.natal_chart_url_p2 ?? "", msg: "Chart created successfully!" },
+          } : {
+            status: true,
+            chart_url: collected.natal_chart_url ?? "",
+            msg: "Chart created successfully!",
+          },
+          formData: isTwoPerson ? {
+            self: { ...form.person1, ...birth1 },
+            partner: { ...form.person2, ...birth2 },
+          } : {
+            ...form.person1,
+            ...birth1,
+          },
+          astro_api_data: isTwoPerson ? {
+            synastry: collected.synastry ?? {},
+            composite: collected.composite ?? {},
+            self: collected.natal_chart_data ?? {},
+            partner: collected.natal_chart_data_p2 ?? {},
+          } : (collected.natal_chart_data ?? {}),
+          freeNatalWheelChart: collected.natal_transit_svg ?? collected.transit_chart_svg ?? "",
+          freeNatalWheelChartForTrasit: collected.natal_transit_svg ?? collected.transit_chart_svg ?? "",
+        };
+
+        if (isTwoPerson) {
+          ai_response_payload.freeNatalWheelChartP2 = collected.natal_transit_svg_p2 ?? "";
+        }
+
+        const finalSavePayload = {
+          toolname: currentTab.slug,
+          ai_response: ai_response_payload,
+        };
+
+        // Local save - Supabase-backed API
+        saveAstroAiResponse(finalSavePayload).catch(() => { });
+
+        // Legacy CloudFront save (fire-and-forget)
+        fetchWithRetry(
+          "https://d36fwfwo4vnk9h.cloudfront.net/astro-ai/save-astro-AI-Response",
+          {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(savePayload),
-          }).catch(() => { });
-        } catch {
-          /* ignore save errors */
-        }
-      }
+            body: JSON.stringify(finalSavePayload),
+          },
+        ).catch(() => { });
 
-      // ── Save romantic forecast report (fire-and-forget) ──────────────
-      if (currentTab.slug === "romantic_forecast_report_tropical_v2") {
-        try {
-          const birth2 = parseBirth(form.person2);
-          const savePayload = {
-            toolname: "romantic_forecast_report_tropical_v2",
-            ai_response: collected.ai_interpretations ?? {},
-            natal_chart: {
-              self: collected.natal_chart_data ?? {},
-              partner: collected.natal_chart_data_p2 ?? {},
-            },
-            formData: {
-              self: birth1,
-              partner: birth2,
-            },
-            astro_api_data: {
-              synastry: collected.synastry ?? {},
-              composite: collected.composite ?? {},
-            },
-            freeNatalWheelChart: natalSvg ?? "",
-            freeNatalWheelChartForTrasit: natalSvgTransit ?? "",
-            freeNatalWheelChartP2: natalSvgP2 ?? "",
-            freeNatalWheelChartForTrasitP2: natalSvgTransitP2 ?? "",
-          };
-          fetchWithRetry(
-            "https://d36fwfwo4vnk9h.cloudfront.net/astro-ai/save-astro-AI-Response",
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(savePayload),
-            },
-          ).catch(() => { });
-
-          // Parallel local save — see comment above for rationale.
-          fetch("/api/astro-ai/save-astro-ai-response", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(savePayload),
-          }).catch(() => { });
-        } catch {
-          /* ignore save errors */
-        }
+      } catch (saveErr) {
+        console.error("Universal save error:", saveErr);
       }
 
       addProgress("Done ✓");
@@ -3710,7 +3794,7 @@ export function HoroscopeToolkitPage({
                 {currentTab.extras?.includes("future_week") && (
                   <div>
                     <Label className="text-xs font-medium text-muted-foreground mb-1 block">Select Week (optional — defaults to current week)</Label>
-                    <Input type="date" value={form.futureWeek} onChange={(e) => setForm((f) => ({ ...f, futureWeek: e.target.value }))} disabled={loading} className="h-9 text-sm max-w-xs" />
+                    <Input type="date" value={form.futureWeek} onChange={(e) => setForm((f) => ({ ...f, futureWeek: e.target.value }))} disabled={loading || readOnlyBirthData} className="h-9 text-sm max-w-xs" />
                   </div>
                 )}
                 {/* Month picker */}
