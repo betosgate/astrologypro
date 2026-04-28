@@ -52,6 +52,7 @@ export default function RitualDetailPage() {
   const id = params?.id as string;
 
   const [ritual, setRitual] = useState<RitualConfig | null>(null);
+  const [resolvedAssets, setResolvedAssets] = useState<Record<string, { title: string | null; url: string | null }> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -69,6 +70,7 @@ export default function RitualDetailPage() {
 
       const data = await response.json();
       setRitual(data.ritual);
+      setResolvedAssets(data.resolvedAssets || null);
       setLoading(false);
     })();
   }, [id]);
@@ -107,8 +109,8 @@ export default function RitualDetailPage() {
   }
 
   const playlist = useMemo(
-    () => (ritual ? buildRitualPlaylist(ritual.ritual_tags) : []),
-    [ritual]
+    () => (ritual ? buildRitualPlaylist(ritual.ritual_tags, { resolvedAssets: resolvedAssets || undefined }) : []),
+    [ritual, resolvedAssets]
   );
 
   if (loading) {

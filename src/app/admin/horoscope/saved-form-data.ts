@@ -151,7 +151,14 @@ function savedFormDataRoot(input: unknown): JsonRecord | null {
   const root = asRecord(input);
   if (!root) return null;
 
-  return asRecord(root.formData) ?? asRecord(root.form_data) ?? root;
+  const aiResponse = asRecord(root.ai_response);
+  return (
+    asRecord(aiResponse?.formData) ??
+    asRecord(aiResponse?.form_data) ??
+    asRecord(root.formData) ??
+    asRecord(root.form_data) ??
+    root
+  );
 }
 
 export function formStateFromSavedFormData(input: unknown): FormState {
