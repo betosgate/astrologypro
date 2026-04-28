@@ -3,6 +3,10 @@ import { redirect } from "next/navigation";
 import { ensureCurrentMonthTransitsForMember } from "@/lib/community/ensure-monthly-transits";
 import { isValidMonthlyTransit } from "@/lib/community/chart-validators";
 import {
+  deriveMonthlyReportState,
+  ctaForState,
+} from "@/lib/community/chart-report-state";
+import {
   Card,
   CardContent,
   CardDescription,
@@ -42,8 +46,13 @@ type MonthlyTransitData = {
 
 type TransitRow = {
   id: string;
+  family_member_id: string;
   month: string;
   transit_data: MonthlyTransitData;
+  generation_status: string | null;
+  full_report_id: string | null;
+  full_report_status: string | null;
+  full_report_generated_at: string | null;
   community_family_members: { full_name: string };
 };
 
@@ -111,10 +120,15 @@ export default async function TransitsPage() {
     }
   }
 
-  // Get this month's transits for all family members
+  // Get this month's transits for all family members.
+  // Includes the new full-report linkage columns so each card can show
+  // its own Generate / View / Regenerate / Retry CTA, replacing the
+  // single ambiguous global Full Report button.
   const { data: transits } = await supabase
     .from("monthly_transits")
-    .select("id, month, transit_data, community_family_members!inner(full_name)")
+    .select(
+      "id, family_member_id, month, transit_data, generation_status, full_report_id, full_report_status, full_report_generated_at, community_family_members!inner(full_name)"
+    )
     .eq("month", currentMonth)
     .order("id");
 
@@ -146,10 +160,11 @@ export default async function TransitsPage() {
             <p className="text-muted-foreground">
               How the current sky affects your family — {monthLabel}
             </p>
+            <p className="mt-1 text-xs text-muted-foreground/80">
+              Open the full monthly report from the member-specific button
+              on each card below.
+            </p>
           </div>
-          <Button asChild size="sm">
-            <Link href="/community/transits/detailed">Open Full Monthly Report</Link>
-          </Button>
         </div>
       </div>
 
@@ -209,6 +224,40 @@ export default async function TransitsPage() {
           0
         );
 
+        // Per-member full-report CTA (member-monthly-transit-full-report-lifecycle Task 02).
+        // The CTA reflects the saved-report linkage on this row, NOT the
+        // lightweight summary state — they're separate lifecycles.
+        const reportState = deriveMonthlyReportState(
+          {
+            month: row.month,
+            transit_data: row.transit_data,
+            generation_status: row.generation_status,
+            full_report_id: row.full_report_id,
+            full_report_status: row.full_report_status,
+          },
+          currentMonth
+        );
+        // Surface the explicit full-report state (the helper above can also
+        // return a "generated" derived purely from the lightweight transit
+        // summary, which is useful for some surfaces but not for the
+        // full-report CTA — we narrow to what's actually available).
+        const hasSavedFullReport = Boolean(row.full_report_id);
+        const fullReportCta = (() => {
+          if (row.full_report_status === "failed") {
+            return { label: "Retry Full Report", kind: "retry" as const };
+          }
+          if (hasSavedFullReport) {
+            return { label: "View Full Report", kind: "view" as const };
+          }
+          // No saved full report yet — primary action is to generate it.
+          return { label: "Generate Full Report", kind: "generate" as const };
+        })();
+        const detailedHref = `/community/transits/detailed?familyMemberId=${row.family_member_id}&month=${row.month}`;
+        // ctaForState exposes a sensible default disabled flag; use it
+        // here to grey-out the action while a generation is in flight.
+        const isPending = reportState === "generating";
+        const ctaDisabledBase = ctaForState(reportState).disabled;
+
         return (
           <Card key={row.id}>
             <CardHeader>
@@ -221,12 +270,34 @@ export default async function TransitsPage() {
                     {harmoniousCount} supportive · {challengingCount} challenging aspects
                   </CardDescription>
                 </div>
-                <Link
-                  href="/diviner"
-                  className="text-xs text-primary hover:underline"
-                >
-                  Book a reading →
-                </Link>
+                <div className="flex items-center gap-3">
+                  <Link
+                    href="/diviner"
+                    className="text-xs text-primary hover:underline"
+                  >
+                    Book a reading →
+                  </Link>
+                  <Button
+                    asChild
+                    size="sm"
+                    variant={
+                      fullReportCta.kind === "view" ? "default" : "outline"
+                    }
+                    disabled={ctaDisabledBase || isPending}
+                  >
+                    <Link href={detailedHref}>
+                      {isPending ? "Generating…" : fullReportCta.label}
+                    </Link>
+                  </Button>
+                  {hasSavedFullReport && (
+                    <Link
+                      href={`${detailedHref}&regenerate=1`}
+                      className="text-xs text-muted-foreground hover:text-foreground"
+                    >
+                      Regenerate
+                    </Link>
+                  )}
+                </div>
               </div>
             </CardHeader>
             <CardContent className="space-y-5">
