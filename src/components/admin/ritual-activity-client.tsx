@@ -14,6 +14,7 @@ import {
   Flame,
   Loader2,
   RotateCw,
+  Search,
 } from "lucide-react";
 import { formatDateTime } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
@@ -492,7 +493,7 @@ export function RitualActivityClient() {
                             onClick={() => setSelectedRitual(row)}
                             title="View Details"
                           >
-                            <Eye className="size-4" />
+                            <Search className="size-4" />
                           </Button>
                         )}
                       </TableCell>

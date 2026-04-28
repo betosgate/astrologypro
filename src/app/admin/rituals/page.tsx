@@ -30,6 +30,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   AlertCircle,
   Archive,
@@ -38,13 +39,10 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
-  Eye,
-  EyeOff,
   Film,
-  Filter,
-  Globe,
-  History,
   Loader2,
+  Monitor,
+  MonitorOff,
   Pencil,
   Plus,
   Power,
@@ -163,6 +161,14 @@ function ConfigurationsTab() {
   const [filterType, setFilterType] = useState<string>("all");
   const [filterOverride, setFilterOverride] = useState<string>("all");
 
+  const [pendingAction, setPendingAction] = useState<{
+    id: string;
+    title: string;
+    type: "publish" | "visible" | "archive" | "restore";
+    value: boolean;
+  } | null>(null);
+  const [processing, setProcessing] = useState(false);
+
   async function load() {
     setLoading(true);
     try {
@@ -203,6 +209,28 @@ function ConfigurationsTab() {
     });
     void load();
   }
+
+  const handleConfirmAction = async () => {
+    if (!pendingAction) return;
+    setProcessing(true);
+    try {
+      const { id, type, value } = pendingAction;
+      
+      if (type === "publish") {
+        await patch(id, { is_published: value });
+      } else if (type === "visible") {
+        await patch(id, { is_visible: value });
+      } else if (type === "archive") {
+        await patch(id, { archive: true });
+      } else if (type === "restore") {
+        await patch(id, { unarchive: true });
+      }
+      
+      setPendingAction(null);
+    } finally {
+      setProcessing(false);
+    }
+  };
 
   return (
     <Card>
@@ -245,6 +273,7 @@ function ConfigurationsTab() {
                 <SelectItem value="all">All states</SelectItem>
                 <SelectItem value="published">Published only</SelectItem>
                 <SelectItem value="draft">Drafts only</SelectItem>
+                <SelectItem value="archived">Archived only</SelectItem>
               </SelectContent>
             </Select>
             <Select value={filterOverride} onValueChange={setFilterOverride}>
@@ -369,7 +398,12 @@ function ConfigurationsTab() {
                         size="icon"
                         variant="ghost"
                         onClick={() =>
-                          patch(c.id, { is_published: !c.is_published })
+                          setPendingAction({
+                            id: c.id,
+                            title: c.title,
+                            type: "publish",
+                            value: !c.is_published,
+                          })
                         }
                         title={c.is_published ? "Unpublish" : "Publish"}
                       >
@@ -377,29 +411,41 @@ function ConfigurationsTab() {
                           className={`size-3.5 ${c.is_published ? "text-green-600" : "text-muted-foreground"}`}
                         />
                       </Button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={() => patch(c.id, { is_visible: !c.is_visible })}
-                        title={c.is_visible ? "Hide" : "Show"}
-                      >
-                        {c.is_visible ? (
-                          <Eye className="size-3.5" />
-                        ) : (
-                          <EyeOff className="size-3.5 text-red-500" />
-                        )}
-                      </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => setPendingAction({
+                            id: c.id,
+                            title: c.title,
+                            type: "visible",
+                            value: !c.is_visible,
+                          })}
+                          title={c.is_visible ? "Hide" : "Show"}
+                        >
+                          {c.is_visible ? (
+                            <Monitor className="size-3.5 text-amber-500" />
+                          ) : (
+                            <MonitorOff className="size-3.5 text-muted-foreground" />
+                          )}
+                        </Button>
                       <Button
                         size="icon"
                         variant="ghost"
                         onClick={() =>
-                          confirm(`Archive "${c.title}"?`)
-                            ? patch(c.id, { archive: true })
-                            : null
+                          setPendingAction({
+                            id: c.id,
+                            title: c.title,
+                            type: c.archived_at ? "restore" : "archive",
+                            value: !c.archived_at,
+                          })
                         }
-                        title="Archive"
+                        title={c.archived_at ? "Restore" : "Archive"}
                       >
-                        <Archive className="size-3.5" />
+                        {c.archived_at ? (
+                          <RotateCw className="size-3.5 text-blue-500" />
+                        ) : (
+                          <Archive className="size-3.5" />
+                        )}
                       </Button>
                     </div>
                   </TableCell>
@@ -409,6 +455,41 @@ function ConfigurationsTab() {
           </Table>
         )}
       </CardContent>
+
+      <ConfirmDialog
+        open={!!pendingAction}
+        onOpenChange={(open) => !open && setPendingAction(null)}
+        loading={processing}
+        title={
+          pendingAction?.type === "publish"
+            ? `${pendingAction.value ? "Publish" : "Unpublish"} Ritual`
+            : pendingAction?.type === "visible"
+            ? `${pendingAction.value ? "Show" : "Hide"} Ritual`
+            : pendingAction?.type === "restore"
+            ? "Restore Ritual"
+            : "Archive Ritual"
+        }
+        description={`Are you sure you want to ${
+          pendingAction?.type === "publish"
+            ? pendingAction.value ? "publish" : "unpublish"
+            : pendingAction?.type === "visible"
+            ? pendingAction.value ? "show" : "hide"
+            : pendingAction?.type === "restore"
+            ? "restore"
+            : "archive"
+        } "${pendingAction?.title}"?`}
+        confirmLabel={
+          pendingAction?.type === "publish"
+            ? pendingAction.value ? "Publish" : "Unpublish"
+            : pendingAction?.type === "visible"
+            ? pendingAction.value ? "Show" : "Hide"
+            : pendingAction?.type === "restore"
+            ? "Restore"
+            : "Archive"
+        }
+        onConfirm={handleConfirmAction}
+        variant={pendingAction?.type === "archive" ? "destructive" : "default"}
+      />
     </Card>
   );
 }
@@ -422,6 +503,13 @@ function AssetsTab() {
   const [showForm, setShowForm] = useState(false);
   const [editingAsset, setEditingAsset] = useState<RitualAsset | null>(null);
   const [previewAsset, setPreviewAsset] = useState<RitualAsset | null>(null);
+
+  const [pendingAssetAction, setPendingAssetAction] = useState<{
+    asset: RitualAsset;
+    type: "archive" | "active" | "restore";
+    value: boolean;
+  } | null>(null);
+  const [processing, setProcessing] = useState(false);
 
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
@@ -499,11 +587,26 @@ function AssetsTab() {
     void load();
   }
 
-  async function archiveAsset(asset: RitualAsset) {
-    if (!confirm(`Archive "${asset.title}"?`)) return;
-    await fetch(`/api/admin/ritual-assets/${asset.id}`, { method: "DELETE" });
-    void load();
-  }
+  const handleConfirmAssetAction = async () => {
+    if (!pendingAssetAction) return;
+    setProcessing(true);
+    try {
+      const { asset, type, value } = pendingAssetAction;
+
+      if (type === "archive") {
+        await fetch(`/api/admin/ritual-assets/${asset.id}`, { method: "DELETE" });
+        void load();
+      } else if (type === "restore") {
+        await patch(asset.id, { unarchive: true });
+      } else if (type === "active") {
+        await patch(asset.id, { is_active: value });
+      }
+
+      setPendingAssetAction(null);
+    } finally {
+      setProcessing(false);
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -734,7 +837,11 @@ function AssetsTab() {
                           <Button
                             size="icon"
                             variant="ghost"
-                            onClick={() => patch(a.id, { is_active: !a.is_active })}
+                            onClick={() => setPendingAssetAction({
+                              asset: a,
+                              type: "active",
+                              value: !a.is_active,
+                            })}
                             title={a.is_active ? "Deactivate" : "Activate"}
                           >
                             <Power
@@ -744,11 +851,18 @@ function AssetsTab() {
                           <Button
                             size="icon"
                             variant="ghost"
-                            onClick={() => archiveAsset(a)}
-                            title="Archive"
-                            disabled={!!a.archived_at}
+                            onClick={() => setPendingAssetAction({
+                              asset: a,
+                              type: a.archived_at ? "restore" : "archive",
+                              value: !a.archived_at,
+                            })}
+                            title={a.archived_at ? "Restore" : "Archive"}
                           >
-                            <Archive className="size-3.5" />
+                            {a.archived_at ? (
+                              <RotateCw className="size-3.5 text-blue-500" />
+                            ) : (
+                              <Archive className="size-3.5" />
+                            )}
                           </Button>
                         </div>
                       </TableCell>
@@ -807,35 +921,20 @@ function AssetsTab() {
               <div>
                 <p className="text-sm text-muted-foreground">
                   Showing <span className="font-medium">{(page - 1) * pageSize + 1}</span> to{" "}
-                  <span className="font-medium">{Math.min(page * pageSize, total)}</span> of{" "}
-                  <span className="font-medium">{total}</span> assets
+                  <span className="font-medium">
+                    {Math.min(page * pageSize, total)}
+                  </span>{" "}
+                  of <span className="font-medium">{total}</span> assets
                 </p>
               </div>
-              <div className="flex items-center gap-4">
-                <Select
-                  value={String(pageSize)}
-                  onValueChange={(v) => {
-                    setPageSize(Number(v));
-                    setPage(1);
-                  }}
-                >
-                  <SelectTrigger className="h-8 w-[70px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="10">10</SelectItem>
-                    <SelectItem value="25">25</SelectItem>
-                    <SelectItem value="50">50</SelectItem>
-                  </SelectContent>
-                </Select>
-                <div className="flex gap-1">
+              <div>
+                <div className="flex items-center gap-1">
                   <Button
                     variant="outline"
                     size="icon"
                     className="h-8 w-8"
                     onClick={() => setPage(1)}
                     disabled={page === 1}
-                    title="First Page"
                   >
                     <ChevronsLeft className="size-4" />
                   </Button>
@@ -845,10 +944,36 @@ function AssetsTab() {
                     className="h-8 w-8"
                     onClick={() => setPage((p) => Math.max(1, p - 1))}
                     disabled={page === 1}
-                    title="Previous Page"
                   >
                     <ChevronLeft className="size-4" />
                   </Button>
+                  <div className="flex items-center gap-1 px-2">
+                    {Array.from({ length: Math.min(5, Math.ceil(total / pageSize)) }, (_, i) => {
+                      const totalPages = Math.ceil(total / pageSize);
+                      let pageNum = page;
+                      if (totalPages <= 5) {
+                        pageNum = i + 1;
+                      } else if (page <= 3) {
+                        pageNum = i + 1;
+                      } else if (page >= totalPages - 2) {
+                        pageNum = totalPages - 4 + i;
+                      } else {
+                        pageNum = page - 2 + i;
+                      }
+
+                      return (
+                        <Button
+                          key={pageNum}
+                          variant={page === pageNum ? "default" : "outline"}
+                          size="icon"
+                          className="h-8 w-8 text-xs"
+                          onClick={() => setPage(pageNum)}
+                        >
+                          {pageNum}
+                        </Button>
+                      );
+                    })}
+                  </div>
                   <Button
                     variant="outline"
                     size="icon"
@@ -876,17 +1001,46 @@ function AssetsTab() {
         )}
       </Card>
 
-      <VideoViewModal
-        isOpen={!!previewAsset}
-        onClose={() => setPreviewAsset(null)}
-        title={previewAsset?.title ?? ""}
-        videoUrl={
-          previewAsset
-            ? previewAsset.source_type === "upload"
+      {previewAsset && (
+        <VideoViewModal
+          isOpen={!!previewAsset}
+          onClose={() => setPreviewAsset(null)}
+          title={previewAsset.title}
+          videoUrl={
+            previewAsset.source_type === "upload"
               ? previewAsset.storage_path
               : previewAsset.external_url
-            : null
+          }
+        />
+      )}
+
+      <ConfirmDialog
+        open={!!pendingAssetAction}
+        onOpenChange={(open) => !open && setPendingAssetAction(null)}
+        loading={processing}
+        title={
+          pendingAssetAction?.type === "archive"
+            ? "Archive Asset"
+            : pendingAssetAction?.type === "restore"
+            ? "Restore Asset"
+            : `${pendingAssetAction?.value ? "Activate" : "Deactivate"} Asset`
         }
+        description={`Are you sure you want to ${
+          pendingAssetAction?.type === "archive"
+            ? "archive"
+            : pendingAssetAction?.type === "restore"
+            ? "restore"
+            : pendingAssetAction?.value ? "activate" : "deactivate"
+        } "${pendingAssetAction?.asset?.title}"?`}
+        confirmLabel={
+          pendingAssetAction?.type === "archive"
+            ? "Archive"
+            : pendingAssetAction?.type === "restore"
+            ? "Restore"
+            : pendingAssetAction?.value ? "Activate" : "Deactivate"
+        }
+        onConfirm={handleConfirmAssetAction}
+        variant={pendingAssetAction?.type === "archive" ? "destructive" : "default"}
       />
     </div>
   );
@@ -1093,6 +1247,14 @@ function MappingsTab() {
   const [editingMapping, setEditingMapping] = useState<AssetMapping | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const [pendingMappingDelete, setPendingMappingDelete] = useState<string | null>(null);
+  const [pendingMappingToggle, setPendingMappingToggle] = useState<{
+    id: string;
+    tag: string;
+    value: boolean;
+  } | null>(null);
+  const [processing, setProcessing] = useState(false);
+
   async function loadAll() {
     setLoading(true);
     try {
@@ -1139,18 +1301,31 @@ function MappingsTab() {
   const filtered = mappings ?? [];
 
   async function deleteMapping(id: string) {
-    if (!confirm("Delete this mapping?")) return;
-    await fetch(`/api/admin/ritual-asset-mappings/${id}`, { method: "DELETE" });
-    void loadAll();
+    setProcessing(true);
+    try {
+      await fetch(`/api/admin/ritual-asset-mappings/${id}`, { method: "DELETE" });
+      setPendingMappingDelete(null);
+      void loadAll();
+    } finally {
+      setProcessing(false);
+    }
   }
-  async function toggle(m: AssetMapping) {
-    await fetch(`/api/admin/ritual-asset-mappings/${m.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ is_active: !m.is_active }),
-    });
-    void loadAll();
-  }
+  const handleConfirmMappingToggle = async () => {
+    if (!pendingMappingToggle) return;
+    setProcessing(true);
+    try {
+      const { id, value } = pendingMappingToggle;
+      await fetch(`/api/admin/ritual-asset-mappings/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ is_active: value }),
+      });
+      setPendingMappingToggle(null);
+      void loadAll();
+    } finally {
+      setProcessing(false);
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -1331,7 +1506,11 @@ function MappingsTab() {
                           <Button
                             size="icon"
                             variant="ghost"
-                            onClick={() => toggle(m)}
+                            onClick={() => setPendingMappingToggle({
+                              id: m.id,
+                              tag: m.tag_key ?? "this mapping",
+                              value: !m.is_active
+                            })}
                             title={m.is_active ? "Deactivate" : "Activate"}
                           >
                             <Power
@@ -1341,7 +1520,7 @@ function MappingsTab() {
                           <Button
                             size="icon"
                             variant="ghost"
-                            onClick={() => deleteMapping(m.id)}
+                            onClick={() => setPendingMappingDelete(m.id)}
                             title="Delete"
                           >
                             <Trash2 className="size-3.5" />
@@ -1471,6 +1650,29 @@ function MappingsTab() {
           </div>
         )}
       </Card>
+
+      <ConfirmDialog
+        open={!!pendingMappingToggle}
+        onOpenChange={(open) => !open && setPendingMappingToggle(null)}
+        loading={processing}
+        title={`${pendingMappingToggle?.value ? "Activate" : "Deactivate"} Mapping`}
+        description={`Are you sure you want to ${
+          pendingMappingToggle?.value ? "activate" : "deactivate"
+        } the mapping for tag "${pendingMappingToggle?.tag}"?`}
+        confirmLabel={pendingMappingToggle?.value ? "Activate" : "Deactivate"}
+        onConfirm={handleConfirmMappingToggle}
+      />
+
+      <ConfirmDialog
+        open={!!pendingMappingDelete}
+        onOpenChange={(open) => !open && setPendingMappingDelete(null)}
+        loading={processing}
+        title="Delete Mapping"
+        description="Are you sure you want to delete this tag-to-asset mapping? This action cannot be undone."
+        confirmLabel="Delete"
+        onConfirm={() => pendingMappingDelete && deleteMapping(pendingMappingDelete)}
+        variant="destructive"
+      />
     </div>
   );
 }
@@ -1669,7 +1871,7 @@ function PlaybackSettingsTab() {
       const data = await res.json();
       setSettings(data);
     } catch (err: any) {
-      alert(err.message);
+      setError(err.message ?? "Failed to save settings");
     } finally {
       setSaving(false);
     }
@@ -1680,6 +1882,11 @@ function PlaybackSettingsTab() {
 
   return (
     <div className="space-y-6">
+      {error && (
+        <div className="flex items-center gap-2 rounded border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          <AlertCircle className="size-4" /> {error}
+        </div>
+      )}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
