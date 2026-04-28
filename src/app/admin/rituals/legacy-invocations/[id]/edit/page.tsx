@@ -24,7 +24,13 @@ interface RitualForm {
   video_url: string;
 }
 
-export default function EditRitualPage() {
+/**
+ * Legacy CRUD edit screen for a `ritual_invocations` row. Preserved
+ * verbatim under /admin/rituals/legacy-invocations so the existing
+ * ritual_invocations data remains editable while the canonical
+ * /admin/rituals route hosts the new Ritual Configurations module.
+ */
+export default function EditLegacyRitualPage() {
   const router = useRouter();
   const { id } = useParams<{ id: string }>();
   const [loading, setLoading] = useState(true);
@@ -53,7 +59,10 @@ export default function EditRitualPage() {
         });
         setLoading(false);
       })
-      .catch(() => { setError("Failed to load ritual"); setLoading(false); });
+      .catch(() => {
+        setError("Failed to load ritual");
+        setLoading(false);
+      });
   }, [id]);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -80,29 +89,31 @@ export default function EditRitualPage() {
       setSaving(false);
       return;
     }
-    router.push("/admin/rituals");
+    router.push("/admin/rituals/legacy-invocations");
   }
 
   async function handleDelete() {
     if (!confirm("Delete this ritual? This cannot be undone.")) return;
     const res = await fetch(`/api/admin/rituals/${id}`, { method: "DELETE" });
-    if (res.ok) router.push("/admin/rituals");
+    if (res.ok) router.push("/admin/rituals/legacy-invocations");
     else setError("Failed to delete ritual");
   }
 
-  if (loading) return <div className="py-8 text-center text-muted-foreground">Loading…</div>;
+  if (loading)
+    return <div className="py-8 text-center text-muted-foreground">Loading…</div>;
 
   return (
     <div className="space-y-6">
       <div>
-        <Link href="/admin/rituals/legacy-invocations" className="text-sm text-muted-foreground hover:text-foreground">
+        <Link
+          href="/admin/rituals/legacy-invocations"
+          className="text-sm text-muted-foreground hover:text-foreground"
+        >
           ← Back to Legacy Invocations
         </Link>
-        <h1 className="mt-2 text-2xl font-bold tracking-tight">Edit Legacy Ritual Invocation</h1>
-        <p className="text-xs text-muted-foreground mt-1">
-          This screen edits a row in the legacy <code>ritual_invocations</code> table.
-          New configuration work should happen on the Ritual Configurations module.
-        </p>
+        <h1 className="mt-2 text-2xl font-bold tracking-tight">
+          Edit Legacy Ritual Invocation
+        </h1>
       </div>
 
       <Card className="max-w-2xl">
@@ -113,22 +124,43 @@ export default function EditRitualPage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="name">Name *</Label>
-              <Input id="name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
+              <Input
+                id="name"
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                required
+              />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="description">Description</Label>
-              <Textarea id="description" rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+              <Textarea
+                id="description"
+                rows={3}
+                value={form.description}
+                onChange={(e) => setForm({ ...form, description: e.target.value })}
+              />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="instructions">Instructions</Label>
-              <Textarea id="instructions" rows={6} value={form.instructions} onChange={(e) => setForm({ ...form, instructions: e.target.value })} />
+              <Textarea
+                id="instructions"
+                rows={6}
+                value={form.instructions}
+                onChange={(e) => setForm({ ...form, instructions: e.target.value })}
+              />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="priority">Priority</Label>
-              <Input id="priority" type="number" min="0" value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value })} />
+              <Input
+                id="priority"
+                type="number"
+                min="0"
+                value={form.priority}
+                onChange={(e) => setForm({ ...form, priority: e.target.value })}
+              />
             </div>
 
             <div className="space-y-2">
@@ -140,13 +172,16 @@ export default function EditRitualPage() {
                 value={form.video_url}
                 onChange={(e) => setForm({ ...form, video_url: e.target.value })}
               />
-              <p className="text-xs text-muted-foreground">
-                Optional. Direct video URL (mp4/webm). When present, shown to the practitioner with auto-advance on completion.
-              </p>
             </div>
 
             <div className="flex items-center gap-2">
-              <Checkbox id="is_active" checked={form.is_active} onCheckedChange={(checked) => setForm({ ...form, is_active: !!checked })} />
+              <Checkbox
+                id="is_active"
+                checked={form.is_active}
+                onCheckedChange={(checked) =>
+                  setForm({ ...form, is_active: !!checked })
+                }
+              />
               <Label htmlFor="is_active">Active</Label>
             </div>
 
@@ -154,10 +189,26 @@ export default function EditRitualPage() {
 
             <div className="flex items-center justify-between pt-2">
               <div className="flex gap-3">
-                <Button type="submit" disabled={saving}>{saving ? "Saving…" : "Save Changes"}</Button>
-                <Button type="button" variant="outline" onClick={() => router.push("/admin/rituals")}>Cancel</Button>
+                <Button type="submit" disabled={saving}>
+                  {saving ? "Saving…" : "Save Changes"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() =>
+                    router.push("/admin/rituals/legacy-invocations")
+                  }
+                >
+                  Cancel
+                </Button>
               </div>
-              <Button type="button" variant="destructive" onClick={handleDelete}>Delete</Button>
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={handleDelete}
+              >
+                Delete
+              </Button>
             </div>
           </form>
         </CardContent>
