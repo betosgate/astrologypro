@@ -84,6 +84,19 @@ export function RitualPlaylistPlayer({
 
   const [duration, setDuration] = useState(0);
   const [position, setPosition] = useState(0);
+  const [settings, setSettings] = useState({
+    video_loop: false,
+    video_autoplay: true,
+    video_controls: true,
+    video_muted: false,
+  });
+
+  useEffect(() => {
+    fetch("/api/community/ritual-settings")
+      .then((r) => r.json())
+      .then((data) => setSettings(data))
+      .catch(() => {});
+  }, []);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
@@ -215,8 +228,10 @@ export function RitualPlaylistPlayer({
                 ref={videoRef}
                 key={activeItem.tag}
                 src={activeItem.videoUrl}
-                controls
-                autoPlay
+                controls={settings.video_controls}
+                autoPlay={settings.video_autoplay}
+                loop={settings.video_loop}
+                muted={settings.video_muted}
                 playsInline
                 onEnded={handleEnded}
                 onEmptied={handleEmptied}

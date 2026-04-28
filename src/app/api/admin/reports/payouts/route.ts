@@ -23,9 +23,10 @@ interface DivinerPayout {
 interface AffiliateCommission {
   affiliateId: string;
   affiliateName: string;
-  referralCode: string | null;
   totalReferrals: number;
   totalEarned: number;
+  // Phase 1 has no paid/pending split — everything not reversed is
+  // "pending payout" until Stripe auto-split ships in Phase 2.
   pendingAmount: number;
 }
 
@@ -92,6 +93,9 @@ export async function GET(req: NextRequest) {
       affiliateQuery = affiliateQuery.gte("created_at", since);
     }
 
+    // v2: campaign_conversions.affiliate_id is a `diviner_affiliates.id`
+    // (junction id), NOT an `affiliates.id` (legacy System A table). Look
+    // up names through the canonical v2 chain: junction → account.
     const [
       { data: diviners, error: divinersError },
       { data: ledgerRows, error: ledgerError },
@@ -106,7 +110,9 @@ export async function GET(req: NextRequest) {
       ledgerQuery,
       refundsQuery,
       affiliateQuery,
-      db.from("affiliates").select("id, name, referral_code"),
+      db
+        .from("diviner_affiliates")
+        .select("id, account:affiliate_accounts(name, email)"),
     ]);
 
     if (divinersError) throw divinersError;
@@ -223,11 +229,19 @@ export async function GET(req: NextRequest) {
 
     const affiliateCommissions: AffiliateCommission[] = Array.from(affMap.entries())
       .map(([affiliateId, agg]) => {
-        const info = affLookup.get(affiliateId);
+        const info = affLookup.get(affiliateId) as
+          | {
+              id: string;
+              account:
+                | { name: string | null; email: string | null }
+                | { name: string | null; email: string | null }[]
+                | null;
+            }
+          | undefined;
+        const account = Array.isArray(info?.account) ? info?.account[0] : info?.account;
         return {
           affiliateId,
-          affiliateName: info?.name ?? "Unknown",
-          referralCode: info?.referral_code ?? null,
+          affiliateName: account?.name ?? account?.email ?? "Unknown",
           totalReferrals: agg.count,
           totalEarned: Math.round(agg.totalEarned * 100) / 100,
           pendingAmount: Math.round(agg.pendingAmount * 100) / 100,
