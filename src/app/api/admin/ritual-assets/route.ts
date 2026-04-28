@@ -24,6 +24,9 @@ export async function GET(req: NextRequest) {
   const fromDate = searchParams.get("from");
   const toDate = searchParams.get("to");
   const sort = searchParams.get("sort") ?? "desc";
+  const sortBy = searchParams.get("sortBy") ?? "created_at";
+  const validSortFields = ["title", "created_at", "updated_at"];
+  const finalSortBy = validSortFields.includes(sortBy) ? sortBy : "created_at";
 
   const admin = createAdminClient();
   let query = admin.from("ritual_media_assets").select("*", { count: "exact" });
@@ -60,7 +63,7 @@ export async function GET(req: NextRequest) {
   const to = from + pageSize - 1;
 
   const { data: assets, count, error } = await query
-    .order("created_at", { ascending: sort === "asc" })
+    .order(finalSortBy, { ascending: sort === "asc" })
     .range(from, to);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

@@ -3799,7 +3799,12 @@ export function HoroscopeToolkitPage({
           composite: collected.composite ?? {},
           self: collected.natal_chart_data ?? {},
           partner: collected.natal_chart_data_p2 ?? {},
-        } : (collected.natal_chart_data ?? {});
+        } : {
+          ...(collected.natal_chart_data as Record<string, unknown> ?? {}),
+          ...collected, 
+          // Spreading collected ensures transit_data, lunar_metrics, solar_return_*, etc. 
+          // are at the top level of astro_api_data for easy hydration later.
+        };
         const natalChartPayload = isTwoPerson ? {
           self: { status: true, chart_url: collected.natal_chart_url ?? "", msg: "Chart created successfully!" },
           partner: { status: true, chart_url: collected.natal_chart_url_p2 ?? "", msg: "Chart created successfully!" },
