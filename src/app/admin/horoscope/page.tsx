@@ -3062,17 +3062,61 @@ export function HoroscopeToolkitPage({
     setNatalSvgTransit(null);
     setNatalSvgP2(null);
     setNatalSvgTransitP2(null);
+    setTransitChartSvg(null);
     setReturnDate(null);
     setProgress([]);
     if (!keepExclusions) {
       setExcludedHoraryDates("");
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const collected: Record<string, any> = {};
-
     try {
       const birth1 = parseBirth(form.person1);
+      const isTwoPerson = currentTab.type === "two-person";
+      const birth2 = isTwoPerson ? parseBirth(form.person2) : null;
+
+      // Check if this report already exists
+      const checkFormData = isTwoPerson ? {
+        self: { ...form.person1, ...birth1 },
+        partner: { ...form.person2, ...birth2 },
+      } : {
+        ...form.person1,
+        ...birth1,
+      };
+
+      addProgress("Checking for existing report...");
+      const checkRes = await fetch("/api/admin/searched-toolkit/check", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          toolname: currentTab.slug,
+          form_data: checkFormData,
+        }),
+      });
+
+      if (checkRes.ok) {
+        const checkData = await checkRes.json();
+        if (checkData.status === "success" && checkData.result) {
+          addProgress("Found existing report! Restoring...");
+          const hydrated = hydrateSavedAstroReport(checkData.result, currentTab.slug);
+          
+          if (hydrated.results) {
+            setResults(hydrated.results);
+            setNatalSvg(hydrated.natalSvg);
+            setNatalSvgTransit(hydrated.natalSvgTransit);
+            setNatalSvgP2(hydrated.natalSvgP2);
+            setNatalSvgTransitP2(hydrated.natalSvgTransitP2);
+            setTransitChartSvg(hydrated.transitChartSvg);
+            setReturnDate(hydrated.returnDate);
+            setShowChartBtn(hydrated.showChartButton);
+            setLoading(false);
+            return; // EXIT EARLY
+          }
+        }
+      }
+
+      // No existing report found, proceed with calculation
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const collected: Record<string, any> = {};
 
       // ── Single person ─────────────────────────────────────────────────────
       if (currentTab.type === "single") {
@@ -3431,8 +3475,7 @@ export function HoroscopeToolkitPage({
       }
 
       // ── Two person ────────────────────────────────────────────────────────
-      if (currentTab.type === "two-person") {
-        const birth2 = parseBirth(form.person2);
+      if (currentTab.type === "two-person" && birth2) {
         const relBase = {
           person1_birth: birth1,
           person2_birth: birth2,
@@ -3628,9 +3671,6 @@ export function HoroscopeToolkitPage({
       // This block captures all AI interpretations, chart URLs, and form data
       // into a single payload and persists it to both legacy and local stores.
       try {
-        const isTwoPerson = currentTab.type === "two-person";
-        const birth1 = parseBirth(form.person1);
-        const birth2 = isTwoPerson ? parseBirth(form.person2) : null;
 
         const ai_response_payload: any = {
           ...(collected.ai_interpretations ?? {}),
