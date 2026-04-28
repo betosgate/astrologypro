@@ -47,7 +47,6 @@ interface DivinerPayout {
 interface AffiliateCommission {
   affiliateId: string;
   affiliateName: string;
-  referralCode: string | null;
   totalReferrals: number;
   totalEarned: number;
   pendingAmount: number;
@@ -330,7 +329,6 @@ export default function PayoutsReportPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Affiliate</TableHead>
-                    <TableHead>Referral Code</TableHead>
                     <TableHead className="text-right">Referrals</TableHead>
                     <TableHead className="text-right">Total Earned</TableHead>
                     <TableHead className="text-right">Pending</TableHead>
@@ -341,13 +339,6 @@ export default function PayoutsReportPage() {
                     <TableRow key={a.affiliateId}>
                       <TableCell className="font-medium">
                         {a.affiliateName}
-                      </TableCell>
-                      <TableCell>
-                        {a.referralCode ? (
-                          <Badge variant="outline">{a.referralCode}</Badge>
-                        ) : (
-                          <span className="text-muted-foreground">--</span>
-                        )}
                       </TableCell>
                       <TableCell className="text-right">
                         {a.totalReferrals}

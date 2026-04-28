@@ -149,13 +149,36 @@ export async function GET(
     const queryStart = new Date(selectedDayUtc.getTime() - 24 * 60 * 60 * 1000).toISOString();
     const queryEnd = new Date(selectedDayUtc.getTime() + 48 * 60 * 60 * 1000).toISOString();
 
+    // Bookings that block this slot. We include `pending` because that's the
+    // initial state for a paid booking while Stripe Checkout is in flight.
+    // BUT: an abandoned/failed checkout can leave a `pending` row sitting
+    // around indefinitely until the Stripe webhook eventually marks it
+    // failed (or never, if no webhook event fires). We therefore filter
+    // out `pending` rows older than the stale window so payment-failed /
+    // abandoned bookings don't permanently block real bookings.
+    //
+    // 30 min is comfortably longer than a typical successful Checkout
+    // session (seconds to a few minutes) plus webhook delay, but short
+    // enough that an abandoned slot reopens before the next visitor.
+    const PENDING_STALE_MIN = 30;
     const { data: bookings } = await admin
       .from("bookings")
-      .select("id, scheduled_at, duration_minutes, status, services(name), clients(full_name)")
+      .select(
+        "id, scheduled_at, duration_minutes, status, created_at, services(name), clients(full_name)"
+      )
       .eq("owner_id", ownerId)
       .gte("scheduled_at", queryStart)
       .lte("scheduled_at", queryEnd)
       .in("status", ["pending", "confirmed", "in_progress"]);
+
+    const staleCutoff = Date.now() - PENDING_STALE_MIN * 60 * 1000;
+    const activeBookings = (bookings ?? []).filter((b) => {
+      if (b.status !== "pending") return true;
+      const createdAt = b.created_at
+        ? new Date(b.created_at as string).getTime()
+        : 0;
+      return createdAt >= staleCutoff;
+    });
 
     // Also treat active holds as booked (prevents race-condition double-booking)
     const { data: holds } = await admin
@@ -224,7 +247,7 @@ export async function GET(
     }
 
     const allBlockedSlots = [
-      ...(bookings ?? []).map((b) => ({
+      ...activeBookings.map((b) => ({
         start: b.scheduled_at,
         end: new Date(
           new Date(b.scheduled_at).getTime() + b.duration_minutes * 60_000
@@ -279,7 +302,7 @@ export async function GET(
 
     if (debugBusy) {
       const busySchedule = [
-        ...((bookings ?? []).map((booking) => ({
+        ...(activeBookings.map((booking) => ({
           id: String(booking.id),
           title:
             booking.services && typeof booking.services === "object" && "name" in booking.services
@@ -294,7 +317,7 @@ export async function GET(
             booking.clients && typeof booking.clients === "object" && "full_name" in booking.clients
               ? `${String((booking.clients as { full_name?: string | null }).full_name ?? "Client")} • ${booking.status}`
               : booking.status,
-        })) ?? []),
+        }))),
         ...((holds ?? []).map((hold) => ({
           id: String(hold.id),
           title: "Pending hold",
