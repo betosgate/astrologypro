@@ -109,7 +109,7 @@ export function AcceptScreen(props: Props) {
   }
 
   return (
-    <main className="mx-auto flex min-h-[60vh] max-w-md items-center p-6">
+    <main className="mx-auto flex min-h-[100vh] max-w-md items-center p-6">
       <Card className="w-full">
         <CardHeader>
           <div className="flex items-center gap-2">

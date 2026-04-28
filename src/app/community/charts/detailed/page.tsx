@@ -5,6 +5,10 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { buildToolkitPrefillForm } from "@/lib/horoscope-toolkit-prefill";
 import { HoroscopeToolkitPage } from "@/app/admin/horoscope/page";
+import {
+  loadLinkedRelationshipReport,
+  type RelationshipReportType,
+} from "@/lib/community/saved-report-link";
 
 export const metadata = {
   title: "Detailed Relationship Report - AstrologyPro Community",
@@ -19,6 +23,18 @@ const RELATIONSHIP_TAB_MAP = {
 } as const;
 
 type RelationshipMode = keyof typeof RELATIONSHIP_TAB_MAP;
+
+/**
+ * UI mode → canonical relationship `report_type` enum (matches the DB
+ * CHECK constraint on community_relationship_reports.report_type and
+ * the validation in /api/community/saved-reports/relationship/link).
+ * Note: the UI exposes "business" but the lifecycle row is "partnership".
+ */
+const MODE_TO_REPORT_TYPE: Record<RelationshipMode, RelationshipReportType> = {
+  romantic: "romantic",
+  friendship: "friendship",
+  business: "partnership",
+};
 
 interface SearchParams {
   personAId?: string;
@@ -100,6 +116,26 @@ export default async function CommunityRelationshipDetailPage({
     redirect("/community/charts");
   }
 
+  // ── Saved-report hydration ─────────────────────────────────────────
+  // If a full relationship report has already been generated for this
+  // pair + selected type, load it from `astro_ai_responses` (via the
+  // domain `community_relationship_reports` linkage) and pass it to the
+  // toolkit as `initialSavedReport`. The toolkit's saved-hydration mode
+  // then renders the report directly without re-running compute /
+  // synastry / composite / AI calls. If null, the toolkit falls back to
+  // its existing live-generation flow exactly as before.
+  const savedRelationshipReport = await loadLinkedRelationshipReport({
+    personAId,
+    personBId,
+    reportType: MODE_TO_REPORT_TYPE[selectedMode],
+  }).catch((err) => {
+    console.error(
+      "[community/charts/detailed] loadLinkedRelationshipReport failed:",
+      err,
+    );
+    return null;
+  });
+
   const prefill = await buildToolkitPrefillForm({
     person1: {
       fullName: personA.full_name,
@@ -135,7 +171,17 @@ export default async function CommunityRelationshipDetailPage({
         basePath={`/community/charts/detailed?personAId=${encodeURIComponent(personAId)}&personBId=${encodeURIComponent(personBId)}&mode=${selectedMode}`}
         allowedSlugs={allowedSlugs}
         initialPrefill={encodeURIComponent(JSON.stringify(prefill))}
+        initialSavedReport={
+          savedRelationshipReport
+            ? (savedRelationshipReport as Record<string, unknown>)
+            : null
+        }
         readOnlyBirthData={true}
+        // Pair ids drive the post-generate save call to
+        // /api/community/saved-reports/relationship/link inside the
+        // toolkit, so the next View hydrates from DB.
+        communityRelationshipPersonAId={personAId}
+        communityRelationshipPersonBId={personBId}
       />
     </div>
   );
