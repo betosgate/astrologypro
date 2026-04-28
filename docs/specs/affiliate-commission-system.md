@@ -678,6 +678,246 @@ Anything referencing these after Phase 1 is dead code — remove on sight.
 - RLS policies
 - Test matrix covering the flows above
 
+### Phase 1.5 — General-product affiliate commissions (designed 2026-04-28, not yet implemented)
+
+**Why it exists:** Phase 1 only models per-diviner-assignment commissions
+(`diviner_service_affiliates`). The platform also has a parallel general-
+product catalog (`service_templates` rows cloned with `general-` slug
+prefix per migration `20260421000002_add_general_service_templates.sql`)
+where customers book without pre-selecting a diviner — the slot picker
+assigns one at booking time. Affiliates should be able to share these
+general landing pages and earn commission on the resulting bookings.
+
+**Locked design decisions** (from 2026-04-28 discussion — do not
+relitigate without explicit approval):
+
+1. **Eligibility** — every `affiliate_accounts.status='active'` row is
+   auto-eligible. No opt-in table, no enrollment UI, no membership
+   state. Webhook fraud gate (Flow F step 3, account-status='active')
+   is the sole eligibility check at credit time.
+2. **Rate setting** — admin only. A single global rate per general
+   `service_templates` row, no per-affiliate override. Visible to
+   affiliates on `/affiliate/products` (general section).
+3. **Default + disabled-program semantics** — when an admin hasn't
+   set a rate (`commission_value IS NULL` AND `affiliate_program_enabled=true`),
+   the system defaults to **10%**. When the admin has explicitly disabled
+   the program for a template (`affiliate_program_enabled=false`), the
+   `/r/<code>` handler returns **410** for any affiliate share URL
+   pointing at it (parallel to revoked-assignment behavior in Flow D
+   step 3) and `resolveStampForBooking` does NOT stamp the booking.
+4. **Rate-edit notifications + history** — **no notification fires** to
+   affiliates when admin changes a general template's rate (potentially
+   thousands of recipients). **No `service_template_commission_history`
+   table** is added — admin-managed rate changes are not commercial
+   negotiations and don't need an audit trail in this system.
+   Affiliates see the *current* rate on `/affiliate/products`. The
+   rate-stamping invariant (§3.8) means in-flight bookings keep their
+   stamped rate regardless of admin edits.
+5. **Campaign anchoring** — campaigns gain a new column
+   `affiliate_campaigns.owner_affiliate_account_id` (UUID, nullable)
+   pointing directly at `affiliate_accounts.id`. General-product
+   campaigns use this column; per-diviner campaigns continue to use
+   `owner_affiliate_id` (junction). The `owner_affiliate_type` enum
+   adds the value `'general'`. This avoids the misleading admin/
+   diviner views that arise from anchoring general campaigns on an
+   arbitrarily-picked junction.
+6. **Affiliate type scope** — Phase 1.5 applies to **diviner-affiliates
+   only**. `social_advocates` are a separate identity (per project
+   memory `project_affiliate_vs_advocate_identity.md`) and are not in
+   scope.
+
+Carried-over invariants from Phase 1 (no change):
+- Rate-stamping at booking creation (§3.8)
+- Webhook account-status fraud gate (Flow F step 3)
+- Webhook idempotency via `campaign_conversions.booking_id` UNIQUE
+- Reversal flow (Flow J) — admin reverses general conversions the same way
+- Admin emergency overrides (Flow K) — same endpoints work; archive logic
+  needs to handle scope lookup via `owner_affiliate_account_id` too
+- RLS isolation (§8) — affiliate-side policies extend with one
+  `OR owner_affiliate_account_id = current_affiliate_account_id()` clause
+
+**Schema additions (single migration):**
+
+```sql
+-- 1. Per-template commission config + program flag
+ALTER TABLE service_templates
+  ADD COLUMN commission_type TEXT
+    CHECK (commission_type IS NULL OR commission_type IN ('percentage','flat')),
+  ADD COLUMN commission_value NUMERIC(10,4),
+  ADD COLUMN affiliate_program_enabled BOOLEAN NOT NULL DEFAULT FALSE;
+-- Only meaningful when is_general = true. Diviner-specific rows leave
+-- these NULL/FALSE.
+
+-- 2. Campaign anchoring for non-junction owners
+ALTER TABLE affiliate_campaigns
+  ADD COLUMN owner_affiliate_account_id UUID
+    REFERENCES affiliate_accounts(id) ON DELETE RESTRICT;
+
+-- Allow 'general' as a third value of owner_affiliate_type
+ALTER TABLE affiliate_campaigns
+  DROP CONSTRAINT IF EXISTS affiliate_campaigns_owner_affiliate_type_check;
+ALTER TABLE affiliate_campaigns
+  ADD CONSTRAINT affiliate_campaigns_owner_affiliate_type_check
+  CHECK (owner_affiliate_type IS NULL
+      OR owner_affiliate_type IN ('diviner_affiliate','social_advocate','general'));
+
+-- Tighten owner_consistency to require account_id when type='general'
+ALTER TABLE affiliate_campaigns
+  DROP CONSTRAINT IF EXISTS affiliate_campaigns_owner_consistency;
+ALTER TABLE affiliate_campaigns
+  ADD CONSTRAINT affiliate_campaigns_owner_consistency CHECK (
+    (owner_type = 'diviner'
+      AND owner_affiliate_id IS NULL
+      AND owner_affiliate_account_id IS NULL
+      AND owner_affiliate_type IS NULL)
+    OR (owner_type = 'affiliate'
+      AND owner_affiliate_type IN ('diviner_affiliate','social_advocate')
+      AND owner_affiliate_id IS NOT NULL
+      AND owner_affiliate_account_id IS NULL
+      AND source_assignment_id IS NOT NULL)
+    OR (owner_type = 'affiliate'
+      AND owner_affiliate_type = 'general'
+      AND owner_affiliate_id IS NULL
+      AND owner_affiliate_account_id IS NOT NULL
+      AND source_assignment_id IS NULL
+      AND destination_service_template_id IS NOT NULL)
+  );
+
+-- 3. Booking stamp source for general program
+ALTER TABLE bookings
+  ADD COLUMN commission_source_template_id UUID
+    REFERENCES service_templates(id) ON DELETE SET NULL;
+-- Parallel to commission_source_assignment_id; populated when the
+-- booking was stamped via the general-program path.
+
+-- 4. Conversion account-direct attribution
+ALTER TABLE campaign_conversions
+  ADD COLUMN affiliate_account_id UUID REFERENCES affiliate_accounts(id);
+-- Always populated by creditAffiliateConversion (resolved from junction
+-- for per-diviner credits, set directly for general credits). Lets
+-- account-level rollups skip the junction join.
+
+-- 5. RLS extension on the campaign affiliate-side policy
+DROP POLICY IF EXISTS affiliate_sees_own_campaigns ON affiliate_campaigns;
+CREATE POLICY affiliate_sees_own_campaigns ON affiliate_campaigns
+  FOR SELECT USING (
+    (owner_type = 'affiliate'
+      AND owner_affiliate_type = 'diviner_affiliate'
+      AND owner_affiliate_id IN (SELECT public.current_affiliate_junction_ids()))
+    OR
+    (owner_type = 'affiliate'
+      AND owner_affiliate_type = 'general'
+      AND owner_affiliate_account_id = public.current_affiliate_account_id())
+  );
+-- Mirror the INSERT + UPDATE policies in the same shape.
+```
+
+`service_templates` RLS: admin (service_role) FOR ALL; everyone else
+SELECT-only (these rows are public landing-page content). Already the
+de-facto state — the new columns inherit the existing posture and don't
+need new policies.
+
+**Stamp logic (new branch in `src/lib/affiliate-stamp.ts`):**
+- After resolving the campaign by `ref_code`:
+  - If `campaign.owner_affiliate_type = 'general'`:
+    - Look up `service_templates` by `campaign.destination_service_template_id`.
+    - If `affiliate_program_enabled = false` → `reason: 'program_disabled'`,
+      no stamp. (`/r/<code>` handler returns 410 BEFORE reaching this point;
+      this is the secondary check.)
+    - Re-check `affiliate_accounts.status='active'` for
+      `campaign.owner_affiliate_account_id`.
+    - Stamp `bookings.commission_source_template_id` +
+      `commission_rate_type_stamp` (from `service_templates.commission_type`,
+      defaulting to `'percentage'` if NULL) +
+      `commission_rate_value_stamp` (from `service_templates.commission_value`,
+      **defaulting to 10 when NULL**).
+  - If `campaign.owner_affiliate_type = 'diviner_affiliate'`: existing
+    Phase 1 branch unchanged.
+
+**Conversion write logic (`creditAffiliateConversion`):**
+- Always sets `campaign_conversions.affiliate_account_id`. For per-
+  diviner credits, resolves it via the junction → account chain. For
+  general credits, sets it directly from
+  `campaign.owner_affiliate_account_id`.
+- `campaign_conversions.affiliate_id` stays nullable: populated for
+  per-diviner credits (junction id), NULL for general credits.
+
+**`/r/<code>` handler (new gate):**
+- Existing Flow D step 3: if linked campaign's source assignment is
+  revoked → 410.
+- New Flow D step 3b (general): if linked campaign's
+  `owner_affiliate_type = 'general'` AND its destination template has
+  `affiliate_program_enabled = false` → 410. No click logged.
+
+**Campaign creation:**
+- New POST endpoint: `POST /api/affiliate/general-campaigns` body
+  `{ service_template_id, name, ... }`. Verifies the template has
+  `is_general = true AND affiliate_program_enabled = true`. Writes a
+  campaign row with `owner_type='affiliate'`,
+  `owner_affiliate_type='general'`,
+  `owner_affiliate_account_id=ctx.account.id`, `owner_affiliate_id=NULL`,
+  `source_assignment_id=NULL`, `destination_service_template_id=<id>`.
+  Auto-generates `campaign_code` + `tracking_links` row.
+- UI: `/affiliate/campaigns/new` extends to a two-mode picker
+  (per-diviner via assignment, OR general via template).
+
+**Affiliate Marketing Kit rewrite:**
+- `src/components/affiliate/marketing-kit.tsx` queries
+  `service_templates WHERE is_general = true AND
+   affiliate_program_enabled = true` (server side).
+- For each general template: lazily ensure the affiliate has a campaign
+  for it. If none exists for `(affiliate_account_id, template_id)`,
+  create one on first share or on Marketing Kit page-load.
+- "Copy Link" button copies `?ref=<campaign_code>` (real campaign code,
+  not the legacy `?ref=<junctionId>` UUID).
+
+**Affiliate `/affiliate/products`:**
+- New section "General products" sourced from
+  `service_templates WHERE is_general = true AND
+   affiliate_program_enabled = true`. Each card shows the current
+  commission rate (`commission_value`% or default 10%) and a
+  "Create campaign" CTA → `/affiliate/campaigns/new?template=<id>`.
+
+**Admin UI:**
+- `/admin/service-templates/[id]` adds three fields: `commission_type`,
+  `commission_value`, `affiliate_program_enabled` toggle. Only meaningful
+  when `is_general = true`. Bulk-edit helper at `/admin/service-templates`
+  for setting one rate across all enabled general templates.
+
+**Reporting touches:**
+- `/admin/reports/affiliates/by-affiliate` already groups by account —
+  general credits flow in seamlessly via `affiliate_account_id`.
+- `/admin/reports/affiliates/by-diviner` — general conversions have
+  `diviner_id IS NULL` and are excluded from this report. Correct: they
+  aren't attributable to a diviner.
+- `/admin/reports/affiliates/conversions` — display label: when
+  `owner_affiliate_type='general'`, show `"General: <template name>"`
+  instead of `"Diviner: <name>"`.
+- `/affiliate/earnings` row-level display: same source-label change.
+
+**Test coverage (Task 08-equivalent):**
+- New integration test: stamp via general path with happy + program-
+  disabled + account-blocked + missing rate (default-10%) cases.
+- New RLS case: general campaign visible to its owner, invisible to
+  another affiliate, invisible to the diviner.
+- Smoke test: end-to-end click → book → pay → conversion via the
+  general-program path.
+
+**What stays out of Phase 1.5 (still Phase 2):**
+- Stripe auto-split for affiliate payouts. General-program credits hit
+  `campaign_conversions` the same way per-diviner credits do and surface
+  on `/affiliate/earnings` as "earned, pending payout".
+
+**Status:** Designed, not implemented. Marketing Kit at
+`src/components/affiliate/marketing-kit.tsx` is currently misleading
+(promises commission credit but doesn't deliver — generates
+`?ref=<junctionId>` UUIDs that never match a campaign code) — **DO NOT
+fix the Marketing Kit in isolation**; the underlying schema + stamp +
+endpoints must land first or the fix would just hide the absence of the
+feature.
+
+---
+
 ### Phase 2 — Stripe auto-split (future)
 - Stripe Connect integration at charge time
 - Per-conversion transfer (or application_fee) execution
@@ -699,6 +939,7 @@ This spec gets an update when Phase 2 starts scoping.
 
 Append-only. One line per concrete change. Newest first.
 
+- **2026-04-28 (Phase 1.5 design)** — General-product affiliate commissions designed. New §10 Phase 1.5 section with locked decisions: (1) all active affiliate accounts auto-eligible (no opt-in); (2) admin-only writes on `service_templates.commission_*` (single global rate per template); (3) `commission_value IS NULL AND affiliate_program_enabled=true` defaults to 10%; (4) `affiliate_program_enabled=false` returns 410 from `/r/<code>`; (5) skip rate-edit notification + no `service_template_commission_history` table — affiliates see current rate on `/affiliate/products`; (6) new column `affiliate_campaigns.owner_affiliate_account_id` to anchor general-program campaigns directly on the account (avoids the misleading admin views from anchoring on an arbitrarily-picked junction); (7) scope is `diviner_affiliates` only — `social_advocates` are out per their distinct identity model. Schema migration adds `service_templates.{commission_type, commission_value, affiliate_program_enabled}`, `affiliate_campaigns.owner_affiliate_account_id`, extends `owner_affiliate_type` enum with `'general'`, tightens `owner_consistency` CHECK, adds `bookings.commission_source_template_id`, and `campaign_conversions.affiliate_account_id` (always populated). Stamp logic gets a general-path branch in `resolveStampForBooking`. New `POST /api/affiliate/general-campaigns` endpoint. Marketing Kit rewrites to use real campaign codes. Spec is the contract — implementation sprint to follow.
 - **2026-04-28** — Audit-driven follow-up cleanup. Two findings from a route-by-route v2-alignment audit: (1) `/admin/campaigns` still carried pre-v2 commission/budget/status surfaces — symmetric to yesterday's `dashboard/campaigns` cleanup. Removed `draft` + `completed` from STATUS_BADGE map / status filter / edit-modal options (CHECK rejects them post-01b); removed Commission Type / Commission % / Budget Cap from create + edit forms (state + setters + POST/PATCH bodies + UI blocks); removed `formTargetProduct` (no UI but still POSTed); dropped the "Commission" sortable column + cell from the table. (2) `/admin/reports/payouts` had a real lookup bug: the API joined `campaign_conversions.affiliate_id` (a `diviner_affiliates.id` in v2) against the legacy `affiliates` table (different ID namespace from System A), so every row's `affiliateName` rendered as "Unknown" and `referralCode` was always null. Fixed `src/app/api/admin/reports/payouts/route.ts` to query `diviner_affiliates` joined to `affiliate_accounts` (correct namespace, canonical v2 name) and dropped `referralCode` from the response interface (System A concept; v2 stores codes on `affiliate_campaigns`, not per-junction). Page-side dropped the matching column. `pendingAmount` preserved unchanged — explicit Phase 2 placeholder ("everything not reversed is pending payout until Stripe auto-split ships"), source comment in `route.ts:225`.
 - **2026-04-27** — Task 08 partial landing + post-sprint dead-UI sweep. Tests: Part A RLS suite (`tests/integration/affiliate-rls.test.ts`, 12 cases, anon-key + JWT, proves DB-layer isolation) and Part C unit suite (`tests/unit/affiliate-commission-math.test.ts`, 23 cases for `computeCommissionCents`) shipped. Part B (8 separate flow files) and Part D (Playwright E2E) deferred — smoke + RLS already cover the core invariants. **RLS migrations (3 ran sequentially):** `20260427000002_affiliate_rls_v2_alignment.sql` rewrote 4 affiliate-side SELECT policies for the v2 junction model (pre-v2 they assumed `*.affiliate_id = auth.uid()`; v2 makes affiliate_id a `diviner_affiliates.id`); `20260427000003_affiliate_junction_select_policy.sql` added the missing `affiliate_sees_own_junctions` policy on `diviner_affiliates` (without it, the IN-subquery in every child policy returned empty under RLS); `20260427000004_affiliate_rls_security_definer.sql` broke the resulting policy cycle (`affiliate_accounts.diviner_sees_linked_accounts` ↔ `diviner_affiliates.affiliate_sees_own_junctions`) by introducing two SECURITY DEFINER helpers — `current_affiliate_junction_ids()` SETOF UUID + `current_affiliate_account_id()` UUID — and rewriting all affiliate-side policies to call them. Spec §8 promises now match what the DB actually enforces. API was always service-role (RLS bypass) so no production regression. **Dead-UI cleanup (5 commits):** deleted broken admin/affiliates/[id] page + 3 dead routes (1014 lines — page was 404'ing post-01b on `/api/admin/affiliates/[id]/commissions` + `/api/admin/commissions/[commId]`); deleted redundant `/affiliate/commissions` + `/affiliate/links` pages + endpoints + nav entries (589 lines — both duplicated `/affiliate/earnings` + `/affiliate/campaigns`); removed pre-v2 `commission_type` / `commission_value` / `budget_cap_cents` / `target_product_type` form fields from the diviner Create Campaign modal, the Edit modal, and the detail page (Commission KPI tile + Budget Progress card removed since diviner-owned campaigns never credit commission per Flow B); trimmed `draft` + `completed` from every `/dashboard/campaigns` status enum surface (CHECK rejects them post-01b); removed dead approval-state branches (pending / on_hold / approved / paid / rejected) from affiliate earnings `statusBadge` and tightened its signature to `'earned' | 'reversed'`; removed dead `Delete` button + `handleDelete` handler from campaign detail (gated on impossible `status === 'draft'`). **Test cleanup tooling:** `scripts/cleanup-affiliate-test-data.ts` (npm run `cleanup:affiliate-test-data`, dry-run default, `--apply` to delete) targets `v2-smoke` / `rls` / `probe` email patterns and cascades through the FK chain.
 - **2026-04-24** — Task 07 Phase C (affiliate-only subset) landed: 6 new pages under `/affiliate/(portal)/` — `products` (active assignments with "Create campaign" CTAs), `campaigns/new` (create form with assignment picker + UTM fields), `campaigns/[id]` (per-campaign detail with KPIs, share URL, recent conversions, archive button), `rate-history` (read-only audit), `notifications` (inbox), `notifications/preferences` (per-kind per-channel toggles backed by new `PATCH /api/affiliate/notification-preferences` endpoint that merges into `affiliate_accounts.notification_prefs`). Affiliate header nav updated with Products / Rate history / Notifications entries. Quality is honest first-pass — works end-to-end but copy + visual polish need design review. Admin + diviner UI still deferred.
