@@ -99,22 +99,36 @@ export default async function CommunityRitualPlaybackPage({
     /* non-fatal */
   }
 
+  if (!matchedDefinitionId) {
+    return (
+      <div className="mx-auto max-w-5xl space-y-4">
+        <Button asChild variant="ghost" size="sm">
+          <Link href="/community/rituals">
+            <ArrowLeft className="mr-1.5 size-4" />
+            Back to My Rituals
+          </Link>
+        </Button>
+        <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-700">
+          This ritual configuration is not currently available.
+        </div>
+      </div>
+    );
+  }
+
   // ── Final-override branch (Task 04 spec section 5) ───────────────────
   //
   // If the matched definition has final_override_enabled + a valid
   // override asset, render a single-item playlist using that one video
   // and bypass the generated step playback entirely.
   let overrideAsset: Awaited<ReturnType<typeof resolveFinalOverrideForRitual>> | null = null;
-  if (matchedDefinitionId) {
-    try {
-      overrideAsset = await resolveFinalOverrideForRitual(matchedDefinitionId);
-    } catch (err) {
-      console.warn(
-        "[community/rituals/playback] final-override resolution failed:",
-        err instanceof Error ? err.message : err
-      );
-      /* fall through to playlist mode */
-    }
+  try {
+    overrideAsset = await resolveFinalOverrideForRitual(matchedDefinitionId);
+  } catch (err) {
+    console.warn(
+      "[community/rituals/playback] final-override resolution failed:",
+      err instanceof Error ? err.message : err
+    );
+    /* fall through to playlist mode */
   }
 
   if (overrideAsset) {
@@ -141,18 +155,16 @@ export default async function CommunityRitualPlaybackPage({
     );
   }
 
-  // Build the playlist via the canonical ordering helper (still
-  // code-managed — preserves the planet/zodiac sequencing rules per the
-  // spec direction "keep in code"). Then re-point each item's URL via
-  // the admin-managed resolver. The resolver falls back to the same
-  // hardcoded URL the helper returned, so when no admin overrides exist
-  // the runtime behaviour is identical to before.
-  const playlist = buildRitualPlaylist(tags);
+  // Build a URL-free playlist skeleton. Ordering stays in code, but
+  // playback URLs come only from admin-managed asset mappings.
+  const playlist = buildRitualPlaylist(tags, {
+    collapseStaticPresets: false,
+    includeCodeFallbackUrls: false,
+  });
 
-  // community-ritual-admin-config (2026-04-27):
-  // Resolve every tag through the DB-first asset resolver, scoped by
-  // the matched ritual_definition_id when we have one. Per-ritual
-  // overrides take precedence over global mappings → code map fallback.
+  // Resolve every tag through admin-managed mappings, scoped by the
+  // matched ritual_definition_id. Per-ritual mappings take precedence
+  // over global mappings.
   if (playlist.length > 0) {
     try {
       const resolved = await resolveAssetsForTags(

@@ -1,5 +1,5 @@
 /**
- * Ritual asset resolver — admin-managed first, code fallback always.
+ * Ritual asset resolver - admin-managed runtime source.
  *
  * Spec source:
  *   docs/tasks/2026-04-27/03-admin-ritual-configurations-and-dynamic-media-management.md
@@ -10,8 +10,8 @@
  *      playable video URL.
  *   2. Honour the optional ritual-definition-level final-override video
  *      (one video that replaces the entire generated playlist).
- *   3. Look up admin-managed mappings first; fall back to the hardcoded
- *      `ritual-video-map.ts` constant when no DB row is configured.
+ *   3. Look up admin-managed mappings from `ritual_asset_mappings`
+ *      joined to `ritual_media_assets`.
  *
  * Design notes:
  *   - Server-only module. The DB read uses an admin client; RLS allows
@@ -19,18 +19,11 @@
  *     run from cron or background contexts too, so we go through admin.
  *   - Per-ritual mapping wins over global mapping — admins can override
  *     individual steps for a single ritual without touching globals.
- *   - The hardcoded fallback in `ritual-video-map.ts` is intentionally
- *     kept so that an environment without the migration applied (or with
- *     an empty asset library) still plays correctly. Behaviour is
- *     identical to the pre-resolver world until admins start curating.
- *   - Pure read paths only. Writes happen via Phase 2 admin endpoints.
+ *   - Pure read paths only. Writes happen via admin endpoints.
  */
 
 import { createAdminClient } from "@/lib/supabase/admin";
-import {
-  getRitualVideoUrlForTag as codeMapUrlForTag,
-  type RitualPlaylistKind,
-} from "@/lib/community/ritual-video-map";
+import type { RitualPlaylistKind } from "@/lib/community/ritual-video-map";
 
 // ── Types ────────────────────────────────────────────────────────────────
 
@@ -38,10 +31,10 @@ export interface ResolvedAsset {
   /** The S3 URL or external URL the player should hit. */
   url: string;
   /** Where the URL came from — useful for telemetry / dev diagnostics. */
-  source: "ritual_definition_mapping" | "global_mapping" | "code_fallback";
-  /** asset_id when the URL came from the DB; null on code fallback. */
-  assetId: string | null;
-  /** The asset row's title when present (DB only); null on code fallback. */
+  source: "ritual_definition_mapping" | "global_mapping";
+  /** asset_id from ritual_media_assets. */
+  assetId: string;
+  /** The mapped display label when configured, otherwise the asset title. */
   title: string | null;
 }
 
@@ -77,6 +70,7 @@ interface MappingRow {
   asset_id: string;
   ritual_definition_id: string | null;
   mapping_scope: "global" | "ritual_definition";
+  label_override: string | null;
 }
 
 interface AssetRow {
@@ -103,6 +97,13 @@ function urlForAssetRow(row: Pick<AssetRow, "is_active" | "is_published" | "sour
   return null;
 }
 
+function firstJoinedAsset(
+  asset: AssetRow | AssetRow[] | null | undefined
+): AssetRow | null {
+  if (Array.isArray(asset)) return asset[0] ?? null;
+  return asset ?? null;
+}
+
 // ── Public API ───────────────────────────────────────────────────────────
 
 /**
@@ -113,8 +114,7 @@ function urlForAssetRow(row: Pick<AssetRow, "is_active" | "is_published" | "sour
  *      ritual_asset_mappings row exists with mapping_scope='ritual_definition'
  *      and the matching ritual_definition_id + tag_key).
  *   2. Global mapping (mapping_scope='global', tag_key match).
- *   3. Hardcoded code fallback (ritual-video-map.ts).
- *   4. null when nothing resolves.
+ *   3. null when no active admin mapping resolves.
  *
  * The DB lookups are JOINed against ritual_media_assets and the result
  * is rejected if the asset row is inactive/unpublished — so a "soft
@@ -131,7 +131,7 @@ export async function resolveAssetForTag(
     const { data: hit } = await admin
       .from("ritual_asset_mappings")
       .select(
-        `tag_key, asset_id, ritual_definition_id, mapping_scope,
+        `tag_key, asset_id, ritual_definition_id, mapping_scope, label_override,
          asset:ritual_media_assets!inner(id, asset_key, title, source_type, storage_path, external_url, is_active, is_published)`
       )
       .eq("mapping_scope", "ritual_definition")
@@ -140,7 +140,9 @@ export async function resolveAssetForTag(
       .eq("is_active", true)
       .maybeSingle();
 
-    const asset = hit?.asset as AssetRow | null | undefined;
+    const asset = firstJoinedAsset(
+      (hit as unknown as { asset?: AssetRow | AssetRow[] | null })?.asset
+    );
     if (hit && asset) {
       const url = urlForAssetRow(asset);
       if (url) {
@@ -148,7 +150,7 @@ export async function resolveAssetForTag(
           url,
           source: "ritual_definition_mapping",
           assetId: asset.id,
-          title: asset.title,
+          title: hit.label_override ?? asset.title,
         };
       }
     }
@@ -158,7 +160,7 @@ export async function resolveAssetForTag(
   const { data: globalHit } = await admin
     .from("ritual_asset_mappings")
     .select(
-      `tag_key, asset_id, ritual_definition_id, mapping_scope,
+      `tag_key, asset_id, ritual_definition_id, mapping_scope, label_override,
        asset:ritual_media_assets!inner(id, asset_key, title, source_type, storage_path, external_url, is_active, is_published)`
     )
     .eq("mapping_scope", "global")
@@ -166,7 +168,9 @@ export async function resolveAssetForTag(
     .eq("is_active", true)
     .maybeSingle();
 
-  const globalAsset = globalHit?.asset as AssetRow | null | undefined;
+  const globalAsset = firstJoinedAsset(
+    (globalHit as unknown as { asset?: AssetRow | AssetRow[] | null })?.asset
+  );
   if (globalHit && globalAsset) {
     const url = urlForAssetRow(globalAsset);
     if (url) {
@@ -174,28 +178,16 @@ export async function resolveAssetForTag(
         url,
         source: "global_mapping",
         assetId: globalAsset.id,
-        title: globalAsset.title,
+        title: globalHit.label_override ?? globalAsset.title,
       };
     }
-  }
-
-  // Code fallback.
-  const codeUrl = codeMapUrlForTag(tag);
-  if (codeUrl) {
-    return {
-      url: codeUrl,
-      source: "code_fallback",
-      assetId: null,
-      title: null,
-    };
   }
 
   return null;
 }
 
 /**
- * Bulk-resolve a list of tags in one round-trip per scope. Falls back
- * per-tag to the code map for any tag without a DB hit.
+ * Bulk-resolve a list of tags in one round-trip per scope.
  *
  * Returns a Map<tag, ResolvedAsset> (only includes resolved tags; callers
  * should treat missing keys as "no mapping").
@@ -215,7 +207,7 @@ export async function resolveAssetsForTags(
     const { data: defRows } = await admin
       .from("ritual_asset_mappings")
       .select(
-        `tag_key, asset_id, ritual_definition_id, mapping_scope,
+        `tag_key, asset_id, ritual_definition_id, mapping_scope, label_override,
          asset:ritual_media_assets!inner(id, asset_key, title, source_type, storage_path, external_url, is_active, is_published)`
       )
       .eq("mapping_scope", "ritual_definition")
@@ -223,15 +215,20 @@ export async function resolveAssetsForTags(
       .in("tag_key", uniqueTags)
       .eq("is_active", true);
 
-    for (const row of (defRows ?? []) as Array<MappingRow & { asset: AssetRow }>) {
+    const rows = (defRows ?? []) as unknown as Array<
+      MappingRow & { asset: AssetRow | AssetRow[] | null }
+    >;
+    for (const row of rows) {
       if (!row.tag_key) continue;
-      const url = urlForAssetRow(row.asset);
+      const asset = firstJoinedAsset(row.asset);
+      if (!asset) continue;
+      const url = urlForAssetRow(asset);
       if (!url) continue;
       result.set(row.tag_key, {
         url,
         source: "ritual_definition_mapping",
-        assetId: row.asset.id,
-        title: row.asset.title,
+        assetId: asset.id,
+        title: row.label_override ?? asset.title,
       });
     }
   }
@@ -242,36 +239,27 @@ export async function resolveAssetsForTags(
     const { data: globalRows } = await admin
       .from("ritual_asset_mappings")
       .select(
-        `tag_key, asset_id, ritual_definition_id, mapping_scope,
+        `tag_key, asset_id, ritual_definition_id, mapping_scope, label_override,
          asset:ritual_media_assets!inner(id, asset_key, title, source_type, storage_path, external_url, is_active, is_published)`
       )
       .eq("mapping_scope", "global")
       .in("tag_key", stillNeed)
       .eq("is_active", true);
 
-    for (const row of (globalRows ?? []) as Array<MappingRow & { asset: AssetRow }>) {
+    const rows = (globalRows ?? []) as unknown as Array<
+      MappingRow & { asset: AssetRow | AssetRow[] | null }
+    >;
+    for (const row of rows) {
       if (!row.tag_key) continue;
-      const url = urlForAssetRow(row.asset);
+      const asset = firstJoinedAsset(row.asset);
+      if (!asset) continue;
+      const url = urlForAssetRow(asset);
       if (!url) continue;
       result.set(row.tag_key, {
         url,
         source: "global_mapping",
-        assetId: row.asset.id,
-        title: row.asset.title,
-      });
-    }
-  }
-
-  // Code fallback for any remaining tags.
-  for (const tag of uniqueTags) {
-    if (result.has(tag)) continue;
-    const codeUrl = codeMapUrlForTag(tag);
-    if (codeUrl) {
-      result.set(tag, {
-        url: codeUrl,
-        source: "code_fallback",
-        assetId: null,
-        title: null,
+        assetId: asset.id,
+        title: row.label_override ?? asset.title,
       });
     }
   }
@@ -295,7 +283,7 @@ export async function resolveFinalOverrideForRitual(
     .from("ritual_definitions")
     .select(
       `id, final_override_enabled, final_override_asset_id,
-       asset:ritual_media_assets(id, title, source_type, storage_path, external_url, is_active, is_published)`
+       asset:ritual_media_assets(id, asset_key, title, source_type, storage_path, external_url, is_active, is_published)`
     )
     .eq("id", ritualDefinitionId)
     .maybeSingle();
@@ -303,7 +291,9 @@ export async function resolveFinalOverrideForRitual(
   if (!data || !data.final_override_enabled || !data.final_override_asset_id) {
     return null;
   }
-  const asset = data.asset as AssetRow | null;
+  const asset = firstJoinedAsset(
+    (data as unknown as { asset?: AssetRow | AssetRow[] | null })?.asset
+  );
   if (!asset) return null;
   const url = urlForAssetRow(asset);
   if (!url) return null;
