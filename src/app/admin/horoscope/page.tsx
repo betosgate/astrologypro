@@ -2862,7 +2862,7 @@ export function HoroscopeToolkitPage({
       : fallbackTab.slug;
   const currentTab = visibleTabs.find((t) => t.slug === currentSlug) ?? fallbackTab;
   const initialForm = useMemo<FormState>(
-    () => formStateFromSavedFormData(initialSavedFormData ?? initialSavedReport),
+    () => formStateFromSavedFormData(initialSavedReport ?? initialSavedFormData),
     [initialSavedFormData, initialSavedReport]
   );
   const initialSavedToolkitState = useMemo(
