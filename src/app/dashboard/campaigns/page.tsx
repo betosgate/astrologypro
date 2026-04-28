@@ -524,10 +524,6 @@ export default function DashboardCampaignsPage() {
   const [formDesc, setFormDesc] = useState("");
   const [formStartDate, setFormStartDate] = useState("");
   const [formEndDate, setFormEndDate] = useState("");
-  const [formCommType, setFormCommType] = useState("percentage");
-  const [formCommValue, setFormCommValue] = useState("10");
-  const [formBudgetCap, setFormBudgetCap] = useState("");
-  const [formTargetProduct, setFormTargetProduct] = useState("");
   const [formUtmSource, setFormUtmSource] = useState("");
   const [formUtmMedium, setFormUtmMedium] = useState("");
   const [formUtmCampaign, setFormUtmCampaign] = useState("");
@@ -542,10 +538,6 @@ export default function DashboardCampaignsPage() {
     setFormDesc("");
     setFormStartDate("");
     setFormEndDate("");
-    setFormCommType("percentage");
-    setFormCommValue("10");
-    setFormBudgetCap("");
-    setFormTargetProduct("");
     setFormUtmSource("");
     setFormUtmMedium("");
     setFormUtmCampaign("");
@@ -588,10 +580,6 @@ export default function DashboardCampaignsPage() {
         description: formDesc || undefined,
         start_date: formStartDate,
         end_date: formEndDate || undefined,
-        commission_type: formCommType,
-        commission_value: parseFloat(formCommValue) || 0,
-        budget_cap_cents: formBudgetCap ? parseInt(formBudgetCap, 10) * 100 : undefined,
-        target_product_type: formTargetProduct || undefined,
         utm_source: formUtmSource || undefined,
         utm_medium: formUtmMedium || undefined,
         utm_campaign: formUtmCampaign || undefined,
@@ -750,32 +738,6 @@ export default function DashboardCampaignsPage() {
                     <Label htmlFor="c-end">End Date (optional)</Label>
                     <Input id="c-end" type="date" value={formEndDate} onChange={(e) => setFormEndDate(e.target.value)} />
                   </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Commission Type</Label>
-                    <select className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm" value={formCommType} onChange={(e) => setFormCommType(e.target.value)}>
-                      <option value="percentage">Percentage</option>
-                      <option value="fixed">Fixed amount</option>
-                    </select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>{formCommType === "percentage" ? "Commission %" : "Fixed amount ($)"}</Label>
-                    <Input type="number" min="0" value={formCommValue} onChange={(e) => setFormCommValue(e.target.value)} />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="c-budget">Budget Cap ($, optional)</Label>
-                  <Input id="c-budget" type="number" min="0" value={formBudgetCap} onChange={(e) => setFormBudgetCap(e.target.value)} placeholder="Max commission payout in dollars" />
-                </div>
-                <div className="space-y-2">
-                  <Label>Target Product Type</Label>
-                  <select className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm" value={formTargetProduct} onChange={(e) => setFormTargetProduct(e.target.value)}>
-                    <option value="">All products</option>
-                    <option value="session">Sessions</option>
-                    <option value="package">Packages</option>
-                    <option value="subscription">Subscriptions</option>
-                  </select>
                 </div>
                 <div className="space-y-2">
                   <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">UTM Parameters</Label>
