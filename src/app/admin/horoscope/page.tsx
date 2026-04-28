@@ -3780,9 +3780,19 @@ export function HoroscopeToolkitPage({
         const formDataPayload = isTwoPerson ? {
           self: { ...form.person1, ...birth1 },
           partner: { ...form.person2, ...birth2 },
+          question: form.question,
+          areaOfInquiry: form.areaOfInquiry,
+          area_of_inquiry: form.areaOfInquiry, // mapping both for compatibility
+          futureWeek: form.futureWeek,
+          futureMonth: form.futureMonth,
         } : {
           ...form.person1,
           ...birth1,
+          question: form.question,
+          areaOfInquiry: form.areaOfInquiry,
+          area_of_inquiry: form.areaOfInquiry, // mapping both for compatibility
+          futureWeek: form.futureWeek,
+          futureMonth: form.futureMonth,
         };
         const astroApiDataPayload = isTwoPerson ? {
           synastry: collected.synastry ?? {},
@@ -4060,15 +4070,15 @@ export function HoroscopeToolkitPage({
                     )}
                   </Button>
                 ) : (
-                  <Button
-                    type="submit"
-                    disabled={loading || !isFormValid || readOnlyBirthData}
-                    className={cn(
-                      "w-full md:w-auto h-10 px-8 font-semibold transition-all shadow-md",
-                      loading || !isFormValid || readOnlyBirthData
-                        ? "bg-muted text-muted-foreground cursor-not-allowed opacity-70"
-                        : "bg-amber-500 hover:bg-amber-600 text-white hover:shadow-lg active:scale-95"
-                    )}
+	                  <Button
+	                    type="submit"
+	                    disabled={loading || !isFormValid}
+	                    className={cn(
+	                      "w-full md:w-auto h-10 px-8 font-semibold transition-all shadow-md",
+	                      loading || !isFormValid
+	                        ? "bg-muted text-muted-foreground cursor-not-allowed opacity-70"
+	                        : "bg-amber-500 hover:bg-amber-600 text-white hover:shadow-lg active:scale-95"
+	                    )}
                   >
                     {loading ? (
                       <>

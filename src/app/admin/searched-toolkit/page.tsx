@@ -7,7 +7,13 @@ import {
   Loader2, 
   ArrowLeft,
   RefreshCcw,
-  Box
+  Box,
+  ChevronLeft,
+  ChevronRight,
+  FilterX,
+  CalendarDays,
+  MapPin,
+  X
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -38,6 +44,34 @@ export default function SearchedToolkitPage() {
   const [selectedDetails, setSelectedDetails] = useState<SavedResponse | null>(null);
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [detailsError, setDetailsError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  // Multi-filter state
+  const [filters, setFilters] = useState({
+    year: "",
+    month: "",
+    day: "",
+    place: "",
+    general: ""
+  });
+
+  const handleFilterChange = (key: keyof typeof filters, value: string) => {
+    setFilters(prev => ({ ...prev, [key]: value }));
+    setCurrentPage(1);
+  };
+
+  const resetFilters = () => {
+    setFilters({
+      year: "",
+      month: "",
+      day: "",
+      place: "",
+      general: ""
+    });
+    setSearchTerm("");
+    setCurrentPage(1);
+  };
 
   useEffect(() => {
     fetchItems();
@@ -108,9 +142,53 @@ export default function SearchedToolkitPage() {
   }
 
   const filteredItems = items.filter(item => {
-    const searchStr = `${item.toolname} ${item.id} ${item.user_name} ${item.user_email} ${JSON.stringify(item.form_data)}`.toLowerCase();
-    return searchStr.includes(searchTerm.toLowerCase());
+    const formData = item.form_data || {};
+    
+    // Helper to check if a subject matches the filters
+    const matchesSubject = (data: any) => {
+      if (!data) return false;
+      const dYear = String(data.year || "");
+      const dMonth = String(data.month || "");
+      const dDay = String(data.day || "");
+      const dPlace = String(data.city?.label || "").toLowerCase();
+
+      const yearMatch = !filters.year || dYear.includes(filters.year);
+      const monthMatch = !filters.month || dMonth === filters.month || dMonth.padStart(2, '0') === filters.month.padStart(2, '0');
+      const dayMatch = !filters.day || dDay === filters.day || dDay.padStart(2, '0') === filters.day.padStart(2, '0');
+      const placeMatch = !filters.place || dPlace.includes(filters.place.toLowerCase());
+
+      return yearMatch && monthMatch && dayMatch && placeMatch;
+    };
+
+    // Check top level or nested subjects
+    let matchesFilters = false;
+    if (formData.self || formData.partner || formData.person1 || formData.person2) {
+      matchesFilters = matchesSubject(formData.self) || 
+                       matchesSubject(formData.partner) || 
+                       matchesSubject(formData.person1) || 
+                       matchesSubject(formData.person2);
+    } else {
+      matchesFilters = matchesSubject(formData);
+    }
+
+    // General search (original behavior)
+    const searchStr = `${item.toolname} ${item.id} ${item.user_name} ${item.user_email}`.toLowerCase();
+    const generalMatch = !filters.general || searchStr.includes(filters.general.toLowerCase());
+
+    return matchesFilters && generalMatch;
   });
+
+  // Pagination logic
+  const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
+  const paginatedItems = filteredItems.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  // Reset to first page when search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
 
   if (selectedItem) {
     const detailRecord = selectedDetails ?? selectedItem;
@@ -178,7 +256,8 @@ export default function SearchedToolkitPage() {
         </div>
         <div className="flex items-center gap-2">
            <Badge variant="secondary" className="px-3 py-1 font-mono">
-             {items.length} Records
+             {filteredItems.length} {filteredItems.length === 1 ? 'Record' : 'Records'}
+             {filteredItems.length !== items.length && ` (of ${items.length})`}
            </Badge>
            <Button variant="outline" size="icon" onClick={fetchItems} disabled={loading} className="size-9">
               <RefreshCcw className={cn("size-4 text-muted-foreground", loading && "animate-spin")} />
@@ -186,16 +265,73 @@ export default function SearchedToolkitPage() {
         </div>
       </div>
 
-      <Card>
-        <CardHeader>
-           <div className="relative">
-             <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-             <Input 
-               placeholder="Search by user, name, or payload..." 
-               value={searchTerm}
-               onChange={(e) => setSearchTerm(e.target.value)}
-               className="pl-9"
-             />
+      <Card className="border-amber-100/50 shadow-sm">
+        <CardHeader className="pb-4">
+           <div className="flex flex-col gap-4">
+             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
+               {/* General Search */}
+               <div className="relative">
+                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+                 <Input 
+                   placeholder="Tool, User..." 
+                   value={filters.general}
+                   onChange={(e) => handleFilterChange("general", e.target.value)}
+                   className="pl-8 h-9 text-xs"
+                 />
+               </div>
+
+               {/* Place Search */}
+               <div className="relative">
+                 <MapPin className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+                 <Input 
+                   placeholder="Place/City..." 
+                   value={filters.place}
+                   onChange={(e) => handleFilterChange("place", e.target.value)}
+                   className="pl-8 h-9 text-xs"
+                 />
+               </div>
+
+               {/* Year Search */}
+               <div className="relative">
+                 <CalendarDays className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+                 <Input 
+                   type="number"
+                   placeholder="Year (e.g. 1993)" 
+                   value={filters.year}
+                   onChange={(e) => handleFilterChange("year", e.target.value)}
+                   className="pl-8 h-9 text-xs"
+                 />
+               </div>
+
+               {/* Month/Day Row */}
+               <div className="grid grid-cols-2 gap-2">
+                  <Input 
+                    type="number"
+                    placeholder="Month" 
+                    value={filters.month}
+                    onChange={(e) => handleFilterChange("month", e.target.value)}
+                    className="h-9 text-xs"
+                  />
+                  <Input 
+                    type="number"
+                    placeholder="Day" 
+                    value={filters.day}
+                    onChange={(e) => handleFilterChange("day", e.target.value)}
+                    className="h-9 text-xs"
+                  />
+               </div>
+
+               {/* Reset Button */}
+               <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={resetFilters}
+                className="h-9 gap-2 text-xs font-semibold hover:bg-amber-50 hover:text-amber-700 hover:border-amber-200 transition-all"
+               >
+                 <FilterX className="size-3.5" />
+                 Reset Filters
+               </Button>
+             </div>
            </div>
         </CardHeader>
         <CardContent>
@@ -210,7 +346,64 @@ export default function SearchedToolkitPage() {
               <p className="font-medium">No results found</p>
             </div>
           ) : (
-             <ToolkitTable items={filteredItems} onSelect={showDetails} onDelete={handleDelete} />
+             <div className="space-y-4">
+               <ToolkitTable items={paginatedItems} onSelect={showDetails} onDelete={handleDelete} />
+               
+               {totalPages > 1 && (
+                 <div className="flex items-center justify-between border-t pt-4">
+                   <div className="text-xs text-muted-foreground font-medium">
+                     Showing <span className="text-foreground">{(currentPage - 1) * itemsPerPage + 1}</span> to <span className="text-foreground">{Math.min(currentPage * itemsPerPage, filteredItems.length)}</span> of <span className="text-foreground">{filteredItems.length}</span> records
+                   </div>
+                   <div className="flex items-center gap-2">
+                     <Button
+                       variant="outline"
+                       size="sm"
+                       onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                       disabled={currentPage === 1}
+                       className="h-8 gap-1 px-2"
+                     >
+                       <ChevronLeft className="size-4" />
+                       <span className="hidden sm:inline">Previous</span>
+                     </Button>
+                     
+                     <div className="flex items-center gap-1">
+                       {Array.from({ length: totalPages }, (_, i) => i + 1)
+                         .filter(p => p === 1 || p === totalPages || (p >= currentPage - 1 && p <= currentPage + 1))
+                         .map((p, i, arr) => {
+                           const showDots = i > 0 && p !== arr[i-1] + 1;
+                           return (
+                             <div key={p} className="flex items-center gap-1">
+                               {showDots && <span className="text-muted-foreground px-1">...</span>}
+                               <Button
+                                 variant={currentPage === p ? "default" : "ghost"}
+                                 size="sm"
+                                 onClick={() => setCurrentPage(p)}
+                                 className={cn(
+                                   "h-8 w-8 p-0 font-medium",
+                                   currentPage === p ? "bg-amber-600 hover:bg-amber-700 text-white" : ""
+                                 )}
+                               >
+                                 {p}
+                               </Button>
+                             </div>
+                           );
+                         })}
+                     </div>
+
+                     <Button
+                       variant="outline"
+                       size="sm"
+                       onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                       disabled={currentPage === totalPages}
+                       className="h-8 gap-1 px-2"
+                     >
+                       <span className="hidden sm:inline">Next</span>
+                       <ChevronRight className="size-4" />
+                     </Button>
+                   </div>
+                 </div>
+               )}
+             </div>
           )}
         </CardContent>
       </Card>

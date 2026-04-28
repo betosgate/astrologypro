@@ -1,1 +1,2 @@
 - [Service assignment model](project_service_model.md) — Admin assigns services to diviners, diviners see read-only, price via pricing assignment
+- [Affiliate Phase 1.5 — general-product commissions](project_affiliate_phase_1_5_general.md) — designed 2026-04-28, not implemented; see spec §10 Phase 1.5; do NOT fix the misleading Marketing Kit until the underlying flow is built
