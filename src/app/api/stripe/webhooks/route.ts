@@ -1037,6 +1037,88 @@ async function handleWeeklySubscriptionCheckoutCompleted(
 
 }
 
+/**
+ * Cancel any `bookings` row tied to a Checkout session / PaymentIntent
+ * that ultimately failed or expired. Without this, the booking sits in
+ * `pending` forever, which the availability conflict check treats as
+ * blocked and prevents other clients from claiming the slot.
+ *
+ * Source-of-truth links we try, in order:
+ *   1. session.metadata?.bookingId        (direct id stamped at checkout)
+ *   2. session.id                          → bookings.stripe_session_id
+ *   3. payment intent metadata.bookingId / payment_intent id → row
+ *
+ * Idempotent: only updates rows currently in `pending` / `pending_payment`.
+ * Already-completed / already-cancelled rows are left alone.
+ */
+async function cancelBookingForFailedPayment(
+  reason: string,
+  ids: {
+    bookingId?: string | null;
+    sessionId?: string | null;
+    paymentIntentId?: string | null;
+  }
+): Promise<void> {
+  const admin = createAdminClient();
+  const directBookingId = ids.bookingId?.trim();
+  const sessionId = ids.sessionId?.trim();
+  const paymentIntentId = ids.paymentIntentId?.trim();
+
+  // Resolve the booking id via whichever signal is available.
+  let bookingId: string | null = directBookingId || null;
+
+  if (!bookingId && sessionId) {
+    const { data } = await admin
+      .from("bookings")
+      .select("id")
+      .eq("stripe_session_id", sessionId)
+      .in("status", ["pending", "pending_payment"])
+      .maybeSingle();
+    bookingId = data?.id ?? null;
+  }
+
+  if (!bookingId && paymentIntentId) {
+    const { data } = await admin
+      .from("bookings")
+      .select("id")
+      .eq("stripe_payment_intent_id", paymentIntentId)
+      .in("status", ["pending", "pending_payment"])
+      .maybeSingle();
+    bookingId = data?.id ?? null;
+  }
+
+  if (!bookingId) {
+    // Nothing to cancel — could be a non-booking checkout (subscription
+    // / gift / membership) or the booking was already moved to a
+    // terminal state by another path.
+    return;
+  }
+
+  const { error } = await admin
+    .from("bookings")
+    .update({
+      status: "cancelled",
+      cancellation_reason: reason,
+    })
+    .eq("id", bookingId)
+    .in("status", ["pending", "pending_payment"]);
+
+  if (error) {
+    console.error(
+      "[stripe/webhooks] failed to cancel booking on failed payment:",
+      bookingId,
+      reason,
+      error
+    );
+  } else {
+    console.log(
+      "[stripe/webhooks] cancelled booking on failed payment:",
+      bookingId,
+      reason
+    );
+  }
+}
+
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   // Route gift certificate checkouts to their own handler
   if (session.metadata?.type === "gift_certificate") {
@@ -2258,6 +2340,53 @@ export async function POST(request: NextRequest) {
           event.data.object as Stripe.Checkout.Session
         );
         break;
+
+      // ── Slot-release fix (2026-04-27) ────────────────────────────────
+      // When a Checkout session expires or its async payment fails, we
+      // must cancel the booking row so its slot becomes available again.
+      // Without this, the row sits in `pending` indefinitely and blocks
+      // future bookers via the availability conflict check.
+      case "checkout.session.expired": {
+        const s = event.data.object as Stripe.Checkout.Session;
+        await cancelBookingForFailedPayment("checkout_session_expired", {
+          bookingId: s.metadata?.bookingId,
+          sessionId: s.id,
+          paymentIntentId:
+            typeof s.payment_intent === "string"
+              ? s.payment_intent
+              : s.payment_intent?.id ?? null,
+        });
+        break;
+      }
+      case "checkout.session.async_payment_failed": {
+        const s = event.data.object as Stripe.Checkout.Session;
+        await cancelBookingForFailedPayment("async_payment_failed", {
+          bookingId: s.metadata?.bookingId,
+          sessionId: s.id,
+          paymentIntentId:
+            typeof s.payment_intent === "string"
+              ? s.payment_intent
+              : s.payment_intent?.id ?? null,
+        });
+        break;
+      }
+      case "payment_intent.payment_failed": {
+        const pi = event.data.object as Stripe.PaymentIntent;
+        await cancelBookingForFailedPayment("payment_intent_failed", {
+          bookingId: pi.metadata?.bookingId,
+          paymentIntentId: pi.id,
+        });
+        break;
+      }
+      case "payment_intent.canceled": {
+        const pi = event.data.object as Stripe.PaymentIntent;
+        await cancelBookingForFailedPayment("payment_intent_canceled", {
+          bookingId: pi.metadata?.bookingId,
+          paymentIntentId: pi.id,
+        });
+        break;
+      }
+
       case "invoice.paid":
         await handleInvoicePaid(event.data.object as Stripe.Invoice);
         await handleDivinerInvoice(event.data.object as Stripe.Invoice, true);

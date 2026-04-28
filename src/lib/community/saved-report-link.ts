@@ -142,6 +142,35 @@ export async function saveAndLinkNatalReport(args: {
       domainLinkError: error.message,
     };
   }
+
+  // ── Cascade: mark dependent relationship reports stale ───────────────
+  // Any relationship saved report whose pair includes this family member
+  // is now potentially out-of-date — its synastry/composite payload was
+  // computed against the OLD natal. We don't delete the artifact (the
+  // user can still View the previous report); we only flip the lifecycle
+  // status to 'stale' with an audit reason. The list page renders a
+  // Regenerate CTA for those rows.
+  //
+  // Best-effort: a failure here doesn't fail the natal save itself.
+  try {
+    const invalidatedAt = new Date().toISOString();
+    await admin
+      .from("community_relationship_reports")
+      .update({
+        report_status: "stale",
+        invalidated_at: invalidatedAt,
+        invalidation_reason: "natal_regenerated",
+        updated_at: invalidatedAt,
+      })
+      .or(`person_a_id.eq.${familyMemberId},person_b_id.eq.${familyMemberId}`)
+      .eq("report_status", "generated");
+  } catch (err) {
+    console.error(
+      "[saveAndLinkNatalReport] relationship invalidation cascade failed:",
+      err,
+    );
+  }
+
   return { reportId, domainLinked: true };
 }
 
