@@ -23,6 +23,11 @@ const RELATIONSHIP_TAB_MAP = {
 } as const;
 
 type RelationshipMode = keyof typeof RELATIONSHIP_TAB_MAP;
+type RelationshipSlug = (typeof RELATIONSHIP_TAB_MAP)[RelationshipMode];
+
+const RELATIONSHIP_MODE_BY_TAB = Object.fromEntries(
+  Object.entries(RELATIONSHIP_TAB_MAP).map(([mode, slug]) => [slug, mode])
+) as Record<RelationshipSlug, RelationshipMode>;
 
 /**
  * UI mode → canonical relationship `report_type` enum (matches the DB
@@ -40,10 +45,15 @@ interface SearchParams {
   personAId?: string;
   personBId?: string;
   mode?: string;
+  tab?: string;
 }
 
 function isRelationshipMode(mode: string | undefined): mode is RelationshipMode {
   return mode === "romantic" || mode === "friendship" || mode === "business";
+}
+
+function isRelationshipSlug(slug: string | undefined): slug is RelationshipSlug {
+  return typeof slug === "string" && slug in RELATIONSHIP_MODE_BY_TAB;
 }
 
 export default async function CommunityRelationshipDetailPage({
@@ -51,7 +61,7 @@ export default async function CommunityRelationshipDetailPage({
 }: {
   searchParams: Promise<SearchParams>;
 }) {
-  const { personAId, personBId, mode } = await searchParams;
+  const { personAId, personBId, mode, tab } = await searchParams;
 
   if (!personAId || !personBId || personAId === personBId) {
     redirect("/community/charts");
@@ -62,6 +72,11 @@ export default async function CommunityRelationshipDetailPage({
   }
 
   const selectedMode = mode;
+  if (isRelationshipSlug(tab) && RELATIONSHIP_MODE_BY_TAB[tab] !== selectedMode) {
+    redirect(
+      `/community/charts/detailed?personAId=${encodeURIComponent(personAId)}&personBId=${encodeURIComponent(personBId)}&mode=${RELATIONSHIP_MODE_BY_TAB[tab]}`
+    );
+  }
   const selectedSlug = RELATIONSHIP_TAB_MAP[selectedMode];
   const allowedSlugs = [
     selectedSlug,
@@ -176,6 +191,7 @@ export default async function CommunityRelationshipDetailPage({
             ? (savedRelationshipReport as Record<string, unknown>)
             : null
         }
+        autoSubmitPrefill={!savedRelationshipReport}
         readOnlyBirthData={true}
         // Pair ids drive the post-generate save call to
         // /api/community/saved-reports/relationship/link inside the

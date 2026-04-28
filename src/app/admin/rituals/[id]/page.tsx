@@ -377,14 +377,14 @@ function DisplayTab({
         <CardTitle>Display</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <div className="space-y-1">
             <Label>Ritual type</Label>
             <Select
               value={type}
               onValueChange={(v) => setType(v as "static" | "dynamic")}
             >
-              <SelectTrigger>
+              <SelectTrigger className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -401,7 +401,7 @@ function DisplayTab({
                 setMode(v as "invocation" | "banishing" | "both")
               }
             >
-              <SelectTrigger>
+              <SelectTrigger className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -418,6 +418,7 @@ function DisplayTab({
               min={0}
               value={sortOrder}
               onChange={(e) => setSortOrder(e.target.value)}
+              className="w-full"
             />
           </div>
         </div>

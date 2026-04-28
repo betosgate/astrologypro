@@ -292,6 +292,7 @@ const NAV_GROUPS = [
       { label: "Astro System Settings", href: "/admin/astro-system-settings", icon: Key },
       { label: "Calendar Config", href: "/admin/calendar-config", icon: CalendarDays },
       { label: "Pricing Management", href: "/admin/pricing", icon: CreditCard },
+      { label: "Searched Toolkit", href: "/admin/searched-toolkit", icon: Search },
       { label: "Legal", href: "/admin/legal", icon: ScrollText },
       { label: "DB Migrations", href: "/admin/db/migrations", icon: Database },
       { label: "Cron Jobs", href: "/admin/cron", icon: Timer },

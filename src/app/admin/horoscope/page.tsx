@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { useRouter, useSearchParams } from "next/navigation";
 import { format, parse, isValid } from "date-fns";
@@ -50,9 +50,11 @@ import {
 } from "./utils";
 import {
   fetchWithRetry, callCompute, callAI, callPlanetReturn,
-  callNatalWheel, callDecanLookup,
+  callNatalWheel, callDecanLookup, saveAstroAiResponse,
 } from "./api";
 import { buildAiPrompts } from "./build-ai-prompts";
+import { formStateFromSavedFormData } from "./saved-form-data";
+import { hydrateSavedAstroReport } from "./saved-report-data";
 import {
   ManualPlanetIcon, ManualZodiacIcon, PlanetSymbol, AspectSymbol,
   ZodiacSymbol, AstroHeaderParts, SmartHeading, WordAssociationChips,
@@ -86,6 +88,24 @@ const TABS: TabDef[] = [
   { slug: "mars_return_v2", label: "Mars Return", type: "single", extras: ["area_of_inquiry"], icon: Zap, description: "Mars return chart — energy, drive, and action cycles." },
   { slug: "uranus_return_v2", label: "Uranus Opposition", type: "single", extras: ["area_of_inquiry"], icon: Star, description: "Uranus opposition analysis — midlife awakening and liberation themes." },
 ];
+
+const RELATIONSHIP_SLUG_TO_MODE = {
+  romantic_forecast_report_tropical_v2: "romantic",
+  friendship_report_tropical_v2: "friendship",
+  business_partner_v2: "business",
+} as const;
+
+const RELATIONSHIP_SLUG_TO_REPORT_TYPE = {
+  romantic_forecast_report_tropical_v2: "romantic",
+  friendship_report_tropical_v2: "friendship",
+  business_partner_v2: "partnership",
+} as const;
+
+function isRelationshipSlug(
+  slug: string
+): slug is keyof typeof RELATIONSHIP_SLUG_TO_REPORT_TYPE {
+  return slug in RELATIONSHIP_SLUG_TO_REPORT_TYPE;
+}
 
 
 
@@ -1474,42 +1494,87 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
   const { modal, trigger, close } = useShowMore();
 
   // aiData: only solar_return_details comes from AI Lambda now
-  const detailsAi = aiData?.solar_return_details ?? null;
+  const detailsAi = unwrapSolarReturnAiResponse(aiData?.solar_return_details ?? null);
   // planet/aspects data come from AstrologyAPI results directly
   const planetAi = null; // not used anymore — see planetReport prop
   const aspectsAi = null; // not used anymore — see aspectsReport prop
 
-  function AiCards({ data, title, showMore = true }: { data: any; title: string; showMore?: boolean }) {
+  function unwrapSolarReturnAiResponse(input: unknown): unknown {
+    const parsed = parseAiJsonResponse(input);
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed) && "ai_response" in parsed) {
+      return parseAiJsonResponse((parsed as Record<string, unknown>).ai_response);
+    }
+    return parsed;
+  }
+
+  function formatSolarReturnAiTitle(value: string, fallback: string) {
+    const trimmed = value.trim();
+    if (!trimmed || trimmed === "0") return fallback;
+    return trimmed
+      .replace(/_/g, " ")
+      .replace(/\b\w/g, (char) => char.toUpperCase());
+  }
+
+  function extractSolarReturnAiCards(input: unknown, fallbackTitle: string) {
+    const parsed = unwrapSolarReturnAiResponse(input);
+    const sourceItems = Array.isArray(parsed)
+      ? parsed
+      : parsed && typeof parsed === "object"
+        ? Object.entries(parsed as Record<string, unknown>).map(([key, value]) => ({ [key]: value }))
+        : parsed
+          ? [{ [fallbackTitle]: parsed }]
+          : [];
+
+    return sourceItems.flatMap((entry: any, index: number) => {
+      if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+        const text = normalizeInterpretationText(entry);
+        return text ? [{ title: `${fallbackTitle} ${index + 1}`, text, raw: entry }] : [];
+      }
+
+      const explicitTitle = entry.title ?? entry.name ?? entry.heading;
+      const explicitText = normalizeInterpretationText(
+        entry.interpretation ?? entry.data ?? entry.forecast ?? entry.text,
+      );
+      if (explicitText) {
+        return [{
+          title: formatSolarReturnAiTitle(String(explicitTitle ?? `${fallbackTitle} ${index + 1}`), fallbackTitle),
+          text: explicitText,
+          raw: entry,
+        }];
+      }
+
+      return Object.entries(entry)
+        .filter(([key]) => !["index", "title", "name", "heading"].includes(key))
+        .map(([key, value]) => ({
+          title: formatSolarReturnAiTitle(key, `${fallbackTitle} ${index + 1}`),
+          text: normalizeInterpretationText(value),
+          raw: entry,
+        }))
+        .filter((card) => card.text);
+    });
+  }
+
+  function renderAiCards(data: any, title: string, showMore = true) {
     if (!data) return <SectionSkeleton title={title} />;
     if (data === "error") return <SectionError title={title} />;
-    const items: any[] = Array.isArray(data) ? data : [];
+    const items = extractSolarReturnAiCards(data, title);
+    if (items.length === 0) return null;
     return (
       <div className="space-y-2">
         {items.map((item: any, i: number) => (
-          (() => {
-            const derivedEntry = Object.entries(item ?? {}).find(([key, value]) => {
-              if (["title", "name", "interpretation", "data", "forecast"].includes(key)) return false;
-              return typeof value === "string";
-            });
-            const cardTitle = item.title ?? item.name ?? derivedEntry?.[0] ?? `${title} ${i + 1}`;
-            const cardText = normalizeInterpretationText(item.interpretation ?? item.data ?? item.forecast ?? derivedEntry?.[1] ?? "");
-
-            return (
-              <div key={i} className="rounded-lg border overflow-hidden">
-                <div className="px-4 py-3 horoscope-interp-header flex items-center justify-center">
-                  <SmartHeading title={cardTitle} textSize="text-[22px]" iconSize="size-7" className="text-black" />
+          <div key={`${item.title}-${i}`} className="rounded-lg border overflow-hidden">
+            <div className="px-4 py-3 horoscope-interp-header flex items-center justify-center">
+              <SmartHeading title={item.title} textSize="text-[22px]" iconSize="size-7" className="text-black" />
+            </div>
+            <div className="interp-gradient-default px-4 py-3 pb-8" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 400, lineHeight: '26px', color: '#000' }}>
+              <p className="leading-relaxed">{String(item.text)}</p>
+              {showMore && (
+                <div className="mt-2 flex justify-center border-t border-black/10 pt-2">
+                  <button onClick={() => trigger(item.title, String(item.text), item.raw, areaOfInquiry)} className="horoscope-show-more">Show More</button>
                 </div>
-                <div className="interp-gradient-default px-4 py-3 pb-8" style={{ fontFamily: "'Roboto', sans-serif", fontSize: '20px', fontWeight: 400, lineHeight: '26px', color: '#000' }}>
-                  <p className="leading-relaxed">{String(cardText)}</p>
-                  {showMore && (
-                    <div className="mt-2 flex justify-center border-t border-black/10 pt-2">
-                      <button onClick={() => trigger(cardTitle, String(cardText), item, areaOfInquiry)} className="horoscope-show-more">Show More</button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })()
+              )}
+            </div>
+          </div>
         ))}
       </div>
     );
@@ -1713,7 +1778,7 @@ function SolarReturnSection({ details, planets, cusps, aspects, planetReport, as
               </div>
             )}
           </div>
-          {detailsAi && <AiCards data={detailsAi} title="Solar Return House Cusps Discussion" showMore={false} />}
+          {aiData && renderAiCards(detailsAi, "Solar Return Details Interpretation", false)}
         </div>
       )}
 
@@ -1868,13 +1933,13 @@ function extractTransitAiCards(input: unknown): TransitAiCard[] {
       "";
     const interpretation = normalizeInterpretationText(
       record.interpretation ??
-        record.interpret ??
-        record.body_text ??
-        record.body ??
-        record.content ??
-        record.description ??
-        record.text ??
-        record.forecast
+      record.interpret ??
+      record.body_text ??
+      record.body ??
+      record.content ??
+      record.description ??
+      record.text ??
+      record.forecast
     );
 
     if (!title && !interpretation) return;
@@ -2750,7 +2815,9 @@ export interface HoroscopeToolkitPageProps {
   basePath?: string;
   allowedSlugs?: string[];
   initialPrefill?: string | null;
-  initialSavedReport?: Record<string, unknown> | null;
+  initialSavedFormData?: unknown;
+  initialSavedReport?: unknown;
+  autoSubmitPrefill?: boolean;
   readOnlyBirthData?: boolean;
   communityNatalFamilyMemberId?: string | null;
   /**
@@ -2769,7 +2836,9 @@ export function HoroscopeToolkitPage({
   basePath = "/admin/horoscope",
   allowedSlugs,
   initialPrefill = null,
+  initialSavedFormData = null,
   initialSavedReport = null,
+  autoSubmitPrefill = true,
   readOnlyBirthData = false,
   communityNatalFamilyMemberId = null,
   communityRelationshipPersonAId = null,
@@ -2779,24 +2848,29 @@ export function HoroscopeToolkitPage({
   const searchParams = useSearchParams();
   const resultRef = useRef<HTMLDivElement>(null);
 
-  const visibleTabs = allowedSlugs?.length
+  const matchedAllowedTabs = allowedSlugs?.length
     ? allowedSlugs
-        .map((slug) => TABS.find((tab) => tab.slug === slug))
-        .filter((tab): tab is TabDef => Boolean(tab))
+      .map((slug) => TABS.find((tab) => tab.slug === slug))
+      .filter((tab): tab is TabDef => Boolean(tab))
     : TABS;
+  const visibleTabs = matchedAllowedTabs.length ? matchedAllowedTabs : TABS;
   const fallbackTab = visibleTabs[0] ?? TABS[0];
-  const currentSlug = searchParams.get("tab") ?? fallbackTab.slug;
+  const requestedSlug = searchParams.get("tab");
+  const currentSlug =
+    requestedSlug && visibleTabs.some((tab) => tab.slug === requestedSlug)
+      ? requestedSlug
+      : fallbackTab.slug;
   const currentTab = visibleTabs.find((t) => t.slug === currentSlug) ?? fallbackTab;
+  const initialForm = useMemo<FormState>(
+    () => formStateFromSavedFormData(initialSavedReport ?? initialSavedFormData),
+    [initialSavedFormData, initialSavedReport]
+  );
+  const initialSavedToolkitState = useMemo(
+    () => hydrateSavedAstroReport(initialSavedReport, currentSlug),
+    [initialSavedReport, currentSlug]
+  );
 
-  const [form, setForm] = useState<FormState>(defaultForm());
-
-  // Reset form and results when tab changes
-  useEffect(() => {
-    if (initialSavedReport) return;
-    setForm(defaultForm());
-    setResults(null);
-    setError(null);
-  }, [currentSlug, initialSavedReport]);
+  const [form, setForm] = useState<FormState>(() => initialForm);
   const isFormValid = (() => {
     const p1 = form.person1;
     if (!p1.dob || !p1.tob || !p1.city) return false;
@@ -2810,17 +2884,17 @@ export function HoroscopeToolkitPage({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [results, setResults] = useState<Record<string, any> | null>(null);
-  const [natalSvg, setNatalSvg] = useState<string | null>(null);
-  const [natalSvgTransit, setNatalSvgTransit] = useState<string | null>(null);
-  const [natalSvgP2, setNatalSvgP2] = useState<string | null>(null);
-  const [natalSvgTransitP2, setNatalSvgTransitP2] = useState<string | null>(null);
-  const [returnDate, setReturnDate] = useState<string | null>(null);
+  const [results, setResults] = useState<Record<string, any> | null>(() => initialSavedToolkitState.results);
+  const [natalSvg, setNatalSvg] = useState<string | null>(() => initialSavedToolkitState.natalSvg);
+  const [natalSvgTransit, setNatalSvgTransit] = useState<string | null>(() => initialSavedToolkitState.natalSvgTransit);
+  const [natalSvgP2, setNatalSvgP2] = useState<string | null>(() => initialSavedToolkitState.natalSvgP2);
+  const [natalSvgTransitP2, setNatalSvgTransitP2] = useState<string | null>(() => initialSavedToolkitState.natalSvgTransitP2);
+  const [returnDate, setReturnDate] = useState<string | null>(() => initialSavedToolkitState.returnDate);
   const [progress, setProgress] = useState<string[]>([]);
   const [showScrollTop, setShowScrollTop] = useState(false);
-  const [showChartBtn, setShowChartBtn] = useState(false);
+  const [showChartBtn, setShowChartBtn] = useState(() => initialSavedToolkitState.showChartButton);
   const [chartModal, setChartModal] = useState<string | null>(null);
-  const [transitChartSvg, setTransitChartSvg] = useState<string | null>(null);
+  const [transitChartSvg, setTransitChartSvg] = useState<string | null>(() => initialSavedToolkitState.transitChartSvg);
   const [dacenPsibality, setDacenPsibality] = useState<DecanPossibility[]>([]);
   const [decanPlanet, setDecanPlanet] = useState<{ name: string; sign: string } | null>(null);
   const [excludedHoraryDates, setExcludedHoraryDates] = useState<string>("");
@@ -2829,46 +2903,19 @@ export function HoroscopeToolkitPage({
   useEffect(() => {
     if (!initialSavedReport) return;
 
-    const formData =
-      initialSavedReport.form_data && typeof initialSavedReport.form_data === "object"
-        ? (initialSavedReport.form_data as Record<string, unknown>)
-        : {};
-    const astroApiData =
-      initialSavedReport.astro_api_data && typeof initialSavedReport.astro_api_data === "object"
-        ? (initialSavedReport.astro_api_data as Record<string, unknown>)
-        : {};
-    const aiResponse =
-      initialSavedReport.ai_response && typeof initialSavedReport.ai_response === "object"
-        ? (initialSavedReport.ai_response as Record<string, unknown>)
-        : {};
-
-    setResults({
-      ...formData,
-      city: form.person1?.city ?? formData.city ?? "",
-      natal_chart_data: astroApiData,
-      ai_interpretations: aiResponse,
-    });
-    setNatalSvg(
-      typeof initialSavedReport.free_natal_wheel_chart === "string"
-        ? initialSavedReport.free_natal_wheel_chart
-        : null,
-    );
-    setNatalSvgTransit(
-      typeof initialSavedReport.free_natal_wheel_chart_transit === "string"
-        ? initialSavedReport.free_natal_wheel_chart_transit
-        : null,
-    );
-    setShowChartBtn(
-      Boolean(
-        initialSavedReport.free_natal_wheel_chart ||
-          initialSavedReport.free_natal_wheel_chart_transit,
-      ),
-    );
+    setResults(initialSavedToolkitState.results);
+    setNatalSvg(initialSavedToolkitState.natalSvg);
+    setNatalSvgTransit(initialSavedToolkitState.natalSvgTransit);
+    setNatalSvgP2(initialSavedToolkitState.natalSvgP2);
+    setNatalSvgTransitP2(initialSavedToolkitState.natalSvgTransitP2);
+    setTransitChartSvg(initialSavedToolkitState.transitChartSvg);
+    setReturnDate(initialSavedToolkitState.returnDate);
+    setShowChartBtn(initialSavedToolkitState.showChartButton);
     setProgress([]);
     setLoading(false);
     setError(null);
     setShowScrollTop(true);
-  }, [initialSavedReport, form.person1?.city]);
+  }, [initialSavedReport, initialSavedToolkitState]);
 
   const checkDacen = (planetName: string, signName: string) => {
     const normalizedPlanet = normalizeDecanValue(planetName);
@@ -2883,12 +2930,11 @@ export function HoroscopeToolkitPage({
 
   // Reset on tab change
   useEffect(() => {
-    if (initialSavedReport) return;
-    setResults(null); setNatalSvg(null); setNatalSvgTransit(null);
-    setNatalSvgP2(null); setNatalSvgTransitP2(null);
-    setReturnDate(null); setError(null); setProgress([]); setForm(defaultForm());
-    setShowScrollTop(false); setShowChartBtn(false); setTransitChartSvg(null);
-  }, [currentSlug, initialSavedReport]);
+    setResults(initialSavedToolkitState.results); setNatalSvg(initialSavedToolkitState.natalSvg); setNatalSvgTransit(initialSavedToolkitState.natalSvgTransit);
+    setNatalSvgP2(initialSavedToolkitState.natalSvgP2); setNatalSvgTransitP2(initialSavedToolkitState.natalSvgTransitP2);
+    setReturnDate(initialSavedToolkitState.returnDate); setError(null); setProgress([]); setForm(initialForm);
+    setShowScrollTop(false); setShowChartBtn(initialSavedToolkitState.showChartButton); setTransitChartSvg(initialSavedToolkitState.transitChartSvg);
+  }, [currentSlug, initialForm, initialSavedToolkitState]);
 
   // Booking-session prefill + auto-submit.
   // When the diviner is routed here from /admin/horoscope/session/[bookingId],
@@ -2902,13 +2948,13 @@ export function HoroscopeToolkitPage({
     try {
       const parsed = JSON.parse(decodeURIComponent(prefillParam)) as Partial<FormState>;
       setForm((prev) => ({ ...prev, ...parsed }));
-      setPendingAutoSubmit(!initialSavedReport);
+      if (autoSubmitPrefill) setPendingAutoSubmit(true);
     } catch {
       // malformed prefill — ignore so the diviner can fill the form by hand
     }
     // Re-apply when the tab changes so restricted community wrappers keep the
     // saved pair/self data while switching between compatible report tabs.
-  }, [prefillParam, currentSlug, initialSavedReport]);
+  }, [prefillParam, currentSlug, autoSubmitPrefill]);
 
   // Fire handleSubmit once the prefill has populated the form and it's valid.
   // We can't call handleSubmit() in the same effect that calls setForm() —
@@ -2952,6 +2998,17 @@ export function HoroscopeToolkitPage({
   }, []);
 
   function setTab(slug: string) {
+    if (
+      communityRelationshipPersonAId &&
+      communityRelationshipPersonBId &&
+      isRelationshipSlug(slug)
+    ) {
+      const url = new URL(basePath, window.location.origin);
+      url.searchParams.set("mode", RELATIONSHIP_SLUG_TO_MODE[slug]);
+      url.searchParams.delete("tab");
+      router.push(`${url.pathname}${url.search}`);
+      return;
+    }
     const separator = basePath.includes("?") ? "&" : "?";
     router.push(`${basePath}${separator}tab=${slug}`);
   }
@@ -3051,10 +3108,67 @@ export function HoroscopeToolkitPage({
     setNatalSvgTransit(null);
     setNatalSvgP2(null);
     setNatalSvgTransitP2(null);
+    setTransitChartSvg(null);
     setReturnDate(null);
     setProgress([]);
     if (!keepExclusions) {
       setExcludedHoraryDates("");
+    }
+
+    // ── Saved-data short-circuit ─────────────────────────────────────────
+    // Before kicking off live compute + AI generation (which is slow and
+    // costs money on the AI side), ask the server whether we already have
+    // a saved astro_ai_responses row for this exact (toolname, person
+    // identity). If yes, hydrate all sections directly from the saved
+    // payload and return — no live calls, no token spend.
+    //
+    // Why we don't do this lookup at module scope:
+    //   The toolkit prefills form data from `?prefill=` or from server
+    //   props on first paint, but the user can also tweak person1/person2
+    //   between submits (different DOB, different city, etc.). Doing the
+    //   lookup at submit time guarantees we match what was actually
+    //   submitted, not the initial prefill.
+    //
+    // We swallow lookup errors and fall through to live generation —
+    // a server hiccup must never block the toolkit.
+    try {
+      addProgress("Checking for saved report…");
+      const matchRes = await fetchWithRetry("/api/admin/horoscope/match-saved", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          toolname: currentTab.slug,
+          type: currentTab.type,
+          person1: form.person1,
+          person2: currentTab.type === "two-person" ? form.person2 : null,
+          extras: {
+            areaOfInquiry: form.areaOfInquiry || undefined,
+            question: form.question || undefined,
+            futureWeek: form.futureWeek || undefined,
+            futureMonth: form.futureMonth || undefined,
+          },
+        }),
+      });
+      const matchJson = await matchRes.json().catch(() => ({}));
+      if (matchRes.ok && matchJson?.found && matchJson.res) {
+        const hydrated = hydrateSavedAstroReport(matchJson.res, currentTab.slug);
+        if (hydrated.results) {
+          addProgress("Loaded saved report ✓");
+          setResults(hydrated.results);
+          setNatalSvg(hydrated.natalSvg);
+          setNatalSvgTransit(hydrated.natalSvgTransit);
+          setNatalSvgP2(hydrated.natalSvgP2);
+          setNatalSvgTransitP2(hydrated.natalSvgTransitP2);
+          setTransitChartSvg(hydrated.transitChartSvg);
+          setReturnDate(hydrated.returnDate);
+          setShowChartBtn(hydrated.showChartButton);
+          setShowScrollTop(true);
+          setLoading(false);
+          return;
+        }
+      }
+    } catch {
+      // Fall through to live generation on any lookup failure.
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -3062,6 +3176,52 @@ export function HoroscopeToolkitPage({
 
     try {
       const birth1 = parseBirth(form.person1);
+      const isTwoPerson = currentTab.type === "two-person";
+      const birth2 = isTwoPerson ? parseBirth(form.person2) : null;
+
+      // Check if this report already exists
+      const checkFormData = isTwoPerson ? {
+        self: { ...form.person1, ...birth1 },
+        partner: { ...form.person2, ...birth2 },
+      } : {
+        ...form.person1,
+        ...birth1,
+      };
+
+      addProgress("Checking for existing report...");
+      const checkRes = await fetch("/api/admin/searched-toolkit/check", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          toolname: currentTab.slug,
+          form_data: checkFormData,
+        }),
+      });
+
+      if (checkRes.ok) {
+        const checkData = await checkRes.json();
+        if (checkData.status === "success" && checkData.result) {
+          addProgress("Found existing report! Restoring...");
+          const hydrated = hydrateSavedAstroReport(checkData.result, currentTab.slug);
+
+          if (hydrated.results) {
+            setResults(hydrated.results);
+            setNatalSvg(hydrated.natalSvg);
+            setNatalSvgTransit(hydrated.natalSvgTransit);
+            setNatalSvgP2(hydrated.natalSvgP2);
+            setNatalSvgTransitP2(hydrated.natalSvgTransitP2);
+            setTransitChartSvg(hydrated.transitChartSvg);
+            setReturnDate(hydrated.returnDate);
+            setShowChartBtn(hydrated.showChartButton);
+            setLoading(false);
+            return; // EXIT EARLY
+          }
+        }
+      }
+
+      // No existing report found, proceed with calculation
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const collected: Record<string, any> = {};
 
       // ── Single person ─────────────────────────────────────────────────────
       if (currentTab.type === "single") {
@@ -3089,6 +3249,7 @@ export function HoroscopeToolkitPage({
               if (w?.chart_url) {
                 collected.freeNatalWheelChart = w.chart_url;
                 setNatalSvg(w.chart_url);
+                collected.natal_chart_url = w.chart_url;
                 setShowChartBtn(true);
               }
             })
@@ -3103,6 +3264,7 @@ export function HoroscopeToolkitPage({
               if (svg) {
                 collected.freeNatalWheelChartForTrasit = svg;
                 setNatalSvgTransit(svg);
+                collected.natal_transit_svg = svg;
                 setShowChartBtn(true);
               }
             })
@@ -3198,7 +3360,10 @@ export function HoroscopeToolkitPage({
                   };
                   const wheelRes = await callNatalWheel(transitWheelPayload);
                   const svg = wheelRes?.results?.output;
-                  if (svg) setTransitChartSvg(svg);
+                  if (svg) {
+                    setTransitChartSvg(svg);
+                    collected.transit_chart_svg = svg;
+                  }
                 }
               } catch (e) {
                 console.error("Weekly transit wheel error:", e);
@@ -3284,7 +3449,10 @@ export function HoroscopeToolkitPage({
                 };
                 const wheelRes = await callNatalWheel(transitWheelPayload);
                 const svg = wheelRes?.results?.output;
-                if (svg) setTransitChartSvg(svg);
+                if (svg) {
+                  setTransitChartSvg(svg);
+                  collected.transit_chart_svg = svg;
+                }
               } catch (e) {
                 console.error("Transit wheel error:", e);
               }
@@ -3412,8 +3580,7 @@ export function HoroscopeToolkitPage({
       }
 
       // ── Two person ────────────────────────────────────────────────────────
-      if (currentTab.type === "two-person") {
-        const birth2 = parseBirth(form.person2);
+      if (currentTab.type === "two-person" && birth2) {
         const relBase = {
           person1_birth: birth1,
           person2_birth: birth2,
@@ -3505,23 +3672,45 @@ export function HoroscopeToolkitPage({
         // Person 1
         relTasks.push(
           callCompute("natal_wheel_chart", birth1 as unknown as Record<string, unknown>)
-            .then((w) => { if (w?.chart_url) { setNatalSvg(w.chart_url); setShowChartBtn(true); } })
+            .then((w) => {
+              if (w?.chart_url) {
+                setNatalSvg(w.chart_url);
+                collected.natal_chart_url = w.chart_url;
+                setShowChartBtn(true);
+              }
+            })
             .catch(() => { })
         );
         relTasks.push(
           callNatalWheel(freeWheelBody(form.person1) as unknown as Record<string, unknown>)
-            .then((r) => { if (r?.results?.output) { setNatalSvgTransit(r.results.output); setShowChartBtn(true); } })
+            .then((r) => {
+              if (r?.results?.output) {
+                setNatalSvgTransit(r.results.output);
+                collected.natal_transit_svg = r.results.output;
+                setShowChartBtn(true);
+              }
+            })
             .catch(() => { })
         );
         // Person 2
         relTasks.push(
           callCompute("natal_wheel_chart", birth2 as unknown as Record<string, unknown>)
-            .then((w) => { if (w?.chart_url) { setNatalSvgP2(w.chart_url); } })
+            .then((w) => {
+              if (w?.chart_url) {
+                setNatalSvgP2(w.chart_url);
+                collected.natal_chart_url_p2 = w.chart_url;
+              }
+            })
             .catch(() => { })
         );
         relTasks.push(
           callNatalWheel(freeWheelBody(form.person2) as unknown as Record<string, unknown>)
-            .then((r) => { if (r?.results?.output) { setNatalSvgTransitP2(r.results.output); } })
+            .then((r) => {
+              if (r?.results?.output) {
+                setNatalSvgTransitP2(r.results.output);
+                collected.natal_transit_svg_p2 = r.results.output;
+              }
+            })
             .catch(() => { })
         );
 
@@ -3539,7 +3728,7 @@ export function HoroscopeToolkitPage({
               json: p.json,
             };
             const aiRes = await callAI(aiPayload, form.areaOfInquiry || undefined);
-            let parsed = parseAiJsonResponse(aiRes.ai_response);
+            const parsed = parseAiJsonResponse(aiRes.ai_response);
             setResults((prev) => {
               const prevAi = prev?.ai_interpretations ?? {};
               return {
@@ -3547,6 +3736,10 @@ export function HoroscopeToolkitPage({
                 ai_interpretations: { ...prevAi, [p.key]: parsed },
               };
             });
+            collected.ai_interpretations = {
+              ...(collected.ai_interpretations as Record<string, unknown> ?? {}),
+              [p.key]: parsed,
+            };
           } catch {
             setResults((prev) => {
               const prevAi = prev?.ai_interpretations ?? {};
@@ -3555,6 +3748,10 @@ export function HoroscopeToolkitPage({
                 ai_interpretations: { ...prevAi, [p.key]: "error" },
               };
             });
+            collected.ai_interpretations = {
+              ...(collected.ai_interpretations as Record<string, unknown> ?? {}),
+              [p.key]: "error",
+            };
           }
         });
         await Promise.allSettled(aiPromises);
@@ -3575,185 +3772,117 @@ export function HoroscopeToolkitPage({
       // and either failing alone does not affect the displayed result.
       // The legacy save remains in place; the lookup/read repointing is
       // intentionally a follow-up so this UI is not refactored here.
-      if (
-        currentTab.slug === "western_horoscope_v2" &&
-        communityNatalFamilyMemberId
-      ) {
-        try {
-          const savePayload = {
-            toolname: "western_horoscope_v2",
-            ai_response: collected.ai_interpretations ?? {},
-            formData: {
-              ...birth1,
-              city: form.person1?.city ?? "",
-              dateOfBirth: form.person1.dob,
-              birthTime: form.person1.tob,
-              birthCity: form.person1.city?.label ?? "",
-              birthLat: form.person1.city?.lat ?? null,
-              birthLng: form.person1.city?.lng ?? null,
-            },
-            astro_api_data: collected.natal_chart_data ?? {},
-            natal_chart: collected.natal_chart_data ?? {},
-            freeNatalWheelChart:
-              collected.freeNatalWheelChart ?? natalSvg ?? "",
-            freeNatalWheelChartForTrasit:
-              collected.freeNatalWheelChartForTrasit ?? natalSvgTransit ?? "",
-          };
+      // ── UNIVERSAL SAVE BLOCK (fire-and-forget) ──────
+      // This block captures all AI interpretations, chart URLs, and form data
+      // into a single payload and persists it to both legacy and local stores.
+      try {
 
-          const saveRes = await fetch("/api/community/saved-reports/natal/link", {
+        const formDataPayload = isTwoPerson ? {
+          self: { ...form.person1, ...birth1 },
+          partner: { ...form.person2, ...birth2 },
+        } : {
+          ...form.person1,
+          ...birth1,
+        };
+        const astroApiDataPayload = isTwoPerson ? {
+          synastry: collected.synastry ?? {},
+          composite: collected.composite ?? {},
+          self: collected.natal_chart_data ?? {},
+          partner: collected.natal_chart_data_p2 ?? {},
+        } : (collected.natal_chart_data ?? {});
+        const natalChartPayload = isTwoPerson ? {
+          self: { status: true, chart_url: collected.natal_chart_url ?? "", msg: "Chart created successfully!" },
+          partner: { status: true, chart_url: collected.natal_chart_url_p2 ?? "", msg: "Chart created successfully!" },
+        } : {
+          status: true,
+          chart_url: collected.natal_chart_url ?? "",
+          msg: "Chart created successfully!",
+        };
+
+        const ai_response_payload: any = {
+          ...(collected.ai_interpretations ?? {}),
+          natal_chart: natalChartPayload,
+          formData: formDataPayload,
+          astro_api_data: astroApiDataPayload,
+          freeNatalWheelChart: collected.natal_transit_svg ?? collected.transit_chart_svg ?? "",
+          freeNatalWheelChartForTransit: collected.natal_transit_svg ?? collected.transit_chart_svg ?? "",
+          freeNatalWheelChartForTrasit: collected.natal_transit_svg ?? collected.transit_chart_svg ?? "",
+        };
+
+        if (isTwoPerson) {
+          ai_response_payload.freeNatalWheelChartP2 = collected.natal_transit_svg_p2 ?? "";
+          ai_response_payload.freeNatalWheelChartForTransitP2 = collected.natal_transit_svg_p2 ?? "";
+          ai_response_payload.freeNatalWheelChartForTrasitP2 = collected.natal_transit_svg_p2 ?? "";
+        }
+
+        const finalSavePayload = {
+          toolname: currentTab.slug,
+          ai_response: ai_response_payload,
+          natal_chart: natalChartPayload,
+          formData: formDataPayload,
+          astro_api_data: astroApiDataPayload,
+          freeNatalWheelChart: collected.natal_chart_url ?? "",
+          freeNatalWheelChartForTransit: collected.natal_transit_svg ?? collected.transit_chart_svg ?? "",
+          freeNatalWheelChartForTrasit: collected.natal_transit_svg ?? collected.transit_chart_svg ?? "",
+          ...(isTwoPerson
+            ? {
+              freeNatalWheelChartP2: collected.natal_chart_url_p2 ?? "",
+              freeNatalWheelChartForTransitP2: collected.natal_transit_svg_p2 ?? "",
+              freeNatalWheelChartForTrasitP2: collected.natal_transit_svg_p2 ?? "",
+            }
+            : {}),
+        };
+
+        if (
+          communityRelationshipPersonAId &&
+          communityRelationshipPersonBId &&
+          isRelationshipSlug(currentTab.slug)
+        ) {
+          addProgress("Saving relationship report…");
+          const linkRes = await fetch("/api/community/saved-reports/relationship/link", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              familyMemberId: communityNatalFamilyMemberId,
-              payload: savePayload,
+              personAId: communityRelationshipPersonAId,
+              personBId: communityRelationshipPersonBId,
+              reportType: RELATIONSHIP_SLUG_TO_REPORT_TYPE[currentTab.slug],
+              payload: finalSavePayload,
             }),
           });
-          if (!saveRes.ok) {
-            const data = await saveRes.json().catch(() => null);
-            throw new Error(data?.error ?? "Failed to save natal report");
+
+          if (!linkRes.ok) {
+            const body = await linkRes.json().catch(() => null);
+            throw new Error(
+              typeof body?.error === "string"
+                ? body.error
+                : "Failed to save relationship report"
+            );
           }
+
           router.refresh();
-        } catch (err) {
-          throw err instanceof Error
-            ? err
-            : new Error("Failed to save natal report");
+        } else {
+          // Local save - Supabase-backed API
+          saveAstroAiResponse(finalSavePayload).catch(() => { });
         }
-      }
 
-      if (currentTab.slug === "tropical_transits_monthly_v3") {
-        try {
-          const savePayload = {
-            toolname: "tropical_transits_monthly_v3",
-            ai_response: collected.ai_interpretations ?? {},
-            formData: birth1,
-            astro_api_data: collected.natal_chart_data ?? {},
-            freeNatalWheelChart: natalSvg ?? "",
-            freeNatalWheelChartForTrasit: natalSvgTransit ?? "",
-          };
-          fetchWithRetry(
-            "https://d36fwfwo4vnk9h.cloudfront.net/astro-ai/save-astro-AI-Response",
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(savePayload),
-            },
-          ).catch(() => { });
-
-          // Parallel local save — same payload shape, different URL.
-          fetch("/api/astro-ai/save-astro-ai-response", {
+        // Legacy CloudFront save (fire-and-forget)
+        fetchWithRetry(
+          "https://d36fwfwo4vnk9h.cloudfront.net/astro-ai/save-astro-AI-Response",
+          {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(savePayload),
-          }).catch(() => { });
-        } catch {
-          /* ignore save errors */
-        }
-      }
+            body: JSON.stringify(finalSavePayload),
+          },
+        ).catch(() => { });
 
-      // ── Save relationship reports ────────────────────────────────────
-      // Covers all three relationship slugs:
-      //   romantic_forecast_report_tropical_v2  → report_type "romantic"
-      //   friendship_report_tropical_v2         → report_type "friendship"
-      //   business_partner_v2                   → report_type "partnership"
-      //
-      // Two writes happen on every successful relationship generation:
-      //   (a) Legacy save to the CloudFront NestJS service + the local
-      //       /api/astro-ai/save-astro-ai-response — preserved for
-      //       backward compatibility with anything still reading those.
-      //   (b) NEW: domain-linked save through
-      //       /api/community/saved-reports/relationship/link, which
-      //       upserts the lifecycle row in community_relationship_reports
-      //       so the next View on /community/charts/detailed hydrates
-      //       from DB without re-running compute / synastry / AI calls.
-      //
-      // The link call only fires when both pair ids are passed in
-      // (community context). Admin paths leave them null and only the
-      // legacy saves run, exactly as before.
-      const RELATIONSHIP_SLUG_TO_REPORT_TYPE: Record<
-        string,
-        "romantic" | "friendship" | "partnership"
-      > = {
-        romantic_forecast_report_tropical_v2: "romantic",
-        friendship_report_tropical_v2: "friendship",
-        business_partner_v2: "partnership",
-      };
-      const relationshipReportType =
-        RELATIONSHIP_SLUG_TO_REPORT_TYPE[currentTab.slug];
-
-      if (relationshipReportType) {
-        try {
-          const birth2 = parseBirth(form.person2);
-          const savePayload = {
-            toolname: currentTab.slug,
-            ai_response: collected.ai_interpretations ?? {},
-            natal_chart: {
-              self: collected.natal_chart_data ?? {},
-              partner: collected.natal_chart_data_p2 ?? {},
-            },
-            formData: {
-              self: birth1,
-              partner: birth2,
-            },
-            astro_api_data: {
-              synastry: collected.synastry ?? {},
-              composite: collected.composite ?? {},
-            },
-            freeNatalWheelChart: natalSvg ?? "",
-            freeNatalWheelChartForTrasit: natalSvgTransit ?? "",
-            freeNatalWheelChartP2: natalSvgP2 ?? "",
-            freeNatalWheelChartForTrasitP2: natalSvgTransitP2 ?? "",
-          };
-
-          // (a) Legacy saves — fire and forget.
-          fetchWithRetry(
-            "https://d36fwfwo4vnk9h.cloudfront.net/astro-ai/save-astro-AI-Response",
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(savePayload),
-            },
-          ).catch(() => { });
-          fetch("/api/astro-ai/save-astro-ai-response", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(savePayload),
-          }).catch(() => { });
-
-          // (b) Domain-linked save (community context only).
-          if (
-            communityRelationshipPersonAId &&
-            communityRelationshipPersonBId
-          ) {
-            fetch("/api/community/saved-reports/relationship/link", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                personAId: communityRelationshipPersonAId,
-                personBId: communityRelationshipPersonBId,
-                reportType: relationshipReportType,
-                payload: savePayload,
-              }),
-            })
-              .then(async (res) => {
-                if (!res.ok) {
-                  const data = await res.json().catch(() => null);
-                  console.error(
-                    "[community/relationship/link] save failed:",
-                    data?.error ?? res.status,
-                  );
-                  return;
-                }
-                router.refresh();
-              })
-              .catch((err) => {
-                console.error(
-                  "[community/relationship/link] network error:",
-                  err,
-                );
-              });
-          }
-        } catch {
-          /* ignore save errors */
+      } catch (saveErr) {
+        console.error("Universal save error:", saveErr);
+        if (
+          communityRelationshipPersonAId &&
+          communityRelationshipPersonBId &&
+          isRelationshipSlug(currentTab.slug)
+        ) {
+          throw saveErr;
         }
       }
 
@@ -3882,7 +4011,7 @@ export function HoroscopeToolkitPage({
                 {currentTab.extras?.includes("future_week") && (
                   <div>
                     <Label className="text-xs font-medium text-muted-foreground mb-1 block">Select Week (optional — defaults to current week)</Label>
-                    <Input type="date" value={form.futureWeek} onChange={(e) => setForm((f) => ({ ...f, futureWeek: e.target.value }))} disabled={loading} className="h-9 text-sm max-w-xs" />
+                    <Input type="date" value={form.futureWeek} onChange={(e) => setForm((f) => ({ ...f, futureWeek: e.target.value }))} disabled={loading || readOnlyBirthData} className="h-9 text-sm max-w-xs" />
                   </div>
                 )}
                 {/* Month picker */}
@@ -3931,15 +4060,15 @@ export function HoroscopeToolkitPage({
                     )}
                   </Button>
                 ) : (
-                  <Button
-                    type="submit"
-                    disabled={loading || !isFormValid || readOnlyBirthData}
-                    className={cn(
-                      "w-full md:w-auto h-10 px-8 font-semibold transition-all shadow-md",
-                      loading || !isFormValid || readOnlyBirthData
-                        ? "bg-muted text-muted-foreground cursor-not-allowed opacity-70"
-                        : "bg-amber-500 hover:bg-amber-600 text-white hover:shadow-lg active:scale-95"
-                    )}
+	                  <Button
+	                    type="submit"
+	                    disabled={loading || !isFormValid}
+	                    className={cn(
+	                      "w-full md:w-auto h-10 px-8 font-semibold transition-all shadow-md",
+	                      loading || !isFormValid
+	                        ? "bg-muted text-muted-foreground cursor-not-allowed opacity-70"
+	                        : "bg-amber-500 hover:bg-amber-600 text-white hover:shadow-lg active:scale-95"
+	                    )}
                   >
                     {loading ? (
                       <>
