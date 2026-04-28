@@ -6603,6 +6603,120 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
     ]
   },
 
+  
+  {
+    name: "ritual_configurations_list",
+    label: "Ritual Configurations",
+    description: "Management of ritual definitions, video assets, and tag-to-asset mappings.",
+    group: "Tools",
+    subModule: "Ritual Configurations",
+    purpose: "Allows administrators to manage ritual definitions that community users can run, including ritual type, invocation or banishing mode, playback behavior, publishing state, and visibility.",
+    bullets: [
+      "Displays all ritual definitions in a structured table with title, internal key, ritual type, supported mode, playback format, publishing state, visibility state, updated timestamp, and available actions.",
+      "Supports searching by ritual title or internal key so administrators can quickly locate specific ritual configurations such as pentagram rituals or planetary zodiacal invocations.",
+      "Includes filters for ritual type, state, and playback mode to simplify management of static rituals, dynamic rituals, published rituals, and playlist-based experiences.",
+      "Tracks whether each ritual is published and visible, helping admins control which ritual experiences are available to the community.",
+      "Provides action controls for editing, validating, previewing, viewing, or removing ritual configurations from the admin interface.",
+      "Supports both fixed ritual definitions and dynamic ritual experiences where assets and tag mappings determine the final generated playlist."
+    ]
+  },
+  {
+    name: "ritual_configuration_create_v1",
+    label: "New Ritual Configuration",
+    description: "Creation form for defining a new ritual experience.",
+    group: "Tools",
+    subModule: "Ritual Configurations",
+    purpose: "Allows administrators to create a new ritual definition with basic information, display settings, playback rules, and publishing visibility controls.",
+    bullets: [
+      "Captures required ritual identity fields including title and internal key or slug, which are used by the community runtime to load the correct ritual configuration.",
+      "Includes a short description field to explain the ritual purpose, user-facing context, or internal administrative notes.",
+      "Provides display settings for ritual type, supported mode, sort order, and card badge label so the ritual can be categorized and presented correctly.",
+      "Supports playback behavior controls such as autoplay first video, backward replay, completion requirement, locked forward navigation, and playlist sidebar visibility.",
+      "Allows administrators to decide whether the ritual should use a generated playlist or a single final override video instead of the normal playlist flow.",
+      "Includes publish and visibility controls so admins can save a ritual as draft, make it visible to the community, or publish it when ready."
+    ]
+  },
+  {
+    name: "ritual_video_asset_library",
+    label: "Video Asset Library",
+    description: "Library for managing ritual video assets and direct video URLs.",
+    group: "Tools",
+    subModule: "Ritual Configurations",
+    purpose: "Provides a centralized library for uploading, organizing, filtering, and managing ritual video assets used by ritual configurations and tag mappings.",
+    bullets: [
+      "Displays video assets in a table with title, asset key, usage count, active state, published state, creation timestamp, and available actions.",
+      "Supports searching by asset title and filtering by date range, status, state, and sort order to quickly locate specific ritual videos.",
+      "Tracks asset usage through mappings and overrides so administrators can understand where each video is connected inside ritual flows.",
+      "Shows active and published status badges to make it clear which video assets are available for runtime playback.",
+      "Includes pagination and page-size controls for managing large ritual video libraries with many gate, planet, zodiac, opening, and closing videos.",
+      "Provides action controls for previewing, editing, enabling or disabling, and deleting video assets."
+    ]
+  },
+  {
+    name: "ritual_video_asset_create",
+    label: "New Video Asset",
+    description: "Video asset creation form for ritual playback content.",
+    group: "Tools",
+    subModule: "Ritual Configurations",
+    purpose: "Allows administrators to create new ritual video assets by uploading a file or linking an external video URL, then assigning a unique key and title.",
+    bullets: [
+      "Supports two asset creation methods: adding an external video URL or uploading a video file directly into the system.",
+      "Requires a unique asset key so the video can be reliably referenced by ritual configurations and tag mappings.",
+      "Captures a clear asset title to make videos easier to identify inside the video asset library.",
+      "Includes a direct video URL field for connecting externally hosted MP4 or supported video resources.",
+      "Provides an optional notes field where administrators can document usage context, production details, ritual meaning, or asset replacement instructions.",
+      "Creates reusable video assets that can later be mapped to ritual tags, playback sequences, or ritual-specific overrides."
+    ]
+  },
+  {
+    name: "ritual_tag_mappings",
+    label: "Tag Mappings",
+    description: "Tag-to-video asset mapping manager for ritual playlist generation.",
+    group: "Tools",
+    subModule: "Ritual Configurations",
+    purpose: "Allows administrators to connect ritual tags to video assets so dynamic ritual playlists can be generated from selected ritual types, gates, planets, and zodiac invocations.",
+    bullets: [
+      "Displays tag mappings in a structured table with mapping scope, tag key, connected video asset, active state, and available actions.",
+      "Supports global mappings that apply across rituals, while also allowing per-ritual mappings to override global asset assignments when needed.",
+      "Includes search by tag key and filters for asset, scope, and status to quickly locate specific mappings such as gate, zodiac, or planet invocations.",
+      "Tracks active mapping status so administrators can enable or disable specific ritual video connections without deleting configuration records.",
+      "Provides action controls for editing mappings, toggling active state, and deleting outdated or incorrect tag-to-asset assignments.",
+      "Supports dynamic ritual assembly by resolving selected ritual tags into the correct ordered video assets during playback."
+    ]
+  },
+  {
+    name: "ritual_tag_mapping_create",
+    label: "New Tag Mapping",
+    description: "Creation form for linking ritual tags to video assets.",
+    group: "Tools",
+    subModule: "Ritual Configurations",
+    purpose: "Allows administrators to create a new mapping between a ritual tag and a video asset, defining how generated ritual playlists select their playback content.",
+    bullets: [
+      "Allows administrators to define the mapping scope, such as global or ritual-specific, depending on whether the mapping should apply everywhere or override a specific ritual.",
+      "Captures the ritual tag key that will be used by the playlist-generation logic to identify which asset should be inserted.",
+      "Provides an asset selector so the correct ritual video can be connected to the selected tag.",
+      "Supports creation of mappings for gates, zodiac signs, planets, ritual openings, ritual closings, invocations, and banishings.",
+      "Helps maintain consistent ritual playback by ensuring each tag resolves to the intended video asset.",
+      "Improves flexibility by allowing asset replacements without rewriting the ritual-generation logic."
+    ]
+  },
+  {
+    name: "ritual_playback_settings",
+    label: "Playback Settings",
+    description: "Global video playback settings for ritual experiences.",
+    group: "Tools",
+    subModule: "Ritual Configurations",
+    purpose: "Controls platform-wide video playback behavior for ritual experiences, including autoplay, looping, native controls, and muted-start preferences.",
+    bullets: [
+      "Provides global playback controls that apply across ritual videos platform-wide, including Perennial Mandalism ritual experiences.",
+      "Allows administrators to enable or disable autoplay so ritual videos can begin automatically when the player loads.",
+      "Includes loop control to determine whether ritual videos restart from the beginning after completion.",
+      "Provides native player control visibility settings for playback functions such as play, pause, volume, and timeline controls.",
+      "Supports muted-start behavior so ritual videos can begin silently when required by browser playback policies or user experience preferences.",
+      "Centralizes playback behavior management so ritual video experiences remain consistent across configurations, assets, and generated playlists."
+    ]
+  },
+
       //----------- Reports-------------//
 
 
