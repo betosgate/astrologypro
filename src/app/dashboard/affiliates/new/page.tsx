@@ -42,6 +42,7 @@ interface AffiliateOption {
 
 interface ServiceOption {
   id: string;
+  template_id: string | null;
   name: string;
   category?: string;
 }
@@ -274,7 +275,7 @@ export default function DashboardAssignAffiliatePage() {
                     </SelectTrigger>
                     <SelectContent>
                       {services.map((s) => (
-                        <SelectItem key={s.id} value={s.id}>
+                        <SelectItem key={s.id} value={s.template_id || s.id}>
                           {s.name}
                           {s.category ? ` · ${s.category}` : ""}
                         </SelectItem>
