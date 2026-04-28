@@ -89,6 +89,24 @@ const TABS: TabDef[] = [
   { slug: "uranus_return_v2", label: "Uranus Opposition", type: "single", extras: ["area_of_inquiry"], icon: Star, description: "Uranus opposition analysis — midlife awakening and liberation themes." },
 ];
 
+const RELATIONSHIP_SLUG_TO_MODE = {
+  romantic_forecast_report_tropical_v2: "romantic",
+  friendship_report_tropical_v2: "friendship",
+  business_partner_v2: "business",
+} as const;
+
+const RELATIONSHIP_SLUG_TO_REPORT_TYPE = {
+  romantic_forecast_report_tropical_v2: "romantic",
+  friendship_report_tropical_v2: "friendship",
+  business_partner_v2: "partnership",
+} as const;
+
+function isRelationshipSlug(
+  slug: string
+): slug is keyof typeof RELATIONSHIP_SLUG_TO_REPORT_TYPE {
+  return slug in RELATIONSHIP_SLUG_TO_REPORT_TYPE;
+}
+
 
 
 
@@ -2885,46 +2903,19 @@ export function HoroscopeToolkitPage({
   useEffect(() => {
     if (!initialSavedReport) return;
 
-    const formData =
-      initialSavedReport.form_data && typeof initialSavedReport.form_data === "object"
-        ? (initialSavedReport.form_data as Record<string, unknown>)
-        : {};
-    const astroApiData =
-      initialSavedReport.astro_api_data && typeof initialSavedReport.astro_api_data === "object"
-        ? (initialSavedReport.astro_api_data as Record<string, unknown>)
-        : {};
-    const aiResponse =
-      initialSavedReport.ai_response && typeof initialSavedReport.ai_response === "object"
-        ? (initialSavedReport.ai_response as Record<string, unknown>)
-        : {};
-
-    setResults({
-      ...formData,
-      city: form.person1?.city ?? formData.city ?? "",
-      natal_chart_data: astroApiData,
-      ai_interpretations: aiResponse,
-    });
-    setNatalSvg(
-      typeof initialSavedReport.free_natal_wheel_chart === "string"
-        ? initialSavedReport.free_natal_wheel_chart
-        : null,
-    );
-    setNatalSvgTransit(
-      typeof initialSavedReport.free_natal_wheel_chart_transit === "string"
-        ? initialSavedReport.free_natal_wheel_chart_transit
-        : null,
-    );
-    setShowChartBtn(
-      Boolean(
-        initialSavedReport.free_natal_wheel_chart ||
-          initialSavedReport.free_natal_wheel_chart_transit,
-      ),
-    );
+    setResults(initialSavedToolkitState.results);
+    setNatalSvg(initialSavedToolkitState.natalSvg);
+    setNatalSvgTransit(initialSavedToolkitState.natalSvgTransit);
+    setNatalSvgP2(initialSavedToolkitState.natalSvgP2);
+    setNatalSvgTransitP2(initialSavedToolkitState.natalSvgTransitP2);
+    setTransitChartSvg(initialSavedToolkitState.transitChartSvg);
+    setReturnDate(initialSavedToolkitState.returnDate);
+    setShowChartBtn(initialSavedToolkitState.showChartButton);
     setProgress([]);
     setLoading(false);
     setError(null);
     setShowScrollTop(true);
-  }, [initialSavedReport, form.person1?.city]);
+  }, [initialSavedReport, initialSavedToolkitState]);
 
   const checkDacen = (planetName: string, signName: string) => {
     const normalizedPlanet = normalizeDecanValue(planetName);
@@ -3007,6 +2998,17 @@ export function HoroscopeToolkitPage({
   }, []);
 
   function setTab(slug: string) {
+    if (
+      communityRelationshipPersonAId &&
+      communityRelationshipPersonBId &&
+      isRelationshipSlug(slug)
+    ) {
+      const url = new URL(basePath, window.location.origin);
+      url.searchParams.set("mode", RELATIONSHIP_SLUG_TO_MODE[slug]);
+      url.searchParams.delete("tab");
+      router.push(`${url.pathname}${url.search}`);
+      return;
+    }
     const separator = basePath.includes("?") ? "&" : "?";
     router.push(`${basePath}${separator}tab=${slug}`);
   }
@@ -3676,44 +3678,93 @@ export function HoroscopeToolkitPage({
         const birth1 = parseBirth(form.person1);
         const birth2 = isTwoPerson ? parseBirth(form.person2) : null;
 
+        const formDataPayload = isTwoPerson ? {
+          self: { ...form.person1, ...birth1 },
+          partner: { ...form.person2, ...birth2 },
+        } : {
+          ...form.person1,
+          ...birth1,
+        };
+        const astroApiDataPayload = isTwoPerson ? {
+          synastry: collected.synastry ?? {},
+          composite: collected.composite ?? {},
+          self: collected.natal_chart_data ?? {},
+          partner: collected.natal_chart_data_p2 ?? {},
+        } : (collected.natal_chart_data ?? {});
+        const natalChartPayload = isTwoPerson ? {
+          self: { status: true, chart_url: collected.natal_chart_url ?? "", msg: "Chart created successfully!" },
+          partner: { status: true, chart_url: collected.natal_chart_url_p2 ?? "", msg: "Chart created successfully!" },
+        } : {
+          status: true,
+          chart_url: collected.natal_chart_url ?? "",
+          msg: "Chart created successfully!",
+        };
+
         const ai_response_payload: any = {
           ...(collected.ai_interpretations ?? {}),
-          natal_chart: isTwoPerson ? {
-            self: { status: true, chart_url: collected.natal_chart_url ?? "", msg: "Chart created successfully!" },
-            partner: { status: true, chart_url: collected.natal_chart_url_p2 ?? "", msg: "Chart created successfully!" },
-          } : {
-            status: true,
-            chart_url: collected.natal_chart_url ?? "",
-            msg: "Chart created successfully!",
-          },
-          formData: isTwoPerson ? {
-            self: { ...form.person1, ...birth1 },
-            partner: { ...form.person2, ...birth2 },
-          } : {
-            ...form.person1,
-            ...birth1,
-          },
-          astro_api_data: isTwoPerson ? {
-            synastry: collected.synastry ?? {},
-            composite: collected.composite ?? {},
-            self: collected.natal_chart_data ?? {},
-            partner: collected.natal_chart_data_p2 ?? {},
-          } : (collected.natal_chart_data ?? {}),
+          natal_chart: natalChartPayload,
+          formData: formDataPayload,
+          astro_api_data: astroApiDataPayload,
           freeNatalWheelChart: collected.natal_transit_svg ?? collected.transit_chart_svg ?? "",
+          freeNatalWheelChartForTransit: collected.natal_transit_svg ?? collected.transit_chart_svg ?? "",
           freeNatalWheelChartForTrasit: collected.natal_transit_svg ?? collected.transit_chart_svg ?? "",
         };
 
         if (isTwoPerson) {
           ai_response_payload.freeNatalWheelChartP2 = collected.natal_transit_svg_p2 ?? "";
+          ai_response_payload.freeNatalWheelChartForTransitP2 = collected.natal_transit_svg_p2 ?? "";
+          ai_response_payload.freeNatalWheelChartForTrasitP2 = collected.natal_transit_svg_p2 ?? "";
         }
 
         const finalSavePayload = {
           toolname: currentTab.slug,
           ai_response: ai_response_payload,
+          natal_chart: natalChartPayload,
+          formData: formDataPayload,
+          astro_api_data: astroApiDataPayload,
+          freeNatalWheelChart: collected.natal_chart_url ?? "",
+          freeNatalWheelChartForTransit: collected.natal_transit_svg ?? collected.transit_chart_svg ?? "",
+          freeNatalWheelChartForTrasit: collected.natal_transit_svg ?? collected.transit_chart_svg ?? "",
+          ...(isTwoPerson
+            ? {
+              freeNatalWheelChartP2: collected.natal_chart_url_p2 ?? "",
+              freeNatalWheelChartForTransitP2: collected.natal_transit_svg_p2 ?? "",
+              freeNatalWheelChartForTrasitP2: collected.natal_transit_svg_p2 ?? "",
+            }
+            : {}),
         };
 
-        // Local save - Supabase-backed API
-        saveAstroAiResponse(finalSavePayload).catch(() => { });
+        if (
+          communityRelationshipPersonAId &&
+          communityRelationshipPersonBId &&
+          isRelationshipSlug(currentTab.slug)
+        ) {
+          addProgress("Saving relationship report…");
+          const linkRes = await fetch("/api/community/saved-reports/relationship/link", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              personAId: communityRelationshipPersonAId,
+              personBId: communityRelationshipPersonBId,
+              reportType: RELATIONSHIP_SLUG_TO_REPORT_TYPE[currentTab.slug],
+              payload: finalSavePayload,
+            }),
+          });
+
+          if (!linkRes.ok) {
+            const body = await linkRes.json().catch(() => null);
+            throw new Error(
+              typeof body?.error === "string"
+                ? body.error
+                : "Failed to save relationship report"
+            );
+          }
+
+          router.refresh();
+        } else {
+          // Local save - Supabase-backed API
+          saveAstroAiResponse(finalSavePayload).catch(() => { });
+        }
 
         // Legacy CloudFront save (fire-and-forget)
         fetchWithRetry(
@@ -3727,6 +3778,13 @@ export function HoroscopeToolkitPage({
 
       } catch (saveErr) {
         console.error("Universal save error:", saveErr);
+        if (
+          communityRelationshipPersonAId &&
+          communityRelationshipPersonBId &&
+          isRelationshipSlug(currentTab.slug)
+        ) {
+          throw saveErr;
+        }
       }
 
       addProgress("Done ✓");
