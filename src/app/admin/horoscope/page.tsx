@@ -2844,7 +2844,7 @@ export function HoroscopeToolkitPage({
       : fallbackTab.slug;
   const currentTab = visibleTabs.find((t) => t.slug === currentSlug) ?? fallbackTab;
   const initialForm = useMemo<FormState>(
-    () => formStateFromSavedFormData(initialSavedFormData ?? initialSavedReport),
+    () => formStateFromSavedFormData(initialSavedReport ?? initialSavedFormData),
     [initialSavedFormData, initialSavedReport]
   );
   const initialSavedToolkitState = useMemo(
@@ -2881,50 +2881,6 @@ export function HoroscopeToolkitPage({
   const [decanPlanet, setDecanPlanet] = useState<{ name: string; sign: string } | null>(null);
   const [excludedHoraryDates, setExcludedHoraryDates] = useState<string>("");
   const [isSuggestingDate, setIsSuggestingDate] = useState(false);
-
-  useEffect(() => {
-    if (!initialSavedReport) return;
-
-    const formData =
-      initialSavedReport.form_data && typeof initialSavedReport.form_data === "object"
-        ? (initialSavedReport.form_data as Record<string, unknown>)
-        : {};
-    const astroApiData =
-      initialSavedReport.astro_api_data && typeof initialSavedReport.astro_api_data === "object"
-        ? (initialSavedReport.astro_api_data as Record<string, unknown>)
-        : {};
-    const aiResponse =
-      initialSavedReport.ai_response && typeof initialSavedReport.ai_response === "object"
-        ? (initialSavedReport.ai_response as Record<string, unknown>)
-        : {};
-
-    setResults({
-      ...formData,
-      city: form.person1?.city ?? formData.city ?? "",
-      natal_chart_data: astroApiData,
-      ai_interpretations: aiResponse,
-    });
-    setNatalSvg(
-      typeof initialSavedReport.free_natal_wheel_chart === "string"
-        ? initialSavedReport.free_natal_wheel_chart
-        : null,
-    );
-    setNatalSvgTransit(
-      typeof initialSavedReport.free_natal_wheel_chart_transit === "string"
-        ? initialSavedReport.free_natal_wheel_chart_transit
-        : null,
-    );
-    setShowChartBtn(
-      Boolean(
-        initialSavedReport.free_natal_wheel_chart ||
-          initialSavedReport.free_natal_wheel_chart_transit,
-      ),
-    );
-    setProgress([]);
-    setLoading(false);
-    setError(null);
-    setShowScrollTop(true);
-  }, [initialSavedReport, form.person1?.city]);
 
   const checkDacen = (planetName: string, signName: string) => {
     const normalizedPlanet = normalizeDecanValue(planetName);
