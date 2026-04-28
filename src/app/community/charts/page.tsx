@@ -213,7 +213,6 @@ export default function ChartsPage() {
     }
   }
 
-  const membersWithoutCharts = familyMembers.filter((m) => !m.natal_chart);
 
   return (
     <div className="space-y-6">
@@ -233,26 +232,6 @@ export default function ChartsPage() {
         </Button>
       </div>
 
-      {/* Prereq notice */}
-      {membersWithoutCharts.length > 0 && (
-        <Card className="border-amber-500/40 bg-amber-500/10 dark:bg-amber-950/20">
-          <CardContent className="py-4">
-            <p className="text-sm text-amber-900 dark:text-amber-200 font-medium">
-              Generate natal charts first
-            </p>
-            <p className="text-sm text-amber-800 dark:text-amber-300/90 mt-1">
-              {membersWithoutCharts.map((m) => m.full_name).join(", ")}{" "}
-              {membersWithoutCharts.length === 1 ? "needs" : "need"} a natal chart before synastry can be calculated.{" "}
-              <Link
-                href="/community/family"
-                className="underline hover:text-amber-700 dark:hover:text-amber-100"
-              >
-                Go to Family →
-              </Link>
-            </p>
-          </CardContent>
-        </Card>
-      )}
 
       {loading ? (
         <div className="flex justify-center py-12">
@@ -281,7 +260,6 @@ export default function ChartsPage() {
             const pairKey = [a.id, b.id].sort().join("-");
             const chart = getChartForPair(a.id, b.id);
             const synastry = chart?.chart_data;
-            const bothHaveCharts = !!a.natal_chart && !!b.natal_chart;
             const isOpen = expandedId === pairKey;
 
             return (
@@ -307,9 +285,7 @@ export default function ChartsPage() {
                         </p>
                       ) : (
                         <p className="text-xs text-muted-foreground">
-                          {bothHaveCharts
-                            ? "Choose a relationship type to open the detailed report"
-                            : "Natal charts required for both people"}
+                          Choose a relationship type to open the detailed report
                         </p>
                       )}
                     </div>
@@ -334,13 +310,12 @@ export default function ChartsPage() {
                       </div>
                     )}
 
-                    {bothHaveCharts && (
-                      <Select
-                        value=""
-                        onValueChange={(value) =>
-                          openDetailedReport(a.id, b.id, value as RelationshipMode)
-                        }
-                      >
+                    <Select
+                      value=""
+                      onValueChange={(value) =>
+                        openDetailedReport(a.id, b.id, value as RelationshipMode)
+                      }
+                    >
                         <SelectTrigger
                           size="sm"
                           className="w-[150px]"
@@ -384,7 +359,6 @@ export default function ChartsPage() {
                           })}
                         </SelectContent>
                       </Select>
-                    )}
 
                     {/*
                       Legacy quick-generate/regenerate behavior bypassed:
