@@ -95,10 +95,14 @@ export default function EditRitualPage() {
   return (
     <div className="space-y-6">
       <div>
-        <Link href="/admin/rituals" className="text-sm text-muted-foreground hover:text-foreground">
-          ← Back to Rituals
+        <Link href="/admin/rituals/legacy-invocations" className="text-sm text-muted-foreground hover:text-foreground">
+          ← Back to Legacy Invocations
         </Link>
-        <h1 className="mt-2 text-2xl font-bold tracking-tight">Edit Ritual Invocation</h1>
+        <h1 className="mt-2 text-2xl font-bold tracking-tight">Edit Legacy Ritual Invocation</h1>
+        <p className="text-xs text-muted-foreground mt-1">
+          This screen edits a row in the legacy <code>ritual_invocations</code> table.
+          New configuration work should happen on the Ritual Configurations module.
+        </p>
       </div>
 
       <Card className="max-w-2xl">

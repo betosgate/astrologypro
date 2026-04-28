@@ -26,6 +26,8 @@ import { buildToolkitPrefillForm } from "@/lib/horoscope-toolkit-prefill";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { formatDate } from "@/lib/format";
+import { deriveNatalReportState } from "@/lib/community/chart-report-state";
+import { loadLinkedNatalReport } from "@/lib/community/saved-report-link";
 import { formatBirthPlace } from "@/lib/community/birth-location";
 import { calcFamilyProfileCompletion } from "@/lib/community/family-profile-completion";
 
@@ -77,6 +79,9 @@ type FamilyMemberRow = {
   relationship: string | null;
   age_group: "child" | "adult" | string | null;
   natal_chart: Record<string, unknown> | null;
+  natal_status: string | null;
+  natal_report_id: string | null;
+  natal_report_status: string | null;
   chart_updated_at: string | null;
   notes: string | null;
   invite_email: string | null;
@@ -128,6 +133,9 @@ export default async function CommunityFamilyMemberPage({ params }: PageProps) {
         "relationship",
         "age_group",
         "natal_chart",
+        "natal_status",
+        "natal_report_id",
+        "natal_report_status",
         "chart_updated_at",
         "notes",
         "invite_email",
@@ -146,7 +154,11 @@ export default async function CommunityFamilyMemberPage({ params }: PageProps) {
 
   const familyMember = familyRow as unknown as FamilyMemberRow;
   const isSelf = (familyMember.relationship ?? "").toLowerCase() === "self";
-  const hasSavedChart = familyMember.natal_chart != null;
+  const hasSavedChart = deriveNatalReportState(familyMember) === "generated";
+  const savedNatalReport =
+    familyMember.natal_report_id
+      ? await loadLinkedNatalReport(familyMember.id)
+      : null;
 
   // Profile completion ring — legacy helper reused verbatim.
   const completion = calcFamilyProfileCompletion({
@@ -430,6 +442,8 @@ export default async function CommunityFamilyMemberPage({ params }: PageProps) {
           basePath={`/community/family/${familyMember.id}`}
           allowedSlugs={[NATAL_TAB_SLUG]}
           initialPrefill={encodedPrefill}
+          initialSavedReport={savedNatalReport}
+          communityNatalFamilyMemberId={familyMember.id}
         />
       ) : (
         <Card className="max-w-2xl border-amber-500/40 bg-amber-500/10 dark:bg-amber-950/20">

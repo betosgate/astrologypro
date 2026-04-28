@@ -2801,6 +2801,17 @@ export interface HoroscopeToolkitPageProps {
   initialSavedReport?: unknown;
   autoSubmitPrefill?: boolean;
   readOnlyBirthData?: boolean;
+  communityNatalFamilyMemberId?: string | null;
+  /**
+   * Community relationship-report linkage. When BOTH ids are set AND the
+   * active toolkit slug is one of the relationship slugs (romantic /
+   * friendship / business), a successful generation will POST the full
+   * payload to /api/community/saved-reports/relationship/link so the
+   * report can be hydrated from DB on the next View. Admin paths leave
+   * these null and the save call is skipped.
+   */
+  communityRelationshipPersonAId?: string | null;
+  communityRelationshipPersonBId?: string | null;
 }
 
 export function HoroscopeToolkitPage({
@@ -2811,6 +2822,9 @@ export function HoroscopeToolkitPage({
   initialSavedReport = null,
   autoSubmitPrefill = true,
   readOnlyBirthData = false,
+  communityNatalFamilyMemberId = null,
+  communityRelationshipPersonAId = null,
+  communityRelationshipPersonBId = null,
 }: HoroscopeToolkitPageProps = {}) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -2867,6 +2881,50 @@ export function HoroscopeToolkitPage({
   const [decanPlanet, setDecanPlanet] = useState<{ name: string; sign: string } | null>(null);
   const [excludedHoraryDates, setExcludedHoraryDates] = useState<string>("");
   const [isSuggestingDate, setIsSuggestingDate] = useState(false);
+
+  useEffect(() => {
+    if (!initialSavedReport) return;
+
+    const formData =
+      initialSavedReport.form_data && typeof initialSavedReport.form_data === "object"
+        ? (initialSavedReport.form_data as Record<string, unknown>)
+        : {};
+    const astroApiData =
+      initialSavedReport.astro_api_data && typeof initialSavedReport.astro_api_data === "object"
+        ? (initialSavedReport.astro_api_data as Record<string, unknown>)
+        : {};
+    const aiResponse =
+      initialSavedReport.ai_response && typeof initialSavedReport.ai_response === "object"
+        ? (initialSavedReport.ai_response as Record<string, unknown>)
+        : {};
+
+    setResults({
+      ...formData,
+      city: form.person1?.city ?? formData.city ?? "",
+      natal_chart_data: astroApiData,
+      ai_interpretations: aiResponse,
+    });
+    setNatalSvg(
+      typeof initialSavedReport.free_natal_wheel_chart === "string"
+        ? initialSavedReport.free_natal_wheel_chart
+        : null,
+    );
+    setNatalSvgTransit(
+      typeof initialSavedReport.free_natal_wheel_chart_transit === "string"
+        ? initialSavedReport.free_natal_wheel_chart_transit
+        : null,
+    );
+    setShowChartBtn(
+      Boolean(
+        initialSavedReport.free_natal_wheel_chart ||
+          initialSavedReport.free_natal_wheel_chart_transit,
+      ),
+    );
+    setProgress([]);
+    setLoading(false);
+    setError(null);
+    setShowScrollTop(true);
+  }, [initialSavedReport, form.person1?.city]);
 
   const checkDacen = (planetName: string, signName: string) => {
     const normalizedPlanet = normalizeDecanValue(planetName);
@@ -3084,6 +3142,7 @@ export function HoroscopeToolkitPage({
           callCompute("natal_wheel_chart", birth1 as unknown as Record<string, unknown>)
             .then((w) => {
               if (w?.chart_url) {
+                collected.freeNatalWheelChart = w.chart_url;
                 setNatalSvg(w.chart_url);
                 collected.natal_chart_url = w.chart_url;
                 setShowChartBtn(true);
@@ -3098,6 +3157,7 @@ export function HoroscopeToolkitPage({
             .then((freeResp) => {
               const svg = freeResp?.results?.output;
               if (svg) {
+                collected.freeNatalWheelChartForTrasit = svg;
                 setNatalSvgTransit(svg);
                 collected.natal_transit_svg = svg;
                 setShowChartBtn(true);
@@ -3821,25 +3881,48 @@ export function HoroscopeToolkitPage({
 
                 {error && <p className="text-sm text-destructive rounded-md bg-destructive/10 px-3 py-2">{error}</p>}
 
-                <Button
-                  type="submit"
-                  disabled={loading || !isFormValid || readOnlyBirthData}
-                  className={cn(
-                    "w-full md:w-auto h-10 px-8 font-semibold transition-all shadow-md",
-                    loading || !isFormValid || readOnlyBirthData
-                      ? "bg-muted text-muted-foreground cursor-not-allowed opacity-70"
-                      : "bg-amber-500 hover:bg-amber-600 text-white hover:shadow-lg active:scale-95"
-                  )}
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="mr-2 size-4 animate-spin" />
-                      Processing Cosmic Data…
-                    </>
-                  ) : (
-                    "Generate Reading"
-                  )}
-                </Button>
+                {initialSavedReport ? (
+                  <Button
+                    type="button"
+                    disabled={loading || !isFormValid}
+                    onClick={() => void handleSubmit(undefined, false)}
+                    className={cn(
+                      "w-full md:w-auto h-10 px-8 font-semibold transition-all shadow-md",
+                      loading || !isFormValid
+                        ? "bg-muted text-muted-foreground cursor-not-allowed opacity-70"
+                        : "bg-amber-500 hover:bg-amber-600 text-white hover:shadow-lg active:scale-95"
+                    )}
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="mr-2 size-4 animate-spin" />
+                        Processing Cosmic Data…
+                      </>
+                    ) : (
+                      "Regenerate"
+                    )}
+                  </Button>
+                ) : (
+                  <Button
+                    type="submit"
+                    disabled={loading || !isFormValid || readOnlyBirthData}
+                    className={cn(
+                      "w-full md:w-auto h-10 px-8 font-semibold transition-all shadow-md",
+                      loading || !isFormValid || readOnlyBirthData
+                        ? "bg-muted text-muted-foreground cursor-not-allowed opacity-70"
+                        : "bg-amber-500 hover:bg-amber-600 text-white hover:shadow-lg active:scale-95"
+                    )}
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="mr-2 size-4 animate-spin" />
+                        Processing Cosmic Data…
+                      </>
+                    ) : (
+                      "Generate Reading"
+                    )}
+                  </Button>
+                )}
               </form>
             </CardContent>
           </Card>

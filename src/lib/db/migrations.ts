@@ -74,8 +74,13 @@ import { MIGRATION_SQL as MIG_20260423000005_ACC } from "@/data/migrations/20260
 import { MIGRATION_SQL as MIG_20260424000001_ODC } from "@/data/migrations/20260424000001_phone_sessions_outbound_diviner_call";
 import { MIGRATION_SQL as MIG_20260424000002_AAR } from "@/data/migrations/20260424000002_astro_ai_responses";
 import { MIGRATION_SQL as MIG_20260427000001_SRL } from "@/data/migrations/20260427000001_saved_report_linkage";
+import { MIGRATION_SQL as MIG_20260427000002_RAC } from "@/data/migrations/20260427000002_ritual_admin_config";
 import { MIGRATION_SQL as MIG_20260424000010_ACV2A } from "@/data/migrations/20260424000010_affiliate_commission_v2_additive";
 import { MIGRATION_SQL as MIG_20260424009001_ACV2D } from "@/data/migrations/20260424009001_affiliate_commission_v2_destructive";
+import { MIGRATION_SQL as MIG_20260427000002_ARV2A } from "@/data/migrations/20260427000002_affiliate_rls_v2_alignment";
+import { MIGRATION_SQL as MIG_20260427000003_AJSP } from "@/data/migrations/20260427000003_affiliate_junction_select_policy";
+import { MIGRATION_SQL as MIG_20260427000004_ARSD } from "@/data/migrations/20260427000004_affiliate_rls_security_definer";
+import { MIGRATION_SQL as MIG_20260428000003_RGS } from "@/data/migrations/20260428000003_ritual_global_settings";
 
 /**
  * Allowlisted migrations that the admin migration runner can execute.
@@ -677,6 +682,38 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
     sortKey: "20260427000001",
     sql: MIG_20260427000001_SRL,
   },
+  "20260427000002_ritual_admin_config": {
+    id: "20260427000002_ritual_admin_config",
+    title: "Ritual admin configuration (definitions + media assets + tag mappings) with seeds",
+    description:
+      "Additive. Creates three tables to move ritual presentation/asset mapping out of hardcoded constants and into admin-managed records: ritual_definitions (metadata + playback_policy_json + final_override link + label overrides), ritual_media_assets (upload OR external_url with mutually-exclusive CHECK), and ritual_asset_mappings ((tag_key | step_role) → asset_id, scoped 'global' or 'ritual_definition' with partial unique indexes per scope). Triggers bump updated_at, RLS allows service_role full + authenticated read of published/active rows so the runtime resolver works under user sessions. Seeds the four current ritual definitions (3 static + 1 dynamic, all final_override DISABLED so existing playlist behaviour is preserved), seeds 37 ritual_media_assets pointing at the existing S3 URLs from src/lib/community/ritual-video-map.ts, and seeds matching global tag_key → asset_id mappings so the runtime resolver can read DB-only for known tags. Rollback: DROP each table.",
+    sortKey: "20260427000002",
+    sql: MIG_20260427000002_RAC,
+  },
+  "20260427000002_affiliate_rls_v2_alignment": {
+    id: "20260427000002_affiliate_rls_v2_alignment",
+    title: "Affiliate RLS v2 alignment (commission v2 sprint)",
+    description:
+      "Aligns affiliate-side SELECT policies with the v2 junction model. Pre-v2 policies assumed *.affiliate_id = auth.users.id; v2 changed affiliate_id to point at diviner_affiliates.id (the junction). Replaces the broken diviner_service_affiliates_select_affiliate policy and adds 5 missing policies: affiliate_sees_own_campaigns + affiliate_inserts_own_campaigns + affiliate_updates_own_campaigns on affiliate_campaigns; affiliate_sees_own_clicks on campaign_clicks; affiliate_sees_own_conversions on campaign_conversions. All resolve auth.uid() → affiliate_accounts.user_id → diviner_affiliates.id. The API was always service-role (RLS bypass) so no production regression — but spec §8 promised affiliates can read their slice via auth client and that promise was unfulfilled. Caught by Task 08 RLS test suite. Idempotent + sanity-checked.",
+    sortKey: "20260427000002",
+    sql: MIG_20260427000002_ARV2A,
+  },
+  "20260427000003_affiliate_junction_select_policy": {
+    id: "20260427000003_affiliate_junction_select_policy",
+    title: "Affiliate junction SELECT policy (RLS chain fix)",
+    description:
+      "Follow-up to 20260427000002. The child-table policies it added all resolve through `diviner_affiliates → affiliate_accounts → user_id`, but `diviner_affiliates` itself only has a diviner-side SELECT policy. With no affiliate-side policy, the IN-subquery returned 0 rows under RLS for the authed affiliate session, making every child policy match nothing. Adds `affiliate_sees_own_junctions` on `diviner_affiliates` resolving `affiliate_account_id → user_id`. Idempotent + sanity-checked. Run AFTER 20260427000002.",
+    sortKey: "20260427000003",
+    sql: MIG_20260427000003_AJSP,
+  },
+  "20260427000004_affiliate_rls_security_definer": {
+    id: "20260427000004_affiliate_rls_security_definer",
+    title: "Affiliate RLS — break policy cycle with SECURITY DEFINER helpers",
+    description:
+      "Hot-fix for 20260427000003. After that migration, every authed query on the affiliate child tables raised 'infinite recursion detected in policy for relation diviner_affiliates' — `affiliate_accounts.diviner_sees_linked_accounts` queries diviner_affiliates, and the new `affiliate_sees_own_junctions` queries affiliate_accounts. Cycle. Introduces two SECURITY DEFINER helpers — `current_affiliate_junction_ids()` (SETOF UUID) and `current_affiliate_account_id()` (UUID) — that resolve auth.uid() → junction set / account id while bypassing inner RLS. Rewrites all 6 affiliate-side policies from 20260427000002 + 20260427000003 to call these helpers instead of inlined subqueries. Run AFTER 20260427000003.",
+    sortKey: "20260427000004",
+    sql: MIG_20260427000004_ARSD,
+  },
   "20260423000004_fix_invite_rpc_ambiguity": {
     id: "20260423000004_fix_invite_rpc_ambiguity",
     title: "Fix column/variable ambiguity in invite RPCs (Task 02 follow-up)",
@@ -724,6 +761,14 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Task 01b of the Affiliate Commission v2 sprint. **DESTRUCTIVE** — drops 6 System A tables (affiliate_commission_history, affiliate_commissions, affiliate_payouts, affiliate_payout_items, affiliate_clicks, affiliate_referral_links) with CASCADE. Defensive backfill collapses any 'suspended' affiliate_accounts.status values to 'blocked' before trimming the enum to (unclaimed | active | blocked). Trims affiliate_campaigns.status to (active | paused | archived | expired); pre-existing 'draft' rows become 'active', 'completed' becomes 'archived'. Relaxes affiliate_campaigns_owner_consistency CHECK so the snapshot columns are no longer required (rate now lives on the booking stamp per spec v1.2). The snapshot columns themselves are NOT dropped — the advocate service still writes them, and dropping them is deferred to a future cross-service cleanup. Run AFTER 01a additive + Tasks 02 + 04 + 07-Phase-A have shipped. Idempotent (DROP IF EXISTS, status updates are no-ops on already-clean data, CHECK swap uses IF EXISTS). End-of-migration sanity check raises if anything didn't drop or any out-of-range status survived.",
     sortKey: "20260424009001",
     sql: MIG_20260424009001_ACV2D,
+  },
+  "20260428000003_ritual_global_settings": {
+    id: "20260428000003_ritual_global_settings",
+    title: "Ritual global playback settings (singleton table)",
+    description:
+      "Creates the ritual_global_settings singleton table for platform-wide video player behaviors (autoplay, loop, controls, muted) and seeds default values. Safe to re-run.",
+    sortKey: "20260428000003",
+    sql: MIG_20260428000003_RGS,
   },
 };
 

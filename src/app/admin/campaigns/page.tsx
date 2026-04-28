@@ -102,10 +102,9 @@ interface Diviner {
 }
 
 const STATUS_BADGE: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-  draft: "secondary",
   active: "default",
   paused: "outline",
-  completed: "default",
+  archived: "outline",
   expired: "destructive",
 };
 
@@ -149,10 +148,6 @@ export default function AdminCampaignsPage() {
   const [formDesc, setFormDesc] = useState("");
   const [formStartDate, setFormStartDate] = useState("");
   const [formEndDate, setFormEndDate] = useState("");
-  const [formCommType, setFormCommType] = useState("percentage");
-  const [formCommValue, setFormCommValue] = useState("10");
-  const [formBudgetCap, setFormBudgetCap] = useState("");
-  const [formTargetProduct, setFormTargetProduct] = useState("");
   const [formUtmSource, setFormUtmSource] = useState("");
   const [formUtmMedium, setFormUtmMedium] = useState("");
   const [formUtmCampaign, setFormUtmCampaign] = useState("");
@@ -163,9 +158,6 @@ export default function AdminCampaignsPage() {
   const [editStatus, setEditStatus] = useState("");
   const [editStartDate, setEditStartDate] = useState("");
   const [editEndDate, setEditEndDate] = useState("");
-  const [editCommType, setEditCommType] = useState("");
-  const [editCommValue, setEditCommValue] = useState("");
-  const [editBudgetCap, setEditBudgetCap] = useState("");
 
   // Deletion state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -174,8 +166,7 @@ export default function AdminCampaignsPage() {
 
   function resetForm() {
     setFormName(""); setFormDesc(""); setFormStartDate(""); setFormEndDate("");
-    setFormCommType("percentage"); setFormCommValue("10"); setFormBudgetCap("");
-    setFormTargetProduct(""); setFormUtmSource(""); setFormUtmMedium(""); setFormUtmCampaign("");
+    setFormUtmSource(""); setFormUtmMedium(""); setFormUtmCampaign("");
   }
 
   const loadCampaigns = useCallback(async () => {
@@ -231,10 +222,7 @@ export default function AdminCampaignsPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         name: formName, description: formDesc || undefined, start_date: formStartDate,
-        end_date: formEndDate || undefined, commission_type: formCommType,
-        commission_value: parseFloat(formCommValue) || 0,
-        budget_cap_cents: formBudgetCap ? parseInt(formBudgetCap, 10) * 100 : undefined,
-        target_product_type: formTargetProduct || undefined,
+        end_date: formEndDate || undefined,
         utm_source: formUtmSource || undefined, utm_medium: formUtmMedium || undefined,
         utm_campaign: formUtmCampaign || undefined,
       }),
@@ -258,9 +246,6 @@ export default function AdminCampaignsPage() {
     setEditStatus(campaign.status);
     setEditStartDate(campaign.start_date);
     setEditEndDate(campaign.end_date || "");
-    setEditCommType(campaign.commission_type);
-    setEditCommValue(String(campaign.commission_value));
-    setEditBudgetCap(campaign.budget_cap_cents ? String(campaign.budget_cap_cents / 100) : "");
     setEditOpen(true);
   }
 
@@ -273,8 +258,6 @@ export default function AdminCampaignsPage() {
       body: JSON.stringify({
         name: editName, description: editDesc, status: editStatus,
         start_date: editStartDate, end_date: editEndDate || undefined,
-        commission_type: editCommType, commission_value: parseFloat(editCommValue) || 0,
-        budget_cap_cents: editBudgetCap ? parseInt(editBudgetCap, 10) * 100 : null,
       }),
     });
     if (res.ok) {
@@ -358,23 +341,6 @@ export default function AdminCampaignsPage() {
                     <Input type="date" value={formEndDate} onChange={(e) => setFormEndDate(e.target.value)} />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Commission Type</Label>
-                    <select className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm" value={formCommType} onChange={(e) => setFormCommType(e.target.value)}>
-                      <option value="percentage">Percentage</option>
-                      <option value="fixed">Fixed amount</option>
-                    </select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>{formCommType === "percentage" ? "Commission %" : "Fixed ($)"}</Label>
-                    <Input type="number" min="0" value={formCommValue} onChange={(e) => setFormCommValue(e.target.value)} />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label>Budget Cap ($, optional)</Label>
-                  <Input type="number" min="0" value={formBudgetCap} onChange={(e) => setFormBudgetCap(e.target.value)} />
-                </div>
                 <div className="space-y-2">
                   <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">UTM Parameters</Label>
                   <div className="grid grid-cols-3 gap-2">
@@ -439,10 +405,9 @@ export default function AdminCampaignsPage() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All statuses</SelectItem>
-            <SelectItem value="draft">Draft</SelectItem>
             <SelectItem value="active">Active</SelectItem>
             <SelectItem value="paused">Paused</SelectItem>
-            <SelectItem value="completed">Completed</SelectItem>
+            <SelectItem value="archived">Archived</SelectItem>
             <SelectItem value="expired">Expired</SelectItem>
           </SelectContent>
         </Select>
@@ -495,9 +460,6 @@ export default function AdminCampaignsPage() {
               <TableHead>
                 <SortHeader label="End Date" column="end_date" currentSort={currentSort} currentDir={currentDir} onSort={handleSort} />
               </TableHead>
-              <TableHead>
-                <SortHeader label="Commission" column="commission_value" currentSort={currentSort} currentDir={currentDir} onSort={handleSort} />
-              </TableHead>
               <TableHead className="text-center">Affiliates</TableHead>
               <TableHead className="text-center">Conversions</TableHead>
               <TableHead className="text-right">Spent / Budget</TableHead>
@@ -508,7 +470,7 @@ export default function AdminCampaignsPage() {
             {loading ? (
               Array.from({ length: pageSize }).map((_, i) => (
                 <TableRow key={i}>
-                  {Array.from({ length: 12 }).map((__, j) => (
+                  {Array.from({ length: 11 }).map((__, j) => (
                     <TableCell key={j}>
                       <div className="h-4 bg-muted animate-pulse rounded w-full" />
                     </TableCell>
@@ -554,11 +516,6 @@ export default function AdminCampaignsPage() {
                   </TableCell>
                   <TableCell className="text-sm">{fmtDate(c.start_date)}</TableCell>
                   <TableCell className="text-sm">{c.end_date ? fmtDate(c.end_date) : <span className="text-muted-foreground">—</span>}</TableCell>
-                  <TableCell>
-                    {c.commission_type === "percentage"
-                      ? `${c.commission_value}%`
-                      : `$${Number(c.commission_value).toFixed(2)}`}
-                  </TableCell>
                   <TableCell className="text-center">{c.affiliates_count}</TableCell>
                   <TableCell className="text-center">{c.conversions_count}</TableCell>
                   <TableCell className="text-right text-sm">
@@ -617,10 +574,9 @@ export default function AdminCampaignsPage() {
             <div className="space-y-2">
               <Label>Status</Label>
               <select className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm" value={editStatus} onChange={(e) => setEditStatus(e.target.value)}>
-                <option value="draft">Draft</option>
                 <option value="active">Active</option>
                 <option value="paused">Paused</option>
-                <option value="completed">Completed</option>
+                <option value="archived">Archived</option>
                 <option value="expired">Expired</option>
               </select>
             </div>
@@ -633,23 +589,6 @@ export default function AdminCampaignsPage() {
                 <Label>End Date</Label>
                 <Input type="date" value={editEndDate} onChange={(e) => setEditEndDate(e.target.value)} />
               </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Commission Type</Label>
-                <select className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm" value={editCommType} onChange={(e) => setEditCommType(e.target.value)}>
-                  <option value="percentage">Percentage</option>
-                  <option value="fixed">Fixed</option>
-                </select>
-              </div>
-              <div className="space-y-2">
-                <Label>{editCommType === "percentage" ? "Commission %" : "Fixed ($)"}</Label>
-                <Input type="number" min="0" value={editCommValue} onChange={(e) => setEditCommValue(e.target.value)} />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>Budget Cap ($)</Label>
-              <Input type="number" min="0" value={editBudgetCap} onChange={(e) => setEditBudgetCap(e.target.value)} placeholder="Unlimited" />
             </div>
           </div>
           <DialogFooter>

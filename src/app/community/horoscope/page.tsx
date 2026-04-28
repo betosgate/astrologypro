@@ -15,7 +15,12 @@ import { SectionContainer } from "@/components/shared/section-container";
 import { HoroscopeToolkitPage } from "@/app/admin/horoscope/page";
 import { buildToolkitPrefillForm } from "@/lib/horoscope-toolkit-prefill";
 import { createClient } from "@/lib/supabase/server";
-import { resolveUserBirthData } from "@/lib/community/birth-data-resolver";
+import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  findOrCreateSelfFamilyMember,
+  resolveUserBirthData,
+} from "@/lib/community/birth-data-resolver";
+import { loadLinkedNatalReport } from "@/lib/community/saved-report-link";
 
 /**
  * Community self-natal chart route.
@@ -179,6 +184,33 @@ export default async function CommunityNativityChartPage() {
     );
   }
 
+  const { id: selfFamilyMemberId } = await findOrCreateSelfFamilyMember(
+    supabase,
+    user.id,
+    member.id,
+    {
+      fullName: resolved.fullName ?? member.full_name ?? "Self",
+      dateOfBirth: resolved.dateOfBirth!,
+      birthTime: resolved.birthTime,
+      birthCity: resolved.birthCity,
+      birthCountry: resolved.birthCountry,
+      birthLat: resolved.birthLat ?? prefill.person1.city.lat,
+      birthLng: resolved.birthLng ?? prefill.person1.city.lng,
+    },
+  );
+  const admin = createAdminClient();
+  const { data: selfFamilyMember } = await admin
+    .from("community_family_members")
+    .select(
+      "id, member_id, natal_report_id",
+    )
+    .eq("id", selfFamilyMemberId)
+    .eq("member_id", member.id)
+    .maybeSingle();
+  const savedNatalReport = selfFamilyMember?.natal_report_id
+    ? await loadLinkedNatalReport(selfFamilyMemberId)
+    : null;
+
   return (
     <div className="space-y-4">
       {header}
@@ -186,7 +218,9 @@ export default async function CommunityNativityChartPage() {
         basePath="/community/horoscope"
         allowedSlugs={[NATAL_TAB_SLUG]}
         initialPrefill={encodeURIComponent(JSON.stringify(prefill))}
+        initialSavedReport={savedNatalReport}
         readOnlyBirthData={true}
+        communityNatalFamilyMemberId={selfFamilyMemberId}
       />
     </div>
   );
