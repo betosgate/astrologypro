@@ -5,7 +5,11 @@ import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import { RitualPlaylistPlayer } from "@/components/community/ritual-playlist-player";
 import { buildRitualPlaylist } from "@/lib/community/ritual-video-map";
-import { resolveAssetsForTags } from "@/lib/community/ritual-asset-resolver";
+import {
+  resolveAssetsForTags,
+  resolveFinalOverrideForRitual,
+  listPublishedRitualDefinitions,
+} from "@/lib/community/ritual-asset-resolver";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Begin the Ritual" };
@@ -74,6 +78,69 @@ export default async function CommunityRitualPlaybackPage({
     ? (ritual.ritual_tags as string[])
     : [];
 
+  // ── Match this user-ritual to an admin ritual_definitions row ────────
+  //
+  // user_ritual_configurations doesn't yet carry a ritual_definition_id
+  // FK (the user-side ritual builder pre-dates the admin definitions).
+  // We map by title match against the published definitions list — the
+  // four seeded definitions use the same title strings the user-side
+  // builder writes for the 3 static rituals + the dynamic planetary
+  // ritual. When a match is found we get final-override resolution and
+  // can pass the definition id to the per-ritual mapping resolver.
+  let matchedDefinitionId: string | null = null;
+  try {
+    const definitions = await listPublishedRitualDefinitions();
+    const wantedTitle = (ritual.ritual_name ?? "").trim().toLowerCase();
+    const matched = definitions.find(
+      (d) => d.title.trim().toLowerCase() === wantedTitle
+    );
+    if (matched) matchedDefinitionId = matched.id;
+  } catch {
+    /* non-fatal */
+  }
+
+  // ── Final-override branch (Task 04 spec section 5) ───────────────────
+  //
+  // If the matched definition has final_override_enabled + a valid
+  // override asset, render a single-item playlist using that one video
+  // and bypass the generated step playback entirely.
+  let overrideAsset: Awaited<ReturnType<typeof resolveFinalOverrideForRitual>> | null = null;
+  if (matchedDefinitionId) {
+    try {
+      overrideAsset = await resolveFinalOverrideForRitual(matchedDefinitionId);
+    } catch (err) {
+      console.warn(
+        "[community/rituals/playback] final-override resolution failed:",
+        err instanceof Error ? err.message : err
+      );
+      /* fall through to playlist mode */
+    }
+  }
+
+  if (overrideAsset) {
+    const overridePlaylist = [
+      {
+        tag: "Final_Override",
+        title: overrideAsset.title ?? ritual.ritual_name,
+        videoUrl: overrideAsset.url,
+        filename: null,
+        sequence: 1,
+        kind: "static" as const,
+        missing: false,
+      },
+    ];
+    return (
+      <div className="space-y-4">
+        <RitualPlaylistPlayer
+          ritualId={ritual.id}
+          ritualName={ritual.ritual_name}
+          playlist={overridePlaylist}
+          initialHighestStepIndex={0}
+        />
+      </div>
+    );
+  }
+
   // Build the playlist via the canonical ordering helper (still
   // code-managed — preserves the planet/zodiac sequencing rules per the
   // spec direction "keep in code"). Then re-point each item's URL via
@@ -83,13 +150,15 @@ export default async function CommunityRitualPlaybackPage({
   const playlist = buildRitualPlaylist(tags);
 
   // community-ritual-admin-config (2026-04-27):
-  // Resolve every tag through the DB-first asset resolver. Per-ritual
-  // overrides aren't wired yet (the user_ritual_configurations row has
-  // no ritual_definition_id today); the resolver falls back to global
-  // mapping → code map automatically.
+  // Resolve every tag through the DB-first asset resolver, scoped by
+  // the matched ritual_definition_id when we have one. Per-ritual
+  // overrides take precedence over global mappings → code map fallback.
   if (playlist.length > 0) {
     try {
-      const resolved = await resolveAssetsForTags(playlist.map((p) => p.tag));
+      const resolved = await resolveAssetsForTags(
+        playlist.map((p) => p.tag),
+        matchedDefinitionId
+      );
       for (const item of playlist) {
         const hit = resolved.get(item.tag);
         if (hit) {
@@ -99,8 +168,6 @@ export default async function CommunityRitualPlaybackPage({
         }
       }
     } catch (err) {
-      // Resolver failures are non-fatal — the playlist already has the
-      // hardcoded fallback URLs from buildRitualPlaylist. Log and move on.
       console.warn(
         "[community/rituals/playback] asset resolver failed:",
         err instanceof Error ? err.message : err
