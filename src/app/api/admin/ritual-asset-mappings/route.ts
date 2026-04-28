@@ -21,15 +21,20 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const scope = searchParams.get("scope");
   const ritualDefinitionId = searchParams.get("ritualDefinitionId");
+  const q_tag = searchParams.get("q_tag");
+  const asset_id = searchParams.get("asset_id");
+  const active = searchParams.get("active");
+  const page = parseInt(searchParams.get("page") ?? "1", 10);
+  const pageSize = parseInt(searchParams.get("pageSize") ?? "10", 10);
 
   const admin = createAdminClient();
   let query = admin
     .from("ritual_asset_mappings")
     .select(
       `*,
-       asset:ritual_media_assets(id, asset_key, title, source_type, storage_path, external_url, is_active, is_published)`
-    )
-    .order("tag_key", { ascending: true });
+       asset:ritual_media_assets(id, asset_key, title, source_type, storage_path, external_url, is_active, is_published)`,
+      { count: "exact" }
+    );
 
   if (scope === "global" || scope === "ritual_definition") {
     query = query.eq("mapping_scope", scope);
@@ -37,10 +42,32 @@ export async function GET(req: NextRequest) {
   if (ritualDefinitionId) {
     query = query.eq("ritual_definition_id", ritualDefinitionId);
   }
+  if (q_tag?.trim()) {
+    query = query.ilike("tag_key", `%${q_tag.trim()}%`);
+  }
+  if (asset_id) {
+    query = query.eq("asset_id", asset_id);
+  }
+  if (active === "true") {
+    query = query.eq("is_active", true);
+  } else if (active === "false") {
+    query = query.eq("is_active", false);
+  }
 
-  const { data, error } = await query;
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
+  const { data, count, error } = await query
+    .order("tag_key", { ascending: true })
+    .range(from, to);
+
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json(data ?? []);
+  return NextResponse.json({
+    items: data ?? [],
+    total: count ?? 0,
+    page,
+    pageSize,
+  });
 }
 
 /**
