@@ -27,6 +27,12 @@ async function getMember(supabase: Awaited<ReturnType<typeof createClient>>) {
 /**
  * GET /api/community/relationship-charts
  * Returns all relationship charts + family members for the current member.
+ *
+ * Also (additive) returns the saved-report lifecycle rows from
+ * `community_relationship_reports` so the list page can render per-type
+ * Generate/View/Regenerate/Retry CTAs without an extra round trip. The
+ * existing `familyMembers` and `charts` fields are unchanged so any old
+ * caller keeps working.
  */
 export async function GET() {
   const supabase = await createClient();
@@ -48,9 +54,20 @@ export async function GET() {
     .select("id, person_a_id, person_b_id, chart_data, generated_at")
     .eq("member_id", member.id);
 
+  // Fetch saved-report lifecycle rows for this member.
+  // The page maps these by (sorted pair, report_type) and feeds them
+  // into deriveRelationshipReportState() to drive the CTA per type.
+  const { data: relationshipReports } = await supabase
+    .from("community_relationship_reports")
+    .select(
+      "person_a_id, person_b_id, report_type, astro_ai_response_id, report_status, invalidated_at, generated_at"
+    )
+    .eq("member_id", member.id);
+
   return NextResponse.json({
     familyMembers: familyMembers ?? [],
     charts: charts ?? [],
+    relationshipReports: relationshipReports ?? [],
   });
 }
 
