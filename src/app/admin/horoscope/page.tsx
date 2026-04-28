@@ -4060,15 +4060,15 @@ export function HoroscopeToolkitPage({
                     )}
                   </Button>
                 ) : (
-                  <Button
-                    type="submit"
-                    disabled={loading || !isFormValid || readOnlyBirthData}
-                    className={cn(
-                      "w-full md:w-auto h-10 px-8 font-semibold transition-all shadow-md",
-                      loading || !isFormValid || readOnlyBirthData
-                        ? "bg-muted text-muted-foreground cursor-not-allowed opacity-70"
-                        : "bg-amber-500 hover:bg-amber-600 text-white hover:shadow-lg active:scale-95"
-                    )}
+	                  <Button
+	                    type="submit"
+	                    disabled={loading || !isFormValid}
+	                    className={cn(
+	                      "w-full md:w-auto h-10 px-8 font-semibold transition-all shadow-md",
+	                      loading || !isFormValid
+	                        ? "bg-muted text-muted-foreground cursor-not-allowed opacity-70"
+	                        : "bg-amber-500 hover:bg-amber-600 text-white hover:shadow-lg active:scale-95"
+	                    )}
                   >
                     {loading ? (
                       <>
