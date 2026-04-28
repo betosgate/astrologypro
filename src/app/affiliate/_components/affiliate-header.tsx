@@ -44,10 +44,12 @@ export function AffiliateHeader({
   accountName,
   accountEmail,
   avatarUrl,
+  showNavigation = true,
 }: {
   accountName: string;
   accountEmail: string;
   avatarUrl: string | null;
+  showNavigation?: boolean;
 }) {
   const pathname = usePathname();
   return (
@@ -60,28 +62,30 @@ export function AffiliateHeader({
               Affiliate Portal
             </span>
           </Link>
-          <nav aria-label="Affiliate navigation" className="hidden gap-1 sm:flex">
-            {navItems.map(({ href, label, icon: Icon, exact }) => {
-              const isActive = exact
-                ? pathname === href
-                : pathname === href || pathname.startsWith(href + "/");
-              return (
-                <Link
-                  key={href}
-                  href={href}
-                  className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-                    isActive
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                  }`}
-                  aria-current={isActive ? "page" : undefined}
-                >
-                  <Icon className="size-3.5" aria-hidden />
-                  {label}
-                </Link>
-              );
-            })}
-          </nav>
+          {showNavigation && (
+            <nav aria-label="Affiliate navigation" className="hidden gap-1 sm:flex">
+              {navItems.map(({ href, label, icon: Icon, exact }) => {
+                const isActive = exact
+                  ? pathname === href
+                  : pathname === href || pathname.startsWith(href + "/");
+                return (
+                  <Link
+                    key={href}
+                    href={href}
+                    className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                      isActive
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    }`}
+                    aria-current={isActive ? "page" : undefined}
+                  >
+                    <Icon className="size-3.5" aria-hidden />
+                    {label}
+                  </Link>
+                );
+              })}
+            </nav>
+          )}
         </div>
         <div className="flex items-center gap-3">
           <div className="hidden items-center gap-2 text-right sm:flex">

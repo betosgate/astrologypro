@@ -68,3 +68,11 @@ export async function callDecanLookup(signs: string, planet: string) {
   }
   return json as { results: DecanRow[] };
 }
+export async function saveAstroAiResponse(payload: Record<string, unknown>) {
+  const r = await fetch("/api/astro-ai/save-astro-ai-response", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+  return r.json();
+}

@@ -32,6 +32,7 @@ interface SubmissionSummary {
 
 interface SharedTemplateCalendarProps {
   templateSlug: string;
+  availabilitySlug?: string;
   templateName: string;
   templateCategory: "astrology" | "tarot";
   submissionId: string | null;
@@ -74,6 +75,7 @@ interface AvailableSlotGroup {
 
 export function SharedTemplateCalendar({
   templateSlug,
+  availabilitySlug,
   templateName,
   templateCategory,
   submissionId,
@@ -110,6 +112,7 @@ export function SharedTemplateCalendar({
     null,
   );
   const dateFetchRef = useRef<AbortController | null>(null);
+  const resolvedAvailabilitySlug = availabilitySlug ?? templateSlug;
 
   const submissionQuery = useMemo(
     () =>
@@ -144,7 +147,7 @@ export function SharedTemplateCalendar({
       try {
         const monthKey = format(currentMonth, "yyyy-MM");
         const url =
-          `/api/services/${encodeURIComponent(templateSlug)}/template-availability/month` +
+          `/api/services/${encodeURIComponent(resolvedAvailabilitySlug)}/template-availability/month` +
           `?month=${monthKey}${submissionQuery}`;
         const res = await fetch(url, { signal: controller.signal });
         if (!res.ok) {
@@ -189,7 +192,7 @@ export function SharedTemplateCalendar({
         monthOverlayTimeoutRef.current = null;
       }
     };
-  }, [currentMonth, submissionQuery, templateSlug]);
+  }, [currentMonth, resolvedAvailabilitySlug, submissionQuery]);
 
   // ── Resolve available diviners whenever the user picks a date ─────────────
   const resolveDate = useCallback(
@@ -203,7 +206,7 @@ export function SharedTemplateCalendar({
       try {
         const dateStr = format(date, "yyyy-MM-dd");
         const url =
-          `/api/services/${encodeURIComponent(templateSlug)}/template-availability` +
+          `/api/services/${encodeURIComponent(resolvedAvailabilitySlug)}/template-availability` +
           `?date=${dateStr}${submissionQuery}`;
         const res = await fetch(url, { signal: controller.signal });
         if (!res.ok) {
@@ -228,7 +231,7 @@ export function SharedTemplateCalendar({
         setDateLoading(false);
       }
     },
-    [submissionQuery, templateSlug],
+    [resolvedAvailabilitySlug, submissionQuery],
   );
 
   function onSelectDate(date: Date | undefined) {
