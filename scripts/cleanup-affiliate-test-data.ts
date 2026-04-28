@@ -287,6 +287,20 @@ async function main() {
     );
   }
 
+  // Order matters: affiliate-owned campaigns must go BEFORE their source
+  // assignments. The assignment row has ON DELETE SET NULL on its
+  // affiliate_campaigns reference, but the
+  // affiliate_campaigns_owner_consistency CHECK requires
+  // source_assignment_id NOT NULL on owner_type='affiliate' rows. So
+  // setting the FK to NULL trips the constraint. Delete campaigns first.
+  if (campaignIds.length) {
+    await countAndMaybeDelete(
+      "affiliate_campaigns",
+      async () => sr.from("affiliate_campaigns").select("id").in("id", campaignIds),
+      async () => sr.from("affiliate_campaigns").delete().in("id", campaignIds),
+    );
+  }
+
   if (assignmentIds.length) {
     await countAndMaybeDelete(
       "diviner_service_affiliate_rate_history",
@@ -305,14 +319,6 @@ async function main() {
       "diviner_service_affiliates",
       async () => sr.from("diviner_service_affiliates").select("id").in("id", assignmentIds),
       async () => sr.from("diviner_service_affiliates").delete().in("id", assignmentIds),
-    );
-  }
-
-  if (campaignIds.length) {
-    await countAndMaybeDelete(
-      "affiliate_campaigns",
-      async () => sr.from("affiliate_campaigns").select("id").in("id", campaignIds),
-      async () => sr.from("affiliate_campaigns").delete().in("id", campaignIds),
     );
   }
 
