@@ -4,7 +4,13 @@ import { useState } from "react";
 
 interface Props {
   divinerUsername: string;
-  divinerId: string;
+  /**
+   * Currently unused inside the form (it POSTs by username), but kept
+   * optional for callers that already have it on hand. Removed required
+   * status so callers (e.g. the in-session end screen) that only know
+   * the username don't have to pass a placeholder.
+   */
+  divinerId?: string;
   divinerName: string;
 }
 

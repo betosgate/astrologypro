@@ -5,7 +5,11 @@ import { TestimonialForm } from "./testimonial-form";
 
 interface Props {
   divinerUsername: string;
-  divinerId: string;
+  /**
+   * Optional — see note in TestimonialForm. Forwarded straight through
+   * for callers that still pass it.
+   */
+  divinerId?: string;
   divinerName: string;
 }
 
