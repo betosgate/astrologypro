@@ -3780,9 +3780,19 @@ export function HoroscopeToolkitPage({
         const formDataPayload = isTwoPerson ? {
           self: { ...form.person1, ...birth1 },
           partner: { ...form.person2, ...birth2 },
+          question: form.question,
+          areaOfInquiry: form.areaOfInquiry,
+          area_of_inquiry: form.areaOfInquiry, // mapping both for compatibility
+          futureWeek: form.futureWeek,
+          futureMonth: form.futureMonth,
         } : {
           ...form.person1,
           ...birth1,
+          question: form.question,
+          areaOfInquiry: form.areaOfInquiry,
+          area_of_inquiry: form.areaOfInquiry, // mapping both for compatibility
+          futureWeek: form.futureWeek,
+          futureMonth: form.futureMonth,
         };
         const astroApiDataPayload = isTwoPerson ? {
           synastry: collected.synastry ?? {},

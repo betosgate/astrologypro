@@ -57,7 +57,7 @@ export async function GET(req: NextRequest) {
   let query = admin
     .from("services")
     .select(
-      "id, name, slug, category, description, duration_minutes, base_price, is_active, is_featured, is_primary, requires_birth_data, sort_order, intake_template_id, created_at",
+      "id, template_id, name, slug, category, description, duration_minutes, base_price, is_active, is_featured, is_primary, requires_birth_data, sort_order, intake_template_id, created_at",
       { count: "exact" },
     )
     .eq("diviner_id", diviner.id);

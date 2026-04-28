@@ -273,7 +273,7 @@ export async function POST(req: NextRequest) {
       .from("diviner_services")
       .select("id, is_enabled")
       .eq("diviner_id", diviner.id)
-      .eq("service_template_id", destinationId!)
+      .eq("template_id", destinationId!)
       .maybeSingle();
     if (!divService || divService.is_enabled === false) {
       return NextResponse.json(
