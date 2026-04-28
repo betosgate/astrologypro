@@ -25,6 +25,7 @@ import {
   X,
 } from "lucide-react";
 import { formatDate } from "@/lib/format";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { buildRitualPlaylist } from "@/lib/community/ritual-video-map";
 
 type RitualRow = {
@@ -66,6 +67,7 @@ export default function CommunityRitualsPage() {
   const [hasMore, setHasMore] = useState(false);
   const [totalCount, setTotalCount] = useState(0);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [ritualToDelete, setRitualToDelete] = useState<{ id: string; name: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectedRitualName, setSelectedRitualName] = useState("all");
   const [selectedStatus, setSelectedStatus] =
@@ -204,13 +206,13 @@ export default function CommunityRitualsPage() {
     return () => observer.disconnect();
   }, [fetchPage, hasMore, loadingInitial]);
 
-  async function handleDelete(id: string, name: string) {
-    if (!window.confirm(`Delete ritual "${name}"? This cannot be undone.`)) {
-      return;
-    }
+  async function performDelete() {
+    if (!ritualToDelete) return;
+    const { id } = ritualToDelete;
 
     setDeleting(id);
     setError(null);
+    setRitualToDelete(null);
 
     const response = await fetch(`/api/community/rituals/${id}`, {
       method: "DELETE",
@@ -545,7 +547,7 @@ export default function CommunityRitualsPage() {
                       variant="ghost"
                       className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                       disabled={deleting === ritual.id}
-                      onClick={() => handleDelete(ritual.id, ritual.ritual_name)}
+                      onClick={() => setRitualToDelete({ id: ritual.id, name: ritual.ritual_name })}
                       aria-label={`Delete ritual ${ritual.ritual_name}`}
                     >
                       {deleting === ritual.id ? (
@@ -594,6 +596,16 @@ export default function CommunityRitualsPage() {
           )}
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!ritualToDelete}
+        onOpenChange={(open) => !open && setRitualToDelete(null)}
+        title="Delete Ritual"
+        description={`Are you sure you want to delete "${ritualToDelete?.name}"? This action cannot be undone.`}
+        confirmLabel="Delete"
+        onConfirm={performDelete}
+        variant="destructive"
+      />
     </div>
   );
 }

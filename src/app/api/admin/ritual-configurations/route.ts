@@ -26,8 +26,13 @@ export async function GET(req: NextRequest) {
     .select(
       `*,
        final_override_asset:ritual_media_assets(id, asset_key, title, source_type, storage_path, external_url, is_active, is_published)`
-    )
-    .is("archived_at", null);
+    );
+
+  if (status === "archived") {
+    query = query.not("archived_at", "is", null);
+  } else {
+    query = query.is("archived_at", null);
+  }
 
   if (q?.trim()) {
     query = query.or(`title.ilike.%${q.trim()}%,key.ilike.%${q.trim()}%`);
