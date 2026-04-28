@@ -6077,12 +6077,247 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
       { name: "email_preview", label: "Email Preview", description: "Visual designer and test environment for system templates.", group: "Email" },
 
       // Engagement & Testimonials
-      { name: "giveaways", label: "Giveaway Engine", description: "Management of community prize draws.", group: "Engagement" },
-      { name: "testimonials_list", label: "Testimonials List", description: "Moderation of user feedback and ratings.", group: "Manage Testimonial" },
-      { name: "request_testimonial", label: "Request Testimonial", description: "Automated triggers for post-reading feedback.", group: "Manage Testimonial" },
+      
+  {
+    name: "giveaways_list_v1",
+    label: "Giveaway Engine",
+    description: "Management of community prize draws.",
+    group: "Engagement",
+    purpose: "Allows administrators to manage platform giveaways, monitor giveaway status, review entries, track winners, and control prize draw activity across diviners.",
+    bullets: [
+      "Displays all giveaway campaigns in a structured table with title, diviner, current status, entry count, winner count, end date, and available actions.",
+      "Supports giveaway status tabs including All, Draft, Active, Ended, and Cancelled so admins can quickly filter campaigns by lifecycle stage.",
+      "Tracks entries against maximum entry limits, helping administrators monitor participation volume and giveaway capacity in real time.",
+      "Shows winner progress such as selected winners versus required winner count, making prize fulfillment and draw completion easier to manage.",
+      "Provides action controls for viewing, launching, exporting, or managing giveaway records depending on giveaway status and availability.",
+      "Helps engagement teams organize promotional prize campaigns, diviner-led giveaways, community rewards, and seasonal audience activation events."
+    ]
+  },
+  {
+    name: "giveaways_create",
+    label: "New Giveaway",
+    description: "Giveaway creation form for configuring prize draws.",
+    group: "Engagement",
+    purpose: "Allows administrators to create new giveaway campaigns by assigning a diviner, defining prize details, setting entry rules, and configuring giveaway timing.",
+    bullets: [
+      "Provides a modal-based creation workflow for setting up a new giveaway without leaving the giveaway management screen.",
+      "Requires diviner assignment so each giveaway can be connected to a specific provider, reader, or platform personality.",
+      "Captures giveaway title, optional description, and prize description to clearly communicate what the campaign offers to participants.",
+      "Supports configurable entry fields, with name and email included by default, so admins can collect the information needed for participation and follow-up.",
+      "Includes start and end date-time controls to schedule giveaway availability and automate campaign lifecycle timing.",
+      "Allows administrators to define maximum entry limits and winner count, supporting both limited-entry campaigns and single or multi-winner prize draws."
+    ]
+  },
+  {
+    name: "giveaways_draft",
+    label: "Draft Giveaways",
+    description: "Unpublished giveaway campaigns prepared for future launch.",
+    group: "Engagement",
+    purpose: "Helps administrators review giveaways that have been created but not yet activated or opened for public participation.",
+    bullets: [
+      "Lists giveaway campaigns currently saved as drafts, including title, assigned diviner, entry count, winner count, and scheduled end date.",
+      "Shows draft giveaways before they become active so admins can verify campaign details, prize descriptions, timing, and participation setup.",
+      "Displays zero-entry draft campaigns clearly, helping teams distinguish unpublished campaigns from live audience-facing giveaways.",
+      "Keeps upcoming prize campaigns organized while allowing administrators to prepare seasonal, astrology-themed, or diviner-specific promotions in advance.",
+      "Provides action controls for draft records so admins can continue setup, export details, or prepare campaigns for publishing.",
+      "Supports internal planning workflows where promotional campaigns are staged and reviewed before being made available to the community."
+    ]
+  },
+  {
+    name: "giveaways_active",
+    label: "Active Giveaways",
+    description: "Live giveaway campaigns currently accepting participant entries.",
+    group: "Engagement",
+    purpose: "Monitors active prize draws, participation counts, winner requirements, and active campaign performance while giveaways are open.",
+    bullets: [
+      "Displays all active giveaway campaigns that are currently available for users to enter or participate in.",
+      "Tracks live entry counts against configured maximum entry limits, such as 7 of 150 or 12 of 200, to monitor participation progress.",
+      "Shows assigned diviner information so admins can identify which provider or campaign owner is connected to each active giveaway.",
+      "Displays winner allocation progress, including selected winners versus total required winners, to support draw completion planning.",
+      "Includes end-date visibility for time-sensitive campaigns so administrators can track deadlines and upcoming giveaway closures.",
+      "Provides action controls for active campaigns, including public view or external access actions and export/download options where available."
+    ]
+  },
+  {
+    name: "giveaways_ended",
+    label: "Ended Giveaways",
+    description: "Completed giveaway campaigns with finalized entry and winner activity.",
+    group: "Engagement",
+    purpose: "Provides administrators with a historical view of completed giveaway campaigns, winner selection progress, and finalized prize draw records.",
+    bullets: [
+      "Lists giveaway campaigns that have ended, including final entry totals, winner counts, assigned diviner, and campaign end date.",
+      "Shows completed giveaway status to separate archived campaigns from live or draft promotional activity.",
+      "Tracks final winner fulfillment progress, such as 1 of 1 winners selected, to confirm campaign completion.",
+      "Preserves historical prize campaign data for reporting, auditing, marketing review, and engagement performance analysis.",
+      "Displays ended campaign descriptions and prize summaries so administrators can understand what each completed giveaway offered.",
+      "Provides download or export actions for ended giveaway records to support winner review, participant lists, or internal documentation."
+    ]
+  },
+  {
+    name: "giveaways_cancelled",
+    label: "Cancelled Giveaways",
+    description: "Cancelled giveaway campaigns and empty-state management.",
+    group: "Engagement",
+    purpose: "Allows administrators to review cancelled giveaway campaigns or create a new giveaway when no cancelled records exist.",
+    bullets: [
+      "Displays cancelled giveaway records separately from active, draft, and ended campaigns for clean campaign lifecycle management.",
+      "Shows an empty-state message when no cancelled giveaways are found, helping admins understand that no campaigns match the selected filter.",
+      "Provides a direct call-to-action to create the first giveaway when the current filtered view has no available records.",
+      "Keeps cancelled promotions isolated from successful or active campaigns to avoid confusion during campaign review.",
+      "Supports administrative cleanup by making it easy to identify campaigns that were stopped, removed, or never completed.",
+      "Maintains consistent giveaway navigation and management actions across all status tabs, including cancelled and empty-state views."
+    ]
+  },
+    
+      // -------------Testimonials----------------//
+  {
+    name: "testimonials_list_v1",
+    label: "Testimonials List",
+    description: "Moderation of user feedback, ratings, client testimonials, and featured review visibility.",
+    group: "Manage Testimonial",
+    purpose: "Provides administrators with a centralized testimonial management table for reviewing, searching, approving, featuring, and organizing customer feedback submitted for diviners.",
+    bullets: [
+      "Displays all testimonial records with client name, client email, phone number, assigned diviner, approval status, featured flag, and created date for easy administrative review.",
+      "Supports advanced filtering by title, client name, approval status, and created date range to quickly locate specific testimonials across large feedback volumes.",
+      "Allows administrators to refresh testimonial records, add new testimonials manually, and manage individual testimonial actions from the table menu.",
+      "Includes pagination and result counts so teams can review large testimonial datasets in an organized and scalable way.",
+      "Shows approved and featured testimonial indicators to help admins control which client feedback appears publicly or receives priority placement.",
+      "Supports sorting across key columns such as title, client email, client name, status, and created date for faster moderation workflows."
+    ]
+  },
+  {
+    name: "testimonials_add",
+    label: "Add Testimonial",
+    description: "Manual testimonial creation form with customer, diviner, rating, and media details.",
+    group: "Manage Testimonial",
+    purpose: "Allows administrators to manually create testimonial records, assign them to diviners, add ratings, manage visibility, and attach supporting media assets.",
+    bullets: [
+      "Provides structured testimonial content fields including title, star rating, and feedback content so admins can capture complete customer review details.",
+      "Allows testimonial attribution to a specific customer and assigned diviner, including customer name, optional email, phone number, and service type.",
+      "Supports visibility controls such as Published & Active and Featured to determine whether the testimonial is displayed publicly or promoted at the top of testimonial lists.",
+      "Includes media asset upload sections for supporting images, audio recordings, and video testimonials to enrich customer feedback records.",
+      "Separates testimonial content, customer information, service details, and media uploads into clear form sections for easier data entry.",
+      "Includes cancel and save actions so administrators can safely review or discard testimonial entries before submission."
+    ]
+  },
+  {
+    name: "testimonial_requests_list_v1",
+    label: "Testimonial Requests",
+    description: "Request tracking table for testimonial invitations sent to customers.",
+    group: "Manage Testimonial",
+    purpose: "Helps administrators manage testimonial request outreach, monitor request status, and track customer response activity.",
+    bullets: [
+      "Displays all testimonial requests with requested customer name, email address, internal notes, created date, updated date, and current request status.",
+      "Supports searching by customer name and email to quickly locate individual testimonial request records.",
+      "Includes status filtering and submitted or updated date-range filters to review pending, completed, or historical testimonial requests.",
+      "Provides refresh and new request actions so administrators can update request data or send new testimonial invitations.",
+      "Shows pagination controls and page-size selection to manage request lists efficiently as testimonial outreach volume grows.",
+      "Tracks pending request status to help teams follow up with customers who have not yet submitted testimonial feedback."
+    ]
+  },
+  {
+    name: "testimonial_request_create",
+    label: "Request Testimonial",
+    description: "Customer testimonial request form for sending feedback invitations.",
+    group: "Manage Testimonial",
+    purpose: "Allows administrators to send testimonial requests to customers and optionally associate each request with a diviner for follow-up and attribution.",
+    bullets: [
+      "Captures required customer details such as customer name and email address for sending testimonial request invitations.",
+      "Supports optional phone number entry and optional diviner assignment to connect the request with a specific service provider.",
+      "Includes an internal notes field where admins can record context, instructions, or follow-up information related to the request.",
+      "Provides a clean request workflow with cancel and send actions so administrators can review the invitation before submitting it.",
+      "Helps standardize testimonial collection by creating a formal request record before customer feedback is received.",
+      "Supports relationship tracking between customers, diviners, and testimonial outreach activity for better moderation and reporting."
+    ]
+  },
 
-      // Support
-      { name: "sla_dashboard", label: "SLA Dashboard", description: "Monitoring system speed and ticket response times.", group: "Support" },
+
+      //--------------- Support---------------//
+     
+  {
+    name: "support_tickets_management",
+    label: "Tickets Management",
+    description: "Centralized support ticket management and customer issue tracking system.",
+    group: "Support",
+    purpose: "Provides administrators and support teams with a unified workspace for managing customer support tickets, SLA monitoring, ticket assignment, and operational issue resolution workflows.",
+    bullets: [
+      "Displays all customer support tickets in a searchable and filterable ticket management table with ticket number, subject, requester details, status, priority level, queue assignment, SLA condition, and creation date.",
+      
+      "Supports advanced filtering by ticket status, request type, priority level, queue ownership, SLA risk category, and date range to streamline operational ticket review and support workflows.",
+      
+      "Allows administrators to identify open, unassigned, at-risk, resolved, and in-progress tickets in real time for faster customer issue resolution and workload balancing.",
+      
+      "Includes bulk-selection capabilities and ticket search tools to simplify large-scale ticket operations, support auditing, and administrative management tasks.",
+      
+      "Tracks ticket categories such as payments, bookings, courses, and platform support requests, helping teams organize customer issues based on operational departments.",
+      
+      "Provides quick-access actions for creating new support tickets, routing requests to teams, and managing customer communication workflows from a centralized interface."
+    ]
+  },
+
+  {
+    name: "support_sla_dashboard",
+    label: "SLA Dashboard",
+    description: "Real-time SLA monitoring and ticket compliance reporting dashboard.",
+    group: "Support",
+    purpose: "Monitors active support tickets against SLA response and resolution targets to help teams identify breached, at-risk, and compliant support requests.",
+    bullets: [
+      "Provides real-time SLA posture monitoring across all active support tickets, including breached tickets, at-risk tickets, and overall SLA compliance percentage.",
+      
+      "Highlights tickets that have exceeded their SLA resolution target, including detailed overdue duration tracking and breached timestamp visibility.",
+      
+      "Displays ticket-level operational data such as ticket number, priority, queue ownership, status, breached time, and total overdue duration for rapid escalation handling.",
+      
+      "Separates breached tickets from on-track tickets to help support managers prioritize urgent customer issues and maintain operational response standards.",
+      
+      "Tracks SLA compliance metrics across support operations to improve customer satisfaction, response accountability, and service performance monitoring.",
+      
+      "Supports proactive ticket escalation workflows by identifying high-priority or overdue support cases before they negatively impact platform support quality."
+    ]
+  },
+
+  {
+    name: "support_ticket_queues",
+    label: "Ticket Queues",
+    description: "Support queue routing and team assignment management system.",
+    group: "Support",
+    purpose: "Enables administrators to create, organize, and manage ticket routing queues for structured team ownership and support workflow distribution.",
+    bullets: [
+      "Provides a dedicated interface for configuring support queues used to assign tickets to specific operational teams, departments, or support specialists.",
+      
+      "Allows administrators to create and manage multiple ticket queues for handling different categories of customer issues such as payments, bookings, technical support, or onboarding.",
+      
+      "Supports structured ticket routing workflows to ensure incoming customer requests are automatically directed to the appropriate support team.",
+      
+      "Displays active queue status and queue availability so administrators can monitor support workload distribution and operational readiness.",
+      
+      "Improves ticket ownership visibility by assigning clear queue responsibility across customer support operations and internal service teams.",
+      
+      "Helps scale customer support infrastructure by organizing ticket handling processes into dedicated operational queues with team-based management."
+    ]
+  },
+
+  {
+  name: "support_create_queue",
+  label: "Create Queue",
+  description: "Queue creation and routing configuration modal for support operations.",
+  group: "Support",
+  purpose: "Allows administrators to create new routing queues for organizing support tickets, assigning team ownership, and managing operational workflows across departments.",
+  bullets: [
+    "Provides a streamlined modal interface for creating new support or job ticket routing queues used throughout the customer support infrastructure.",
+    
+    "Allows administrators to define queue names such as Billing & Payments, Technical Support, Customer Success, or Operations to organize incoming ticket categories.",
+    
+    "Supports team-type assignment fields so queues can be associated with departments such as finance, support, engineering, compliance, onboarding, or technical operations.",
+    
+    "Includes a queue description field for documenting the types of support requests, escalations, or operational workflows handled within the queue.",
+    
+    "Helps structure ticket-routing logic by creating dedicated ownership channels that improve issue resolution speed, accountability, and workload distribution.",
+    
+    "Enables scalable support management by separating customer requests into specialized operational queues for more efficient triaging and team collaboration."
+  ]
+},
+
 
       // -----------tarot suite---------//
  {
@@ -6929,294 +7164,294 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
       },
 
       // ── Mundane Astrology (extended) ─────────────────────────────────────
-      {
-        name: "admin_mundane_leaders",
-        label: "World Leaders Registry",
-        description: "A searchable directory of world leaders and notable persons tracked in mundane astrology — current and historical.",
-        group: "Mundane Astrology",
-        purpose: "Maintains a biographical and astrological record of key political and cultural figures whose charts are used in mundane research and forecasting.",
-        bullets: [
-          "Filter by current / former leader status",
-          "Birth date, birth location, and Astrodatabank confidence rating (AA–X) per record",
-          "Linked to country entity — one click navigates to the entity's full mundane profile",
-          "Add / edit leader with natal chart data entry fields"
-        ]
-      },
-      {
-        name: "admin_mundane_leader_detail",
-        label: "Leader Detail — Natal Profile",
-        description: "Full profile for a single world leader: natal chart, time-lord analysis (Profection, Firdaria), linked events, and admin notes.",
-        group: "Mundane Astrology",
-        purpose: "The deepest view in the leader registry — combines biographical data with astrological time-lord calculations to support event correlation research.",
-        bullets: [
-          "Natal wheel chart generated from stored birth data",
-          "Annual profection table showing current activated house and sign lord",
-          "Firdaria timeline — major and minor lord periods mapped to a scrollable chart",
-          "Linked mundane events where this leader is a key actor"
-        ]
-      },
-      {
-        name: "admin_mundane_backtesting",
-        label: "Backtesting Engine",
-        description: "Test astrological hypotheses against historical data — enter a planetary configuration and see when it recurred across recorded history.",
-        group: "Mundane Astrology",
-        purpose: "Allows researchers to validate predictive models by comparing current transits against historical analogues with documented outcomes.",
-        bullets: [
-          "Input any planet-sign-house combination and search historical occurrence dates",
-          "Returns a ranked list of closest analogues with correlation scores",
-          "Click any result to open the historical analogue detail with event log",
-          "Export results as CSV for external research use"
-        ]
-      },
-      {
-        name: "admin_mundane_backtesting_detail",
-        label: "Backtesting Result Detail",
-        description: "Detailed view of a single backtesting run — the analogue date, planetary snapshot, correlated events, and confidence score breakdown.",
-        group: "Mundane Astrology",
-        purpose: "Gives researchers a granular look at how closely a historical period mirrors current transits and what documented events occurred.",
-        bullets: [
-          "Side-by-side planetary position comparison: current vs. historical",
-          "Correlation score components: orb tolerance, exact aspects, midpoints",
-          "Timeline of events that occurred within the analogue window",
-          "Admin notes field for attaching commentary and research findings"
-        ]
-      },
-      {
-        name: "admin_mundane_timeline",
-        label: "Event Timeline",
-        description: "A chronological view of all mundane events, forecasts, and chart activations — filterable by entity, event type, and date range.",
-        group: "Mundane Astrology",
-        purpose: "Provides a unified time-ordered view of everything tracked in the mundane system so researchers can spot patterns and gaps.",
-        bullets: [
-          "Swimlane view: events grouped by entity in a horizontal timeline",
-          "Filter by event type (political, economic, natural disaster, military)",
-          "Click any event bar to open the full mundane event record",
-          "Export filtered timeline as PDF or PNG for presentations"
-        ]
-      },
-      {
-        name: "admin_mundane_alerts",
-        label: "Mundane Alerts",
-        description: "Automated alert system that fires when a significant planetary configuration (eclipse, ingress, major aspect) enters orb.",
-        group: "Mundane Astrology",
-        purpose: "Ensures the research team never misses a critical astrological event by surfacing actionable alerts before the window opens.",
-        bullets: [
-          "Pending alerts ranked by significance score",
-          "Each alert shows the exact date, planet, aspect, and affected entities",
-          "Snooze or dismiss alerts with a logged reason",
-          "Configure alert thresholds: orb tolerance and minimum significance score"
-        ]
-      },
-      {
-        name: "admin_mundane_cycles",
-        label: "Planetary Cycles Tracker",
-        description: "Monitor long-term planetary cycles — Jupiter-Saturn conjunctions, Pluto ingresses, nodal returns — across a configurable time horizon.",
-        group: "Mundane Astrology",
-        purpose: "Tracks the macro backdrop of mundane astrology so that shorter-term research is contextualised within larger civilisational cycles.",
-        bullets: [
-          "Cycle list: all active and upcoming cycles with exact dates and current phase",
-          "Phase bar: visual arc showing how far through the cycle the world currently sits",
-          "Historical events overlaid on each cycle for research correlation",
-          "Subscribe to a cycle to receive alerts when phase milestones are reached"
-        ]
-      },
-      {
-        name: "admin_mundane_eclipses",
-        label: "Eclipse Tracker",
-        description: "Full catalogue of upcoming solar and lunar eclipses with shadow path, chart data, and entity exposure analysis.",
-        group: "Mundane Astrology",
-        purpose: "Eclipses are primary mundane triggers — this page ensures every eclipse is logged, geocoded, and linked to the entities it most directly activates.",
-        bullets: [
-          "Eclipse list with type (total/partial/annular), path countries, and saros series",
-          "Entity exposure: which tracked countries and cities fall in the shadow path",
-          "Natal-chart sensitivity: which tracked leader charts have planets near the eclipse degree",
-          "Click any eclipse to open the full chart and generate a mundane interpretation"
-        ]
-      },
-      {
-        name: "admin_mundane_scoring",
-        label: "Mundane Significance Scoring",
-        description: "Rule-based engine that assigns a significance score (0–100) to any date based on active transits, eclipses, ingresses, and station events.",
-        group: "Mundane Astrology",
-        purpose: "Provides an objective ranking of which dates carry the highest astrological charge — useful for allocating research attention and scheduling client reports.",
-        bullets: [
-          "Calendar heatmap: dates colour-coded by significance score",
-          "Score breakdown panel: which factors contribute to each date's total",
-          "Adjust weighting rules for each transit type to customise the model",
-          "Export a 12-month significance calendar as CSV or PDF"
-        ]
-      },
-      {
-        name: "admin_mundane_ai_brief",
-        label: "AI Mundane Brief",
-        description: "AI-generated weekly intelligence brief synthesising current transits, active cycles, and upcoming eclipses into a plain-language narrative.",
-        group: "Mundane Astrology",
-        purpose: "Reduces the research overhead for the team by automating the first draft of a weekly mundane briefing — editors refine and publish.",
-        bullets: [
-          "Auto-generates on Monday mornings using the Lambda AI router",
-          "Sections: global weather, regional hotspots, key leader activations, market notes",
-          "Edit inline before publishing to the member-facing mundane dashboard",
-          "Version history — compare this week's draft to previous briefs"
-        ]
-      },
-      {
-        name: "admin_mundane_market_intelligence",
-        label: "Market Intelligence",
-        description: "Correlate planetary transits with asset price movements — charts, commodity prices, and index performance mapped against astrological events.",
-        group: "Mundane Astrology",
-        purpose: "Supports the platform's financial astrology offering by giving researchers the data they need to validate and publish market-oriented forecasts.",
-        bullets: [
-          "Asset selector: choose from tracked indices, commodities, and FX pairs",
-          "Overlay transits: add any planet-aspect event to the price chart as a vertical marker",
-          "Correlation matrix: auto-calculate r-values between aspect dates and price changes",
-          "Save correlation studies to the research library for later citation"
-        ]
-      },
-      {
-        name: "admin_mundane_workspaces",
-        label: "Research Workspaces",
-        description: "Saved research sessions — a workspace bundles a set of entities, date ranges, transits, and notes into a persistent named project.",
-        group: "Mundane Astrology",
-        purpose: "Allows researchers to organise long-running projects without losing context — each workspace is its own persistent analytical environment.",
-        bullets: [
-          "Workspace list with last-opened date, entity count, and collaborator avatars",
-          "Create a new workspace from a template (election, disaster, financial crisis)",
-          "Add entities, events, chart screenshots, and notes within the workspace",
-          "Share a workspace with another admin or export to PDF for client delivery"
-        ]
-      },
-      {
-        name: "admin_mundane_historical_analogs",
-        label: "Historical Analogues Library",
-        description: "A curated database of past mundane events with full planetary snapshots — the source material for backtesting and AI brief generation.",
-        group: "Mundane Astrology",
-        purpose: "Provides the ground-truth dataset for the backtesting engine and AI brief — well-documented historical events make the predictions more defensible.",
-        bullets: [
-          "Search by event type, date, entity, or planet involved",
-          "Each record: event description, exact date, planetary snapshot at time, outcome notes",
-          "Admin-verified records marked with a trust badge; unverified shown in amber",
-          "Import events from a CSV template or add individually"
-        ]
-      },
-      {
-        name: "admin_mundane_library",
-        label: "Mundane Research Library",
-        description: "Centralised repository for all saved mundane research: reports, chart screenshots, AI briefs, and published forecasts.",
-        group: "Mundane Astrology",
-        purpose: "Ensures that research doesn't live in individual researchers' inboxes — everything is searchable, tagged, and attributable.",
-        bullets: [
-          "Filter by document type (report, brief, chart, forecast) and date",
-          "Tag documents by entity, planet, or event for cross-referenced retrieval",
-          "Published documents are visible to members in the PM portal mundane section",
-          "Version history on each document — restore any prior version"
-        ]
-      },
-      {
-        name: "admin_mundane_watchlist",
-        label: "Entity Watchlist",
-        description: "A curated short-list of entities under active monitoring — admins pin the most astrologically activated entities here for daily attention.",
-        group: "Mundane Astrology",
-        purpose: "Surfaces the highest-priority entities without requiring a full search each day — the watchlist is the researcher's morning dashboard.",
-        bullets: [
-          "Pin any entity from the registry to the watchlist in one click",
-          "Each pinned entity shows current transit highlights and next alert date",
-          "Custom note per entity: private research memo visible only to admins",
-          "Watchlist is shared across the admin team — everyone sees the same priority list"
-        ]
-      },
-      {
-        name: "admin_mundane_imports",
-        label: "Data Imports",
-        description: "Bulk import mundane entities, events, or leaders from structured CSV or JSON files — useful for onboarding new research datasets.",
-        group: "Mundane Astrology",
-        purpose: "Allows the research team to ingest large datasets (e.g., a complete election database or a century of documented crises) without manual entry.",
-        bullets: [
-          "Download the import template for each record type (entity, event, leader)",
-          "Validation report shows errors and warnings before committing the import",
-          "Import history log: who imported what, when, and how many records were created",
-          "Rollback button: undo the last import if errors are discovered post-commit"
-        ]
-      },
-      {
-        name: "admin_mundane_subscriptions",
-        label: "Mundane Report Subscriptions",
-        description: "Manage which members receive the weekly AI mundane brief by email — subscription list, unsubscribes, and delivery status.",
-        group: "Mundane Astrology",
-        purpose: "Controls the distribution of published mundane research to member inboxes — separate from the platform notification system.",
-        bullets: [
-          "Subscriber list with email, subscription date, open rate, and last delivery",
-          "Add members manually or enable auto-enrolment for all active PM members",
-          "Unsubscribe log: reason captured when a member opts out",
-          "Test delivery: send the latest brief to a single email address for QA"
-        ]
-      },
+      // {
+      //   name: "admin_mundane_leaders",
+      //   label: "World Leaders Registry",
+      //   description: "A searchable directory of world leaders and notable persons tracked in mundane astrology — current and historical.",
+      //   group: "Mundane Astrology",
+      //   purpose: "Maintains a biographical and astrological record of key political and cultural figures whose charts are used in mundane research and forecasting.",
+      //   bullets: [
+      //     "Filter by current / former leader status",
+      //     "Birth date, birth location, and Astrodatabank confidence rating (AA–X) per record",
+      //     "Linked to country entity — one click navigates to the entity's full mundane profile",
+      //     "Add / edit leader with natal chart data entry fields"
+      //   ]
+      // },
+      // {
+      //   name: "admin_mundane_leader_detail",
+      //   label: "Leader Detail — Natal Profile",
+      //   description: "Full profile for a single world leader: natal chart, time-lord analysis (Profection, Firdaria), linked events, and admin notes.",
+      //   group: "Mundane Astrology",
+      //   purpose: "The deepest view in the leader registry — combines biographical data with astrological time-lord calculations to support event correlation research.",
+      //   bullets: [
+      //     "Natal wheel chart generated from stored birth data",
+      //     "Annual profection table showing current activated house and sign lord",
+      //     "Firdaria timeline — major and minor lord periods mapped to a scrollable chart",
+      //     "Linked mundane events where this leader is a key actor"
+      //   ]
+      // },
+      // {
+      //   name: "admin_mundane_backtesting",
+      //   label: "Backtesting Engine",
+      //   description: "Test astrological hypotheses against historical data — enter a planetary configuration and see when it recurred across recorded history.",
+      //   group: "Mundane Astrology",
+      //   purpose: "Allows researchers to validate predictive models by comparing current transits against historical analogues with documented outcomes.",
+      //   bullets: [
+      //     "Input any planet-sign-house combination and search historical occurrence dates",
+      //     "Returns a ranked list of closest analogues with correlation scores",
+      //     "Click any result to open the historical analogue detail with event log",
+      //     "Export results as CSV for external research use"
+      //   ]
+      // },
+      // {
+      //   name: "admin_mundane_backtesting_detail",
+      //   label: "Backtesting Result Detail",
+      //   description: "Detailed view of a single backtesting run — the analogue date, planetary snapshot, correlated events, and confidence score breakdown.",
+      //   group: "Mundane Astrology",
+      //   purpose: "Gives researchers a granular look at how closely a historical period mirrors current transits and what documented events occurred.",
+      //   bullets: [
+      //     "Side-by-side planetary position comparison: current vs. historical",
+      //     "Correlation score components: orb tolerance, exact aspects, midpoints",
+      //     "Timeline of events that occurred within the analogue window",
+      //     "Admin notes field for attaching commentary and research findings"
+      //   ]
+      // },
+      // {
+      //   name: "admin_mundane_timeline",
+      //   label: "Event Timeline",
+      //   description: "A chronological view of all mundane events, forecasts, and chart activations — filterable by entity, event type, and date range.",
+      //   group: "Mundane Astrology",
+      //   purpose: "Provides a unified time-ordered view of everything tracked in the mundane system so researchers can spot patterns and gaps.",
+      //   bullets: [
+      //     "Swimlane view: events grouped by entity in a horizontal timeline",
+      //     "Filter by event type (political, economic, natural disaster, military)",
+      //     "Click any event bar to open the full mundane event record",
+      //     "Export filtered timeline as PDF or PNG for presentations"
+      //   ]
+      // },
+      // {
+      //   name: "admin_mundane_alerts",
+      //   label: "Mundane Alerts",
+      //   description: "Automated alert system that fires when a significant planetary configuration (eclipse, ingress, major aspect) enters orb.",
+      //   group: "Mundane Astrology",
+      //   purpose: "Ensures the research team never misses a critical astrological event by surfacing actionable alerts before the window opens.",
+      //   bullets: [
+      //     "Pending alerts ranked by significance score",
+      //     "Each alert shows the exact date, planet, aspect, and affected entities",
+      //     "Snooze or dismiss alerts with a logged reason",
+      //     "Configure alert thresholds: orb tolerance and minimum significance score"
+      //   ]
+      // },
+      // {
+      //   name: "admin_mundane_cycles",
+      //   label: "Planetary Cycles Tracker",
+      //   description: "Monitor long-term planetary cycles — Jupiter-Saturn conjunctions, Pluto ingresses, nodal returns — across a configurable time horizon.",
+      //   group: "Mundane Astrology",
+      //   purpose: "Tracks the macro backdrop of mundane astrology so that shorter-term research is contextualised within larger civilisational cycles.",
+      //   bullets: [
+      //     "Cycle list: all active and upcoming cycles with exact dates and current phase",
+      //     "Phase bar: visual arc showing how far through the cycle the world currently sits",
+      //     "Historical events overlaid on each cycle for research correlation",
+      //     "Subscribe to a cycle to receive alerts when phase milestones are reached"
+      //   ]
+      // },
+      // {
+      //   name: "admin_mundane_eclipses",
+      //   label: "Eclipse Tracker",
+      //   description: "Full catalogue of upcoming solar and lunar eclipses with shadow path, chart data, and entity exposure analysis.",
+      //   group: "Mundane Astrology",
+      //   purpose: "Eclipses are primary mundane triggers — this page ensures every eclipse is logged, geocoded, and linked to the entities it most directly activates.",
+      //   bullets: [
+      //     "Eclipse list with type (total/partial/annular), path countries, and saros series",
+      //     "Entity exposure: which tracked countries and cities fall in the shadow path",
+      //     "Natal-chart sensitivity: which tracked leader charts have planets near the eclipse degree",
+      //     "Click any eclipse to open the full chart and generate a mundane interpretation"
+      //   ]
+      // },
+      // {
+      //   name: "admin_mundane_scoring",
+      //   label: "Mundane Significance Scoring",
+      //   description: "Rule-based engine that assigns a significance score (0–100) to any date based on active transits, eclipses, ingresses, and station events.",
+      //   group: "Mundane Astrology",
+      //   purpose: "Provides an objective ranking of which dates carry the highest astrological charge — useful for allocating research attention and scheduling client reports.",
+      //   bullets: [
+      //     "Calendar heatmap: dates colour-coded by significance score",
+      //     "Score breakdown panel: which factors contribute to each date's total",
+      //     "Adjust weighting rules for each transit type to customise the model",
+      //     "Export a 12-month significance calendar as CSV or PDF"
+      //   ]
+      // },
+      // {
+      //   name: "admin_mundane_ai_brief",
+      //   label: "AI Mundane Brief",
+      //   description: "AI-generated weekly intelligence brief synthesising current transits, active cycles, and upcoming eclipses into a plain-language narrative.",
+      //   group: "Mundane Astrology",
+      //   purpose: "Reduces the research overhead for the team by automating the first draft of a weekly mundane briefing — editors refine and publish.",
+      //   bullets: [
+      //     "Auto-generates on Monday mornings using the Lambda AI router",
+      //     "Sections: global weather, regional hotspots, key leader activations, market notes",
+      //     "Edit inline before publishing to the member-facing mundane dashboard",
+      //     "Version history — compare this week's draft to previous briefs"
+      //   ]
+      // },
+      // {
+      //   name: "admin_mundane_market_intelligence",
+      //   label: "Market Intelligence",
+      //   description: "Correlate planetary transits with asset price movements — charts, commodity prices, and index performance mapped against astrological events.",
+      //   group: "Mundane Astrology",
+      //   purpose: "Supports the platform's financial astrology offering by giving researchers the data they need to validate and publish market-oriented forecasts.",
+      //   bullets: [
+      //     "Asset selector: choose from tracked indices, commodities, and FX pairs",
+      //     "Overlay transits: add any planet-aspect event to the price chart as a vertical marker",
+      //     "Correlation matrix: auto-calculate r-values between aspect dates and price changes",
+      //     "Save correlation studies to the research library for later citation"
+      //   ]
+      // },
+      // {
+      //   name: "admin_mundane_workspaces",
+      //   label: "Research Workspaces",
+      //   description: "Saved research sessions — a workspace bundles a set of entities, date ranges, transits, and notes into a persistent named project.",
+      //   group: "Mundane Astrology",
+      //   purpose: "Allows researchers to organise long-running projects without losing context — each workspace is its own persistent analytical environment.",
+      //   bullets: [
+      //     "Workspace list with last-opened date, entity count, and collaborator avatars",
+      //     "Create a new workspace from a template (election, disaster, financial crisis)",
+      //     "Add entities, events, chart screenshots, and notes within the workspace",
+      //     "Share a workspace with another admin or export to PDF for client delivery"
+      //   ]
+      // },
+      // {
+      //   name: "admin_mundane_historical_analogs",
+      //   label: "Historical Analogues Library",
+      //   description: "A curated database of past mundane events with full planetary snapshots — the source material for backtesting and AI brief generation.",
+      //   group: "Mundane Astrology",
+      //   purpose: "Provides the ground-truth dataset for the backtesting engine and AI brief — well-documented historical events make the predictions more defensible.",
+      //   bullets: [
+      //     "Search by event type, date, entity, or planet involved",
+      //     "Each record: event description, exact date, planetary snapshot at time, outcome notes",
+      //     "Admin-verified records marked with a trust badge; unverified shown in amber",
+      //     "Import events from a CSV template or add individually"
+      //   ]
+      // },
+      // {
+      //   name: "admin_mundane_library",
+      //   label: "Mundane Research Library",
+      //   description: "Centralised repository for all saved mundane research: reports, chart screenshots, AI briefs, and published forecasts.",
+      //   group: "Mundane Astrology",
+      //   purpose: "Ensures that research doesn't live in individual researchers' inboxes — everything is searchable, tagged, and attributable.",
+      //   bullets: [
+      //     "Filter by document type (report, brief, chart, forecast) and date",
+      //     "Tag documents by entity, planet, or event for cross-referenced retrieval",
+      //     "Published documents are visible to members in the PM portal mundane section",
+      //     "Version history on each document — restore any prior version"
+      //   ]
+      // },
+      // {
+      //   name: "admin_mundane_watchlist",
+      //   label: "Entity Watchlist",
+      //   description: "A curated short-list of entities under active monitoring — admins pin the most astrologically activated entities here for daily attention.",
+      //   group: "Mundane Astrology",
+      //   purpose: "Surfaces the highest-priority entities without requiring a full search each day — the watchlist is the researcher's morning dashboard.",
+      //   bullets: [
+      //     "Pin any entity from the registry to the watchlist in one click",
+      //     "Each pinned entity shows current transit highlights and next alert date",
+      //     "Custom note per entity: private research memo visible only to admins",
+      //     "Watchlist is shared across the admin team — everyone sees the same priority list"
+      //   ]
+      // },
+      // {
+      //   name: "admin_mundane_imports",
+      //   label: "Data Imports",
+      //   description: "Bulk import mundane entities, events, or leaders from structured CSV or JSON files — useful for onboarding new research datasets.",
+      //   group: "Mundane Astrology",
+      //   purpose: "Allows the research team to ingest large datasets (e.g., a complete election database or a century of documented crises) without manual entry.",
+      //   bullets: [
+      //     "Download the import template for each record type (entity, event, leader)",
+      //     "Validation report shows errors and warnings before committing the import",
+      //     "Import history log: who imported what, when, and how many records were created",
+      //     "Rollback button: undo the last import if errors are discovered post-commit"
+      //   ]
+      // },
+      // {
+      //   name: "admin_mundane_subscriptions",
+      //   label: "Mundane Report Subscriptions",
+      //   description: "Manage which members receive the weekly AI mundane brief by email — subscription list, unsubscribes, and delivery status.",
+      //   group: "Mundane Astrology",
+      //   purpose: "Controls the distribution of published mundane research to member inboxes — separate from the platform notification system.",
+      //   bullets: [
+      //     "Subscriber list with email, subscription date, open rate, and last delivery",
+      //     "Add members manually or enable auto-enrolment for all active PM members",
+      //     "Unsubscribe log: reason captured when a member opts out",
+      //     "Test delivery: send the latest brief to a single email address for QA"
+      //   ]
+      // },
 
       // ── Mystery School Admin (extended) ──────────────────────────────────
-      {
-        name: "admin_ms_student_detail",
-        label: "Student Detail Page",
-        description: "Full record for a single Mystery School student — subscription status, decan progress grid, foundation week completion, and admin actions.",
-        group: "Mystery School",
-        purpose: "The most granular admin view of a student — gives support staff and programme directors complete context for handling queries or exceptions.",
-        bullets: [
-          "Subscription status: active/cancelled, one-time fee paid, next billing date",
-          "36-decan progress grid: coloured status per decan (completed/active/missed/excused)",
-          "Foundation week completion: 12 weeks with per-task breakdown",
-          "Admin actions: excuse a missed decan, override status, add internal note"
-        ]
-      },
-      {
-        name: "admin_ms_decan_detail",
-        label: "Decan Detail — Admin View",
-        description: "Admin perspective on a single decan record: decan description, active student cohort, completion rates, and content management.",
-        group: "Mystery School",
-        purpose: "Allows admins to monitor how students are engaging with each decan and update the decan's instructional content without a code deploy.",
-        bullets: [
-          "Decan metadata: sign, ruling planet, tarot card reference, artwork URL",
-          "Cohort view: how many students are active/completed/missed on this decan right now",
-          "Content editor: update the preview text, ritual instructions, and scrying prompt",
-          "Window configuration: set or override window open, close, and grace dates for this decan"
-        ]
-      },
-      {
-        name: "admin_ms_graduation_queue",
-        label: "Graduation Queue",
-        description: "Students who have completed all 36 decans and 12 foundation weeks — awaiting final admin review and certificate generation.",
-        group: "Mystery School",
-        purpose: "Provides a clear workflow for approving graduations — admins verify completion, confirm no unexcused misses, then trigger the certificate.",
-        bullets: [
-          "Queue sorted by completion date — longest-waiting graduates shown first",
-          "One-click eligibility check: flags unexcused misses or incomplete foundation weeks",
-          "Generate certificate button: sends the Priest/Priestess certificate email and updates the student record",
-          "Graduation log: complete history of all graduates with certificate generation date"
-        ]
-      },
-      {
-        name: "admin_ms_excuse_workflow",
-        label: "Decan Excuse Workflow",
-        description: "Review and approve student requests to excuse a missed decan — see the reason, the decan details, and approve or reject with a note.",
-        group: "Mystery School",
-        purpose: "Maintains programme integrity while allowing compassionate exceptions for students with documented unavoidable circumstances.",
-        bullets: [
-          "Pending excuse requests with student name, decan number, missed date, and stated reason",
-          "Approve: marks the decan as admin-excused so it no longer blocks graduation",
-          "Reject: sends the student a rejection notification with the admin's note",
-          "Excuse history: all decisions audited with timestamp and admin username"
-        ]
-      },
-      {
-        name: "admin_ms_foundation_weeks",
-        label: "Foundation Week Manager",
-        description: "Edit the content of each of the 12 foundation weeks — title, description, audio recording URL, Beto photo, and per-week task list.",
-        group: "Mystery School",
-        purpose: "Allows the curriculum team to update foundation content without engineering involvement — new audio drops, task revisions, and week descriptions.",
-        bullets: [
-          "12 week cards in week-number order, each expandable for editing",
-          "Audio URL field: paste the direct media URL for the week's Beto teaching",
-          "Task editor: add, remove, or reorder tasks within each week",
-          "Published / draft toggle: keep a week in draft while content is being finalised"
-        ]
-      },
+      // {
+      //   name: "admin_ms_student_detail",
+      //   label: "Student Detail Page",
+      //   description: "Full record for a single Mystery School student — subscription status, decan progress grid, foundation week completion, and admin actions.",
+      //   group: "Mystery School",
+      //   purpose: "The most granular admin view of a student — gives support staff and programme directors complete context for handling queries or exceptions.",
+      //   bullets: [
+      //     "Subscription status: active/cancelled, one-time fee paid, next billing date",
+      //     "36-decan progress grid: coloured status per decan (completed/active/missed/excused)",
+      //     "Foundation week completion: 12 weeks with per-task breakdown",
+      //     "Admin actions: excuse a missed decan, override status, add internal note"
+      //   ]
+      // },
+      // {
+      //   name: "admin_ms_decan_detail",
+      //   label: "Decan Detail — Admin View",
+      //   description: "Admin perspective on a single decan record: decan description, active student cohort, completion rates, and content management.",
+      //   group: "Mystery School",
+      //   purpose: "Allows admins to monitor how students are engaging with each decan and update the decan's instructional content without a code deploy.",
+      //   bullets: [
+      //     "Decan metadata: sign, ruling planet, tarot card reference, artwork URL",
+      //     "Cohort view: how many students are active/completed/missed on this decan right now",
+      //     "Content editor: update the preview text, ritual instructions, and scrying prompt",
+      //     "Window configuration: set or override window open, close, and grace dates for this decan"
+      //   ]
+      // },
+      // {
+      //   name: "admin_ms_graduation_queue",
+      //   label: "Graduation Queue",
+      //   description: "Students who have completed all 36 decans and 12 foundation weeks — awaiting final admin review and certificate generation.",
+      //   group: "Mystery School",
+      //   purpose: "Provides a clear workflow for approving graduations — admins verify completion, confirm no unexcused misses, then trigger the certificate.",
+      //   bullets: [
+      //     "Queue sorted by completion date — longest-waiting graduates shown first",
+      //     "One-click eligibility check: flags unexcused misses or incomplete foundation weeks",
+      //     "Generate certificate button: sends the Priest/Priestess certificate email and updates the student record",
+      //     "Graduation log: complete history of all graduates with certificate generation date"
+      //   ]
+      // },
+      // {
+      //   name: "admin_ms_excuse_workflow",
+      //   label: "Decan Excuse Workflow",
+      //   description: "Review and approve student requests to excuse a missed decan — see the reason, the decan details, and approve or reject with a note.",
+      //   group: "Mystery School",
+      //   purpose: "Maintains programme integrity while allowing compassionate exceptions for students with documented unavoidable circumstances.",
+      //   bullets: [
+      //     "Pending excuse requests with student name, decan number, missed date, and stated reason",
+      //     "Approve: marks the decan as admin-excused so it no longer blocks graduation",
+      //     "Reject: sends the student a rejection notification with the admin's note",
+      //     "Excuse history: all decisions audited with timestamp and admin username"
+      //   ]
+      // },
+      // {
+      //   name: "admin_ms_foundation_weeks",
+      //   label: "Foundation Week Manager",
+      //   description: "Edit the content of each of the 12 foundation weeks — title, description, audio recording URL, Beto photo, and per-week task list.",
+      //   group: "Mystery School",
+      //   purpose: "Allows the curriculum team to update foundation content without engineering involvement — new audio drops, task revisions, and week descriptions.",
+      //   bullets: [
+      //     "12 week cards in week-number order, each expandable for editing",
+      //     "Audio URL field: paste the direct media URL for the week's Beto teaching",
+      //     "Task editor: add, remove, or reorder tasks within each week",
+      //     "Published / draft toggle: keep a week in draft while content is being finalised"
+      //   ]
+      // },
 
       // ── Governance & Users (extended) ────────────────────────────────────
       {
@@ -7384,90 +7619,90 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Publication history — previous versions accessible with diff view"
         ]
       },
-      {
-        name: "decan-journal-detail",
-        label: "Decan Journal Entry Detail",
-        description: "Admin view of a single student decan journal submission. Shows the student's written reflection, the target decan, submission date, and admin annotation fields. Used during graduation review.",
-        group: "Mystery School",
-        purpose: "Enables admin review and annotation of student journal entries without needing direct database access.",
-        bullets: [
-          "Full journal text with student name, decan number, and submission timestamp",
-          "Admin annotation sidebar — add private notes or a review rating",
-          "Quick-action buttons: Approve for graduation, Flag for follow-up, or Request revision"
-        ]
-      },
-      {
-        name: "ingress-chart-detail",
-        label: "Ingress Chart Detail",
-        description: "Detailed view of a specific planetary ingress chart in the mundane astrology system. Shows the chart wheel, triggered entities, AI-generated interpretation, and linked research notes. Admins can edit the interpretation and add manual annotations.",
-        group: "Mundane Astrology",
-        purpose: "Allows deep inspection and manual curation of individual ingress events to ensure published interpretations meet editorial standards.",
-        bullets: [
-          "Full chart wheel rendering with planet glyphs and house cusps",
-          "Triggered entities panel — which world leaders, nations, and markets are flagged",
-          "AI interpretation text with admin override editor and publish/unpublish toggle"
-        ]
-      },
-      {
-        name: "entity-compare",
-        label: "Entity Comparison",
-        description: "Side-by-side comparison tool for two or more mundane entities (countries, leaders, organisations). Overlays their natal charts, active transits, and current scores to surface correlations and conflicts.",
-        group: "Mundane Astrology",
-        purpose: "Helps researchers identify which entities are in synchronised astrological cycles and where divergence signals geopolitical tension.",
-        bullets: [
-          "Dual chart wheel view with colour-coded glyphs per entity",
-          "Transit overlay table showing shared triggers on the same degree within a 2° orb",
-          "Score delta column — numerical difference in mundane scores side by side"
-        ]
-      },
-      {
-        name: "backtesting-new",
-        label: "New Backtesting Run",
-        description: "Setup form for launching a new mundane backtesting job. Admins specify the target entity, date range, signal parameters, and which event database to validate against. Job is queued and results appear in the backtesting detail screen.",
-        group: "Mundane Astrology",
-        purpose: "Allows the research team to validate predictive models against historical data before publishing forecasts to members.",
-        bullets: [
-          "Entity selector with date range picker (supports ranges up to 100 years)",
-          "Signal parameter sliders: orb tolerance, minimum score threshold, event type filter",
-          "Estimated runtime display — updates live as parameters are adjusted"
-        ]
-      },
-      {
-        name: "workspaces-new",
-        label: "New Workspace",
-        description: "Creation form for a new mundane research workspace. Admins name the workspace, choose a lead researcher, select seed entities, and set the collaboration visibility (private / team / published). Workspaces group related charts, notes, and backtesting runs.",
-        group: "Mundane Astrology",
-        purpose: "Organises long-running research projects so charts, notes, and backtests are grouped together rather than scattered across the global library.",
-        bullets: [
-          "Workspace name and description fields with slug preview",
-          "Lead researcher selector from the admin user list",
-          "Seed entity picker — search and add up to 20 starting entities"
-        ]
-      },
-      {
-        name: "mundane-forecasts-list",
-        label: "Mundane Forecasts List",
-        description: "Paginated list of all published and draft mundane forecasts. Each row shows the forecast title, target entity, publication date, expiry date, and current status. Admins can filter by status, entity type, and date range.",
-        group: "Mundane Astrology",
-        purpose: "Gives the editorial team a single view of the forecast pipeline so nothing is accidentally left unpublished or allowed to expire stale.",
-        bullets: [
-          "Status filter tabs: All, Draft, Scheduled, Published, Expired",
-          "Bulk actions: publish, unpublish, or delete selected forecasts",
-          "Expiry warning badge on forecasts within 7 days of their end date"
-        ]
-      },
-      {
-        name: "mundane-forecast-detail",
-        label: "Mundane Forecast Detail",
-        description: "Full editor and preview for a single mundane forecast. Contains the forecast body, associated ingress chart, entity tags, start and end dates, and member visibility tier. Admins can preview the member-facing rendering before publishing.",
-        group: "Mundane Astrology",
-        purpose: "Provides a complete authoring environment for forecasts so editors can manage content, metadata, and visibility in one screen.",
-        bullets: [
-          "Rich-text forecast body editor with astrology symbol picker",
-          "Linked ingress chart panel with miniature chart wheel thumbnail",
-          "Member tier selector: Public, PM, MS — with preview toggle to see each audience view"
-        ]
-      },
+      // {
+      //   name: "decan-journal-detail",
+      //   label: "Decan Journal Entry Detail",
+      //   description: "Admin view of a single student decan journal submission. Shows the student's written reflection, the target decan, submission date, and admin annotation fields. Used during graduation review.",
+      //   group: "Mystery School",
+      //   purpose: "Enables admin review and annotation of student journal entries without needing direct database access.",
+      //   bullets: [
+      //     "Full journal text with student name, decan number, and submission timestamp",
+      //     "Admin annotation sidebar — add private notes or a review rating",
+      //     "Quick-action buttons: Approve for graduation, Flag for follow-up, or Request revision"
+      //   ]
+      // },
+      // {
+      //   name: "ingress-chart-detail",
+      //   label: "Ingress Chart Detail",
+      //   description: "Detailed view of a specific planetary ingress chart in the mundane astrology system. Shows the chart wheel, triggered entities, AI-generated interpretation, and linked research notes. Admins can edit the interpretation and add manual annotations.",
+      //   group: "Mundane Astrology",
+      //   purpose: "Allows deep inspection and manual curation of individual ingress events to ensure published interpretations meet editorial standards.",
+      //   bullets: [
+      //     "Full chart wheel rendering with planet glyphs and house cusps",
+      //     "Triggered entities panel — which world leaders, nations, and markets are flagged",
+      //     "AI interpretation text with admin override editor and publish/unpublish toggle"
+      //   ]
+      // },
+      // {
+      //   name: "entity-compare",
+      //   label: "Entity Comparison",
+      //   description: "Side-by-side comparison tool for two or more mundane entities (countries, leaders, organisations). Overlays their natal charts, active transits, and current scores to surface correlations and conflicts.",
+      //   group: "Mundane Astrology",
+      //   purpose: "Helps researchers identify which entities are in synchronised astrological cycles and where divergence signals geopolitical tension.",
+      //   bullets: [
+      //     "Dual chart wheel view with colour-coded glyphs per entity",
+      //     "Transit overlay table showing shared triggers on the same degree within a 2° orb",
+      //     "Score delta column — numerical difference in mundane scores side by side"
+      //   ]
+      // },
+      // {
+      //   name: "backtesting-new",
+      //   label: "New Backtesting Run",
+      //   description: "Setup form for launching a new mundane backtesting job. Admins specify the target entity, date range, signal parameters, and which event database to validate against. Job is queued and results appear in the backtesting detail screen.",
+      //   group: "Mundane Astrology",
+      //   purpose: "Allows the research team to validate predictive models against historical data before publishing forecasts to members.",
+      //   bullets: [
+      //     "Entity selector with date range picker (supports ranges up to 100 years)",
+      //     "Signal parameter sliders: orb tolerance, minimum score threshold, event type filter",
+      //     "Estimated runtime display — updates live as parameters are adjusted"
+      //   ]
+      // },
+      // {
+      //   name: "workspaces-new",
+      //   label: "New Workspace",
+      //   description: "Creation form for a new mundane research workspace. Admins name the workspace, choose a lead researcher, select seed entities, and set the collaboration visibility (private / team / published). Workspaces group related charts, notes, and backtesting runs.",
+      //   group: "Mundane Astrology",
+      //   purpose: "Organises long-running research projects so charts, notes, and backtests are grouped together rather than scattered across the global library.",
+      //   bullets: [
+      //     "Workspace name and description fields with slug preview",
+      //     "Lead researcher selector from the admin user list",
+      //     "Seed entity picker — search and add up to 20 starting entities"
+      //   ]
+      // },
+      // {
+      //   name: "mundane-forecasts-list",
+      //   label: "Mundane Forecasts List",
+      //   description: "Paginated list of all published and draft mundane forecasts. Each row shows the forecast title, target entity, publication date, expiry date, and current status. Admins can filter by status, entity type, and date range.",
+      //   group: "Mundane Astrology",
+      //   purpose: "Gives the editorial team a single view of the forecast pipeline so nothing is accidentally left unpublished or allowed to expire stale.",
+      //   bullets: [
+      //     "Status filter tabs: All, Draft, Scheduled, Published, Expired",
+      //     "Bulk actions: publish, unpublish, or delete selected forecasts",
+      //     "Expiry warning badge on forecasts within 7 days of their end date"
+      //   ]
+      // },
+      // {
+      //   name: "mundane-forecast-detail",
+      //   label: "Mundane Forecast Detail",
+      //   description: "Full editor and preview for a single mundane forecast. Contains the forecast body, associated ingress chart, entity tags, start and end dates, and member visibility tier. Admins can preview the member-facing rendering before publishing.",
+      //   group: "Mundane Astrology",
+      //   purpose: "Provides a complete authoring environment for forecasts so editors can manage content, metadata, and visibility in one screen.",
+      //   bullets: [
+      //     "Rich-text forecast body editor with astrology symbol picker",
+      //     "Linked ingress chart panel with miniature chart wheel thumbnail",
+      //     "Member tier selector: Public, PM, MS — with preview toggle to see each audience view"
+      //   ]
+      // },
     
    
   
@@ -7587,42 +7822,42 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
         ]
       },
       
-      {
-        name: "ingress-chart-new",
-        label: "New Ingress Chart",
-        description: "Creation form for a new planetary ingress chart entry. Admins input the planet, sign, ingress date and time, and geographic focus. The system computes the chart wheel and pre-populates AI interpretation for admin review.",
-        group: "Mundane Astrology",
-        purpose: "Allows the mundane astrology team to capture and publish ingress events quickly while keeping chart computation server-side and consistent.",
-        bullets: [
-          "Planet and sign selectors with ingress date-time picker in UTC",
-          "Geographic focus field — regional or global scope affects which entities are triggered",
-          "Auto-computed chart wheel preview with one-click AI interpretation generation"
-        ]
-      },
-      {
-        name: "mundane-research-detail",
-        label: "Mundane Research Detail",
-        description: "Detail view for a single mundane research note or analysis document. Shows the body, associated entities and charts, author, publication status, and linked backtesting run. Admins can edit and publish research.",
-        group: "Mundane Astrology",
-        purpose: "Provides a structured authoring environment for long-form research so findings are linked to the charts and data that support them.",
-        bullets: [
-          "Rich-text research body with inline entity and chart embed support",
-          "Linked backtesting run panel showing the validation result that supports this analysis",
-          "Publish toggle with visibility tier: Admin only, Research team, Published to PM members"
-        ]
-      },
-      {
-        name: "mundane-leaders-new",
-        label: "New World Leader Entry",
-        description: "Form to add a new world leader entity to the mundane astrology database. Admins enter name, birth data, country association, role title, and active status. The system generates the natal chart and begins tracking transits.",
-        group: "Mundane Astrology",
-        purpose: "Keeps the leader entity database up to date as political landscapes change, ensuring transit tracking reflects current world affairs.",
-        bullets: [
-          "Birth data form: name, date, time, location with geocoding lookup",
-          "Country and role association with effective date (for leaders who assumed office at a specific time)",
-          "Auto-generated natal chart preview with save and publish confirmation"
-        ]
-      },
+      // {
+      //   name: "ingress-chart-new",
+      //   label: "New Ingress Chart",
+      //   description: "Creation form for a new planetary ingress chart entry. Admins input the planet, sign, ingress date and time, and geographic focus. The system computes the chart wheel and pre-populates AI interpretation for admin review.",
+      //   group: "Mundane Astrology",
+      //   purpose: "Allows the mundane astrology team to capture and publish ingress events quickly while keeping chart computation server-side and consistent.",
+      //   bullets: [
+      //     "Planet and sign selectors with ingress date-time picker in UTC",
+      //     "Geographic focus field — regional or global scope affects which entities are triggered",
+      //     "Auto-computed chart wheel preview with one-click AI interpretation generation"
+      //   ]
+      // },
+      // {
+      //   name: "mundane-research-detail",
+      //   label: "Mundane Research Detail",
+      //   description: "Detail view for a single mundane research note or analysis document. Shows the body, associated entities and charts, author, publication status, and linked backtesting run. Admins can edit and publish research.",
+      //   group: "Mundane Astrology",
+      //   purpose: "Provides a structured authoring environment for long-form research so findings are linked to the charts and data that support them.",
+      //   bullets: [
+      //     "Rich-text research body with inline entity and chart embed support",
+      //     "Linked backtesting run panel showing the validation result that supports this analysis",
+      //     "Publish toggle with visibility tier: Admin only, Research team, Published to PM members"
+      //   ]
+      // },
+      // {
+      //   name: "mundane-leaders-new",
+      //   label: "New World Leader Entry",
+      //   description: "Form to add a new world leader entity to the mundane astrology database. Admins enter name, birth data, country association, role title, and active status. The system generates the natal chart and begins tracking transits.",
+      //   group: "Mundane Astrology",
+      //   purpose: "Keeps the leader entity database up to date as political landscapes change, ensuring transit tracking reflects current world affairs.",
+      //   bullets: [
+      //     "Birth data form: name, date, time, location with geocoding lookup",
+      //     "Country and role association with effective date (for leaders who assumed office at a specific time)",
+      //     "Auto-generated natal chart preview with save and publish confirmation"
+      //   ]
+      // },
      
      {
   "name": "admin_revenue_dashboard",
@@ -7651,18 +7886,18 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
   ]
 },
 
-      {
-        name: "ms-quarter-config",
-        label: "Mystery School Quarter Configuration",
-        description: "Editor for a single Mystery School quarter (3-month curriculum period). Admins set the start and end dates, assign featured decans, configure the Sunday Service schedule, and set the graduation eligibility window.",
-        group: "Mystery School",
-        purpose: "Keeps the Mystery School calendar structured and aligned so students and admins have clear expectations for each quarter's milestones.",
-        bullets: [
-          "Quarter date range picker with academic year label",
-          "Featured decans selector — choose up to 3 decans to highlight in the quarter",
-          "Graduation window: set the date range when students in this quarter can request graduation review"
-        ]
-      },
+      // {
+      //   name: "ms-quarter-config",
+      //   label: "Mystery School Quarter Configuration",
+      //   description: "Editor for a single Mystery School quarter (3-month curriculum period). Admins set the start and end dates, assign featured decans, configure the Sunday Service schedule, and set the graduation eligibility window.",
+      //   group: "Mystery School",
+      //   purpose: "Keeps the Mystery School calendar structured and aligned so students and admins have clear expectations for each quarter's milestones.",
+      //   bullets: [
+      //     "Quarter date range picker with academic year label",
+      //     "Featured decans selector — choose up to 3 decans to highlight in the quarter",
+      //     "Graduation window: set the date range when students in this quarter can request graduation review"
+      //   ]
+      // },
       {
         name: "broadcast-admin-detail",
         label: "Broadcast Detail (Admin)",
