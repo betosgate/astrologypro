@@ -3068,6 +3068,62 @@ export function HoroscopeToolkitPage({
       setExcludedHoraryDates("");
     }
 
+    // ── Saved-data short-circuit ─────────────────────────────────────────
+    // Before kicking off live compute + AI generation (which is slow and
+    // costs money on the AI side), ask the server whether we already have
+    // a saved astro_ai_responses row for this exact (toolname, person
+    // identity). If yes, hydrate all sections directly from the saved
+    // payload and return — no live calls, no token spend.
+    //
+    // Why we don't do this lookup at module scope:
+    //   The toolkit prefills form data from `?prefill=` or from server
+    //   props on first paint, but the user can also tweak person1/person2
+    //   between submits (different DOB, different city, etc.). Doing the
+    //   lookup at submit time guarantees we match what was actually
+    //   submitted, not the initial prefill.
+    //
+    // We swallow lookup errors and fall through to live generation —
+    // a server hiccup must never block the toolkit.
+    try {
+      addProgress("Checking for saved report…");
+      const matchRes = await fetchWithRetry("/api/admin/horoscope/match-saved", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          toolname: currentTab.slug,
+          type: currentTab.type,
+          person1: form.person1,
+          person2: currentTab.type === "two-person" ? form.person2 : null,
+          extras: {
+            areaOfInquiry: form.areaOfInquiry || undefined,
+            question: form.question || undefined,
+            futureWeek: form.futureWeek || undefined,
+            futureMonth: form.futureMonth || undefined,
+          },
+        }),
+      });
+      const matchJson = await matchRes.json().catch(() => ({}));
+      if (matchRes.ok && matchJson?.found && matchJson.res) {
+        const hydrated = hydrateSavedAstroReport(matchJson.res, currentTab.slug);
+        if (hydrated.results) {
+          addProgress("Loaded saved report ✓");
+          setResults(hydrated.results);
+          setNatalSvg(hydrated.natalSvg);
+          setNatalSvgTransit(hydrated.natalSvgTransit);
+          setNatalSvgP2(hydrated.natalSvgP2);
+          setNatalSvgTransitP2(hydrated.natalSvgTransitP2);
+          setTransitChartSvg(hydrated.transitChartSvg);
+          setReturnDate(hydrated.returnDate);
+          setShowChartBtn(hydrated.showChartButton);
+          setShowScrollTop(true);
+          setLoading(false);
+          return;
+        }
+      }
+    } catch {
+      // Fall through to live generation on any lookup failure.
+    }
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const collected: Record<string, any> = {};
 
