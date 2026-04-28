@@ -120,11 +120,17 @@ export async function GET(
     const queryStart = new Date(startOfMonth.getTime() - 24 * 60 * 60 * 1000).toISOString();
     const queryEnd = new Date(endOfMonth.getTime() + 48 * 60 * 60 * 1000).toISOString();
 
+    // Stale-pending guard (slot-release fix, 2026-04-27):
+    // We include `pending` because that's the initial state of a paid
+    // booking while Stripe Checkout is in flight. Abandoned/failed
+    // checkouts can leave a pending row sitting around indefinitely
+    // until a webhook eventually fires, so we filter out `pending`
+    // rows older than the stale window in JS below.
     const [{ data: bookings }, { data: holds }, googleBusy, outlookBusy] =
       await Promise.all([
         admin
           .from("bookings")
-          .select("scheduled_at, duration_minutes")
+          .select("scheduled_at, duration_minutes, status, created_at")
           .eq("owner_id", ownerId)
           .gte("scheduled_at", queryStart)
           .lte("scheduled_at", queryEnd)
@@ -149,8 +155,20 @@ export async function GET(
           : Promise.resolve([]),
       ]);
 
+    // Filter out abandoned `pending` rows older than the stale window so
+    // payment-failed bookings don't permanently block real slots.
+    const PENDING_STALE_MIN = 30;
+    const staleCutoff = Date.now() - PENDING_STALE_MIN * 60 * 1000;
+    const activeBookings = (bookings ?? []).filter((b) => {
+      if ((b as { status?: string }).status !== "pending") return true;
+      const ts = (b as { created_at?: string }).created_at
+        ? new Date((b as { created_at?: string }).created_at as string).getTime()
+        : 0;
+      return ts >= staleCutoff;
+    });
+
     const allBlockedSlots = [
-      ...(bookings ?? []).map((booking) => ({
+      ...activeBookings.map((booking) => ({
         start: booking.scheduled_at,
         end: new Date(
           new Date(booking.scheduled_at).getTime() +

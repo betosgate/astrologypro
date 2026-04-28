@@ -2753,6 +2753,16 @@ export interface HoroscopeToolkitPageProps {
   initialSavedReport?: Record<string, unknown> | null;
   readOnlyBirthData?: boolean;
   communityNatalFamilyMemberId?: string | null;
+  /**
+   * Community relationship-report linkage. When BOTH ids are set AND the
+   * active toolkit slug is one of the relationship slugs (romantic /
+   * friendship / business), a successful generation will POST the full
+   * payload to /api/community/saved-reports/relationship/link so the
+   * report can be hydrated from DB on the next View. Admin paths leave
+   * these null and the save call is skipped.
+   */
+  communityRelationshipPersonAId?: string | null;
+  communityRelationshipPersonBId?: string | null;
 }
 
 export function HoroscopeToolkitPage({
@@ -2762,6 +2772,8 @@ export function HoroscopeToolkitPage({
   initialSavedReport = null,
   readOnlyBirthData = false,
   communityNatalFamilyMemberId = null,
+  communityRelationshipPersonAId = null,
+  communityRelationshipPersonBId = null,
 }: HoroscopeToolkitPageProps = {}) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -3638,12 +3650,41 @@ export function HoroscopeToolkitPage({
         }
       }
 
-      // ── Save romantic forecast report (fire-and-forget) ──────────────
-      if (currentTab.slug === "romantic_forecast_report_tropical_v2") {
+      // ── Save relationship reports ────────────────────────────────────
+      // Covers all three relationship slugs:
+      //   romantic_forecast_report_tropical_v2  → report_type "romantic"
+      //   friendship_report_tropical_v2         → report_type "friendship"
+      //   business_partner_v2                   → report_type "partnership"
+      //
+      // Two writes happen on every successful relationship generation:
+      //   (a) Legacy save to the CloudFront NestJS service + the local
+      //       /api/astro-ai/save-astro-ai-response — preserved for
+      //       backward compatibility with anything still reading those.
+      //   (b) NEW: domain-linked save through
+      //       /api/community/saved-reports/relationship/link, which
+      //       upserts the lifecycle row in community_relationship_reports
+      //       so the next View on /community/charts/detailed hydrates
+      //       from DB without re-running compute / synastry / AI calls.
+      //
+      // The link call only fires when both pair ids are passed in
+      // (community context). Admin paths leave them null and only the
+      // legacy saves run, exactly as before.
+      const RELATIONSHIP_SLUG_TO_REPORT_TYPE: Record<
+        string,
+        "romantic" | "friendship" | "partnership"
+      > = {
+        romantic_forecast_report_tropical_v2: "romantic",
+        friendship_report_tropical_v2: "friendship",
+        business_partner_v2: "partnership",
+      };
+      const relationshipReportType =
+        RELATIONSHIP_SLUG_TO_REPORT_TYPE[currentTab.slug];
+
+      if (relationshipReportType) {
         try {
           const birth2 = parseBirth(form.person2);
           const savePayload = {
-            toolname: "romantic_forecast_report_tropical_v2",
+            toolname: currentTab.slug,
             ai_response: collected.ai_interpretations ?? {},
             natal_chart: {
               self: collected.natal_chart_data ?? {},
@@ -3662,6 +3703,8 @@ export function HoroscopeToolkitPage({
             freeNatalWheelChartP2: natalSvgP2 ?? "",
             freeNatalWheelChartForTrasitP2: natalSvgTransitP2 ?? "",
           };
+
+          // (a) Legacy saves — fire and forget.
           fetchWithRetry(
             "https://d36fwfwo4vnk9h.cloudfront.net/astro-ai/save-astro-AI-Response",
             {
@@ -3670,13 +3713,45 @@ export function HoroscopeToolkitPage({
               body: JSON.stringify(savePayload),
             },
           ).catch(() => { });
-
-          // Parallel local save — see comment above for rationale.
           fetch("/api/astro-ai/save-astro-ai-response", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(savePayload),
           }).catch(() => { });
+
+          // (b) Domain-linked save (community context only).
+          if (
+            communityRelationshipPersonAId &&
+            communityRelationshipPersonBId
+          ) {
+            fetch("/api/community/saved-reports/relationship/link", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                personAId: communityRelationshipPersonAId,
+                personBId: communityRelationshipPersonBId,
+                reportType: relationshipReportType,
+                payload: savePayload,
+              }),
+            })
+              .then(async (res) => {
+                if (!res.ok) {
+                  const data = await res.json().catch(() => null);
+                  console.error(
+                    "[community/relationship/link] save failed:",
+                    data?.error ?? res.status,
+                  );
+                  return;
+                }
+                router.refresh();
+              })
+              .catch((err) => {
+                console.error(
+                  "[community/relationship/link] network error:",
+                  err,
+                );
+              });
+          }
         } catch {
           /* ignore save errors */
         }

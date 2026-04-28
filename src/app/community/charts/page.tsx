@@ -16,6 +16,10 @@ import {
 } from "@/components/ui/select";
 import { Heart, RefreshCw, Loader2, ChevronDown, ChevronUp, Star } from "lucide-react";
 import Link from "next/link";
+import {
+  deriveRelationshipReportState,
+  type ChartReportState,
+} from "@/lib/community/chart-report-state";
 
 type FamilyMember = {
   id: string;
@@ -47,6 +51,21 @@ type RelationshipChart = {
   generated_at: string;
 };
 
+/**
+ * Lifecycle row from `community_relationship_reports`. Used per pair ×
+ * report_type to derive whether the CTA should be Generate / View /
+ * Regenerate / Retry on this list.
+ */
+type RelationshipReportRow = {
+  person_a_id: string;
+  person_b_id: string;
+  report_type: "romantic" | "friendship" | "partnership";
+  astro_ai_response_id: string | null;
+  report_status: string | null;
+  invalidated_at: string | null;
+  generated_at: string | null;
+};
+
 const RELATIONSHIP_MODES = [
   { value: "romantic", label: "Romantic" },
   { value: "friendship", label: "Friendship" },
@@ -55,10 +74,47 @@ const RELATIONSHIP_MODES = [
 
 type RelationshipMode = (typeof RELATIONSHIP_MODES)[number]["value"];
 
+/**
+ * UI mode → canonical `report_type` enum on community_relationship_reports.
+ * UI exposes "business" but the lifecycle row stores "partnership". Same
+ * mapping is enforced server-side in /api/community/saved-reports/relationship/link
+ * and on the detailed page hydration.
+ */
+const MODE_TO_REPORT_TYPE: Record<
+  RelationshipMode,
+  "romantic" | "friendship" | "partnership"
+> = {
+  romantic: "romantic",
+  friendship: "friendship",
+  business: "partnership",
+};
+
+/** Short label shown next to each option in the type selector. */
+function ctaLabelForState(state: ChartReportState): string {
+  switch (state) {
+    case "generated":
+      return "View";
+    case "stale":
+      return "Regenerate";
+    case "failed":
+      return "Retry";
+    case "generating":
+      return "In progress";
+    case "locked_for_review":
+      return "Review";
+    case "missing":
+    default:
+      return "Generate";
+  }
+}
+
 export default function ChartsPage() {
   const router = useRouter();
   const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
   const [charts, setCharts] = useState<RelationshipChart[]>([]);
+  const [relationshipReports, setRelationshipReports] = useState<
+    RelationshipReportRow[]
+  >([]);
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
@@ -69,6 +125,7 @@ export default function ChartsPage() {
       const data = await res.json();
       setFamilyMembers(data.familyMembers ?? []);
       setCharts(data.charts ?? []);
+      setRelationshipReports(data.relationshipReports ?? []);
     }
     setLoading(false);
   }
@@ -85,6 +142,7 @@ export default function ChartsPage() {
         if (cancelled) return;
         setFamilyMembers(data.familyMembers ?? []);
         setCharts(data.charts ?? []);
+        setRelationshipReports(data.relationshipReports ?? []);
       }
       setLoading(false);
     }
@@ -95,6 +153,40 @@ export default function ChartsPage() {
       cancelled = true;
     };
   }, []);
+
+  /**
+   * Resolve the canonical lifecycle state for a given pair + UI mode.
+   * Returns "missing" when there's no row yet — the deriver in the
+   * shared lib treats that as "Generate". When a saved row exists, the
+   * deriver reads `report_status`, `astro_ai_response_id`, and
+   * `invalidated_at` to decide between View, Regenerate, Retry, etc.
+   *
+   * IMPORTANT: this deliberately ignores `relationship_charts.chart_data`
+   * (the legacy lightweight synastry summary). Per the spec, that data
+   * does not unlock View for full saved reports.
+   */
+  function getReportStateForMode(
+    aId: string,
+    bId: string,
+    mode: RelationshipMode
+  ): ChartReportState {
+    const [a, b] = [aId, bId].sort();
+    const reportType = MODE_TO_REPORT_TYPE[mode];
+    const row = relationshipReports.find(
+      (r) =>
+        r.person_a_id === a &&
+        r.person_b_id === b &&
+        r.report_type === reportType
+    );
+    return deriveRelationshipReportState({
+      report_id: row?.astro_ai_response_id ?? null,
+      report_status: row?.report_status ?? null,
+      invalidated_at: row?.invalidated_at ?? null,
+      // Pass undefined chart_data so the deriver doesn't fall back to
+      // the legacy synastry summary as proof of a full saved report.
+      chart_data: undefined,
+    });
+  }
 
   function getChartForPair(aId: string, bId: string) {
     const [a, b] = [aId, bId].sort();
@@ -257,11 +349,39 @@ export default function ChartsPage() {
                           <SelectValue placeholder="Select type" />
                         </SelectTrigger>
                         <SelectContent>
-                          {RELATIONSHIP_MODES.map((option) => (
-                            <SelectItem key={option.value} value={option.value}>
-                              {option.label}
-                            </SelectItem>
-                          ))}
+                          {RELATIONSHIP_MODES.map((option) => {
+                            const state = getReportStateForMode(
+                              a.id,
+                              b.id,
+                              option.value
+                            );
+                            const cta = ctaLabelForState(state);
+                            return (
+                              <SelectItem
+                                key={option.value}
+                                value={option.value}
+                              >
+                                <span className="flex w-full items-center justify-between gap-3">
+                                  <span>{option.label}</span>
+                                  <span
+                                    className={`text-[10px] font-medium uppercase tracking-wider ${
+                                      state === "generated"
+                                        ? "text-green-500"
+                                        : state === "stale"
+                                        ? "text-amber-500"
+                                        : state === "failed"
+                                        ? "text-destructive"
+                                        : state === "generating"
+                                        ? "text-blue-500"
+                                        : "text-muted-foreground"
+                                    }`}
+                                  >
+                                    {cta}
+                                  </span>
+                                </span>
+                              </SelectItem>
+                            );
+                          })}
                         </SelectContent>
                       </Select>
                     )}
@@ -307,11 +427,39 @@ export default function ChartsPage() {
                           <SelectValue placeholder="Select report type" />
                         </SelectTrigger>
                         <SelectContent>
-                          {RELATIONSHIP_MODES.map((option) => (
-                            <SelectItem key={option.value} value={option.value}>
-                              {option.label}
-                            </SelectItem>
-                          ))}
+                          {RELATIONSHIP_MODES.map((option) => {
+                            const state = getReportStateForMode(
+                              a.id,
+                              b.id,
+                              option.value
+                            );
+                            const cta = ctaLabelForState(state);
+                            return (
+                              <SelectItem
+                                key={option.value}
+                                value={option.value}
+                              >
+                                <span className="flex w-full items-center justify-between gap-3">
+                                  <span>{option.label}</span>
+                                  <span
+                                    className={`text-[10px] font-medium uppercase tracking-wider ${
+                                      state === "generated"
+                                        ? "text-green-500"
+                                        : state === "stale"
+                                        ? "text-amber-500"
+                                        : state === "failed"
+                                        ? "text-destructive"
+                                        : state === "generating"
+                                        ? "text-blue-500"
+                                        : "text-muted-foreground"
+                                    }`}
+                                  >
+                                    {cta}
+                                  </span>
+                                </span>
+                              </SelectItem>
+                            );
+                          })}
                         </SelectContent>
                       </Select>
                     </div>
