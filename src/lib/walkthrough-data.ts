@@ -6369,38 +6369,172 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
   },
 
       //----------- Reports-------------//
-      { 
-        name: "report_revenue", 
-        label: "Revenue Analytics", 
-        description: "Deep-dive financial reporting suite.", 
-        group: "Reports",
-        purpose: "Provides granular financial auditing for all platform-wide income streams.",
-        bullets: [
-          "Product-level revenue attribution logs",
-          "Time-series financial trend analysis",
-          "Net vs Gross revenue reconciliation",
-          "Exportable records for tax and audit"
-        ]
-      },
-      { name: "report_bookings", label: "Booking Velocity", description: "Trends in appointment scheduling.", group: "Reports" },
-      { 
-        name: "report_provider_costs", 
-        label: "Payout Liabilities", 
-        description: "Tracking what is owed to practitioners.", 
-        group: "Reports",
-        purpose: "Manages the platform's debt to its service providers, ensuring timely and accurate payouts.",
-        bullets: [
-          "Automated payout calculation logic",
-          "Practitioner commission rate auditing",
-          "Pending liability forecasting",
-          "Batch payout processing reconciliation"
-        ]
-      },
-      { name: "report_payouts", label: "Payout History", description: "Log of successfully processed transfers.", group: "Reports" },
-      { name: "report_funnel", label: "Conversion Funnel", description: "Tracking visitor-to-member journey.", group: "Reports" },
-      { name: "report_readings", label: "Reading Quality", description: "Metrics on session ratings and output.", group: "Reports" },
-      { name: "report_affiliates", label: "Affiliate ROI", description: "Performance of external traffic sources.", group: "Reports" },
-      { name: "report_campaigns", label: "Campaign ROI", description: "Financial results of marketing spends.", group: "Reports" },
+
+
+
+      
+  {
+    name: "report_revenue_v1",
+    label: "Revenue Analytics",
+    description: "Deep-dive financial reporting suite.",
+    group: "Reports",
+    purpose: "Provides granular financial auditing, payout tracking, commission visibility, and revenue reconciliation across all monetized activities on the platform.",
+    bullets: [
+      "Tracks total recognized revenue generated from bookings, paid sessions, spiritual consultations, subscriptions, and platform transactions across the selected reporting period.",
+      "Displays monetized event statistics including total paid sessions, average revenue per event, and financial contribution from completed platform activities.",
+      "Provides a complete breakdown of platform fees, affiliate commissions, diviner gross earnings, diviner net payouts, and retained platform revenue after deductions.",
+      "Includes financial reconciliation between gross revenue and net platform income to simplify accounting, auditing, tax reporting, and payout verification workflows.",
+      "Supports dynamic date-range filtering including 30 days, 90 days, 1 year, and all-time financial performance analysis for long-term trend tracking.",
+      "Visualizes monthly revenue trends and platform earnings distribution to help identify revenue growth patterns, seasonal demand, and monetization opportunities."
+    ]
+  },
+
+  {
+    name: "report_bookings_v1",
+    label: "Booking Analytics",
+    description: "Booking performance, completion, cancellation, and refund insights.",
+    group: "Reports",
+    purpose: "Monitors booking lifecycle performance, operational efficiency, customer reliability, and session engagement across the platform.",
+    bullets: [
+      "Provides a centralized overview of total bookings, session completion rates, cancellation percentages, no-show rates, average session duration, and refund activity.",
+      "Tracks booking status distribution including confirmed, pending, completed, canceled, in-progress, and no-show sessions for operational visibility.",
+      "Displays duration distribution metrics to analyze user engagement patterns and identify the most common session lengths across the platform.",
+      "Includes cancellation reason tracking and refund reporting to help administrators identify recurring operational issues and customer friction points.",
+      "Visualizes daily booking trends over time to monitor platform activity spikes, booking consistency, and diviner engagement performance.",
+      "Supports time-based filtering to compare booking behavior and performance metrics across multiple reporting periods including 30 days, 90 days, yearly, and all-time."
+    ]
+  },
+
+  {
+    name: "report_provider_costs_1",
+    label: "Provider Cost Report",
+    description: "Video and phone provider cost comparison dashboard.",
+    group: "Reports",
+    purpose: "Analyzes communication infrastructure costs and compares provider efficiency across video and phone session services.",
+    bullets: [
+      "Compares video provider performance between Daily.co and Amazon Chime using total sessions, total minutes consumed, estimated costs, and cost-per-minute calculations.",
+      "Tracks phone communication expenses between Twilio and Chime PSTN services to identify the most cost-effective telecommunication provider.",
+      "Highlights provider savings percentages and estimated cost reductions achieved through optimized provider routing and session distribution.",
+      "Displays detailed monthly cost trend analysis across all integrated providers for financial forecasting and infrastructure optimization.",
+      "Allows administrators to monitor communication usage patterns and understand how session volume impacts platform operational expenses.",
+      "Supports historical reporting across multiple time ranges to evaluate provider scalability, reliability, and long-term cost efficiency."
+    ]
+  },
+{
+  name: "report_operations_health_v1",
+  label: "Operations Health",
+  description: "Platform operational monitoring and issue tracking dashboard.",
+  group: "Reports",
+  purpose: "Monitors platform-wide operational stability, delivery failures, billing issues, unpaid subscriptions, telephony usage gaps, and pending payout risks requiring administrative attention.",
+  bullets: [
+    "Provides a centralized operational health overview including failed deliveries, overdue scheduled sends, unpaid subscriptions, unbilled telephony usage, and pending affiliate payout monitoring.",
+    
+    "Tracks subscription payment issues for recurring weekly subscribers, including unpaid accounts, past-due renewals, failed billing attempts, and renewal timeline visibility.",
+    
+    "Displays failed weekly deliveries and overdue scheduled deliveries to help administrators quickly identify communication breakdowns, automation failures, and delayed platform workflows.",
+    
+    "Monitors unbilled telephony usage across diviners and communication services to prevent missing invoices, untracked provider expenses, and revenue leakage from session infrastructure usage.",
+    
+    "Includes affiliate commission payout tracking with visibility into pending or approved payout obligations grouped by diviner and affiliate performance activity.",
+    
+    "Supports operational reporting across multiple time ranges including 7 days, 30 days, and 90 days for short-term issue monitoring and long-term platform stability analysis."
+  ]
+},
+  {
+    name: "report_funnel_V2",
+    label: "Funnel Analytics",
+    description: "Conversion funnel from traffic to completed sessions.",
+    group: "Reports",
+    purpose: "Tracks user conversion behavior from initial profile visits through completed paid sessions and identifies major drop-off points.",
+    bullets: [
+      "Visualizes the complete conversion funnel from page views and unique visitors to bookings created, bookings paid, and sessions completed.",
+      "Calculates conversion percentages and drop-off rates between every stage of the booking lifecycle to identify friction points in the user journey.",
+      "Displays key performance metrics including view-to-booking conversion rate, booking-to-completion rate, and overall platform conversion performance.",
+      "Includes daily trend charts to analyze visitor engagement, booking activity, and completed sessions over the selected reporting period.",
+      "Provides per-diviner performance analytics including page views, bookings, completed sessions, unique visitors, and conversion efficiency rankings.",
+      "Tracks top traffic referrers such as Instagram, Google, Facebook, TikTok, and direct sources to measure marketing and social media effectiveness."
+    ]
+  },
+
+  {
+    name: "report_per_diviner_performance",
+    label: "Per-Diviner Performance",
+    description: "Individual diviner conversion and booking performance table.",
+    group: "Reports",
+    purpose: "Compares each diviner’s traffic, booking activity, completed sessions, and conversion rate to identify top performers and underperforming profiles.",
+    bullets: [
+      "Displays each diviner with their public handle, making it easy for admins to review individual profile performance and compare activity across providers.",
+      "Tracks page views and unique visitors per diviner to measure how much audience attention each profile receives during the selected reporting period.",
+      "Shows total bookings and completed sessions for every diviner, helping admins understand which providers are turning visitor interest into paid or completed activity.",
+      "Calculates conversion percentage per diviner so high-performing providers can be identified based on actual results rather than traffic volume alone.",
+      "Highlights unusual performance patterns, such as high booking numbers with low visitor counts, so admins can review tracking quality or booking source behavior.",
+      "Supports operational review of diviner growth, marketing effectiveness, profile engagement, and session completion performance."
+    ]
+  },
+  {
+    name: "report_top_referrers",
+    label: "Top Referrers",
+    description: "Traffic source and booking attribution report.",
+    group: "Reports",
+    purpose: "Identifies the highest-performing referral sources driving views and bookings into the platform.",
+    bullets: [
+      "Lists major traffic sources such as Instagram, Google, Facebook, TikTok, localhost, direct platform traffic, and AstrologyPro domain referrals.",
+      "Tracks view counts per referrer to show which external channels are generating the strongest discovery and profile traffic.",
+      "Displays booking counts alongside traffic volume so admins can compare traffic quality, not just the number of visits received.",
+      "Helps identify which social, search, referral, and internal sources are producing the most valuable booking activity.",
+      "Supports campaign and marketing evaluation by showing whether visitors from specific platforms are converting into bookings.",
+      "Provides source-level attribution that can guide future advertising spend, affiliate strategy, SEO efforts, and social media promotion."
+    ]
+  },
+  {
+    name: "report_diviner_traffic",
+    label: "Diviner Traffic Report",
+    description: "Traffic attribution report for diviner profile activity.",
+    group: "Reports",
+    purpose: "Measures profile traffic, visitor attribution, and engagement performance for individual diviners across the platform.",
+    bullets: [
+      "Tracks total profile hits, unique visitors, affiliate-attributed traffic, advocate traffic, and organic non-partner visits across all diviners.",
+      "Displays top-performing diviners ranked by total traffic volume, engagement activity, and visitor acquisition performance.",
+      "Provides geographic analytics including top countries, cities, and regions generating traffic to diviner profiles and spiritual services.",
+      "Identifies the highest-performing traffic acquisition channels such as referral links, Google search, Facebook, direct traffic, and affiliate campaigns.",
+      "Includes last-hit timestamps and traffic recency indicators to monitor real-time engagement and profile visibility trends.",
+      "Helps administrators evaluate affiliate partnerships, organic discovery performance, and external marketing effectiveness across the platform."
+    ]
+  },
+
+  {
+    name: "report_readings_v1",
+    label: "Reading History",
+    description: "Searchable history of user readings across spiritual tools.",
+    group: "Reports",
+    purpose: "Provides a searchable archive of Tarot readings, Birth Charts, Astro Toolkit sessions, and spiritual consultation activity.",
+    bullets: [
+      "Allows administrators to browse and review all historical user readings across Tarot spreads, astrology reports, and spiritual guidance tools.",
+      "Supports tabbed filtering between Tarot Readings, Birth Charts, and Astro Toolkit activity for organized record management.",
+      "Includes detailed reading metadata such as spread type, number of cards used, notes entered by the diviner, and session timestamps.",
+      "Provides search functionality by user email to quickly locate individual reading histories and customer spiritual activity records.",
+      "Supports CSV export functionality for reporting, archival storage, compliance documentation, and administrative analysis.",
+      "Enables long-term tracking of user spiritual engagement patterns and recurring reading themes across the platform."
+    ]
+  },
+
+  {
+    name: "report_campaigns_v1",
+    label: "Campaign Performance Report",
+    description: "Platform-wide campaign metrics and revenue performance.",
+    group: "Reports",
+    purpose: "Tracks marketing campaign effectiveness, conversion activity, affiliate performance, and revenue generation across promotional initiatives.",
+    bullets: [
+      "Displays platform-wide campaign metrics including total active campaigns, campaign type distribution, generated revenue, and affiliate commissions.",
+      "Tracks campaign conversion performance by measuring completed purchases, successful bookings, and revenue generated from promotional traffic.",
+      "Highlights top-performing campaigns ranked by revenue contribution, conversion count, and campaign engagement metrics.",
+      "Associates campaigns with specific diviners or platform initiatives to evaluate individual marketing effectiveness and audience response.",
+      "Provides visibility into campaign status, monetization success, and commission payouts generated through affiliate-driven promotions.",
+      "Supports multi-range reporting across 30 days, 90 days, yearly, and all-time periods for campaign comparison and long-term performance analysis."
+    ]
+  },
+     
+     
 
       //----------------Config-----------------------//
       { 
@@ -7207,45 +7341,9 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Reject with reason: sends a notification to the client explaining the decision"
         ]
       },
-      {
-        name: "admin_report_engagement",
-        label: "Engagement Report",
-        description: "Platform-wide engagement metrics — daily active users, feature adoption rates, content consumption, and session-to-booking conversion.",
-        group: "Reports",
-        purpose: "Measures how deeply members are using the platform beyond just paying — engagement is the lead indicator of retention and upsell.",
-        bullets: [
-          "DAU/MAU ratio — the stickiness metric that shows how often active users return",
-          "Feature adoption heatmap: which pages and tools are used most across each role",
-          "Content consumption: most-watched videos, most-read articles, most-completed rituals",
-          "Conversion funnel: member acquisition → first session → second session rates"
-        ]
-      },
-      {
-        name: "admin_report_churn",
-        label: "Churn & Retention Report",
-        description: "Monthly cohort analysis of subscription churn — which cohorts have the highest dropout, at what tenure month, and correlated factors.",
-        group: "Reports",
-        purpose: "Identifies at-risk member segments before they cancel so the team can intervene with outreach or feature improvements.",
-        bullets: [
-          "Cohort retention grid: signup month on the Y axis, tenure month on the X axis",
-          "Churn reasons captured at cancellation: price, inactivity, life changes, product",
-          "At-risk segment: members in month 3–4 of tenure (historically highest dropout point)",
-          "Revenue impact of churn: estimated MRR lost if current cohort churn rates persist"
-        ]
-      },
-      {
-        name: "admin_report_nps",
-        label: "NPS & Satisfaction Report",
-        description: "Net Promoter Score trends from post-session surveys, testimonial star ratings, and platform satisfaction polls.",
-        group: "Reports",
-        purpose: "Tracks the platform's reputation from the member perspective — NPS is the leading indicator of word-of-mouth growth.",
-        bullets: [
-          "Overall NPS score with 30/90/365-day trend sparklines",
-          "NPS by role: Diviners vs PM Members vs Clients — different satisfaction drivers",
-          "Verbatim response browser: read unfiltered member comments with sentiment tag",
-          "Alert if NPS drops more than 10 points month-over-month"
-        ]
-      },
+    
+     
+    
       {
         name: "admin_ai_content_moderation",
         label: "AI Content Moderation Queue",
@@ -7370,66 +7468,10 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Member tier selector: Public, PM, MS — with preview toggle to see each audience view"
         ]
       },
-      {
-        name: "report-training-completion",
-        label: "Training Completion Report",
-        description: "Aggregate report showing lesson and quiz completion rates across all active trainees. Filterable by cohort start date, lesson, and completion status. Exports to CSV for offline analysis.",
-        group: "Reports",
-        purpose: "Helps admins identify which lessons have the highest drop-off so training content can be prioritised for improvement.",
-        bullets: [
-          "Completion funnel: enrolled → started → passed quiz → completed lesson for each lesson",
-          "Average time-to-complete per lesson compared to platform median",
-          "Cohort comparison table — compare completion rates across different trainee intake batches"
-        ]
-      },
-      {
-        name: "report-ms-progress",
-        label: "Mystery School Progress Report",
-        description: "Dashboard report tracking Mystery School student progress across the 36 decans. Shows how many students are active per decan, average completion rate, journal submission volume, and graduation pipeline.",
-        group: "Reports",
-        purpose: "Gives the Mystery School admin team visibility into the student body's collective momentum and highlights where students are stalling.",
-        bullets: [
-          "Decan-by-decan progress heatmap — colour intensity reflects student density",
-          "Journal submission volume chart by week",
-          "Graduation pipeline: students within 3 decans of completion highlighted"
-        ]
-      },
-      {
-        name: "report-pm-growth",
-        label: "Perennial Mandalism Growth Report",
-        description: "Monthly and cumulative growth report for the Perennial Mandalism subscription. Tracks new sign-ups, cancellations, net growth, and revenue. Filterable by plan tier and cohort month.",
-        group: "Reports",
-        purpose: "Provides the business team with subscription health data to inform retention campaigns and pricing decisions.",
-        bullets: [
-          "Net growth chart: new MRR minus churned MRR per month",
-          "Churn reasons breakdown (from exit survey) as a donut chart",
-          "Cohort retention table: % of month-0 subscribers still active at months 1, 3, 6, 12"
-        ]
-      },
-      {
-        name: "report-diviner-performance",
-        label: "Diviner Performance Report",
-        description: "Per-diviner performance scorecard covering session volume, average rating, cancellation rate, response time, and earnings. Filterable by date range and service type. Exportable to CSV.",
-        group: "Reports",
-        purpose: "Enables the admin team to identify top-performing diviners for promotion and flag underperforming accounts for support outreach.",
-        bullets: [
-          "Performance league table sortable by any metric",
-          "Trend sparklines per diviner showing 12-week trajectory for rating and session count",
-          "Flag for review button — marks a diviner for SLA follow-up without sending a notification"
-        ]
-      },
-      {
-        name: "report-client-lifetime-value",
-        label: "Client Lifetime Value Report",
-        description: "Report showing average and median client lifetime value (LTV) segmented by acquisition channel, first session type, and subscription status. Includes cohort LTV curves for clients acquired in each quarter.",
-        group: "Reports",
-        purpose: "Guides marketing spend allocation by revealing which acquisition channels produce the highest-value long-term clients.",
-        bullets: [
-          "LTV by acquisition channel bar chart (organic, referral, affiliate, paid)",
-          "Cohort LTV curves — line chart showing cumulative spend per client over 24 months",
-          "Top 10% client segment detail — session frequency, average order value, and subscription tier"
-        ]
-      },
+    
+   
+  
+     
       // {
       //   name: "discount-code-create",
       //   label: "Create Discount Code",
@@ -7454,18 +7496,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
       //     "Clone button — copies all settings to a new code with an auto-incremented suffix"
       //   ]
       // },
-      {
-        name: "affiliate-leaderboard-admin",
-        label: "Affiliate Leaderboard (Admin)",
-        description: "Full affiliate performance leaderboard with raw earnings, referral counts, conversion rates, and payout status. Admin view shows all advocates including those below public leaderboard threshold. Exportable to CSV.",
-        group: "Reports",
-        purpose: "Gives the admin team an unfiltered view of affiliate performance to identify top earners, detect fraud patterns, and plan commission reviews.",
-        bullets: [
-          "Sortable columns: referrals sent, conversions, gross revenue, net commission, payout status",
-          "Fraud flag indicator — unusual referral velocity triggers an automatic caution badge",
-          "Bulk payout action — mark multiple advocates as paid in one click after bank transfer"
-        ]
-      },
+   
       {
         name: "testimonial-moderation-queue",
         label: "Testimonial Moderation Queue",
@@ -8594,22 +8625,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Your personal number stays hidden — the client only ever sees the platform Chime number"
         ]
       },
-      {
-        name: "revenue-breakdown",
-        label: "Revenue by Service Type",
-        description: "A detailed revenue breakdown showing exactly how much each of your services earns — natal chart readings, transit consultations, tarot sessions, subscriptions, gift certificate redemptions, and packages — compared across time periods.",
-        group: "Finance & Reports",
-        purpose: "Understanding which services make you the most money is essential for running a sustainable practice. This breakdown shows you not just total revenue, but revenue by service type — so you can see that natal chart readings bring in the most gross income but tarot sessions have the best booking frequency, for example. That insight helps you decide where to focus your marketing and how to price new offerings.",
-        bullets: [
-          "Service revenue ranking — every active service ranked from highest to lowest revenue in the selected period",
-          "Booking count per service — how many sessions of each type were completed, separate from revenue",
-          "Average value per service — average session price, useful for comparing service profitability",
-          "Subscription revenue line — recurring income from subscription clients shown separately from one-off bookings",
-          "Gift certificate redemptions — revenue that came through gift certificates, tracked as its own category",
-          "Period comparison — compare service revenue this month vs last month side by side",
-          "Export by service — download the revenue breakdown per service as a CSV for your records"
-        ]
-      },
+  
       {
         name: "session-notes",
         label: "Client Session Notes",
