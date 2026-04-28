@@ -80,6 +80,7 @@ import { MIGRATION_SQL as MIG_20260424009001_ACV2D } from "@/data/migrations/202
 import { MIGRATION_SQL as MIG_20260427000002_ARV2A } from "@/data/migrations/20260427000002_affiliate_rls_v2_alignment";
 import { MIGRATION_SQL as MIG_20260427000003_AJSP } from "@/data/migrations/20260427000003_affiliate_junction_select_policy";
 import { MIGRATION_SQL as MIG_20260427000004_ARSD } from "@/data/migrations/20260427000004_affiliate_rls_security_definer";
+import { MIGRATION_SQL as MIG_20260428000003_RGS } from "@/data/migrations/20260428000003_ritual_global_settings";
 
 /**
  * Allowlisted migrations that the admin migration runner can execute.
@@ -760,6 +761,14 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Task 01b of the Affiliate Commission v2 sprint. **DESTRUCTIVE** — drops 6 System A tables (affiliate_commission_history, affiliate_commissions, affiliate_payouts, affiliate_payout_items, affiliate_clicks, affiliate_referral_links) with CASCADE. Defensive backfill collapses any 'suspended' affiliate_accounts.status values to 'blocked' before trimming the enum to (unclaimed | active | blocked). Trims affiliate_campaigns.status to (active | paused | archived | expired); pre-existing 'draft' rows become 'active', 'completed' becomes 'archived'. Relaxes affiliate_campaigns_owner_consistency CHECK so the snapshot columns are no longer required (rate now lives on the booking stamp per spec v1.2). The snapshot columns themselves are NOT dropped — the advocate service still writes them, and dropping them is deferred to a future cross-service cleanup. Run AFTER 01a additive + Tasks 02 + 04 + 07-Phase-A have shipped. Idempotent (DROP IF EXISTS, status updates are no-ops on already-clean data, CHECK swap uses IF EXISTS). End-of-migration sanity check raises if anything didn't drop or any out-of-range status survived.",
     sortKey: "20260424009001",
     sql: MIG_20260424009001_ACV2D,
+  },
+  "20260428000003_ritual_global_settings": {
+    id: "20260428000003_ritual_global_settings",
+    title: "Ritual global playback settings (singleton table)",
+    description:
+      "Creates the ritual_global_settings singleton table for platform-wide video player behaviors (autoplay, loop, controls, muted) and seeds default values. Safe to re-run.",
+    sortKey: "20260428000003",
+    sql: MIG_20260428000003_RGS,
   },
 };
 
