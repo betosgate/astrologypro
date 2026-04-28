@@ -166,7 +166,7 @@ export default function NewRitualConfigurationPage() {
             <CardTitle>2. Display</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid gap-3 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <div className="space-y-1">
                 <Label>Ritual type</Label>
                 <Select
@@ -175,7 +175,7 @@ export default function NewRitualConfigurationPage() {
                     setForm({ ...form, ritual_type: v as "static" | "dynamic" })
                   }
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -195,7 +195,7 @@ export default function NewRitualConfigurationPage() {
                     })
                   }
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -215,6 +215,7 @@ export default function NewRitualConfigurationPage() {
                   onChange={(e) =>
                     setForm({ ...form, sort_order: e.target.value })
                   }
+                  className="w-full"
                 />
               </div>
             </div>

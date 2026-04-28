@@ -19,9 +19,14 @@ export async function GET(req: NextRequest) {
   const search = searchParams.get("q")?.trim();
   const status = searchParams.get("status");
   const state = searchParams.get("state");
+  const page = parseInt(searchParams.get("page") ?? "1", 10);
+  const pageSize = parseInt(searchParams.get("pageSize") ?? "10", 10);
+  const fromDate = searchParams.get("from");
+  const toDate = searchParams.get("to");
+  const sort = searchParams.get("sort") ?? "desc";
 
   const admin = createAdminClient();
-  let query = admin.from("ritual_media_assets").select("*");
+  let query = admin.from("ritual_media_assets").select("*", { count: "exact" });
 
   if (search) {
     query = query.or(`title.ilike.%${search}%,asset_key.ilike.%${search}%`);
@@ -44,9 +49,19 @@ export async function GET(req: NextRequest) {
     query = query.is("archived_at", null);
   }
 
-  const { data: assets, error } = await query.order("created_at", {
-    ascending: false,
-  });
+  if (fromDate) {
+    query = query.gte("created_at", fromDate);
+  }
+  if (toDate) {
+    query = query.lte("created_at", `${toDate}T23:59:59.999Z`);
+  }
+
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
+  const { data: assets, count, error } = await query
+    .order("created_at", { ascending: sort === "asc" })
+    .range(from, to);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
@@ -57,10 +72,7 @@ export async function GET(req: NextRequest) {
     .eq("is_active", true);
   const mappingCounts = new Map<string, number>();
   for (const m of mappings ?? []) {
-    mappingCounts.set(
-      m.asset_id,
-      (mappingCounts.get(m.asset_id) ?? 0) + 1
-    );
+    mappingCounts.set(m.asset_id, (mappingCounts.get(m.asset_id) ?? 0) + 1);
   }
 
   // Final-override usage count.
@@ -83,7 +95,12 @@ export async function GET(req: NextRequest) {
     final_override_count: overrideCounts.get(a.id) ?? 0,
   }));
 
-  return NextResponse.json(enriched);
+  return NextResponse.json({
+    items: enriched,
+    total: count ?? 0,
+    page,
+    pageSize,
+  });
 }
 
 /**

@@ -417,6 +417,7 @@ function tagToTitle(tag: string): string {
 type BuildRitualPlaylistOptions = {
   collapseStaticPresets?: boolean;
   includeCodeFallbackUrls?: boolean;
+  resolvedAssets?: Record<string, { title: string | null; url: string | null }>;
 };
 
 export function buildRitualPlaylist(
@@ -447,34 +448,46 @@ export function buildRitualPlaylist(
     : null;
 
   if (staticPreset) {
-    return [
-      {
-        tag: staticPreset.item.tag,
-        title: staticPreset.item.title,
-        videoUrl: includeCodeFallbackUrls
-          ? ritualVideoUrl(staticPreset.item.filename)
-          : null,
-        filename: includeCodeFallbackUrls ? staticPreset.item.filename : null,
-        sequence: 1,
-        kind: staticPreset.item.kind,
-        missing: !includeCodeFallbackUrls,
-      },
-    ];
+    const presetItem: RitualPlaylistItem = {
+      tag: staticPreset.item.tag,
+      title: staticPreset.item.title,
+      videoUrl: includeCodeFallbackUrls
+        ? ritualVideoUrl(staticPreset.item.filename)
+        : null,
+      filename: includeCodeFallbackUrls ? staticPreset.item.filename : null,
+      sequence: 1,
+      kind: staticPreset.item.kind,
+      missing: !includeCodeFallbackUrls,
+    };
+
+    // Apply resolver override if present for the constituent tag
+    const firstTag = uniqueInput[0];
+    const resolved = options.resolvedAssets?.[firstTag];
+    if (resolved) {
+      if (resolved.title) presetItem.title = resolved.title;
+      if (resolved.url) presetItem.videoUrl = resolved.url;
+    }
+
+    return [presetItem];
   }
 
   const ordered = sortRitualTagsForPlayback(uniqueInput);
   return ordered.map((tag, idx) => {
     const filename = getRitualVideoFilenameForTag(tag);
     const classified = classifyTag(tag);
-    return {
+    const resolved = options.resolvedAssets?.[tag];
+
+    const item: RitualPlaylistItem = {
       tag,
-      title: tagToTitle(tag),
+      title: resolved?.title || tagToTitle(tag),
       videoUrl:
-        includeCodeFallbackUrls && filename ? ritualVideoUrl(filename) : null,
+        resolved?.url ||
+        (includeCodeFallbackUrls && filename ? ritualVideoUrl(filename) : null),
       filename: includeCodeFallbackUrls ? filename : null,
       sequence: idx + 1,
       kind: classified.kind,
-      missing: !includeCodeFallbackUrls || filename === null,
+      missing: !includeCodeFallbackUrls || (filename === null && !resolved?.url),
     };
+    return item;
   });
 }
