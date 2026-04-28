@@ -15,7 +15,6 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Progress } from "@/components/ui/progress";
 import {
   Table,
   TableBody,
@@ -36,8 +35,6 @@ import {
   Loader2,
   ArrowLeft,
   Pencil,
-  Trash2,
-  DollarSign,
   Target,
   Users,
   Calendar,
@@ -114,9 +111,6 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
   const [editStatus, setEditStatus] = useState("");
   const [editStartDate, setEditStartDate] = useState("");
   const [editEndDate, setEditEndDate] = useState("");
-  const [editCommType, setEditCommType] = useState("");
-  const [editCommValue, setEditCommValue] = useState("");
-  const [editBudgetCap, setEditBudgetCap] = useState("");
 
   const loadCampaign = useCallback(async () => {
     setLoading(true);
@@ -141,9 +135,6 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
     setEditStatus(campaign.status);
     setEditStartDate(campaign.start_date);
     setEditEndDate(campaign.end_date || "");
-    setEditCommType(campaign.commission_type);
-    setEditCommValue(String(campaign.commission_value));
-    setEditBudgetCap(campaign.budget_cap_cents ? String(campaign.budget_cap_cents / 100) : "");
     setEditOpen(true);
   }
 
@@ -158,9 +149,6 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
         status: editStatus,
         start_date: editStartDate,
         end_date: editEndDate || undefined,
-        commission_type: editCommType,
-        commission_value: parseFloat(editCommValue) || 0,
-        budget_cap_cents: editBudgetCap ? parseInt(editBudgetCap, 10) * 100 : null,
       }),
     });
     if (res.ok) {
@@ -174,20 +162,10 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
     setSaving(false);
   }
 
-  async function handleDelete() {
-    if (!campaign || campaign.status !== "draft") return;
-    if (!confirm("Delete this draft campaign?")) return;
-    const res = await fetch(`/api/dashboard/campaigns/${id}`, { method: "DELETE" });
-    if (res.ok) {
-      toast.success("Campaign deleted");
-      window.location.href = "/dashboard/campaigns";
-    } else {
-      const err = await res.json();
-      toast.error(err.title ?? "Failed to delete");
-    }
-  }
-
   // Affiliate enrollment removed from campaign detail — see /dashboard/affiliates/assignments
+  // Delete flow removed in v2 cleanup: API endpoint requires
+  // status='draft' which the trimmed enum no longer allows. Use
+  // archive instead (PATCH status='archived').
 
   if (loading) {
     return (
@@ -207,12 +185,6 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
       </div>
     );
   }
-
-  const budgetPercent = campaign.budget_cap_cents
-    ? Math.min(100, Math.round((campaign.spent_cents / campaign.budget_cap_cents) * 100))
-    : 0;
-
-  const totalConversionCommission = campaign.conversions.reduce((s, c) => s + c.commission_amount_cents, 0);
 
   return (
     <div className="space-y-6">
@@ -241,11 +213,6 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
           <Button variant="outline" size="sm" onClick={openEdit}>
             <Pencil className="mr-2 size-3.5" />Edit
           </Button>
-          {campaign.status === "draft" && (
-            <Button variant="destructive" size="sm" onClick={handleDelete}>
-              <Trash2 className="mr-2 size-3.5" />Delete
-            </Button>
-          )}
         </div>
       </div>
 
@@ -315,38 +282,7 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
             <p className="text-2xl font-bold">{campaign.conversions.length}</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Commission</CardTitle>
-            <DollarSign className="size-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">{fmtCents(totalConversionCommission)}</p>
-            <p className="text-xs text-muted-foreground">
-              {campaign.commission_type === "percentage"
-                ? `${campaign.commission_value}% rate`
-                : `$${Number(campaign.commission_value).toFixed(2)} fixed`}
-            </p>
-          </CardContent>
-        </Card>
       </div>
-
-      {/* Budget Progress */}
-      {campaign.budget_cap_cents && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">Budget Progress</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-muted-foreground">{fmtCents(campaign.spent_cents)} spent</span>
-              <span className="text-sm font-medium">{fmtCents(campaign.budget_cap_cents)} budget</span>
-            </div>
-            <Progress value={budgetPercent} className="h-3" />
-            <p className="mt-1 text-xs text-muted-foreground">{budgetPercent}% utilized</p>
-          </CardContent>
-        </Card>
-      )}
 
       {/* UTM Info */}
       {(campaign.utm_source || campaign.utm_medium || campaign.utm_campaign) && (
@@ -443,10 +379,10 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
             <div className="space-y-2">
               <Label>Status</Label>
               <select className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm" value={editStatus} onChange={(e) => setEditStatus(e.target.value)}>
-                <option value="draft">Draft</option>
                 <option value="active">Active</option>
                 <option value="paused">Paused</option>
-                <option value="completed">Completed</option>
+                <option value="archived">Archived</option>
+                <option value="expired">Expired</option>
               </select>
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -458,23 +394,6 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
                 <Label>End Date</Label>
                 <Input type="date" value={editEndDate} onChange={(e) => setEditEndDate(e.target.value)} />
               </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Commission Type</Label>
-                <select className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm" value={editCommType} onChange={(e) => setEditCommType(e.target.value)}>
-                  <option value="percentage">Percentage</option>
-                  <option value="fixed">Fixed</option>
-                </select>
-              </div>
-              <div className="space-y-2">
-                <Label>{editCommType === "percentage" ? "Commission %" : "Fixed ($)"}</Label>
-                <Input type="number" min="0" value={editCommValue} onChange={(e) => setEditCommValue(e.target.value)} />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>Budget Cap ($)</Label>
-              <Input type="number" min="0" value={editBudgetCap} onChange={(e) => setEditBudgetCap(e.target.value)} placeholder="Leave blank for unlimited" />
             </div>
           </div>
           <DialogFooter>

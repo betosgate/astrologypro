@@ -185,9 +185,8 @@ const PERIODS = [
 
 const STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
   active: "default",
-  draft: "secondary",
   paused: "outline",
-  completed: "default",
+  archived: "outline",
   expired: "destructive",
 };
 

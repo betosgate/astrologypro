@@ -96,10 +96,8 @@ interface CreatedCampaignResult {
 }
 
 const STATUS_BADGE: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-  draft: "secondary",
   active: "default",
   paused: "outline",
-  completed: "default",
   expired: "destructive",
   archived: "outline",
 };
@@ -156,9 +154,8 @@ interface ReportData {
 const REPORT_STATUS_COLORS: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
   active: "default",
   paused: "secondary",
-  draft: "outline",
-  ended: "destructive",
-  completed: "secondary",
+  archived: "outline",
+  expired: "destructive",
 };
 
 function fmtCurrency(amount: number) {
@@ -626,9 +623,7 @@ export default function DashboardCampaignsPage() {
               <DialogTitle>{createdCampaign ? "Campaign Created!" : "Create Campaign"}</DialogTitle>
               <DialogDescription>
                 {createdCampaign
-                  ? (createdCampaign.status && createdCampaign.status !== "active"
-                      ? "Your campaign was created as a draft. Activate it before sharing the URL — draft links will not route to the destination you picked."
-                      : "Your campaign is ready. Copy the URL to share with affiliates.")
+                  ? "Your campaign is ready. Copy the URL to share with affiliates."
                   : "Set up a new promotional campaign for your affiliates."}
               </DialogDescription>
             </DialogHeader>
@@ -836,10 +831,9 @@ export default function DashboardCampaignsPage() {
                 onChange={(e) => setFilterStatus(e.target.value)}
               >
                 <option value="">All statuses</option>
-                <option value="draft">Draft</option>
                 <option value="active">Active</option>
                 <option value="paused">Paused</option>
-                <option value="completed">Completed</option>
+                <option value="archived">Archived</option>
                 <option value="expired">Expired</option>
               </select>
             </div>
@@ -885,7 +879,6 @@ export default function DashboardCampaignsPage() {
                           <TableHead>Destination</TableHead>
                           <TableHead>Campaign URL</TableHead>
                           <TableHead>Dates</TableHead>
-                          <TableHead>Commission</TableHead>
                           <TableHead>Affiliates</TableHead>
                           <TableHead>Conversions</TableHead>
                           <TableHead className="text-right">Actions</TableHead>
@@ -945,11 +938,6 @@ export default function DashboardCampaignsPage() {
                             <TableCell className="text-sm">
                               {fmtDate(c.start_date)}
                               {c.end_date ? ` - ${fmtDate(c.end_date)}` : ""}
-                            </TableCell>
-                            <TableCell>
-                              {c.commission_type === "percentage"
-                                ? `${c.commission_value}%`
-                                : `$${Number(c.commission_value).toFixed(2)}`}
                             </TableCell>
                             <TableCell>{c.affiliates_count}</TableCell>
                             <TableCell>{c.conversions_count}</TableCell>

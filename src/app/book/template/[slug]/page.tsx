@@ -144,6 +144,7 @@ export default async function SharedBookingPage({
         ) : (
           <SharedTemplateCalendar
             templateSlug={requestedTemplate.slug as string}
+            availabilitySlug={match.baseSlug}
             templateName={requestedTemplate.name as string}
             templateCategory={
               ((requestedTemplate.category as string) === "tarot"

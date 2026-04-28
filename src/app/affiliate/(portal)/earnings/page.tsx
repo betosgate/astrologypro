@@ -25,7 +25,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { TrendingUp, DollarSign, Clock } from "lucide-react";
+import { TrendingUp, Clock } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -43,18 +43,16 @@ function formatDate(iso: string): string {
   });
 }
 
-function statusBadge(status: string) {
-  const map: Record<string, string> = {
-    pending: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300",
-    on_hold: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300",
-    approved: "bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300",
-    paid: "bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300",
-    rejected: "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300",
-    reversed: "bg-muted text-muted-foreground",
-  };
+function statusBadge(status: "earned" | "reversed") {
+  // v2 has only two conversion states. Pre-v2 approval-state keys
+  // (pending / on_hold / approved / paid / rejected) are gone.
+  const cls =
+    status === "earned"
+      ? "bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300"
+      : "bg-muted text-muted-foreground";
   return (
     <span
-      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${map[status] ?? "bg-muted text-muted-foreground"}`}
+      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${cls}`}
     >
       {status}
     </span>

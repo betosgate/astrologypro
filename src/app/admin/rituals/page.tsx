@@ -8,6 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import {
   Table,
   TableBody,
@@ -27,10 +28,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import {
   AlertCircle,
   Archive,
+  CheckCircle2,
   Eye,
   EyeOff,
   Film,
@@ -38,27 +41,13 @@ import {
   Globe,
   Pencil,
   Plus,
+  Power,
   RotateCw,
   Search,
+  Settings,
   Trash2,
   Upload,
 } from "lucide-react";
-
-/**
- * /admin/rituals — Ritual Configurations module.
- *
- * Spec source:
- *   docs/tasks/2026-04-27/04-ritual-configurations-gap-analysis-post-db-migration.md
- *
- * Single admin sidebar entry "Ritual Configurations" hosts three tabs:
- *   1. Configurations  — list + filters + publish/visibility actions
- *   2. Video Assets    — upload OR external-URL asset library
- *   3. Tag Mappings    — global + per-ritual tag → asset wiring
- *
- * The legacy ritual_invocations CRUD is preserved at
- *   /admin/rituals/legacy-invocations
- * because runtime community pages still read from that table.
- */
 
 interface RitualDefinition {
   id: string;
@@ -107,7 +96,7 @@ interface AssetMapping {
   asset?: RitualAsset | null;
 }
 
-type Tab = "configs" | "assets" | "mappings";
+type Tab = "configs" | "assets" | "mappings" | "playback-settings";
 
 export default function RitualConfigurationsPage() {
   const [tab, setTab] = useState<Tab>("configs");
@@ -122,25 +111,24 @@ export default function RitualConfigurationsPage() {
       </div>
 
       <div className="flex flex-wrap gap-2 border-b">
-        {(
-          [
-            { id: "configs", label: "Configurations" },
-            { id: "assets", label: "Video Assets" },
-            { id: "mappings", label: "Tag Mappings" },
-          ] as Array<{ id: Tab; label: string }>
-        ).map((t) => (
-          <button
+        {[
+          { id: "configs", label: "Configurations" },
+          { id: "assets", label: "Video Assets" },
+          { id: "mappings", label: "Tag Mappings" },
+          { id: "playback-settings", label: "Playback Settings" },
+        ].map((t) => (
+          <Button
             key={t.id}
-            type="button"
-            onClick={() => setTab(t.id)}
-            className={`-mb-px border-b-2 px-3 py-2 text-sm transition-colors ${
+            variant="ghost"
+            className={`rounded-none border-b-2 px-4 pb-3 pt-2 text-sm font-medium transition-colors hover:bg-transparent ${
               tab === t.id
-                ? "border-primary text-foreground"
+                ? "border-primary text-primary"
                 : "border-transparent text-muted-foreground hover:text-foreground"
             }`}
+            onClick={() => setTab(t.id as Tab)}
           >
             {t.label}
-          </button>
+          </Button>
         ))}
         <div className="ml-auto">
           <Button asChild variant="outline" size="sm">
@@ -151,9 +139,10 @@ export default function RitualConfigurationsPage() {
         </div>
       </div>
 
-      {tab === "configs" ? <ConfigurationsTab /> : null}
-      {tab === "assets" ? <AssetsTab /> : null}
-      {tab === "mappings" ? <MappingsTab /> : null}
+      {tab === "configs" && <ConfigurationsTab />}
+      {tab === "assets" && <AssetsTab />}
+      {tab === "mappings" && <MappingsTab />}
+      {tab === "playback-settings" && <PlaybackSettingsTab />}
     </div>
   );
 }
@@ -178,7 +167,6 @@ function ConfigurationsTab() {
     setItems((await res.json()) as RitualDefinition[]);
   }
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     void load();
   }, []);
 
@@ -363,7 +351,7 @@ function ConfigurationsTab() {
                         }
                         title={c.is_published ? "Unpublish" : "Publish"}
                       >
-                        <Globe
+                        <CheckCircle2
                           className={`size-3.5 ${c.is_published ? "text-green-600" : "text-muted-foreground"}`}
                         />
                       </Button>
@@ -403,14 +391,39 @@ function ConfigurationsTab() {
   );
 }
 
+import { VideoViewModal } from "@/components/shared/video-view-modal";
+
 function AssetsTab() {
   const [items, setItems] = useState<RitualAsset[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [editingAsset, setEditingAsset] = useState<RitualAsset | null>(null);
+  const [previewAsset, setPreviewAsset] = useState<RitualAsset | null>(null);
+
+  const [search, setSearch] = useState("");
+  const [status, setStatus] = useState("all");
+  const [state, setState] = useState("all");
+  const [assetOptions, setAssetOptions] = useState<{ value: string; label: string }[]>([]);
+
+  useEffect(() => {
+    fetch("/api/admin/ritual-assets")
+      .then((r) => r.json())
+      .then((data: RitualAsset[]) => {
+        if (Array.isArray(data)) {
+          setAssetOptions(data.map(a => ({ value: a.title, label: a.title })));
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   async function load() {
     setError(null);
-    const res = await fetch("/api/admin/ritual-assets");
+    const params = new URLSearchParams();
+    if (search.trim()) params.set("q", search.trim());
+    if (status !== "all") params.set("status", status);
+    if (state !== "all") params.set("state", state);
+
+    const res = await fetch(`/api/admin/ritual-assets?${params.toString()}`);
     if (!res.ok) {
       const e = await res.json().catch(() => ({}));
       setError(e.error ?? "Failed to load assets");
@@ -419,10 +432,13 @@ function AssetsTab() {
     }
     setItems((await res.json()) as RitualAsset[]);
   }
+
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    void load();
-  }, []);
+    const timer = setTimeout(() => {
+      void load();
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search, status, state]);
 
   async function patch(id: string, body: Record<string, unknown>) {
     await fetch(`/api/admin/ritual-assets/${id}`, {
@@ -448,20 +464,85 @@ function AssetsTab() {
             Upload a video file or paste a direct video URL.
           </p>
         </div>
-        <Button onClick={() => setShowForm((s) => !s)}>
-          <Plus className="mr-1.5 size-4" />
-          {showForm ? "Hide form" : "New Asset"}
+        <Button
+          onClick={() => {
+            if (editingAsset) {
+              setEditingAsset(null);
+              setShowForm(false);
+            } else {
+              setShowForm((s) => !s);
+            }
+          }}
+        >
+          {showForm || editingAsset ? (
+            "Cancel"
+          ) : (
+            <>
+              <Plus className="mr-1.5 size-4" />
+              New Asset
+            </>
+          )}
         </Button>
       </div>
 
-      {showForm ? (
-        <NewAssetForm
-          onCreated={() => {
+      {showForm || editingAsset ? (
+        <AssetForm
+          initialAsset={editingAsset}
+          onCompleted={() => {
             setShowForm(false);
+            setEditingAsset(null);
             void load();
           }}
         />
       ) : null}
+
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="flex-1">
+          <SearchableSelect
+            options={assetOptions}
+            value={search}
+            onValueChange={setSearch}
+            placeholder="Search by asset title..."
+            searchPlaceholder="Type to find asset..."
+            className="w-full"
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <Select value={status} onValueChange={setStatus}>
+            <SelectTrigger className="w-[140px]">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="inactive">Inactive</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={state} onValueChange={setState}>
+            <SelectTrigger className="w-[140px]">
+              <SelectValue placeholder="State" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All States</SelectItem>
+              <SelectItem value="published">Published</SelectItem>
+              <SelectItem value="draft">Draft</SelectItem>
+              <SelectItem value="archived">Archived</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => {
+              setSearch("");
+              setStatus("all");
+              setState("all");
+            }}
+            title="Clear all filters"
+          >
+            <RotateCw className="size-4" />
+          </Button>
+        </div>
+      </div>
 
       {error ? (
         <div className="flex items-center gap-2 rounded border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
@@ -513,15 +594,14 @@ function AssetsTab() {
                               : "External URL"}
                           </Badge>
                           {url ? (
-                            <a
-                              href={url}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="max-w-[16rem] truncate text-xs text-blue-500 hover:underline"
+                            <button
+                              type="button"
+                              onClick={() => setPreviewAsset(a)}
+                              className="max-w-[16rem] truncate text-left text-xs text-blue-500 hover:underline"
                               title={url}
                             >
                               {url}
-                            </a>
+                            </button>
                           ) : null}
                         </div>
                       </TableCell>
@@ -562,23 +642,37 @@ function AssetsTab() {
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">
                           {url ? (
-                            <Button asChild size="icon" variant="ghost">
-                              <a href={url} target="_blank" rel="noreferrer">
-                                <Film className="size-3.5" />
-                              </a>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => setPreviewAsset(a)}
+                              title="Preview Video"
+                            >
+                              <Film className="size-3.5" />
                             </Button>
                           ) : null}
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => {
+                              setEditingAsset(a);
+                              setShowForm(false);
+                              window.scrollTo({ top: 0, behavior: "smooth" });
+                            }}
+                            title="Edit"
+                            disabled={!!a.archived_at}
+                          >
+                            <Pencil className="size-3.5" />
+                          </Button>
                           <Button
                             size="icon"
                             variant="ghost"
                             onClick={() => patch(a.id, { is_active: !a.is_active })}
                             title={a.is_active ? "Deactivate" : "Activate"}
                           >
-                            {a.is_active ? (
-                              <Eye className="size-3.5" />
-                            ) : (
-                              <EyeOff className="size-3.5" />
-                            )}
+                            <Power
+                              className={`size-3.5 ${a.is_active ? "text-green-600" : "text-muted-foreground"}`}
+                            />
                           </Button>
                           <Button
                             size="icon"
@@ -599,32 +693,68 @@ function AssetsTab() {
           )}
         </CardContent>
       </Card>
+
+      <VideoViewModal
+        isOpen={!!previewAsset}
+        onClose={() => setPreviewAsset(null)}
+        title={previewAsset?.title ?? ""}
+        videoUrl={
+          previewAsset
+            ? previewAsset.source_type === "upload"
+              ? previewAsset.storage_path
+              : previewAsset.external_url
+            : null
+        }
+      />
     </div>
   );
 }
 
-function NewAssetForm({ onCreated }: { onCreated: () => void }) {
-  const [mode, setMode] = useState<"upload" | "external_url">("external_url");
-  const [assetKey, setAssetKey] = useState("");
-  const [title, setTitle] = useState("");
-  const [externalUrl, setExternalUrl] = useState("");
-  const [notes, setNotes] = useState("");
+function AssetForm({
+  onCompleted,
+  initialAsset,
+}: {
+  onCompleted: () => void;
+  initialAsset?: RitualAsset | null;
+}) {
+  const [mode, setMode] = useState<"upload" | "external_url">(
+    initialAsset?.source_type ?? "external_url"
+  );
+  const [assetKey, setAssetKey] = useState(initialAsset?.asset_key ?? "");
+  const [title, setTitle] = useState(initialAsset?.title ?? "");
+  const [externalUrl, setExternalUrl] = useState(initialAsset?.external_url ?? "");
+  const [notes, setNotes] = useState(initialAsset?.notes ?? "");
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (initialAsset) {
+      setMode(initialAsset.source_type);
+      setAssetKey(initialAsset.asset_key);
+      setTitle(initialAsset.title);
+      setExternalUrl(initialAsset.external_url ?? "");
+      setNotes(initialAsset.notes ?? "");
+      setFile(null);
+      setErr(null);
+    } else {
+      setMode("external_url");
+      setAssetKey("");
+      setTitle("");
+      setExternalUrl("");
+      setNotes("");
+      setFile(null);
+      setErr(null);
+    }
+  }, [initialAsset]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
     setErr(null);
     try {
-      let storagePath: string | null = null;
-      if (mode === "upload") {
-        if (!file) {
-          setErr("Choose a file.");
-          setBusy(false);
-          return;
-        }
+      let storagePath: string | null = initialAsset?.storage_path ?? null;
+      if (mode === "upload" && file) {
         const fd = new FormData();
         fd.append("file", file);
         const upRes = await fetch("/api/admin/ritual-assets/upload", {
@@ -638,19 +768,27 @@ function NewAssetForm({ onCreated }: { onCreated: () => void }) {
           return;
         }
         storagePath = upJson.storage_path as string;
+      } else if (mode === "external_url") {
+        storagePath = null;
       }
-      const res = await fetch("/api/admin/ritual-assets", {
-        method: "POST",
+
+      const method = initialAsset ? "PATCH" : "POST";
+      const url = initialAsset
+        ? `/api/admin/ritual-assets/${initialAsset.id}`
+        : "/api/admin/ritual-assets";
+
+      const res = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           asset_key: assetKey,
           title,
           source_type: mode,
-          storage_path: mode === "upload" ? storagePath : null,
+          storage_path: storagePath,
           external_url: mode === "external_url" ? externalUrl : null,
           notes: notes || null,
-          is_active: true,
-          is_published: true,
+          is_active: initialAsset ? initialAsset.is_active : true,
+          is_published: initialAsset ? initialAsset.is_published : true,
         }),
       });
       const j = await res.json().catch(() => ({}));
@@ -659,7 +797,7 @@ function NewAssetForm({ onCreated }: { onCreated: () => void }) {
         setBusy(false);
         return;
       }
-      onCreated();
+      onCompleted();
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Unknown error");
     } finally {
@@ -670,7 +808,7 @@ function NewAssetForm({ onCreated }: { onCreated: () => void }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>New Asset</CardTitle>
+        <CardTitle>{initialAsset ? "Edit Asset" : "New Asset"}</CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={submit} className="space-y-4">
@@ -723,15 +861,20 @@ function NewAssetForm({ onCreated }: { onCreated: () => void }) {
             </div>
           ) : (
             <div className="space-y-1">
-              <Label>Video file</Label>
+              <Label>Video file {initialAsset?.storage_path ? "(optional if keeping current)" : ""}</Label>
               <Input
                 type="file"
                 accept="video/*"
                 onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-                required
+                required={!initialAsset?.storage_path}
               />
+              {initialAsset?.storage_path && !file && (
+                <p className="text-xs text-muted-foreground italic">
+                  Currently: {initialAsset.storage_path}
+                </p>
+              )}
               <p className="text-xs text-muted-foreground">
-                Up to 500&nbsp;MB. mp4 / webm / mov / ogg / avi.
+                Up to 500 MB. mp4 / webm / mov / ogg / avi.
               </p>
             </div>
           )}
@@ -745,7 +888,7 @@ function NewAssetForm({ onCreated }: { onCreated: () => void }) {
           </div>
           {err ? <p className="text-sm text-red-500">{err}</p> : null}
           <Button type="submit" disabled={busy}>
-            {busy ? "Saving…" : "Create asset"}
+            {busy ? "Saving…" : initialAsset ? "Update asset" : "Create asset"}
           </Button>
         </form>
       </CardContent>
@@ -759,6 +902,7 @@ function MappingsTab() {
   const [assets, setAssets] = useState<RitualAsset[]>([]);
   const [scopeFilter, setScopeFilter] = useState<string>("all");
   const [showForm, setShowForm] = useState(false);
+  const [editingMapping, setEditingMapping] = useState<AssetMapping | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   async function loadAll() {
@@ -778,7 +922,6 @@ function MappingsTab() {
     setAssets((a as RitualAsset[]) ?? []);
   }
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadAll();
   }, []);
 
@@ -811,18 +954,35 @@ function MappingsTab() {
             Per-ritual mappings override global ones.
           </p>
         </div>
-        <Button onClick={() => setShowForm((s) => !s)}>
-          <Plus className="mr-1.5 size-4" />
-          {showForm ? "Hide form" : "New Mapping"}
+        <Button
+          onClick={() => {
+            if (editingMapping) {
+              setEditingMapping(null);
+              setShowForm(false);
+            } else {
+              setShowForm((s) => !s);
+            }
+          }}
+        >
+          {showForm || editingMapping ? (
+            "Cancel"
+          ) : (
+            <>
+              <Plus className="mr-1.5 size-4" />
+              New Mapping
+            </>
+          )}
         </Button>
       </div>
 
-      {showForm ? (
-        <NewMappingForm
+      {showForm || editingMapping ? (
+        <MappingForm
           definitions={definitions}
           assets={assets}
-          onCreated={() => {
+          initialMapping={editingMapping}
+          onCompleted={() => {
             setShowForm(false);
+            setEditingMapping(null);
             void loadAll();
           }}
         />
@@ -864,7 +1024,6 @@ function MappingsTab() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Scope</TableHead>
-                  <TableHead>Ritual</TableHead>
                   <TableHead>Tag</TableHead>
                   <TableHead>Asset</TableHead>
                   <TableHead>State</TableHead>
@@ -873,9 +1032,6 @@ function MappingsTab() {
               </TableHeader>
               <TableBody>
                 {filtered.map((m) => {
-                  const def = definitions.find(
-                    (d) => d.id === m.ritual_definition_id
-                  );
                   return (
                     <TableRow key={m.id}>
                       <TableCell>
@@ -884,11 +1040,6 @@ function MappingsTab() {
                             ? "Global"
                             : "Per-ritual"}
                         </Badge>
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {m.mapping_scope === "global"
-                          ? "—"
-                          : def?.title ?? m.ritual_definition_id}
                       </TableCell>
                       <TableCell>
                         <code className="text-xs">{m.tag_key}</code>
@@ -915,14 +1066,24 @@ function MappingsTab() {
                           <Button
                             size="icon"
                             variant="ghost"
+                            onClick={() => {
+                              setEditingMapping(m);
+                              setShowForm(false);
+                              window.scrollTo({ top: 0, behavior: "smooth" });
+                            }}
+                            title="Edit"
+                          >
+                            <Pencil className="size-3.5" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
                             onClick={() => toggle(m)}
                             title={m.is_active ? "Deactivate" : "Activate"}
                           >
-                            {m.is_active ? (
-                              <Eye className="size-3.5" />
-                            ) : (
-                              <EyeOff className="size-3.5" />
-                            )}
+                            <Power
+                              className={`size-3.5 ${m.is_active ? "text-green-600" : "text-muted-foreground"}`}
+                            />
                           </Button>
                           <Button
                             size="icon"
@@ -946,28 +1107,54 @@ function MappingsTab() {
   );
 }
 
-function NewMappingForm({
+function MappingForm({
   definitions,
   assets,
-  onCreated,
+  onCompleted,
+  initialMapping,
 }: {
   definitions: RitualDefinition[];
   assets: RitualAsset[];
-  onCreated: () => void;
+  onCompleted: () => void;
+  initialMapping?: AssetMapping | null;
 }) {
-  const [scope, setScope] = useState<"global" | "ritual_definition">("global");
-  const [definitionId, setDefinitionId] = useState<string>("");
-  const [tagKey, setTagKey] = useState("");
-  const [assetId, setAssetId] = useState<string>("");
+  const [scope, setScope] = useState<"global" | "ritual_definition">(
+    initialMapping?.mapping_scope ?? "global"
+  );
+  const [definitionId, setDefinitionId] = useState<string>(
+    initialMapping?.ritual_definition_id ?? ""
+  );
+  const [tagKey, setTagKey] = useState(initialMapping?.tag_key ?? "");
+  const [assetId, setAssetId] = useState<string>(initialMapping?.asset_id ?? "");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (initialMapping) {
+      setScope(initialMapping.mapping_scope);
+      setDefinitionId(initialMapping.ritual_definition_id ?? "");
+      setTagKey(initialMapping.tag_key ?? "");
+      setAssetId(initialMapping.asset_id);
+    } else {
+      setScope("global");
+      setDefinitionId("");
+      setTagKey("");
+      setAssetId("");
+    }
+  }, [initialMapping]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
     setErr(null);
-    const res = await fetch("/api/admin/ritual-asset-mappings", {
-      method: "POST",
+
+    const method = initialMapping ? "PATCH" : "POST";
+    const url = initialMapping
+      ? `/api/admin/ritual-asset-mappings/${initialMapping.id}`
+      : "/api/admin/ritual-asset-mappings";
+
+    const res = await fetch(url, {
+      method,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         mapping_scope: scope,
@@ -979,21 +1166,21 @@ function NewMappingForm({
     });
     const j = await res.json().catch(() => ({}));
     if (!res.ok) {
-      setErr(j.error ?? "Failed to create mapping");
+      setErr(j.error ?? `Failed to ${initialMapping ? "update" : "create"} mapping`);
       setBusy(false);
       return;
     }
-    onCreated();
+    onCompleted();
   }
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>New Mapping</CardTitle>
+        <CardTitle>{initialMapping ? "Edit Mapping" : "New Mapping"}</CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={submit} className="space-y-3">
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 items-end">
             <div className="space-y-1">
               <Label>Scope</Label>
               <Select
@@ -1001,6 +1188,7 @@ function NewMappingForm({
                 onValueChange={(v) =>
                   setScope(v as "global" | "ritual_definition")
                 }
+                disabled={!!initialMapping}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -1011,10 +1199,15 @@ function NewMappingForm({
                 </SelectContent>
               </Select>
             </div>
+
             {scope === "ritual_definition" ? (
               <div className="space-y-1">
                 <Label>Ritual configuration</Label>
-                <Select value={definitionId} onValueChange={setDefinitionId}>
+                <Select
+                  value={definitionId}
+                  onValueChange={setDefinitionId}
+                  disabled={!!initialMapping}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Select…" />
                   </SelectTrigger>
@@ -1028,6 +1221,7 @@ function NewMappingForm({
                 </Select>
               </div>
             ) : null}
+
             <div className="space-y-1">
               <Label>Tag</Label>
               <Input
@@ -1037,6 +1231,7 @@ function NewMappingForm({
                 required
               />
             </div>
+
             <div className="space-y-1">
               <Label>Asset</Label>
               <Select value={assetId} onValueChange={setAssetId}>
@@ -1052,13 +1247,139 @@ function NewMappingForm({
                 </SelectContent>
               </Select>
             </div>
+
+            <div className="pt-2 sm:pt-0">
+              <Button type="submit" className="w-full" disabled={busy || !assetId || !tagKey}>
+                {busy
+                  ? "Saving…"
+                  : initialMapping
+                    ? "Update mapping"
+                    : "Create mapping"}
+              </Button>
+            </div>
           </div>
-          {err ? <p className="text-sm text-red-500">{err}</p> : null}
-          <Button type="submit" disabled={busy || !assetId || !tagKey}>
-            {busy ? "Creating…" : "Create mapping"}
-          </Button>
+          {err ? <p className="mt-2 text-sm text-red-500">{err}</p> : null}
         </form>
       </CardContent>
     </Card>
+  );
+}
+
+function PlaybackSettingsTab() {
+  const [settings, setSettings] = useState<{
+    video_loop: boolean;
+    video_autoplay: boolean;
+    video_controls: boolean;
+    video_muted: boolean;
+  } | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/admin/ritual-settings")
+      .then((r) => r.json())
+      .then((data) => {
+        setSettings(data);
+        setLoading(false);
+      })
+      .catch((err) => {
+        setError(err.message);
+        setLoading(false);
+      });
+  }, []);
+
+  async function save(updates: Partial<typeof settings>) {
+    setSaving(true);
+    try {
+      const res = await fetch("/api/admin/ritual-settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updates),
+      });
+      if (!res.ok) throw new Error("Failed to save settings");
+      const data = await res.json();
+      setSettings(data);
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (loading) return <div className="p-8 text-center text-muted-foreground">Loading settings...</div>;
+  if (!settings) return <div className="p-8 text-center text-destructive">Error loading settings</div>;
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Settings className="size-5 text-amber-500" />
+            Global Video Playback Settings
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            These settings apply to all ritual videos platform-wide, including the Perennial Mandalism ritual.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="flex items-center justify-between rounded-lg border p-4 shadow-sm">
+            <div className="space-y-0.5">
+              <Label className="text-base">Auto Play</Label>
+              <p className="text-sm text-muted-foreground">
+                Videos will start playing automatically when loaded.
+              </p>
+            </div>
+            <Switch
+              checked={settings.video_autoplay}
+              onCheckedChange={(v) => save({ video_autoplay: v })}
+              disabled={saving}
+            />
+          </div>
+
+          <div className="flex items-center justify-between rounded-lg border p-4 shadow-sm">
+            <div className="space-y-0.5">
+              <Label className="text-base">Loop</Label>
+              <p className="text-sm text-muted-foreground">
+                Videos will restart from the beginning once they end.
+              </p>
+            </div>
+            <Switch
+              checked={settings.video_loop}
+              onCheckedChange={(v) => save({ video_loop: v })}
+              disabled={saving}
+            />
+          </div>
+
+          <div className="flex items-center justify-between rounded-lg border p-4 shadow-sm">
+            <div className="space-y-0.5">
+              <Label className="text-base">Show Controls</Label>
+              <p className="text-sm text-muted-foreground">
+                Enable native video player controls (Play/Pause, Volume, etc.).
+              </p>
+            </div>
+            <Switch
+              checked={settings.video_controls}
+              onCheckedChange={(v) => save({ video_controls: v })}
+              disabled={saving}
+            />
+          </div>
+
+          <div className="flex items-center justify-between rounded-lg border p-4 shadow-sm">
+            <div className="space-y-0.5">
+              <Label className="text-base">Start Muted</Label>
+              <p className="text-sm text-muted-foreground">
+                Videos will be muted by default when they start.
+              </p>
+            </div>
+            <Switch
+              checked={settings.video_muted}
+              onCheckedChange={(v) => save({ video_muted: v })}
+              disabled={saving}
+            />
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 }

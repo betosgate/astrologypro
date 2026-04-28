@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { Dispatch, SetStateAction } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
 import {
   Card,
   CardContent,
@@ -25,68 +25,86 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Skeleton } from "@/components/ui/skeleton";
 
-const PRESET_OPTIONS = [
+function RitualCardSkeleton() {
+  return (
+    <div className="flex min-h-[240px] flex-col space-y-5 rounded-2xl border border-border/60 bg-card/70 p-6">
+      <div className="flex items-start justify-between gap-2">
+        <Skeleton className="size-11 rounded-xl" />
+        <Skeleton className="h-5 w-20 rounded-full" />
+      </div>
+      <div className="space-y-3">
+        <Skeleton className="h-6 w-3/4 rounded-md" />
+        <div className="space-y-2">
+          <Skeleton className="h-3 w-full rounded-md" />
+          <Skeleton className="h-3 w-5/6 rounded-md" />
+        </div>
+      </div>
+      <div className="mt-auto flex items-center justify-between pt-1">
+        <Skeleton className="h-4 w-24 rounded-md" />
+        <Skeleton className="size-4 rounded-full" />
+      </div>
+    </div>
+  );
+}
+
+
+type RitualDefinitionOption = {
+  id: string;
+  key: string;
+  name: string;
+  ritual_name: string;
+  description: string;
+  ritual_type: "static" | "dynamic";
+  supported_mode: "invocation" | "banishing" | "both";
+  badge_label: string;
+  icon_key: string | null;
+  tags: string[] | null;
+  requires_configuration: boolean;
+};
+
+const CARD_STYLES_BY_KEY: Record<
+  string,
   {
-    name: "Standard Banishing Ritual of the Pentagram",
-    shortName: "Banishing",
-    description:
-      "Cleanse and purify your sacred space with the foundational pentagram banishing rite.",
+    icon: typeof Shield;
+    iconColor: string;
+    iconBg: string;
+    borderColor: string;
+  }
+> = {
+  standard_banishing_pentagram: {
     icon: Shield,
     iconColor: "text-blue-400",
     iconBg: "from-blue-900/40 to-blue-800/20",
     borderColor: "hover:border-blue-500/40 group-hover:ring-blue-500/20",
-    tags: [
-      "Ritual_Opening",
-      "Pentagram_Gate_Banishing_Ritual",
-      "Pentagram_Banishing_Ritual",
-      "Ritual_Closing",
-    ],
   },
-  {
-    name: "Standard Invocation Ritual of the Pentagram",
-    shortName: "Invocation",
-    description:
-      "Invoke higher energies and open the gates with the classic pentagram invocation.",
+  standard_invocation_pentagram: {
     icon: Sparkles,
     iconColor: "text-violet-400",
     iconBg: "from-violet-900/40 to-purple-800/20",
     borderColor: "hover:border-violet-500/40 group-hover:ring-violet-500/20",
-    tags: [
-      "Ritual_Opening",
-      "Pentagram_Gate_Invocation_Ritual",
-      "Pentagram_Invocation_Ritual",
-      "Ritual_Closing",
-    ],
   },
-  {
-    name: "Divine Infinite Being Invocation Ritual of the Pentagram",
-    shortName: "Divine Infinite Being",
-    description:
-      "Connect with the Divine Infinite Being through this sacred invocation ceremony.",
+  dib_invocation_ritual: {
     icon: Globe,
     iconColor: "text-amber-400",
     iconBg: "from-amber-900/40 to-orange-800/20",
     borderColor: "hover:border-amber-500/40 group-hover:ring-amber-500/20",
-    tags: [
-      "Ritual_Opening",
-      "DIB_Gate_Invocation_Ritual",
-      "DIB_Invocation_Ritual",
-      "Ritual_Closing",
-    ],
   },
-  {
-    name: "Planetary Zodiacal Invocation Ritual of the Pentagram",
-    shortName: "Planetary Zodiacal",
-    description:
-      "Advanced configurator - choose specific planets and zodiac signs for your ritual.",
+  planetary_zodiacal_invocation: {
     icon: Star,
     iconColor: "text-cyan-400",
     iconBg: "from-cyan-900/40 to-sky-800/20",
     borderColor: "hover:border-cyan-500/40 group-hover:ring-cyan-500/20",
-    tags: null,
   },
-] as const;
+};
+
+const DEFAULT_CARD_STYLE = {
+  icon: Flame,
+  iconColor: "text-amber-400",
+  iconBg: "from-amber-900/40 to-orange-800/20",
+  borderColor: "hover:border-amber-500/40 group-hover:ring-amber-500/20",
+};
 
 const PLANETS = [
   "Sun",
@@ -259,15 +277,22 @@ export default function CreateRitualPage() {
   const [saving, setSaving] = useState(false);
   const [savingPreset, setSavingPreset] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [ritualDefinitions, setRitualDefinitions] = useState<
+    RitualDefinitionOption[]
+  >([]);
+  const [loadingDefinitions, setLoadingDefinitions] = useState(true);
   const [mode, setMode] = useState<RitualMode>("invocation");
   const [selectedPlanets, setSelectedPlanets] = useState<string[]>([]);
   const [selectedZodiacs, setSelectedZodiacs] = useState<string[]>([]);
   const [stepPreview, setStepPreview] = useState<StepPreview>(null);
+  const customDefinition =
+    ritualDefinitions.find((definition) => definition.requires_configuration) ??
+    null;
 
   function toggleItem(
     item: string,
     list: string[],
-    setter: React.Dispatch<React.SetStateAction<string[]>>
+    setter: Dispatch<SetStateAction<string[]>>
   ) {
     setter((previous) =>
       previous.includes(item)
@@ -275,6 +300,51 @@ export default function CreateRitualPage() {
         : [...previous, item]
     );
   }
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    void (async () => {
+      setLoadingDefinitions(true);
+      setError(null);
+
+      try {
+        const response = await fetch("/api/community/ritual-definitions", {
+          cache: "no-store",
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          setError("Failed to load ritual configurations.");
+          setRitualDefinitions([]);
+          return;
+        }
+
+        const data = (await response.json()) as {
+          ritualDefinitions?: RitualDefinitionOption[];
+        };
+        setRitualDefinitions(data.ritualDefinitions ?? []);
+      } catch (err) {
+        if (!controller.signal.aborted) {
+          setError("Failed to load ritual configurations.");
+          setRitualDefinitions([]);
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setLoadingDefinitions(false);
+        }
+      }
+    })();
+
+    return () => controller.abort();
+  }, []);
+
+  useEffect(() => {
+    if (loadingDefinitions || step !== "custom" || customDefinition) return;
+    setStep("choose");
+    router.replace("/community/rituals/new");
+    setError("The planetary ritual configuration is not currently available.");
+  }, [customDefinition, loadingDefinitions, router, step]);
 
   useEffect(() => {
     if (step !== "custom") return;
@@ -301,14 +371,20 @@ export default function CreateRitualPage() {
     return () => controller.abort();
   }, [step, mode, selectedPlanets, selectedZodiacs]);
 
-  async function submitPreset(name: string, tags: string[]) {
-    setSavingPreset(name);
+  async function submitPreset(definition: RitualDefinitionOption) {
+    if (!definition.tags) return;
+
+    setSavingPreset(definition.key);
     setError(null);
 
     const response = await fetch("/api/community/rituals", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ritual_name: name, ritual_tags: tags }),
+      body: JSON.stringify({
+        ritual_definition_key: definition.key,
+        ritual_name: definition.ritual_name,
+        ritual_tags: definition.tags,
+      }),
     });
 
     if (!response.ok) {
@@ -325,6 +401,11 @@ export default function CreateRitualPage() {
   async function submitCustom() {
     setError(null);
 
+    if (!customDefinition) {
+      setError("The planetary ritual configuration is not currently available.");
+      return;
+    }
+
     if (mode === "banishing" && selectedPlanets.length === 0) {
       setError("Banishing ritual requires at least one planet.");
       return;
@@ -340,13 +421,16 @@ export default function CreateRitualPage() {
     }
 
     const tags = buildCustomTags(mode, selectedPlanets, selectedZodiacs);
-    const ritualName = "Planetary Zodiacal Invocation Ritual of the Pentagram";
 
     setSaving(true);
     const response = await fetch("/api/community/rituals", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ritual_name: ritualName, ritual_tags: tags }),
+      body: JSON.stringify({
+        ritual_definition_key: customDefinition.key,
+        ritual_name: customDefinition.ritual_name,
+        ritual_tags: tags,
+      }),
     });
 
     if (!response.ok) {
@@ -392,79 +476,136 @@ export default function CreateRitualPage() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-          {PRESET_OPTIONS.map((option) => {
-            const Icon = option.icon;
-            const isLoading = savingPreset === option.name;
+        {loadingDefinitions ? (
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+            {[...Array(4)].map((_, i) => (
+              <RitualCardSkeleton key={i} />
+            ))}
+          </div>
+        ) : ritualDefinitions.length === 0 ? (
+          <div className="rounded-2xl border border-amber-500/20 bg-amber-950/10 px-6 py-10 text-center">
+            <p className="text-sm text-muted-foreground">
+              No ritual configurations are currently available.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+            {ritualDefinitions.map((option) => {
+              const style = CARD_STYLES_BY_KEY[option.key] ?? DEFAULT_CARD_STYLE;
+              const Icon = style.icon;
+              const isLoading = savingPreset === option.key;
 
-            return (
-              <button
-                key={option.name}
-                type="button"
-                disabled={savingPreset !== null}
-                onClick={() => {
-                  if (savingPreset !== null) return;
+              return (
+                <button
+                  key={option.id}
+                  type="button"
+                  disabled={savingPreset !== null}
+                  onClick={() => {
+                    if (savingPreset !== null) return;
 
-                  if (option.tags === null) {
-                    router.push("/community/rituals/new?type=planetary");
-                    setStep("custom");
-                    return;
-                  }
+                    if (option.requires_configuration) {
+                      router.push("/community/rituals/new?type=planetary");
+                      setStep("custom");
+                      return;
+                    }
 
-                  void submitPreset(option.name, [...option.tags]);
-                }}
-                className={`group relative flex min-h-[240px] overflow-hidden rounded-2xl border border-border/60 bg-card/70 p-6 text-left transition-all hover:border-amber-500/30 hover:shadow-lg hover:shadow-amber-500/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60 ${option.borderColor}`}
-              >
-                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(245,158,11,0.06),transparent_60%)] opacity-0 transition-opacity group-hover:opacity-100" />
+                    void submitPreset(option);
+                  }}
+                  className={`group relative flex min-h-[240px] overflow-hidden rounded-2xl border border-border/60 bg-card/70 p-6 text-left transition-all hover:border-amber-500/30 hover:shadow-lg hover:shadow-amber-500/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60 ${style.borderColor}`}
+                >
+                  <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(245,158,11,0.06),transparent_60%)] opacity-0 transition-opacity group-hover:opacity-100" />
 
-                <div className="relative flex w-full flex-col space-y-5">
-                  <div className="flex items-start justify-between gap-2">
-                    <div
-                      className={`flex size-11 items-center justify-center rounded-xl bg-gradient-to-br ${option.iconBg} ring-1 ring-white/5 shadow-inner`}
-                    >
-                      <Icon className={`size-5 ${option.iconColor}`} />
+                  <div className="relative flex w-full flex-col space-y-5">
+                    <div className="flex items-start justify-between gap-2">
+                      <div
+                        className={`flex size-11 items-center justify-center rounded-xl bg-gradient-to-br ${style.iconBg} ring-1 ring-white/5 shadow-inner`}
+                      >
+                        <Icon className={`size-5 ${style.iconColor}`} />
+                      </div>
+                      {option.requires_configuration ? (
+                        <Badge
+                          variant="outline"
+                          className="shrink-0 border-cyan-500/30 bg-cyan-950/20 px-1.5 py-0.5 text-[10px] text-cyan-400"
+                        >
+                          {option.badge_label}
+                        </Badge>
+                      ) : (
+                        <Badge
+                          variant="outline"
+                          className="shrink-0 border-border/40 px-1.5 py-0.5 text-[10px] text-muted-foreground"
+                        >
+                          {option.badge_label}
+                        </Badge>
+                      )}
                     </div>
-                    {option.tags ? (
-                      <Badge
-                        variant="outline"
-                        className="shrink-0 border-border/40 px-1.5 py-0.5 text-[10px] text-muted-foreground"
-                      >
-                        Static
-                      </Badge>
-                    ) : (
-                      <Badge
-                        variant="outline"
-                        className="shrink-0 border-cyan-500/30 bg-cyan-950/20 px-1.5 py-0.5 text-[10px] text-cyan-400"
-                      >
-                        Custom
-                      </Badge>
-                    )}
-                  </div>
 
-                  <div className="space-y-2">
-                    <p className="text-lg font-semibold leading-snug">
-                      {option.name}
-                    </p>
-                    <p className="line-clamp-2 text-xs leading-relaxed text-muted-foreground">
-                      {option.description}
-                    </p>
-                  </div>
+                    <div className="space-y-2">
+                      <p className="text-lg font-semibold leading-snug">
+                        {option.name}
+                      </p>
+                      <p className="line-clamp-2 text-xs leading-relaxed text-muted-foreground">
+                        {option.description}
+                      </p>
+                    </div>
 
-                  <div className="mt-auto flex items-center justify-between pt-1">
-                    <span className="text-xs text-muted-foreground/60">
-                      {option.tags ? "Click to start" : "Configure first"}
-                    </span>
-                    {isLoading ? (
-                      <Loader2 className="size-4 animate-spin text-muted-foreground" />
-                    ) : (
-                      <ChevronRight className="size-4 text-muted-foreground/50 transition-transform group-hover:translate-x-0.5" />
-                    )}
+                    <div className="mt-auto flex items-center justify-between pt-1">
+                      <span className="text-xs text-muted-foreground/60">
+                        {option.requires_configuration
+                          ? "Configure first"
+                          : "Click to start"}
+                      </span>
+                      {isLoading ? (
+                        <Loader2 className="size-4 animate-spin text-muted-foreground" />
+                      ) : (
+                        <ChevronRight className="size-4 text-muted-foreground/50 transition-transform group-hover:translate-x-0.5" />
+                      )}
+                    </div>
                   </div>
-                </div>
-              </button>
-            );
-          })}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (loadingDefinitions) {
+    return (
+      <div className="mx-auto w-full max-w-5xl space-y-6">
+        <div className="flex items-center gap-3">
+          <Skeleton className="size-10 rounded-xl" />
+          <div className="space-y-2">
+            <Skeleton className="h-7 w-48 rounded-md" />
+            <Skeleton className="h-4 w-64 rounded-md" />
+          </div>
         </div>
+        <div className="space-y-4 pt-4">
+          <Skeleton className="h-32 w-full rounded-2xl" />
+          <Skeleton className="h-48 w-full rounded-2xl" />
+          <Skeleton className="h-48 w-full rounded-2xl" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!customDefinition) {
+    return (
+      <div className="mx-auto max-w-5xl space-y-4">
+        <div className="flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          <AlertCircle className="size-4 shrink-0" />
+          The planetary ritual configuration is not currently available.
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => {
+            router.push("/community/rituals/new");
+            setStep("choose");
+          }}
+        >
+          Back to Ritual Options
+        </Button>
       </div>
     );
   }

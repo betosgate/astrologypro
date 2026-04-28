@@ -83,6 +83,63 @@ const TAG_TO_FILENAME: Record<string, string> = {
 };
 
 const STATIC_PRESET_PLAYLISTS = [
+  // 1-tag versions (New - Minimalist)
+  {
+    tags: ["Pentagram_Banishing_Ritual"],
+    item: {
+      tag: "Standard_Banishing_Ritual_Static",
+      title: "Standard Banishing Ritual",
+      filename: "StandardBanishingRitual.mp4",
+      kind: "static" as const,
+    },
+  },
+  {
+    tags: ["Pentagram_Invocation_Ritual"],
+    item: {
+      tag: "Standard_Invocation_Ritual_Static",
+      title: "Standard Invocation Ritual",
+      filename: "StandardInvocationRitual.mp4",
+      kind: "static" as const,
+    },
+  },
+  {
+    tags: ["DIB_Invocation_Ritual"],
+    item: {
+      tag: "DIB_Invocation_Ritual_Static",
+      title: "Core Invocation Ritual",
+      filename: "Core_Invocation_Ritual.mp4",
+      kind: "static" as const,
+    },
+  },
+  // 2-tag versions (Legacy)
+  {
+    tags: ["Pentagram_Gate_Banishing_Ritual", "Pentagram_Banishing_Ritual"],
+    item: {
+      tag: "Standard_Banishing_Ritual_Static",
+      title: "Standard Banishing Ritual",
+      filename: "StandardBanishingRitual.mp4",
+      kind: "static" as const,
+    },
+  },
+  {
+    tags: ["Pentagram_Gate_Invocation_Ritual", "Pentagram_Invocation_Ritual"],
+    item: {
+      tag: "Standard_Invocation_Ritual_Static",
+      title: "Standard Invocation Ritual",
+      filename: "StandardInvocationRitual.mp4",
+      kind: "static" as const,
+    },
+  },
+  {
+    tags: ["DIB_Gate_Invocation_Ritual", "DIB_Invocation_Ritual"],
+    item: {
+      tag: "DIB_Invocation_Ritual_Static",
+      title: "Core Invocation Ritual",
+      filename: "Core_Invocation_Ritual.mp4",
+      kind: "static" as const,
+    },
+  },
+  // 4-tag versions (Legacy / Backward Compatibility)
   {
     tags: [
       "Ritual_Opening",
@@ -92,7 +149,7 @@ const STATIC_PRESET_PLAYLISTS = [
     ],
     item: {
       tag: "Standard_Banishing_Ritual_Static",
-      title: "Standard Banishing Ritual of the Pentagram",
+      title: "Standard Banishing Ritual",
       filename: "StandardBanishingRitual.mp4",
       kind: "static" as const,
     },
@@ -106,7 +163,7 @@ const STATIC_PRESET_PLAYLISTS = [
     ],
     item: {
       tag: "Standard_Invocation_Ritual_Static",
-      title: "Standard Invocation Ritual of the Pentagram",
+      title: "Standard Invocation Ritual",
       filename: "StandardInvocationRitual.mp4",
       kind: "static" as const,
     },
@@ -120,7 +177,7 @@ const STATIC_PRESET_PLAYLISTS = [
     ],
     item: {
       tag: "DIB_Invocation_Ritual_Static",
-      title: "Divine Infinite Being Invocation Ritual of the Pentagram",
+      title: "Core Invocation Ritual",
       filename: "Core_Invocation_Ritual.mp4",
       kind: "static" as const,
     },
@@ -357,40 +414,67 @@ function tagToTitle(tag: string): string {
  *    We never silently drop a tag (acceptance criteria: missing assets
  *    must not be silently skipped).
  */
-export function buildRitualPlaylist(tags: string[]): RitualPlaylistItem[] {
-  const uniqueInput = [...new Set(tags)];
-  const staticPreset = STATIC_PRESET_PLAYLISTS.find(
-    ({ tags: presetTags }) =>
-      presetTags.length === uniqueInput.length &&
-      presetTags.every((tag) => uniqueInput.includes(tag))
-  );
+type BuildRitualPlaylistOptions = {
+  collapseStaticPresets?: boolean;
+  includeCodeFallbackUrls?: boolean;
+};
+
+export function buildRitualPlaylist(
+  tags: string[],
+  options: BuildRitualPlaylistOptions = {}
+): RitualPlaylistItem[] {
+  const collapseStaticPresets = options.collapseStaticPresets !== false;
+  const includeCodeFallbackUrls = options.includeCodeFallbackUrls !== false;
+
+  // Deduplicate and filter redundant tags for static rituals
+  let uniqueInput = [...new Set(tags)];
+  if (uniqueInput.includes("Pentagram_Banishing_Ritual")) {
+    uniqueInput = uniqueInput.filter(t => t !== "Pentagram_Gate_Banishing_Ritual");
+  }
+  if (uniqueInput.includes("Pentagram_Invocation_Ritual")) {
+    uniqueInput = uniqueInput.filter(t => t !== "Pentagram_Gate_Invocation_Ritual");
+  }
+  if (uniqueInput.includes("DIB_Invocation_Ritual")) {
+    uniqueInput = uniqueInput.filter(t => t !== "DIB_Gate_Invocation_Ritual");
+  }
+
+  const staticPreset = collapseStaticPresets
+    ? STATIC_PRESET_PLAYLISTS.find(
+        ({ tags: presetTags }) =>
+          presetTags.length === uniqueInput.length &&
+          presetTags.every((tag) => uniqueInput.includes(tag))
+      )
+    : null;
 
   if (staticPreset) {
     return [
       {
         tag: staticPreset.item.tag,
         title: staticPreset.item.title,
-        videoUrl: ritualVideoUrl(staticPreset.item.filename),
-        filename: staticPreset.item.filename,
+        videoUrl: includeCodeFallbackUrls
+          ? ritualVideoUrl(staticPreset.item.filename)
+          : null,
+        filename: includeCodeFallbackUrls ? staticPreset.item.filename : null,
         sequence: 1,
         kind: staticPreset.item.kind,
-        missing: false,
+        missing: !includeCodeFallbackUrls,
       },
     ];
   }
 
-  const ordered = sortRitualTagsForPlayback(tags);
+  const ordered = sortRitualTagsForPlayback(uniqueInput);
   return ordered.map((tag, idx) => {
     const filename = getRitualVideoFilenameForTag(tag);
     const classified = classifyTag(tag);
     return {
       tag,
       title: tagToTitle(tag),
-      videoUrl: filename ? ritualVideoUrl(filename) : null,
-      filename,
+      videoUrl:
+        includeCodeFallbackUrls && filename ? ritualVideoUrl(filename) : null,
+      filename: includeCodeFallbackUrls ? filename : null,
       sequence: idx + 1,
       kind: classified.kind,
-      missing: filename === null,
+      missing: !includeCodeFallbackUrls || filename === null,
     };
   });
 }

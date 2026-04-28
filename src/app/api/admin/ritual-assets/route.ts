@@ -11,15 +11,42 @@ export const dynamic = "force-dynamic";
  * + final-override links so the asset library can show "in use here".
  * Admin-only.
  */
-export async function GET() {
+export async function GET(req: NextRequest) {
   const user = await getAdminUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  const { searchParams } = new URL(req.url);
+  const search = searchParams.get("q")?.trim();
+  const status = searchParams.get("status");
+  const state = searchParams.get("state");
+
   const admin = createAdminClient();
-  const { data: assets, error } = await admin
-    .from("ritual_media_assets")
-    .select("*")
-    .order("created_at", { ascending: false });
+  let query = admin.from("ritual_media_assets").select("*");
+
+  if (search) {
+    query = query.or(`title.ilike.%${search}%,asset_key.ilike.%${search}%`);
+  }
+
+  if (status === "active") {
+    query = query.eq("is_active", true);
+  } else if (status === "inactive") {
+    query = query.eq("is_active", false);
+  }
+
+  if (state === "published") {
+    query = query.eq("is_published", true).is("archived_at", null);
+  } else if (state === "draft") {
+    query = query.eq("is_published", false).is("archived_at", null);
+  } else if (state === "archived") {
+    query = query.not("archived_at", "is", null);
+  } else {
+    // By default, exclude archived if not explicitly requested
+    query = query.is("archived_at", null);
+  }
+
+  const { data: assets, error } = await query.order("created_at", {
+    ascending: false,
+  });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 

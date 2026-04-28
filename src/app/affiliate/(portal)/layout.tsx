@@ -13,6 +13,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAffiliateAccountByUserId } from "@/lib/affiliate-accounts";
 import { AffiliateHeader } from "../_components/affiliate-header";
+import { AffiliateSidebar } from "../_components/affiliate-sidebar";
 import { SectionContainer } from "@/components/shared/section-container";
 
 export const dynamic = "force-dynamic";
@@ -63,14 +64,18 @@ export default async function AffiliateLayout({
 
   return (
     <div className="min-h-screen bg-background">
-      <AffiliateHeader
-        accountName={account.name}
-        accountEmail={account.email}
-        avatarUrl={account.avatar_url}
-      />
-      <SectionContainer as="main" verticalPadding="lg">
-        {children}
-      </SectionContainer>
+      <AffiliateSidebar />
+      <main className="lg:pl-60">
+        <AffiliateHeader
+          accountName={account.name}
+          accountEmail={account.email}
+          avatarUrl={account.avatar_url}
+          showNavigation={false}
+        />
+        <SectionContainer verticalPadding="lg">
+          {children}
+        </SectionContainer>
+      </main>
     </div>
   );
 }
