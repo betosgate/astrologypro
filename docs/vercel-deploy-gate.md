@@ -1,103 +1,120 @@
-# Vercel Deploy Gate — "deploy" keyword required
+# Vercel Deploy Gate — manual-only deploys
 
-This project is configured so Vercel only builds and deploys commits whose
-message contains the literal whole word **`deploy`**. Every other commit
-(docs, refactors, work-in-progress, bumped task files) is silently ignored
-by Vercel — no build is triggered, no preview is created, no minutes are
-spent.
+**As of 2026-04-21:** Vercel auto-deploy on `master` is **disabled**. No
+git push ever triggers a Vercel build. Deploys only happen when a human
+explicitly clicks **Create Deployment** in the dashboard or runs the
+Vercel CLI. Source-controlled in `vercel.json`.
 
-## How it works
-
-Vercel's **Ignored Build Step** runs `scripts/vercel-ignore-build.sh`
-before every build. The script inspects `$VERCEL_GIT_COMMIT_MESSAGE` and:
-
-| Exit code | Meaning |
-|---|---|
-| `0` | **Skip** the build (no deploy) |
-| `1` | **Proceed** with the build (deploy) |
-
-## One-time setup in the Vercel dashboard
-
-1. Open the project in the Vercel dashboard.
-2. **Settings → Git → Ignored Build Step**.
-3. Set the command to:
-   ```
-   bash scripts/vercel-ignore-build.sh
-   ```
-4. Save. The next push uses the new gate; existing in-flight builds are
-   not affected.
-
-This setting lives in Vercel's UI, not in `vercel.json` — Vercel does not
-support `ignoreCommand` via the JSON config file.
-
-## Commit message rules
-
-| Commit message contains | Result |
-|---|---|
-| the whole word `deploy` (case-insensitive) | ✅ build |
-| `[force-deploy]` | ✅ build (overrides everything) |
-| env var `FORCE_DEPLOY=1` set on the project | ✅ build (every commit) |
-| `[skip ci]`, `[no-deploy]`, or `[skip-deploy]` | ❌ skip (overrides keyword) |
-| nothing matching above | ❌ skip |
-
-### Examples
-
-```
-✅  deploy: ship V2 affiliate flow
-✅  feat(landing): add slot column - deploy
-✅  fix(stripe): edge case [force-deploy]
-✅  deploy
-
-❌  feat(landing): add slot column          (no keyword)
-❌  redeployment of legacy code             (whole-word match — "redeployment" doesn't count)
-❌  deploys                                 (whole-word match — "deploys" doesn't count)
-❌  deploy [skip ci]                        (skip wins)
+```jsonc
+// vercel.json
+{
+  "git": {
+    "deploymentEnabled": {
+      "master": false
+    }
+  }
+}
 ```
 
-The whole-word match is intentional. It prevents accidental rebuilds when
-the message happens to mention "deployment", "redeploy", "deploys", etc.
-in passing.
+## Why this design
 
-## Force a one-off deploy without changing your commit message
+Vercel's "Ignored Build Step" feature was unreliable in practice — saving
+the dashboard setting didn't always take effect, and there was no obvious
+signal whether a given commit had been gated or not. Disabling
+auto-deploy entirely is the bulletproof equivalent: there's no gate
+logic to misfire because no automatic build is attempted in the first
+place.
 
-Three options, in order of preference:
+## How to ship
 
-1. **Add `[force-deploy]`** to the commit message of the last commit and
-   amend or follow up with a tiny patch:
-   ```bash
-   git commit --amend -m "$(git log -1 --format=%B) [force-deploy]"
-   git push --force-with-lease origin master
-   ```
-2. **Set `FORCE_DEPLOY=1`** as an environment variable on the Vercel
-   project. Every commit deploys until you remove it. Useful during
-   active rollout windows.
-3. **Trigger via the Vercel dashboard** — `Deployments → ⋯ → Redeploy`
-   on any past deployment bypasses the ignore script entirely (Vercel
-   policy: manual redeploys always run).
+Two equivalent ways. Pick whichever is easier in the moment.
 
-## Skip a deploy that *does* contain the keyword
+### Option A — Vercel dashboard (no CLI needed)
 
-Add `[skip ci]`, `[no-deploy]`, or `[skip-deploy]` anywhere in the
-message. The skip-override is checked first and wins.
+1. Open the project on Vercel.
+2. **Deployments** tab → top-right **Create Deployment** (or open an
+   older deployment and click **⋯ → Redeploy**).
+3. Pick the commit you want to deploy. The dashboard builds + deploys
+   that commit immediately.
 
-## Local testing
+Manual redeploys bypass `git.deploymentEnabled` because they're
+intentional human action, not webhook-triggered automation.
 
-The script is safe to run locally with simulated env vars:
+### Option B — Vercel CLI
 
 ```bash
-VERCEL_GIT_COMMIT_MESSAGE="deploy: ship feature" bash scripts/vercel-ignore-build.sh
-echo "exit=$?"   # → 1 (would build)
+# One-time setup (per machine):
+npm i -g vercel
+vercel login
+vercel link        # links the current dir to the Vercel project
 
-VERCEL_GIT_COMMIT_MESSAGE="fix: typo"             bash scripts/vercel-ignore-build.sh
-echo "exit=$?"   # → 0 (would skip)
+# Every time you want to ship master HEAD to production:
+git push origin master   # syncs to GitHub (no deploy fires)
+vercel --prod            # builds + deploys the linked project
 ```
 
-A run on every commit is logged by Vercel under the **Skipped Builds**
-section in the dashboard, including the script's stdout — that's the
-fastest place to confirm the gate is doing what you expect.
+`vercel --prod` from a clean tree is the muscle-memory equivalent of
+`git push` for a normally-auto-deploying project.
+
+## Workflow
+
+```
+git commit -m "fix: anything"   # message format doesn't matter anymore
+git push origin master          # syncs to GitHub, no Vercel build
+                                # …repeat for as many commits as you want…
+
+# When ready to ship:
+vercel --prod                   # one explicit step, ships master HEAD
+```
+
+You can pile up dozens of commits between deploys — the next deploy
+ships them all at once.
+
+## Re-enable auto-deploy
+
+If you want to revert to "every push deploys", remove the `git` block
+from `vercel.json` (or set `master: true`):
+
+```jsonc
+{
+  "git": {
+    "deploymentEnabled": {
+      "master": true
+    }
+  }
+}
+```
+
+Push that change. Vercel reads the new config on the next push event.
+
+## Backup gate (Ignored Build Step) — kept as belt-and-braces
+
+`scripts/vercel-ignore-build.sh` and the dashboard's **Ignored Build
+Step** setting are still in the repo / dashboard. They're now redundant
+because `git.deploymentEnabled.master = false` short-circuits the
+webhook before the script would run. They stay around as a safety net:
+
+- If someone accidentally re-enables auto-deploy in `vercel.json` AND
+  doesn't intend to ship every push, the script still gates.
+- The script's keyword-match logic (whole-word `deploy`,
+  `[force-deploy]` override, `[skip ci]` override) is documented at the
+  top of the script if you ever need it again.
+
+## Verification — does the gate actually work?
+
+Push a no-keyword commit:
+
+```bash
+git commit --allow-empty -m "chore: docs tweak"
+git push origin master
+```
+
+Open Vercel **Deployments**. The new commit should NOT appear in the
+list. If you don't see a new build appear within ~30 seconds, the gate
+is working as intended.
 
 ## Rollback
 
-Empty the **Ignored Build Step** field in Vercel settings. Vercel reverts
-to building every push immediately on the next commit. The script file
-can stay in the repo — it has no effect when Vercel isn't calling it.
+Remove the `git` block from `vercel.json`, push (you'll need to ship
+manually since the gate still applies until Vercel reads the new
+config), then resume normal auto-deploy on the next push.
