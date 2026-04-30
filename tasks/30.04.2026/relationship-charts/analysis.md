@@ -19,6 +19,19 @@ This ensures that for any set of family members (e.g., A, B, C), the system gene
 
 ---
 
+## What is Synastry Data?
+In astrology, **Synastry** is the practice of comparing two birth charts to determine how the planets of one person interact with the planets of another. This reveals the "astrological chemistry" between two individuals.
+
+In this codebase, `SynastryData` is a structured object (defined in `src/app/community/charts/page.tsx`) that stores the results of this comparison:
+
+- **Aspects**: A list of specific mathematical relationships (angles) between Person A's planets and Person B's planets.
+    - *Example*: Person A's Venus "conjunct" Person B's Mars.
+    - Each aspect is flagged as **Harmonious** (easy flow of energy) or **Challenging** (tension/growth).
+- **Score**: A numerical value (0-100) representing the overall compatibility based on the balance of harmonious vs. challenging aspects.
+- **Summary**: A human-readable text description (AI or algorithm-generated) that interprets the overall vibe of the connection.
+
+---
+
 ## Why UI Differences Exist Between Pairs
 
 You noticed that some pairs have **stars** and an **extra whole section drop-down menu**, while others do not. This is driven by the presence of `synastry` data (legacy or pre-calculated chart data).
