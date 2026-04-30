@@ -1909,17 +1909,20 @@ async function handlePaymentIntentSucceeded(
     const { data: bookingForAttribution } = await supabase
       .from("bookings")
       .select(
-        "id, base_price, total_amount, ref_code, commission_source_assignment_id, commission_rate_type_stamp, commission_rate_value_stamp",
+        "id, base_price, total_amount, ref_code, commission_source_assignment_id, commission_source_template_id, commission_rate_type_stamp, commission_rate_value_stamp",
       )
       .eq("id", bookingId)
       .single();
 
-    // Stamping happens at booking creation (spec §3.8). If the three
-    // stamp columns are NULL the booking never earns commission —
-    // regardless of whether ref_code is set.
+    // Stamping happens at booking creation (spec §3.8 / Phase 1.5).
+    // Credit fires when EITHER source column is populated:
+    //   commission_source_assignment_id → per-diviner credit (Phase 1)
+    //   commission_source_template_id   → general-program credit (Phase 1.5)
+    // Both NULL → no commission; diviner keeps the full payment.
     if (
       bookingForAttribution &&
-      bookingForAttribution.commission_source_assignment_id
+      (bookingForAttribution.commission_source_assignment_id ||
+        bookingForAttribution.commission_source_template_id)
     ) {
       const amountCents =
         Number(
@@ -1933,7 +1936,13 @@ async function handlePaymentIntentSucceeded(
         orderAmountCents: Math.round(amountCents),
         refCode: (bookingForAttribution.ref_code as string | null) ?? null,
         stampedAssignmentId:
-          bookingForAttribution.commission_source_assignment_id as string,
+          (bookingForAttribution.commission_source_assignment_id as
+            | string
+            | null) ?? null,
+        stampedTemplateId:
+          (bookingForAttribution.commission_source_template_id as
+            | string
+            | null) ?? null,
         stampedRateType:
           (bookingForAttribution.commission_rate_type_stamp as
             | "percent"

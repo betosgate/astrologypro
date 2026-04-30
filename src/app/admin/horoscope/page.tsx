@@ -3837,6 +3837,7 @@ export function HoroscopeToolkitPage({
         };
 
         const ai_response_payload: any = {
+          ai_interpretations: collected.ai_interpretations ?? {},
           ...(collected.ai_interpretations ?? {}),
           natal_chart: natalChartPayload,
           formData: formDataPayload,
@@ -3845,6 +3846,11 @@ export function HoroscopeToolkitPage({
           freeNatalWheelChartForTransit: collected.natal_transit_svg ?? collected.transit_chart_svg ?? "",
           freeNatalWheelChartForTrasit: collected.natal_transit_svg ?? collected.transit_chart_svg ?? "",
         };
+
+        if (currentTab.slug === "tropical_transits_monthly_v3") {
+          ai_response_payload.tropical_transits_monthly = collected.transit_data ?? null;
+          ai_response_payload.lunar_metrics = collected.lunar_metrics ?? null;
+        }
 
         if (isTwoPerson) {
           ai_response_payload.freeNatalWheelChartP2 = collected.natal_transit_svg_p2 ?? "";
@@ -3874,11 +3880,19 @@ export function HoroscopeToolkitPage({
           currentTab.slug === "tropical_transits_monthly_v3" &&
           Boolean(communityMonthlyFamilyMemberId) &&
           Boolean(communityMonthlyMonthKey);
+        const isCommunityMonthlyWithoutLinkContext =
+          isCommunityToolkit &&
+          currentTab.slug === "tropical_transits_monthly_v3" &&
+          (!communityMonthlyFamilyMemberId || !communityMonthlyMonthKey);
         const isCommunityNatalReport =
           currentTab.slug === "western_horoscope_v2" &&
           Boolean(communityNatalFamilyMemberId);
 
-        if (isCommunityMonthlyReport) {
+        if (isCommunityMonthlyWithoutLinkContext) {
+          throw new Error(
+            "Monthly report cannot be saved because family member or month context is missing"
+          );
+        } else if (isCommunityMonthlyReport) {
           addProgress("Saving monthly report…");
           const linkRes = await fetch("/api/community/saved-reports/monthly/link", {
             method: "POST",
@@ -3953,15 +3967,16 @@ export function HoroscopeToolkitPage({
           saveAstroAiResponse(finalSavePayload).catch(() => { });
         }
 
-        // Legacy CloudFront save (fire-and-forget)
-        fetchWithRetry(
-          "https://d36fwfwo4vnk9h.cloudfront.net/astro-ai/save-astro-AI-Response",
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(finalSavePayload),
-          },
-        ).catch(() => { });
+        // Legacy CloudFront save disabled in favor of the local
+        // /api/astro-ai/save-astro-ai-response path above.
+        // fetchWithRetry(
+        //   "https://d36fwfwo4vnk9h.cloudfront.net/astro-ai/save-astro-AI-Response",
+        //   {
+        //     method: "POST",
+        //     headers: { "Content-Type": "application/json" },
+        //     body: JSON.stringify(finalSavePayload),
+        //   },
+        // ).catch(() => { });
 
       } catch (saveErr) {
         console.error("Universal save error:", saveErr);

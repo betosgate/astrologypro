@@ -76,6 +76,10 @@ export interface NatalReportRow {
   natal_status?: string | null;
   natal_report_id?: string | null;
   natal_report_status?: string | null;
+  natal_report_generated_at?: string | null;
+  natal_last_generated_at?: string | null;
+  chart_updated_at?: string | null;
+  updated_at?: string | null;
 }
 
 export interface MonthlyReportRow {
@@ -116,6 +120,9 @@ export function deriveNatalReportState(row: NatalReportRow): ChartReportState {
   const explicit = normalizeStatus(row.natal_report_status);
   const hasLegacyChart = Boolean(row.natal_chart);
   if (explicit === "stale" && hasLegacyChart) return "generated";
+  if (explicit === "generating") {
+    return isRecentNatalActivity(row) ? "generating" : fallbackNatalState(row);
+  }
   if (explicit && explicit !== "generated") return explicit;
 
   const hasLinkedReport = Boolean(row.natal_report_id);
@@ -128,7 +135,9 @@ export function deriveNatalReportState(row: NatalReportRow): ChartReportState {
   const legacyStatus = (row.natal_status ?? "").toLowerCase();
   if (legacyStatus === "locked_for_review") return "locked_for_review";
   if (legacyStatus === "failed") return "failed";
-  if (legacyStatus === "queued" || legacyStatus === "pending") return "generating";
+  if (legacyStatus === "queued" || legacyStatus === "pending") {
+    return isRecentNatalActivity(row) ? "generating" : fallbackNatalState(row);
+  }
 
   if (legacyStatus === "generated") {
     return hasLegacyChart ? "generated" : "stale";
@@ -221,4 +230,25 @@ function normalizeStatus(value: string | null | undefined): ChartReportState | n
   return (VALID_STATES as Set<string>).has(lower)
     ? (lower as ChartReportState)
     : null;
+}
+
+const ACTIVE_NATAL_WINDOW_MS = 30 * 60 * 1000;
+
+function fallbackNatalState(row: NatalReportRow): ChartReportState {
+  if (row.natal_report_id || row.natal_chart) return "generated";
+  return "missing";
+}
+
+function isRecentNatalActivity(row: NatalReportRow): boolean {
+  const timestamp =
+    row.updated_at ??
+    row.natal_last_generated_at ??
+    row.natal_report_generated_at ??
+    row.chart_updated_at ??
+    null;
+  if (!timestamp) return false;
+
+  const time = Date.parse(timestamp);
+  if (!Number.isFinite(time)) return false;
+  return Date.now() - time <= ACTIVE_NATAL_WINDOW_MS;
 }

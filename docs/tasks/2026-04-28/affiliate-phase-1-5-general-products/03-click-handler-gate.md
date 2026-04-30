@@ -1,6 +1,6 @@
 # Task 03 — `/r/<code>` Click Handler — Disabled-Program Gate
 
-- Status: Not Started
+- Status: Code complete 2026-04-30 in working tree (uncommitted). Two files: `src/app/r/[code]/route.ts` (gate + click-log coercion for general type), `src/lib/campaign-destination-resolver.ts` (extended for null `diviner_id` → `/readings/<slug>`). Implementation uses the existing 307→`/link-not-active` pattern instead of a literal HTTP 410 to match the codebase's existing revoked-assignment behavior.
 - Priority: P0
 - Depends on: 01
 - Blocks: 08
