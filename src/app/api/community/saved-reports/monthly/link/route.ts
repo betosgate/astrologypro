@@ -115,6 +115,50 @@ function approxEq(a: number, b: number, eps = 0.01): boolean {
   return Math.abs(a - b) <= eps;
 }
 
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
+function hasValue(value: unknown): boolean {
+  if (value == null) return false;
+  if (typeof value === "string") return value.trim().length > 0;
+  if (Array.isArray(value)) return value.length > 0;
+  if (typeof value === "object") return Object.keys(value).length > 0;
+  return true;
+}
+
+function validateInlineMonthlyPayload(payload: Record<string, unknown>, monthKey: string): string | null {
+  const aiResponse = asRecord(payload.ai_response);
+  const formData = asRecord(payload.formData) ?? asRecord(payload.form_data);
+  const astroApiData = asRecord(payload.astro_api_data);
+
+  if (!aiResponse) return "payload.ai_response is required";
+  if (!formData) return "payload.formData is required";
+  if (!astroApiData) return "payload.astro_api_data is required";
+
+  const payloadMonth =
+    deepFindString(formData, "futureMonth") ??
+    deepFindString(formData, "future_month") ??
+    deepFindString(formData, "targetMonth") ??
+    deepFindString(formData, "target_month");
+  if (!payloadMonth || payloadMonth.slice(0, 7) !== monthKey) {
+    return "payload.formData.futureMonth must match monthKey";
+  }
+
+  if (!hasValue(astroApiData.transit_data)) {
+    return "payload.astro_api_data.transit_data is required";
+  }
+
+  const aiSections = asRecord(aiResponse.ai_interpretations);
+  if (!hasValue(aiSections) && !hasValue(aiResponse.tropical_transits_monthly)) {
+    return "payload.ai_response must include monthly AI interpretation data";
+  }
+
+  return null;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
@@ -190,6 +234,10 @@ export async function POST(request: NextRequest) {
           { error: `payload.toolname must be "${TOOLNAME}"` },
           { status: 422 }
         );
+      }
+      const validationError = validateInlineMonthlyPayload(payload, monthKey);
+      if (validationError) {
+        return NextResponse.json({ error: validationError }, { status: 422 });
       }
       const result = await saveAndLinkMonthlyReport({
         userId: user.id,
