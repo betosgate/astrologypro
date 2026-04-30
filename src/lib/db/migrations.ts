@@ -80,6 +80,7 @@ import { MIGRATION_SQL as MIG_20260424009001_ACV2D } from "@/data/migrations/202
 import { MIGRATION_SQL as MIG_20260427000002_ARV2A } from "@/data/migrations/20260427000002_affiliate_rls_v2_alignment";
 import { MIGRATION_SQL as MIG_20260427000003_AJSP } from "@/data/migrations/20260427000003_affiliate_junction_select_policy";
 import { MIGRATION_SQL as MIG_20260427000004_ARSD } from "@/data/migrations/20260427000004_affiliate_rls_security_definer";
+import { MIGRATION_SQL as MIG_20260430000001_SAUE } from "@/data/migrations/20260430000001_search_auth_users_by_email_fn";
 import { MIGRATION_SQL as MIG_20260430000002_AP15G } from "@/data/migrations/20260430000002_affiliate_phase_1_5_general";
 import { MIGRATION_SQL as MIG_20260428000003_RGS } from "@/data/migrations/20260428000003_ritual_global_settings";
 import { MIGRATION_SQL as MIG_20260430000002_RSTL } from "@/data/migrations/20260430000002_repair_service_template_links";
@@ -660,6 +661,14 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Backfills services.template_id from matching service_templates.slug, creates missing diviner_services assignments for active linked services, and installs a trigger so older insert paths that provide a canonical slug automatically attach the matching template_id.",
     sortKey: "20260430000002",
     sql: MIG_20260430000002_RSTL,
+  },
+  "20260430000001_search_auth_users_by_email_fn": {
+    id: "20260430000001_search_auth_users_by_email_fn",
+    title: "Search auth users by email RPC",
+    description:
+      "Creates service-role-only SECURITY DEFINER RPC search_auth_user_ids_by_email(email_query, max_rows). Required by /admin/diviners so the search field can match diviners by auth.users.email even though the diviners table only stores user_id.",
+    sortKey: "20260430000001",
+    sql: MIG_20260430000001_SAUE,
   },
   "20260423000005_accept_rpc": {
     id: "20260423000005_accept_rpc",
