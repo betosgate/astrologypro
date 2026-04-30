@@ -174,6 +174,34 @@ export async function saveAndLinkNatalReport(args: {
   return { reportId, domainLinked: true };
 }
 
+export async function linkExistingNatalReport(args: {
+  familyMemberId: string;
+  reportId: string;
+}): Promise<SaveAndLinkResult> {
+  const { familyMemberId, reportId } = args;
+  const admin = createAdminClient();
+  const now = new Date().toISOString();
+
+  const { error } = await admin
+    .from("community_family_members")
+    .update({
+      natal_report_id: reportId,
+      natal_report_generated_at: now,
+      natal_report_status: "generated",
+    })
+    .eq("id", familyMemberId);
+
+  if (error) {
+    return {
+      reportId,
+      domainLinked: false,
+      domainLinkError: error.message,
+    };
+  }
+
+  return { reportId, domainLinked: true };
+}
+
 // ── Monthly: save + link to monthly_transits ───────────────────────────
 
 export async function saveAndLinkMonthlyReport(args: {

@@ -108,18 +108,20 @@ export interface RelationshipReportRow {
  *      a shape check on `natal_chart` (legacy/dummy rows return "stale").
  *   3. Falls back to "missing".
  *
- * Legacy compatibility (Task 09): a row with no `natal_report_id` but a
- * shape-valid `natal_chart` and `natal_status='generated'` still returns
- * "generated" so existing users don't lose chart access during rollout.
+ * Legacy compatibility: a row with no `natal_report_id` but a saved
+ * `natal_chart` and `natal_status='generated'` still returns "generated"
+ * so existing users don't lose chart access during rollout.
  */
 export function deriveNatalReportState(row: NatalReportRow): ChartReportState {
   const explicit = normalizeStatus(row.natal_report_status);
+  const hasLegacyChart = Boolean(row.natal_chart);
+  if (explicit === "stale" && hasLegacyChart) return "generated";
   if (explicit && explicit !== "generated") return explicit;
 
   const hasLinkedReport = Boolean(row.natal_report_id);
 
   if (explicit === "generated") {
-    return hasLinkedReport ? "generated" : "stale";
+    return hasLinkedReport || hasLegacyChart ? "generated" : "stale";
   }
   if (hasLinkedReport) return "generated";
 
@@ -129,7 +131,7 @@ export function deriveNatalReportState(row: NatalReportRow): ChartReportState {
   if (legacyStatus === "queued" || legacyStatus === "pending") return "generating";
 
   if (legacyStatus === "generated") {
-    return "stale";
+    return hasLegacyChart ? "generated" : "stale";
   }
 
   return "missing";
