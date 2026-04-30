@@ -88,13 +88,19 @@ export async function resolveTemplateMatches(
   const category = (template.category as string) === "tarot" ? "tarot" : "astrology";
 
   // Services that target this template.
+  //
+  // Older/custom services may predate `services.template_id` and only carry
+  // the canonical slug. They are still eligible if the diviner has an enabled
+  // + published diviner_services assignment for this template; otherwise a
+  // live diviner can be invisible to the shared template calendar even though
+  // their availability is attached to the right service slug.
   const { data: services } = await admin
     .from("services")
     .select(
       "id, slug, name, category, base_price, duration_minutes, diviner_id, template_id, " +
         "diviners!inner(id, username, display_name, tagline, bio, avatar_url, specialties, is_certified, is_active, onboarding_completed, account_status, charges_enabled, payouts_enabled, stripe_account_id, timezone)",
     )
-    .eq("template_id", template.id)
+    .or(`template_id.eq.${template.id},slug.eq.${baseSlug}`)
     .eq("is_active", true);
 
   if (!services || services.length === 0) {
@@ -210,8 +216,10 @@ export async function resolveTemplateMatches(
 
   // Dedup so each diviner appears once even if multiple services under the
   // template match. Pick the service with the lowest base_price — that's the
-  // one surfaced when we hand off to /{username}/book/{serviceSlug}.
+  // one surfaced when we hand off to /{username}/book/{serviceSlug}. Prefer an
+  // explicit template_id match over a legacy slug-only match when both exist.
   const byDiviner = new Map<string, TemplateMatchedDiviner>();
+  const explicitTemplateMatchByDiviner = new Map<string, boolean>();
   for (const row of visibleServices) {
     const divinerRelation = row.diviners;
     const diviner = (Array.isArray(divinerRelation)
@@ -236,10 +244,21 @@ export async function resolveTemplateMatches(
             0,
         ) || 0,
     };
+    const isExplicitTemplateMatch = row.template_id === template.id;
 
     const existing = byDiviner.get(divinerId);
-    if (existing && existing.service.basePrice <= servicePayload.basePrice) {
-      continue; // keep the cheaper matched service
+    if (existing) {
+      const existingIsExplicit =
+        explicitTemplateMatchByDiviner.get(divinerId) === true;
+      if (existingIsExplicit && !isExplicitTemplateMatch) {
+        continue;
+      }
+      if (
+        existingIsExplicit === isExplicitTemplateMatch &&
+        existing.service.basePrice <= servicePayload.basePrice
+      ) {
+        continue; // keep the cheaper matched service
+      }
     }
 
     const ratings = ratingsByDiviner.get(divinerId) ?? [];
@@ -263,6 +282,7 @@ export async function resolveTemplateMatches(
       timezone: (diviner.timezone as string | null) ?? null,
       service: servicePayload,
     });
+    explicitTemplateMatchByDiviner.set(divinerId, isExplicitTemplateMatch);
   }
 
   const diviners = [...byDiviner.values()];

@@ -24,9 +24,9 @@ export async function GET(
   const serviceId = searchParams.get("serviceId");
   const allSlots = searchParams.get("allSlots") === "1";
 
-  if (!month || !duration) {
+  if (!month) {
     return NextResponse.json(
-      { error: "Missing required query params: month, duration" },
+      { error: "Missing required query param: month" },
       { status: 400 }
     );
   }
@@ -38,10 +38,21 @@ export async function GET(
     );
   }
 
-  const durationMinutes = parseInt(duration, 10);
-  if (isNaN(durationMinutes) || durationMinutes <= 0) {
-    return NextResponse.json({ error: "Invalid duration" }, { status: 400 });
+  // In `allSlots` mode the duration is only a stride/cadence hint — actual
+  // template windows already carry their own duration_minutes. Tolerate a
+  // missing or zero duration so a misconfigured upstream service (e.g. an
+  // evergreen product with duration_minutes = 0) cannot break the public
+  // calendar with a 400. Service-specific callers must still pass a valid
+  // duration so we return the correct slot length.
+  const parsedDuration = duration != null ? parseInt(duration, 10) : NaN;
+  const durationValid = !isNaN(parsedDuration) && parsedDuration > 0;
+  if (!allSlots && !durationValid) {
+    return NextResponse.json(
+      { error: "Missing or invalid duration" },
+      { status: 400 }
+    );
   }
+  const durationMinutes = durationValid ? parsedDuration : 60;
 
   try {
     const [year, monthIndex] = month.split("-").map(Number);

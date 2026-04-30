@@ -102,6 +102,8 @@ type Tab =
   | "overview"
   | "display"
   | "playback"
+  | "mappings"
+  | "assets"
   | "publish";
 
 export default function EditRitualConfigurationPage() {
@@ -203,6 +205,8 @@ export default function EditRitualConfigurationPage() {
               { id: "overview", label: "Overview" },
               { id: "display", label: "Display" },
               { id: "playback", label: "Playback" },
+              { id: "mappings", label: "Mappings" },
+              { id: "assets", label: "Assets" },
               { id: "publish", label: "Publish" },
             ] as Array<{ id: Tab; label: string }>
         ).map((t) => (
@@ -235,6 +239,12 @@ export default function EditRitualConfigurationPage() {
       ) : null}
       {tab === "playback" ? (
         <PlaybackTab definition={definition} onPatch={patch} />
+      ) : null}
+      {tab === "mappings" ? (
+        <MappingsTab definition={definition} />
+      ) : null}
+      {tab === "assets" ? (
+        <AssetsTab definition={definition} onPatch={patch} onReload={load} />
       ) : null}
       {tab === "publish" ? (
         <PublishTab definition={definition} onPatch={patch} onArchive={() => router.push("/admin/rituals")} />
@@ -612,6 +622,605 @@ function PublishTab({
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+// ── Mappings tab ──────────────────────────────────────────────────────────
+//
+// Per-ritual scoped mappings. Lets the admin override what video plays for
+// a given tag (e.g. "Fire_Gate_Invocation_Ritual") for THIS ritual only,
+// without touching the global mapping. Backed by ritual_asset_mappings
+// rows where mapping_scope='ritual_definition' and ritual_definition_id
+// matches this configuration.
+
+function MappingsTab({ definition }: { definition: RitualDefinition }) {
+  const [mappings, setMappings] = useState<PerRitualMapping[] | null>(null);
+  const [assets, setAssets] = useState<RitualAsset[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [showForm, setShowForm] = useState(false);
+  const [editing, setEditing] = useState<PerRitualMapping | null>(null);
+
+  async function load() {
+    setError(null);
+    setLoading(true);
+    try {
+      const [mRes, aRes] = await Promise.all([
+        fetch(
+          `/api/admin/ritual-asset-mappings?scope=ritual_definition&ritualDefinitionId=${definition.id}&pageSize=200`
+        ),
+        fetch(`/api/admin/ritual-assets?pageSize=200&status=active&state=published`),
+      ]);
+      if (!mRes.ok) throw new Error("Failed to load mappings");
+      if (!aRes.ok) throw new Error("Failed to load assets");
+      const mJson = await mRes.json();
+      const aJson = await aRes.json();
+      setMappings((mJson.items ?? []) as PerRitualMapping[]);
+      const items = Array.isArray(aJson) ? aJson : aJson.items ?? [];
+      setAssets(items as RitualAsset[]);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Load failed");
+      setMappings([]);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    void load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [definition.id]);
+
+  async function remove(id: string) {
+    if (!confirm("Remove this per-ritual mapping?")) return;
+    const res = await fetch(`/api/admin/ritual-asset-mappings/${id}`, {
+      method: "DELETE",
+    });
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}));
+      setError(j.error ?? "Delete failed");
+      return;
+    }
+    await load();
+  }
+
+  async function toggleActive(m: PerRitualMapping) {
+    const res = await fetch(`/api/admin/ritual-asset-mappings/${m.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ is_active: !m.is_active }),
+    });
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}));
+      setError(j.error ?? "Update failed");
+      return;
+    }
+    await load();
+  }
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <CardTitle>Per-ritual mappings</CardTitle>
+          <p className="text-xs text-muted-foreground mt-1">
+            Override what video plays for a given tag in <em>this</em>{" "}
+            configuration. Falls back to the global mapping when no
+            per-ritual row exists.
+          </p>
+        </div>
+        <Button
+          size="sm"
+          onClick={() => {
+            setEditing(null);
+            setShowForm((s) => !s);
+          }}
+        >
+          {showForm && !editing ? (
+            "Cancel"
+          ) : (
+            <>
+              <Plus className="mr-1.5 size-4" /> New mapping
+            </>
+          )}
+        </Button>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {error ? (
+          <div className="flex items-center gap-2 rounded border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            <AlertCircle className="size-4" /> {error}
+          </div>
+        ) : null}
+
+        {(showForm || editing) && (
+          <PerRitualMappingForm
+            ritualDefinitionId={definition.id}
+            assets={assets}
+            initial={editing}
+            onCancel={() => {
+              setShowForm(false);
+              setEditing(null);
+            }}
+            onSaved={async () => {
+              setShowForm(false);
+              setEditing(null);
+              await load();
+            }}
+          />
+        )}
+
+        {loading ? (
+          <div className="flex h-24 items-center justify-center">
+            <RotateCw className="size-4 animate-spin text-muted-foreground" />
+          </div>
+        ) : !mappings || mappings.length === 0 ? (
+          <p className="py-6 text-center text-sm text-muted-foreground">
+            No per-ritual mappings yet. The runtime player will use global
+            mappings for every tag.
+          </p>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Tag</TableHead>
+                <TableHead>Asset</TableHead>
+                <TableHead>Active</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {mappings.map((m) => (
+                <TableRow key={m.id}>
+                  <TableCell>
+                    <code className="text-sm">{m.tag_key ?? "—"}</code>
+                  </TableCell>
+                  <TableCell className="text-sm">
+                    {m.asset?.title ?? (
+                      <span className="text-muted-foreground">
+                        (asset missing)
+                      </span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <Badge
+                      variant="outline"
+                      className={
+                        m.is_active
+                          ? "border-green-500/30 bg-green-500/10 text-green-600"
+                          : "bg-muted text-muted-foreground"
+                      }
+                    >
+                      {m.is_active ? "Active" : "Inactive"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => toggleActive(m)}
+                      >
+                        {m.is_active ? "Disable" : "Enable"}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                          setEditing(m);
+                          setShowForm(true);
+                        }}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        title="Delete"
+                        onClick={() => remove(m.id)}
+                      >
+                        <Trash2 className="size-3.5 text-destructive" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function PerRitualMappingForm({
+  ritualDefinitionId,
+  assets,
+  initial,
+  onCancel,
+  onSaved,
+}: {
+  ritualDefinitionId: string;
+  assets: RitualAsset[];
+  initial: PerRitualMapping | null;
+  onCancel: () => void;
+  onSaved: () => void | Promise<void>;
+}) {
+  const [tagKey, setTagKey] = useState(initial?.tag_key ?? "");
+  const [assetId, setAssetId] = useState(initial?.asset_id ?? "");
+  const [isActive, setIsActive] = useState<boolean>(
+    initial?.is_active ?? true
+  );
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  async function submit() {
+    setBusy(true);
+    setErr(null);
+    try {
+      if (!tagKey.trim()) {
+        setErr("Tag key is required.");
+        return;
+      }
+      if (!assetId) {
+        setErr("Pick an asset.");
+        return;
+      }
+      const url = initial
+        ? `/api/admin/ritual-asset-mappings/${initial.id}`
+        : "/api/admin/ritual-asset-mappings";
+      const method = initial ? "PATCH" : "POST";
+      const body = initial
+        ? { tag_key: tagKey.trim(), asset_id: assetId, is_active: isActive }
+        : {
+            mapping_scope: "ritual_definition",
+            ritual_definition_id: ritualDefinitionId,
+            tag_key: tagKey.trim(),
+            asset_id: assetId,
+            is_active: isActive,
+          };
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        setErr(j.error ?? "Save failed");
+        return;
+      }
+      await onSaved();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="rounded-md border bg-muted/30 p-4 space-y-3">
+      <p className="text-sm font-medium">
+        {initial ? "Edit mapping" : "New per-ritual mapping"}
+      </p>
+      {err ? (
+        <div className="flex items-center gap-2 rounded border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          <AlertCircle className="size-4" /> {err}
+        </div>
+      ) : null}
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="space-y-1">
+          <Label>Tag key</Label>
+          <Input
+            placeholder="e.g. Fire_Gate_Invocation_Ritual"
+            value={tagKey}
+            onChange={(e) => setTagKey(e.target.value)}
+          />
+        </div>
+        <div className="space-y-1">
+          <Label>Asset</Label>
+          <Select value={assetId} onValueChange={setAssetId}>
+            <SelectTrigger>
+              <SelectValue placeholder="Pick an asset…" />
+            </SelectTrigger>
+            <SelectContent>
+              {assets.length === 0 ? (
+                <SelectItem value="__none" disabled>
+                  No active+published assets available
+                </SelectItem>
+              ) : (
+                assets.map((a) => (
+                  <SelectItem key={a.id} value={a.id}>
+                    {a.title}
+                  </SelectItem>
+                ))
+              )}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+      <Toggle
+        id="mapping-active"
+        label="Active"
+        value={isActive}
+        onChange={setIsActive}
+      />
+      <div className="flex gap-2">
+        <Button onClick={submit} disabled={busy}>
+          {busy ? "Saving…" : initial ? "Save changes" : "Create mapping"}
+        </Button>
+        <Button variant="ghost" onClick={onCancel} disabled={busy}>
+          Cancel
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ── Assets tab ────────────────────────────────────────────────────────────
+//
+// "Assets" surfaces the configuration's asset relationships:
+//   1. Final-override picker — when override is enabled on the Playback
+//      tab, this is the single video that replaces the generated playlist.
+//   2. Linked assets — read-only summary of assets currently used by the
+//      per-ritual mappings (the Mappings tab is where you actually edit
+//      them; this is just a quick "what's attached" view).
+
+function AssetsTab({
+  definition,
+  onPatch,
+  onReload,
+}: {
+  definition: RitualDefinition;
+  onPatch: (body: Record<string, unknown>) => Promise<void> | void;
+  onReload: () => void | Promise<void>;
+}) {
+  const [assets, setAssets] = useState<RitualAsset[]>([]);
+  const [linked, setLinked] = useState<PerRitualMapping[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [pickedId, setPickedId] = useState<string>(
+    definition.final_override_asset_id ?? ""
+  );
+  const [busy, setBusy] = useState(false);
+
+  async function load() {
+    setError(null);
+    setLoading(true);
+    try {
+      const [aRes, mRes] = await Promise.all([
+        fetch(`/api/admin/ritual-assets?pageSize=200&status=active&state=published`),
+        fetch(
+          `/api/admin/ritual-asset-mappings?scope=ritual_definition&ritualDefinitionId=${definition.id}&pageSize=200`
+        ),
+      ]);
+      if (!aRes.ok) throw new Error("Failed to load assets");
+      if (!mRes.ok) throw new Error("Failed to load linked mappings");
+      const aJson = await aRes.json();
+      const mJson = await mRes.json();
+      const items = Array.isArray(aJson) ? aJson : aJson.items ?? [];
+      setAssets(items as RitualAsset[]);
+      setLinked((mJson.items ?? []) as PerRitualMapping[]);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Load failed");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    void load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [definition.id]);
+
+  // Keep the picker in sync if the parent re-loads (e.g. after a save).
+  useEffect(() => {
+    setPickedId(definition.final_override_asset_id ?? "");
+  }, [definition.final_override_asset_id]);
+
+  const overrideEnabled = definition.final_override_enabled;
+  const currentOverride = useMemo(
+    () =>
+      definition.final_override_asset ??
+      assets.find((a) => a.id === definition.final_override_asset_id) ??
+      null,
+    [assets, definition.final_override_asset, definition.final_override_asset_id]
+  );
+
+  async function saveOverride() {
+    setBusy(true);
+    try {
+      await onPatch({ final_override_asset_id: pickedId || null });
+      await onReload();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function clearOverride() {
+    setBusy(true);
+    try {
+      setPickedId("");
+      await onPatch({ final_override_asset_id: null });
+      await onReload();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Final-override video</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {error ? (
+            <div className="flex items-center gap-2 rounded border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              <AlertCircle className="size-4" /> {error}
+            </div>
+          ) : null}
+
+          <div className="flex items-center gap-2">
+            <Badge
+              variant="outline"
+              className={
+                overrideEnabled
+                  ? "border-amber-500/30 bg-amber-500/10 text-amber-600"
+                  : "bg-muted text-muted-foreground"
+              }
+            >
+              {overrideEnabled ? "Final override mode" : "Generated playlist mode"}
+            </Badge>
+            {!overrideEnabled ? (
+              <span className="text-xs text-muted-foreground">
+                Enable on the Playback tab to use a single override video.
+              </span>
+            ) : null}
+          </div>
+
+          {currentOverride ? (
+            <div className="rounded-md border p-3 text-sm">
+              <p className="font-medium">{currentOverride.title}</p>
+              <p className="text-xs text-muted-foreground">
+                {currentOverride.source_type === "external_url"
+                  ? currentOverride.external_url
+                  : currentOverride.storage_path}
+              </p>
+              <div className="mt-2 flex flex-wrap gap-1">
+                <Badge
+                  variant="outline"
+                  className={
+                    currentOverride.is_active
+                      ? ""
+                      : "border-red-500/30 bg-red-500/10 text-red-500"
+                  }
+                >
+                  {currentOverride.is_active ? "Active" : "Inactive"}
+                </Badge>
+                <Badge
+                  variant="outline"
+                  className={
+                    currentOverride.is_published
+                      ? "border-green-500/30 bg-green-500/10 text-green-600"
+                      : "bg-muted text-muted-foreground"
+                  }
+                >
+                  {currentOverride.is_published ? "Published" : "Draft"}
+                </Badge>
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              No override asset selected.
+            </p>
+          )}
+
+          <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
+            <div className="space-y-1">
+              <Label>Pick final-override asset</Label>
+              <Select
+                value={pickedId}
+                onValueChange={setPickedId}
+                disabled={!overrideEnabled || loading}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose an asset…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {assets.length === 0 ? (
+                    <SelectItem value="__none" disabled>
+                      No active+published assets available
+                    </SelectItem>
+                  ) : (
+                    assets.map((a) => (
+                      <SelectItem key={a.id} value={a.id}>
+                        {a.title}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                onClick={saveOverride}
+                disabled={
+                  !overrideEnabled ||
+                  busy ||
+                  pickedId === (definition.final_override_asset_id ?? "")
+                }
+              >
+                {busy ? "Saving…" : "Save override"}
+              </Button>
+              {definition.final_override_asset_id ? (
+                <Button
+                  variant="outline"
+                  onClick={clearOverride}
+                  disabled={busy}
+                >
+                  Remove
+                </Button>
+              ) : null}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Linked assets (per-ritual mappings)</CardTitle>
+          <p className="text-xs text-muted-foreground">
+            Read-only summary. Edit on the Mappings tab.
+          </p>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="flex h-20 items-center justify-center">
+              <RotateCw className="size-4 animate-spin text-muted-foreground" />
+            </div>
+          ) : linked.length === 0 ? (
+            <p className="py-4 text-center text-sm text-muted-foreground">
+              No per-ritual mappings yet.
+            </p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Tag</TableHead>
+                  <TableHead>Asset</TableHead>
+                  <TableHead>State</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {linked.map((m) => (
+                  <TableRow key={m.id}>
+                    <TableCell>
+                      <code className="text-sm">{m.tag_key ?? "—"}</code>
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {m.asset?.title ?? (
+                        <span className="text-muted-foreground">
+                          (asset missing)
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant="outline"
+                        className={
+                          m.is_active
+                            ? ""
+                            : "bg-muted text-muted-foreground"
+                        }
+                      >
+                        {m.is_active ? "Active" : "Inactive"}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 

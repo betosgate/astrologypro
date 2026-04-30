@@ -2,13 +2,13 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import {
   InvitationsClient,
   type InvitationRow,
-  type RoleOption,
 } from "@/components/admin/invitations-client";
 
 export const metadata = { title: "Invitations — Admin" };
 
 interface InvitationSearchParams {
   q?: string;
+  role?: string;
   status?: string;
   page?: string;
   pageSize?: string;
@@ -58,10 +58,7 @@ async function getData(params: InvitationSearchParams) {
     );
   }
 
-  const [filteredInvitationsRes, filteredRolesRes] = await Promise.all([
-    invitationsQuery,
-    admin.from("roles").select("id, name, slug").order("name", { ascending: true }),
-  ]);
+  const filteredInvitationsRes = await invitationsQuery;
 
   const invitations: InvitationRow[] = (
     (filteredInvitationsRes.data ?? []) as Array<Record<string, unknown>>
@@ -76,17 +73,8 @@ async function getData(params: InvitationSearchParams) {
     created_at:   inv.created_at as string,
   }));
 
-  const roles: RoleOption[] = (
-    (filteredRolesRes.data ?? []) as Array<Record<string, unknown>>
-  ).map((r) => ({
-    id:   r.id as string,
-    name: r.name as string,
-    slug: r.slug as string,
-  }));
-
   return {
     invitations,
-    roles,
     total: filteredInvitationsRes.count ?? 0,
     page,
     pageSize,
@@ -105,13 +93,13 @@ export default async function AdminInvitationsPage({
   searchParams: Promise<InvitationSearchParams>;
 }) {
   const params = await searchParams;
-  const { invitations, roles, total, page, pageSize, sortBy, sortDir, q, status } = await getData(params);
+  const { invitations, total, page, pageSize, sortBy, sortDir, q, status } =
+    await getData(params);
 
   return (
     <div className="space-y-6">
       <InvitationsClient
         invitations={invitations}
-        roles={roles}
         total={total}
         page={page}
         pageSize={pageSize}
@@ -120,6 +108,7 @@ export default async function AdminInvitationsPage({
         sortDir={sortDir}
         q={q}
         status={status}
+        initialRoleSlug={params.role}
       />
     </div>
   );
