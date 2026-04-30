@@ -177,6 +177,7 @@ function AddServiceModal({
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
+            template_slug: state.template.key,
             name: state.template.name,
             category: state.template.category,
             description: state.template.description,

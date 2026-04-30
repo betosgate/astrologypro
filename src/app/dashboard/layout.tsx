@@ -36,7 +36,9 @@ export default async function DashboardLayout({
   const admin = createAdminClient();
   const { data: diviner, error: divinerError } = await admin
     .from("diviners")
-    .select("id, display_name, username, avatar_url, bio, tagline, onboarding_completed")
+    .select(
+      "id, display_name, username, avatar_url, bio, tagline, onboarding_completed, subscription_status"
+    )
     .eq("user_id", user.id)
     .maybeSingle();
 
@@ -44,9 +46,30 @@ export default async function DashboardLayout({
     console.error("[dashboard/layout] diviner fetch error:", divinerError);
   }
 
-  // Gate non-admin users until they complete the diviner onboarding wizard.
+  // Gate non-admin users.
+  //
+  // The invited-diviner flow (docs/tasks/2026-04-30/diviner-invite-
+  // registration-plan-gating.md) requires the dashboard to stay locked
+  // for invited diviners who haven't paid yet, while NOT regressing
+  // existing diviners whose onboarding wizard already set
+  // onboarding_completed=true regardless of Stripe subscription state.
+  //
+  // The discriminator is the combination:
+  //   onboarding_completed=false  ⇢  account is fresh
+  //   subscription_status!='active' ⇢  payment has not landed yet
+  // …because /api/join/diviner/register inserts the diviner row with
+  // onboarding_completed=false and the column default
+  // subscription_status='trialing'. The Stripe webhook + success-page
+  // finalize flips both fields together, so post-payment users skip
+  // both gates cleanly.
   if (!isAdmin) {
     if (!diviner) redirect("/onboarding");
+    if (
+      !diviner.onboarding_completed &&
+      diviner.subscription_status !== "active"
+    ) {
+      redirect("/join/diviner/plan");
+    }
     if (!diviner.onboarding_completed) redirect("/onboarding");
   }
 
