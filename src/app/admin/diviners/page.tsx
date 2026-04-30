@@ -22,8 +22,46 @@ interface DivinersSearchParams {
 
 const ALLOWED_PAGE_SIZES = [10, 25, 50, 100];
 const DEFAULT_PAGE_SIZE = 10;
+const EMAIL_SEARCH_LIMIT = 1000;
 
 // ─── Data fetch ───────────────────────────────────────────────────────────────
+
+async function findUserIdsByEmail(admin: any, q: string): Promise<string[]> {
+  const search = q.trim().toLowerCase();
+  if (!search) return [];
+
+  const rpcRes = await Promise.resolve(
+    admin.rpc("search_auth_user_ids_by_email", {
+      email_query: search,
+      max_rows: EMAIL_SEARCH_LIMIT,
+    }),
+  ).catch(() => null);
+
+  if (rpcRes && !rpcRes.error && rpcRes.data) {
+    return (rpcRes.data as Array<{ user_id?: string }>)
+      .map((row) => row.user_id)
+      .filter((id): id is string => !!id);
+  }
+
+  // Fallback for environments where the RPC migration has not run yet.
+  const ids: string[] = [];
+  const perPage = 1000;
+  for (let page = 1; ids.length < EMAIL_SEARCH_LIMIT; page += 1) {
+    const { data, error } = await admin.auth.admin.listUsers({ page, perPage });
+    if (error) break;
+
+    const users = data?.users ?? [];
+    for (const user of users) {
+      if (user.email?.toLowerCase().includes(search)) {
+        ids.push(user.id);
+        if (ids.length >= EMAIL_SEARCH_LIMIT) break;
+      }
+    }
+    if (users.length < perPage) break;
+  }
+
+  return ids;
+}
 
 async function getDiviners(
   params: DivinersSearchParams,
@@ -42,6 +80,7 @@ async function getDiviners(
   const page = Math.max(1, parseInt(params.page ?? "1", 10));
   const joinedFrom = params.joinedFrom ?? "";
   const joinedTo = params.joinedTo ?? "";
+  const emailMatchedUserIds = q ? await findUserIdsByEmail(admin, q) : [];
 
   // NOTE: `google_calendar_connected` is legacy — the source of truth is the
   // `calendar_connections` table (migrated in 20260408000110). We no longer
@@ -80,9 +119,15 @@ async function getDiviners(
     if (q) {
       // Escape commas and special PostgREST chars in q (basic safety)
       const safe = q.replace(/[,()]/g, " ");
-      query = query.or(
-        `display_name.ilike.%${safe}%,username.ilike.%${safe}%,phone.ilike.%${safe}%`,
-      );
+      const searchFilters = [
+        `display_name.ilike.%${safe}%`,
+        `username.ilike.%${safe}%`,
+        `phone.ilike.%${safe}%`,
+      ];
+      if (emailMatchedUserIds.length > 0) {
+        searchFilters.push(`user_id.in.(${emailMatchedUserIds.join(",")})`);
+      }
+      query = query.or(searchFilters.join(","));
     }
     if (joinedFrom) query = query.gte("created_at", joinedFrom);
     if (joinedTo) query = query.lte("created_at", joinedTo + "T23:59:59Z");

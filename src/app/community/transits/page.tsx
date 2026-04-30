@@ -4,14 +4,16 @@ import { ensureCurrentMonthTransitsForMember } from "@/lib/community/ensure-mont
 import { isValidMonthlyTransit } from "@/lib/community/chart-validators";
 import {
   deriveMonthlyReportState,
+  deriveNatalReportState,
   ctaForState,
 } from "@/lib/community/chart-report-state";
+import { isBirthDataComplete } from "@/lib/community/birth-data-readiness";
 import {
   Card,
   CardContent,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { TrendingUp } from "lucide-react";
+import { TrendingUp, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { BookReadingButton } from "./BookReadingButton";
 import { TransitCardExpander } from "./TransitCardExpander";
@@ -53,10 +55,19 @@ type TransitRow = {
   community_family_members: { full_name: string };
 };
 
-const PLANET_GLYPHS: Record<string, string> = {
-  Sun: "☉", Moon: "☽", Mercury: "☿", Venus: "♀",
-  Mars: "♂", Jupiter: "♃", Saturn: "♄", Uranus: "♅",
-  Neptune: "♆", Pluto: "♇",
+type FamilyTransitOwner = {
+  id: string;
+  full_name: string;
+  natal_chart: unknown;
+  natal_status: string | null;
+  natal_report_id: string | null;
+  natal_report_status: string | null;
+  date_of_birth: string | null;
+  birth_time: string | null;
+  birth_city: string | null;
+  birth_country: string | null;
+  birth_lat: number | string | null;
+  birth_lng: number | string | null;
 };
 
 export default async function TransitsPage() {
@@ -79,15 +90,29 @@ export default async function TransitsPage() {
   const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 
   // ── Get this member's household family IDs ────────────────────────────
+  //
+  // Independent product rule (tasks/30.04.2026): the gate for the
+  // monthly transit workflow is *complete birth data*, not saved
+  // natal_chart state. We still pull natal_* fields so the natal CTA
+  // (separate, secondary action) can render its own state per row.
   const { data: familyRows } = await supabase
     .from("community_family_members")
-    .select("id, natal_chart, natal_status")
+    .select(
+      "id, full_name, natal_chart, natal_status, natal_report_id, natal_report_status, date_of_birth, birth_time, birth_city, birth_country, birth_lat, birth_lng"
+    )
     .eq("member_id", member.id);
 
-  const allFamilyIds = (familyRows ?? []).map((f) => f.id);
-  const eligibleFamily = (familyRows ?? []).filter(
-    (f) => f.natal_status === "generated" && f.natal_chart != null
-  );
+  const familyOwners = (familyRows ?? []) as FamilyTransitOwner[];
+  const familyOwnerById = new Map(familyOwners.map((f) => [f.id, f]));
+  const allFamilyIds = familyOwners.map((f) => f.id);
+
+  // Members with complete birth data are visible in the transit
+  // workflow regardless of natal_chart state.
+  const eligibleFamily = familyOwners.filter((f) => isBirthDataComplete(f));
+  // Members with incomplete birth data stay visible too, but with a
+  // "Complete Birth Details" CTA instead of a transit card — they must
+  // not be silently hidden.
+  const incompleteFamily = familyOwners.filter((f) => !isBirthDataComplete(f));
 
   // ── Lazy catch-up: generate missing current-month rows ────────────────
   if (eligibleFamily.length > 0) {
@@ -155,16 +180,43 @@ export default async function TransitsPage() {
     const hasSavedFullReport = Boolean(row.full_report_id);
     const fullReportCta = (() => {
       if (row.full_report_status === "failed") {
-        return { label: "Retry Full Report", kind: "retry" as const };
+        return { label: "Retry Transit Report", kind: "retry" as const };
       }
       if (hasSavedFullReport) {
-        return { label: "View Full Report", kind: "view" as const };
+        return { label: "View Transit Report", kind: "view" as const };
       }
-      return { label: "Generate Full Report", kind: "generate" as const };
+      return { label: "Generate Transit Report", kind: "generate" as const };
     })();
     const detailedHref = `/community/transits/detailed?familyMemberId=${row.family_member_id}&month=${row.month}`;
+    const chartHref = `/community/family/${row.family_member_id}`;
     const isPending = reportState === "generating";
     const ctaDisabledBase = ctaForState(reportState).disabled;
+    const chartOwner = familyOwnerById.get(row.family_member_id);
+    const chartState = deriveNatalReportState({
+      natal_chart: chartOwner?.natal_chart,
+      natal_status: chartOwner?.natal_status,
+      natal_report_id: chartOwner?.natal_report_id,
+      natal_report_status: chartOwner?.natal_report_status,
+    });
+    const chartCta = ctaForState(chartState);
+    const chartCtaLabel =
+      chartCta.kind === "view"
+        ? "View Natal Chart"
+        : chartCta.kind === "retry"
+        ? "Retry Natal Chart"
+        : chartCta.kind === "regenerate"
+        ? "Update Natal Chart"
+        : chartCta.kind === "generating"
+        ? "Generating Natal Chart..."
+        : chartCta.kind === "locked"
+        ? "Review Natal Chart"
+        : "Generate Natal Chart";
+    const reportStatusLabel = (() => {
+      if (row.full_report_status === "failed") return "Full report needs attention";
+      if (hasSavedFullReport) return "Full report saved";
+      if (isPending) return "Summary generating";
+      return "Full report not generated yet";
+    })();
 
     return {
       id: row.id,
@@ -174,20 +226,15 @@ export default async function TransitsPage() {
       challengingCount,
       fullReportCta,
       detailedHref,
+      chartHref,
+      chartCtaLabel,
+      chartCtaDisabled: chartCta.disabled,
       isPending,
       ctaDisabledBase,
       hasSavedFullReport,
       month: row.month,
-      highlights: data.highlights,
-      planets: data.planets.map((p) => ({
-        name: p.name,
-        glyph: PLANET_GLYPHS[p.name] ?? "●",
-        sign: p.sign,
-        degree: p.degree,
-        retrograde: p.retrograde,
-        aspectCount: p.aspects.length,
-        hasChallenging: p.aspects.some((a) => !a.isHarmonious),
-      })),
+      reportStatusLabel,
+      highlights: data.highlights.slice(0, 3),
     };
   });
 
@@ -220,17 +267,17 @@ export default async function TransitsPage() {
         </CardContent>
       </Card>
 
-      {/* Empty state: no family members with charts at all */}
-      {eligibleFamily.length === 0 && (
+      {/* Empty state: no family members at all */}
+      {familyOwners.length === 0 && (
         <Card>
           <CardContent className="flex flex-col items-center gap-4 py-12 text-center">
             <div className="flex size-14 items-center justify-center rounded-full bg-primary/10">
               <TrendingUp className="size-7 text-primary" />
             </div>
             <div>
-              <h2 className="font-semibold">No charts generated yet</h2>
+              <h2 className="font-semibold">No family members yet</h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                Generate natal charts for your family members first, then transits will appear here monthly.
+                Add family members with their birth details to see monthly transits.
               </p>
             </div>
             <Button asChild size="sm">
@@ -261,6 +308,39 @@ export default async function TransitsPage() {
             <span>{familyTransits.length} member{familyTransits.length !== 1 ? "s" : ""} with transit data</span>
           </div>
           <TransitCardExpander cards={cardData} />
+        </div>
+      )}
+
+      {/* Members with incomplete birth data — visible but actionable */}
+      {incompleteFamily.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <AlertCircle className="size-4" />
+            <span>
+              {incompleteFamily.length} member
+              {incompleteFamily.length !== 1 ? "s" : ""} need
+              {incompleteFamily.length !== 1 ? "" : "s"} birth details
+            </span>
+          </div>
+          <div className="space-y-2">
+            {incompleteFamily.map((fm) => (
+              <Card key={fm.id} className="border-amber-500/40 bg-amber-500/5">
+                <CardContent className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-sm font-medium">{fm.full_name}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Add birth date, time and place to enable monthly transits.
+                    </p>
+                  </div>
+                  <Button asChild size="sm" variant="outline">
+                    <Link href={`/community/family/${fm.id}`}>
+                      Complete Birth Details
+                    </Link>
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </div>
       )}
     </div>

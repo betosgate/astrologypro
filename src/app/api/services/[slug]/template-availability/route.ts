@@ -193,7 +193,7 @@ export async function GET(
    * who explicitly pinned templates per-service); if that returns zero
    * slots, retry with `allSlots=1` so the generic template is honored.
    * The generic-template diviner is still gated by the earlier
-   * `match.diviners` filter (template enabled + published + cert), so
+   * `match.diviners` filter (template enabled + published + payout-ready), so
    * this is purely a slot-resolution fallback, not an authorization one.
    */
   type FetchPath = "scoped" | "generic" | "none";

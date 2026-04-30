@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createHash, randomBytes } from "crypto";
 import { getAdminUser } from "@/lib/admin-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { sendEmail } from "@/lib/email";
+import { sendPlatformInvitationEmail } from "@/lib/email";
 import { APP_URL } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
@@ -54,18 +54,16 @@ export async function POST(_req: NextRequest, { params }: Params) {
 
   if (updateErr) return NextResponse.json({ error: updateErr.message }, { status: 500 });
 
-  // Send fresh invitation email
-  const acceptUrl = `${APP_URL}/invitations/${token}/accept`;
-  await sendEmail({
+  const acceptUrl =
+    invitation.role_slug === "diviner"
+      ? `${APP_URL}/join/diviner?email=${encodeURIComponent(invitation.email)}&inviteToken=${encodeURIComponent(token)}`
+      : `${APP_URL}/invitations/${token}/accept`;
+
+  await sendPlatformInvitationEmail({
     to: invitation.email,
-    subject: "Your AstrologyPro invitation has been resent",
-    html: `
-      <p>Hello,</p>
-      <p>Your invitation to join AstrologyPro as a <strong>${invitation.role_slug}</strong> has been resent.</p>
-      <p>Click the link below to create your account. This link expires in 7 days.</p>
-      <p><a href="${acceptUrl}" style="padding:12px 24px;background:#6366f1;color:#fff;text-decoration:none;border-radius:6px;display:inline-block;">Accept Invitation</a></p>
-      <p>If you did not expect this invitation, you can safely ignore this email.</p>
-    `,
+    roleSlug: invitation.role_slug,
+    acceptUrl,
+    resent: true,
   });
 
   // Log to admin_activity_log

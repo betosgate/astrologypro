@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -61,6 +61,7 @@ import {
   useAdminTableParams,
 } from "./admin-table-parts";
 import { InvitationDetailSheet } from "./invitation-detail-sheet";
+import { ALL_USER_TYPES } from "./user-type-options";
 
 export interface InvitationRow {
   id: string;
@@ -71,17 +72,21 @@ export interface InvitationRow {
   expires_at?: string;
   resent_count?: number;
   created_at: string;
-}
-
-export interface RoleOption {
-  id: string;
-  name: string;
-  slug: string;
+  /**
+   * Derived for diviner-role rows by /api/admin/invitations.
+   *
+   * The invitations.status enum stays
+   * pending|accepted|expired|cancelled, but the invited-diviner spec
+   * (docs/tasks/2026-04-30) wants admin to see Pending → Active →
+   * Completed. We resolve "Active" vs "Completed" by reading the linked
+   * diviner row's subscription_status here and surfacing it to the
+   * label component.
+   */
+  diviner_subscription_status?: string | null;
 }
 
 export interface InvitationsClientProps {
   invitations: InvitationRow[];
-  roles: RoleOption[];
   total: number;
   page: number;
   pageSize: number;
@@ -90,12 +95,63 @@ export interface InvitationsClientProps {
   sortDir: string;
   q: string;
   status: string;
+  initialRoleSlug?: string;
 }
 
 const STATUS_OPTIONS = ["all", "pending", "accepted", "expired", "cancelled"];
 
-function InviteStatusBadge({ status }: { status: string }) {
+function InviteStatusBadge({
+  status,
+  roleSlug,
+  divinerSubscriptionStatus,
+}: {
+  status: string;
+  roleSlug?: string;
+  divinerSubscriptionStatus?: string | null;
+}) {
   const s = status.toLowerCase();
+
+  // Diviner-role rows get the 3-state Pending → Active → Completed label
+  // (docs/tasks/2026-04-30). Non-diviner roles keep the legacy label.
+  if (roleSlug === "diviner") {
+    if (s === "pending") {
+      return (
+        <span className="inline-flex items-center rounded-full bg-amber-500/10 px-2.5 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-400">
+          Pending
+        </span>
+      );
+    }
+    if (s === "accepted") {
+      const subActive = divinerSubscriptionStatus === "active";
+      if (subActive) {
+        return (
+          <span className="inline-flex items-center rounded-full bg-green-500/10 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:text-green-400">
+            Completed
+          </span>
+        );
+      }
+      return (
+        <span className="inline-flex items-center rounded-full bg-blue-500/10 px-2.5 py-0.5 text-xs font-medium text-blue-700 dark:text-blue-400">
+          Active
+        </span>
+      );
+    }
+    if (s === "expired") {
+      return (
+        <span className="inline-flex items-center rounded-full bg-gray-500/10 px-2.5 py-0.5 text-xs font-medium text-gray-600">
+          Expired
+        </span>
+      );
+    }
+    if (s === "cancelled") {
+      return (
+        <span className="inline-flex items-center rounded-full bg-red-500/10 px-2.5 py-0.5 text-xs font-medium text-red-700 dark:text-red-400">
+          Cancelled
+        </span>
+      );
+    }
+  }
+
   const map: Record<string, string> = {
     pending: "bg-amber-500/10 text-amber-700 dark:text-amber-400",
     accepted: "bg-green-500/10 text-green-700 dark:text-green-400",
@@ -144,7 +200,6 @@ function exportSelectedCsv(invitations: InvitationRow[]) {
 
 export function InvitationsClient({
   invitations,
-  roles,
   total,
   page,
   pageSize,
@@ -153,6 +208,7 @@ export function InvitationsClient({
   sortDir,
   q,
   status,
+  initialRoleSlug,
 }: InvitationsClientProps) {
   const { pushParams, currentSort, currentDir, isPending } = useAdminTableParams({
     sort: sortBy,
@@ -167,11 +223,20 @@ export function InvitationsClient({
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [detailInvitation, setDetailInvitation] = useState<InvitationRow | null>(null);
+  const lockedRole =
+    ALL_USER_TYPES.find((role) => role.value === initialRoleSlug) ?? null;
+  const lockedRoleId = lockedRole?.value ?? "";
 
-  const selectedRole = roles.find((role) => role.id === inviteRole);
+  const selectedRole = ALL_USER_TYPES.find((role) => role.value === inviteRole);
   const isAffiliate =
-    selectedRole?.slug?.toLowerCase().includes("affiliate") ||
-    selectedRole?.slug?.toLowerCase().includes("advocate");
+    selectedRole?.value.toLowerCase().includes("affiliate") ||
+    selectedRole?.value.toLowerCase().includes("advocate");
+
+  useEffect(() => {
+    if (lockedRoleId) {
+      setInviteRole(lockedRoleId);
+    }
+  }, [lockedRoleId]);
 
   const allPageIds = invitations.map((invitation) => invitation.id);
   const allSelected =
@@ -219,12 +284,18 @@ export function InvitationsClient({
     if (!inviteEmail.trim() || !inviteRole) return;
     setInviting(true);
     try {
-      const payload: Record<string, string> = {
+      const payload: {
+        email: string;
+        role_slug: string;
+        metadata?: Record<string, string>;
+      } = {
         email: inviteEmail.trim(),
-        role_id: inviteRole,
+        role_slug: inviteRole,
       };
       if (isAffiliate && parentDiviner.trim()) {
-        payload.parent_diviner = parentDiviner.trim();
+        payload.metadata = {
+          parent_diviner_id: parentDiviner.trim(),
+        };
       }
 
       const response = await fetch("/api/admin/invitations", {
@@ -239,7 +310,7 @@ export function InvitationsClient({
 
       setShowInviteModal(false);
       setInviteEmail("");
-      setInviteRole("");
+      setInviteRole(lockedRoleId);
       setParentDiviner("");
       toast.success("Invitation sent");
       pushParams({ page: "1" });
@@ -468,7 +539,13 @@ export function InvitationsClient({
                             </span>
                           </TableCell>
                           <TableCell>
-                            <InviteStatusBadge status={invitation.status} />
+                            <InviteStatusBadge
+                              status={invitation.status}
+                              roleSlug={invitation.role_slug}
+                              divinerSubscriptionStatus={
+                                invitation.diviner_subscription_status
+                              }
+                            />
                           </TableCell>
                           <TableCell className="text-xs text-muted-foreground">
                             {invitation.invited_by ?? "—"}
@@ -595,12 +672,13 @@ export function InvitationsClient({
                 value={inviteRole}
                 onChange={(event) => setInviteRole(event.target.value)}
                 required
+                disabled={!!lockedRoleId}
                 className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               >
                 <option value="">Select a role…</option>
-                {roles.map((role) => (
-                  <option key={role.id} value={role.id}>
-                    {role.name}
+                {ALL_USER_TYPES.map((role) => (
+                  <option key={role.value} value={role.value}>
+                    {role.label}
                   </option>
                 ))}
               </select>

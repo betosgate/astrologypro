@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createHash, randomBytes } from "crypto";
 import { getAdminUser } from "@/lib/admin-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { sendEmail } from "@/lib/email";
+import { sendPlatformInvitationEmail } from "@/lib/email";
 import { APP_URL } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
@@ -50,9 +50,67 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  // Diviner sub-status enrichment.
+  //
+  // The invited-diviner flow (docs/tasks/2026-04-30) needs admin to see
+  // a three-state label:
+  //   pending                                 → "Pending"
+  //   accepted + no diviner / inactive sub   → "Active"
+  //   accepted + diviner subscription active → "Completed"
+  //
+  // We don't migrate the invitations.status enum (it stays
+  // pending|accepted|expired|cancelled). Instead we attach a derived
+  // `diviner_subscription_status` field for diviner-role rows so the
+  // client renders the 3-state label without a follow-up fetch.
+  const divinerEmails = (data ?? [])
+    .filter(
+      (inv) =>
+        inv.role_slug === "diviner" &&
+        (inv.status === "accepted" || inv.status === "pending")
+    )
+    .map((inv) => inv.email.toLowerCase());
+
+  const divinerSubStatusByEmail = new Map<string, string | null>();
+  if (divinerEmails.length > 0) {
+    // Resolve emails → user_ids via auth admin (RLS-bypassing path).
+    const { data: usersList } = await admin.auth.admin.listUsers();
+    const emailToUserId = new Map<string, string>();
+    for (const u of usersList?.users ?? []) {
+      const e = u.email?.toLowerCase();
+      if (e) emailToUserId.set(e, u.id);
+    }
+    const userIds = divinerEmails
+      .map((e) => emailToUserId.get(e))
+      .filter((v): v is string => Boolean(v));
+
+    if (userIds.length > 0) {
+      const { data: divinersRows } = await admin
+        .from("diviners")
+        .select("user_id, subscription_status")
+        .in("user_id", userIds);
+      const userIdToStatus = new Map<string, string | null>();
+      for (const row of divinersRows ?? []) {
+        userIdToStatus.set(
+          row.user_id as string,
+          (row.subscription_status as string | null) ?? null
+        );
+      }
+      for (const email of divinerEmails) {
+        const uid = emailToUserId.get(email);
+        if (uid) {
+          divinerSubStatusByEmail.set(email, userIdToStatus.get(uid) ?? null);
+        }
+      }
+    }
+  }
+
   const enriched = (data ?? []).map((inv) => ({
     ...inv,
     invited_by_email: inv.invited_by ? (invitedByMap[inv.invited_by] ?? inv.invited_by) : null,
+    diviner_subscription_status:
+      inv.role_slug === "diviner"
+        ? divinerSubStatusByEmail.get(inv.email.toLowerCase()) ?? null
+        : null,
   }));
 
   return NextResponse.json({
@@ -123,18 +181,15 @@ export async function POST(req: NextRequest) {
 
   if (insertErr) return NextResponse.json({ error: insertErr.message }, { status: 500 });
 
-  // Send invitation email
-  const acceptUrl = `${APP_URL}/invitations/${token}/accept`;
-  await sendEmail({
+  const acceptUrl =
+    role_slug === "diviner"
+      ? `${APP_URL}/join/diviner?email=${encodeURIComponent(emailLower)}&inviteToken=${encodeURIComponent(token)}`
+      : `${APP_URL}/invitations/${token}/accept`;
+
+  await sendPlatformInvitationEmail({
     to: emailLower,
-    subject: "You've been invited to AstrologyPro",
-    html: `
-      <p>Hello,</p>
-      <p>You have been invited to join AstrologyPro as a <strong>${role_slug}</strong>.</p>
-      <p>Click the link below to create your account. This link expires in 7 days.</p>
-      <p><a href="${acceptUrl}" style="padding:12px 24px;background:#6366f1;color:#fff;text-decoration:none;border-radius:6px;display:inline-block;">Accept Invitation</a></p>
-      <p>If you did not expect this invitation, you can safely ignore this email.</p>
-    `,
+    roleSlug: role_slug,
+    acceptUrl,
   });
 
   return NextResponse.json(

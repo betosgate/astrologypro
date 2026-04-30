@@ -19,7 +19,7 @@ import { Button } from "@/components/ui/button";
  * The parent is a server component that loads the family member row
  * and renders static JSX. This client sibling owns:
  *
- *   - the "Generate Chart" / "Regenerate" button (calls
+ *   - the "Generate Chart" / "Update Chart" button (calls
  *     `POST /api/community/generate-natal`, then `router.refresh()` so
  *     the server component re-reads `community_family_members` and
  *     picks up the new `natal_chart` blob for the Chart Ready badge)
@@ -144,7 +144,7 @@ export function FamilyMemberActions({
           ) : (
             <RefreshCw className="mr-2 size-4" />
           )}
-          {hasSavedChart ? "Regenerate" : "Generate Chart"}
+          {hasSavedChart ? "Update Chart" : "Generate Chart"}
         </Button>
       </div>
 

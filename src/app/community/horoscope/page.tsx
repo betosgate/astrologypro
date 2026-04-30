@@ -202,23 +202,34 @@ export default async function CommunityNativityChartPage() {
   const { data: selfFamilyMember } = await admin
     .from("community_family_members")
     .select(
-      "id, member_id, natal_report_id",
+      "id, member_id, natal_chart, natal_report_id",
     )
     .eq("id", selfFamilyMemberId)
     .eq("member_id", member.id)
     .maybeSingle();
-  const savedNatalReport = selfFamilyMember?.natal_report_id
+  const linkedNatalReport = selfFamilyMember?.natal_report_id
     ? await loadLinkedNatalReport(selfFamilyMemberId)
     : null;
+  const legacyNatalReport =
+    !linkedNatalReport && selfFamilyMember?.natal_chart
+      ? {
+          toolname: NATAL_TAB_SLUG,
+          natal_chart: selfFamilyMember.natal_chart,
+          astro_api_data: { natal_chart_data: selfFamilyMember.natal_chart },
+        }
+      : null;
+  const savedNatalReport = linkedNatalReport ?? legacyNatalReport;
 
   return (
     <div className="space-y-4">
       {header}
       <HoroscopeToolkitPage
         basePath="/community/horoscope"
+        apiBase="/api/community/horoscope"
         allowedSlugs={[NATAL_TAB_SLUG]}
         initialPrefill={encodeURIComponent(JSON.stringify(prefill))}
         initialSavedReport={savedNatalReport}
+        autoSubmitPrefill={!savedNatalReport}
         readOnlyBirthData={true}
         communityNatalFamilyMemberId={selfFamilyMemberId}
       />

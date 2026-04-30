@@ -2813,6 +2813,7 @@ function BirthBlock({ title, value, onChange, disabled }: { title?: string; valu
 
 export interface HoroscopeToolkitPageProps {
   basePath?: string;
+  apiBase?: string;
   allowedSlugs?: string[];
   initialPrefill?: string | null;
   initialSavedFormData?: unknown;
@@ -2820,6 +2821,14 @@ export interface HoroscopeToolkitPageProps {
   autoSubmitPrefill?: boolean;
   readOnlyBirthData?: boolean;
   communityNatalFamilyMemberId?: string | null;
+  /**
+   * Community monthly-report linkage. When both values are set and the
+   * active toolkit slug is tropical_transits_monthly_v3, a successful
+   * generation posts the full payload to the monthly link endpoint so
+   * monthly_transits.full_report_id is updated atomically.
+   */
+  communityMonthlyFamilyMemberId?: string | null;
+  communityMonthlyMonthKey?: string | null;
   /**
    * Community relationship-report linkage. When BOTH ids are set AND the
    * active toolkit slug is one of the relationship slugs (romantic /
@@ -2834,6 +2843,7 @@ export interface HoroscopeToolkitPageProps {
 
 export function HoroscopeToolkitPage({
   basePath = "/admin/horoscope",
+  apiBase = "/api/admin/horoscope",
   allowedSlugs,
   initialPrefill = null,
   initialSavedFormData = null,
@@ -2841,6 +2851,8 @@ export function HoroscopeToolkitPage({
   autoSubmitPrefill = true,
   readOnlyBirthData = false,
   communityNatalFamilyMemberId = null,
+  communityMonthlyFamilyMemberId = null,
+  communityMonthlyMonthKey = null,
   communityRelationshipPersonAId = null,
   communityRelationshipPersonBId = null,
 }: HoroscopeToolkitPageProps = {}) {
@@ -2861,6 +2873,7 @@ export function HoroscopeToolkitPage({
       ? requestedSlug
       : fallbackTab.slug;
   const currentTab = visibleTabs.find((t) => t.slug === currentSlug) ?? fallbackTab;
+  const isCommunityToolkit = apiBase.startsWith("/api/community/");
   const initialForm = useMemo<FormState>(
     () => formStateFromSavedFormData(initialSavedReport ?? initialSavedFormData),
     [initialSavedFormData, initialSavedReport]
@@ -3133,7 +3146,7 @@ export function HoroscopeToolkitPage({
     // a server hiccup must never block the toolkit.
     try {
       addProgress("Checking for saved report…");
-      const matchRes = await fetchWithRetry("/api/admin/horoscope/match-saved", {
+      const matchRes = await fetchWithRetry(`${apiBase}/match-saved`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -3141,6 +3154,12 @@ export function HoroscopeToolkitPage({
           type: currentTab.type,
           person1: form.person1,
           person2: currentTab.type === "two-person" ? form.person2 : null,
+          familyMemberId:
+            communityNatalFamilyMemberId ??
+            communityMonthlyFamilyMemberId ??
+            undefined,
+          personAId: communityRelationshipPersonAId ?? undefined,
+          personBId: communityRelationshipPersonBId ?? undefined,
           extras: {
             areaOfInquiry: form.areaOfInquiry || undefined,
             question: form.question || undefined,
@@ -3163,6 +3182,7 @@ export function HoroscopeToolkitPage({
           setReturnDate(hydrated.returnDate);
           setShowChartBtn(hydrated.showChartButton);
           setShowScrollTop(true);
+          if (isCommunityToolkit) router.refresh();
           setLoading(false);
           return;
         }
@@ -3188,33 +3208,35 @@ export function HoroscopeToolkitPage({
         ...birth1,
       };
 
-      addProgress("Checking for existing report...");
-      const checkRes = await fetch("/api/admin/searched-toolkit/check", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          toolname: currentTab.slug,
-          form_data: checkFormData,
-        }),
-      });
+      if (!isCommunityToolkit) {
+        addProgress("Checking for existing report...");
+        const checkRes = await fetch("/api/admin/searched-toolkit/check", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            toolname: currentTab.slug,
+            form_data: checkFormData,
+          }),
+        });
 
-      if (checkRes.ok) {
-        const checkData = await checkRes.json();
-        if (checkData.status === "success" && checkData.result) {
-          addProgress("Found existing report! Restoring...");
-          const hydrated = hydrateSavedAstroReport(checkData.result, currentTab.slug);
+        if (checkRes.ok) {
+          const checkData = await checkRes.json();
+          if (checkData.status === "success" && checkData.result) {
+            addProgress("Found existing report! Restoring...");
+            const hydrated = hydrateSavedAstroReport(checkData.result, currentTab.slug);
 
-          if (hydrated.results) {
-            setResults(hydrated.results);
-            setNatalSvg(hydrated.natalSvg);
-            setNatalSvgTransit(hydrated.natalSvgTransit);
-            setNatalSvgP2(hydrated.natalSvgP2);
-            setNatalSvgTransitP2(hydrated.natalSvgTransitP2);
-            setTransitChartSvg(hydrated.transitChartSvg);
-            setReturnDate(hydrated.returnDate);
-            setShowChartBtn(hydrated.showChartButton);
-            setLoading(false);
-            return; // EXIT EARLY
+            if (hydrated.results) {
+              setResults(hydrated.results);
+              setNatalSvg(hydrated.natalSvg);
+              setNatalSvgTransit(hydrated.natalSvgTransit);
+              setNatalSvgP2(hydrated.natalSvgP2);
+              setNatalSvgTransitP2(hydrated.natalSvgTransitP2);
+              setTransitChartSvg(hydrated.transitChartSvg);
+              setReturnDate(hydrated.returnDate);
+              setShowChartBtn(hydrated.showChartButton);
+              setLoading(false);
+              return; // EXIT EARLY
+            }
           }
         }
       }
@@ -3848,7 +3870,58 @@ export function HoroscopeToolkitPage({
             : {}),
         };
 
-        if (
+        const isCommunityMonthlyReport =
+          currentTab.slug === "tropical_transits_monthly_v3" &&
+          Boolean(communityMonthlyFamilyMemberId) &&
+          Boolean(communityMonthlyMonthKey);
+        const isCommunityNatalReport =
+          currentTab.slug === "western_horoscope_v2" &&
+          Boolean(communityNatalFamilyMemberId);
+
+        if (isCommunityMonthlyReport) {
+          addProgress("Saving monthly report…");
+          const linkRes = await fetch("/api/community/saved-reports/monthly/link", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              familyMemberId: communityMonthlyFamilyMemberId,
+              monthKey: communityMonthlyMonthKey,
+              payload: finalSavePayload,
+            }),
+          });
+
+          if (!linkRes.ok) {
+            const body = await linkRes.json().catch(() => null);
+            throw new Error(
+              typeof body?.error === "string"
+                ? body.error
+                : "Failed to save monthly report"
+            );
+          }
+
+          router.refresh();
+        } else if (isCommunityNatalReport) {
+          addProgress("Saving natal report…");
+          const linkRes = await fetch("/api/community/saved-reports/natal/link", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              familyMemberId: communityNatalFamilyMemberId,
+              payload: finalSavePayload,
+            }),
+          });
+
+          if (!linkRes.ok) {
+            const body = await linkRes.json().catch(() => null);
+            throw new Error(
+              typeof body?.error === "string"
+                ? body.error
+                : "Failed to save natal report"
+            );
+          }
+
+          router.refresh();
+        } else if (
           communityRelationshipPersonAId &&
           communityRelationshipPersonBId &&
           isRelationshipSlug(currentTab.slug)
@@ -3893,6 +3966,15 @@ export function HoroscopeToolkitPage({
       } catch (saveErr) {
         console.error("Universal save error:", saveErr);
         if (
+          (
+            currentTab.slug === "tropical_transits_monthly_v3" &&
+            communityMonthlyFamilyMemberId &&
+            communityMonthlyMonthKey
+          ) ||
+          (
+            currentTab.slug === "western_horoscope_v2" &&
+            communityNatalFamilyMemberId
+          ) ||
           communityRelationshipPersonAId &&
           communityRelationshipPersonBId &&
           isRelationshipSlug(currentTab.slug)
