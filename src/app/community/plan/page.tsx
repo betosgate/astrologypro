@@ -186,6 +186,28 @@ export default function CommunityPlanPage() {
   const [planLoading, setPlanLoading] = useState(true);
   const [planError, setPlanError] = useState<string | null>(null);
 
+  // ── Subscription state ──
+  const [subscription, setSubscription] = useState<{
+    current_period_end: string | null;
+    status: string | null;
+  } | null>(null);
+  const [subscriptionLoading, setSubscriptionLoading] = useState(false);
+
+  const loadSubscription = useCallback(async () => {
+    setSubscriptionLoading(true);
+    try {
+      const res = await fetch("/api/pm/subscription");
+      if (res.ok) {
+        const d = await res.json();
+        setSubscription(d.subscription ?? null);
+      }
+    } catch (err) {
+      console.error("Failed to load subscription info:", err);
+    } finally {
+      setSubscriptionLoading(false);
+    }
+  }, []);
+
   const loadPlan = useCallback(async () => {
     setPlanLoading(true);
     setPlanError(null);
@@ -207,7 +229,8 @@ export default function CommunityPlanPage() {
 
   useEffect(() => {
     loadPlan();
-  }, [loadPlan]);
+    loadSubscription();
+  }, [loadPlan, loadSubscription]);
 
   // Toast + refresh when the user returns from Stripe conversion checkout.
   useEffect(() => {
@@ -628,9 +651,20 @@ export default function CommunityPlanPage() {
                     <span className="font-medium text-foreground">
                       Next billing:
                     </span>{" "}
-                    {plan.status === "cancelling"
-                      ? `Access until ${formatNextBilling(plan.current_period_end)}`
-                      : formatNextBilling(plan.current_period_end)}
+                    {subscriptionLoading ? (
+                      <span className="animate-pulse">Loading...</span>
+                    ) : subscription?.current_period_end ? (
+                      plan?.status === "cancelling"
+                        ? `Access until ${formatNextBilling(subscription.current_period_end)}`
+                        : formatNextBilling(subscription.current_period_end)
+                    ) : plan?.current_period_end ? (
+                      // Fallback to plan date if subscription fetch hasn't finished or failed
+                      plan.status === "cancelling"
+                        ? `Access until ${formatNextBilling(plan.current_period_end)}`
+                        : formatNextBilling(plan.current_period_end)
+                    ) : (
+                      "—"
+                    )}
                   </div>
                   <div>
                     <span className="font-medium text-foreground">Members:</span>{" "}
