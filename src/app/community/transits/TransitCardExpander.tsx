@@ -5,9 +5,15 @@ import {
   Card,
   CardContent,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { TrendingUp, Star, Zap, ChevronDown, ChevronUp } from "lucide-react";
+import {
+  BookOpen,
+  CalendarDays,
+  ChevronDown,
+  ChevronUp,
+  FileText,
+  Telescope,
+} from "lucide-react";
 import Link from "next/link";
 
 export type TransitCardData = {
@@ -21,20 +27,15 @@ export type TransitCardData = {
     kind: "generate" | "view" | "retry";
   };
   detailedHref: string;
+  chartHref: string;
+  chartCtaLabel: string;
+  chartCtaDisabled: boolean;
   isPending: boolean;
   ctaDisabledBase: boolean;
   hasSavedFullReport: boolean;
   month: string;
+  reportStatusLabel: string;
   highlights: string[];
-  planets: Array<{
-    name: string;
-    glyph: string;
-    sign: string;
-    degree: number;
-    retrograde: boolean;
-    aspectCount: number;
-    hasChallenging: boolean;
-  }>;
 };
 
 export function TransitCardExpander({
@@ -69,12 +70,19 @@ export function TransitCardExpander({
               </button>
 
               <div className="flex items-center gap-2 shrink-0">
-                <Link
-                  href="/diviner"
-                  className="text-xs text-primary hover:underline hidden sm:inline"
-                >
-                  Book a reading →
-                </Link>
+                {card.chartCtaDisabled ? (
+                  <Button size="sm" variant="outline" disabled>
+                    <Telescope className="mr-1.5 size-4" />
+                    {card.chartCtaLabel}
+                  </Button>
+                ) : (
+                  <Button asChild size="sm" variant="outline">
+                    <Link href={card.chartHref}>
+                      <Telescope className="mr-1.5 size-4" />
+                      {card.chartCtaLabel}
+                    </Link>
+                  </Button>
+                )}
                 <Button
                   asChild
                   size="sm"
@@ -96,90 +104,86 @@ export function TransitCardExpander({
             </div>
 
             {isOpen && (
-              <CardContent className="border-t pt-4 space-y-5">
-                {/* Key Transits / Highlights */}
+              <CardContent className="border-t pt-4 space-y-4">
+                <div className="grid gap-3 text-sm sm:grid-cols-3">
+                  <div className="rounded-md border px-3 py-2">
+                    <p className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                      <CalendarDays className="size-3.5" />
+                      Month
+                    </p>
+                    <p className="mt-1 font-medium">{card.month}</p>
+                  </div>
+                  <div className="rounded-md border px-3 py-2">
+                    <p className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                      <FileText className="size-3.5" />
+                      Report
+                    </p>
+                    <p className="mt-1 font-medium">{card.reportStatusLabel}</p>
+                  </div>
+                  <div className="rounded-md border px-3 py-2">
+                    <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                      Snapshot
+                    </p>
+                    <p className="mt-1 font-medium">
+                      {card.harmoniousCount} supportive · {card.challengingCount} challenging
+                    </p>
+                  </div>
+                </div>
+
                 {card.highlights.length > 0 && (
                   <div className="space-y-2">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                      <Star className="size-3" />
-                      Key Transits
+                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      Transit Snapshot
                     </p>
                     <div className="space-y-1.5">
                       {card.highlights.map((h, i) => (
-                        <div
+                        <p
                           key={i}
-                          className="flex items-start gap-2 text-sm"
+                          className="line-clamp-2 text-sm leading-relaxed text-muted-foreground"
                         >
-                          <Zap className="size-3.5 shrink-0 text-amber-500 mt-0.5" />
-                          <span>{h}</span>
-                        </div>
+                          {h}
+                        </p>
                       ))}
                     </div>
                   </div>
                 )}
 
-                {/* Current Planet Positions */}
-                <div className="space-y-2">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Current Planets
-                  </p>
-                  <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                    {card.planets.map((p) => (
-                      <div
-                        key={p.name}
-                        className="flex items-center gap-2 rounded-md border px-3 py-2"
-                      >
-                        <span className="text-lg leading-none">
-                          {p.glyph}
-                        </span>
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium">
-                            {p.name}
-                            {p.retrograde && (
-                              <span className="ml-1 text-xs text-muted-foreground">℞</span>
-                            )}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {p.sign} {p.degree.toFixed(1)}°
-                            {p.aspectCount > 0 && (
-                              <> · {p.aspectCount} aspect{p.aspectCount !== 1 ? "s" : ""}</>
-                            )}
-                          </p>
-                        </div>
-                        {p.hasChallenging && (
-                          <Badge variant="secondary" className="ml-auto text-[10px] shrink-0">
-                            ⚡
-                          </Badge>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Action buttons in expanded view — like /family */}
                 <div className="flex items-center gap-2 pt-1 flex-wrap">
+                  {card.chartCtaDisabled ? (
+                    <Button size="sm" variant="outline" disabled>
+                      <Telescope className="mr-1.5 size-4" />
+                      {card.chartCtaLabel}
+                    </Button>
+                  ) : (
+                    <Button size="sm" variant="outline" asChild>
+                      <Link href={card.chartHref}>
+                        <Telescope className="mr-1.5 size-4" />
+                        {card.chartCtaLabel}
+                      </Link>
+                    </Button>
+                  )}
                   <Button size="sm" asChild>
                     <Link href={card.detailedHref}>
                       {card.fullReportCta.kind === "view"
-                        ? "View Full Report"
+                        ? "View Transit Report"
                         : card.fullReportCta.kind === "retry"
-                        ? "Retry Full Report"
-                        : "Generate Full Report"}
+                        ? "Retry Transit Report"
+                        : "Generate Transit Report"}
                     </Link>
                   </Button>
                   {card.hasSavedFullReport && (
                     <Button size="sm" variant="outline" asChild>
                       <Link href={`${card.detailedHref}&regenerate=1`}>
-                        Regenerate
+                        Regenerate Transit Report
                       </Link>
                     </Button>
                   )}
-                  <Link
-                    href="/diviner"
-                    className="text-xs text-primary hover:underline sm:hidden"
-                  >
-                    Book a reading →
-                  </Link>
+                  <Button size="sm" variant="ghost" asChild>
+                    <Link href="/diviner">
+                      <BookOpen className="mr-1.5 size-4" />
+                      Book Reading
+                    </Link>
+                  </Button>
                 </div>
               </CardContent>
             )}
