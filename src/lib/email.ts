@@ -1,5 +1,6 @@
 import { SESClient, SendEmailCommand } from "@aws-sdk/client-ses";
 import {
+  EMAIL_COLORS,
   buildEmailHtml,
   detailRow,
   infoCard,
@@ -61,6 +62,82 @@ export async function sendEmail({ to, subject, html }: SendEmailParams) {
     console.error(`[sendEmail] FAILED — to: ${to}, subject: "${subject}"`, err);
     throw err;
   }
+}
+
+export async function sendPlatformInvitationEmail({
+  to,
+  roleSlug,
+  acceptUrl,
+  resent = false,
+}: {
+  to: string;
+  roleSlug: string;
+  acceptUrl: string;
+  resent?: boolean;
+}) {
+  const roleLabelMap: Record<string, string> = {
+    admin: "Admin",
+    diviner: "Diviner",
+    client: "Client",
+    advocate: "Social Advocate",
+    social_advo: "Social Advocate",
+    trainee: "Trainee",
+    community_mystery_school: "Community - Mystery School",
+    community_perennial_mandalism: "Community - Perennial Mandalism",
+  };
+
+  const roleLabel =
+    roleLabelMap[roleSlug] ??
+    roleSlug
+      .split("_")
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(" ");
+
+  const safeRoleLabel = escapeHtmlForEmail(roleLabel);
+  const title = resent ? "Your invitation is ready again" : "You're invited to AstrologyPro";
+  const subject = resent
+    ? "Your AstrologyPro invitation has been resent"
+    : "You've been invited to AstrologyPro";
+
+  const content = `
+    <p style="margin:0 0 16px;color:#d4d4d8;">
+      Hello,
+    </p>
+
+    <p style="margin:0 0 16px;color:#d4d4d8;">
+      You have been invited to join AstrologyPro as a
+      <strong style="color:#f4f4f5;">${safeRoleLabel}</strong>.
+    </p>
+
+    ${infoCard(
+      `Use the button below to open your registration flow and create your account. This invitation link expires in <strong style="color:#f4f4f5;">7 days</strong>.`
+    )}
+
+    ${sectionHeading("What happens next")}
+    <p style="margin:0;color:#a1a1aa;">
+      Complete your account setup, choose your secure password, and finish creating your AstrologyPro profile.
+    </p>
+
+    <p style="margin:20px 0 0;color:#71717a;font-size:13px;">
+      If you did not expect this invitation, you can safely ignore this email.
+    </p>
+  `;
+
+  return sendEmail({
+    to,
+    subject,
+    html: buildEmailHtml({
+      title,
+      badge: "Invitation",
+      preheader: `${safeRoleLabel} invitation for AstrologyPro`,
+      subtitle: `Start your ${safeRoleLabel.toLowerCase()} account setup with AstrologyPro.`,
+      content,
+      ctaText: "Accept Invitation",
+      ctaUrl: acceptUrl,
+      accentColor: EMAIL_COLORS.warning,
+      footer: "AstrologyPro &mdash; Run Your Divination Business",
+    }),
+  });
 }
 
 
