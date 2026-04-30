@@ -1,6 +1,6 @@
 # Task 08 — Tests + Sign-off
 
-- Status: In progress 2026-04-30 — Tasks 01–07 all merged on master; migration `20260430000002_affiliate_phase_1_5_general` registered in admin runner allowlist but **not yet applied** (waiting on user-triggered run after the deploy of Tasks 02–07 lands). Test files + manual E2E + spec/memory updates are this task's deliverables. Most of the spec changelog work is **already done** in the 2026-04-30 entry I wrote during the implementation sprint — see `IMPLEMENTATION-NOTES.md` for the per-task delta. Test scaffolding hasn't started yet.
+- Status: Code shipped 2026-04-30 in the same `deploy:` push that brings Tasks 02–07 live. New `tests/integration/affiliate-phase-1-5-general-smoke.test.ts` (8 cases) + `tests/integration/affiliate-rls.test.ts` extended with 6 Phase 1.5 cases. `package.json` aggregator `npm run test:affiliate-commission` chains the new smoke. `scripts/cleanup-affiliate-test-data.ts` extended with the `phase15-` prefix. Spec §12 changelog tail extended with test counts. Memory file flipped from "Designed" to "Shipped". **Two things still owed by the user (not by code):** (1) apply the migration `20260430000002` via `/admin/db/migrations` immediately after the Vercel build lands; (2) walk the 12-step manual E2E flow in Part E.
 - Priority: P1
 - Depends on: 01–07
 - Blocks: sprint complete
