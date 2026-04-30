@@ -34,6 +34,9 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   AlertCircle,
   Archive,
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
@@ -520,6 +523,7 @@ function AssetsTab() {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [sort, setSort] = useState("desc");
+  const [sortBy, setSortBy] = useState("created_at");
   const [assetOptions, setAssetOptions] = useState<{ value: string; label: string }[]>([]);
 
   useEffect(() => {
@@ -548,6 +552,7 @@ function AssetsTab() {
         params.set("to", toDate);
       }
       params.set("sort", sort);
+      params.set("sortBy", sortBy);
       params.set("page", String(page));
       params.set("pageSize", String(pageSize));
 
@@ -572,7 +577,7 @@ function AssetsTab() {
       void load();
     }, 300);
     return () => clearTimeout(timer);
-  }, [search, status, state, page, pageSize, fromDate, toDate, sort]);
+  }, [search, status, state, page, pageSize, fromDate, toDate, sort, sortBy]);
 
   useEffect(() => {
     setPage(1);
@@ -753,11 +758,57 @@ function AssetsTab() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Title</TableHead>
+                  <TableHead
+                    className="cursor-pointer hover:text-foreground"
+                    onClick={() => {
+                      if (sortBy === "title") {
+                        setSort(sort === "asc" ? "desc" : "asc");
+                      } else {
+                        setSortBy("title");
+                        setSort("asc");
+                      }
+                    }}
+                  >
+                    <div className="flex items-center gap-1">
+                      Title
+                      {sortBy === "title" ? (
+                        sort === "asc" ? (
+                          <ArrowUp className="size-3.5" />
+                        ) : (
+                          <ArrowDown className="size-3.5" />
+                        )
+                      ) : (
+                        <ArrowUpDown className="size-3.5 opacity-50" />
+                      )}
+                    </div>
+                  </TableHead>
                   <TableHead>Key</TableHead>
                   <TableHead>Usage</TableHead>
                   <TableHead>State</TableHead>
-                  <TableHead>Created</TableHead>
+                  <TableHead
+                    className="cursor-pointer hover:text-foreground"
+                    onClick={() => {
+                      if (sortBy === "created_at") {
+                        setSort(sort === "asc" ? "desc" : "asc");
+                      } else {
+                        setSortBy("created_at");
+                        setSort("desc");
+                      }
+                    }}
+                  >
+                    <div className="flex items-center gap-1">
+                      Created
+                      {sortBy === "created_at" ? (
+                        sort === "asc" ? (
+                          <ArrowUp className="size-3.5" />
+                        ) : (
+                          <ArrowDown className="size-3.5" />
+                        )
+                      ) : (
+                        <ArrowUpDown className="size-3.5 opacity-50" />
+                      )}
+                    </div>
+                  </TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
