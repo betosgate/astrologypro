@@ -1,6 +1,6 @@
 # Task 07 — Reporting Display Labels
 
-- Status: Not Started
+- Status: Code complete 2026-04-30 in working tree (uncommitted). Five file changes spanning admin + affiliate reporting surfaces. Caught and fixed three pre-existing bugs along the way: (1) `/api/admin/reports/affiliates/conversions` SELECTed `created_at` and `reversed_reason` (real columns: `converted_at`, `reversal_reason`), so the endpoint was returning DB errors in production; (2) `/api/admin/reports/affiliates/clicks` SELECTed `ip`, `country`, `referrer` (real columns: `ip_hash`, `country_code`, `referrer_url`), same outcome; (3) `/affiliate/earnings` had the same `created_at`/`reversed_reason` mismatch and filtered conversions via `affiliate_id IN junctionIds` which would have missed every general credit (those have NULL affiliate_id). Switched the earnings query to `affiliate_account_id = account.id` which captures both per-diviner and general per the Task 01 backfill; added a Source column with the General/Diviner discriminator. The admin conversions + clicks pages gain the same Source column, sourcing the label from the new `service_templates!destination_service_template_id` PostgREST nested join. Spec-flagged "no change required" surfaces (`/admin/reports/affiliates/by-diviner`, `/admin/reports/payouts`, `/dashboard/affiliates/[id]`) verified to naturally exclude general rows by their existing query shape.
 - Priority: P1
 - Depends on: 01
 - Blocks: 08
