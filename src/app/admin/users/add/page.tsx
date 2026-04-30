@@ -23,12 +23,12 @@ import { toast } from "sonner";
 
 const USER_TYPES = [
   { value: "admin", label: "Admin" },
-  { value: "diviner", label: "Diviner" },
-  { value: "client", label: "Client" },
-  { value: "advocate", label: "Social Advocate" },
-  { value: "trainee", label: "Trainee" },
-  { value: "community_mystery_school", label: "Community - Mystery School" },
-  { value: "community_perennial_mandalism", label: "Community - Perennial Mandalism" },
+  // { value: "diviner", label: "Diviner" },
+  // { value: "client", label: "Client" },
+  // { value: "advocate", label: "Social Advocate" },
+  // { value: "trainee", label: "Trainee" },
+  // { value: "community_mystery_school", label: "Community - Mystery School" },
+  // { value: "community_perennial_mandalism", label: "Community - Perennial Mandalism" },
 ];
 
 const GENDERS = [

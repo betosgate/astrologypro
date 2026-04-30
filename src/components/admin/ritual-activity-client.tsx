@@ -236,6 +236,9 @@ export function RitualActivityClient() {
   const rows = data?.rows ?? [];
   const total = data?.total ?? 0;
   const totalPages = data?.totalPages ?? 1;
+  const fromRecord =
+    total === 0 ? 0 : Math.min((page - 1) * pageSize + 1, total);
+  const toRecord = Math.min((page - 1) * pageSize + rows.length, total);
   const hasFilters =
     ritualName || userId || status !== "all" || createdFrom || createdTo;
 
@@ -505,102 +508,98 @@ export function RitualActivityClient() {
           )}
 
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <p className="text-xs text-muted-foreground">
-                Showing {rows.length} of {total} rituals. Page {page} of{" "}
-                {totalPages}.
-              </p>
-              <div className="h-4 w-px bg-border" />
-              <div className="flex items-center gap-2">
-                <p className="text-xs text-muted-foreground">Rows per page</p>
-                <Select
-                  value={String(pageSize)}
-                  onValueChange={(v) => updateFilters({ pageSize: v, page: "1" })}
+            <p className="text-xs text-muted-foreground">
+              Showing {fromRecord} to {toRecord} of {total} rituals
+            </p>
+
+            <div className="flex items-center gap-4">
+              <Select
+                value={String(pageSize)}
+                onValueChange={(v) => updateFilters({ pageSize: v, page: "1" })}
+              >
+                <SelectTrigger className="h-8 w-[70px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="25">25</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                  <SelectItem value="100">100</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => goToPage(1)}
+                  disabled={page <= 1 || loading}
+                  title="First Page"
                 >
-                  <SelectTrigger className="h-8 w-[70px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="10">10</SelectItem>
-                    <SelectItem value="25">25</SelectItem>
-                    <SelectItem value="50">50</SelectItem>
-                    <SelectItem value="100">100</SelectItem>
-                  </SelectContent>
-                </Select>
+                  <ChevronsLeft className="size-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => goToPage(page - 1)}
+                  disabled={page <= 1 || loading}
+                  title="Previous Page"
+                >
+                  <ChevronLeft className="size-4" />
+                </Button>
+
+                <div className="flex items-center gap-1 px-2">
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    // Logic to show a window of pages around current page
+                    let pageNum = page;
+                    if (totalPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (page <= 3) {
+                      pageNum = i + 1;
+                    } else if (page >= totalPages - 2) {
+                      pageNum = totalPages - 4 + i;
+                    } else {
+                      pageNum = page - 2 + i;
+                    }
+
+                    return (
+                      <Button
+                        key={pageNum}
+                        variant={page === pageNum ? "default" : "outline"}
+                        size="icon"
+                        className="h-8 w-8 text-xs"
+                        onClick={() => goToPage(pageNum)}
+                        disabled={loading}
+                      >
+                        {pageNum}
+                      </Button>
+                    );
+                  })}
+                </div>
+
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => goToPage(page + 1)}
+                  disabled={page >= totalPages || loading}
+                  title="Next Page"
+                >
+                  <ChevronRight className="size-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => goToPage(totalPages)}
+                  disabled={page >= totalPages || loading}
+                  title="Last Page"
+                >
+                  <ChevronsRight className="size-4" />
+                </Button>
               </div>
-            </div>
-
-            <div className="flex items-center gap-1">
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-8 w-8"
-                onClick={() => goToPage(1)}
-                disabled={page <= 1 || loading}
-                title="First Page"
-              >
-                <ChevronsLeft className="size-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-8 w-8"
-                onClick={() => goToPage(page - 1)}
-                disabled={page <= 1 || loading}
-                title="Previous Page"
-              >
-                <ChevronLeft className="size-4" />
-              </Button>
-
-              <div className="flex items-center gap-1 px-2">
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  // Logic to show a window of pages around current page
-                  let pageNum = page;
-                  if (totalPages <= 5) {
-                    pageNum = i + 1;
-                  } else if (page <= 3) {
-                    pageNum = i + 1;
-                  } else if (page >= totalPages - 2) {
-                    pageNum = totalPages - 4 + i;
-                  } else {
-                    pageNum = page - 2 + i;
-                  }
-
-                  return (
-                    <Button
-                      key={pageNum}
-                      variant={page === pageNum ? "default" : "outline"}
-                      size="icon"
-                      className="h-8 w-8 text-xs"
-                      onClick={() => goToPage(pageNum)}
-                      disabled={loading}
-                    >
-                      {pageNum}
-                    </Button>
-                  );
-                })}
-              </div>
-
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-8 w-8"
-                onClick={() => goToPage(page + 1)}
-                disabled={page >= totalPages || loading}
-                title="Next Page"
-              >
-                <ChevronRight className="size-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-8 w-8"
-                onClick={() => goToPage(totalPages)}
-                disabled={page >= totalPages || loading}
-                title="Last Page"
-              >
-                <ChevronsRight className="size-4" />
-              </Button>
             </div>
           </div>
         </CardContent>
