@@ -1,6 +1,6 @@
 # Task 04 — General-Campaigns Endpoint
 
-- Status: Not Started
+- Status: Code complete 2026-04-30 in working tree (uncommitted). New file `src/app/api/affiliate/general-campaigns/route.ts` (POST). Existing `src/app/api/affiliate/campaigns/[id]/route.ts` archive-PATCH ownership check extended to recognize general campaigns via `owner_affiliate_account_id = ctx.account.id`. Required a follow-up to the Task 01 migration to drop `tracking_links.diviner_id` NOT NULL — folded into the same migration since it hadn't been applied yet.
 - Priority: P0
 - Depends on: 01
 - Blocks: 05, 08

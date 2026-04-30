@@ -453,6 +453,7 @@ export default async function CommunityFamilyMemberPage({ params }: PageProps) {
           initialPrefill={encodedPrefill}
           initialSavedReport={savedNatalReport}
           autoSubmitPrefill={!savedNatalReport}
+          readOnlyBirthData={true}
           communityNatalFamilyMemberId={familyMember.id}
         />
       ) : (

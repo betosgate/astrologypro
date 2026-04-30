@@ -100,6 +100,17 @@ ALTER TABLE affiliate_campaigns
       AND destination_service_template_id IS NOT NULL)
   );
 
+-- ─── 2b. tracking_links: relax diviner_id NOT NULL ────────────────────────
+-- General-program campaigns have no specific diviner (the matcher picks
+-- one at booking time). The original tracking_links table from
+-- 20260331000001_initial_schema.sql declared diviner_id NOT NULL — that
+-- predated Phase 1.5. Drop the constraint so general campaigns can insert
+-- their tracking_links row. FK to diviners(id) ON DELETE CASCADE is kept;
+-- NULL passes FK checks since they only enforce on non-null values.
+-- Per-diviner campaigns continue to populate diviner_id as before.
+ALTER TABLE tracking_links
+  ALTER COLUMN diviner_id DROP NOT NULL;
+
 -- ─── 3. bookings: parallel stamp source for general program ────────────────
 ALTER TABLE bookings
   ADD COLUMN IF NOT EXISTS commission_source_template_id UUID
@@ -233,6 +244,12 @@ BEGIN
   IF EXISTS (SELECT 1 FROM service_templates WHERE slug LIKE 'general-%')
      AND NOT EXISTS (SELECT 1 FROM service_templates WHERE is_general = TRUE) THEN
     RAISE EXCEPTION 'is_general backfill from slug pattern produced 0 rows';
+  END IF;
+  -- tracking_links.diviner_id should now be nullable (general campaigns).
+  IF (SELECT is_nullable FROM information_schema.columns
+       WHERE table_schema='public' AND table_name='tracking_links'
+         AND column_name='diviner_id') <> 'YES' THEN
+    RAISE EXCEPTION 'tracking_links.diviner_id NOT NULL was not dropped';
   END IF;
 END
 $check$;
