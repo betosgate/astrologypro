@@ -2874,6 +2874,7 @@ export function HoroscopeToolkitPage({
       : fallbackTab.slug;
   const currentTab = visibleTabs.find((t) => t.slug === currentSlug) ?? fallbackTab;
   const isCommunityToolkit = apiBase.startsWith("/api/community/");
+  const effectiveReadOnlyBirthData = readOnlyBirthData || isCommunityToolkit;
   const initialForm = useMemo<FormState>(
     () => formStateFromSavedFormData(initialSavedReport ?? initialSavedFormData),
     [initialSavedFormData, initialSavedReport]
@@ -3837,6 +3838,7 @@ export function HoroscopeToolkitPage({
         };
 
         const ai_response_payload: any = {
+          ai_interpretations: collected.ai_interpretations ?? {},
           ...(collected.ai_interpretations ?? {}),
           natal_chart: natalChartPayload,
           formData: formDataPayload,
@@ -3845,6 +3847,11 @@ export function HoroscopeToolkitPage({
           freeNatalWheelChartForTransit: collected.natal_transit_svg ?? collected.transit_chart_svg ?? "",
           freeNatalWheelChartForTrasit: collected.natal_transit_svg ?? collected.transit_chart_svg ?? "",
         };
+
+        if (currentTab.slug === "tropical_transits_monthly_v3") {
+          ai_response_payload.tropical_transits_monthly = collected.transit_data ?? null;
+          ai_response_payload.lunar_metrics = collected.lunar_metrics ?? null;
+        }
 
         if (isTwoPerson) {
           ai_response_payload.freeNatalWheelChartP2 = collected.natal_transit_svg_p2 ?? "";
@@ -3961,15 +3968,16 @@ export function HoroscopeToolkitPage({
           saveAstroAiResponse(finalSavePayload).catch(() => { });
         }
 
-        // Legacy CloudFront save (fire-and-forget)
-        fetchWithRetry(
-          "https://d36fwfwo4vnk9h.cloudfront.net/astro-ai/save-astro-AI-Response",
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(finalSavePayload),
-          },
-        ).catch(() => { });
+        // Legacy CloudFront save disabled in favor of the local
+        // /api/astro-ai/save-astro-ai-response path above.
+        // fetchWithRetry(
+        //   "https://d36fwfwo4vnk9h.cloudfront.net/astro-ai/save-astro-AI-Response",
+        //   {
+        //     method: "POST",
+        //     headers: { "Content-Type": "application/json" },
+        //     body: JSON.stringify(finalSavePayload),
+        //   },
+        // ).catch(() => { });
 
       } catch (saveErr) {
         console.error("Universal save error:", saveErr);
@@ -4063,6 +4071,13 @@ export function HoroscopeToolkitPage({
   const isTransit = ["tropical_transits_weekly_v2", "tropical_transits_monthly_v3"].includes(currentSlug);
   const isHorary = currentSlug === "horary_chart_v2";
   const isSolarReturn = currentSlug === "solar_return_v2";
+  const hasRenderedResult = Boolean(results && Object.keys(results).length > 0);
+  const primarySubmitLabel = (() => {
+    if (loading) return "Processing Cosmic Data…";
+    if (error) return "Retry Reading";
+    if (initialSavedReport || hasRenderedResult) return "Regenerate";
+    return "Generate Reading";
+  })();
 
   return (
     <div className="horoscope-toolkit h-[calc(100vh-3.5rem)] lg:h-screen overflow-hidden flex flex-col" style={{ background: '#0a0c10' }}>
@@ -4104,11 +4119,11 @@ export function HoroscopeToolkitPage({
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-5">
                 {currentTab.type === "single" ? (
-                  <BirthBlock value={form.person1} onChange={(v) => setForm((f) => ({ ...f, person1: v }))} disabled={loading || readOnlyBirthData} />
+                  <BirthBlock value={form.person1} onChange={(v) => setForm((f) => ({ ...f, person1: v }))} disabled={loading || effectiveReadOnlyBirthData} />
                 ) : (
                   <div className="flex flex-col gap-6">
-                    <BirthBlock title="Person 1 (Self)" value={form.person1} onChange={(v) => setForm((f) => ({ ...f, person1: v }))} disabled={loading || readOnlyBirthData} />
-                    <BirthBlock title="Person 2 (Partner)" value={form.person2} onChange={(v) => setForm((f) => ({ ...f, person2: v }))} disabled={loading || readOnlyBirthData} />
+                    <BirthBlock title="Person 1 (Self)" value={form.person1} onChange={(v) => setForm((f) => ({ ...f, person1: v }))} disabled={loading || effectiveReadOnlyBirthData} />
+                    <BirthBlock title="Person 2 (Partner)" value={form.person2} onChange={(v) => setForm((f) => ({ ...f, person2: v }))} disabled={loading || effectiveReadOnlyBirthData} />
                   </div>
                 )}
 
@@ -4116,75 +4131,57 @@ export function HoroscopeToolkitPage({
                 {currentTab.extras?.includes("future_week") && (
                   <div>
                     <Label className="text-xs font-medium text-muted-foreground mb-1 block">Select Week (optional — defaults to current week)</Label>
-                    <Input type="date" value={form.futureWeek} onChange={(e) => setForm((f) => ({ ...f, futureWeek: e.target.value }))} disabled={loading || readOnlyBirthData} className="h-9 text-sm max-w-xs" />
+                    <Input type="date" value={form.futureWeek} onChange={(e) => setForm((f) => ({ ...f, futureWeek: e.target.value }))} disabled={loading || effectiveReadOnlyBirthData} className="h-9 text-sm max-w-xs" />
                   </div>
                 )}
                 {/* Month picker */}
                 {currentTab.extras?.includes("future_month") && (
                   <div>
                     <Label className="text-xs font-medium text-muted-foreground mb-1 block">Select Month (optional — defaults to current month)</Label>
-                    <Input type="month" value={form.futureMonth ? form.futureMonth.slice(0, 7) : ""} onChange={(e) => { const val = e.target.value; setForm((f) => ({ ...f, futureMonth: val ? `${val}-01` : "" })); }} disabled={loading || readOnlyBirthData} className="h-9 text-sm max-w-xs" />
+                    <Input type="month" value={form.futureMonth ? form.futureMonth.slice(0, 7) : ""} onChange={(e) => { const val = e.target.value; setForm((f) => ({ ...f, futureMonth: val ? `${val}-01` : "" })); }} disabled={loading || effectiveReadOnlyBirthData} className="h-9 text-sm max-w-xs" />
                   </div>
                 )}
                 {/* Question */}
                 {currentTab.extras?.includes("question") && (
                   <div>
                     <Label className="text-xs font-medium text-muted-foreground mb-1 block">Your Question (required for Horary)</Label>
-                    <Textarea value={form.question} onChange={(e) => setForm((f) => ({ ...f, question: e.target.value }))} placeholder="e.g. Will I get the job I applied for this month?" rows={3} disabled={loading || readOnlyBirthData} className="text-sm resize-none" />
+                    <Textarea value={form.question} onChange={(e) => setForm((f) => ({ ...f, question: e.target.value }))} placeholder="e.g. Will I get the job I applied for this month?" rows={3} disabled={loading || effectiveReadOnlyBirthData} className="text-sm resize-none" />
                   </div>
                 )}
                 {/* Area of inquiry */}
                 {currentTab.extras?.includes("area_of_inquiry") && (
                   <div>
                     <Label className="text-xs font-medium text-muted-foreground mb-1 block">Area of Inquiry (optional)</Label>
-                    <Textarea value={form.areaOfInquiry} onChange={(e) => setForm((f) => ({ ...f, areaOfInquiry: e.target.value }))} placeholder="What would you like to gain clarity on? e.g., Career and purpose, a specific relationship…" rows={3} disabled={loading || readOnlyBirthData} className="text-sm resize-none" />
+                    <Textarea value={form.areaOfInquiry} onChange={(e) => setForm((f) => ({ ...f, areaOfInquiry: e.target.value }))} placeholder="What would you like to gain clarity on? e.g., Career and purpose, a specific relationship…" rows={3} disabled={loading || effectiveReadOnlyBirthData} className="text-sm resize-none" />
                   </div>
                 )}
 
                 {error && <p className="text-sm text-destructive rounded-md bg-destructive/10 px-3 py-2">{error}</p>}
 
-                {initialSavedReport ? (
-                  <Button
-                    type="button"
-                    disabled={loading || !isFormValid}
-                    onClick={() => void handleSubmit(undefined, false)}
-                    className={cn(
-                      "w-full md:w-auto h-10 px-8 font-semibold transition-all shadow-md",
-                      loading || !isFormValid
-                        ? "bg-muted text-muted-foreground cursor-not-allowed opacity-70"
-                        : "bg-amber-500 hover:bg-amber-600 text-white hover:shadow-lg active:scale-95"
-                    )}
-                  >
-                    {loading ? (
-                      <>
-                        <Loader2 className="mr-2 size-4 animate-spin" />
-                        Processing Cosmic Data…
-                      </>
-                    ) : (
-                      "Regenerate"
-                    )}
-                  </Button>
-                ) : (
-	                  <Button
-	                    type="submit"
-	                    disabled={loading || !isFormValid}
-	                    className={cn(
-	                      "w-full md:w-auto h-10 px-8 font-semibold transition-all shadow-md",
-	                      loading || !isFormValid
-	                        ? "bg-muted text-muted-foreground cursor-not-allowed opacity-70"
-	                        : "bg-amber-500 hover:bg-amber-600 text-white hover:shadow-lg active:scale-95"
-	                    )}
-                  >
-                    {loading ? (
-                      <>
-                        <Loader2 className="mr-2 size-4 animate-spin" />
-                        Processing Cosmic Data…
-                      </>
-                    ) : (
-                      "Generate Reading"
-                    )}
-                  </Button>
-                )}
+                <Button
+                  type={initialSavedReport || hasRenderedResult || error ? "button" : "submit"}
+                  disabled={loading || !isFormValid}
+                  onClick={
+                    initialSavedReport || hasRenderedResult || error
+                      ? () => void handleSubmit(undefined, false)
+                      : undefined
+                  }
+                  className={cn(
+                    "w-full md:w-auto h-10 px-8 font-semibold transition-all shadow-md",
+                    loading || !isFormValid
+                      ? "bg-muted text-muted-foreground cursor-not-allowed opacity-70"
+                      : "bg-amber-500 hover:bg-amber-600 text-white hover:shadow-lg active:scale-95"
+                  )}
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="mr-2 size-4 animate-spin" />
+                      {primarySubmitLabel}
+                    </>
+                  ) : (
+                    primarySubmitLabel
+                  )}
+                </Button>
               </form>
             </CardContent>
           </Card>

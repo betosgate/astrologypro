@@ -51,18 +51,35 @@ export async function GET(request: Request) {
     }
   }
 
+  // Phase 1.5 + bug-fix:
+  // (1) campaign_conversions has `converted_at` (not `created_at`) and
+  //     `reversal_reason` (not `reversed_reason`). The pre-existing
+  //     endpoint referenced both wrong names; fixed here so the report
+  //     actually returns rows.
+  // (2) Extend the campaign sub-select to pull owner_affiliate_type and
+  //     the destination service_template name so the page can render
+  //     "General: <template>" vs "Diviner: <name>" labels per spec §10.
+  // (3) affiliate_account_id is post-migration; included so the report
+  //     can group by account if needed.
   let query = admin
     .from("campaign_conversions")
     .select(
-      "id, campaign_id, affiliate_id, affiliate_type, booking_id, order_amount_cents, commission_amount_cents, rate_type_used, rate_value_used, reversed_at, reversed_reason, created_at, campaign:affiliate_campaigns(diviner_id, name)",
+      `id, campaign_id, affiliate_id, affiliate_type, affiliate_account_id,
+       booking_id, order_amount_cents, commission_amount_cents,
+       rate_type_used, rate_value_used,
+       reversed_at, reversal_reason, converted_at,
+       campaign:affiliate_campaigns(
+         diviner_id, name, owner_affiliate_type,
+         template:service_templates!destination_service_template_id(id, name)
+       )`,
     )
-    .order("created_at", { ascending: false })
+    .order("converted_at", { ascending: false })
     .order("id", { ascending: false })
     .limit(limit + 1);
 
   if (scopedCampaignIds) query = query.in("campaign_id", scopedCampaignIds);
-  if (dateFrom) query = query.gte("created_at", dateFrom);
-  if (dateTo) query = query.lte("created_at", dateTo);
+  if (dateFrom) query = query.gte("converted_at", dateFrom);
+  if (dateTo) query = query.lte("converted_at", dateTo);
   if (affiliateId) query = query.eq("affiliate_id", affiliateId);
   if (status === "earned") query = query.is("reversed_at", null);
   else if (status === "reversed") query = query.not("reversed_at", "is", null);

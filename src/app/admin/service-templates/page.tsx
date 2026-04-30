@@ -62,6 +62,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { BulkRateCard } from "./_components/bulk-rate-card";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -78,6 +79,11 @@ interface ServiceTemplateRow {
   display_order: number;
   icon_name: string | null;
   diviner_count: number;
+  // Phase 1.5 — fields are nullable when migration hasn't applied yet.
+  is_general?: boolean | null;
+  affiliate_program_enabled?: boolean | null;
+  commission_type?: "percent" | "flat" | null;
+  commission_value?: number | string | null;
 }
 
 // ── Main page ────────────────────────────────────────────────────────────────
@@ -275,6 +281,9 @@ export default function ServiceTemplatesPage() {
         </div>
       </div>
 
+      {/* Phase 1.5: bulk rate update across enabled general templates. */}
+      <BulkRateCard />
+
       {/* Filters */}
       <div className="flex flex-wrap gap-3 items-center">
         <div className="w-full sm:w-auto flex-1 min-w-[220px] max-w-sm">
@@ -355,6 +364,8 @@ export default function ServiceTemplatesPage() {
               </TableHead>
               <TableHead className="text-center">Active</TableHead>
               <TableHead className="text-center">Diviners</TableHead>
+              <TableHead className="text-center">Affiliate program</TableHead>
+              <TableHead className="text-right">Rate</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -362,7 +373,7 @@ export default function ServiceTemplatesPage() {
             {loading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <TableRow key={i}>
-                  {Array.from({ length: 8 }).map((__, j) => (
+                  {Array.from({ length: 10 }).map((__, j) => (
                     <TableCell key={j}>
                       <div className="h-4 bg-muted animate-pulse rounded w-full" />
                     </TableCell>
@@ -371,7 +382,7 @@ export default function ServiceTemplatesPage() {
               ))
             ) : templates.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
+                <TableCell colSpan={10} className="text-center py-12 text-muted-foreground">
                   No service templates found.
                 </TableCell>
               </TableRow>
@@ -415,6 +426,34 @@ export default function ServiceTemplatesPage() {
                   </TableCell>
                   <TableCell className="text-center">
                     <span className="text-sm font-medium">{t.diviner_count}</span>
+                  </TableCell>
+                  <TableCell className="text-center">
+                    {t.is_general
+                      ? t.affiliate_program_enabled
+                        ? (
+                          <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 text-xs">
+                            Enabled
+                          </Badge>
+                        )
+                        : (
+                          <Badge variant="secondary" className="text-xs">
+                            Disabled
+                          </Badge>
+                        )
+                      : (
+                        <span className="text-xs text-muted-foreground">N/A</span>
+                      )}
+                  </TableCell>
+                  <TableCell className="text-right text-sm">
+                    {!t.is_general ? (
+                      <span className="text-muted-foreground">—</span>
+                    ) : t.commission_value === null || t.commission_value === undefined ? (
+                      <span className="text-muted-foreground">default (10%)</span>
+                    ) : t.commission_type === "flat" ? (
+                      <span>{Number(t.commission_value).toLocaleString()}¢ flat</span>
+                    ) : (
+                      <span>{Number(t.commission_value)}%</span>
+                    )}
                   </TableCell>
                   <TableCell className="text-right">
                     <div

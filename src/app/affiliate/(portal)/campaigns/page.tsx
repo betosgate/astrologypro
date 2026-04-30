@@ -68,28 +68,40 @@ export default async function AffiliateCampaignsListPage() {
   const ctx = await resolveAffiliateForCaller(admin, user.id);
   if (!ctx) redirect("/login?e=no_affiliate_account");
 
-  const { junctionIds } = ctx;
+  const { account, junctionIds } = ctx;
 
-  if (junctionIds.length === 0) {
-    return (
-      <div className="space-y-6">
-        <ListHeader />
-        <EmptyState
-          title="No partnerships yet"
-          body="Once a diviner invites you to be an affiliate and assigns a product, you'll be able to create campaigns here."
-        />
-      </div>
-    );
-  }
+  // Phase 1.5: pull both per-diviner campaigns (matched via junctionIds)
+  // and general campaigns (matched via owner_affiliate_account_id). Two
+  // SELECTs since PostgREST can't OR cross-column constraints; merged
+  // client-side. Cost is negligible (single account, 0–N junctions).
+  const [perDivinerRes, generalRes] = await Promise.all([
+    junctionIds.length > 0
+      ? admin
+          .from("affiliate_campaigns")
+          .select(
+            "id, campaign_code, name, status, share_url, channel, diviner_id, owner_affiliate_type, destination_type, destination_service_template_id, created_at",
+          )
+          .in("owner_affiliate_id", junctionIds)
+          .eq("owner_affiliate_type", "diviner_affiliate")
+      : Promise.resolve({ data: [] }),
+    admin
+      .from("affiliate_campaigns")
+      .select(
+        "id, campaign_code, name, status, share_url, channel, diviner_id, owner_affiliate_type, destination_type, destination_service_template_id, created_at",
+      )
+      .eq("owner_affiliate_account_id", account.id)
+      .eq("owner_affiliate_type", "general"),
+  ]);
 
-  const { data: campaigns } = await admin
-    .from("affiliate_campaigns")
-    .select(
-      "id, campaign_code, name, status, share_url, channel, diviner_id, destination_type, destination_service_template_id, created_at",
-    )
-    .in("owner_affiliate_id", junctionIds)
-    .eq("owner_affiliate_type", "diviner_affiliate")
-    .order("created_at", { ascending: false });
+  const merged = [
+    ...((perDivinerRes.data ?? []) as Array<Record<string, unknown>>),
+    ...((generalRes.data ?? []) as Array<Record<string, unknown>>),
+  ].sort((a, b) => {
+    const at = (a.created_at as string) ?? "";
+    const bt = (b.created_at as string) ?? "";
+    return bt.localeCompare(at);
+  });
+  const campaigns = merged;
 
   const rows = campaigns ?? [];
 
@@ -112,26 +124,55 @@ export default async function AffiliateCampaignsListPage() {
     );
   }
 
-  // Aggregate per-campaign KPIs in one round-trip rather than N+1.
+  // Aggregate per-campaign KPIs in one round-trip rather than N+1. Also
+  // pull display names for diviners (per-diviner campaigns) and general
+  // templates (Phase 1.5 campaigns) so the Diviner / Source column can
+  // render the right label per row.
   const campaignIds = rows.map((c) => c.id as string);
-  const [{ data: conversions }, { data: clicks }, { data: diviners }] =
-    await Promise.all([
-      admin
-        .from("campaign_conversions")
-        .select("campaign_id, commission_amount_cents, reversed_at")
-        .in("campaign_id", campaignIds),
-      admin
-        .from("campaign_clicks")
-        .select("campaign_id")
-        .in("campaign_id", campaignIds),
-      admin
-        .from("diviners")
-        .select("id, display_name")
-        .in(
-          "id",
-          Array.from(new Set(rows.map((c) => c.diviner_id as string))),
-        ),
-    ]);
+  const divinerIdsToFetch = Array.from(
+    new Set(
+      rows
+        .map((c) => c.diviner_id as string | null)
+        .filter((v): v is string => !!v),
+    ),
+  );
+  const generalTemplateIds = Array.from(
+    new Set(
+      rows
+        .filter((c) => c.owner_affiliate_type === "general")
+        .map(
+          (c) => c.destination_service_template_id as string | null,
+        )
+        .filter((v): v is string => !!v),
+    ),
+  );
+  const [
+    { data: conversions },
+    { data: clicks },
+    { data: diviners },
+    { data: generalTemplates },
+  ] = await Promise.all([
+    admin
+      .from("campaign_conversions")
+      .select("campaign_id, commission_amount_cents, reversed_at")
+      .in("campaign_id", campaignIds),
+    admin
+      .from("campaign_clicks")
+      .select("campaign_id")
+      .in("campaign_id", campaignIds),
+    divinerIdsToFetch.length > 0
+      ? admin
+          .from("diviners")
+          .select("id, display_name")
+          .in("id", divinerIdsToFetch)
+      : Promise.resolve({ data: [] }),
+    generalTemplateIds.length > 0
+      ? admin
+          .from("service_templates")
+          .select("id, name")
+          .in("id", generalTemplateIds)
+      : Promise.resolve({ data: [] }),
+  ]);
 
   const totals = new Map<
     string,
@@ -156,6 +197,19 @@ export default async function AffiliateCampaignsListPage() {
   const divinerNameById = new Map<string, string>();
   for (const d of diviners ?? []) {
     divinerNameById.set(d.id as string, (d.display_name as string) ?? "Diviner");
+  }
+  const templateNameById = new Map<string, string>();
+  for (const t of generalTemplates ?? []) {
+    templateNameById.set(t.id as string, (t.name as string) ?? "General product");
+  }
+  function sourceLabel(row: Record<string, unknown>): string {
+    if (row.owner_affiliate_type === "general") {
+      const tid = row.destination_service_template_id as string | null;
+      const tn = tid ? templateNameById.get(tid) : null;
+      return tn ? `General: ${tn}` : "General product";
+    }
+    const did = row.diviner_id as string | null;
+    return (did && divinerNameById.get(did)) ?? "—";
   }
 
   const activeCount = rows.filter((r) => r.status === "active").length;
@@ -241,7 +295,7 @@ export default async function AffiliateCampaignsListPage() {
                         </div>
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
-                        {divinerNameById.get(r.diviner_id as string) ?? "—"}
+                        {sourceLabel(r)}
                       </TableCell>
                       <TableCell>
                         <Badge variant={statusVariant(r.status as string)}>
