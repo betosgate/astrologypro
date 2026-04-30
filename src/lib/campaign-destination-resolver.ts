@@ -67,7 +67,10 @@ export async function resolveCampaignDestination(
     if (!template.is_active) {
       return { url: "/", valid: false, reason: "Service template inactive" };
     }
-    return { url: `/readings/${template.slug}`, valid: true };
+    // General products live at /services/<slug> (the slug carries the
+    // `general-` prefix from migration 20260421000002). The /readings/*
+    // tree is for marketing landing pages — separate concern.
+    return { url: `/services/${template.slug}`, valid: true };
   }
 
   // No destination set — fall back to diviner profile

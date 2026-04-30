@@ -163,7 +163,7 @@ export default function AddMemberPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-3xl">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-3">
         <Button variant="outline" size="sm" asChild>
@@ -356,47 +356,49 @@ export default function AddMemberPage() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm">Intake Questionnaire</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-
-            {(
-              [
-                ["personality", "Personality"],
-                ["strengths", "Strengths"],
-                ["lifeAreasFulfilling", "Life Areas That Are Fulfilling"],
-                ["lifeAreasImprovement", "Life Areas for Improvement"],
-                ["longTermGoals", "Long-Term Goals"],
-                ["majorLifeEvents", "Major Life Events"],
-                ["relationship_with_family", "Relationship with Family"],
-                ["biggest_current_challenges", "Biggest Current Challenges"],
-                ["mainConcern", "Main Concern"],
-                ["additionalInfo", "Additional Info"],
-                ["achieveFromReading", "What They Hope to Achieve from Reading"],
-                ["focus_on_specific_relationships", "Focus on Specific Relationships"],
-                ["stressManagement", "Stress Management"],
-                ["workLifeBalance", "Work-Life Balance"],
-                ["concerns_about_romantic_life", "Concerns About Romantic Life"],
-                ["social_life_fulfillment", "Social Life Fulfillment"],
-                ["spiritualPractices", "Spiritual Practices"],
-                ["guidance_on_specific_decision", "Guidance on a Specific Decision"],
-                ["ongoing_projects_or_plans", "Ongoing Projects or Plans"],
-                ["selfDiscovery", "Self-Discovery"],
-                ["externalInfluences", "External Influences"],
-                ["specificQuestions", "Specific Questions"],
-                ["goalsOutcomes", "Goals & Outcomes"],
-                ["additional_info", "Additional Notes"],
-              ] as [keyof FormState, string][]
-            ).map(([field, label]) => (
-              <div key={field} className="space-y-1.5">
-                <Label htmlFor={field}>{label}</Label>
-                <Textarea
-                  id={field}
-                  value={form[field]}
-                  onChange={(e) => set(field, e.target.value)}
-                  rows={2}
-                  placeholder={`Enter ${label.toLowerCase()}…`}
-                />
-              </div>
-            ))}
+          <CardContent>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {(
+                [
+                  ["personality", "Personality"],
+                  ["strengths", "Strengths"],
+                  ["lifeAreasFulfilling", "Life Areas That Are Fulfilling"],
+                  ["lifeAreasImprovement", "Life Areas for Improvement"],
+                  ["longTermGoals", "Long-Term Goals"],
+                  ["majorLifeEvents", "Major Life Events"],
+                  ["relationship_with_family", "Relationship with Family"],
+                  ["biggest_current_challenges", "Biggest Current Challenges"],
+                  ["mainConcern", "Main Concern"],
+                  ["additionalInfo", "Additional Info"],
+                  ["achieveFromReading", "What They Hope to Achieve from Reading"],
+                  ["focus_on_specific_relationships", "Focus on Specific Relationships"],
+                  ["stressManagement", "Stress Management"],
+                  ["workLifeBalance", "Work-Life Balance"],
+                  ["concerns_about_romantic_life", "Concerns About Romantic Life"],
+                  ["social_life_fulfillment", "Social Life Fulfillment"],
+                  ["spiritualPractices", "Spiritual Practices"],
+                  ["guidance_on_specific_decision", "Guidance on a Specific Decision"],
+                  ["ongoing_projects_or_plans", "Ongoing Projects or Plans"],
+                  ["selfDiscovery", "Self-Discovery"],
+                  ["externalInfluences", "External Influences"],
+                  ["specificQuestions", "Specific Questions"],
+                  ["goalsOutcomes", "Goals & Outcomes"],
+                  ["additional_info", "Additional Notes"],
+                ] as [keyof FormState, string][]
+              ).map(([field, label]) => (
+                <div key={field} className="space-y-2">
+                  <Label htmlFor={field} className="text-sm">{label}</Label>
+                  <Textarea
+                    id={field}
+                    value={form[field]}
+                    onChange={(e) => set(field, e.target.value)}
+                    rows={1}
+                    className="resize-none min-h-[52px]"
+                    placeholder={`Enter ${label.toLowerCase()}…`}
+                  />
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
 
