@@ -6,6 +6,10 @@ import {
   isValidNatalChart,
   isValidRelationshipChart,
 } from "@/lib/community/chart-validators";
+import {
+  computeBirthDataReadiness,
+  buildNatalChartFromBirthData,
+} from "@/lib/community/birth-data-readiness";
 
 export const dynamic = "force-dynamic";
 
@@ -130,9 +134,17 @@ export async function POST(request: NextRequest) {
   // Fetch both members (RLS ensures they belong to this member). If either
   // id is from another household it simply won't appear in the result —
   // no information leak.
+  //
+  // Independent product rule (tasks/30.04.2026): the gate is complete
+  // birth data on both people. We still pull `natal_chart` because we
+  // honour it as a read-through cache when shape-valid, but its absence
+  // is no longer a hard gate — we can build NatalChartData on the fly
+  // from birth fields, just like the admin Horoscope Toolkit.
   const { data: members } = await supabase
     .from("community_family_members")
-    .select("id, full_name, natal_chart")
+    .select(
+      "id, full_name, natal_chart, age_group, date_of_birth, birth_time, birth_city, birth_country, birth_lat, birth_lng"
+    )
     .eq("member_id", member.id)
     .in("id", [personAId, personBId]);
 
@@ -141,30 +153,6 @@ export async function POST(request: NextRequest) {
 
   if (!personA || !personB) {
     return NextResponse.json({ error: "Family member(s) not found" }, { status: 404 });
-  }
-
-  if (!personA.natal_chart || !personB.natal_chart) {
-    return NextResponse.json(
-      { error: "Both people need natal charts generated first" },
-      { status: 422 }
-    );
-  }
-
-  // Task 06 — refuse to compute synastry from a legacy/dummy natal chart.
-  // The relationship guard relies on natal_chart being a valid current
-  // shape; if either input fails validation we report as 422 so the user
-  // can regenerate the underlying natal chart through the governed path.
-  if (
-    !isValidNatalChart(personA.natal_chart) ||
-    !isValidNatalChart(personB.natal_chart)
-  ) {
-    return NextResponse.json(
-      {
-        error:
-          "One or both natal charts are stale and need to be regenerated before computing this relationship.",
-      },
-      { status: 422 }
-    );
   }
 
   // Canonical sorted pair — matches the (person_a_id, person_b_id) unique
@@ -181,6 +169,8 @@ export async function POST(request: NextRequest) {
     .maybeSingle();
 
   // Cache hit: existing, not invalidated, shape valid, no force.
+  // Birth data is irrelevant on a cache hit — we just hydrate the saved
+  // relationship report row.
   if (
     !forceRegenerate &&
     existing &&
@@ -194,10 +184,52 @@ export async function POST(request: NextRequest) {
     });
   }
 
+  // Compute path — gate now is complete birth data for both people.
+  // We use saved natal_chart as a cache when shape-valid, otherwise we
+  // build NatalChartData from birth fields in memory. No side-effect
+  // write back to community_family_members.natal_chart.
+  const readyA = computeBirthDataReadiness(personA);
+  const readyB = computeBirthDataReadiness(personB);
+  if (!readyA.complete || !readyB.complete) {
+    const detail = [
+      !readyA.complete ? `${personA.full_name}: ${readyA.missing.join(", ")}` : null,
+      !readyB.complete ? `${personB.full_name}: ${readyB.missing.join(", ")}` : null,
+    ]
+      .filter(Boolean)
+      .join("; ");
+    return NextResponse.json(
+      {
+        error:
+          "Both people need complete birth details before a relationship report can be generated.",
+        detail,
+      },
+      { status: 422 }
+    );
+  }
+
+  let natalA: NatalChartData;
+  let natalB: NatalChartData;
+  try {
+    natalA = isValidNatalChart(personA.natal_chart)
+      ? (personA.natal_chart as NatalChartData)
+      : buildNatalChartFromBirthData(personA);
+    natalB = isValidNatalChart(personB.natal_chart)
+      ? (personB.natal_chart as NatalChartData)
+      : buildNatalChartFromBirthData(personB);
+  } catch (e) {
+    return NextResponse.json(
+      {
+        error: "Could not build a chart from one or both people's birth data.",
+        detail: e instanceof Error ? e.message : String(e),
+      },
+      { status: 422 }
+    );
+  }
+
   // Regenerate or generate.
   const synastry = calculateSynastry(
-    personA.natal_chart as NatalChartData,
-    personB.natal_chart as NatalChartData,
+    natalA,
+    natalB,
     personA.full_name,
     personB.full_name
   );

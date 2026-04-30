@@ -29,15 +29,16 @@ import {
   type MonthlyTransitData,
 } from "@/lib/astro/transits";
 import type { NatalChartData } from "@/lib/astro/natal-chart";
+import { isValidMonthlyTransit, isValidNatalChart } from "@/lib/community/chart-validators";
 import {
-  isValidNatalChart,
-  isValidMonthlyTransit,
-} from "@/lib/community/chart-validators";
+  computeBirthDataReadiness,
+  buildNatalChartFromBirthData,
+  type BirthDataInput,
+} from "@/lib/community/birth-data-readiness";
 
 export type EnsureSkipReason =
   | "current_valid"
-  | "missing_natal_chart"
-  | "invalid_natal_chart";
+  | "incomplete_birth_data";
 
 export interface EnsureMonthlyTransitsResult {
   /** Month key the run targeted (`YYYY-MM`). */
@@ -54,7 +55,7 @@ export interface EnsureMonthlyTransitsResult {
   retried: number;
   /** Stale-shape rows that were regenerated. */
   regenerated: number;
-  /** Members blocked because their natal chart is missing or stale. */
+  /** Members blocked because their birth data is incomplete. */
   blocked: number;
   /** Rows that failed to generate this run. */
   failed: number;
@@ -152,40 +153,41 @@ export async function ensureCurrentMonthTransitsForMember(
   result.active = true;
 
   // ── Find eligible family members ───────────────────────────────────────
-  // Eligibility = natal_status='generated' AND a shape-valid stored chart.
-  // A row whose natal_chart is legacy/dummy is recorded as `blocked` so
-  // the user / admin can see why no summary appeared.
+  // Eligibility = complete birth data. The natal_chart product is no
+  // longer the gate — the admin Horoscope Toolkit model treats birth
+  // data as the prerequisite and computes whatever report is requested
+  // directly. We follow the same rule here: any row with complete birth
+  // fields is eligible, regardless of natal_chart cache state.
+  //
+  // Saved natal_chart JSON is still honoured as a read-through cache
+  // when shape-valid (see compute loop below) — but its absence does
+  // NOT block monthly summary generation.
   const { data: familyRows } = await admin
     .from("community_family_members")
-    .select("id, full_name, natal_chart, natal_status")
+    .select(
+      "id, full_name, natal_chart, natal_status, age_group, date_of_birth, birth_time, birth_city, birth_country, birth_lat, birth_lng"
+    )
     .eq("member_id", memberId);
 
-  const family = (familyRows ?? []) as Array<{
+  type FamilyRow = BirthDataInput & {
     id: string;
     full_name: string;
     natal_chart: unknown;
     natal_status: string | null;
-  }>;
+  };
 
-  const eligible: typeof family = [];
+  const family = (familyRows ?? []) as FamilyRow[];
+
+  const eligible: FamilyRow[] = [];
   for (const fm of family) {
-    if (fm.natal_status !== "generated" || fm.natal_chart == null) {
+    const readiness = computeBirthDataReadiness(fm);
+    if (!readiness.complete) {
       result.blocked++;
       result.details.push({
         family_member_id: fm.id,
         full_name: fm.full_name,
         outcome: "blocked",
-        reason: "missing_natal_chart",
-      });
-      continue;
-    }
-    if (!isValidNatalChart(fm.natal_chart)) {
-      result.blocked++;
-      result.details.push({
-        family_member_id: fm.id,
-        full_name: fm.full_name,
-        outcome: "blocked",
-        reason: "invalid_natal_chart",
+        reason: `incomplete_birth_data: ${readiness.missing.join(",")}`,
       });
       continue;
     }
@@ -307,13 +309,20 @@ export async function ensureCurrentMonthTransitsForMember(
     }
 
     // Compute.
+    //
+    // Independent product rule: monthly transit summary computes from
+    // birth data on the fly. The stored `natal_chart` is honoured as a
+    // read-through cache when shape-valid (saves the Sun/Moon/etc.
+    // Astronomy Engine work), but missing or stale cache is NOT a
+    // blocker — we just rebuild the natal positions in memory from
+    // birth fields. Side-effect: zero. We never write back to
+    // `community_family_members.natal_chart` from this path.
     let transitData: MonthlyTransitData;
     try {
-      transitData = calculateMonthlyTransits(
-        fm.natal_chart as NatalChartData,
-        year,
-        monthNum
-      );
+      const natalForCompute: NatalChartData = isValidNatalChart(fm.natal_chart)
+        ? (fm.natal_chart as NatalChartData)
+        : buildNatalChartFromBirthData(fm);
+      transitData = calculateMonthlyTransits(natalForCompute, year, monthNum);
     } catch (calcErr) {
       const reason =
         calcErr instanceof Error ? calcErr.message : "calculation_error";
