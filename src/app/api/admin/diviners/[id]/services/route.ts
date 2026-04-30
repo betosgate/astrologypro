@@ -33,6 +33,7 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
     .from("service_templates")
     .select("id, name, slug, category, base_price, duration_minutes, is_primary, is_active")
     .eq("is_active", true)
+    .not("slug", "like", "general-%")
     .order("category", { ascending: true })
     .order("display_order", { ascending: true });
 
@@ -155,6 +156,12 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
   if (!template) return NextResponse.json({ error: "Template not found" }, { status: 404 });
   if (!template.is_active) {
     return NextResponse.json({ error: "Cannot assign an inactive template" }, { status: 422 });
+  }
+  if (typeof template.slug === "string" && template.slug.startsWith("general-")) {
+    return NextResponse.json(
+      { error: "General templates cannot be assigned to diviners" },
+      { status: 422 },
+    );
   }
 
   // Duplicate check
