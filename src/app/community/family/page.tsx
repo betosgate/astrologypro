@@ -49,7 +49,10 @@ type FamilyMember = {
   natal_status: string | null;
   natal_report_id: string | null;
   natal_report_status: string | null;
+  natal_report_generated_at?: string | null;
+  natal_last_generated_at?: string | null;
   chart_updated_at: string | null;
+  updated_at?: string | null;
   notes: string | null;
 };
 

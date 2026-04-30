@@ -8,7 +8,7 @@
  *   - affiliate-owner extensions on existing campaign/click/conversion types
  */
 
-export type AffiliateType = "diviner_affiliate" | "social_advocate";
+export type AffiliateType = "diviner_affiliate" | "social_advocate" | "general";
 export type AffiliateCampaignOwnerType = "diviner" | "affiliate";
 export type AffiliateCommissionType = "percent" | "flat";
 export type AffiliateDestinationType = "PROFILE" | "SERVICE";
@@ -56,6 +56,11 @@ export interface AffiliateCampaignOwnerFields {
   owner_type: AffiliateCampaignOwnerType;
   owner_affiliate_id: string | null;
   owner_affiliate_type: AffiliateType | null;
+  /**
+   * Phase 1.5: account-direct ownership for general-program campaigns
+   * (owner_affiliate_type='general'). NULL on per-diviner campaigns.
+   */
+  owner_affiliate_account_id: string | null;
   commission_value_snapshot: number | null;
   commission_type_snapshot: AffiliateCommissionType | null;
   source_assignment_id: string | null;

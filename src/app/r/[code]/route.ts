@@ -47,14 +47,17 @@ export async function GET(
     );
   }
 
-  // Pre-validate the campaign + its source assignment BEFORE logging the
-  // click. Spec §5 Flow D step 3: a dead campaign or revoked assignment
+  // Pre-validate the campaign + its source assignment / template program
+  // BEFORE logging the click. Spec §5 Flow D step 3 (dead campaign / revoked
+  // assignment) and §10 Phase 1.5 step 3b (disabled general program): both
   // MUST render the "link no longer active" page — and clicks on dead
   // links should not pollute campaign_clicks analytics.
   if (link.campaign_id) {
     const { data: gatingCampaign } = await admin
       .from("affiliate_campaigns")
-      .select("status, source_assignment_id")
+      .select(
+        "status, source_assignment_id, owner_affiliate_type, destination_service_template_id",
+      )
       .eq("id", link.campaign_id)
       .maybeSingle();
 
@@ -72,6 +75,33 @@ export async function GET(
         .eq("id", gatingCampaign.source_assignment_id as string)
         .maybeSingle();
       if (!gatingAssignment || gatingAssignment.is_active === false) {
+        return NextResponse.redirect(
+          new URL("/link-not-active", request.url),
+          307,
+        );
+      }
+    }
+
+    // Phase 1.5: general-program gate. When the campaign points at a
+    // service_templates row whose affiliate_program_enabled flag is false,
+    // route to the inactive page just like a revoked assignment. NULL
+    // commission_value is fine (default-rate path); only the explicit
+    // disabled flag triggers this gate.
+    if (gatingCampaign.owner_affiliate_type === "general") {
+      const templateId =
+        (gatingCampaign.destination_service_template_id as string | null) ?? null;
+      if (!templateId) {
+        return NextResponse.redirect(
+          new URL("/link-not-active", request.url),
+          307,
+        );
+      }
+      const { data: gatingTemplate } = await admin
+        .from("service_templates")
+        .select("affiliate_program_enabled")
+        .eq("id", templateId)
+        .maybeSingle();
+      if (!gatingTemplate || gatingTemplate.affiliate_program_enabled !== true) {
         return NextResponse.redirect(
           new URL("/link-not-active", request.url),
           307,
@@ -113,9 +143,24 @@ export async function GET(
       .maybeSingle();
 
     if (campaign && campaign.owner_type === "affiliate") {
-      affiliateId = (campaign.owner_affiliate_id as string | null) ?? null;
-      affiliateType =
-        (campaign.owner_affiliate_type as "diviner_affiliate" | "social_advocate" | null) ?? null;
+      // Phase 1.5: campaign_clicks.affiliate_type has a CHECK that only
+      // accepts 'diviner_affiliate' / 'social_advocate'. General campaigns
+      // get null affiliate_type on the click row (the campaign_id link is
+      // enough to attribute later via owner_affiliate_account_id; out of
+      // scope to alter the CHECK here). Per-diviner campaigns: existing
+      // behavior unchanged.
+      const ownerType = campaign.owner_affiliate_type as
+        | "diviner_affiliate"
+        | "social_advocate"
+        | "general"
+        | null;
+      if (ownerType === "general") {
+        affiliateId = null;
+        affiliateType = null;
+      } else {
+        affiliateId = (campaign.owner_affiliate_id as string | null) ?? null;
+        affiliateType = ownerType ?? null;
+      }
       // Click-level snapshot carried on campaign_clicks is legacy audit
       // only — the authoritative rate for payout is on the booking row.
       commissionValueSnapshot = null;
