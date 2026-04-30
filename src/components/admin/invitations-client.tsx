@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -61,6 +61,7 @@ import {
   useAdminTableParams,
 } from "./admin-table-parts";
 import { InvitationDetailSheet } from "./invitation-detail-sheet";
+import { ALL_USER_TYPES } from "./user-type-options";
 
 export interface InvitationRow {
   id: string;
@@ -73,15 +74,8 @@ export interface InvitationRow {
   created_at: string;
 }
 
-export interface RoleOption {
-  id: string;
-  name: string;
-  slug: string;
-}
-
 export interface InvitationsClientProps {
   invitations: InvitationRow[];
-  roles: RoleOption[];
   total: number;
   page: number;
   pageSize: number;
@@ -90,6 +84,7 @@ export interface InvitationsClientProps {
   sortDir: string;
   q: string;
   status: string;
+  initialRoleSlug?: string;
 }
 
 const STATUS_OPTIONS = ["all", "pending", "accepted", "expired", "cancelled"];
@@ -144,7 +139,6 @@ function exportSelectedCsv(invitations: InvitationRow[]) {
 
 export function InvitationsClient({
   invitations,
-  roles,
   total,
   page,
   pageSize,
@@ -153,6 +147,7 @@ export function InvitationsClient({
   sortDir,
   q,
   status,
+  initialRoleSlug,
 }: InvitationsClientProps) {
   const { pushParams, currentSort, currentDir, isPending } = useAdminTableParams({
     sort: sortBy,
@@ -167,11 +162,20 @@ export function InvitationsClient({
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [detailInvitation, setDetailInvitation] = useState<InvitationRow | null>(null);
+  const lockedRole =
+    ALL_USER_TYPES.find((role) => role.value === initialRoleSlug) ?? null;
+  const lockedRoleId = lockedRole?.value ?? "";
 
-  const selectedRole = roles.find((role) => role.id === inviteRole);
+  const selectedRole = ALL_USER_TYPES.find((role) => role.value === inviteRole);
   const isAffiliate =
-    selectedRole?.slug?.toLowerCase().includes("affiliate") ||
-    selectedRole?.slug?.toLowerCase().includes("advocate");
+    selectedRole?.value.toLowerCase().includes("affiliate") ||
+    selectedRole?.value.toLowerCase().includes("advocate");
+
+  useEffect(() => {
+    if (lockedRoleId) {
+      setInviteRole(lockedRoleId);
+    }
+  }, [lockedRoleId]);
 
   const allPageIds = invitations.map((invitation) => invitation.id);
   const allSelected =
@@ -219,12 +223,18 @@ export function InvitationsClient({
     if (!inviteEmail.trim() || !inviteRole) return;
     setInviting(true);
     try {
-      const payload: Record<string, string> = {
+      const payload: {
+        email: string;
+        role_slug: string;
+        metadata?: Record<string, string>;
+      } = {
         email: inviteEmail.trim(),
-        role_id: inviteRole,
+        role_slug: inviteRole,
       };
       if (isAffiliate && parentDiviner.trim()) {
-        payload.parent_diviner = parentDiviner.trim();
+        payload.metadata = {
+          parent_diviner_id: parentDiviner.trim(),
+        };
       }
 
       const response = await fetch("/api/admin/invitations", {
@@ -239,7 +249,7 @@ export function InvitationsClient({
 
       setShowInviteModal(false);
       setInviteEmail("");
-      setInviteRole("");
+      setInviteRole(lockedRoleId);
       setParentDiviner("");
       toast.success("Invitation sent");
       pushParams({ page: "1" });
@@ -595,12 +605,13 @@ export function InvitationsClient({
                 value={inviteRole}
                 onChange={(event) => setInviteRole(event.target.value)}
                 required
+                disabled={!!lockedRoleId}
                 className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               >
                 <option value="">Select a role…</option>
-                {roles.map((role) => (
-                  <option key={role.id} value={role.id}>
-                    {role.name}
+                {ALL_USER_TYPES.map((role) => (
+                  <option key={role.value} value={role.value}>
+                    {role.label}
                   </option>
                 ))}
               </select>
