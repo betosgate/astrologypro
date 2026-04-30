@@ -115,8 +115,11 @@ ALTER TABLE campaign_conversions
   ADD COLUMN IF NOT EXISTS affiliate_account_id UUID
     REFERENCES affiliate_accounts(id);
 
+-- Time column is `converted_at` (per 20260413000005_affiliate_campaigns.sql:44),
+-- NOT `created_at`. Task plan inherited the wrong name; corrected here to
+-- match live schema. Caught by 2026-04-30 runner failure (PG 42703).
 CREATE INDEX IF NOT EXISTS idx_campaign_conversions_affiliate_account
-  ON campaign_conversions (affiliate_account_id, created_at DESC)
+  ON campaign_conversions (affiliate_account_id, converted_at DESC)
   WHERE affiliate_account_id IS NOT NULL;
 
 -- Backfill: resolve junction → account for per-diviner credits so
