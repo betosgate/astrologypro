@@ -39,6 +39,7 @@ import { finalizePerennialCommunityCheckoutSession } from "@/lib/community/final
 import { tierToPlanType } from "@/lib/community/pm-entitlement";
 import { ensureUserContractRequirements } from "@/lib/contract-orchestration";
 import { provisionTraineeDivinerUpgradeFromSession } from "@/lib/trainee-diviner-upgrade";
+import { provisionInvitedDivinerFromSession } from "@/lib/invited-diviner-upgrade";
 
 export const dynamic = "force-dynamic";
 
@@ -728,6 +729,46 @@ async function provisionDivinerFromCheckoutSession(
   return { email: "", username: "", displayName: "", planId: session.metadata?.planId ?? null };
 }
 
+async function handleInvitedDivinerCheckoutCompleted(
+  session: Stripe.Checkout.Session,
+) {
+  const planName =
+    session.metadata?.planName ?? "Professional Divination Course";
+  const provisioned = await provisionInvitedDivinerFromSession(session);
+  const userId = session.metadata?.userId;
+
+  if (userId) {
+    try {
+      await ensureUserContractRequirements(userId, "post_login");
+    } catch (error) {
+      console.error(
+        "[Webhook] Invited diviner failed to ensure contract requirements:",
+        error,
+      );
+    }
+  }
+
+  if (userId) {
+    logActivity({
+      userId,
+      eventCategory: "subscription",
+      eventType: "subscription.created",
+      metadata: {
+        itemKey: "professional_divination_course",
+        planName,
+        planId: provisioned?.planId ?? null,
+        source: "invited_diviner",
+        status: "active",
+        portals_after_upgrade: ["/dashboard"],
+      },
+    });
+  }
+
+  console.log(
+    `[Webhook] Invited diviner provisioned: userId=${userId ?? "?"} username=${provisioned?.username ?? "?"} plan=${planName}`,
+  );
+}
+
 async function handleTraineeDivinerUpgradeCheckoutCompleted(
   session: Stripe.Checkout.Session,
 ) {
@@ -1154,6 +1195,15 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
   if (session.metadata?.type === "trainee_diviner_upgrade") {
     return handleTraineeDivinerUpgradeCheckoutCompleted(session);
+  }
+
+  // Invited diviner flow (admin invite → /join/diviner → /join/diviner/plan
+  // → Stripe Checkout). Must be checked BEFORE the
+  // professional_divination_course itemKey fallback below so the trainee
+  // handler isn't accidentally invoked for an invited diviner who has no
+  // trainee row.
+  if (session.metadata?.type === "invited_diviner") {
+    return handleInvitedDivinerCheckoutCompleted(session);
   }
 
   // Route combo bundle (trainee + diviner) checkouts

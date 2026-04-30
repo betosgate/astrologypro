@@ -47,6 +47,20 @@ const ROLE_HIERARCHY: Array<{
     role: "diviner",
     check: (d) => !!d.diviner,
     destination: (d, isInvited) => {
+      // Invited-diviner gate (docs/tasks/2026-04-30): a freshly-
+      // registered invited diviner whose Stripe subscription is not
+      // yet 'active' must be sent to /join/diviner/plan on every
+      // login. The discriminator (onboarding_completed=false AND
+      // subscription_status!='active') uniquely identifies the
+      // invited-but-unpaid state without breaking existing diviners
+      // whose wizard set onboarding_completed=true with a 'trialing'
+      // subscription. Mirrors the dashboard layout server gate.
+      if (
+        !d.diviner?.onboarding_completed &&
+        d.diviner?.subscription_status !== "active"
+      ) {
+        return "/join/diviner/plan";
+      }
       if (!d.diviner?.onboarding_completed) {
         return isInvited ? getInvitedRoleDestination("diviner") : "/onboarding";
       }
@@ -125,7 +139,11 @@ const ROLE_HIERARCHY: Array<{
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface PortalCheckData {
-  diviner: { id: string; onboarding_completed: boolean | null } | null;
+  diviner: {
+    id: string;
+    onboarding_completed: boolean | null;
+    subscription_status: string | null;
+  } | null;
   trainee: { id: string; onboarding_completed: boolean | null } | null;
   advocate: { id: string; onboarding_completed: boolean | null } | null;
   mysteryStudent: {
@@ -186,7 +204,7 @@ export async function resolveLoginDestination({
     await Promise.all([
       adminClient
         .from("diviners")
-        .select("id, onboarding_completed")
+        .select("id, onboarding_completed, subscription_status")
         .eq("user_id", userId)
         .maybeSingle()
         .then((r) => r.data),
