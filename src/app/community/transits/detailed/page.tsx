@@ -8,8 +8,6 @@ import { HoroscopeToolkitPage } from "@/app/admin/horoscope/page";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { loadLinkedMonthlyReport } from "@/lib/community/saved-report-link";
-import { CommunityMonthlyLinkButton } from "./community-monthly-link-button";
-import { CommunityMonthlySavedView } from "./community-monthly-saved-view";
 
 export const metadata = {
   title: "Detailed Monthly Transits - AstrologyPro Community",
@@ -49,12 +47,11 @@ function monthStartDate(month: string): string {
  *  - Selected member's birth data is prefilled and the toolkit's birth
  *    fields are read-only.
  *  - When a saved full report is already linked to (member, month) and
- *    `regenerate=1` is NOT set, render the saved view directly from
- *    astro_ai_responses without re-mounting the toolkit (no live AI/
- *    compute calls).
- *  - Otherwise mount the toolkit. After it generates, the user clicks
- *    "Save This Report" to call the linkage endpoint that records
- *    `monthly_transits.full_report_id` on this (member, month) row.
+ *    `regenerate=1` is NOT set, hydrate the shared toolkit from the
+ *    saved astro_ai_responses row without live AI/compute calls.
+ *  - Otherwise mount the toolkit for generation. On successful generation,
+ *    the toolkit posts the full payload to the monthly linkage endpoint
+ *    so `monthly_transits.full_report_id` is recorded atomically.
  */
 export default async function CommunityTransitDetailPage({
   searchParams,
@@ -180,43 +177,7 @@ export default async function CommunityTransitDetailPage({
     }
   }
 
-  if (savedReport && !forceRegenerate) {
-    return (
-      <div className="space-y-4">
-        <Link
-          href="/community/transits"
-          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
-        >
-          <ArrowLeft className="size-4" />
-          Back to Monthly Transits
-        </Link>
-        <div className="flex items-center justify-between gap-3 flex-wrap">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">
-              Monthly Report — {memberDisplayName}
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              Saved report for {requestedMonth}.
-              {savedReport.created_at ? (
-                <> Generated {new Date(savedReport.created_at).toLocaleDateString()}.</>
-              ) : null}
-            </p>
-          </div>
-          <Button asChild variant="outline" size="sm">
-            <Link
-              href={`/community/transits/detailed?familyMemberId=${targetFamilyMemberId}&month=${requestedMonth}&regenerate=1`}
-            >
-              <RefreshCw className="mr-1.5 size-4" />
-              Regenerate
-            </Link>
-          </Button>
-        </div>
-        <CommunityMonthlySavedView report={savedReport} />
-      </div>
-    );
-  }
-
-  // ── Generate / regenerate branch — mount the toolkit ─────────────────
+  // ── Render saved / generate / regenerate through the shared toolkit ───
   const prefill = await buildToolkitPrefillForm({
     person1: prefillSeed,
     futureMonth: monthStartDate(requestedMonth),
@@ -231,35 +192,49 @@ export default async function CommunityTransitDetailPage({
         <ArrowLeft className="size-4" />
         Back to Monthly Transits
       </Link>
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">
-          Monthly Report — {memberDisplayName}
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          {forceRegenerate
-            ? `Regenerating ${requestedMonth} — the previous saved report stays available until this run completes successfully.`
-            : `Generating ${requestedMonth}. Click "Save This Report" once the toolkit finishes so it's reusable later.`}
-        </p>
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">
+            Monthly Report — {memberDisplayName}
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            {savedReport && !forceRegenerate
+              ? `Saved report for ${requestedMonth}.`
+              : forceRegenerate
+              ? `Regenerating ${requestedMonth} — the previous saved report stays available until this run completes successfully.`
+              : `Generating ${requestedMonth}. The report will save automatically when the toolkit finishes.`}
+            {savedReport?.created_at && !forceRegenerate ? (
+              <> Generated {new Date(savedReport.created_at).toLocaleDateString()}.</>
+            ) : null}
+          </p>
+        </div>
+        {savedReport && !forceRegenerate && targetFamilyMemberId ? (
+          <Button asChild variant="outline" size="sm">
+            <Link
+              href={`/community/transits/detailed?familyMemberId=${targetFamilyMemberId}&month=${requestedMonth}&regenerate=1`}
+            >
+              <RefreshCw className="mr-1.5 size-4" />
+              Regenerate
+            </Link>
+          </Button>
+        ) : null}
       </div>
 
-      {targetFamilyMemberId ? (
-        <CommunityMonthlyLinkButton
-          familyMemberId={targetFamilyMemberId}
-          monthKey={requestedMonth}
-          birthDate={prefillSeed.dateOfBirth}
-          birthTime={prefillSeed.birthTime}
-          birthCity={prefillSeed.birthCity}
-          birthCountry={prefillSeed.birthCountry}
-          birthLat={prefillSeed.birthLat}
-          birthLng={prefillSeed.birthLng}
-        />
-      ) : null}
-
       <HoroscopeToolkitPage
-        basePath="/community/transits/detailed"
+        basePath={`/community/transits/detailed?familyMemberId=${encodeURIComponent(
+          targetFamilyMemberId ?? ""
+        )}&month=${encodeURIComponent(requestedMonth)}`}
         allowedSlugs={["tropical_transits_monthly_v3"]}
         initialPrefill={encodeURIComponent(JSON.stringify(prefill))}
+        initialSavedReport={
+          savedReport && !forceRegenerate
+            ? (savedReport as Record<string, unknown>)
+            : null
+        }
+        autoSubmitPrefill={!savedReport || forceRegenerate}
         readOnlyBirthData={true}
+        communityMonthlyFamilyMemberId={targetFamilyMemberId}
+        communityMonthlyMonthKey={requestedMonth}
       />
     </div>
   );
