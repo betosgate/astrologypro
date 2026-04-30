@@ -30,15 +30,22 @@ import {
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   AlertCircle,
   Archive,
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
   CheckCircle2,
-  Eye,
-  EyeOff,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
   Film,
-  Filter,
-  Globe,
+  Loader2,
+  Monitor,
+  MonitorOff,
   Pencil,
   Plus,
   Power,
@@ -63,6 +70,7 @@ interface RitualDefinition {
   final_override_enabled: boolean;
   final_override_asset_id: string | null;
   archived_at: string | null;
+  created_at: string;
   updated_at: string;
   final_override_asset?: RitualAsset | null;
 }
@@ -82,6 +90,7 @@ interface RitualAsset {
   notes: string | null;
   mapping_count?: number;
   final_override_count?: number;
+  created_at: string;
   updated_at: string;
 }
 
@@ -104,8 +113,8 @@ export default function RitualConfigurationsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Ritual Configurations</h1>
-        <p className="text-muted-foreground">
+        <h1 className="text-3xl font-bold tracking-tight">Ritual Configurations</h1>
+        <p className="text-base text-muted-foreground">
           Manage ritual definitions, video assets, and tag → asset mappings.
         </p>
       </div>
@@ -120,23 +129,22 @@ export default function RitualConfigurationsPage() {
           <Button
             key={t.id}
             variant="ghost"
-            className={`rounded-none border-b-2 px-4 pb-3 pt-2 text-sm font-medium transition-colors hover:bg-transparent ${
-              tab === t.id
-                ? "border-primary text-primary"
-                : "border-transparent text-muted-foreground hover:text-foreground"
-            }`}
+            className={`rounded-none border-b-2 px-4 pb-3 pt-2 text-sm font-medium transition-colors hover:bg-transparent ${tab === t.id
+              ? "border-primary text-primary"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
             onClick={() => setTab(t.id as Tab)}
           >
             {t.label}
           </Button>
         ))}
-        <div className="ml-auto">
+        {/* <div className="ml-auto">
           <Button asChild variant="outline" size="sm">
             <Link href="/admin/rituals/legacy-invocations">
               Legacy Invocations
             </Link>
           </Button>
-        </div>
+        </div> */}
       </div>
 
       {tab === "configs" && <ConfigurationsTab />}
@@ -149,47 +157,52 @@ export default function RitualConfigurationsPage() {
 
 function ConfigurationsTab() {
   const [items, setItems] = useState<RitualDefinition[] | null>(null);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [filterPublished, setFilterPublished] = useState<string>("all");
   const [filterType, setFilterType] = useState<string>("all");
   const [filterOverride, setFilterOverride] = useState<string>("all");
 
-  async function load() {
-    setError(null);
-    const res = await fetch("/api/admin/ritual-configurations");
-    if (!res.ok) {
-      const e = await res.json().catch(() => ({}));
-      setError(e.error ?? "Failed to load configurations");
-      setItems([]);
-      return;
-    }
-    setItems((await res.json()) as RitualDefinition[]);
-  }
-  useEffect(() => {
-    void load();
-  }, []);
+  const [pendingAction, setPendingAction] = useState<{
+    id: string;
+    title: string;
+    type: "publish" | "visible" | "archive" | "restore";
+    value: boolean;
+  } | null>(null);
+  const [processing, setProcessing] = useState(false);
 
-  const filtered = useMemo(() => {
-    if (!items) return [];
-    return items.filter((item) => {
-      if (item.archived_at) return false;
-      if (filterPublished === "published" && !item.is_published) return false;
-      if (filterPublished === "draft" && item.is_published) return false;
-      if (filterType !== "all" && item.ritual_type !== filterType) return false;
-      if (filterOverride === "on" && !item.final_override_enabled) return false;
-      if (filterOverride === "off" && item.final_override_enabled) return false;
-      if (search.trim()) {
-        const q = search.toLowerCase();
-        if (
-          !item.title.toLowerCase().includes(q) &&
-          !item.key.toLowerCase().includes(q)
-        )
-          return false;
+  async function load() {
+    setLoading(true);
+    try {
+      setError(null);
+      const params = new URLSearchParams();
+      if (search.trim()) params.set("q", search.trim());
+      if (filterType !== "all") params.set("type", filterType);
+      if (filterPublished !== "all") params.set("status", filterPublished);
+      if (filterOverride !== "all") params.set("override", filterOverride);
+
+      const res = await fetch(`/api/admin/ritual-configurations?${params.toString()}`);
+      if (!res.ok) {
+        const e = await res.json().catch(() => ({}));
+        setError(e.error ?? "Failed to load configurations");
+        setItems([]);
+        return;
       }
-      return true;
-    });
-  }, [items, search, filterPublished, filterType, filterOverride]);
+      setItems((await res.json()) as RitualDefinition[]);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      void load();
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search, filterPublished, filterType, filterOverride]);
+
+  const filtered = items ?? [];
 
   async function patch(id: string, body: Record<string, unknown>) {
     await fetch(`/api/admin/ritual-configurations/${id}`, {
@@ -199,6 +212,28 @@ function ConfigurationsTab() {
     });
     void load();
   }
+
+  const handleConfirmAction = async () => {
+    if (!pendingAction) return;
+    setProcessing(true);
+    try {
+      const { id, type, value } = pendingAction;
+      
+      if (type === "publish") {
+        await patch(id, { is_published: value });
+      } else if (type === "visible") {
+        await patch(id, { is_visible: value });
+      } else if (type === "archive") {
+        await patch(id, { archive: true });
+      } else if (type === "restore") {
+        await patch(id, { unarchive: true });
+      }
+      
+      setPendingAction(null);
+    } finally {
+      setProcessing(false);
+    }
+  };
 
   return (
     <Card>
@@ -212,8 +247,8 @@ function ConfigurationsTab() {
         </Button>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
-          <div className="relative">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="relative flex-1">
             <Search className="pointer-events-none absolute left-2 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Search title or key…"
@@ -222,36 +257,52 @@ function ConfigurationsTab() {
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
-          <Select value={filterType} onValueChange={setFilterType}>
-            <SelectTrigger>
-              <SelectValue placeholder="Type" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All types</SelectItem>
-              <SelectItem value="static">Static</SelectItem>
-              <SelectItem value="dynamic">Dynamic</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={filterPublished} onValueChange={setFilterPublished}>
-            <SelectTrigger>
-              <SelectValue placeholder="Published" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All states</SelectItem>
-              <SelectItem value="published">Published only</SelectItem>
-              <SelectItem value="draft">Drafts only</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={filterOverride} onValueChange={setFilterOverride}>
-            <SelectTrigger>
-              <SelectValue placeholder="Override" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Any playback mode</SelectItem>
-              <SelectItem value="on">Final override on</SelectItem>
-              <SelectItem value="off">Generated playlist</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="flex flex-wrap items-center gap-2">
+            <Select value={filterType} onValueChange={setFilterType}>
+              <SelectTrigger className="w-full sm:w-[150px]">
+                <SelectValue placeholder="Type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All types</SelectItem>
+                <SelectItem value="static">Static</SelectItem>
+                <SelectItem value="dynamic">Dynamic</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={filterPublished} onValueChange={setFilterPublished}>
+              <SelectTrigger className="w-full sm:w-[150px]">
+                <SelectValue placeholder="Published" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All states</SelectItem>
+                <SelectItem value="published">Published only</SelectItem>
+                <SelectItem value="draft">Drafts only</SelectItem>
+                <SelectItem value="archived">Archived only</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={filterOverride} onValueChange={setFilterOverride}>
+              <SelectTrigger className="w-full sm:w-[180px]">
+                <SelectValue placeholder="Override" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Any playback mode</SelectItem>
+                <SelectItem value="on">Final override on</SelectItem>
+                <SelectItem value="off">Generated playlist</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => {
+                setSearch("");
+                setFilterType("all");
+                setFilterPublished("all");
+                setFilterOverride("all");
+              }}
+              title="Clear all filters"
+            >
+              <RotateCw className="size-4" />
+            </Button>
+          </div>
         </div>
 
         {error ? (
@@ -260,10 +311,13 @@ function ConfigurationsTab() {
           </div>
         ) : null}
 
-        {!items ? (
+        {loading ? (
+          <div className="flex h-32 items-center justify-center">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        ) : !items ? (
           <p className="py-8 text-center text-sm text-muted-foreground">
-            <RotateCw className="mx-auto mb-2 size-4 animate-spin" />
-            Loading…
+            Loading ritual list...
           </p>
         ) : filtered.length === 0 ? (
           <p className="py-8 text-center text-sm text-muted-foreground">
@@ -286,9 +340,9 @@ function ConfigurationsTab() {
             <TableBody>
               {filtered.map((c) => (
                 <TableRow key={c.id}>
-                  <TableCell className="font-medium">{c.title}</TableCell>
+                  <TableCell className="font-medium text-sm">{c.title}</TableCell>
                   <TableCell>
-                    <code className="text-xs">{c.key}</code>
+                    <code className="text-sm">{c.key}</code>
                   </TableCell>
                   <TableCell>
                     <Badge variant="outline" className="capitalize">
@@ -333,8 +387,8 @@ function ConfigurationsTab() {
                       </Badge>
                     </div>
                   </TableCell>
-                  <TableCell className="text-xs text-muted-foreground">
-                    {new Date(c.updated_at).toLocaleDateString()}
+                  <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
+                    {new Date(c.updated_at).toLocaleString()}
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1">
@@ -347,7 +401,12 @@ function ConfigurationsTab() {
                         size="icon"
                         variant="ghost"
                         onClick={() =>
-                          patch(c.id, { is_published: !c.is_published })
+                          setPendingAction({
+                            id: c.id,
+                            title: c.title,
+                            type: "publish",
+                            value: !c.is_published,
+                          })
                         }
                         title={c.is_published ? "Unpublish" : "Publish"}
                       >
@@ -355,29 +414,41 @@ function ConfigurationsTab() {
                           className={`size-3.5 ${c.is_published ? "text-green-600" : "text-muted-foreground"}`}
                         />
                       </Button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={() => patch(c.id, { is_visible: !c.is_visible })}
-                        title={c.is_visible ? "Hide" : "Show"}
-                      >
-                        {c.is_visible ? (
-                          <Eye className="size-3.5" />
-                        ) : (
-                          <EyeOff className="size-3.5 text-red-500" />
-                        )}
-                      </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => setPendingAction({
+                            id: c.id,
+                            title: c.title,
+                            type: "visible",
+                            value: !c.is_visible,
+                          })}
+                          title={c.is_visible ? "Hide" : "Show"}
+                        >
+                          {c.is_visible ? (
+                            <Monitor className="size-3.5 text-amber-500" />
+                          ) : (
+                            <MonitorOff className="size-3.5 text-muted-foreground" />
+                          )}
+                        </Button>
                       <Button
                         size="icon"
                         variant="ghost"
                         onClick={() =>
-                          confirm(`Archive "${c.title}"?`)
-                            ? patch(c.id, { archive: true })
-                            : null
+                          setPendingAction({
+                            id: c.id,
+                            title: c.title,
+                            type: c.archived_at ? "restore" : "archive",
+                            value: !c.archived_at,
+                          })
                         }
-                        title="Archive"
+                        title={c.archived_at ? "Restore" : "Archive"}
                       >
-                        <Archive className="size-3.5" />
+                        {c.archived_at ? (
+                          <RotateCw className="size-3.5 text-blue-500" />
+                        ) : (
+                          <Archive className="size-3.5" />
+                        )}
                       </Button>
                     </div>
                   </TableCell>
@@ -387,6 +458,41 @@ function ConfigurationsTab() {
           </Table>
         )}
       </CardContent>
+
+      <ConfirmDialog
+        open={!!pendingAction}
+        onOpenChange={(open) => !open && setPendingAction(null)}
+        loading={processing}
+        title={
+          pendingAction?.type === "publish"
+            ? `${pendingAction.value ? "Publish" : "Unpublish"} Ritual`
+            : pendingAction?.type === "visible"
+            ? `${pendingAction.value ? "Show" : "Hide"} Ritual`
+            : pendingAction?.type === "restore"
+            ? "Restore Ritual"
+            : "Archive Ritual"
+        }
+        description={`Are you sure you want to ${
+          pendingAction?.type === "publish"
+            ? pendingAction.value ? "publish" : "unpublish"
+            : pendingAction?.type === "visible"
+            ? pendingAction.value ? "show" : "hide"
+            : pendingAction?.type === "restore"
+            ? "restore"
+            : "archive"
+        } "${pendingAction?.title}"?`}
+        confirmLabel={
+          pendingAction?.type === "publish"
+            ? pendingAction.value ? "Publish" : "Unpublish"
+            : pendingAction?.type === "visible"
+            ? pendingAction.value ? "Show" : "Hide"
+            : pendingAction?.type === "restore"
+            ? "Restore"
+            : "Archive"
+        }
+        onConfirm={handleConfirmAction}
+        variant={pendingAction?.type === "archive" ? "destructive" : "default"}
+      />
     </Card>
   );
 }
@@ -394,43 +500,76 @@ function ConfigurationsTab() {
 import { VideoViewModal } from "@/components/shared/video-view-modal";
 
 function AssetsTab() {
-  const [items, setItems] = useState<RitualAsset[] | null>(null);
+  const [assets, setAssets] = useState<RitualAsset[] | null>(null);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editingAsset, setEditingAsset] = useState<RitualAsset | null>(null);
   const [previewAsset, setPreviewAsset] = useState<RitualAsset | null>(null);
 
+  const [pendingAssetAction, setPendingAssetAction] = useState<{
+    asset: RitualAsset;
+    type: "archive" | "active" | "restore";
+    value: boolean;
+  } | null>(null);
+  const [processing, setProcessing] = useState(false);
+
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
   const [state, setState] = useState("all");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [total, setTotal] = useState(0);
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+  const [sort, setSort] = useState("desc");
+  const [sortBy, setSortBy] = useState("created_at");
   const [assetOptions, setAssetOptions] = useState<{ value: string; label: string }[]>([]);
 
   useEffect(() => {
-    fetch("/api/admin/ritual-assets")
+    // Initial fetch for title options (for searchable select)
+    fetch("/api/admin/ritual-assets?pageSize=100")
       .then((r) => r.json())
-      .then((data: RitualAsset[]) => {
-        if (Array.isArray(data)) {
-          setAssetOptions(data.map(a => ({ value: a.title, label: a.title })));
+      .then((data: any) => {
+        const items = Array.isArray(data) ? data : data.items;
+        if (Array.isArray(items)) {
+          setAssetOptions(items.map((a: any) => ({ value: a.title, label: a.title })));
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   async function load() {
-    setError(null);
-    const params = new URLSearchParams();
-    if (search.trim()) params.set("q", search.trim());
-    if (status !== "all") params.set("status", status);
-    if (state !== "all") params.set("state", state);
+    setLoading(true);
+    try {
+      setError(null);
+      const params = new URLSearchParams();
+      if (search.trim()) params.set("q", search.trim());
+      if (status !== "all") params.set("status", status);
+      if (state !== "all") params.set("state", state);
+      if (fromDate && toDate) {
+        params.set("from", fromDate);
+        params.set("to", toDate);
+      }
+      params.set("sort", sort);
+      params.set("sortBy", sortBy);
+      params.set("page", String(page));
+      params.set("pageSize", String(pageSize));
 
-    const res = await fetch(`/api/admin/ritual-assets?${params.toString()}`);
-    if (!res.ok) {
-      const e = await res.json().catch(() => ({}));
-      setError(e.error ?? "Failed to load assets");
-      setItems([]);
-      return;
+      const res = await fetch(`/api/admin/ritual-assets?${params.toString()}`);
+      if (!res.ok) {
+        const e = await res.json().catch(() => ({}));
+        setError(e.error ?? "Failed to load assets");
+        setAssets([]);
+        setTotal(0);
+        return;
+      }
+      const j = await res.json();
+      setAssets(j.items ?? []);
+      setTotal(j.total ?? 0);
+    } finally {
+      setLoading(false);
     }
-    setItems((await res.json()) as RitualAsset[]);
   }
 
   useEffect(() => {
@@ -438,7 +577,11 @@ function AssetsTab() {
       void load();
     }, 300);
     return () => clearTimeout(timer);
-  }, [search, status, state]);
+  }, [search, status, state, page, pageSize, fromDate, toDate, sort, sortBy]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, status, state, fromDate, toDate, sort]);
 
   async function patch(id: string, body: Record<string, unknown>) {
     await fetch(`/api/admin/ritual-assets/${id}`, {
@@ -449,11 +592,26 @@ function AssetsTab() {
     void load();
   }
 
-  async function archiveAsset(asset: RitualAsset) {
-    if (!confirm(`Archive "${asset.title}"?`)) return;
-    await fetch(`/api/admin/ritual-assets/${asset.id}`, { method: "DELETE" });
-    void load();
-  }
+  const handleConfirmAssetAction = async () => {
+    if (!pendingAssetAction) return;
+    setProcessing(true);
+    try {
+      const { asset, type, value } = pendingAssetAction;
+
+      if (type === "archive") {
+        await fetch(`/api/admin/ritual-assets/${asset.id}`, { method: "DELETE" });
+        void load();
+      } else if (type === "restore") {
+        await patch(asset.id, { unarchive: true });
+      } else if (type === "active") {
+        await patch(asset.id, { is_active: value });
+      }
+
+      setPendingAssetAction(null);
+    } finally {
+      setProcessing(false);
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -507,9 +665,38 @@ function AssetsTab() {
             className="w-full"
           />
         </div>
-        <div className="flex items-center gap-2">
-          <Select value={status} onValueChange={setStatus}>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1">
+              <Label className="text-xs text-muted-foreground whitespace-nowrap">From</Label>
+              <Input
+                type="date"
+                className="h-9 w-[135px]"
+                value={fromDate}
+                onChange={(e) => setFromDate(e.target.value)}
+              />
+            </div>
+            <div className="flex items-center gap-1">
+              <Label className="text-xs text-muted-foreground whitespace-nowrap">To</Label>
+              <Input
+                type="date"
+                className="h-9 w-[135px]"
+                value={toDate}
+                onChange={(e) => setToDate(e.target.value)}
+              />
+            </div>
+          </div>
+          <Select value={sort} onValueChange={setSort}>
             <SelectTrigger className="w-[140px]">
+              <SelectValue placeholder="Sort" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="desc">Newest first</SelectItem>
+              <SelectItem value="asc">Oldest first</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={status} onValueChange={setStatus}>
+            <SelectTrigger className="w-[130px]">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
@@ -519,7 +706,7 @@ function AssetsTab() {
             </SelectContent>
           </Select>
           <Select value={state} onValueChange={setState}>
-            <SelectTrigger className="w-[140px]">
+            <SelectTrigger className="w-[130px]">
               <SelectValue placeholder="State" />
             </SelectTrigger>
             <SelectContent>
@@ -536,6 +723,9 @@ function AssetsTab() {
               setSearch("");
               setStatus("all");
               setState("all");
+              setFromDate("");
+              setToDate("");
+              setSort("desc");
             }}
             title="Clear all filters"
           >
@@ -552,12 +742,15 @@ function AssetsTab() {
 
       <Card>
         <CardContent className="p-0">
-          {!items ? (
+          {loading ? (
+            <div className="flex h-32 items-center justify-center">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : !assets ? (
             <p className="py-8 text-center text-sm text-muted-foreground">
-              <RotateCw className="mx-auto mb-2 size-4 animate-spin" />
-              Loading…
+              Loading asset library...
             </p>
-          ) : items.length === 0 ? (
+          ) : assets.length === 0 ? (
             <p className="py-8 text-center text-sm text-muted-foreground">
               No assets yet.
             </p>
@@ -565,54 +758,89 @@ function AssetsTab() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Title</TableHead>
+                  <TableHead
+                    className="cursor-pointer hover:text-foreground"
+                    onClick={() => {
+                      if (sortBy === "title") {
+                        setSort(sort === "asc" ? "desc" : "asc");
+                      } else {
+                        setSortBy("title");
+                        setSort("asc");
+                      }
+                    }}
+                  >
+                    <div className="flex items-center gap-1">
+                      Title
+                      {sortBy === "title" ? (
+                        sort === "asc" ? (
+                          <ArrowUp className="size-3.5" />
+                        ) : (
+                          <ArrowDown className="size-3.5" />
+                        )
+                      ) : (
+                        <ArrowUpDown className="size-3.5 opacity-50" />
+                      )}
+                    </div>
+                  </TableHead>
                   <TableHead>Key</TableHead>
-                  <TableHead>Source</TableHead>
-                  <TableHead>State</TableHead>
                   <TableHead>Usage</TableHead>
+                  <TableHead>State</TableHead>
+                  <TableHead
+                    className="cursor-pointer hover:text-foreground"
+                    onClick={() => {
+                      if (sortBy === "created_at") {
+                        setSort(sort === "asc" ? "desc" : "asc");
+                      } else {
+                        setSortBy("created_at");
+                        setSort("desc");
+                      }
+                    }}
+                  >
+                    <div className="flex items-center gap-1">
+                      Created
+                      {sortBy === "created_at" ? (
+                        sort === "asc" ? (
+                          <ArrowUp className="size-3.5" />
+                        ) : (
+                          <ArrowDown className="size-3.5" />
+                        )
+                      ) : (
+                        <ArrowUpDown className="size-3.5 opacity-50" />
+                      )}
+                    </div>
+                  </TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {items.map((a) => {
-                  const url =
-                    a.source_type === "upload" ? a.storage_path : a.external_url;
+                {assets.map((a) => {
+                  const usage = a.mapping_count + a.final_override_count;
+                  const url = a.source_type === "upload" ? a.storage_path : a.external_url;
                   return (
-                    <TableRow
-                      key={a.id}
-                      className={a.archived_at ? "opacity-50" : ""}
-                    >
-                      <TableCell className="font-medium">{a.title}</TableCell>
-                      <TableCell>
-                        <code className="text-xs">{a.asset_key}</code>
+                    <TableRow key={a.id}>
+                      <TableCell className="font-medium text-sm">
+                        {a.title}
                       </TableCell>
                       <TableCell>
-                        <div className="flex flex-col gap-1">
-                          <Badge variant="outline" className="w-fit capitalize">
-                            {a.source_type === "upload"
-                              ? "Upload"
-                              : "External URL"}
-                          </Badge>
-                          {url ? (
-                            <button
-                              type="button"
-                              onClick={() => setPreviewAsset(a)}
-                              className="max-w-[16rem] truncate text-left text-xs text-blue-500 hover:underline"
-                              title={url}
-                            >
-                              {url}
-                            </button>
-                          ) : null}
+                        <code className="text-sm text-muted-foreground">
+                          {a.asset_key}
+                        </code>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm text-muted-foreground">
+                          {a.mapping_count ?? 0} mapping(s)
+                          <br />
+                          {a.final_override_count ?? 0} override(s)
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="flex flex-wrap gap-1">
+                        <div className="flex gap-1">
                           <Badge
                             variant="outline"
                             className={
                               a.is_active
                                 ? "border-green-500/30 bg-green-500/10 text-green-600"
-                                : ""
+                                : "bg-muted"
                             }
                           >
                             {a.is_active ? "Active" : "Inactive"}
@@ -622,22 +850,15 @@ function AssetsTab() {
                             className={
                               a.is_published
                                 ? "border-blue-500/30 bg-blue-500/10 text-blue-600"
-                                : ""
+                                : "bg-muted"
                             }
                           >
                             {a.is_published ? "Published" : "Draft"}
                           </Badge>
-                          {a.archived_at ? (
-                            <Badge variant="outline" className="bg-muted">
-                              Archived
-                            </Badge>
-                          ) : null}
                         </div>
                       </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
-                        {a.mapping_count ?? 0} mapping(s)
-                        <br />
-                        {a.final_override_count ?? 0} override(s)
+                      <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
+                        {new Date(a.created_at).toLocaleString()}
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">
@@ -667,7 +888,11 @@ function AssetsTab() {
                           <Button
                             size="icon"
                             variant="ghost"
-                            onClick={() => patch(a.id, { is_active: !a.is_active })}
+                            onClick={() => setPendingAssetAction({
+                              asset: a,
+                              type: "active",
+                              value: !a.is_active,
+                            })}
                             title={a.is_active ? "Deactivate" : "Activate"}
                           >
                             <Power
@@ -677,11 +902,18 @@ function AssetsTab() {
                           <Button
                             size="icon"
                             variant="ghost"
-                            onClick={() => archiveAsset(a)}
-                            title="Archive"
-                            disabled={!!a.archived_at}
+                            onClick={() => setPendingAssetAction({
+                              asset: a,
+                              type: a.archived_at ? "restore" : "archive",
+                              value: !a.archived_at,
+                            })}
+                            title={a.archived_at ? "Restore" : "Archive"}
                           >
-                            <Archive className="size-3.5" />
+                            {a.archived_at ? (
+                              <RotateCw className="size-3.5 text-blue-500" />
+                            ) : (
+                              <Archive className="size-3.5" />
+                            )}
                           </Button>
                         </div>
                       </TableCell>
@@ -692,19 +924,174 @@ function AssetsTab() {
             </Table>
           )}
         </CardContent>
+        {total > 0 && (
+          <div className="flex items-center justify-between border-t px-4 py-3 sm:px-6">
+            <div className="flex flex-1 justify-between sm:hidden">
+              <div className="flex gap-1">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setPage(1)}
+                  disabled={page === 1}
+                >
+                  <ChevronsLeft className="size-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                >
+                  <ChevronLeft className="size-4" />
+                </Button>
+              </div>
+              <div className="flex gap-1">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setPage((p) => p + 1)}
+                  disabled={page * pageSize >= total}
+                >
+                  <ChevronRight className="size-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setPage(Math.ceil(total / pageSize))}
+                  disabled={page * pageSize >= total}
+                >
+                  <ChevronsRight className="size-4" />
+                </Button>
+              </div>
+            </div>
+            <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">
+                  Showing <span className="font-medium">{(page - 1) * pageSize + 1}</span> to{" "}
+                  <span className="font-medium">
+                    {Math.min(page * pageSize, total)}
+                  </span>{" "}
+                  of <span className="font-medium">{total}</span> assets
+                </p>
+              </div>
+              <div>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => setPage(1)}
+                    disabled={page === 1}
+                  >
+                    <ChevronsLeft className="size-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                  >
+                    <ChevronLeft className="size-4" />
+                  </Button>
+                  <div className="flex items-center gap-1 px-2">
+                    {Array.from({ length: Math.min(5, Math.ceil(total / pageSize)) }, (_, i) => {
+                      const totalPages = Math.ceil(total / pageSize);
+                      let pageNum = page;
+                      if (totalPages <= 5) {
+                        pageNum = i + 1;
+                      } else if (page <= 3) {
+                        pageNum = i + 1;
+                      } else if (page >= totalPages - 2) {
+                        pageNum = totalPages - 4 + i;
+                      } else {
+                        pageNum = page - 2 + i;
+                      }
+
+                      return (
+                        <Button
+                          key={pageNum}
+                          variant={page === pageNum ? "default" : "outline"}
+                          size="icon"
+                          className="h-8 w-8 text-xs"
+                          onClick={() => setPage(pageNum)}
+                        >
+                          {pageNum}
+                        </Button>
+                      );
+                    })}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => setPage((p) => p + 1)}
+                    disabled={page * pageSize >= total}
+                    title="Next Page"
+                  >
+                    <ChevronRight className="size-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => setPage(Math.ceil(total / pageSize))}
+                    disabled={page * pageSize >= total}
+                    title="Last Page"
+                  >
+                    <ChevronsRight className="size-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </Card>
 
-      <VideoViewModal
-        isOpen={!!previewAsset}
-        onClose={() => setPreviewAsset(null)}
-        title={previewAsset?.title ?? ""}
-        videoUrl={
-          previewAsset
-            ? previewAsset.source_type === "upload"
+      {previewAsset && (
+        <VideoViewModal
+          isOpen={!!previewAsset}
+          onClose={() => setPreviewAsset(null)}
+          title={previewAsset.title}
+          videoUrl={
+            previewAsset.source_type === "upload"
               ? previewAsset.storage_path
               : previewAsset.external_url
-            : null
+          }
+        />
+      )}
+
+      <ConfirmDialog
+        open={!!pendingAssetAction}
+        onOpenChange={(open) => !open && setPendingAssetAction(null)}
+        loading={processing}
+        title={
+          pendingAssetAction?.type === "archive"
+            ? "Archive Asset"
+            : pendingAssetAction?.type === "restore"
+            ? "Restore Asset"
+            : `${pendingAssetAction?.value ? "Activate" : "Deactivate"} Asset`
         }
+        description={`Are you sure you want to ${
+          pendingAssetAction?.type === "archive"
+            ? "archive"
+            : pendingAssetAction?.type === "restore"
+            ? "restore"
+            : pendingAssetAction?.value ? "activate" : "deactivate"
+        } "${pendingAssetAction?.asset?.title}"?`}
+        confirmLabel={
+          pendingAssetAction?.type === "archive"
+            ? "Archive"
+            : pendingAssetAction?.type === "restore"
+            ? "Restore"
+            : pendingAssetAction?.value ? "Activate" : "Deactivate"
+        }
+        onConfirm={handleConfirmAssetAction}
+        variant={pendingAssetAction?.type === "archive" ? "destructive" : "default"}
       />
     </div>
   );
@@ -895,55 +1282,101 @@ function AssetForm({
     </Card>
   );
 }
-
 function MappingsTab() {
   const [mappings, setMappings] = useState<AssetMapping[] | null>(null);
+  const [loading, setLoading] = useState(false);
   const [definitions, setDefinitions] = useState<RitualDefinition[]>([]);
   const [assets, setAssets] = useState<RitualAsset[]>([]);
+  const [searchTag, setSearchTag] = useState("");
+  const [filterAssetId, setFilterAssetId] = useState("all");
+  const [filterActive, setFilterActive] = useState("all");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [total, setTotal] = useState(0);
   const [scopeFilter, setScopeFilter] = useState<string>("all");
   const [showForm, setShowForm] = useState(false);
   const [editingMapping, setEditingMapping] = useState<AssetMapping | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  async function loadAll() {
-    setError(null);
-    const [m, d, a] = await Promise.all([
-      fetch("/api/admin/ritual-asset-mappings").then((r) => r.json()),
-      fetch("/api/admin/ritual-configurations").then((r) => r.json()),
-      fetch("/api/admin/ritual-assets").then((r) => r.json()),
-    ]);
-    if (!Array.isArray(m)) {
-      setError(m?.error ?? "Failed to load mappings");
-      setMappings([]);
-      return;
-    }
-    setMappings(m as AssetMapping[]);
-    setDefinitions((d as RitualDefinition[]) ?? []);
-    setAssets((a as RitualAsset[]) ?? []);
-  }
-  useEffect(() => {
-    void loadAll();
-  }, []);
+  const [pendingMappingDelete, setPendingMappingDelete] = useState<string | null>(null);
+  const [pendingMappingToggle, setPendingMappingToggle] = useState<{
+    id: string;
+    tag: string;
+    value: boolean;
+  } | null>(null);
+  const [processing, setProcessing] = useState(false);
 
-  const filtered = useMemo(() => {
-    if (!mappings) return [];
-    if (scopeFilter === "all") return mappings;
-    return mappings.filter((m) => m.mapping_scope === scopeFilter);
-  }, [mappings, scopeFilter]);
+  async function loadAll() {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (scopeFilter !== "all") params.set("scope", scopeFilter);
+      if (searchTag.trim()) params.set("q_tag", searchTag.trim());
+      if (filterAssetId !== "all") params.set("asset_id", filterAssetId);
+      if (filterActive !== "all") params.set("active", filterActive);
+      params.set("page", String(page));
+      params.set("pageSize", String(pageSize));
+
+      const [m, d, a] = await Promise.all([
+        fetch(`/api/admin/ritual-asset-mappings?${params.toString()}`).then((r) => r.json()),
+        fetch("/api/admin/ritual-configurations").then((r) => r.json()),
+        fetch("/api/admin/ritual-assets?pageSize=100").then((r) => r.json()),
+      ]);
+      if (m && typeof m === "object" && "items" in m) {
+        setMappings(m.items as AssetMapping[]);
+        setTotal(m.total ?? 0);
+      } else {
+        setError(m?.error ?? "Failed to load mappings");
+        setMappings([]);
+        setTotal(0);
+      }
+      setDefinitions((d as RitualDefinition[]) ?? []);
+      const aItems = Array.isArray(a) ? a : (a as any).items;
+      setAssets(aItems ?? []);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      void loadAll();
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [scopeFilter, searchTag, filterAssetId, filterActive, page, pageSize]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [scopeFilter, searchTag, filterAssetId, filterActive]);
+
+  const filtered = mappings ?? [];
 
   async function deleteMapping(id: string) {
-    if (!confirm("Delete this mapping?")) return;
-    await fetch(`/api/admin/ritual-asset-mappings/${id}`, { method: "DELETE" });
-    void loadAll();
+    setProcessing(true);
+    try {
+      await fetch(`/api/admin/ritual-asset-mappings/${id}`, { method: "DELETE" });
+      setPendingMappingDelete(null);
+      void loadAll();
+    } finally {
+      setProcessing(false);
+    }
   }
-  async function toggle(m: AssetMapping) {
-    await fetch(`/api/admin/ritual-asset-mappings/${m.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ is_active: !m.is_active }),
-    });
-    void loadAll();
-  }
+  const handleConfirmMappingToggle = async () => {
+    if (!pendingMappingToggle) return;
+    setProcessing(true);
+    try {
+      const { id, value } = pendingMappingToggle;
+      await fetch(`/api/admin/ritual-asset-mappings/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ is_active: value }),
+      });
+      setPendingMappingToggle(null);
+      void loadAll();
+    } finally {
+      setProcessing(false);
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -988,18 +1421,61 @@ function MappingsTab() {
         />
       ) : null}
 
-      <div className="flex items-center gap-2">
-        <Filter className="size-4 text-muted-foreground" />
-        <Select value={scopeFilter} onValueChange={setScopeFilter}>
-          <SelectTrigger className="w-44">
-            <SelectValue placeholder="Scope" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All scopes</SelectItem>
-            <SelectItem value="global">Global only</SelectItem>
-            <SelectItem value="ritual_definition">Per-ritual only</SelectItem>
-          </SelectContent>
-        </Select>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="relative flex-1">
+          <Search className="pointer-events-none absolute left-2 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search by tag key…"
+            className="pl-8"
+            value={searchTag}
+            onChange={(e) => setSearchTag(e.target.value)}
+          />
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <SearchableSelect
+            placeholder="Asset…"
+            options={[
+              { value: "all", label: "All assets" },
+              ...assets.map((a) => ({ value: a.id, label: a.title })),
+            ]}
+            value={filterAssetId}
+            onValueChange={setFilterAssetId}
+            className="w-full sm:w-[200px]"
+          />
+          <Select value={scopeFilter} onValueChange={setScopeFilter}>
+            <SelectTrigger className="w-full sm:w-[150px]">
+              <SelectValue placeholder="Scope" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All scopes</SelectItem>
+              <SelectItem value="global">Global only</SelectItem>
+              <SelectItem value="ritual_definition">Per-ritual only</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={filterActive} onValueChange={setFilterActive}>
+            <SelectTrigger className="w-full sm:w-[140px]">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Any status</SelectItem>
+              <SelectItem value="true">Active only</SelectItem>
+              <SelectItem value="false">Inactive only</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => {
+              setSearchTag("");
+              setFilterAssetId("all");
+              setFilterActive("all");
+              setScopeFilter("all");
+            }}
+            title="Clear filters"
+          >
+            <RotateCw className="size-4" />
+          </Button>
+        </div>
       </div>
 
       {error ? (
@@ -1010,10 +1486,13 @@ function MappingsTab() {
 
       <Card>
         <CardContent className="p-0">
-          {!mappings ? (
+          {loading ? (
+            <div className="flex h-32 items-center justify-center">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : !mappings ? (
             <p className="py-8 text-center text-sm text-muted-foreground">
-              <RotateCw className="mx-auto mb-2 size-4 animate-spin" />
-              Loading…
+              Loading mappings...
             </p>
           ) : filtered.length === 0 ? (
             <p className="py-8 text-center text-sm text-muted-foreground">
@@ -1042,9 +1521,9 @@ function MappingsTab() {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <code className="text-xs">{m.tag_key}</code>
+                        <code className="text-sm">{m.tag_key}</code>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="text-sm font-medium">
                         {m.asset?.title ?? (
                           <span className="text-muted-foreground">—</span>
                         )}
@@ -1078,7 +1557,11 @@ function MappingsTab() {
                           <Button
                             size="icon"
                             variant="ghost"
-                            onClick={() => toggle(m)}
+                            onClick={() => setPendingMappingToggle({
+                              id: m.id,
+                              tag: m.tag_key ?? "this mapping",
+                              value: !m.is_active
+                            })}
                             title={m.is_active ? "Deactivate" : "Activate"}
                           >
                             <Power
@@ -1088,7 +1571,7 @@ function MappingsTab() {
                           <Button
                             size="icon"
                             variant="ghost"
-                            onClick={() => deleteMapping(m.id)}
+                            onClick={() => setPendingMappingDelete(m.id)}
                             title="Delete"
                           >
                             <Trash2 className="size-3.5" />
@@ -1102,7 +1585,145 @@ function MappingsTab() {
             </Table>
           )}
         </CardContent>
+        {total > 0 && (
+          <div className="flex items-center justify-between border-t px-4 py-3 sm:px-6">
+            <div className="flex flex-1 justify-between sm:hidden">
+              <div className="flex gap-1">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setPage(1)}
+                  disabled={page === 1}
+                >
+                  <ChevronsLeft className="size-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                >
+                  <ChevronLeft className="size-4" />
+                </Button>
+              </div>
+              <div className="flex gap-1">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setPage((p) => p + 1)}
+                  disabled={page * pageSize >= total}
+                >
+                  <ChevronRight className="size-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setPage(Math.ceil(total / pageSize))}
+                  disabled={page * pageSize >= total}
+                >
+                  <ChevronsRight className="size-4" />
+                </Button>
+              </div>
+            </div>
+            <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">
+                  Showing <span className="font-medium">{(page - 1) * pageSize + 1}</span> to{" "}
+                  <span className="font-medium">{Math.min(page * pageSize, total)}</span> of{" "}
+                  <span className="font-medium">{total}</span> mappings
+                </p>
+              </div>
+              <div className="flex items-center gap-4">
+                <Select
+                  value={String(pageSize)}
+                  onValueChange={(v) => {
+                    setPageSize(Number(v));
+                    setPage(1);
+                  }}
+                >
+                  <SelectTrigger className="h-8 w-[70px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="10">10</SelectItem>
+                    <SelectItem value="25">25</SelectItem>
+                    <SelectItem value="50">50</SelectItem>
+                  </SelectContent>
+                </Select>
+                <div className="flex gap-1">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => setPage(1)}
+                    disabled={page === 1}
+                    title="First Page"
+                  >
+                    <ChevronsLeft className="size-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                    title="Previous Page"
+                  >
+                    <ChevronLeft className="size-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => setPage((p) => p + 1)}
+                    disabled={page * pageSize >= total}
+                    title="Next Page"
+                  >
+                    <ChevronRight className="size-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => setPage(Math.ceil(total / pageSize))}
+                    disabled={page * pageSize >= total}
+                    title="Last Page"
+                  >
+                    <ChevronsRight className="size-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </Card>
+
+      <ConfirmDialog
+        open={!!pendingMappingToggle}
+        onOpenChange={(open) => !open && setPendingMappingToggle(null)}
+        loading={processing}
+        title={`${pendingMappingToggle?.value ? "Activate" : "Deactivate"} Mapping`}
+        description={`Are you sure you want to ${
+          pendingMappingToggle?.value ? "activate" : "deactivate"
+        } the mapping for tag "${pendingMappingToggle?.tag}"?`}
+        confirmLabel={pendingMappingToggle?.value ? "Activate" : "Deactivate"}
+        onConfirm={handleConfirmMappingToggle}
+      />
+
+      <ConfirmDialog
+        open={!!pendingMappingDelete}
+        onOpenChange={(open) => !open && setPendingMappingDelete(null)}
+        loading={processing}
+        title="Delete Mapping"
+        description="Are you sure you want to delete this tag-to-asset mapping? This action cannot be undone."
+        confirmLabel="Delete"
+        onConfirm={() => pendingMappingDelete && deleteMapping(pendingMappingDelete)}
+        variant="destructive"
+      />
     </div>
   );
 }
@@ -1301,7 +1922,7 @@ function PlaybackSettingsTab() {
       const data = await res.json();
       setSettings(data);
     } catch (err: any) {
-      alert(err.message);
+      setError(err.message ?? "Failed to save settings");
     } finally {
       setSaving(false);
     }
@@ -1312,6 +1933,11 @@ function PlaybackSettingsTab() {
 
   return (
     <div className="space-y-6">
+      {error && (
+        <div className="flex items-center gap-2 rounded border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          <AlertCircle className="size-4" /> {error}
+        </div>
+      )}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">

@@ -11,18 +11,47 @@ export const dynamic = "force-dynamic";
  * asset (when one is set) so the index can show "ready / no asset"
  * without a second round-trip per row. Admin-only.
  */
-export async function GET() {
+export async function GET(req: NextRequest) {
   const user = await getAdminUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  const q = req.nextUrl.searchParams.get("q");
+  const type = req.nextUrl.searchParams.get("type");
+  const status = req.nextUrl.searchParams.get("status");
+  const override = req.nextUrl.searchParams.get("override");
+
   const admin = createAdminClient();
-  const { data, error } = await admin
+  let query = admin
     .from("ritual_definitions")
     .select(
       `*,
        final_override_asset:ritual_media_assets(id, asset_key, title, source_type, storage_path, external_url, is_active, is_published)`
-    )
-    .order("sort_order", { ascending: true });
+    );
+
+  if (status === "archived") {
+    query = query.not("archived_at", "is", null);
+  } else {
+    query = query.is("archived_at", null);
+  }
+
+  if (q?.trim()) {
+    query = query.or(`title.ilike.%${q.trim()}%,key.ilike.%${q.trim()}%`);
+  }
+  if (type && type !== "all") {
+    query = query.eq("ritual_type", type);
+  }
+  if (status === "published") {
+    query = query.eq("is_published", true);
+  } else if (status === "draft") {
+    query = query.eq("is_published", false);
+  }
+  if (override === "on") {
+    query = query.eq("final_override_enabled", true);
+  } else if (override === "off") {
+    query = query.eq("final_override_enabled", false);
+  }
+
+  const { data, error } = await query.order("sort_order", { ascending: true });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data ?? []);

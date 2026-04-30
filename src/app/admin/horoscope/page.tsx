@@ -89,6 +89,24 @@ const TABS: TabDef[] = [
   { slug: "uranus_return_v2", label: "Uranus Opposition", type: "single", extras: ["area_of_inquiry"], icon: Star, description: "Uranus opposition analysis — midlife awakening and liberation themes." },
 ];
 
+const RELATIONSHIP_SLUG_TO_MODE = {
+  romantic_forecast_report_tropical_v2: "romantic",
+  friendship_report_tropical_v2: "friendship",
+  business_partner_v2: "business",
+} as const;
+
+const RELATIONSHIP_SLUG_TO_REPORT_TYPE = {
+  romantic_forecast_report_tropical_v2: "romantic",
+  friendship_report_tropical_v2: "friendship",
+  business_partner_v2: "partnership",
+} as const;
+
+function isRelationshipSlug(
+  slug: string
+): slug is keyof typeof RELATIONSHIP_SLUG_TO_REPORT_TYPE {
+  return slug in RELATIONSHIP_SLUG_TO_REPORT_TYPE;
+}
+
 
 
 
@@ -2882,6 +2900,23 @@ export function HoroscopeToolkitPage({
   const [excludedHoraryDates, setExcludedHoraryDates] = useState<string>("");
   const [isSuggestingDate, setIsSuggestingDate] = useState(false);
 
+  useEffect(() => {
+    if (!initialSavedReport) return;
+
+    setResults(initialSavedToolkitState.results);
+    setNatalSvg(initialSavedToolkitState.natalSvg);
+    setNatalSvgTransit(initialSavedToolkitState.natalSvgTransit);
+    setNatalSvgP2(initialSavedToolkitState.natalSvgP2);
+    setNatalSvgTransitP2(initialSavedToolkitState.natalSvgTransitP2);
+    setTransitChartSvg(initialSavedToolkitState.transitChartSvg);
+    setReturnDate(initialSavedToolkitState.returnDate);
+    setShowChartBtn(initialSavedToolkitState.showChartButton);
+    setProgress([]);
+    setLoading(false);
+    setError(null);
+    setShowScrollTop(true);
+  }, [initialSavedReport, initialSavedToolkitState]);
+
   const checkDacen = (planetName: string, signName: string) => {
     const normalizedPlanet = normalizeDecanValue(planetName);
     const normalizedSign = normalizeDecanValue(signName);
@@ -2963,6 +2998,17 @@ export function HoroscopeToolkitPage({
   }, []);
 
   function setTab(slug: string) {
+    if (
+      communityRelationshipPersonAId &&
+      communityRelationshipPersonBId &&
+      isRelationshipSlug(slug)
+    ) {
+      const url = new URL(basePath, window.location.origin);
+      url.searchParams.set("mode", RELATIONSHIP_SLUG_TO_MODE[slug]);
+      url.searchParams.delete("tab");
+      router.push(`${url.pathname}${url.search}`);
+      return;
+    }
     const separator = basePath.includes("?") ? "&" : "?";
     router.push(`${basePath}${separator}tab=${slug}`);
   }
@@ -3062,6 +3108,7 @@ export function HoroscopeToolkitPage({
     setNatalSvgTransit(null);
     setNatalSvgP2(null);
     setNatalSvgTransitP2(null);
+    setTransitChartSvg(null);
     setReturnDate(null);
     setProgress([]);
     if (!keepExclusions) {
@@ -3129,6 +3176,52 @@ export function HoroscopeToolkitPage({
 
     try {
       const birth1 = parseBirth(form.person1);
+      const isTwoPerson = currentTab.type === "two-person";
+      const birth2 = isTwoPerson ? parseBirth(form.person2) : null;
+
+      // Check if this report already exists
+      const checkFormData = isTwoPerson ? {
+        self: { ...form.person1, ...birth1 },
+        partner: { ...form.person2, ...birth2 },
+      } : {
+        ...form.person1,
+        ...birth1,
+      };
+
+      addProgress("Checking for existing report...");
+      const checkRes = await fetch("/api/admin/searched-toolkit/check", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          toolname: currentTab.slug,
+          form_data: checkFormData,
+        }),
+      });
+
+      if (checkRes.ok) {
+        const checkData = await checkRes.json();
+        if (checkData.status === "success" && checkData.result) {
+          addProgress("Found existing report! Restoring...");
+          const hydrated = hydrateSavedAstroReport(checkData.result, currentTab.slug);
+
+          if (hydrated.results) {
+            setResults(hydrated.results);
+            setNatalSvg(hydrated.natalSvg);
+            setNatalSvgTransit(hydrated.natalSvgTransit);
+            setNatalSvgP2(hydrated.natalSvgP2);
+            setNatalSvgTransitP2(hydrated.natalSvgTransitP2);
+            setTransitChartSvg(hydrated.transitChartSvg);
+            setReturnDate(hydrated.returnDate);
+            setShowChartBtn(hydrated.showChartButton);
+            setLoading(false);
+            return; // EXIT EARLY
+          }
+        }
+      }
+
+      // No existing report found, proceed with calculation
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const collected: Record<string, any> = {};
 
       // ── Single person ─────────────────────────────────────────────────────
       if (currentTab.type === "single") {
@@ -3487,8 +3580,7 @@ export function HoroscopeToolkitPage({
       }
 
       // ── Two person ────────────────────────────────────────────────────────
-      if (currentTab.type === "two-person") {
-        const birth2 = parseBirth(form.person2);
+      if (currentTab.type === "two-person" && birth2) {
         const relBase = {
           person1_birth: birth1,
           person2_birth: birth2,
@@ -3684,48 +3776,109 @@ export function HoroscopeToolkitPage({
       // This block captures all AI interpretations, chart URLs, and form data
       // into a single payload and persists it to both legacy and local stores.
       try {
-        const isTwoPerson = currentTab.type === "two-person";
-        const birth1 = parseBirth(form.person1);
-        const birth2 = isTwoPerson ? parseBirth(form.person2) : null;
+
+        const formDataPayload = isTwoPerson ? {
+          self: { ...form.person1, ...birth1 },
+          partner: { ...form.person2, ...birth2 },
+          question: form.question,
+          areaOfInquiry: form.areaOfInquiry,
+          area_of_inquiry: form.areaOfInquiry, // mapping both for compatibility
+          futureWeek: form.futureWeek,
+          futureMonth: form.futureMonth,
+        } : {
+          ...form.person1,
+          ...birth1,
+          question: form.question,
+          areaOfInquiry: form.areaOfInquiry,
+          area_of_inquiry: form.areaOfInquiry, // mapping both for compatibility
+          futureWeek: form.futureWeek,
+          futureMonth: form.futureMonth,
+        };
+        const astroApiDataPayload = isTwoPerson ? {
+          synastry: collected.synastry ?? {},
+          composite: collected.composite ?? {},
+          self: collected.natal_chart_data ?? {},
+          partner: collected.natal_chart_data_p2 ?? {},
+        } : {
+          ...(collected.natal_chart_data as Record<string, unknown> ?? {}),
+          ...collected, 
+          // Spreading collected ensures transit_data, lunar_metrics, solar_return_*, etc. 
+          // are at the top level of astro_api_data for easy hydration later.
+        };
+        const natalChartPayload = isTwoPerson ? {
+          self: { status: true, chart_url: collected.natal_chart_url ?? "", msg: "Chart created successfully!" },
+          partner: { status: true, chart_url: collected.natal_chart_url_p2 ?? "", msg: "Chart created successfully!" },
+        } : {
+          status: true,
+          chart_url: collected.natal_chart_url ?? "",
+          msg: "Chart created successfully!",
+        };
 
         const ai_response_payload: any = {
           ...(collected.ai_interpretations ?? {}),
-          natal_chart: isTwoPerson ? {
-            self: { status: true, chart_url: collected.natal_chart_url ?? "", msg: "Chart created successfully!" },
-            partner: { status: true, chart_url: collected.natal_chart_url_p2 ?? "", msg: "Chart created successfully!" },
-          } : {
-            status: true,
-            chart_url: collected.natal_chart_url ?? "",
-            msg: "Chart created successfully!",
-          },
-          formData: isTwoPerson ? {
-            self: { ...form.person1, ...birth1 },
-            partner: { ...form.person2, ...birth2 },
-          } : {
-            ...form.person1,
-            ...birth1,
-          },
-          astro_api_data: isTwoPerson ? {
-            synastry: collected.synastry ?? {},
-            composite: collected.composite ?? {},
-            self: collected.natal_chart_data ?? {},
-            partner: collected.natal_chart_data_p2 ?? {},
-          } : (collected.natal_chart_data ?? {}),
+          natal_chart: natalChartPayload,
+          formData: formDataPayload,
+          astro_api_data: astroApiDataPayload,
           freeNatalWheelChart: collected.natal_transit_svg ?? collected.transit_chart_svg ?? "",
+          freeNatalWheelChartForTransit: collected.natal_transit_svg ?? collected.transit_chart_svg ?? "",
           freeNatalWheelChartForTrasit: collected.natal_transit_svg ?? collected.transit_chart_svg ?? "",
         };
 
         if (isTwoPerson) {
           ai_response_payload.freeNatalWheelChartP2 = collected.natal_transit_svg_p2 ?? "";
+          ai_response_payload.freeNatalWheelChartForTransitP2 = collected.natal_transit_svg_p2 ?? "";
+          ai_response_payload.freeNatalWheelChartForTrasitP2 = collected.natal_transit_svg_p2 ?? "";
         }
 
         const finalSavePayload = {
           toolname: currentTab.slug,
           ai_response: ai_response_payload,
+          natal_chart: natalChartPayload,
+          formData: formDataPayload,
+          astro_api_data: astroApiDataPayload,
+          freeNatalWheelChart: collected.natal_chart_url ?? "",
+          freeNatalWheelChartForTransit: collected.natal_transit_svg ?? collected.transit_chart_svg ?? "",
+          freeNatalWheelChartForTrasit: collected.natal_transit_svg ?? collected.transit_chart_svg ?? "",
+          ...(isTwoPerson
+            ? {
+              freeNatalWheelChartP2: collected.natal_chart_url_p2 ?? "",
+              freeNatalWheelChartForTransitP2: collected.natal_transit_svg_p2 ?? "",
+              freeNatalWheelChartForTrasitP2: collected.natal_transit_svg_p2 ?? "",
+            }
+            : {}),
         };
 
-        // Local save - Supabase-backed API
-        saveAstroAiResponse(finalSavePayload).catch(() => { });
+        if (
+          communityRelationshipPersonAId &&
+          communityRelationshipPersonBId &&
+          isRelationshipSlug(currentTab.slug)
+        ) {
+          addProgress("Saving relationship report…");
+          const linkRes = await fetch("/api/community/saved-reports/relationship/link", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              personAId: communityRelationshipPersonAId,
+              personBId: communityRelationshipPersonBId,
+              reportType: RELATIONSHIP_SLUG_TO_REPORT_TYPE[currentTab.slug],
+              payload: finalSavePayload,
+            }),
+          });
+
+          if (!linkRes.ok) {
+            const body = await linkRes.json().catch(() => null);
+            throw new Error(
+              typeof body?.error === "string"
+                ? body.error
+                : "Failed to save relationship report"
+            );
+          }
+
+          router.refresh();
+        } else {
+          // Local save - Supabase-backed API
+          saveAstroAiResponse(finalSavePayload).catch(() => { });
+        }
 
         // Legacy CloudFront save (fire-and-forget)
         fetchWithRetry(
@@ -3739,6 +3892,13 @@ export function HoroscopeToolkitPage({
 
       } catch (saveErr) {
         console.error("Universal save error:", saveErr);
+        if (
+          communityRelationshipPersonAId &&
+          communityRelationshipPersonBId &&
+          isRelationshipSlug(currentTab.slug)
+        ) {
+          throw saveErr;
+        }
       }
 
       addProgress("Done ✓");
@@ -3915,15 +4075,15 @@ export function HoroscopeToolkitPage({
                     )}
                   </Button>
                 ) : (
-                  <Button
-                    type="submit"
-                    disabled={loading || !isFormValid || readOnlyBirthData}
-                    className={cn(
-                      "w-full md:w-auto h-10 px-8 font-semibold transition-all shadow-md",
-                      loading || !isFormValid || readOnlyBirthData
-                        ? "bg-muted text-muted-foreground cursor-not-allowed opacity-70"
-                        : "bg-amber-500 hover:bg-amber-600 text-white hover:shadow-lg active:scale-95"
-                    )}
+	                  <Button
+	                    type="submit"
+	                    disabled={loading || !isFormValid}
+	                    className={cn(
+	                      "w-full md:w-auto h-10 px-8 font-semibold transition-all shadow-md",
+	                      loading || !isFormValid
+	                        ? "bg-muted text-muted-foreground cursor-not-allowed opacity-70"
+	                        : "bg-amber-500 hover:bg-amber-600 text-white hover:shadow-lg active:scale-95"
+	                    )}
                   >
                     {loading ? (
                       <>

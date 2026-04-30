@@ -150,6 +150,12 @@ export function RitualPlaylistPlayer({
     if (isLast) {
       setCompletedAll(true);
       void patchProgress({ current_step: totalSteps, is_complete: true });
+      
+      // If loop is enabled and we have multiple steps, restart from index 0.
+      // For single-step rituals, native video looping handles it.
+      if (settings.video_loop && totalSteps > 1) {
+        setCurrentStepIndex(0);
+      }
       return;
     }
 
@@ -157,7 +163,7 @@ export function RitualPlaylistPlayer({
     setHighestUnlockedIndex((prev) => Math.max(prev, nextIdx));
     setCurrentStepIndex(nextIdx);
     void patchProgress({ current_step: nextIdx + 1 });
-  }, [activeItem, currentStepIndex, patchProgress, totalSteps]);
+  }, [activeItem, currentStepIndex, patchProgress, totalSteps, settings.video_loop]);
 
   const handleLoadedMetadata = useCallback(() => {
     const el = videoRef.current;
@@ -230,7 +236,7 @@ export function RitualPlaylistPlayer({
                 src={activeItem.videoUrl}
                 controls={settings.video_controls}
                 autoPlay={settings.video_autoplay}
-                loop={settings.video_loop}
+                loop={settings.video_loop && totalSteps === 1}
                 muted={settings.video_muted}
                 playsInline
                 onEnded={handleEnded}

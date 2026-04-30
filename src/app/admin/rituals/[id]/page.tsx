@@ -102,16 +102,12 @@ type Tab =
   | "overview"
   | "display"
   | "playback"
-  | "mappings"
-  | "assets"
   | "publish";
 
 export default function EditRitualConfigurationPage() {
   const router = useRouter();
   const { id } = useParams<{ id: string }>();
   const [definition, setDefinition] = useState<RitualDefinition | null>(null);
-  const [mappings, setMappings] = useState<PerRitualMapping[]>([]);
-  const [assets, setAssets] = useState<RitualAsset[]>([]);
   const [tab, setTab] = useState<Tab>("overview");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -120,10 +116,7 @@ export default function EditRitualConfigurationPage() {
   async function load() {
     setError(null);
     setLoading(true);
-    const [defRes, assetsRes] = await Promise.all([
-      fetch(`/api/admin/ritual-configurations/${id}`),
-      fetch(`/api/admin/ritual-assets`),
-    ]);
+    const defRes = await fetch(`/api/admin/ritual-configurations/${id}`);
     if (!defRes.ok) {
       const e = await defRes.json().catch(() => ({}));
       setError(e.error ?? "Failed to load");
@@ -132,10 +125,6 @@ export default function EditRitualConfigurationPage() {
     }
     const j = await defRes.json();
     setDefinition(j.definition as RitualDefinition);
-    setMappings((j.mappings ?? []) as PerRitualMapping[]);
-    if (assetsRes.ok) {
-      setAssets((await assetsRes.json()) as RitualAsset[]);
-    }
     setLoading(false);
   }
 
@@ -210,14 +199,12 @@ export default function EditRitualConfigurationPage() {
 
       <div className="flex flex-wrap gap-2 border-b">
         {(
-          [
-            { id: "overview", label: "Overview" },
-            { id: "display", label: "Display" },
-            { id: "playback", label: "Playback" },
-            { id: "mappings", label: "Mappings" },
-            { id: "assets", label: "Assets" },
-            { id: "publish", label: "Publish" },
-          ] as Array<{ id: Tab; label: string }>
+            [
+              { id: "overview", label: "Overview" },
+              { id: "display", label: "Display" },
+              { id: "playback", label: "Playback" },
+              { id: "publish", label: "Publish" },
+            ] as Array<{ id: Tab; label: string }>
         ).map((t) => (
           <button
             key={t.id}
@@ -248,17 +235,6 @@ export default function EditRitualConfigurationPage() {
       ) : null}
       {tab === "playback" ? (
         <PlaybackTab definition={definition} onPatch={patch} />
-      ) : null}
-      {tab === "mappings" ? (
-        <MappingsTab
-          definitionId={definition.id}
-          mappings={mappings}
-          assets={assets}
-          onChange={load}
-        />
-      ) : null}
-      {tab === "assets" ? (
-        <AssetsTab definition={definition} assets={assets} onPatch={patch} />
       ) : null}
       {tab === "publish" ? (
         <PublishTab definition={definition} onPatch={patch} onArchive={() => router.push("/admin/rituals")} />
@@ -377,14 +353,14 @@ function DisplayTab({
         <CardTitle>Display</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <div className="space-y-1">
             <Label>Ritual type</Label>
             <Select
               value={type}
               onValueChange={(v) => setType(v as "static" | "dynamic")}
             >
-              <SelectTrigger>
+              <SelectTrigger className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -401,7 +377,7 @@ function DisplayTab({
                 setMode(v as "invocation" | "banishing" | "both")
               }
             >
-              <SelectTrigger>
+              <SelectTrigger className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -418,6 +394,7 @@ function DisplayTab({
               min={0}
               value={sortOrder}
               onChange={(e) => setSortOrder(e.target.value)}
+              className="w-full"
             />
           </div>
         </div>
@@ -569,7 +546,7 @@ function PlaybackTab({
           />
           <p className="mt-1 text-xs text-muted-foreground">
             When on, the runtime player ignores the generated playlist and
-            uses the asset selected on the Assets tab.
+            uses the configured final-override asset.
           </p>
         </div>
         <Button onClick={save} disabled={busy}>
@@ -580,227 +557,6 @@ function PlaybackTab({
   );
 }
 
-function MappingsTab({
-  definitionId,
-  mappings,
-  assets,
-  onChange,
-}: {
-  definitionId: string;
-  mappings: PerRitualMapping[];
-  assets: RitualAsset[];
-  onChange: () => void;
-}) {
-  const [tag, setTag] = useState("");
-  const [assetId, setAssetId] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
-
-  const sortedMappings = useMemo(
-    () => [...mappings].sort((a, b) => (a.tag_key ?? "").localeCompare(b.tag_key ?? "")),
-    [mappings]
-  );
-
-  async function add(e: React.FormEvent) {
-    e.preventDefault();
-    setBusy(true);
-    setErr(null);
-    const res = await fetch("/api/admin/ritual-asset-mappings", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        mapping_scope: "ritual_definition",
-        ritual_definition_id: definitionId,
-        tag_key: tag,
-        asset_id: assetId,
-      }),
-    });
-    const j = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      setErr(j.error ?? "Failed to create");
-      setBusy(false);
-      return;
-    }
-    setTag("");
-    setAssetId("");
-    setBusy(false);
-    onChange();
-  }
-
-  async function remove(id: string) {
-    if (!confirm("Delete this mapping?")) return;
-    await fetch(`/api/admin/ritual-asset-mappings/${id}`, { method: "DELETE" });
-    onChange();
-  }
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Per-ritual mappings</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <p className="text-sm text-muted-foreground">
-          These overrides apply only when this ritual configuration is the
-          one being played. They take precedence over global mappings for
-          the same tag.
-        </p>
-        <form onSubmit={add} className="grid gap-3 sm:grid-cols-3">
-          <Input
-            placeholder="Tag (e.g. Fire_Gate_Invocation_Ritual)"
-            value={tag}
-            onChange={(e) => setTag(e.target.value)}
-            required
-          />
-          <Select value={assetId} onValueChange={setAssetId}>
-            <SelectTrigger>
-              <SelectValue placeholder="Asset…" />
-            </SelectTrigger>
-            <SelectContent>
-              {assets
-                .filter((a) => a.is_active && a.is_published && !a.archived_at)
-                .map((a) => (
-                  <SelectItem key={a.id} value={a.id}>
-                    {a.title}
-                  </SelectItem>
-                ))}
-            </SelectContent>
-          </Select>
-          <Button type="submit" disabled={busy || !tag || !assetId}>
-            <Plus className="mr-1.5 size-4" />
-            {busy ? "Adding…" : "Add mapping"}
-          </Button>
-        </form>
-        {err ? <p className="text-sm text-red-500">{err}</p> : null}
-        {sortedMappings.length === 0 ? (
-          <p className="py-6 text-center text-sm text-muted-foreground">
-            No per-ritual mappings — runtime falls back to global mappings.
-          </p>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Tag</TableHead>
-                <TableHead>Asset</TableHead>
-                <TableHead>State</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {sortedMappings.map((m) => (
-                <TableRow key={m.id}>
-                  <TableCell>
-                    <code className="text-xs">{m.tag_key}</code>
-                  </TableCell>
-                  <TableCell>{m.asset?.title ?? "—"}</TableCell>
-                  <TableCell>
-                    <Badge
-                      variant="outline"
-                      className={
-                        m.is_active
-                          ? "border-green-500/30 bg-green-500/10 text-green-600"
-                          : "bg-muted"
-                      }
-                    >
-                      {m.is_active ? "Active" : "Inactive"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={() => remove(m.id)}
-                    >
-                      <Trash2 className="size-3.5" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-function AssetsTab({
-  definition,
-  assets,
-  onPatch,
-}: {
-  definition: RitualDefinition;
-  assets: RitualAsset[];
-  onPatch: (body: Record<string, unknown>) => void;
-}) {
-  const [overrideAsset, setOverrideAsset] = useState<string>(
-    definition.final_override_asset_id ?? ""
-  );
-  const [busy, setBusy] = useState(false);
-
-  async function save() {
-    setBusy(true);
-    await onPatch({
-      final_override_asset_id: overrideAsset || null,
-    });
-    setBusy(false);
-  }
-
-  const eligibleAssets = assets.filter(
-    (a) => a.is_active && a.is_published && !a.archived_at
-  );
-  const current = eligibleAssets.find((a) => a.id === overrideAsset);
-  const url = current
-    ? current.source_type === "upload"
-      ? current.storage_path
-      : current.external_url
-    : null;
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Final-override video</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <p className="text-sm text-muted-foreground">
-          Pick the single video that plays when{" "}
-          <strong>final-override mode</strong> is enabled (Playback tab).
-          When override is off, this asset is ignored and the generated
-          playlist is used.
-        </p>
-        <div className="space-y-1">
-          <Label>Override asset</Label>
-          <Select value={overrideAsset} onValueChange={setOverrideAsset}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select an asset…" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="">— None —</SelectItem>
-              {eligibleAssets.map((a) => (
-                <SelectItem key={a.id} value={a.id}>
-                  {a.title}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        {url ? (
-          <div className="space-y-2">
-            <Label>Preview</Label>
-            <video
-              key={url}
-              src={url}
-              controls
-              className="aspect-video w-full max-w-2xl rounded border bg-black"
-            />
-          </div>
-        ) : null}
-        <Button onClick={save} disabled={busy}>
-          {busy ? "Saving…" : "Save override asset"}
-        </Button>
-      </CardContent>
-    </Card>
-  );
-}
 
 function PublishTab({
   definition,

@@ -132,8 +132,8 @@ export default async function SharedBookingPage({
               No readers are currently offering this session
             </h2>
             <p className="mt-3 text-sm text-muted-foreground">
-              No certified readers have this reading enabled right now. Please
-              check back soon, or pick a different reading from our services.
+              No readers have this reading enabled right now. Please check back
+              soon, or pick a different reading from our services.
             </p>
             <div className="mt-6">
               <Button asChild variant="outline">
