@@ -422,8 +422,8 @@ export function TestimonialsClient() {
                       </TableRow>
                       {isExpanded && (
                         <TableRow key={`${t.id}-expanded`} className="bg-muted/20">
-                          <TableCell colSpan={8} className="py-4 px-6">
-                            <div className="space-y-3 max-w-3xl">
+                          <TableCell colSpan={8} className="py-4 px-6 whitespace-pre-wrap">
+                            <div className="space-y-3">
                               <div>
                                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
                                   Full Review

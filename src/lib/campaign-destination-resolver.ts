@@ -16,7 +16,11 @@ interface CampaignDestinationInput {
   destination_type: "PROFILE" | "SERVICE" | null;
   destination_profile_id: string | null;
   destination_service_template_id: string | null;
-  diviner_id: string;
+  /**
+   * NULL for Phase 1.5 general-program campaigns (no specific diviner).
+   * Non-null for per-diviner campaigns.
+   */
+  diviner_id: string | null;
 }
 
 /**
@@ -27,9 +31,50 @@ export async function resolveCampaignDestination(
   supabase: SupabaseClient,
   campaign: CampaignDestinationInput
 ): Promise<DestinationResolution> {
+  // Phase 1.5 general-program campaigns: no specific diviner. Route to
+  // the public reading page keyed by the general template's slug.
+  // SERVICE destination + null diviner_id is the discriminator.
+  if (
+    campaign.destination_type === "SERVICE" &&
+    campaign.diviner_id === null
+  ) {
+    if (!campaign.destination_service_template_id) {
+      return {
+        url: "/",
+        valid: false,
+        reason: "General campaign missing service template",
+      };
+    }
+    const { data: template } = await supabase
+      .from("service_templates")
+      .select("slug, is_active, is_general")
+      .eq("id", campaign.destination_service_template_id)
+      .maybeSingle();
+    if (!template) {
+      return {
+        url: "/",
+        valid: false,
+        reason: "General service template not found",
+      };
+    }
+    if (!template.is_general) {
+      return {
+        url: "/",
+        valid: false,
+        reason: "Campaign template is not flagged as general",
+      };
+    }
+    if (!template.is_active) {
+      return { url: "/", valid: false, reason: "Service template inactive" };
+    }
+    return { url: `/readings/${template.slug}`, valid: true };
+  }
+
   // No destination set — fall back to diviner profile
   if (!campaign.destination_type) {
-    const diviner = await getDiviner(supabase, campaign.diviner_id);
+    const diviner = campaign.diviner_id
+      ? await getDiviner(supabase, campaign.diviner_id)
+      : null;
     return {
       url: diviner ? `/${diviner.username}` : "/",
       valid: false,
@@ -37,9 +82,12 @@ export async function resolveCampaignDestination(
     };
   }
 
-  // PROFILE destination
+  // PROFILE destination (always per-diviner — diviner_id required)
   if (campaign.destination_type === "PROFILE") {
     const profileId = campaign.destination_profile_id ?? campaign.diviner_id;
+    if (!profileId) {
+      return { url: "/", valid: false, reason: "PROFILE destination missing diviner id" };
+    }
     const diviner = await getDiviner(supabase, profileId);
     if (!diviner || !diviner.is_active) {
       return { url: "/", valid: false, reason: "Diviner profile not found or inactive" };
@@ -47,8 +95,11 @@ export async function resolveCampaignDestination(
     return { url: `/${diviner.username}`, valid: true };
   }
 
-  // SERVICE destination
+  // SERVICE destination — per-diviner (Phase 1)
   if (campaign.destination_type === "SERVICE") {
+    if (!campaign.diviner_id) {
+      return { url: "/", valid: false, reason: "SERVICE destination missing diviner id" };
+    }
     // Get diviner username first (for fallback)
     const diviner = await getDiviner(supabase, campaign.diviner_id);
     const fallbackUrl = diviner ? `/${diviner.username}` : "/";
