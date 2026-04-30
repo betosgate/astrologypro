@@ -28,7 +28,7 @@ import {
   AvatarFallback,
   AvatarImage,
 } from "@/components/ui/avatar";
-import { Plus, Megaphone, Package } from "lucide-react";
+import { Plus, Megaphone, Package, Globe } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -62,6 +62,24 @@ export default async function MyProductsPage() {
   if (!ctx) redirect("/login?e=no_affiliate_account");
 
   const { junctionIds } = ctx;
+
+  // Phase 1.5: general products are visible to every active affiliate
+  // regardless of per-diviner partnerships (spec §10 decision #1).
+  const { data: generalTemplates } = await admin
+    .from("service_templates")
+    .select("id, name, description, category, commission_value, commission_type")
+    .eq("is_general", true)
+    .eq("affiliate_program_enabled", true)
+    .order("name");
+  const generalRows = (generalTemplates ?? []) as Array<{
+    id: string;
+    name: string;
+    description: string | null;
+    category: string | null;
+    commission_value: string | number | null;
+    commission_type: "percent" | "flat" | null;
+  }>;
+
   if (junctionIds.length === 0) {
     return (
       <div className="space-y-6">
@@ -76,6 +94,9 @@ export default async function MyProductsPage() {
           title="No partnerships yet"
           body="Once a diviner invites you to be an affiliate and assigns a product, it will show up here."
         />
+        {generalRows.length > 0 && (
+          <GeneralProductsSection rows={generalRows} />
+        )}
       </div>
     );
   }
@@ -134,6 +155,9 @@ export default async function MyProductsPage() {
           title="No active assignments"
           body="You have partnerships with diviners but none of them have assigned an active product to you yet."
         />
+        {generalRows.length > 0 && (
+          <GeneralProductsSection rows={generalRows} />
+        )}
       </div>
     );
   }
@@ -200,7 +224,91 @@ export default async function MyProductsPage() {
           );
         })}
       </div>
+
+      {generalRows.length > 0 && (
+        <GeneralProductsSection rows={generalRows} />
+      )}
     </div>
+  );
+}
+
+function formatGeneralRate(
+  type: "percent" | "flat" | null,
+  value: string | number | null,
+): { display: string; isDefault: boolean } {
+  // Phase 1.5 §10 decision #3: NULL value with program enabled means
+  // the platform default of 10% is applied at stamp time.
+  if (value === null || value === undefined) {
+    return { display: "10% (platform default)", isDefault: true };
+  }
+  const numeric = Number(value);
+  if (type === "flat") {
+    return { display: `$${numeric.toFixed(2)} per conversion`, isDefault: false };
+  }
+  return { display: `${numeric}%`, isDefault: false };
+}
+
+function GeneralProductsSection({
+  rows,
+}: {
+  rows: Array<{
+    id: string;
+    name: string;
+    description: string | null;
+    category: string | null;
+    commission_value: string | number | null;
+    commission_type: "percent" | "flat" | null;
+  }>;
+}) {
+  return (
+    <section className="space-y-4 border-t pt-6">
+      <header>
+        <h2 className="text-xl font-bold tracking-tight inline-flex items-center gap-2">
+          <Globe className="size-5" aria-hidden />
+          General products you can promote
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          Available to all active affiliates. The commission rate is set by
+          the platform and can change without notice — the rate stamped on
+          a booking at checkout is what pays out.
+        </p>
+      </header>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {rows.map((t) => {
+          const rate = formatGeneralRate(t.commission_type, t.commission_value);
+          return (
+            <Card key={t.id} className="flex flex-col">
+              <CardHeader>
+                <CardTitle className="text-base">{t.name}</CardTitle>
+                <CardDescription className="space-y-1">
+                  <span className="font-medium text-primary">{rate.display}</span>
+                  {t.category && (
+                    <Badge variant="outline" className="ml-2 text-xs capitalize">
+                      {t.category}
+                    </Badge>
+                  )}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-1 flex-col gap-3 pt-0 text-sm">
+                {t.description && (
+                  <p className="text-xs text-muted-foreground line-clamp-3">
+                    {t.description}
+                  </p>
+                )}
+                <div className="mt-auto flex justify-end">
+                  <Button asChild size="sm">
+                    <Link href={`/affiliate/campaigns/new?template=${t.id}`}>
+                      <Plus className="size-3.5" aria-hidden />
+                      Create campaign
+                    </Link>
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 
