@@ -1,6 +1,6 @@
 # Task 08 — Tests + Sign-off
 
-- Status: Not Started
+- Status: In progress 2026-04-30 — Tasks 01–07 all merged on master; migration `20260430000002_affiliate_phase_1_5_general` registered in admin runner allowlist but **not yet applied** (waiting on user-triggered run after the deploy of Tasks 02–07 lands). Test files + manual E2E + spec/memory updates are this task's deliverables. Most of the spec changelog work is **already done** in the 2026-04-30 entry I wrote during the implementation sprint — see `IMPLEMENTATION-NOTES.md` for the per-task delta. Test scaffolding hasn't started yet.
 - Priority: P1
 - Depends on: 01–07
 - Blocks: sprint complete
@@ -134,8 +134,14 @@ One real run through the deployed preview:
    pre-fills → submits.
 4. Copies share URL from `/affiliate/campaigns/<id>`.
 5. Anonymous browser visits share URL → 307 redirect with
-   `?ref=<code>` → `campaign_clicks` row appears in admin clicks log
-   labeled "General".
+   `?ref=<code>` to `/services/<template-slug>` → `campaign_clicks`
+   row inserted with `affiliate_id=NULL, affiliate_type=NULL` (the
+   `campaign_clicks.affiliate_type` CHECK predates Phase 1.5 and only
+   allows `'diviner_affiliate'`/`'social_advocate'` — see §3.7). Admin
+   clicks log surfaces the "General" label by reading
+   `campaign.owner_affiliate_type` via the joined campaign row, not
+   from the click row's `affiliate_type` column. Net display is the
+   same; the label-source path is what to verify.
 6. Anonymous user signs up + books the general product → completes
    Stripe test card.
 7. Webhook fires → `campaign_conversions` row appears with
@@ -149,7 +155,13 @@ One real run through the deployed preview:
     "General: <template name>" and the affiliate's name.
 11. Diviner A's `/dashboard/affiliates/<sarah-junction-id>` does NOT
     show the campaign or conversion.
-12. Admin disables the template → re-clicking the share URL returns 410.
+12. Admin disables the template (`affiliate_program_enabled=false`)
+    → re-clicking the share URL renders the branded "link no longer
+    active" page. Implementation pattern: 307 redirect to
+    `/link-not-active` (matches the existing revoked-assignment
+    behavior). Spec wording for this gate sometimes calls it "410";
+    the codebase convention is the 307→inactive-page form. Customer
+    UX is identical.
 
 ## Sign-off checklist
 
@@ -166,15 +178,50 @@ Before declaring the sprint done, tick every box:
       visible in the affiliate Marketing Kit + `/r/<code>` gating
       within the next page render.
 - [ ] Manual E2E flow above completes top to bottom on preview.
-- [ ] Spec §12 changelog entry recorded with the implementation date
-      (see template below — drop into §12 above the existing
-      "2026-04-28 (Phase 1.5 design)" entry).
+- [x] Spec §12 changelog entry already recorded — comprehensive
+      2026-04-30 (Phase 1.5 implementation) entry in
+      `docs/specs/affiliate-commission-system.md` covering Tasks
+      01–07 + the four spec deviations + the five pre-existing v2
+      reporting bugs caught during the audit. The "drop-in template"
+      below this checklist is **stale** — left in for reference only
+      so reviewers can compare; do **not** drop it in literally
+      (would create a duplicate, less detailed entry).
 - [ ] Memory file
-      `.claude/projects/.../memory/project_affiliate_phase_1_5_general.md`
+      `~/.claude/projects/-home-this-pc-Documents-Indra-Beto-Project-astrologypro/memory/project_affiliate_phase_1_5_general.md`
       status flipped from "Designed, not yet implemented" to "Shipped
-      <YYYY-MM-DD>".
+      <YYYY-MM-DD>". The memory's existing line saying *"do NOT fix
+      the misleading Marketing Kit until the underlying flow is
+      built"* needs to flip too — the underlying flow IS what just
+      shipped, and the Marketing Kit was rewritten in Task 05 to use
+      real `cmp_<code>` URLs instead of the broken `?ref=<junctionUUID>`
+      pattern.
 
-### Spec changelog template (drop-in)
+### Spec changelog template (STALE — kept for reference only)
+
+> **Do NOT drop this template into §12.** A comprehensive
+> 2026-04-30 (Phase 1.5 implementation) entry has already been
+> written in `docs/specs/affiliate-commission-system.md` and is
+> more detailed than this template. Several specifics in the
+> template below are wrong:
+>
+> - Migration filename: template says `<YYYYMMDD>0001_*`; actual is
+>   `20260430000002_*` (bumped from `0001` because the prefix
+>   collided with a teammate's `search_auth_users_by_email_fn`
+>   migration mid-implementation).
+> - Schema list is incomplete: missing `service_templates.is_general`
+>   (added at impl time), `tracking_links.diviner_id` NULL drop,
+>   `admin_action_log.payload` + NULL `target_resource_id` + extended
+>   `action_kind` CHECK.
+> - "applied" wording: as of this task, the migration is registered
+>   but **not yet applied**. The actual changelog entry phrases the
+>   ship state honestly.
+> - "/r/<code> returns 410": the codebase convention is 307 →
+>   `/link-not-active` (same UX as revoked-assignment); literal HTTP
+>   410 isn't used. The actual changelog entry says "branded inactive
+>   page" / 307.
+>
+> Use this section to grep for "what was supposed to ship" but trust
+> the live §12 entry for what actually shipped.
 
 ```markdown
 - **<YYYY-MM-DD> (Phase 1.5 shipped)** — General-product affiliate
@@ -209,4 +256,13 @@ Before declaring the sprint done, tick every box:
 - Running `npm run test:affiliate-commission` returns 0 failures.
 - RLS tests prove cross-account isolation at the DB layer.
 - Manual E2E walked at least once on preview.
-- Spec + memory file reflect "shipped" status.
+- The 2026-04-30 entry in spec §12 (already written) gets a single
+  closing edit naming the actual test counts and the manual-E2E
+  walkthrough date — search for "Tests:" / "Manual E2E walked once
+  on preview" placeholders and fill them in.
+- Memory file (path in the sign-off checklist above) status flipped
+  to "Shipped 2026-MM-DD" with the misleading-Marketing-Kit advisory
+  removed since the rewrite shipped in Task 05.
+- `IMPLEMENTATION-NOTES.md` in this folder remains the authoritative
+  delta log between original task plans and what actually shipped.
+  Update it if a Task 08 finding contradicts anything noted there.
