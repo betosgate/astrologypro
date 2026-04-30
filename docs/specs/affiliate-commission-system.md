@@ -238,6 +238,11 @@ tracking_links
 
 `GET /r/<campaign_code>` looks up the tracking link, logs the click, and
 307-redirects to the destination with `?ref=<campaign_code>` appended.
+On the happy path it also sets a first-party `aff_ref` cookie (value =
+`<campaign_code>`, `Max-Age=2592000` / 30 days, `SameSite=Lax`,
+`Secure` in production, **not** `HttpOnly` so the booking client can
+read it). The cookie is **not** set on the 410 / `/link-not-active`
+paths so revoked or inactive attribution can't leak past the gate.
 
 ### 3.8 Booking rate stamp (authoritative commission rate for a booking)
 
@@ -255,7 +260,11 @@ commission_rate_value_stamp       NUMERIC(10,4)
 ```
 
 All three are nullable. They are set only when:
-1. The booking carries a valid `ref_code`.
+1. The booking carries a valid `ref_code`. The booking client reads it
+   from the URL `?ref=` query param first, falling back to the
+   `aff_ref` cookie set at `/r/<code>` (see §3.7). URL wins when both
+   are present so a fresh affiliate click always overrides a stale
+   cookie. The 30-day cookie window is the attribution span.
 2. The resolved campaign has `status='active'` and `owner_type='affiliate'`.
 3. The campaign's `source_assignment_id` points at an assignment with
    `is_active=true`.
@@ -357,7 +366,10 @@ Steps:
    is logged.
 4. Otherwise: resolve the destination URL, log to `campaign_clicks` (fire-
    and-forget, full analytics payload), 307-redirect to destination with
-   `?ref=<campaign_code>` appended.
+   `?ref=<campaign_code>` appended **and** set the `aff_ref` cookie
+   (30-day attribution window — see §3.7 for the full attribute set).
+   The cookie is the durable carrier when in-site navigation drops the
+   URL param; URL still wins when both are present at booking time.
 
 ### Flow E — Customer books (rate stamped onto the booking)
 
@@ -366,9 +378,12 @@ Steps:
 route creates a `bookings` row).
 
 Steps:
-1. Booking row is inserted with the usual fields plus `ref_code` (read
-   from the session / URL query param preserved through the checkout
-   flow).
+1. Booking row is inserted with the usual fields plus `ref_code`. The
+   client reads the URL `?ref=` query param first, falling back to the
+   `aff_ref` cookie set at `/r/<code>` (see §3.7). URL wins on
+   conflict (last-touch via fresh click); cookie covers organic
+   navigation that drops the URL param. Field is POSTed as `refCode`
+   on the booking-payment endpoint.
 2. If `ref_code` is present, resolve:
    - Campaign with matching `campaign_code`, `status='active'`,
      `owner_type='affiliate'`.
@@ -939,6 +954,7 @@ This spec gets an update when Phase 2 starts scoping.
 
 Append-only. One line per concrete change. Newest first.
 
+- **2026-04-30** — Cookie-capture ref persistence shipped (commit `dd1b43c0`). `/r/[code]` now sets a first-party `aff_ref` cookie (30-day `Max-Age`, `SameSite=Lax`, `Secure` in prod, not `HttpOnly`) on the 307 happy campaign-link path; never on the 410 / `/link-not-active` paths so revoked attribution can't leak. `BookingWizard` reads `aff_ref` as a fallback when the URL has no `?ref=` and POSTs the value as `refCode` (renamed from the silent-bug field name `affiliateCode`, which the booking API was destructuring but never feeding into `resolveStampForBooking`). Three independent breaks closed in two file edits: (1) ref-loss when reading-page → diviner-card navigation drops the URL param; (2) ref-loss on organic returns within the 30-day window; (3) field-name mismatch that meant even direct `/r/<code>` → book flows never stamped. Spec §3.7, §3.8 condition 1, §5 Flow D step 4, §5 Flow E step 1 updated. Forward-compatible with Phase 1.5: cookie name and value are owner-type-agnostic, `resolveStampForBooking` remains the single decision point. Sprint plan: `tasks/28.04.2026/affiliate-ref-parameter-loss-fix/`.
 - **2026-04-28 (Phase 1.5 design)** — General-product affiliate commissions designed. New §10 Phase 1.5 section with locked decisions: (1) all active affiliate accounts auto-eligible (no opt-in); (2) admin-only writes on `service_templates.commission_*` (single global rate per template); (3) `commission_value IS NULL AND affiliate_program_enabled=true` defaults to 10%; (4) `affiliate_program_enabled=false` returns 410 from `/r/<code>`; (5) skip rate-edit notification + no `service_template_commission_history` table — affiliates see current rate on `/affiliate/products`; (6) new column `affiliate_campaigns.owner_affiliate_account_id` to anchor general-program campaigns directly on the account (avoids the misleading admin views from anchoring on an arbitrarily-picked junction); (7) scope is `diviner_affiliates` only — `social_advocates` are out per their distinct identity model. Schema migration adds `service_templates.{commission_type, commission_value, affiliate_program_enabled}`, `affiliate_campaigns.owner_affiliate_account_id`, extends `owner_affiliate_type` enum with `'general'`, tightens `owner_consistency` CHECK, adds `bookings.commission_source_template_id`, and `campaign_conversions.affiliate_account_id` (always populated). Stamp logic gets a general-path branch in `resolveStampForBooking`. New `POST /api/affiliate/general-campaigns` endpoint. Marketing Kit rewrites to use real campaign codes. Spec is the contract — implementation sprint to follow.
 - **2026-04-28** — Audit-driven follow-up cleanup. Two findings from a route-by-route v2-alignment audit: (1) `/admin/campaigns` still carried pre-v2 commission/budget/status surfaces — symmetric to yesterday's `dashboard/campaigns` cleanup. Removed `draft` + `completed` from STATUS_BADGE map / status filter / edit-modal options (CHECK rejects them post-01b); removed Commission Type / Commission % / Budget Cap from create + edit forms (state + setters + POST/PATCH bodies + UI blocks); removed `formTargetProduct` (no UI but still POSTed); dropped the "Commission" sortable column + cell from the table. (2) `/admin/reports/payouts` had a real lookup bug: the API joined `campaign_conversions.affiliate_id` (a `diviner_affiliates.id` in v2) against the legacy `affiliates` table (different ID namespace from System A), so every row's `affiliateName` rendered as "Unknown" and `referralCode` was always null. Fixed `src/app/api/admin/reports/payouts/route.ts` to query `diviner_affiliates` joined to `affiliate_accounts` (correct namespace, canonical v2 name) and dropped `referralCode` from the response interface (System A concept; v2 stores codes on `affiliate_campaigns`, not per-junction). Page-side dropped the matching column. `pendingAmount` preserved unchanged — explicit Phase 2 placeholder ("everything not reversed is pending payout until Stripe auto-split ships"), source comment in `route.ts:225`.
 - **2026-04-27** — Task 08 partial landing + post-sprint dead-UI sweep. Tests: Part A RLS suite (`tests/integration/affiliate-rls.test.ts`, 12 cases, anon-key + JWT, proves DB-layer isolation) and Part C unit suite (`tests/unit/affiliate-commission-math.test.ts`, 23 cases for `computeCommissionCents`) shipped. Part B (8 separate flow files) and Part D (Playwright E2E) deferred — smoke + RLS already cover the core invariants. **RLS migrations (3 ran sequentially):** `20260427000002_affiliate_rls_v2_alignment.sql` rewrote 4 affiliate-side SELECT policies for the v2 junction model (pre-v2 they assumed `*.affiliate_id = auth.uid()`; v2 makes affiliate_id a `diviner_affiliates.id`); `20260427000003_affiliate_junction_select_policy.sql` added the missing `affiliate_sees_own_junctions` policy on `diviner_affiliates` (without it, the IN-subquery in every child policy returned empty under RLS); `20260427000004_affiliate_rls_security_definer.sql` broke the resulting policy cycle (`affiliate_accounts.diviner_sees_linked_accounts` ↔ `diviner_affiliates.affiliate_sees_own_junctions`) by introducing two SECURITY DEFINER helpers — `current_affiliate_junction_ids()` SETOF UUID + `current_affiliate_account_id()` UUID — and rewriting all affiliate-side policies to call them. Spec §8 promises now match what the DB actually enforces. API was always service-role (RLS bypass) so no production regression. **Dead-UI cleanup (5 commits):** deleted broken admin/affiliates/[id] page + 3 dead routes (1014 lines — page was 404'ing post-01b on `/api/admin/affiliates/[id]/commissions` + `/api/admin/commissions/[commId]`); deleted redundant `/affiliate/commissions` + `/affiliate/links` pages + endpoints + nav entries (589 lines — both duplicated `/affiliate/earnings` + `/affiliate/campaigns`); removed pre-v2 `commission_type` / `commission_value` / `budget_cap_cents` / `target_product_type` form fields from the diviner Create Campaign modal, the Edit modal, and the detail page (Commission KPI tile + Budget Progress card removed since diviner-owned campaigns never credit commission per Flow B); trimmed `draft` + `completed` from every `/dashboard/campaigns` status enum surface (CHECK rejects them post-01b); removed dead approval-state branches (pending / on_hold / approved / paid / rejected) from affiliate earnings `statusBadge` and tightened its signature to `'earned' | 'reversed'`; removed dead `Delete` button + `handleDelete` handler from campaign detail (gated on impossible `status === 'draft'`). **Test cleanup tooling:** `scripts/cleanup-affiliate-test-data.ts` (npm run `cleanup:affiliate-test-data`, dry-run default, `--apply` to delete) targets `v2-smoke` / `rls` / `probe` email patterns and cascades through the FK chain.
