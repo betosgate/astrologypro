@@ -26,12 +26,26 @@ export type StampReason =
   | "assignment_inactive"
   | "destination_mismatch"
   | "account_not_active"
+  | "program_disabled"
   | "lookup_error";
 
 export interface StampResult {
   source_assignment_id: string | null;
+  /**
+   * Phase 1.5: set when the stamp came from a general-program campaign.
+   * Mutually exclusive with source_assignment_id in practice (one set, the
+   * other null). NULL on per-diviner stamps.
+   */
+  source_template_id: string | null;
   rate_type_stamp: StampRateType | null;
   rate_value_stamp: number | null;
+  /**
+   * Phase 1.5: the affiliate account this stamp credits, regardless of
+   * whether attribution was per-diviner (resolved via junction) or general
+   * (read directly from the campaign). Webhook credit can use this to
+   * bypass a junction join.
+   */
+  affiliate_account_id: string | null;
   reason: StampReason;
 }
 
@@ -44,8 +58,10 @@ export interface ResolveStampInput {
 
 const NO_STAMP = (reason: StampReason): StampResult => ({
   source_assignment_id: null,
+  source_template_id: null,
   rate_type_stamp: null,
   rate_value_stamp: null,
+  affiliate_account_id: null,
   reason,
 });
 
@@ -70,7 +86,7 @@ export async function resolveStampForBooking(
   const { data: campaign, error: campaignErr } = await admin
     .from("affiliate_campaigns")
     .select(
-      "id, diviner_id, status, owner_type, owner_affiliate_id, owner_affiliate_type, source_assignment_id, destination_type, destination_service_template_id",
+      "id, diviner_id, status, owner_type, owner_affiliate_id, owner_affiliate_type, owner_affiliate_account_id, source_assignment_id, destination_type, destination_service_template_id",
     )
     .eq("campaign_code", code)
     .maybeSingle();
@@ -86,13 +102,65 @@ export async function resolveStampForBooking(
   if (campaign.status !== "active" || campaign.owner_type !== "affiliate") {
     return NO_STAMP("campaign_inactive");
   }
+
+  // Phase 1.5: general-program branch. Campaign carries the affiliate
+  // account id directly; rate comes from service_templates, not from a
+  // per-diviner assignment.
+  if (campaign.owner_affiliate_type === "general") {
+    const accountId = (campaign.owner_affiliate_account_id as string | null) ?? null;
+    const templateId =
+      (campaign.destination_service_template_id as string | null) ?? null;
+    if (!accountId || !templateId) {
+      // CHECK constraint guarantees both are set when type='general'.
+      // Defensive: treat a corrupt row as no-match.
+      return NO_STAMP("no_campaign");
+    }
+
+    const { data: template } = await admin
+      .from("service_templates")
+      .select(
+        "id, is_general, affiliate_program_enabled, commission_type, commission_value",
+      )
+      .eq("id", templateId)
+      .maybeSingle();
+    if (!template) return NO_STAMP("no_campaign");
+    if (template.affiliate_program_enabled !== true) {
+      return NO_STAMP("program_disabled");
+    }
+
+    const { data: account } = await admin
+      .from("affiliate_accounts")
+      .select("id, status")
+      .eq("id", accountId)
+      .maybeSingle();
+    if (!account || account.status !== "active") {
+      return NO_STAMP("account_not_active");
+    }
+
+    // Default 10% percent if admin enabled the program but didn't set a
+    // rate (spec §10 Phase 1.5 decision #3).
+    const rateType =
+      ((template.commission_type as StampRateType | null) ?? "percent");
+    const rateValue =
+      template.commission_value != null ? Number(template.commission_value) : 10;
+
+    return {
+      source_assignment_id: null,
+      source_template_id: template.id as string,
+      rate_type_stamp: rateType,
+      rate_value_stamp: rateValue,
+      affiliate_account_id: account.id as string,
+      reason: "stamped",
+    };
+  }
+
   if (
     !campaign.owner_affiliate_id ||
     campaign.owner_affiliate_type !== "diviner_affiliate" ||
     !campaign.source_assignment_id
   ) {
-    // Phase 1: only diviner-affiliate campaigns stamp. Malformed campaign row
-    // (missing owner or assignment link) is treated as no-match.
+    // Per-diviner path: malformed campaign row (missing owner or
+    // assignment link) is treated as no-match.
     return NO_STAMP("campaign_inactive");
   }
 
@@ -153,8 +221,10 @@ export async function resolveStampForBooking(
   // All five conditions pass — stamp the booking.
   return {
     source_assignment_id: assignment.id as string,
+    source_template_id: null,
     rate_type_stamp: (assignment.commission_type as StampRateType) ?? "percent",
     rate_value_stamp: Number(assignment.commission_value ?? 0),
+    affiliate_account_id: junction.affiliate_account_id as string,
     reason: "stamped",
   };
 }

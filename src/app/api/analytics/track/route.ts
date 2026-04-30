@@ -41,8 +41,18 @@ export async function POST(request: NextRequest) {
       try {
         const resolved = await resolveAffiliateFromRef(admin, rawRefCode);
         if (resolved) {
-          affiliateId = resolved.owner_affiliate_id;
-          affiliateType = resolved.owner_affiliate_type;
+          // Phase 1.5: page_views.affiliate_type CHECK only accepts
+          // 'diviner_affiliate' / 'social_advocate'. General campaigns
+          // would 23514 the insert; record them as untracked here. (No
+          // page_views CHECK migration in this sprint — tracker degrades
+          // silently for general; per-diviner attribution unchanged.)
+          if (resolved.owner_affiliate_type === "general") {
+            affiliateId = null;
+            affiliateType = null;
+          } else {
+            affiliateId = resolved.owner_affiliate_id;
+            affiliateType = resolved.owner_affiliate_type;
+          }
         }
       } catch {
         // Never let affiliate resolution break page-view tracking.
