@@ -82,26 +82,35 @@ export default async function AffiliateCampaignDetailPage({
   const { data: campaign } = await admin
     .from("affiliate_campaigns")
     .select(
-      "id, campaign_code, name, description, status, owner_affiliate_id, owner_affiliate_type, diviner_id, share_url, channel, utm_source, utm_medium, utm_campaign, destination_type, destination_service_template_id, created_at",
+      "id, campaign_code, name, description, status, owner_affiliate_id, owner_affiliate_type, owner_affiliate_account_id, diviner_id, share_url, channel, utm_source, utm_medium, utm_campaign, destination_type, destination_service_template_id, created_at",
     )
     .eq("id", id)
     .maybeSingle();
 
-  if (
-    !campaign ||
-    campaign.owner_affiliate_type !== "diviner_affiliate" ||
-    !ctx.junctionIds.includes(campaign.owner_affiliate_id as string)
-  ) {
+  // Phase 1.5: ownership matches per-diviner via junctionIds OR general
+  // via account.id. Foreign campaigns return 404 (existence-hiding).
+  const isOwnedPerDiviner =
+    !!campaign &&
+    campaign.owner_affiliate_type === "diviner_affiliate" &&
+    ctx.junctionIds.includes(campaign.owner_affiliate_id as string);
+  const isOwnedGeneral =
+    !!campaign &&
+    campaign.owner_affiliate_type === "general" &&
+    campaign.owner_affiliate_account_id === ctx.account.id;
+  if (!campaign || (!isOwnedPerDiviner && !isOwnedGeneral)) {
     notFound();
   }
 
-  // Resolve diviner display + service name for the destination.
+  // Resolve display name for the destination — diviner profile, per-diviner
+  // service, or general template.
   const [{ data: diviner }, { data: template }] = await Promise.all([
-    admin
-      .from("diviners")
-      .select("id, username, display_name")
-      .eq("id", campaign.diviner_id as string)
-      .maybeSingle(),
+    campaign.diviner_id
+      ? admin
+          .from("diviners")
+          .select("id, username, display_name")
+          .eq("id", campaign.diviner_id as string)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
     campaign.destination_service_template_id
       ? admin
           .from("service_templates")
@@ -112,9 +121,11 @@ export default async function AffiliateCampaignDetailPage({
   ]);
 
   const destinationName =
-    campaign.destination_type === "PROFILE"
-      ? `${diviner?.display_name ?? "Diviner"}'s profile`
-      : (template?.name as string | null) ?? "Service";
+    campaign.owner_affiliate_type === "general"
+      ? `General: ${(template?.name as string | null) ?? "product"}`
+      : campaign.destination_type === "PROFILE"
+        ? `${diviner?.display_name ?? "Diviner"}'s profile`
+        : (template?.name as string | null) ?? "Service";
 
   // KPIs: clicks count + conversions (with rate audit).
   const [{ count: totalClicks }, { data: conversions }] = await Promise.all([
