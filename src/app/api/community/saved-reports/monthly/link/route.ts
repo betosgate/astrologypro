@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { saveAndLinkMonthlyReport } from "@/lib/community/saved-report-link";
+import {
+  linkExistingMonthlyReport,
+  saveAndLinkMonthlyReport,
+} from "@/lib/community/saved-report-link";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -314,48 +317,21 @@ export async function POST(request: NextRequest) {
 
     const reportId = match.id as string;
 
-    // Update the (family_member_id, month) monthly_transits row to
-    // point at the newly-linked saved artifact. Insert a placeholder
-    // pending summary row if one doesn't yet exist (mirrors the
-    // saveAndLinkMonthlyReport helper's behaviour).
-    const { data: existing } = await admin
-      .from("monthly_transits")
-      .select("id")
-      .eq("family_member_id", familyMemberId)
-      .eq("month", monthKey)
-      .maybeSingle();
-
-    if (existing) {
-      const { error } = await admin
-        .from("monthly_transits")
-        .update({
-          full_report_id: reportId,
-          full_report_generated_at: new Date().toISOString(),
-          full_report_status: "generated",
-        })
-        .eq("id", existing.id);
-      if (error) {
-        return NextResponse.json(
-          { error: error.message, reportId },
-          { status: 500 }
-        );
-      }
-    } else {
-      const { error } = await admin.from("monthly_transits").insert({
-        family_member_id: familyMemberId,
-        month: monthKey,
-        transit_data: {},
-        generation_status: "pending",
-        full_report_id: reportId,
-        full_report_generated_at: new Date().toISOString(),
-        full_report_status: "generated",
-      });
-      if (error) {
-        return NextResponse.json(
-          { error: error.message, reportId },
-          { status: 500 }
-        );
-      }
+    const link = await linkExistingMonthlyReport({
+      familyMemberId,
+      monthKey,
+      reportId,
+    });
+    if (!link.domainLinked) {
+      return NextResponse.json(
+        {
+          error:
+            link.domainLinkError ??
+            "Saved report found but failed to link the monthly_transits row",
+          reportId,
+        },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({
