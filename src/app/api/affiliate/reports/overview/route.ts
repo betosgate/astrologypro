@@ -36,33 +36,68 @@ export async function GET(request: Request) {
     new URL(request.url).searchParams.get("period"),
   );
   const since = reportPeriodSince(period);
-  const { junctionIds } = ctx;
+  const { account, junctionIds } = ctx;
 
-  if (junctionIds.length === 0) {
-    return NextResponse.json({
-      data: {
-        period,
-        total_clicks: 0,
-        total_conversions: 0,
-        total_earned_cents: 0,
-        total_reversed_cents: 0,
-        active_assignments: 0,
-        active_campaigns: 0,
-      },
-    });
-  }
-
+  // Bug-fix (Task 07): real column is `converted_at`, not `created_at`.
+  // The endpoint was returning DB errors. Filter switched from junction-
+  // bound to account-bound so the overview also rolls up Phase 1.5
+  // general credits (those have NULL affiliate_id). Same approach for
+  // clicks: filter by campaign_id of the caller's campaigns (covers
+  // general clicks whose affiliate_id is NULL too). The zero-junctions
+  // early-return is removed because general credits can exist without
+  // any per-diviner partnership.
   let convQuery = admin
     .from("campaign_conversions")
-    .select("commission_amount_cents, reversed_at, created_at")
-    .in("affiliate_id", junctionIds);
-  if (since) convQuery = convQuery.gte("created_at", since);
+    .select("commission_amount_cents, reversed_at, converted_at")
+    .eq("affiliate_account_id", account.id);
+  if (since) convQuery = convQuery.gte("converted_at", since);
 
-  let clicksQuery = admin
-    .from("campaign_clicks")
+  // Resolve caller's campaign ids first, so the click counter can use
+  // them for both per-diviner and general clicks.
+  const orParts: string[] = [];
+  if (junctionIds.length > 0) {
+    orParts.push(
+      `and(owner_affiliate_type.eq.diviner_affiliate,owner_affiliate_id.in.(${junctionIds.join(",")}))`,
+    );
+  }
+  orParts.push(
+    `and(owner_affiliate_type.eq.general,owner_affiliate_account_id.eq.${account.id})`,
+  );
+  const { data: callerCampaigns } = await admin
+    .from("affiliate_campaigns")
+    .select("id")
+    .or(orParts.join(","));
+  const callerCampaignIds = (callerCampaigns ?? []).map((c) => c.id as string);
+
+  const clicksQuery =
+    callerCampaignIds.length > 0
+      ? (() => {
+          let q = admin
+            .from("campaign_clicks")
+            .select("id", { count: "exact", head: true })
+            .in("campaign_id", callerCampaignIds);
+          if (since) q = q.gte("created_at", since);
+          return q;
+        })()
+      : Promise.resolve({ count: 0 } as { count: number });
+
+  // Active campaigns count includes per-diviner + general so the affiliate
+  // dashboard reflects everything they're currently running.
+  const activeCampaignsQuery = admin
+    .from("affiliate_campaigns")
     .select("id", { count: "exact", head: true })
-    .in("affiliate_id", junctionIds);
-  if (since) clicksQuery = clicksQuery.gte("created_at", since);
+    .in("id", callerCampaignIds.length > 0 ? callerCampaignIds : [""])
+    .eq("status", "active");
+
+  const activeAssignmentsQuery =
+    junctionIds.length > 0
+      ? admin
+          .from("diviner_service_affiliates")
+          .select("id", { count: "exact", head: true })
+          .in("affiliate_id", junctionIds)
+          .eq("affiliate_type", "diviner_affiliate")
+          .eq("is_active", true)
+      : Promise.resolve({ count: 0 } as { count: number });
 
   const [
     { data: conversions },
@@ -72,18 +107,8 @@ export async function GET(request: Request) {
   ] = await Promise.all([
     convQuery,
     clicksQuery,
-    admin
-      .from("diviner_service_affiliates")
-      .select("id", { count: "exact", head: true })
-      .in("affiliate_id", junctionIds)
-      .eq("affiliate_type", "diviner_affiliate")
-      .eq("is_active", true),
-    admin
-      .from("affiliate_campaigns")
-      .select("id", { count: "exact", head: true })
-      .in("owner_affiliate_id", junctionIds)
-      .eq("owner_affiliate_type", "diviner_affiliate")
-      .eq("status", "active"),
+    activeAssignmentsQuery,
+    activeCampaignsQuery,
   ]);
 
   let earnedCents = 0;

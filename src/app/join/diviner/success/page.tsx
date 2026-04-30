@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { ensureUserContractRequirements } from "@/lib/contract-orchestration";
 import { finalizeInvitedDivinerFromSessionId } from "@/lib/invited-diviner-upgrade";
 
 export const dynamic = "force-dynamic";
@@ -51,5 +52,16 @@ export default async function JoinDivinerSuccessPage({
     redirect("/join/diviner/plan?error=provision-failed");
   }
 
-  redirect("/dashboard");
+  await ensureUserContractRequirements(user.id, "post_login").catch((error) => {
+    console.error(
+      "[join/diviner/success] failed to ensure contract requirements:",
+      error
+    );
+  });
+
+  redirect(
+    `/contracts/pending?source=invited-diviner&session_id=${encodeURIComponent(
+      sessionId as string
+    )}&next=${encodeURIComponent("/dashboard")}`
+  );
 }

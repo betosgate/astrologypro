@@ -98,7 +98,7 @@ export interface InvitationsClientProps {
   initialRoleSlug?: string;
 }
 
-const STATUS_OPTIONS = ["all", "pending", "accepted", "expired", "cancelled"];
+const STATUS_OPTIONS = ["all", "pending", "active", "completed", "expired", "cancelled"];
 
 function InviteStatusBadge({
   status,

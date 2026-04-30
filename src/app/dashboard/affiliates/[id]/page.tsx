@@ -136,11 +136,15 @@ interface Conversion {
   booking_id: string | null;
   order_amount_cents: number;
   commission_amount_cents: number;
-  rate_type_used: "percentage" | "fixed";
+  // Real DB enum is 'percent' | 'flat' (legacy 'percentage'/'fixed'
+  // names appear in older code). Accept both for compatibility.
+  rate_type_used: "percentage" | "fixed" | "percent" | "flat";
   rate_value_used: number;
   reversed_at: string | null;
-  reversed_reason: string | null;
-  created_at: string;
+  // Real column name is `reversal_reason` (not `reversed_reason`).
+  reversal_reason: string | null;
+  // Real column name is `converted_at` (not `created_at`).
+  converted_at: string;
 }
 
 const STATUS_COLORS: Record<
@@ -179,10 +183,13 @@ function fmtDateTime(iso: string) {
   });
 }
 
-function fmtRate(type: "percentage" | "fixed", value: number) {
-  return type === "percentage"
+function fmtRate(
+  type: "percentage" | "fixed" | "percent" | "flat",
+  value: number,
+) {
+  return type === "percentage" || type === "percent"
     ? `${value}%`
-    : `${fmtCents(value)} fixed`;
+    : `${fmtCents(value)} flat`;
 }
 
 function avatarInitials(name: string | null) {
@@ -668,7 +675,7 @@ export default function DashboardAffiliateDetailPage({
                   {conversions.map((c) => (
                     <TableRow key={c.id}>
                       <TableCell className="text-sm">
-                        {fmtDate(c.created_at)}
+                        {fmtDate(c.converted_at)}
                       </TableCell>
                       <TableCell>{fmtCents(c.order_amount_cents)}</TableCell>
                       <TableCell className="text-sm">
@@ -680,7 +687,7 @@ export default function DashboardAffiliateDetailPage({
                       <TableCell>
                         {c.reversed_at ? (
                           <Badge variant="outline">
-                            reversed{c.reversed_reason ? ` · ${c.reversed_reason}` : ""}
+                            reversed{c.reversal_reason ? ` · ${c.reversal_reason}` : ""}
                           </Badge>
                         ) : (
                           <Badge variant="default">earned</Badge>

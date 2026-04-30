@@ -37,6 +37,7 @@ import {
   Users,
 } from "lucide-react";
 import { AffiliateMarketingKit } from "@/components/affiliate/marketing-kit";
+import { fetchMarketingKitItems } from "@/lib/affiliate-marketing-kit";
 
 export const dynamic = "force-dynamic";
 
@@ -63,7 +64,13 @@ export default async function AffiliateDashboardPage() {
 
   const { account, junctionIds } = ctx;
 
-  // Short-circuit: zero partnerships
+  // Phase 1.5: general products are available to every active affiliate
+  // regardless of per-diviner partnerships (spec §10 decision #1).
+  const marketingItems = await fetchMarketingKitItems(admin, account.id);
+
+  // Short-circuit: zero partnerships. Still surface the Marketing Kit
+  // when general programs are enabled — the affiliate has earning paths
+  // even before any diviner invites them.
   if (junctionIds.length === 0) {
     return (
       <div className="space-y-6">
@@ -85,6 +92,9 @@ export default async function AffiliateDashboardPage() {
             </p>
           </CardContent>
         </Card>
+        {marketingItems.length > 0 && (
+          <AffiliateMarketingKit items={marketingItems} />
+        )}
       </div>
     );
   }
@@ -96,21 +106,75 @@ export default async function AffiliateDashboardPage() {
     { data: campaignRows },
     { count: totalClicks },
   ] = await Promise.all([
+    // Phase 1.5: conversions are now identified by affiliate_account_id
+    // (always populated after the Task 01 backfill), which covers both
+    // per-diviner credits and general credits in one filter.
     admin
       .from("campaign_conversions")
       .select("commission_amount_cents, reversed_at")
-      .in("affiliate_id", junctionIds),
+      .eq("affiliate_account_id", account.id),
+    // Recent campaigns: union per-diviner + general. Two SELECTs, merged
+    // client-side. Limit applied after the merge so we don't accidentally
+    // hide one type behind the other's recency.
+    Promise.all([
+      junctionIds.length > 0
+        ? admin
+            .from("affiliate_campaigns")
+            .select(
+              "id, campaign_code, name, status, diviner_id, owner_affiliate_type, destination_service_template_id, created_at",
+            )
+            .eq("owner_affiliate_type", "diviner_affiliate")
+            .in("owner_affiliate_id", junctionIds)
+            .order("created_at", { ascending: false })
+            .limit(5)
+        : Promise.resolve({ data: [] }),
+      admin
+        .from("affiliate_campaigns")
+        .select(
+          "id, campaign_code, name, status, diviner_id, owner_affiliate_type, destination_service_template_id, created_at",
+        )
+        .eq("owner_affiliate_type", "general")
+        .eq("owner_affiliate_account_id", account.id)
+        .order("created_at", { ascending: false })
+        .limit(5),
+    ]).then(([per, gen]) => ({
+      data: [
+        ...((per.data ?? []) as Array<Record<string, unknown>>),
+        ...((gen.data ?? []) as Array<Record<string, unknown>>),
+      ]
+        .sort((a, b) => {
+          const at = (a.created_at as string) ?? "";
+          const bt = (b.created_at as string) ?? "";
+          return bt.localeCompare(at);
+        })
+        .slice(0, 5),
+    })),
+    // Clicks: filter by campaign_id (the caller's campaigns) instead of
+    // affiliate_id, so we capture both per-diviner clicks (have
+    // affiliate_id set) and general clicks (have affiliate_id=NULL per
+    // Task 03's CHECK-compatibility coercion).
     admin
       .from("affiliate_campaigns")
-      .select("id, campaign_code, name, status, diviner_id")
-      .eq("owner_affiliate_type", "diviner_affiliate")
-      .in("owner_affiliate_id", junctionIds)
-      .order("created_at", { ascending: false })
-      .limit(5),
-    admin
-      .from("campaign_clicks")
-      .select("id", { count: "exact", head: true })
-      .in("affiliate_id", junctionIds),
+      .select("id")
+      .or(
+        [
+          junctionIds.length > 0
+            ? `and(owner_affiliate_type.eq.diviner_affiliate,owner_affiliate_id.in.(${junctionIds.join(",")}))`
+            : null,
+          `and(owner_affiliate_type.eq.general,owner_affiliate_account_id.eq.${account.id})`,
+        ]
+          .filter(Boolean)
+          .join(","),
+      )
+      .then(async ({ data }) => {
+        const ids = (data ?? []).map((c) => c.id as string);
+        if (ids.length === 0) return { count: 0 };
+        const { count } = await admin
+          .from("campaign_clicks")
+          .select("id", { count: "exact", head: true })
+          .in("campaign_id", ids);
+        return { count: count ?? 0 };
+      }),
   ]);
 
   let earnedCents = 0;
@@ -173,11 +237,13 @@ export default async function AffiliateDashboardPage() {
         </Card>
       </div>
 
-      {/* Marketing kit — 17+ readings to promote (restored from pre-refactor dashboard).
-          The `ref=` attribution pipeline resolves junction IDs, so we pass the first
-          junction id. Multi-diviner affiliates currently get their first partnership
-          credited on marketing-kit links; per-reading routing is a follow-up. */}
-      <AffiliateMarketingKit affiliateId={junctionIds[0]} />
+      {/* Marketing Kit — Phase 1.5 general products, sourced from
+          service_templates with affiliate_program_enabled=true. Each link
+          carries a real cmp_<code> that credits this affiliate's account
+          when the customer books. */}
+      {marketingItems.length > 0 && (
+        <AffiliateMarketingKit items={marketingItems} />
+      )}
 
       {/* Recent campaigns */}
       <Card>
@@ -201,7 +267,12 @@ export default async function AffiliateDashboardPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {campaignRows.map((c) => (
+                {(campaignRows as Array<{
+                  id: string;
+                  name: string | null;
+                  campaign_code: string;
+                  status: string;
+                }>).map((c) => (
                   <TableRow key={c.id}>
                     <TableCell>{c.name ?? "—"}</TableCell>
                     <TableCell className="font-mono text-xs">{c.campaign_code}</TableCell>

@@ -133,7 +133,7 @@ export default function JoinDivinerPage() {
       <MarketingHeader />
 
       <main className="flex flex-1 items-center justify-center bg-[radial-gradient(circle_at_top,rgba(201,168,76,0.18),transparent_35%),radial-gradient(circle_at_bottom,rgba(212,175,55,0.08),transparent_30%),linear-gradient(180deg,#090d1d_0%,#050816_100%)] px-4 py-10 sm:px-6">
-        <div className="w-full max-w-3xl">
+        <div className="w-full max-w-4xl">
           <div className="overflow-hidden rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(13,17,31,0.96)_0%,rgba(7,10,20,0.96)_100%)] shadow-[0_24px_80px_rgba(0,0,0,0.45)]">
             <div className="border-b border-white/8 px-6 py-8 sm:px-10">
               <p className="text-xs uppercase tracking-[0.32em] text-[#d6b75a]">

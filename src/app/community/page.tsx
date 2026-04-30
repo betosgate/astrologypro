@@ -195,6 +195,10 @@ function getRelationshipBadgeClasses(rel: string): string {
   if (r === "spouse" || r === "partner") return "bg-purple-500/20 text-purple-400 border-purple-500/30";
   if (r === "son" || r === "boy") return "bg-blue-500/20 text-blue-400 border-blue-500/30";
   if (r === "daughter" || r === "girl") return "bg-rose-500/20 text-rose-400 border-rose-500/30";
+  if (r === "child") return "bg-emerald-500/20 text-emerald-400 border-emerald-500/30";
+  if (r === "friend") return "bg-sky-500/20 text-sky-400 border-sky-500/30";
+  if (r === "parent") return "bg-pink-500/20 text-pink-400 border-pink-500/30";
+  if (r === "sibling") return "bg-orange-500/20 text-orange-400 border-orange-500/30";
   return "bg-slate-500/20 text-slate-400 border-slate-500/30";
 }
 
@@ -804,7 +808,7 @@ export default async function CommunityDashboardPage() {
     {
       icon: ownChartReady ? Star : Sparkles,
       label: ownChartGenerated ? "View Chart" : "Generate Chart",
-      href: "/community/horoscope",
+      href: "/community/charts",
       highlight: !ownChartGenerated && ownChartReady,
     },
     {
@@ -1424,7 +1428,7 @@ export default async function CommunityDashboardPage() {
                   <p className="text-sm font-semibold leading-tight">Your Natal Chart</p>
                   <p className="text-xs text-emerald-600 mt-0.5">Birth data complete — open your chart</p>
                   <Button asChild variant="link" size="sm" className="h-auto p-0 mt-1 text-xs text-primary">
-                    <Link href="/community/horoscope">View Chart →</Link>
+                    <Link href="/community/charts">View Chart →</Link>
                   </Button>
                 </div>
                 <Badge variant="outline" className="shrink-0 text-xs border-emerald-500/40 text-emerald-700">
@@ -1484,7 +1488,11 @@ export default async function CommunityDashboardPage() {
               </CardContent>
             </Card>
           ) : ( */}
-          {relationshipChartCount > 0 ? null : (
+          {/* Client update 2026-04-30:
+              Hide the empty-state relationship chart CTA for now. Keep the
+              implementation commented instead of deleting it so it can be
+              restored later if requirements change. */}
+          {/* {relationshipChartCount > 0 ? null : (
             <Card className="border-dashed">
               <CardContent className="flex flex-col items-center gap-3 py-5 text-center">
                 <div className="flex size-10 items-center justify-center rounded-full bg-violet-500/10">
@@ -1504,7 +1512,7 @@ export default async function CommunityDashboardPage() {
                 </Button>
               </CardContent>
             </Card>
-          )}
+          )} */}
         </div>
 
         {/* Client update 2026-04-24:
@@ -1532,7 +1540,7 @@ export default async function CommunityDashboardPage() {
               variant="outline"
               className="shrink-0 w-full sm:w-auto border-sky-500/40 text-sky-700 hover:bg-sky-500/10"
             >
-              <Link href="/community/horoscope">
+              <Link href="/community/charts">
                 <Telescope className="mr-1.5 size-3.5" />
                 View My Natal Chart
               </Link>
@@ -1851,16 +1859,16 @@ export default async function CommunityDashboardPage() {
                     </Card>
                   );
                 })}
-                <Card className="border-dashed">
-                  <CardContent className="flex items-center justify-center py-3">
-                    <Button asChild variant="ghost" size="sm">
-                      <Link href="/community/charts">
-                        <TrendingUp className="mr-1.5 size-3.5" />
-                        Explore Compatibility
-                      </Link>
-                    </Button>
-                  </CardContent>
-                </Card>
+{/* <Card className="border-dashed">
+  <CardContent className="flex items-center justify-center py-3">
+    <Button asChild variant="ghost" size="sm">
+      <Link href="/community/charts">
+        <TrendingUp className="mr-1.5 size-3.5" />
+        Explore Compatibility
+      </Link>
+    </Button>
+  </CardContent>
+</Card> */}
               </div>
             )}
           </div>

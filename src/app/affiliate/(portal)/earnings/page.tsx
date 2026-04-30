@@ -43,6 +43,26 @@ function formatDate(iso: string): string {
   });
 }
 
+type EarningsCampaignSub = {
+  name: string | null;
+  owner_affiliate_type: "diviner_affiliate" | "social_advocate" | "general" | null;
+  diviner: { display_name: string | null } | { display_name: string | null }[] | null;
+  template: { name: string | null } | { name: string | null }[] | null;
+};
+
+function sourceLabel(
+  campaign: EarningsCampaignSub | EarningsCampaignSub[] | null,
+): string {
+  const c = Array.isArray(campaign) ? campaign[0] : campaign;
+  if (!c) return "Unknown";
+  if (c.owner_affiliate_type === "general") {
+    const t = Array.isArray(c.template) ? c.template[0] : c.template;
+    return `General: ${t?.name ?? "Unknown template"}`;
+  }
+  const d = Array.isArray(c.diviner) ? c.diviner[0] : c.diviner;
+  return `Diviner: ${d?.display_name ?? "Unknown"}`;
+}
+
 function statusBadge(status: "earned" | "reversed") {
   // v2 has only two conversion states. Pre-v2 approval-state keys
   // (pending / on_hold / approved / paid / rejected) are gone.
@@ -70,32 +90,31 @@ export default async function AffiliateEarningsPage() {
   const ctx = await resolveAffiliateForCaller(admin, user.id);
   if (!ctx) redirect("/login?e=no_affiliate_account");
 
-  if (ctx.junctionIds.length === 0) {
-    return (
-      <div className="space-y-6">
-        <header>
-          <h1 className="text-2xl font-bold tracking-tight">Earnings</h1>
-          <p className="text-muted-foreground">No commissions yet.</p>
-        </header>
-        <Card>
-          <CardContent className="py-10 text-center text-sm text-muted-foreground">
-            You don&rsquo;t have any diviner partnerships yet, so no commissions
-            have been recorded.
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  const { account, junctionIds } = ctx;
 
-  // System B commission ledger — campaign_conversions. Payouts deferred
-  // to Phase 2 (spec §10), so the "Payout history" section is omitted for now.
+  // Phase 1.5: query by affiliate_account_id (post-migration backfill
+  // covers both per-diviner and general credits) instead of by
+  // junctionIds (which would miss general conversions whose
+  // affiliate_id IS NULL). Real columns are converted_at + reversal_reason
+  // (not created_at + reversed_reason — those names don't exist).
+  // Campaign sub-select pulls owner_affiliate_type + the destination
+  // template name so the Source column can render the General/Diviner
+  // label per spec §10 reporting touches.
   const { data: commissions } = await admin
     .from("campaign_conversions")
     .select(
-      "id, affiliate_id, booking_id, order_amount_cents, commission_amount_cents, rate_type_used, rate_value_used, reversed_at, reversed_reason, created_at",
+      `id, affiliate_id, affiliate_account_id, booking_id,
+       order_amount_cents, commission_amount_cents,
+       rate_type_used, rate_value_used,
+       reversed_at, reversal_reason, converted_at,
+       campaign:affiliate_campaigns(
+         name, owner_affiliate_type,
+         diviner:diviners(display_name),
+         template:service_templates!destination_service_template_id(name)
+       )`,
     )
-    .in("affiliate_id", ctx.junctionIds)
-    .order("created_at", { ascending: false })
+    .eq("affiliate_account_id", account.id)
+    .order("converted_at", { ascending: false })
     .limit(50);
 
   let totalEarned = 0;
@@ -111,8 +130,9 @@ export default async function AffiliateEarningsPage() {
       <header>
         <h1 className="text-2xl font-bold tracking-tight">Earnings</h1>
         <p className="text-muted-foreground">
-          Commissions and payouts across your {ctx.junctionIds.length} diviner
-          partnership{ctx.junctionIds.length === 1 ? "" : "s"}.
+          Commissions across your {junctionIds.length} diviner partnership
+          {junctionIds.length === 1 ? "" : "s"}
+          {junctionIds.length > 0 ? " plus general-program credits." : " — general-program credits only."}
         </p>
       </header>
 
@@ -154,6 +174,7 @@ export default async function AffiliateEarningsPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Date</TableHead>
+                    <TableHead>Source</TableHead>
                     <TableHead>Booking</TableHead>
                     <TableHead className="text-right">Order amount</TableHead>
                     <TableHead className="text-right">Rate</TableHead>
@@ -162,11 +183,22 @@ export default async function AffiliateEarningsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {commissions.map((c) => (
+                  {(commissions as Array<{
+                    id: string;
+                    booking_id: string | null;
+                    order_amount_cents: number | null;
+                    commission_amount_cents: number | null;
+                    rate_type_used: "percent" | "flat" | null;
+                    rate_value_used: number | string | null;
+                    reversed_at: string | null;
+                    converted_at: string;
+                    campaign: EarningsCampaignSub | EarningsCampaignSub[] | null;
+                  }>).map((c) => (
                     <TableRow key={c.id}>
-                      <TableCell>{formatDate(c.created_at)}</TableCell>
+                      <TableCell>{formatDate(c.converted_at)}</TableCell>
+                      <TableCell className="text-sm">{sourceLabel(c.campaign)}</TableCell>
                       <TableCell className="font-mono text-xs">
-                        {(c.booking_id as string | null)?.slice(0, 8) ?? "—"}
+                        {c.booking_id?.slice(0, 8) ?? "—"}
                       </TableCell>
                       <TableCell className="text-right">
                         {formatCents(Number(c.order_amount_cents ?? 0))}

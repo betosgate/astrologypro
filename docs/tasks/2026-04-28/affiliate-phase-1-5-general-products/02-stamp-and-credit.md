@@ -1,6 +1,6 @@
 # Task 02 — Stamp Logic + Conversion Credit
 
-- Status: Not Started
+- Status: Code complete 2026-04-30 (commit `87b4db7d`, no `deploy:` keyword — checkpoint only). Six files: `affiliate-stamp.ts`, `affiliate-attribution.ts`, `booking-payment/route.ts`, `webhooks/route.ts`, `analytics/track/route.ts`, `types/affiliate-assignment.ts`. Awaiting Task 04+ + final deploy.
 - Priority: P0
 - Depends on: 01
 - Blocks: 03, 04, 05, 08
