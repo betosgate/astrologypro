@@ -155,10 +155,18 @@ export default async function CommunityFamilyMemberPage({ params }: PageProps) {
   const familyMember = familyRow as unknown as FamilyMemberRow;
   const isSelf = (familyMember.relationship ?? "").toLowerCase() === "self";
   const hasSavedChart = deriveNatalReportState(familyMember) === "generated";
-  const savedNatalReport =
-    familyMember.natal_report_id
-      ? await loadLinkedNatalReport(familyMember.id)
+  const linkedNatalReport = familyMember.natal_report_id
+    ? await loadLinkedNatalReport(familyMember.id)
+    : null;
+  const legacyNatalReport =
+    !linkedNatalReport && familyMember.natal_chart
+      ? {
+          toolname: NATAL_TAB_SLUG,
+          natal_chart: familyMember.natal_chart,
+          astro_api_data: { natal_chart_data: familyMember.natal_chart },
+        }
       : null;
+  const savedNatalReport = linkedNatalReport ?? legacyNatalReport;
 
   // Profile completion ring — legacy helper reused verbatim.
   const completion = calcFamilyProfileCompletion({
@@ -440,9 +448,11 @@ export default async function CommunityFamilyMemberPage({ params }: PageProps) {
       {canRenderToolkit ? (
         <HoroscopeToolkitPage
           basePath={`/community/family/${familyMember.id}`}
+          apiBase="/api/community/horoscope"
           allowedSlugs={[NATAL_TAB_SLUG]}
           initialPrefill={encodedPrefill}
           initialSavedReport={savedNatalReport}
+          autoSubmitPrefill={!savedNatalReport}
           communityNatalFamilyMemberId={familyMember.id}
         />
       ) : (

@@ -505,7 +505,7 @@ export default function CommunityFamilyPage() {
                 : reportCta.kind === "retry"
                 ? "Retry Chart"
                 : reportCta.kind === "regenerate"
-                ? "Regenerate Chart"
+                ? "Update Chart"
                 : reportCta.kind === "generating"
                 ? "Generating Chart..."
                 : reportCta.kind === "locked"
