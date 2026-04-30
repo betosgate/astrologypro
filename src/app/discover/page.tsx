@@ -226,7 +226,11 @@ async function getTemplateMatchedDiviners(templateSlug: string): Promise<{
 
   const publishedDivinerIds = new Set((divinerServices ?? []).map((row) => row.diviner_id as string));
 
-  const visibleServices = (services as Array<Record<string, unknown>>).filter((row) => {
+  const serviceRows = (services ?? []) as unknown as Array<
+    Record<string, unknown>
+  >;
+
+  const visibleServices = serviceRows.filter((row) => {
     const divinerId = (row.diviner_id as string) ?? "";
     if (!publishedDivinerIds.has(divinerId)) return false;
 
