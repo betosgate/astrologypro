@@ -1,6 +1,6 @@
 # Task 01 — Schema Migration
 
-- Status: Code shipped 2026-04-30 (commits `ab47cb76` + hotfix `1c938875` + Task-04-driven follow-up dropping `tracking_links.diviner_id` NOT NULL); admin migration runner has yet to apply. ID: `20260430000002_affiliate_phase_1_5_general`. Spec deviations recorded in migration header: (1) `commission_type` CHECK uses `('percent','flat')` to match v2 stamp pipeline (§10 wrote 'percentage' which would break booking inserts); (2) `tracking_links.diviner_id` made NULLable so general campaigns can insert their tracking row (spec didn't mention this — caught when implementing Task 04).
+- Status: Code shipped 2026-04-30 (commits `ab47cb76` + hotfix `1c938875` + Task-04-driven follow-up dropping `tracking_links.diviner_id` NOT NULL + Task-06-driven follow-up extending `admin_action_log` for the bulk-rate audit row); admin migration runner has yet to apply. ID: `20260430000002_affiliate_phase_1_5_general`. Spec deviations recorded in migration header: (1) `commission_type` CHECK uses `('percent','flat')` to match v2 stamp pipeline (§10 wrote 'percentage' which would break booking inserts); (2) `tracking_links.diviner_id` made NULLable so general campaigns can insert their tracking row; (3) `admin_action_log.target_resource_id` made NULLable + new `payload JSONB` column + `action_kind` CHECK extended with `service_templates_bulk_commission_update` so the bulk-rate endpoint can audit-log multi-row updates without a single target.
 - Priority: P0
 - Depends on: —
 - Blocks: 02, 03, 04, 05, 06, 07, 08

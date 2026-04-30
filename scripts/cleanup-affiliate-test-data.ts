@@ -49,6 +49,7 @@ const EMAIL_PATTERNS = [
   "v2-smoke+%@test.astrologypro.com",
   "rls-%@test.astrologypro.com",
   "probe-%@test.astrologypro.com",
+  "phase15-%@test.astrologypro.com",
 ];
 
 // Slug / username patterns derived from the same NS prefixes.
@@ -56,6 +57,8 @@ const SLUG_PATTERNS = [
   "v2-smoke-%",
   "rls-%",
   "probe-%",
+  "phase15-%",
+  "general-phase15-%",
 ];
 
 async function listTestAuthUsers(): Promise<{ id: string; email: string }[]> {

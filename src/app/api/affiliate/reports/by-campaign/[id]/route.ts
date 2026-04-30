@@ -62,15 +62,18 @@ export async function GET(
   const since = reportPeriodSince(period);
 
   // Aggregates + recent rows for the period.
+  // Bug-fix (Task 07): real column on campaign_conversions is
+  // `converted_at`, not `created_at`. Pre-existing endpoint queried
+  // the wrong name.
   let convQuery = admin
     .from("campaign_conversions")
     .select(
-      "id, booking_id, order_amount_cents, commission_amount_cents, rate_type_used, rate_value_used, reversed_at, created_at",
+      "id, booking_id, order_amount_cents, commission_amount_cents, rate_type_used, rate_value_used, reversed_at, converted_at",
     )
     .eq("campaign_id", campaignId)
-    .order("created_at", { ascending: false })
+    .order("converted_at", { ascending: false })
     .limit(50);
-  if (since) convQuery = convQuery.gte("created_at", since);
+  if (since) convQuery = convQuery.gte("converted_at", since);
 
   let clicksAggQuery = admin
     .from("campaign_clicks")

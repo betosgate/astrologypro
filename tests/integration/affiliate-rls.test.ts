@@ -922,3 +922,288 @@ test("rls: affiliate_campaigns — affiliate cannot INSERT for someone else's ju
     await teardown(t);
   }
 });
+
+// ──────────────────────────────────────────────────────────────────────
+// Phase 1.5 — general-campaign RLS isolation (Task 08, Part B)
+// ──────────────────────────────────────────────────────────────────────
+//
+// Each test sets up its own minimal Tenancy + general campaign /
+// conversion for the affiliate(s) it needs, runs queries through the
+// auth-as-affiliate / auth-as-diviner client, and tears down. Tenancy
+// fixture intentionally NOT extended — keeps the existing 12 cases
+// untouched and avoids cleanup-order ripple.
+
+async function insertGeneralCampaignFor(
+  ownerAccountId: string,
+  templateId: string,
+): Promise<{ id: string; code: string }> {
+  const code = genCode();
+  const { data: cmp, error } = await sr
+    .from("affiliate_campaigns")
+    .insert({
+      diviner_id: null,
+      name: "RLS general campaign",
+      status: "active",
+      commission_type: "percentage",
+      commission_value: 0,
+      owner_type: "affiliate",
+      owner_affiliate_id: null,
+      owner_affiliate_type: "general",
+      owner_affiliate_account_id: ownerAccountId,
+      source_assignment_id: null,
+      destination_type: "SERVICE",
+      destination_service_template_id: templateId,
+      campaign_code: code,
+      share_url: `https://astrologypro.com/r/${code}`,
+      start_date: new Date().toISOString(),
+    })
+    .select("id")
+    .single();
+  if (error) throw new Error(`general campaign insert failed: ${error.message}`);
+  return { id: (cmp as { id: string }).id, code };
+}
+
+async function insertGeneralConversionFor(
+  ownerAccountId: string,
+  campaignId: string,
+): Promise<string> {
+  // Direct INSERT through service-role bypassing RLS to seed a row;
+  // tests below verify the SELECT side under affiliate auth.
+  const { data: row, error } = await sr
+    .from("campaign_conversions")
+    .insert({
+      campaign_id: campaignId,
+      affiliate_id: null,
+      affiliate_type: "general",
+      affiliate_account_id: ownerAccountId,
+      booking_id: null,
+      ref_code_snapshot: null,
+      order_reference: `rls-general-${Date.now()}`,
+      order_amount_cents: 10000,
+      commission_amount_cents: 1500,
+      commission_source: "campaign_assignment",
+      rate_type_used: "percent",
+      rate_value_used: 15,
+    })
+    .select("id")
+    .single();
+  if (error) throw new Error(`general conversion insert failed: ${error.message}`);
+  return (row as { id: string }).id;
+}
+
+test("phase 1.5 rls: affiliate sees own general campaign", async () => {
+  const t = await setup();
+  try {
+    const { id: cmpId } = await insertGeneralCampaignFor(
+      t.affiliate1.accountId,
+      t.templateA,
+    );
+
+    const aff1 = await authAs(t.affiliate1.email);
+    const { data, error } = await aff1
+      .from("affiliate_campaigns")
+      .select("id, owner_affiliate_type")
+      .eq("id", cmpId);
+    assert.equal(error, null);
+    assert.equal((data ?? []).length, 1, "Affiliate 1 should see their own general campaign");
+    assert.equal(data![0]!.owner_affiliate_type, "general");
+
+    await sr.from("affiliate_campaigns").delete().eq("id", cmpId);
+  } finally {
+    await teardown(t);
+  }
+});
+
+test("phase 1.5 rls: affiliate cannot see another affiliate's general campaign", async () => {
+  const t = await setup();
+  try {
+    const { id: cmpId } = await insertGeneralCampaignFor(
+      t.affiliate1.accountId,
+      t.templateA,
+    );
+
+    const aff2 = await authAs(t.affiliate2.email);
+    const { data, error } = await aff2
+      .from("affiliate_campaigns")
+      .select("id")
+      .eq("id", cmpId);
+    assert.equal(error, null);
+    assert.equal(
+      (data ?? []).length,
+      0,
+      "Affiliate 2 must NOT see Affiliate 1's general campaign",
+    );
+
+    await sr.from("affiliate_campaigns").delete().eq("id", cmpId);
+  } finally {
+    await teardown(t);
+  }
+});
+
+test("phase 1.5 rls: diviner cannot see general campaigns (anti-leakage per §10 decision #5)", async () => {
+  const t = await setup();
+  try {
+    // Affiliate 1 IS partnered with Diviner A (via junctionAId), but a
+    // general campaign owned by their account must NOT appear in
+    // Diviner A's view of affiliate_campaigns.
+    const { id: cmpId } = await insertGeneralCampaignFor(
+      t.affiliate1.accountId,
+      t.templateA,
+    );
+
+    const divA = await authAs(t.divinerA.email);
+    const { data, error } = await divA
+      .from("affiliate_campaigns")
+      .select("id, owner_affiliate_type")
+      .eq("id", cmpId);
+    assert.equal(error, null);
+    assert.equal(
+      (data ?? []).length,
+      0,
+      "Diviner A must NOT see Affiliate 1's general campaign",
+    );
+
+    await sr.from("affiliate_campaigns").delete().eq("id", cmpId);
+  } finally {
+    await teardown(t);
+  }
+});
+
+test("phase 1.5 rls: affiliate INSERT general for own account works; for another's blocked", async () => {
+  const t = await setup();
+  try {
+    const aff1 = await authAs(t.affiliate1.email);
+
+    // Try to insert a general campaign owned by Affiliate 2 — should
+    // be blocked by the WITH CHECK on affiliate_inserts_own_campaigns.
+    const hijackCode = genCode();
+    const { data: bad, error: badErr } = await aff1
+      .from("affiliate_campaigns")
+      .insert({
+        diviner_id: null,
+        name: "RLS hijack attempt",
+        status: "active",
+        commission_type: "percentage",
+        commission_value: 0,
+        owner_type: "affiliate",
+        owner_affiliate_id: null,
+        owner_affiliate_type: "general",
+        owner_affiliate_account_id: t.affiliate2.accountId,
+        source_assignment_id: null,
+        destination_type: "SERVICE",
+        destination_service_template_id: t.templateA,
+        campaign_code: hijackCode,
+        share_url: `https://astrologypro.com/r/${hijackCode}`,
+        start_date: new Date().toISOString(),
+      })
+      .select("id");
+    // Either the INSERT errors (RLS rejects) OR returns 0 affected
+    // rows. Both outcomes prove isolation; supabase-js usually surfaces
+    // the RLS rejection as an error.
+    if (badErr === null) {
+      assert.equal(
+        (bad ?? []).length,
+        0,
+        "INSERT for another affiliate's account must not produce a row",
+      );
+    }
+
+    // Sanity: nothing actually exists with that code.
+    const { data: leak } = await sr
+      .from("affiliate_campaigns")
+      .select("id")
+      .eq("campaign_code", hijackCode);
+    assert.equal((leak ?? []).length, 0);
+
+    // Now insert a legitimate general campaign for the caller's own
+    // account — should succeed.
+    const ownCode = genCode();
+    const { error: okErr, data: okRow } = await aff1
+      .from("affiliate_campaigns")
+      .insert({
+        diviner_id: null,
+        name: "RLS own general",
+        status: "active",
+        commission_type: "percentage",
+        commission_value: 0,
+        owner_type: "affiliate",
+        owner_affiliate_id: null,
+        owner_affiliate_type: "general",
+        owner_affiliate_account_id: t.affiliate1.accountId,
+        source_assignment_id: null,
+        destination_type: "SERVICE",
+        destination_service_template_id: t.templateA,
+        campaign_code: ownCode,
+        share_url: `https://astrologypro.com/r/${ownCode}`,
+        start_date: new Date().toISOString(),
+      })
+      .select("id")
+      .single();
+    assert.equal(okErr, null, `INSERT for own account should succeed: ${okErr?.message}`);
+    assert.ok(okRow);
+
+    await sr
+      .from("affiliate_campaigns")
+      .delete()
+      .eq("campaign_code", ownCode);
+  } finally {
+    await teardown(t);
+  }
+});
+
+test("phase 1.5 rls: affiliate sees own general conversion", async () => {
+  const t = await setup();
+  try {
+    const { id: cmpId } = await insertGeneralCampaignFor(
+      t.affiliate1.accountId,
+      t.templateA,
+    );
+    const convId = await insertGeneralConversionFor(t.affiliate1.accountId, cmpId);
+
+    const aff1 = await authAs(t.affiliate1.email);
+    const { data, error } = await aff1
+      .from("campaign_conversions")
+      .select("id, affiliate_type")
+      .eq("id", convId);
+    assert.equal(error, null);
+    assert.equal(
+      (data ?? []).length,
+      1,
+      "Affiliate 1 should see their own general conversion",
+    );
+    assert.equal(data![0]!.affiliate_type, "general");
+
+    await sr.from("campaign_conversions").delete().eq("id", convId);
+    await sr.from("affiliate_campaigns").delete().eq("id", cmpId);
+  } finally {
+    await teardown(t);
+  }
+});
+
+test("phase 1.5 rls: affiliate cannot see another affiliate's general conversion", async () => {
+  const t = await setup();
+  try {
+    const { id: cmpId } = await insertGeneralCampaignFor(
+      t.affiliate1.accountId,
+      t.templateA,
+    );
+    const convId = await insertGeneralConversionFor(t.affiliate1.accountId, cmpId);
+
+    const aff2 = await authAs(t.affiliate2.email);
+    const { data, error } = await aff2
+      .from("campaign_conversions")
+      .select("id")
+      .eq("id", convId);
+    assert.equal(error, null);
+    assert.equal(
+      (data ?? []).length,
+      0,
+      "Affiliate 2 must NOT see Affiliate 1's general conversion",
+    );
+
+    await sr.from("campaign_conversions").delete().eq("id", convId);
+    await sr.from("affiliate_campaigns").delete().eq("id", cmpId);
+  } finally {
+    await teardown(t);
+  }
+});

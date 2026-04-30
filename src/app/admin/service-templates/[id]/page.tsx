@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { TemplateForm } from "../_components/template-form";
 import type { TemplateFormData } from "../_components/template-form";
 import { TemplatePublicUrlActions } from "../_components/template-public-url-actions";
+import { AffiliateProgramCard } from "../_components/affiliate-program-card";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -184,6 +185,25 @@ export default async function EditServiceTemplatePage({ params }: Props) {
           divinerCount={divinerCount}
         />
       </div>
+
+      {/* Phase 1.5: affiliate program controls — general templates only.
+          Falls back to is_general column when present (post-migration);
+          while the migration hasn't run we use the slug heuristic. */}
+      {(template.is_general === true ||
+        (template.is_general == null && isGeneralTemplate)) && (
+        <AffiliateProgramCard
+          templateId={template.id}
+          initialEnabled={template.affiliate_program_enabled === true}
+          initialCommissionType={
+            (template.commission_type as "percent" | "flat" | null | undefined) ?? null
+          }
+          initialCommissionValue={
+            template.commission_value != null
+              ? Number(template.commission_value)
+              : null
+          }
+        />
+      )}
     </div>
   );
 }

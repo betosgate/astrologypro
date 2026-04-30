@@ -413,10 +413,11 @@ export default function AddMemberPage() {
               { key: "additional_info", label: "Other Notes" },
             ].map(({ key, label }) => (
               <div key={key} className="space-y-2">
-                <Label htmlFor={key}>{label}</Label>
+                <Label htmlFor={key} className="text-sm">{label}</Label>
                 <Textarea
                   id={key}
-                  rows={2}
+                  rows={1}
+                  className="resize-none min-h-[52px]"
                   value={(form as Record<string, string>)[key] ?? ""}
                   onChange={(e) => set(key, e.target.value)}
                   placeholder={label}
