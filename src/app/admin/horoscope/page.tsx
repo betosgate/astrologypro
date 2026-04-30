@@ -2821,6 +2821,14 @@ export interface HoroscopeToolkitPageProps {
   readOnlyBirthData?: boolean;
   communityNatalFamilyMemberId?: string | null;
   /**
+   * Community monthly-report linkage. When both values are set and the
+   * active toolkit slug is tropical_transits_monthly_v3, a successful
+   * generation posts the full payload to the monthly link endpoint so
+   * monthly_transits.full_report_id is updated atomically.
+   */
+  communityMonthlyFamilyMemberId?: string | null;
+  communityMonthlyMonthKey?: string | null;
+  /**
    * Community relationship-report linkage. When BOTH ids are set AND the
    * active toolkit slug is one of the relationship slugs (romantic /
    * friendship / business), a successful generation will POST the full
@@ -2841,6 +2849,8 @@ export function HoroscopeToolkitPage({
   autoSubmitPrefill = true,
   readOnlyBirthData = false,
   communityNatalFamilyMemberId = null,
+  communityMonthlyFamilyMemberId = null,
+  communityMonthlyMonthKey = null,
   communityRelationshipPersonAId = null,
   communityRelationshipPersonBId = null,
 }: HoroscopeToolkitPageProps = {}) {
@@ -3848,7 +3858,34 @@ export function HoroscopeToolkitPage({
             : {}),
         };
 
-        if (
+        const isCommunityMonthlyReport =
+          currentTab.slug === "tropical_transits_monthly_v3" &&
+          Boolean(communityMonthlyFamilyMemberId) &&
+          Boolean(communityMonthlyMonthKey);
+
+        if (isCommunityMonthlyReport) {
+          addProgress("Saving monthly report…");
+          const linkRes = await fetch("/api/community/saved-reports/monthly/link", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              familyMemberId: communityMonthlyFamilyMemberId,
+              monthKey: communityMonthlyMonthKey,
+              payload: finalSavePayload,
+            }),
+          });
+
+          if (!linkRes.ok) {
+            const body = await linkRes.json().catch(() => null);
+            throw new Error(
+              typeof body?.error === "string"
+                ? body.error
+                : "Failed to save monthly report"
+            );
+          }
+
+          router.refresh();
+        } else if (
           communityRelationshipPersonAId &&
           communityRelationshipPersonBId &&
           isRelationshipSlug(currentTab.slug)
@@ -3893,6 +3930,11 @@ export function HoroscopeToolkitPage({
       } catch (saveErr) {
         console.error("Universal save error:", saveErr);
         if (
+          (
+            currentTab.slug === "tropical_transits_monthly_v3" &&
+            communityMonthlyFamilyMemberId &&
+            communityMonthlyMonthKey
+          ) ||
           communityRelationshipPersonAId &&
           communityRelationshipPersonBId &&
           isRelationshipSlug(currentTab.slug)

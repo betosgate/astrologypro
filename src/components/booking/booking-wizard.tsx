@@ -154,6 +154,13 @@ const INITIAL_DETAILS: BookingDetails = {
   notes: "",
 };
 
+function readCookie(name: string): string | undefined {
+  if (typeof document === "undefined") return undefined;
+  const prefix = `${encodeURIComponent(name)}=`;
+  const row = document.cookie.split("; ").find((c) => c.startsWith(prefix));
+  return row ? decodeURIComponent(row.slice(prefix.length)) : undefined;
+}
+
 function formatSlotDate(iso: string, timezone: string): string {
   return formatInTimezone(iso, timezone, {
     weekday: "long",
@@ -554,8 +561,12 @@ export function BookingWizard({
     setError(null);
 
     try {
+      // Spec §3.8 step 1: URL ?ref= wins (last-touch via fresh click);
+      // fall back to aff_ref cookie set at /r/<code> for organic returns.
       const urlParams = new URLSearchParams(window.location.search);
-      const affiliateCode = urlParams.get("ref") || undefined;
+      const refFromUrl = urlParams.get("ref") || undefined;
+      const refFromCookie = readCookie("aff_ref");
+      const refCode = refFromUrl ?? refFromCookie ?? undefined;
 
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 30_000);
@@ -581,7 +592,7 @@ export function BookingWizard({
             ...(bookingDetails.birthLng != null ? { birthLng: bookingDetails.birthLng } : {}),
             ...(bookingDetails.birthTimezone ? { birthTimezone: bookingDetails.birthTimezone } : {}),
           },
-          affiliateCode,
+          refCode,
           policyAcknowledgedAt: policyAcknowledged ? new Date().toISOString() : undefined,
           // Signal that this slot is not linked to any service — the API will skip charging.
           freeSlot: slotIsUnscoped ? true : undefined,

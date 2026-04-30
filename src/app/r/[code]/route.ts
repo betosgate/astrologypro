@@ -227,5 +227,20 @@ export async function GET(
     if (clickData.utm_campaign) redirectUrl.searchParams.set("utm_campaign", clickData.utm_campaign);
   }
 
-  return NextResponse.redirect(redirectUrl, 307);
+  const response = NextResponse.redirect(redirectUrl, 307);
+
+  // Spec §3.8 step 1: persist ref through the checkout flow via cookie.
+  // 30-day attribution window; set only on the happy campaign-link path
+  // so revoked/inactive/non-campaign redirects don't leak attribution.
+  if (isCampaignLink) {
+    response.cookies.set("aff_ref", code, {
+      maxAge: 60 * 60 * 24 * 30,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      httpOnly: false,
+      path: "/",
+    });
+  }
+
+  return response;
 }

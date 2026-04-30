@@ -4,6 +4,7 @@ import { ensureCurrentMonthTransitsForMember } from "@/lib/community/ensure-mont
 import { isValidMonthlyTransit } from "@/lib/community/chart-validators";
 import {
   deriveMonthlyReportState,
+  deriveNatalReportState,
   ctaForState,
 } from "@/lib/community/chart-report-state";
 import {
@@ -53,10 +54,12 @@ type TransitRow = {
   community_family_members: { full_name: string };
 };
 
-const PLANET_GLYPHS: Record<string, string> = {
-  Sun: "☉", Moon: "☽", Mercury: "☿", Venus: "♀",
-  Mars: "♂", Jupiter: "♃", Saturn: "♄", Uranus: "♅",
-  Neptune: "♆", Pluto: "♇",
+type FamilyTransitOwner = {
+  id: string;
+  natal_chart: unknown;
+  natal_status: string | null;
+  natal_report_id: string | null;
+  natal_report_status: string | null;
 };
 
 export default async function TransitsPage() {
@@ -81,11 +84,13 @@ export default async function TransitsPage() {
   // ── Get this member's household family IDs ────────────────────────────
   const { data: familyRows } = await supabase
     .from("community_family_members")
-    .select("id, natal_chart, natal_status")
+    .select("id, natal_chart, natal_status, natal_report_id, natal_report_status")
     .eq("member_id", member.id);
 
-  const allFamilyIds = (familyRows ?? []).map((f) => f.id);
-  const eligibleFamily = (familyRows ?? []).filter(
+  const familyOwners = (familyRows ?? []) as FamilyTransitOwner[];
+  const familyOwnerById = new Map(familyOwners.map((f) => [f.id, f]));
+  const allFamilyIds = familyOwners.map((f) => f.id);
+  const eligibleFamily = familyOwners.filter(
     (f) => f.natal_status === "generated" && f.natal_chart != null
   );
 
@@ -155,16 +160,43 @@ export default async function TransitsPage() {
     const hasSavedFullReport = Boolean(row.full_report_id);
     const fullReportCta = (() => {
       if (row.full_report_status === "failed") {
-        return { label: "Retry Full Report", kind: "retry" as const };
+        return { label: "Retry Transit Report", kind: "retry" as const };
       }
       if (hasSavedFullReport) {
-        return { label: "View Full Report", kind: "view" as const };
+        return { label: "View Transit Report", kind: "view" as const };
       }
-      return { label: "Generate Full Report", kind: "generate" as const };
+      return { label: "Generate Transit Report", kind: "generate" as const };
     })();
     const detailedHref = `/community/transits/detailed?familyMemberId=${row.family_member_id}&month=${row.month}`;
+    const chartHref = `/community/family/${row.family_member_id}`;
     const isPending = reportState === "generating";
     const ctaDisabledBase = ctaForState(reportState).disabled;
+    const chartOwner = familyOwnerById.get(row.family_member_id);
+    const chartState = deriveNatalReportState({
+      natal_chart: chartOwner?.natal_chart,
+      natal_status: chartOwner?.natal_status,
+      natal_report_id: chartOwner?.natal_report_id,
+      natal_report_status: chartOwner?.natal_report_status,
+    });
+    const chartCta = ctaForState(chartState);
+    const chartCtaLabel =
+      chartCta.kind === "view"
+        ? "View Natal Chart"
+        : chartCta.kind === "retry"
+        ? "Retry Natal Chart"
+        : chartCta.kind === "regenerate"
+        ? "Update Natal Chart"
+        : chartCta.kind === "generating"
+        ? "Generating Natal Chart..."
+        : chartCta.kind === "locked"
+        ? "Review Natal Chart"
+        : "Generate Natal Chart";
+    const reportStatusLabel = (() => {
+      if (row.full_report_status === "failed") return "Full report needs attention";
+      if (hasSavedFullReport) return "Full report saved";
+      if (isPending) return "Summary generating";
+      return "Full report not generated yet";
+    })();
 
     return {
       id: row.id,
@@ -174,20 +206,15 @@ export default async function TransitsPage() {
       challengingCount,
       fullReportCta,
       detailedHref,
+      chartHref,
+      chartCtaLabel,
+      chartCtaDisabled: chartCta.disabled,
       isPending,
       ctaDisabledBase,
       hasSavedFullReport,
       month: row.month,
-      highlights: data.highlights,
-      planets: data.planets.map((p) => ({
-        name: p.name,
-        glyph: PLANET_GLYPHS[p.name] ?? "●",
-        sign: p.sign,
-        degree: p.degree,
-        retrograde: p.retrograde,
-        aspectCount: p.aspects.length,
-        hasChallenging: p.aspects.some((a) => !a.isHarmonious),
-      })),
+      reportStatusLabel,
+      highlights: data.highlights.slice(0, 3),
     };
   });
 
