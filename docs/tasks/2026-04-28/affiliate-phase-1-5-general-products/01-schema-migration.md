@@ -1,6 +1,6 @@
 # Task 01 — Schema Migration
 
-- Status: Not Started
+- Status: Code shipped 2026-04-30 (commit `ab47cb76` + hotfix `1c938875`); admin migration runner has yet to apply on dev/prod. ID: `20260430000002_affiliate_phase_1_5_general`. Spec deviation: `commission_type` CHECK uses `('percent','flat')` to match v2 stamp pipeline (spec §10 wrote 'percentage' which would break booking inserts).
 - Priority: P0
 - Depends on: —
 - Blocks: 02, 03, 04, 05, 06, 07, 08
