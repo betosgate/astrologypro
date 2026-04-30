@@ -324,7 +324,7 @@ export default async function TransitsPage() {
       )}
 
       {/* Members with incomplete birth data — visible but actionable */}
-      {incompleteFamily.length > 0 && (
+      {/* {incompleteFamily.length > 0 && (
         <div className="space-y-3">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <AlertCircle className="size-4" />
@@ -354,7 +354,7 @@ export default async function TransitsPage() {
             ))}
           </div>
         </div>
-      )}
+      )} */}
     </div>
   );
 }

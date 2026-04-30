@@ -35,6 +35,11 @@ import {
 import { Loader2 } from "lucide-react";
 import { ReportsTabs } from "../_components/reports-tabs";
 
+type ClickCampaignSub = {
+  owner_affiliate_type: "diviner_affiliate" | "social_advocate" | "general" | null;
+  template: { name: string } | { name: string }[] | null;
+};
+
 interface Click {
   id: string;
   campaign_id: string;
@@ -44,13 +49,27 @@ interface Click {
   destination_id: string | null;
   affiliate_id: string | null;
   affiliate_type: string | null;
-  ip: string | null;
-  country: string | null;
+  // Real column names: ip_hash, country_code, referrer_url. The pre-
+  // existing report shipped with `ip`/`country`/`referrer` (which don't
+  // exist), so the report was returning DB errors; corrected in Task 07.
+  ip_hash: string | null;
+  country_code: string | null;
   user_agent: string | null;
-  referrer: string | null;
+  referrer_url: string | null;
   is_bot: boolean;
   is_unique_click: boolean;
   created_at: string;
+  campaign: ClickCampaignSub | ClickCampaignSub[] | null;
+}
+
+function clickSourceLabel(row: Click): string {
+  const c = Array.isArray(row.campaign) ? row.campaign[0] : row.campaign;
+  if (!c) return row.diviner_id ? "Diviner" : "—";
+  if (c.owner_affiliate_type === "general") {
+    const t = Array.isArray(c.template) ? c.template[0] : c.template;
+    return `General: ${t?.name ?? "Unknown template"}`;
+  }
+  return "Diviner";
 }
 
 function fmtDateTime(iso: string) {
@@ -238,6 +257,7 @@ export default function AdminReportsClicksPage() {
                       <TableHead>When</TableHead>
                       <TableHead>Campaign</TableHead>
                       <TableHead>Country</TableHead>
+                      <TableHead>Source</TableHead>
                       <TableHead>Affiliate</TableHead>
                       <TableHead>Bot?</TableHead>
                       <TableHead>Unique?</TableHead>
@@ -253,8 +273,9 @@ export default function AdminReportsClicksPage() {
                           {r.campaign_code ?? r.campaign_id}
                         </TableCell>
                         <TableCell className="font-mono text-xs">
-                          {r.country ?? "—"}
+                          {r.country_code ?? "—"}
                         </TableCell>
+                        <TableCell className="text-sm">{clickSourceLabel(r)}</TableCell>
                         <TableCell className="font-mono text-xs">
                           {r.affiliate_id ?? "—"}
                         </TableCell>

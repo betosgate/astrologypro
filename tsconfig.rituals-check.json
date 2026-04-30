@@ -5,23 +5,12 @@
     "incremental": false
   },
   "include": [
-    "src/app/api/join/diviner/register/route.ts",
-    "src/app/api/join/diviner/checkout/route.ts",
-    "src/app/join/diviner/page.tsx",
-    "src/app/join/diviner/plan/page.tsx",
-    "src/app/join/diviner/success/page.tsx",
-    "src/lib/invited-diviner-upgrade.ts",
-    "src/app/api/stripe/webhooks/route.ts",
-    "src/app/dashboard/layout.tsx",
-    "src/lib/auth/resolve-login-destination.ts",
-    "src/app/api/admin/invitations/route.ts",
-    "src/app/api/admin/invitations/[id]/route.ts",
-    "src/app/api/admin/invitations/[id]/resend/route.ts",
-    "src/components/admin/invitations-client.tsx",
-    "src/app/admin/invitations/page.tsx",
-    "src/app/api/auth/post-login-redirect/route.ts",
-    "src/app/auth/callback/route.ts",
-    "src/app/onboarding/layout.tsx",
-    "src/app/join/page.tsx"
+    "src/app/api/community/astro-charts/route.ts",
+    "src/components/community/astro-charts-section.tsx",
+    "src/lib/community/birth-data-readiness.ts",
+    "src/lib/community/chart-validators.ts",
+    "src/lib/community/chart-report-state.ts",
+    "src/app/community/transits/page.tsx",
+    "src/app/community/page.tsx"
   ]
 }

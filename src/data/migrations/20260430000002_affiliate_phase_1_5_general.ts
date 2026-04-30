@@ -189,6 +189,32 @@ CREATE POLICY affiliate_updates_own_campaigns
       AND owner_affiliate_account_id = public.current_affiliate_account_id())
   );
 
+-- ─── 5b. admin_action_log: extensions for bulk template-rate updates ─────
+-- Phase 1.5 introduces a bulk endpoint at /api/admin/service-templates/
+-- bulk-set-commission that updates many rows in one shot. Three small
+-- changes to admin_action_log so the bulk action can be audited:
+--   (a) action_kind enum gains 'service_templates_bulk_commission_update'
+--   (b) target_resource_id loses NOT NULL (bulk actions hit many rows)
+--   (c) new payload JSONB column carries structured action params
+-- All idempotent; existing rows pass the new CHECK unchanged.
+
+ALTER TABLE admin_action_log
+  ALTER COLUMN target_resource_id DROP NOT NULL;
+
+ALTER TABLE admin_action_log
+  ADD COLUMN IF NOT EXISTS payload JSONB;
+
+ALTER TABLE admin_action_log
+  DROP CONSTRAINT IF EXISTS admin_action_log_action_kind_check;
+ALTER TABLE admin_action_log
+  ADD CONSTRAINT admin_action_log_action_kind_check
+  CHECK (action_kind IN (
+    'affiliate_assignment_revoked',
+    'affiliate_campaign_archived',
+    'affiliate_conversion_reversed',
+    'service_templates_bulk_commission_update'
+  ));
+
 -- ─── 6. RLS on campaign_conversions: add general-account SELECT ────────────
 -- The existing affiliate_sees_own_conversions policy from 20260427000004
 -- covers per-diviner credits via the junction. Add a parallel policy for
@@ -254,6 +280,20 @@ BEGIN
        WHERE table_schema='public' AND table_name='tracking_links'
          AND column_name='diviner_id') <> 'YES' THEN
     RAISE EXCEPTION 'tracking_links.diviner_id NOT NULL was not dropped';
+  END IF;
+  -- admin_action_log.payload column added.
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema='public' AND table_name='admin_action_log'
+      AND column_name='payload'
+  ) THEN
+    RAISE EXCEPTION 'admin_action_log.payload not added';
+  END IF;
+  -- admin_action_log.target_resource_id should now be nullable.
+  IF (SELECT is_nullable FROM information_schema.columns
+       WHERE table_schema='public' AND table_name='admin_action_log'
+         AND column_name='target_resource_id') <> 'YES' THEN
+    RAISE EXCEPTION 'admin_action_log.target_resource_id NOT NULL was not dropped';
   END IF;
 END
 $check$;

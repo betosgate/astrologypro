@@ -137,6 +137,60 @@ export async function PATCH(
     errors.seo_description = "SEO description must be 160 characters or fewer";
   }
 
+  // Phase 1.5: per-template affiliate program config. Only meaningful on
+  // general templates (is_general=true). Diviner-specific rows reject the
+  // fields with `field_not_applicable` so the admin can't silently set
+  // values that the stamp resolver will never read.
+  const isGeneralTemplate = existing.is_general === true;
+  const affiliateFieldsTouched =
+    "affiliate_program_enabled" in body ||
+    "commission_type" in body ||
+    "commission_value" in body;
+
+  if (affiliateFieldsTouched && !isGeneralTemplate) {
+    errors.affiliate_program_enabled =
+      "field_not_applicable: affiliate program fields are only meaningful on general templates";
+  } else if (affiliateFieldsTouched) {
+    if ("commission_type" in body) {
+      const ct = body.commission_type;
+      if (ct !== null && ct !== "percent" && ct !== "flat") {
+        errors.commission_type =
+          "validation_error: commission_type must be 'percent', 'flat', or null";
+      }
+    }
+    if ("commission_value" in body) {
+      const cv = body.commission_value;
+      if (cv !== null) {
+        const n = Number(cv);
+        if (!Number.isFinite(n) || n < 0) {
+          errors.commission_value =
+            "validation_error: commission_value must be a non-negative number or null";
+        } else {
+          // Resolve the effective type for sanity caps. Use the new value
+          // if being set in this PATCH; otherwise fall back to the
+          // existing column.
+          const effectiveType =
+            "commission_type" in body
+              ? body.commission_type
+              : existing.commission_type;
+          if (effectiveType === "percent" && n > 100) {
+            errors.commission_value = "percent_over_100: percentage rate cannot exceed 100";
+          }
+          // Sanity cap on flat: 100,000 cents = $1000 per spec table.
+          if (effectiveType === "flat" && n > 100000) {
+            errors.commission_value = "flat_over_cap: flat rate cannot exceed $1000 (100000 cents)";
+          }
+        }
+      }
+    }
+    if ("affiliate_program_enabled" in body) {
+      if (typeof body.affiliate_program_enabled !== "boolean") {
+        errors.affiliate_program_enabled =
+          "validation_error: affiliate_program_enabled must be true or false";
+      }
+    }
+  }
+
   if (Object.keys(errors).length > 0) {
     return NextResponse.json({ error: "Validation failed", details: errors }, { status: 422 });
   }
@@ -189,6 +243,20 @@ export async function PATCH(
   if ("form_enabled" in body) payload.form_enabled = body.form_enabled === true;
   if ("form_config" in body || "slug" in body || "category" in body) {
     payload.form_config = normalizedFormConfig;
+  }
+
+  // Phase 1.5: affiliate program columns (gated above to general templates only).
+  if ("affiliate_program_enabled" in body) {
+    payload.affiliate_program_enabled = body.affiliate_program_enabled === true;
+  }
+  if ("commission_type" in body) {
+    payload.commission_type = body.commission_type ?? null;
+  }
+  if ("commission_value" in body) {
+    payload.commission_value =
+      body.commission_value === null || body.commission_value === undefined
+        ? null
+        : Number(body.commission_value);
   }
 
   const { data: updated, error: updateErr } = await admin
