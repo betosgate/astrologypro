@@ -650,24 +650,26 @@ export default function AvailabilityPage() {
 
                 return (
                   <>
-                    <select
-                      id="av-duration"
-                      value={form.duration_minutes}
-                      onChange={(e) =>
+                    <Select
+                      value={form.duration_minutes.toString()}
+                      onValueChange={(v) =>
                         setForm((p) => ({
                           ...p,
-                          duration_minutes: Number(e.target.value),
+                          duration_minutes: Number(v),
                         }))
                       }
-                      aria-describedby="av-duration-help"
-                      className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
                     >
-                      {DURATION_OPTIONS.map((d) => (
-                        <option key={d} value={d}>
-                          {d} minutes
-                        </option>
-                      ))}
-                    </select>
+                      <SelectTrigger id="av-duration" className="w-full" aria-describedby="av-duration-help">
+                        <SelectValue placeholder="Select duration" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {DURATION_OPTIONS.map((d) => (
+                          <SelectItem key={d} value={d.toString()}>
+                            {d} minutes
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <p
                       id="av-duration-help"
                       className="text-xs text-muted-foreground"
