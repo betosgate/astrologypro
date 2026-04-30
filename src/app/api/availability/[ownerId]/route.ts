@@ -18,20 +18,27 @@ export async function GET(
   const allSlots = searchParams.get("allSlots") === "1";
   const debugBusy = searchParams.get("debugBusy") === "1";
 
-  if (!date || !duration) {
+  if (!date) {
     return NextResponse.json(
-      { error: "Missing required query params: date, duration" },
+      { error: "Missing required query param: date" },
       { status: 400 }
     );
   }
 
-  const durationMinutes = parseInt(duration, 10);
-  if (isNaN(durationMinutes) || durationMinutes <= 0) {
+  // Mirrors the month route: in `allSlots` mode the duration is just a
+  // stride and templates carry their own duration_minutes, so tolerate a
+  // missing/zero value (a misconfigured evergreen service with
+  // duration_minutes = 0 must not return 400 and blank out the calendar).
+  // Service-specific callers still must pass a valid duration.
+  const parsedDuration = duration != null ? parseInt(duration, 10) : NaN;
+  const durationValid = !isNaN(parsedDuration) && parsedDuration > 0;
+  if (!allSlots && !durationValid) {
     return NextResponse.json(
-      { error: "Invalid duration" },
+      { error: "Missing or invalid duration" },
       { status: 400 }
     );
   }
+  const durationMinutes = durationValid ? parsedDuration : 60;
 
   // Validate date format YYYY-MM-DD
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
