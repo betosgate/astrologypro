@@ -120,6 +120,11 @@ interface BookingWizardProps {
    * UX hint — does not skip slot selection.
    */
   preselectedDate?: string | null;
+  /**
+   * Server-derived deep-link hint. Keeps SSR and the first client render in
+   * sync when the URL already includes a selected date + time.
+   */
+  startOnContact?: boolean;
 }
 
 const STEPS = [
@@ -305,16 +310,13 @@ export function BookingWizard({
   submissionId = null,
   intakePrefill = null,
   preselectedDate = null,
+  startOnContact = false,
 }: BookingWizardProps) {
   // Start on the Contact step when the URL already carries a chosen date + time
   // (deep-link from the profile's "Next Available" picker) so users don't see a
   // flash of the calendar while slots load. We fall back to step 0 if the
   // requested time turns out to be unavailable.
-  const [step, setStep] = useState(() => {
-    if (typeof window === "undefined") return 0;
-    const p = new URLSearchParams(window.location.search);
-    return p.get("date") && p.get("time") ? 1 : 0;
-  });
+  const [step, setStep] = useState(() => (startOnContact ? 1 : 0));
   // Seed from the optional preselectedDate hint (shared `/book/template/[slug]`
   // flow). Strictly a UX nudge so the calendar opens on the right month — the
   // user still has to pick a slot.
@@ -350,11 +352,8 @@ export function BookingWizard({
   const [creatingPaymentIntent, setCreatingPaymentIntent] = useState(false);
   const [prefilled, setPrefilled] = useState(false);
   const [requestedTimeIso, setRequestedTimeIso] = useState<string | null>(null);
-  const [hasAutoAdvancedFromQuery, setHasAutoAdvancedFromQuery] = useState(() => {
-    if (typeof window === "undefined") return false;
-    const p = new URLSearchParams(window.location.search);
-    return !!(p.get("date") && p.get("time"));
-  });
+  const [hasAutoAdvancedFromQuery, setHasAutoAdvancedFromQuery] =
+    useState(startOnContact);
   const [clientTimezone, setClientTimezone] = useState(diviner.timezone || "UTC");
   const resolvedServiceName = hideServiceName ? (bookingLabel ?? "Reading Session") : (bookingLabel ?? service.name);
   const availabilityQuery = availabilityServiceId ? `&serviceId=${availabilityServiceId}` : "";

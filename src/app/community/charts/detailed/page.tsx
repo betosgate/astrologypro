@@ -184,6 +184,7 @@ export default async function CommunityRelationshipDetailPage({
 
       <HoroscopeToolkitPage
         basePath={`/community/charts/detailed?personAId=${encodeURIComponent(personAId)}&personBId=${encodeURIComponent(personBId)}&mode=${selectedMode}`}
+        apiBase="/api/community/horoscope"
         allowedSlugs={allowedSlugs}
         initialPrefill={encodeURIComponent(JSON.stringify(prefill))}
         initialSavedReport={

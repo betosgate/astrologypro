@@ -224,6 +224,7 @@ export default async function CommunityTransitDetailPage({
         basePath={`/community/transits/detailed?familyMemberId=${encodeURIComponent(
           targetFamilyMemberId ?? ""
         )}&month=${encodeURIComponent(requestedMonth)}`}
+        apiBase="/api/community/horoscope"
         allowedSlugs={["tropical_transits_monthly_v3"]}
         initialPrefill={encodeURIComponent(JSON.stringify(prefill))}
         initialSavedReport={

@@ -474,27 +474,43 @@ export default async function DivinerPage({ params, searchParams }: PageProps) {
   const evergreenServices = remainingPublicServices.filter((service) =>
     !isTimeBasedPublicService(service),
   );
+  // Picking a service with duration_minutes <= 0 for the booking preview
+  // breaks the public availability calendar — the month API rejects
+  // `duration=0` with 400 Invalid duration, and the calendar then renders
+  // every date as unavailable. Prefer a featured service, then any
+  // sellable service with a positive duration, then fall back to the
+  // first sellable service (still gated by the duration coercion below).
   const primaryPublicService =
     sellablePublicServices.find((service) => service.is_featured) ??
+    sellablePublicServices.find(
+      (service) => (service.duration_minutes ?? 0) > 0
+    ) ??
     sellablePublicServices[0] ??
     null;
+  // Coerce to a sane positive cadence. The "Next Available" widget runs in
+  // `allSlots` mode and uses this only as a step/stride, so 60min is a safe
+  // default when the chosen service has no time component (e.g. evergreen
+  // reports stored with duration_minutes = 0).
+  const previewDurationMinutes =
+    primaryPublicService && (primaryPublicService.duration_minutes ?? 0) > 0
+      ? primaryPublicService.duration_minutes
+      : stats.unscopedDurationMinutes && stats.unscopedDurationMinutes > 0
+        ? stats.unscopedDurationMinutes
+        : 60;
   const bookingPreview = servicesBlocked
     ? null
     : primaryPublicService
       ? {
           serviceId: primaryPublicService.id,
           bookPath: `/book/${primaryPublicService.slug}`,
-          durationMinutes: primaryPublicService.duration_minutes,
+          durationMinutes: previewDurationMinutes,
           serviceName: primaryPublicService.name,
         }
       : stats.hasAnyAvailability
         ? {
             serviceId: null,
             bookPath: "/book",
-            durationMinutes:
-              stats.unscopedDurationMinutes ??
-              primaryPublicService?.duration_minutes ??
-              60,
+            durationMinutes: previewDurationMinutes,
             serviceName: undefined,
           }
         : null;
