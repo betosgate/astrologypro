@@ -6,6 +6,7 @@ import {
 } from "@/lib/community/chart-validators";
 import { deriveNatalReportState } from "@/lib/community/chart-report-state";
 import { isBirthDataComplete } from "@/lib/community/birth-data-readiness";
+import { ensureCurrentMonthTransitsForMember } from "@/lib/community/ensure-monthly-transits";
 
 export const dynamic = "force-dynamic";
 
@@ -58,14 +59,45 @@ export async function GET() {
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  // Get community member
-  const { data: member } = await supabase
+  // community-dashboard-monthly-transit-card-sync (2026-04-30):
+  // Identify the household member ID. A user is either the primary
+  // account owner (community_members) or a family member who accepted
+  // an invite (community_family_members).
+  let memberId: string | null = null;
+  let membershipStatus: string | null = null;
+
+  // 1. Try primary owner path
+  const { data: primaryMember } = await supabase
     .from("community_members")
     .select("id, membership_status")
     .eq("user_id", user.id)
     .maybeSingle();
 
-  if (!member || member.membership_status !== "active") {
+  if (primaryMember) {
+    memberId = primaryMember.id;
+    membershipStatus = primaryMember.membership_status;
+  } else {
+    // 2. Try household member path
+    const { data: familyMember } = await supabase
+      .from("community_family_members")
+      .select("member_id")
+      .eq("user_id", user.id)
+      .eq("invite_status", "accepted")
+      .maybeSingle();
+
+    if (familyMember) {
+      memberId = familyMember.member_id;
+      // Household members inherit the subscription status of the owner
+      const { data: owner } = await supabase
+        .from("community_members")
+        .select("membership_status")
+        .eq("id", familyMember.member_id)
+        .maybeSingle();
+      membershipStatus = owner?.membership_status ?? null;
+    }
+  }
+
+  if (!memberId || membershipStatus !== "active") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -78,7 +110,7 @@ export async function GET() {
     .select(
       "id, full_name, date_of_birth, birth_time, birth_city, birth_country, birth_lat, birth_lng, natal_chart, natal_status, natal_report_id, natal_report_status, created_at"
     )
-    .eq("member_id", member.id)
+    .eq("member_id", memberId)
     .order("created_at", { ascending: true });
 
   type NatalChartItem = {
@@ -100,7 +132,7 @@ export async function GET() {
     full_report_id: string | null;
     full_report_status: string | null;
     full_report_generated_at: string | null;
-    created_at: string | null;
+    generated_at: string | null;
   };
 
   let natalChart: NatalChartItem | null = null;
@@ -139,11 +171,12 @@ export async function GET() {
     //    natalCharts[0]. Mirrors /community/transits exactly.
     const eligibleFamily = familyRows.filter((row) => isBirthDataComplete(row));
     const eligibleIds = eligibleFamily.map((row) => row.id);
+    const allFamilyIds = familyRows.map((row) => row.id);
     const familyNameById = new Map<string, string>(
-      eligibleFamily.map((row) => [row.id, row.full_name])
+      familyRows.map((row) => [row.id, row.full_name])
     );
 
-    if (eligibleIds.length === 0) {
+    if (allFamilyIds.length === 0) {
       transitStatus = "empty";
     } else {
       const now = new Date();
@@ -151,79 +184,141 @@ export async function GET() {
         now.getMonth() + 1
       ).padStart(2, "0")}`;
 
-      // Array read — survives duplicate (family_member_id, month) rows
-      // that would have thrown under .maybeSingle(). Newest-first so the
-      // dedupe logic below picks the freshest valid row per member.
+      // community-dashboard-monthly-transit-card-sync (2026-04-30):
+      // Ensure current-month summaries exist for the eligible household
+      // members. Mirrors the lazy-fallback on /community/transits.
+      if (eligibleIds.length > 0) {
+        try {
+          const { count: transitCount } = await supabase
+            .from("monthly_transits")
+            .select("id", { count: "exact", head: true })
+            .in("family_member_id", eligibleIds)
+            .eq("month", currentMonth);
+
+          if ((transitCount ?? 0) < eligibleIds.length) {
+            await ensureCurrentMonthTransitsForMember(memberId);
+          }
+        } catch (ensureErr) {
+          console.warn(
+            "[api/community/astro-charts] lazy catch-up failed:",
+            ensureErr
+          );
+        }
+      }
+
+      // Query for EVERY family member in the household (allFamilyIds),
+      // matching the broad visibility of /community/transits.
       const { data: transitRows, error: transitError } = await supabase
         .from("monthly_transits")
         .select(
-          "id, family_member_id, month, transit_data, generation_status, full_report_id, full_report_status, full_report_generated_at, created_at"
+          "id, family_member_id, month, transit_data, generation_status, full_report_id, full_report_status, full_report_generated_at, generated_at, community_family_members!inner(full_name)"
         )
-        .in("family_member_id", eligibleIds)
+        .in("family_member_id", allFamilyIds)
         .eq("month", currentMonth)
-        .order("created_at", { ascending: false });
+        .order("id");
 
       if (transitError) {
         console.error(
-          "[community/astro-charts] transit read error:",
+          "[api/community/astro-charts] transit read error:",
           transitError
         );
         transitStatus = "failed";
       } else {
         const seen = new Set<string>();
+        let hasPending = false;
+
         for (const row of transitRows ?? []) {
           if (!row.family_member_id) continue;
 
+          // --- RESTORED (Commented Out) ---
           // Drift guard: if we've already taken a row for this member in
           // this month, the rest are duplicates. Log once per duplicate
           // and move on without failing the whole card.
-          if (seen.has(row.family_member_id)) {
-            console.warn(
-              "[community/astro-charts] duplicate monthly_transits row",
-              {
-                family_member_id: row.family_member_id,
-                month: currentMonth,
-                duplicate_row_id: row.id,
-              }
-            );
-            continue;
-          }
+          // if (seen.has(row.family_member_id)) {
+          //   console.warn(
+          //     "[community/astro-charts] duplicate monthly_transits row",
+          //     {
+          //       family_member_id: row.family_member_id,
+          //       month: currentMonth,
+          //       duplicate_row_id: row.id,
+          //     }
+          //   );
+          //   continue;
+          // }
 
-          if (!isValidMonthlyTransit(row.transit_data, currentMonth)) {
-            // Skip invalid/legacy shape — don't break valid neighbours.
-            console.warn(
-              "[community/astro-charts] skipping invalid monthly transit row",
-              {
-                family_member_id: row.family_member_id,
-                row_id: row.id,
-              }
-            );
-            continue;
-          }
+          // if (!isValidMonthlyTransit(row.transit_data, currentMonth)) {
+          //   // Skip invalid/legacy shape — don't break valid neighbours.
+          //   console.warn(
+          //     "[community/astro-charts] skipping invalid monthly transit row",
+          //     {
+          //       family_member_id: row.family_member_id,
+          //       row_id: row.id,
+          //     }
+          //   );
+          //   continue;
+          // }
 
+          // seen.add(row.family_member_id);
+          // ---------------------------------
+
+          if (seen.has(row.family_member_id)) continue;
           seen.add(row.family_member_id);
+
+          if (row.generation_status === "pending") {
+            hasPending = true;
+          }
+
+          // Validation: If the lightweight summary data is invalid/missing 
+          // (e.g. calculation failed), we still want to show this member 
+          // in the carousel so the user can access their full report or 
+          // retry generation. We just provide an empty object for transit_data.
+          const validData = isValidMonthlyTransit(row.transit_data) 
+            ? row.transit_data 
+            : {};
+
           const memberName =
             familyNameById.get(row.family_member_id) ?? "Member";
           monthlyTransits.push({
             id: row.id,
             family_member_id: row.family_member_id,
-            member_id: row.family_member_id, // legacy alias
+            member_id: row.family_member_id,
             member_name: memberName,
             month: row.month,
-            transit_data: row.transit_data as Record<string, unknown>,
+            transit_data: validData as Record<string, unknown>,
             generation_status: row.generation_status as string | null,
             full_report_id: row.full_report_id as string | null,
             full_report_status: row.full_report_status as string | null,
             full_report_generated_at:
               row.full_report_generated_at as string | null,
-            created_at: row.created_at as string | null,
+            generated_at: row.generated_at as string | null,
           });
         }
 
-        // Stable ordering for the dashboard carousel: by family creation
-        // order (matches the natal carousel ordering for visual parity).
+        // community-dashboard-monthly-transit-card-sync (2026-04-30):
+        // Mirrors Natal Carousel behavior — if an eligible member has no 
+        // transit row yet, add a placeholder so they still appear in the 
+        // dashboard carousel (allows the user to see the "Generate" CTA).
+        for (const id of eligibleIds) {
+          if (!seen.has(id)) {
+            monthlyTransits.push({
+              id: "",
+              family_member_id: id,
+              member_id: id,
+              member_name: familyNameById.get(id) ?? "Member",
+              month: currentMonth,
+              transit_data: {},
+              generation_status: null,
+              full_report_id: null,
+              full_report_status: null,
+              full_report_generated_at: null,
+              generated_at: null,
+            });
+          }
+        }
+
+        // Dashboard carousel ordering by household joined_at
         const familyOrderById = new Map(
-          eligibleFamily.map((row, idx) => [row.id, idx])
+          familyRows.map((row, idx) => [row.id, idx])
         );
         monthlyTransits.sort(
           (a, b) =>
@@ -232,8 +327,25 @@ export async function GET() {
         );
 
         monthlyTransit = monthlyTransits[0] ?? null;
-        transitStatus = monthlyTransits.length === 0 ? "empty" : "ready";
+
+        // Status logic: if we have ANY members to show (actual rows or 
+        // placeholders), it's "ready" (carousel).
+        // If the list is empty but we know some are being calculated, it's "pending".
+        if (monthlyTransits.length > 0) {
+          transitStatus = "ready";
+        } else if (hasPending) {
+          transitStatus = "pending";
+        } else {
+          transitStatus = "empty";
+        }
       }
+    }
+
+    // Task sync audit: ensure we never return "empty" if the household 
+    // actually has members. This forces the carousel to show placeholders
+    // if rows are missing.
+    if (transitStatus === "empty" && eligibleIds.length > 0) {
+      transitStatus = "ready";
     }
   }
 
