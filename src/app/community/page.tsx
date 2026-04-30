@@ -1484,7 +1484,11 @@ export default async function CommunityDashboardPage() {
               </CardContent>
             </Card>
           ) : ( */}
-          {relationshipChartCount > 0 ? null : (
+          {/* Client update 2026-04-30:
+              Hide the empty-state relationship chart CTA for now. Keep the
+              implementation commented instead of deleting it so it can be
+              restored later if requirements change. */}
+          {/* {relationshipChartCount > 0 ? null : (
             <Card className="border-dashed">
               <CardContent className="flex flex-col items-center gap-3 py-5 text-center">
                 <div className="flex size-10 items-center justify-center rounded-full bg-violet-500/10">
@@ -1504,7 +1508,7 @@ export default async function CommunityDashboardPage() {
                 </Button>
               </CardContent>
             </Card>
-          )}
+          )} */}
         </div>
 
         {/* Client update 2026-04-24:
