@@ -81,6 +81,7 @@ import { MIGRATION_SQL as MIG_20260427000002_ARV2A } from "@/data/migrations/202
 import { MIGRATION_SQL as MIG_20260427000003_AJSP } from "@/data/migrations/20260427000003_affiliate_junction_select_policy";
 import { MIGRATION_SQL as MIG_20260427000004_ARSD } from "@/data/migrations/20260427000004_affiliate_rls_security_definer";
 import { MIGRATION_SQL as MIG_20260428000003_RGS } from "@/data/migrations/20260428000003_ritual_global_settings";
+import { MIGRATION_SQL as MIG_20260430000002_RSTL } from "@/data/migrations/20260430000002_repair_service_template_links";
 import { MIGRATION_SQL as MIG_20260413000184_MTL } from "@/data/migrations/20260413000184_monthly_transit_lifecycle";
 
 /**
@@ -650,6 +651,14 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Increases the length of plan_id, subscription_status, phone, and username columns in the diviners table to TEXT or VARCHAR(50). Resolves 'value too long for type character varying(20)' errors during trainee-to-diviner upgrade.",
     sortKey: "20260428000100",
     sql: MIG_20260428000100,
+  },
+  "20260430000002_repair_service_template_links": {
+    id: "20260430000002_repair_service_template_links",
+    title: "Repair service template links",
+    description:
+      "Backfills services.template_id from matching service_templates.slug, creates missing diviner_services assignments for active linked services, and installs a trigger so older insert paths that provide a canonical slug automatically attach the matching template_id.",
+    sortKey: "20260430000002",
+    sql: MIG_20260430000002_RSTL,
   },
   "20260423000005_accept_rpc": {
     id: "20260423000005_accept_rpc",

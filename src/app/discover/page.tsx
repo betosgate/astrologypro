@@ -206,7 +206,7 @@ async function getTemplateMatchedDiviners(templateSlug: string): Promise<{
       "id, slug, base_price, category, duration_minutes, diviner_id, template_id, " +
         "diviners!inner(id, username, display_name, tagline, bio, avatar_url, cover_image_url, specialties, is_certified, is_active, onboarding_completed, account_status, charges_enabled, payouts_enabled, stripe_account_id)",
     )
-    .eq("template_id", template.id)
+    .or(`template_id.eq.${template.id},slug.eq.${baseSlug}`)
     .eq("is_active", true);
 
   if (error || !services || services.length === 0) {
@@ -245,7 +245,33 @@ async function getTemplateMatchedDiviners(templateSlug: string): Promise<{
     };
   }
 
-  const divinerIds = visibleServices
+  const dedupedServicesByDiviner = new Map<string, Record<string, unknown>>();
+  const explicitTemplateMatchByDiviner = new Map<string, boolean>();
+  for (const row of visibleServices) {
+    const divinerId = (row.diviner_id as string) ?? "";
+    if (!divinerId) continue;
+
+    const isExplicitTemplateMatch = row.template_id === template.id;
+    const existing = dedupedServicesByDiviner.get(divinerId);
+    if (existing) {
+      const existingIsExplicit =
+        explicitTemplateMatchByDiviner.get(divinerId) === true;
+      if (existingIsExplicit && !isExplicitTemplateMatch) continue;
+      if (
+        existingIsExplicit === isExplicitTemplateMatch &&
+        Number(existing.base_price ?? 0) <= Number(row.base_price ?? 0)
+      ) {
+        continue;
+      }
+    }
+
+    dedupedServicesByDiviner.set(divinerId, row);
+    explicitTemplateMatchByDiviner.set(divinerId, isExplicitTemplateMatch);
+  }
+
+  const matchedServices = [...dedupedServicesByDiviner.values()];
+
+  const divinerIds = matchedServices
     .map((row) => ((row.diviner_id as string) ?? ""))
     .filter(Boolean);
 
@@ -297,7 +323,7 @@ async function getTemplateMatchedDiviners(templateSlug: string): Promise<{
     if (key) availabilityByDiviner.add(key);
   }
 
-  const cards = visibleServices.map((row) => {
+  const cards = matchedServices.map((row) => {
     const divinerRelation = row.diviners;
     const diviner = (Array.isArray(divinerRelation)
       ? divinerRelation[0]

@@ -205,6 +205,7 @@ export function ServiceEditSheet({
         is_featured: form.featured,
         is_active: true,
         category: form.category || "astrology",
+        ...(selectedTemplateId ? { template_id: selectedTemplateId } : {}),
       });
 
       setSaving(false);
