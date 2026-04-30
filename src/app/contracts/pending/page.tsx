@@ -4,6 +4,7 @@ import {
   ensureUserContractRequirements,
   getPendingUserContractRequirements,
 } from "@/lib/contract-orchestration";
+import { finalizeInvitedDivinerFromSessionId } from "@/lib/invited-diviner-upgrade";
 import { createClient } from "@/lib/supabase/server";
 import { finalizeTraineeDivinerUpgradeFromSessionId } from "@/lib/trainee-diviner-upgrade";
 
@@ -49,6 +50,17 @@ export default async function PendingContractsPage({
         userId: user.id,
         sessionId,
         markTraineePaid: true,
+      });
+    }
+    await ensureUserContractRequirements(user.id, "post_login");
+    requirements = await getPendingUserContractRequirements(user.id, "post_login");
+  }
+
+  if (requirements.length === 0 && source === "invited-diviner") {
+    if (sessionId) {
+      await finalizeInvitedDivinerFromSessionId({
+        userId: user.id,
+        sessionId,
       });
     }
     await ensureUserContractRequirements(user.id, "post_login");

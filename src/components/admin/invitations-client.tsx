@@ -72,6 +72,17 @@ export interface InvitationRow {
   expires_at?: string;
   resent_count?: number;
   created_at: string;
+  /**
+   * Derived for diviner-role rows by /api/admin/invitations.
+   *
+   * The invitations.status enum stays
+   * pending|accepted|expired|cancelled, but the invited-diviner spec
+   * (docs/tasks/2026-04-30) wants admin to see Pending → Active →
+   * Completed. We resolve "Active" vs "Completed" by reading the linked
+   * diviner row's subscription_status here and surfacing it to the
+   * label component.
+   */
+  diviner_subscription_status?: string | null;
 }
 
 export interface InvitationsClientProps {
@@ -87,10 +98,60 @@ export interface InvitationsClientProps {
   initialRoleSlug?: string;
 }
 
-const STATUS_OPTIONS = ["all", "pending", "accepted", "expired", "cancelled"];
+const STATUS_OPTIONS = ["all", "pending", "active", "completed", "expired", "cancelled"];
 
-function InviteStatusBadge({ status }: { status: string }) {
+function InviteStatusBadge({
+  status,
+  roleSlug,
+  divinerSubscriptionStatus,
+}: {
+  status: string;
+  roleSlug?: string;
+  divinerSubscriptionStatus?: string | null;
+}) {
   const s = status.toLowerCase();
+
+  // Diviner-role rows get the 3-state Pending → Active → Completed label
+  // (docs/tasks/2026-04-30). Non-diviner roles keep the legacy label.
+  if (roleSlug === "diviner") {
+    if (s === "pending") {
+      return (
+        <span className="inline-flex items-center rounded-full bg-amber-500/10 px-2.5 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-400">
+          Pending
+        </span>
+      );
+    }
+    if (s === "accepted") {
+      const subActive = divinerSubscriptionStatus === "active";
+      if (subActive) {
+        return (
+          <span className="inline-flex items-center rounded-full bg-green-500/10 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:text-green-400">
+            Completed
+          </span>
+        );
+      }
+      return (
+        <span className="inline-flex items-center rounded-full bg-blue-500/10 px-2.5 py-0.5 text-xs font-medium text-blue-700 dark:text-blue-400">
+          Active
+        </span>
+      );
+    }
+    if (s === "expired") {
+      return (
+        <span className="inline-flex items-center rounded-full bg-gray-500/10 px-2.5 py-0.5 text-xs font-medium text-gray-600">
+          Expired
+        </span>
+      );
+    }
+    if (s === "cancelled") {
+      return (
+        <span className="inline-flex items-center rounded-full bg-red-500/10 px-2.5 py-0.5 text-xs font-medium text-red-700 dark:text-red-400">
+          Cancelled
+        </span>
+      );
+    }
+  }
+
   const map: Record<string, string> = {
     pending: "bg-amber-500/10 text-amber-700 dark:text-amber-400",
     accepted: "bg-green-500/10 text-green-700 dark:text-green-400",
@@ -478,7 +539,13 @@ export function InvitationsClient({
                             </span>
                           </TableCell>
                           <TableCell>
-                            <InviteStatusBadge status={invitation.status} />
+                            <InviteStatusBadge
+                              status={invitation.status}
+                              roleSlug={invitation.role_slug}
+                              divinerSubscriptionStatus={
+                                invitation.diviner_subscription_status
+                              }
+                            />
                           </TableCell>
                           <TableCell className="text-xs text-muted-foreground">
                             {invitation.invited_by ?? "—"}

@@ -1,6 +1,6 @@
 # Task 06 — Admin UI for Template Rate Config
 
-- Status: Not Started
+- Status: Code complete 2026-04-30 in working tree (uncommitted). Six file changes: PATCH endpoint at `src/app/api/admin/service-templates/[id]/route.ts` validates the new affiliate fields (rejects on diviner-specific templates with `field_not_applicable`; enforces percent ≤ 100 + flat ≤ 100000); list endpoint extended to return the new columns; new `AffiliateProgramCard` client component on `/admin/service-templates/[id]/page.tsx` (general templates only); new bulk endpoint at `src/app/api/admin/service-templates/bulk-set-commission/route.ts` (writes admin_action_log row with action_kind `service_templates_bulk_commission_update`); new `BulkRateCard` at `/admin/service-templates/page.tsx` with a confirmation modal flagging the override-overwrite behavior; list table gains "Affiliate program" + "Rate" columns. Required folding three more changes into the Phase 1.5 migration (still unapplied): drop NOT NULL on `admin_action_log.target_resource_id`, add `payload JSONB`, extend `action_kind` CHECK with the new value.
 - Priority: P1
 - Depends on: 01
 - Blocks: 08

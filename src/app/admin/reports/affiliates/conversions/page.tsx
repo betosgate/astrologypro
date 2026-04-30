@@ -37,23 +37,38 @@ import { Loader2, Undo2 } from "lucide-react";
 import { ReportsTabs } from "../_components/reports-tabs";
 import { OverrideActionButton } from "../_components/override-action-button";
 
+type CampaignSub = {
+  diviner_id: string | null;
+  name: string | null;
+  owner_affiliate_type: "diviner_affiliate" | "social_advocate" | "general" | null;
+  template: { id: string; name: string } | { id: string; name: string }[] | null;
+};
+
 interface Conversion {
   id: string;
   campaign_id: string;
-  affiliate_id: string;
+  affiliate_id: string | null;
   affiliate_type: string;
+  affiliate_account_id: string | null;
   booking_id: string | null;
   order_amount_cents: number;
   commission_amount_cents: number;
-  rate_type_used: "percentage" | "fixed";
+  rate_type_used: "percent" | "flat" | "percentage" | "fixed";
   rate_value_used: number;
   reversed_at: string | null;
-  reversed_reason: string | null;
-  created_at: string;
-  campaign:
-    | { diviner_id: string | null; name: string | null }
-    | { diviner_id: string | null; name: string | null }[]
-    | null;
+  reversal_reason: string | null;
+  converted_at: string;
+  campaign: CampaignSub | CampaignSub[] | null;
+}
+
+function sourceLabel(row: Conversion): string {
+  const c = Array.isArray(row.campaign) ? row.campaign[0] : row.campaign;
+  if (!c) return "Unknown";
+  if (c.owner_affiliate_type === "general") {
+    const t = Array.isArray(c.template) ? c.template[0] : c.template;
+    return `General: ${t?.name ?? "Unknown template"}`;
+  }
+  return `Diviner: ${c.name ?? "Unknown"}`;
 }
 
 function fmtCents(cents: number) {
@@ -73,10 +88,13 @@ function fmtDateTime(iso: string) {
   });
 }
 
-function fmtRate(type: "percentage" | "fixed", value: number) {
-  return type === "percentage"
+function fmtRate(
+  type: "percentage" | "fixed" | "percent" | "flat",
+  value: number,
+) {
+  return type === "percentage" || type === "percent"
     ? `${value}%`
-    : `${fmtCents(value)} fixed`;
+    : `${fmtCents(value)} flat`;
 }
 
 function campaignName(c: Conversion["campaign"]): string {
@@ -248,6 +266,7 @@ export default function AdminReportsConversionsPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>When</TableHead>
+                      <TableHead>Source</TableHead>
                       <TableHead>Campaign</TableHead>
                       <TableHead>Order</TableHead>
                       <TableHead>Rate used</TableHead>
@@ -260,8 +279,9 @@ export default function AdminReportsConversionsPage() {
                     {rows.map((r) => (
                       <TableRow key={r.id}>
                         <TableCell className="whitespace-nowrap text-sm">
-                          {fmtDateTime(r.created_at)}
+                          {fmtDateTime(r.converted_at)}
                         </TableCell>
+                        <TableCell className="text-sm">{sourceLabel(r)}</TableCell>
                         <TableCell>
                           <div className="text-sm">{campaignName(r.campaign)}</div>
                           <div className="font-mono text-xs text-muted-foreground">
@@ -279,8 +299,8 @@ export default function AdminReportsConversionsPage() {
                           {r.reversed_at ? (
                             <Badge variant="outline">
                               reversed
-                              {r.reversed_reason
-                                ? ` · ${r.reversed_reason.slice(0, 40)}`
+                              {r.reversal_reason
+                                ? ` · ${r.reversal_reason.slice(0, 40)}`
                                 : ""}
                             </Badge>
                           ) : (

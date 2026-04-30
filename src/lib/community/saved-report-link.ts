@@ -220,10 +220,18 @@ export async function saveAndLinkMonthlyReport(args: {
     schema_version: "community_monthly_full_v1",
   });
 
+  return await linkExistingMonthlyReport({ familyMemberId, monthKey, reportId });
+}
+
+export async function linkExistingMonthlyReport(args: {
+  familyMemberId: string;
+  monthKey: string;
+  reportId: string;
+}): Promise<SaveAndLinkResult> {
+  const { familyMemberId, monthKey, reportId } = args;
   const admin = createAdminClient();
-  // Update existing summary row if present, else insert a placeholder
-  // summary so the link has somewhere to live. This keeps the
-  // (family_member_id, month) uniqueness intact.
+  const now = new Date().toISOString();
+
   const { data: existing } = await admin
     .from("monthly_transits")
     .select("id")
@@ -236,7 +244,7 @@ export async function saveAndLinkMonthlyReport(args: {
       .from("monthly_transits")
       .update({
         full_report_id: reportId,
-        full_report_generated_at: new Date().toISOString(),
+        full_report_generated_at: now,
         full_report_status: "generated",
       })
       .eq("id", existing.id);
@@ -251,17 +259,15 @@ export async function saveAndLinkMonthlyReport(args: {
     return { reportId, domainLinked: true };
   }
 
-  const { error } = await admin
-    .from("monthly_transits")
-    .insert({
-      family_member_id: familyMemberId,
-      month: monthKey,
-      transit_data: {},
-      generation_status: "pending", // summary still needs to be computed
-      full_report_id: reportId,
-      full_report_generated_at: new Date().toISOString(),
-      full_report_status: "generated",
-    });
+  const { error } = await admin.from("monthly_transits").insert({
+    family_member_id: familyMemberId,
+    month: monthKey,
+    transit_data: {},
+    generation_status: "pending",
+    full_report_id: reportId,
+    full_report_generated_at: now,
+    full_report_status: "generated",
+  });
 
   if (error) {
     return {
@@ -270,6 +276,7 @@ export async function saveAndLinkMonthlyReport(args: {
       domainLinkError: error.message,
     };
   }
+
   return { reportId, domainLinked: true };
 }
 

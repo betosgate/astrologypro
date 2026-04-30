@@ -2,14 +2,16 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { MarketingHeader } from "@/components/marketing/header";
 import { MarketingFooter } from "@/components/marketing/footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/ui/password-input";
-import { ArrowRight, ShieldCheck, Zap } from "lucide-react";
+import { ArrowRight, Loader2, ShieldCheck, Zap } from "lucide-react";
 import { toast } from "sonner";
+import { createClient } from "@/lib/supabase/client";
 
 function slugify(value: string) {
   return value
@@ -20,17 +22,24 @@ function slugify(value: string) {
 }
 
 export default function JoinDivinerPage() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [profileUrl, setProfileUrl] = useState("");
+  const [inviteToken, setInviteToken] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const invitedEmail = params.get("email") ?? "";
+    const token = params.get("inviteToken") ?? "";
     if (invitedEmail) {
       setEmail(invitedEmail);
+    }
+    if (token) {
+      setInviteToken(token);
     }
   }, []);
 
@@ -39,7 +48,7 @@ export default function JoinDivinerPage() {
     setProfileUrl((current) => current || slugify(value));
   }
 
-  function handleSubmit(event: React.FormEvent) {
+  async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
 
     if (!email || !fullName || !password || !confirmPassword || !profileUrl) {
@@ -57,7 +66,63 @@ export default function JoinDivinerPage() {
       return;
     }
 
-    toast.success("Diviner registration form is ready.");
+    if (!inviteToken) {
+      toast.error(
+        "Missing invitation token. Please open the link from your invitation email."
+      );
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      // 1. Create the diviner account from the invitation.
+      const res = await fetch("/api/join/diviner/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email,
+          password,
+          fullName,
+          profileUrl,
+          inviteToken,
+        }),
+      });
+      const payload = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        next?: string;
+      };
+      if (!res.ok) {
+        throw new Error(payload.error ?? "Registration failed.");
+      }
+
+      // 2. Sign in client-side so the SSR cookies are written by the
+      //    Supabase browser client. The server endpoint deliberately
+      //    doesn't write cookies — keeping cookie writes in one place.
+      const supabase = createClient();
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (signInError) {
+        // The account was created but auto-login failed. The plan page
+        // is auth-gated, so route the user to /login with a notice.
+        toast.error(
+          "Account created, but auto-login failed. Please sign in to continue."
+        );
+        router.push("/login?next=/join/diviner/plan");
+        return;
+      }
+
+      // 3. Off to plan selection — the dashboard remains gated until
+      //    payment completes.
+      toast.success("Account created! Choose your plan to continue.");
+      router.push(payload.next ?? "/join/diviner/plan");
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Registration failed."
+      );
+      setSubmitting(false);
+    }
   }
 
   const pageSlug = slugify(profileUrl);
@@ -68,7 +133,7 @@ export default function JoinDivinerPage() {
       <MarketingHeader />
 
       <main className="flex flex-1 items-center justify-center bg-[radial-gradient(circle_at_top,rgba(201,168,76,0.18),transparent_35%),radial-gradient(circle_at_bottom,rgba(212,175,55,0.08),transparent_30%),linear-gradient(180deg,#090d1d_0%,#050816_100%)] px-4 py-10 sm:px-6">
-        <div className="w-full max-w-3xl">
+        <div className="w-full max-w-4xl">
           <div className="overflow-hidden rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(13,17,31,0.96)_0%,rgba(7,10,20,0.96)_100%)] shadow-[0_24px_80px_rgba(0,0,0,0.45)]">
             <div className="border-b border-white/8 px-6 py-8 sm:px-10">
               <p className="text-xs uppercase tracking-[0.32em] text-[#d6b75a]">
@@ -164,10 +229,20 @@ export default function JoinDivinerPage() {
 
                   <Button
                     type="submit"
+                    disabled={submitting}
                     className="h-14 w-full rounded-full bg-[#d6b75a] text-lg font-semibold text-[#16120a] shadow-[0_14px_34px_rgba(214,183,90,0.28)] transition hover:bg-[#e3c76e]"
                   >
-                    Register
-                    <ArrowRight className="ml-2 size-5" />
+                    {submitting ? (
+                      <>
+                        <Loader2 className="mr-2 size-5 animate-spin" />
+                        Creating account…
+                      </>
+                    ) : (
+                      <>
+                        Register
+                        <ArrowRight className="ml-2 size-5" />
+                      </>
+                    )}
                   </Button>
 
                   <div className="flex flex-wrap items-center justify-center gap-5 pt-1 text-sm text-[#8d96b8]">
