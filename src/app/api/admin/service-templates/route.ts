@@ -40,7 +40,8 @@ export async function GET(req: NextRequest) {
       base_price, duration_minutes, is_primary, requires_birth_data,
       trigger_event, sort_order, display_order, is_active,
       icon_name, color, whats_included, who_its_for, faq,
-      seo_title, seo_description, created_by, updated_at, updated_by
+      seo_title, seo_description, created_by, updated_at, updated_by,
+      is_general, affiliate_program_enabled, commission_type, commission_value
     `, { count: "exact" })
     .order(safeSort, { ascending: sortDir });
 
