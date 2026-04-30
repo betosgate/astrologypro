@@ -3874,11 +3874,19 @@ export function HoroscopeToolkitPage({
           currentTab.slug === "tropical_transits_monthly_v3" &&
           Boolean(communityMonthlyFamilyMemberId) &&
           Boolean(communityMonthlyMonthKey);
+        const isCommunityMonthlyWithoutLinkContext =
+          isCommunityToolkit &&
+          currentTab.slug === "tropical_transits_monthly_v3" &&
+          (!communityMonthlyFamilyMemberId || !communityMonthlyMonthKey);
         const isCommunityNatalReport =
           currentTab.slug === "western_horoscope_v2" &&
           Boolean(communityNatalFamilyMemberId);
 
-        if (isCommunityMonthlyReport) {
+        if (isCommunityMonthlyWithoutLinkContext) {
+          throw new Error(
+            "Monthly report cannot be saved because family member or month context is missing"
+          );
+        } else if (isCommunityMonthlyReport) {
           addProgress("Saving monthly report…");
           const linkRes = await fetch("/api/community/saved-reports/monthly/link", {
             method: "POST",

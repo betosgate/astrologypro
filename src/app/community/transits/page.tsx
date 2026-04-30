@@ -47,7 +47,7 @@ type TransitRow = {
   id: string;
   family_member_id: string;
   month: string;
-  transit_data: MonthlyTransitData;
+  transit_data: unknown;
   generation_status: string | null;
   full_report_id: string | null;
   full_report_status: string | null;
@@ -62,6 +62,10 @@ type FamilyTransitOwner = {
   natal_status: string | null;
   natal_report_id: string | null;
   natal_report_status: string | null;
+  natal_report_generated_at: string | null;
+  natal_last_generated_at: string | null;
+  chart_updated_at: string | null;
+  updated_at: string | null;
   date_of_birth: string | null;
   birth_time: string | null;
   birth_city: string | null;
@@ -98,7 +102,7 @@ export default async function TransitsPage() {
   const { data: familyRows } = await supabase
     .from("community_family_members")
     .select(
-      "id, full_name, natal_chart, natal_status, natal_report_id, natal_report_status, date_of_birth, birth_time, birth_city, birth_country, birth_lat, birth_lng"
+      "id, full_name, natal_chart, natal_status, natal_report_id, natal_report_status, natal_report_generated_at, natal_last_generated_at, chart_updated_at, updated_at, date_of_birth, birth_time, birth_city, birth_country, birth_lat, birth_lng"
     )
     .eq("member_id", member.id);
 
@@ -147,39 +151,42 @@ export default async function TransitsPage() {
       .eq("month", currentMonth)
       .order("id");
 
-    // Filter to only valid transit shapes — no dummy/legacy data
-    familyTransits = (
-      (transits ?? []) as unknown as TransitRow[]
-    ).filter((row) => isValidMonthlyTransit(row.transit_data, currentMonth));
+    familyTransits = (transits ?? []) as unknown as TransitRow[];
   }
 
   const monthLabel = now.toLocaleString("en-US", { month: "long", year: "numeric" });
+  const transitByFamilyId = new Map(
+    familyTransits.map((row) => [row.family_member_id, row])
+  );
 
   // Pre-compute card data server-side for the client expander
-  const cardData = familyTransits.map((row) => {
-    const data = row.transit_data;
-    const harmoniousCount = data.planets.reduce(
+  const cardData = eligibleFamily.map((familyMember) => {
+    const row = transitByFamilyId.get(familyMember.id);
+    const validTransitData = row && isValidMonthlyTransit(row.transit_data, currentMonth)
+      ? row.transit_data as MonthlyTransitData
+      : null;
+    const harmoniousCount = validTransitData?.planets.reduce(
       (s, p) => s + p.aspects.filter((a) => a.isHarmonious).length,
       0
-    );
-    const challengingCount = data.planets.reduce(
+    ) ?? 0;
+    const challengingCount = validTransitData?.planets.reduce(
       (s, p) => s + p.aspects.filter((a) => !a.isHarmonious).length,
       0
-    );
+    ) ?? 0;
 
     const reportState = deriveMonthlyReportState(
       {
-        month: row.month,
-        transit_data: row.transit_data,
-        generation_status: row.generation_status,
-        full_report_id: row.full_report_id,
-        full_report_status: row.full_report_status,
+        month: row?.month ?? currentMonth,
+        transit_data: row?.transit_data ?? null,
+        generation_status: row?.generation_status ?? null,
+        full_report_id: row?.full_report_id ?? null,
+        full_report_status: row?.full_report_status ?? null,
       },
       currentMonth
     );
-    const hasSavedFullReport = Boolean(row.full_report_id);
+    const hasSavedFullReport = Boolean(row?.full_report_id);
     const fullReportCta = (() => {
-      if (row.full_report_status === "failed") {
+      if (row?.full_report_status === "failed") {
         return { label: "Retry Transit Report", kind: "retry" as const };
       }
       if (hasSavedFullReport) {
@@ -187,16 +194,20 @@ export default async function TransitsPage() {
       }
       return { label: "Generate Transit Report", kind: "generate" as const };
     })();
-    const detailedHref = `/community/transits/detailed?familyMemberId=${row.family_member_id}&month=${row.month}`;
-    const chartHref = `/community/family/${row.family_member_id}`;
+    const detailedHref = `/community/transits/detailed?familyMemberId=${familyMember.id}&month=${row?.month ?? currentMonth}`;
+    const chartHref = `/community/family/${familyMember.id}`;
     const isPending = reportState === "generating";
     const ctaDisabledBase = ctaForState(reportState).disabled;
-    const chartOwner = familyOwnerById.get(row.family_member_id);
+    const chartOwner = familyOwnerById.get(familyMember.id);
     const chartState = deriveNatalReportState({
       natal_chart: chartOwner?.natal_chart,
       natal_status: chartOwner?.natal_status,
       natal_report_id: chartOwner?.natal_report_id,
       natal_report_status: chartOwner?.natal_report_status,
+      natal_report_generated_at: chartOwner?.natal_report_generated_at,
+      natal_last_generated_at: chartOwner?.natal_last_generated_at,
+      chart_updated_at: chartOwner?.chart_updated_at,
+      updated_at: chartOwner?.updated_at,
     });
     const chartCta = ctaForState(chartState);
     const chartCtaLabel =
@@ -212,16 +223,17 @@ export default async function TransitsPage() {
         ? "Review Natal Chart"
         : "Generate Natal Chart";
     const reportStatusLabel = (() => {
-      if (row.full_report_status === "failed") return "Full report needs attention";
+      if (row?.full_report_status === "failed") return "Full report needs attention";
       if (hasSavedFullReport) return "Full report saved";
       if (isPending) return "Summary generating";
+      if (!validTransitData) return "Summary not generated yet";
       return "Full report not generated yet";
     })();
 
     return {
-      id: row.id,
-      familyMemberId: row.family_member_id,
-      memberName: row.community_family_members.full_name,
+      id: row?.id ?? `${familyMember.id}-${currentMonth}`,
+      familyMemberId: familyMember.id,
+      memberName: familyMember.full_name,
       harmoniousCount,
       challengingCount,
       fullReportCta,
@@ -232,9 +244,9 @@ export default async function TransitsPage() {
       isPending,
       ctaDisabledBase,
       hasSavedFullReport,
-      month: row.month,
+      month: row?.month ?? currentMonth,
       reportStatusLabel,
-      highlights: data.highlights.slice(0, 3),
+      highlights: validTransitData?.highlights.slice(0, 3) ?? [],
     };
   });
 
@@ -288,7 +300,7 @@ export default async function TransitsPage() {
       )}
 
       {/* Eligible family exists but no valid transit rows yet */}
-      {eligibleFamily.length > 0 && familyTransits.length === 0 && (
+      {eligibleFamily.length > 0 && cardData.length === 0 && (
         <Card className="border-amber-500/40 bg-amber-500/10 dark:bg-amber-950/20">
           <CardContent className="py-4">
             <p className="text-sm font-medium text-amber-900 dark:text-amber-200">
@@ -302,10 +314,10 @@ export default async function TransitsPage() {
       )}
 
       {/* Transit cards — collapsed-by-default like /family and /charts */}
-      {familyTransits.length > 0 && (
+      {cardData.length > 0 && (
         <div className="space-y-3">
           <div className="flex items-center justify-between text-sm text-muted-foreground">
-            <span>{familyTransits.length} member{familyTransits.length !== 1 ? "s" : ""} with transit data</span>
+            <span>{cardData.length} member{cardData.length !== 1 ? "s" : ""} with transit access</span>
           </div>
           <TransitCardExpander cards={cardData} />
         </div>

@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { linkExistingNatalReport } from "@/lib/community/saved-report-link";
+import {
+  linkExistingMonthlyReport,
+  linkExistingNatalReport,
+} from "@/lib/community/saved-report-link";
 import {
   findSavedReportMatch,
   MatchSavedReportBody,
@@ -14,6 +17,14 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 const NATAL_TOOLNAME = "western_horoscope_v2";
+const MONTHLY_TOOLNAME = "tropical_transits_monthly_v3";
+
+function monthKeyFromBody(body: MatchSavedReportBody): string | null {
+  const futureMonth = body.extras?.futureMonth?.trim();
+  if (!futureMonth) return null;
+  const monthKey = futureMonth.slice(0, 7);
+  return /^\d{4}-(0[1-9]|1[0-2])$/.test(monthKey) ? monthKey : null;
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -133,6 +144,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ found: false });
     }
 
+    let domainLinked = false;
+
     if (toolname === NATAL_TOOLNAME && familyMemberId && typeof match.id === "string") {
       const link = await linkExistingNatalReport({
         familyMemberId,
@@ -151,12 +164,38 @@ export async function POST(request: NextRequest) {
           { status: 500 }
         );
       }
+      domainLinked = true;
+    }
+
+    if (toolname === MONTHLY_TOOLNAME && familyMemberId && typeof match.id === "string") {
+      const monthKey = monthKeyFromBody(body);
+      if (monthKey) {
+        const link = await linkExistingMonthlyReport({
+          familyMemberId,
+          monthKey,
+          reportId: match.id,
+        });
+        if (!link.domainLinked) {
+          return NextResponse.json(
+            {
+              error:
+                link.domainLinkError ??
+                "Saved report found but failed to link monthly transit",
+              found: true,
+              res: match,
+              domainLinked: false,
+            },
+            { status: 500 }
+          );
+        }
+        domainLinked = true;
+      }
     }
 
     return NextResponse.json({
       found: true,
       res: match,
-      domainLinked: toolname === NATAL_TOOLNAME,
+      domainLinked,
     });
   } catch (err) {
     console.error("[community/horoscope/match-saved] unexpected error:", err);
