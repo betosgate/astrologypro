@@ -103,6 +103,16 @@ export function AvailabilityPreview({
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
+  // Guard: the month API rejects duration <= 0 with 400, which makes the
+  // calendar render as fully unavailable. Some evergreen services live in
+  // the DB with duration_minutes = 0; in `allSlots` mode the duration is
+  // only a stride, so 60 is a safe fallback. Keep the prop so callers can
+  // still pass real per-service durations.
+  const requestDurationMinutes =
+    Number.isFinite(durationMinutes) && durationMinutes > 0
+      ? durationMinutes
+      : 60;
+
   const serviceQuery = allSlots
     ? "&allSlots=1"
     : serviceId
@@ -119,7 +129,7 @@ export function AvailabilityPreview({
 
       try {
         const response = await fetch(
-          `/api/availability/${divinerId}/month?month=${monthKey}&duration=${durationMinutes}${serviceQuery}`
+          `/api/availability/${divinerId}/month?month=${monthKey}&duration=${requestDurationMinutes}${serviceQuery}`
         );
         const data = response.ok ? await response.json() : null;
         const dates = Array.isArray(data?.availableDates)
@@ -133,7 +143,7 @@ export function AvailabilityPreview({
       }
     }
     fetchMonthAvailability();
-  }, [divinerId, currentMonth, durationMinutes, serviceQuery]);
+  }, [divinerId, currentMonth, requestDurationMinutes, serviceQuery]);
 
   // Fetch time slots when a date is selected
   useEffect(() => {
@@ -143,7 +153,7 @@ export function AvailabilityPreview({
       setLoadingSlots(true);
       try {
         const response = await fetch(
-          `/api/availability/${divinerId}?date=${selectedDate}&duration=${durationMinutes}${serviceQuery}&debugBusy=1`
+          `/api/availability/${divinerId}?date=${selectedDate}&duration=${requestDurationMinutes}${serviceQuery}&debugBusy=1`
         );
         const data: AvailabilityDebugResponse | TimeSlot[] = response.ok ? await response.json() : [];
         if (Array.isArray(data)) {
@@ -162,7 +172,7 @@ export function AvailabilityPreview({
     }
 
     fetchSlots();
-  }, [selectedDate, divinerId, durationMinutes, serviceQuery]);
+  }, [selectedDate, divinerId, requestDurationMinutes, serviceQuery]);
 
   useEffect(() => {
     setActiveTab("available");

@@ -166,21 +166,74 @@ export async function POST(_req: NextRequest) {
     );
   }
 
-  // Task 05: if a template_id is provided, verify diviner_services access
-  const templateId = typeof body.template_id === "string" ? body.template_id : null;
-  if (templateId) {
+  const requestedTemplateId =
+    typeof body.template_id === "string" ? body.template_id.trim() : "";
+  const requestedTemplateSlug =
+    typeof body.template_slug === "string" ? body.template_slug.trim() : "";
+
+  let templateId: string | null = null;
+  let shouldCreateAssignment = false;
+
+  if (requestedTemplateId || requestedTemplateSlug) {
+    let templateQuery = admin
+      .from("service_templates")
+      .select("id, slug, category, is_active")
+      .eq("is_active", true);
+
+    templateQuery = requestedTemplateId
+      ? templateQuery.eq("id", requestedTemplateId)
+      : templateQuery.eq("slug", requestedTemplateSlug);
+
+    const { data: template, error: templateError } =
+      await templateQuery.maybeSingle();
+
+    if (templateError || !template) {
+      return NextResponse.json(
+        {
+          type: "https://httpstatuses.com/422",
+          title: "Validation error",
+          status: 422,
+          detail: "Selected service template was not found.",
+        },
+        { status: 422 },
+      );
+    }
+
+    if (template.category !== category) {
+      return NextResponse.json(
+        {
+          type: "https://httpstatuses.com/422",
+          title: "Validation error",
+          status: 422,
+          detail:
+            "Selected service template category does not match the service category.",
+        },
+        { status: 422 },
+      );
+    }
+
+    templateId = template.id as string;
+
     const { data: dsAccess } = await admin
       .from("diviner_services")
       .select("is_enabled")
       .eq("diviner_id", diviner.id)
       .eq("template_id", templateId)
       .maybeSingle();
-    if (!dsAccess || !dsAccess.is_enabled) {
+
+    if (dsAccess?.is_enabled === false) {
       return NextResponse.json(
-        { type: "https://httpstatuses.com/403", title: "Forbidden", status: 403, detail: "This service template is not enabled for your account" },
+        {
+          type: "https://httpstatuses.com/403",
+          title: "Forbidden",
+          status: 403,
+          detail: "This service template is disabled for your account.",
+        },
         { status: 403 },
       );
     }
+
+    shouldCreateAssignment = !dsAccess;
   }
 
   // Generate slug from name
@@ -204,7 +257,7 @@ export async function POST(_req: NextRequest) {
       requires_birth_data: body.requires_birth_data !== false,
       ...(templateId ? { template_id: templateId } : {}),
     })
-    .select("id, name, slug, category, description, duration_minutes, base_price, is_active, created_at")
+    .select("id, template_id, name, slug, category, description, duration_minutes, base_price, is_active, created_at")
     .single();
 
   if (error) {
@@ -212,6 +265,40 @@ export async function POST(_req: NextRequest) {
       { type: "https://httpstatuses.com/500", title: "Insert failed", status: 500, detail: error.message },
       { status: 500 },
     );
+  }
+
+  if (templateId) {
+    const assignmentMutation = shouldCreateAssignment
+      ? admin.from("diviner_services").insert({
+          diviner_id: diviner.id,
+          template_id: templateId,
+          price: base_price,
+          is_enabled: true,
+          is_published: false,
+          enabled_at: new Date().toISOString(),
+          enabled_by: user.id,
+        })
+      : admin
+          .from("diviner_services")
+          .update({
+            price: base_price,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("diviner_id", diviner.id)
+          .eq("template_id", templateId);
+
+    const { error: assignmentError } = await assignmentMutation;
+    if (assignmentError) {
+      return NextResponse.json(
+        {
+          type: "https://httpstatuses.com/500",
+          title: "Assignment failed",
+          status: 500,
+          detail: assignmentError.message,
+        },
+        { status: 500 },
+      );
+    }
   }
 
   return NextResponse.json({ service }, { status: 201 });
