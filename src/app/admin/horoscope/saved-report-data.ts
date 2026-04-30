@@ -131,20 +131,25 @@ function hydrateCommon(results: JsonRecord, tabSlug: string, astroApiData: JsonR
   if (natalData) results.natal_chart_data = natalData;
 }
 
-function hydrateTransit(results: JsonRecord, tabSlug: string, row: JsonRecord, astroApiData: JsonRecord | null) {
-  if (!astroApiData) return;
-
-  const transitData =
-    astroApiData.transit_data ??
-    astroApiData.transits ??
-    astroApiData.astrology_report_weekly ??
-    astroApiData.astrology_report_monthly ??
+function hydrateTransit(results: JsonRecord, tabSlug: string, row: JsonRecord, astroApiData: JsonRecord | null, aiResponse: JsonRecord) {
+  let transitData =
+    astroApiData?.transit_data ??
+    astroApiData?.transits ??
+    astroApiData?.astrology_report_weekly ??
+    astroApiData?.astrology_report_monthly ??
+    aiResponse.tropical_transits_monthly ??
+    aiResponse.tropical_transits_weekly ??
     astroApiData;
+
+  if (Array.isArray(transitData) && tabSlug === "tropical_transits_monthly_v3") {
+    transitData = { unique_transits: transitData };
+  }
   const lunarMetrics =
-    astroApiData.lunar_metrics ??
-    astroApiData.lunar_data ??
+    astroApiData?.lunar_metrics ??
+    astroApiData?.lunar_data ??
     asRecord(transitData)?.lunar_data ??
-    asRecord(transitData)?.lunar_metrics;
+    asRecord(transitData)?.lunar_metrics ??
+    aiResponse.lunar_metrics;
 
   results.transit_data = transitData;
   if (lunarMetrics) results.lunar_metrics = lunarMetrics;
@@ -157,13 +162,13 @@ function hydrateTransit(results: JsonRecord, tabSlug: string, row: JsonRecord, a
     formData?.future_month ??
     formData?.targetMonth ??
     formData?.target_month ??
-    astroApiData.future_transit_date;
+    astroApiData?.future_transit_date;
 
   if (futureDate) {
     results.is_future_transit = true;
     results.future_transit_date = futureDate;
   } else {
-    results.is_future_transit = Boolean(astroApiData.is_future_transit);
+    results.is_future_transit = Boolean(astroApiData?.is_future_transit);
   }
 
   if (tabSlug === "tropical_transits_monthly_v3" && !results.lunar_metrics && asRecord(transitData)?.lunar_data) {
@@ -230,7 +235,7 @@ export function hydrateSavedAstroReport(input: unknown, tabSlug: string): SavedR
   hydrateCommon(results, tabSlug, astroApiData);
 
   if (tabSlug === "tropical_transits_weekly_v2" || tabSlug === "tropical_transits_monthly_v3") {
-    hydrateTransit(results, tabSlug, row, astroApiData);
+    hydrateTransit(results, tabSlug, row, astroApiData, aiResponse);
   }
 
   if (tabSlug === "solar_return_v2") {

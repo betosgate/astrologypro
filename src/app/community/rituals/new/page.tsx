@@ -268,6 +268,46 @@ function buildCustomTags(
   return [...new Set(tags)];
 }
 
+const PLANET_SYMBOLS: Record<string, string> = {
+  Sun: "☉",
+  Moon: "☽",
+  Mercury: "☿",
+  Venus: "♀",
+  Mars: "♂",
+  Jupiter: "♃",
+  Saturn: "♄",
+  Uranus: "♅",
+  Neptune: "♆",
+  Pluto: "♇",
+};
+
+const ZODIAC_SYMBOLS: Record<string, string> = {
+  Aries: "♈",
+  Taurus: "♉",
+  Gemini: "♊",
+  Cancer: "♋",
+  Leo: "♌",
+  Virgo: "♍",
+  Libra: "♎",
+  Scorpio: "♏",
+  Sagittarius: "♐",
+  Capricorn: "♑",
+  Aquarius: "♒",
+  Pisces: "♓",
+};
+
+const ELEMENT_ICONS: Record<Element, React.ReactNode> = {
+  Fire: <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[10px] border-b-red-500" />,
+  Water: <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[10px] border-t-blue-500" />,
+  Air: <div className="relative w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[10px] border-b-yellow-500">
+    <div className="absolute left-[-3px] top-[5px] h-[1px] w-[6px] bg-yellow-900/50" />
+  </div>,
+  Earth: <div className="relative w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[10px] border-t-emerald-500">
+    <div className="absolute left-[-3px] top-[-6px] h-[1px] w-[6px] bg-emerald-900/50" />
+  </div>,
+  Spirit: <div className="size-2.5 rounded-full border-2 border-white/20 bg-gray-500" />,
+};
+
 export default function CreateRitualPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -707,17 +747,14 @@ export default function CreateRitualPage() {
                     toggleItem(planet, selectedPlanets, setSelectedPlanets)
                   }
                   aria-pressed={selected}
-                  className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${selected
-                      ? "border-amber-500/50 bg-amber-500/20 text-amber-300"
+                  className={`flex items-center gap-2.5 rounded-full border px-4 py-2 text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${selected
+                      ? "border-amber-500/50 bg-amber-500/20 text-amber-300 shadow-lg shadow-amber-500/10"
                       : "border-border/60 bg-muted/20 text-muted-foreground hover:border-border hover:text-foreground"
                     }`}
                 >
-                  <Checkbox
-                    checked={selected}
-                    className="pointer-events-none size-3.5"
-                    tabIndex={-1}
-                    aria-hidden
-                  />
+                  <span className={`text-lg font-serif transition-colors ${selected ? "text-amber-400" : "text-muted-foreground/60"}`}>
+                    {PLANET_SYMBOLS[planet]}
+                  </span>
                   {planet}
                 </button>
               );
@@ -749,6 +786,7 @@ export default function CreateRitualPage() {
           <div className="flex flex-wrap gap-2">
             {ZODIAC_SIGNS.map((sign) => {
               const selected = selectedZodiacs.includes(sign);
+              const metadata = ZODIAC_METADATA[sign];
               return (
                 <button
                   key={sign}
@@ -758,17 +796,14 @@ export default function CreateRitualPage() {
                     toggleItem(sign, selectedZodiacs, setSelectedZodiacs)
                   }
                   aria-pressed={selected}
-                  className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${selected
-                      ? "border-violet-500/50 bg-violet-500/20 text-violet-300"
+                  className={`flex items-center gap-3 rounded-full border px-4 py-2 text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${selected
+                      ? "border-violet-500/50 bg-violet-500/20 text-violet-300 shadow-lg shadow-violet-500/10"
                       : "border-border/60 bg-muted/20 text-muted-foreground hover:border-border hover:text-foreground"
                     }`}
                 >
-                  <Checkbox
-                    checked={selected}
-                    className="pointer-events-none size-3.5"
-                    tabIndex={-1}
-                    aria-hidden
-                  />
+                  <div className={`transition-opacity ${selected ? "opacity-100" : "opacity-40"}`}>
+                    {ELEMENT_ICONS[metadata.element]}
+                  </div>
                   {sign}
                 </button>
               );

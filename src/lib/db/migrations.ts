@@ -81,6 +81,7 @@ import { MIGRATION_SQL as MIG_20260427000002_ARV2A } from "@/data/migrations/202
 import { MIGRATION_SQL as MIG_20260427000003_AJSP } from "@/data/migrations/20260427000003_affiliate_junction_select_policy";
 import { MIGRATION_SQL as MIG_20260427000004_ARSD } from "@/data/migrations/20260427000004_affiliate_rls_security_definer";
 import { MIGRATION_SQL as MIG_20260428000003_RGS } from "@/data/migrations/20260428000003_ritual_global_settings";
+import { MIGRATION_SQL as MIG_20260413000184_MTL } from "@/data/migrations/20260413000184_monthly_transit_lifecycle";
 
 /**
  * Allowlisted migrations that the admin migration runner can execute.
@@ -769,6 +770,14 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Creates the ritual_global_settings singleton table for platform-wide video player behaviors (autoplay, loop, controls, muted) and seeds default values. Safe to re-run.",
     sortKey: "20260428000003",
     sql: MIG_20260428000003_RGS,
+  },
+  "20260413000184_monthly_transit_lifecycle": {
+    id: "20260413000184_monthly_transit_lifecycle",
+    title: "Monthly Transit Lifecycle States (generation_status, failure tracking)",
+    description:
+      "Extends monthly_transits with full lifecycle tracking: generation_status (pending|generated|notified|failed|suppressed), failure_reason, retry_count, last_attempted_at, notified_at, notification_sent. Backfills existing rows to generation_status=generated (or notified when notification_sent=true). Adds indexes for status filtering and family_member_id+month lookups. Required by the ensure-monthly-transits service and the /community/transits page. Strictly additive — IF NOT EXISTS on all columns. Idempotent.",
+    sortKey: "20260413000184",
+    sql: MIG_20260413000184_MTL,
   },
 };
 

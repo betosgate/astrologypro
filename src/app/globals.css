@@ -123,6 +123,7 @@
   --sidebar-accent-foreground: #f5f0e8;
   --sidebar-border: rgba(255, 255, 255, 0.1);
   --sidebar-ring: #c9a84c;
+  color-scheme: dark;
 }
 
 /* Fix native <select> <option> visibility in dark mode */
@@ -142,6 +143,23 @@
 
   html {
     @apply font-sans;
+  }
+
+  /* Global styling for native date/time pickers */
+  input[type="date"]::-webkit-calendar-picker-indicator,
+  input[type="time"]::-webkit-calendar-picker-indicator,
+  input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+  input[type="month"]::-webkit-calendar-picker-indicator {
+    opacity: 0.5;
+    transition: opacity 0.2s ease-in-out;
+    cursor: pointer;
+  }
+
+  input[type="date"]::-webkit-calendar-picker-indicator:hover,
+  input[type="time"]::-webkit-calendar-picker-indicator:hover,
+  input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover,
+  input[type="month"]::-webkit-calendar-picker-indicator:hover {
+    opacity: 1;
   }
 }
 
