@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { calculateSynastry } from "@/lib/astro/synastry";
 import type { NatalChartData } from "@/lib/astro/natal-chart";
+import { isValidNatalChart } from "@/lib/community/chart-validators";
+import {
+  isBirthDataComplete,
+  buildNatalChartFromBirthData,
+} from "@/lib/community/birth-data-readiness";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -12,8 +17,11 @@ export const runtime = "nodejs";
  * Generates all missing or invalidated pairwise relationship charts for the
  * authenticated member's household in a single request.
  *
- * Strategy:
- * - Fetch all eligible family members (those with a generated natal chart).
+ * Strategy (post 2026-04-30 — independent product rule):
+ * - Eligibility = complete birth data, not saved natal_chart state.
+ * - Saved natal_chart JSON is honoured as a read-through cache when
+ *   shape-valid; otherwise we build NatalChartData on the fly from
+ *   birth fields. No side-effect writes to natal_chart.
  * - Compute every valid pair combination.
  * - Skip pairs where a current (non-invalidated) chart already exists.
  * - Generate and upsert missing/invalidated pairs.
@@ -21,7 +29,8 @@ export const runtime = "nodejs";
  * Returns: { generated, skipped, blocked, invalidatedRegenerated }
  *   generated             — new charts created
  *   skipped               — already current, no action needed
- *   blocked               — pair skipped because one or both natal charts are missing
+ *   blocked               — pair skipped because one or both members have
+ *                           incomplete birth data
  *   invalidatedRegenerated — stale charts refreshed due to natal chart update
  */
 export async function POST() {
@@ -43,10 +52,14 @@ export async function POST() {
     return NextResponse.json({ error: "Inactive membership" }, { status: 403 });
   }
 
-  // Fetch all family members — only those with natal charts are eligible for pairing
+  // Fetch all family members — eligibility for pairing is complete birth
+  // data (independent product rule). We pull natal_chart so the compute
+  // path below can use it as a read-through cache when shape-valid.
   const { data: allMembers, error: membersError } = await supabase
     .from("community_family_members")
-    .select("id, full_name, natal_chart, natal_status")
+    .select(
+      "id, full_name, natal_chart, natal_status, age_group, date_of_birth, birth_time, birth_city, birth_country, birth_lat, birth_lng"
+    )
     .eq("member_id", member.id)
     .order("created_at", { ascending: true });
 
@@ -54,9 +67,7 @@ export async function POST() {
     return NextResponse.json({ error: membersError.message }, { status: 500 });
   }
 
-  const eligible = (allMembers ?? []).filter(
-    (m) => m.natal_chart !== null && m.natal_status === "generated"
-  );
+  const eligible = (allMembers ?? []).filter((m) => isBirthDataComplete(m));
 
   if (eligible.length < 2) {
     return NextResponse.json({
@@ -64,7 +75,8 @@ export async function POST() {
       skipped: 0,
       blocked: 0,
       invalidatedRegenerated: 0,
-      message: "Need at least 2 members with generated natal charts to create relationship charts.",
+      message:
+        "Need at least 2 members with complete birth details to create relationship charts.",
     });
   }
 
@@ -102,14 +114,28 @@ export async function POST() {
         continue;
       }
 
-      if (!personA.natal_chart || !personB.natal_chart) {
+      // Both ends are guaranteed birth-data-complete by the `eligible`
+      // filter above. Use saved natal_chart when shape-valid, otherwise
+      // build NatalChartData from birth fields in memory. No write-back
+      // to natal_chart — the relationship product is independent of
+      // whether the natal chart product has been generated yet.
+      let natalA: NatalChartData;
+      let natalB: NatalChartData;
+      try {
+        natalA = isValidNatalChart(personA.natal_chart)
+          ? (personA.natal_chart as NatalChartData)
+          : buildNatalChartFromBirthData(personA);
+        natalB = isValidNatalChart(personB.natal_chart)
+          ? (personB.natal_chart as NatalChartData)
+          : buildNatalChartFromBirthData(personB);
+      } catch {
         blocked++;
         continue;
       }
 
       const synastry = calculateSynastry(
-        personA.natal_chart as NatalChartData,
-        personB.natal_chart as NatalChartData,
+        natalA,
+        natalB,
         personA.full_name,
         personB.full_name
       );

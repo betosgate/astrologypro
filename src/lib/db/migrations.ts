@@ -80,6 +80,7 @@ import { MIGRATION_SQL as MIG_20260424009001_ACV2D } from "@/data/migrations/202
 import { MIGRATION_SQL as MIG_20260427000002_ARV2A } from "@/data/migrations/20260427000002_affiliate_rls_v2_alignment";
 import { MIGRATION_SQL as MIG_20260427000003_AJSP } from "@/data/migrations/20260427000003_affiliate_junction_select_policy";
 import { MIGRATION_SQL as MIG_20260427000004_ARSD } from "@/data/migrations/20260427000004_affiliate_rls_security_definer";
+import { MIGRATION_SQL as MIG_20260430000002_AP15G } from "@/data/migrations/20260430000002_affiliate_phase_1_5_general";
 import { MIGRATION_SQL as MIG_20260428000003_RGS } from "@/data/migrations/20260428000003_ritual_global_settings";
 import { MIGRATION_SQL as MIG_20260430000002_RSTL } from "@/data/migrations/20260430000002_repair_service_template_links";
 import { MIGRATION_SQL as MIG_20260413000184_MTL } from "@/data/migrations/20260413000184_monthly_transit_lifecycle";
@@ -723,6 +724,14 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Hot-fix for 20260427000003. After that migration, every authed query on the affiliate child tables raised 'infinite recursion detected in policy for relation diviner_affiliates' — `affiliate_accounts.diviner_sees_linked_accounts` queries diviner_affiliates, and the new `affiliate_sees_own_junctions` queries affiliate_accounts. Cycle. Introduces two SECURITY DEFINER helpers — `current_affiliate_junction_ids()` (SETOF UUID) and `current_affiliate_account_id()` (UUID) — that resolve auth.uid() → junction set / account id while bypassing inner RLS. Rewrites all 6 affiliate-side policies from 20260427000002 + 20260427000003 to call these helpers instead of inlined subqueries. Run AFTER 20260427000003.",
     sortKey: "20260427000004",
     sql: MIG_20260427000004_ARSD,
+  },
+  "20260430000002_affiliate_phase_1_5_general": {
+    id: "20260430000002_affiliate_phase_1_5_general",
+    title: "Affiliate Phase 1.5 — general-product commissions schema",
+    description:
+      "Single additive migration enabling general-product affiliate commissions per spec §10 Phase 1.5. Adds `service_templates.is_general` (backfilled from `slug LIKE 'general-%'`), `service_templates.affiliate_program_enabled` toggle, `service_templates.commission_type` (CHECK in 'percent','flat' — corrected from spec wording 'percentage' to match the v2 stamp pipeline; deviation noted in migration header) + `commission_value`. Adds `affiliate_campaigns.owner_affiliate_account_id` for account-direct ownership of general campaigns; extends `owner_affiliate_type` CHECK to allow 'general'; tightens `affiliate_campaigns_owner_consistency` CHECK so general campaigns require account_id + destination_service_template_id and forbid junction/source_assignment. Adds `bookings.commission_source_template_id` parallel to `commission_source_assignment_id`. Adds `campaign_conversions.affiliate_account_id` (always populated for new rows; backfills existing per-diviner rows by resolving junction → account). Extends affiliate-side RLS on `affiliate_campaigns` (SELECT/INSERT/UPDATE) and `campaign_conversions` (SELECT) to recognize general ownership via `current_affiliate_account_id()`. Idempotent + sanity-checked. Run AFTER 20260427000004. (Bumped from ...0001 to ...0002 to avoid collision with 20260430000001_search_auth_users_by_email_fn.sql.)",
+    sortKey: "20260430000002",
+    sql: MIG_20260430000002_AP15G,
   },
   "20260423000004_fix_invite_rpc_ambiguity": {
     id: "20260423000004_fix_invite_rpc_ambiguity",
