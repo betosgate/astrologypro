@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getAdminUser } from "@/lib/admin-auth";
+import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
 /**
  * POST /api/admin/horoscope/match-saved
+ * POST /api/community/horoscope/match-saved
  *
  * Looks up the most recent saved astro toolkit artifact whose form_data
  * matches the submitted form data for the given toolname. Used by the
@@ -15,7 +16,7 @@ export const dynamic = "force-dynamic";
  * Why this endpoint vs. /api/astro-ai/lookup-saved:
  *   - lookup-saved is scoped to the *authenticated end user* (`user_id`)
  *     and operates on a fixed set of identity fields used by the
- *     community flow. Admins viewing the horoscope tool need to be able
+ *     community flow. Horoscope toolkit users need to be able
  *     to find ANY saved row (their own, an end user's, or a session
  *     prefill) by birth identity alone.
  *   - The legacy save path stored real form data inside `ai_response`
@@ -294,12 +295,12 @@ function isComplete(id: Identity): boolean {
 
 export async function POST(request: NextRequest) {
   try {
-    const adminUser = await getAdminUser();
-    if (!adminUser) {
-      return NextResponse.json(
-        { error: "Forbidden: Admin access required" },
-        { status: 403 }
-      );
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const body = (await request.json().catch(() => null)) as MatchBody | null;
@@ -372,12 +373,12 @@ export async function POST(request: NextRequest) {
       .limit(limit);
 
     if (error) {
-      console.error("[admin/horoscope/match-saved] read error:", error);
+      console.error("[horoscope/match-saved] read error:", error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
     for (const candidate of candidates ?? []) {
-      const row = candidate as JsonRecord;
+      const row = candidate as unknown as JsonRecord;
       const formData = resolveFormData(row);
       if (!formData) continue;
 
@@ -424,7 +425,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ found: false });
   } catch (err) {
-    console.error("[admin/horoscope/match-saved] unexpected error:", err);
+    console.error("[horoscope/match-saved] unexpected error:", err);
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Match-saved failed" },
       { status: 500 }

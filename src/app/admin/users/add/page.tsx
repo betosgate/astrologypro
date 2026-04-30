@@ -18,18 +18,11 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2, ArrowLeft, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
+import { ADMIN_ONLY_USER_TYPES } from "@/components/admin/user-type-options";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const USER_TYPES = [
-  { value: "admin", label: "Admin" },
-  { value: "diviner", label: "Diviner" },
-  { value: "client", label: "Client" },
-  { value: "advocate", label: "Social Advocate" },
-  { value: "trainee", label: "Trainee" },
-  { value: "community_mystery_school", label: "Community - Mystery School" },
-  { value: "community_perennial_mandalism", label: "Community - Perennial Mandalism" },
-];
+const USER_TYPES = ADMIN_ONLY_USER_TYPES;
 
 const GENDERS = [
   { value: "male", label: "Male" },
