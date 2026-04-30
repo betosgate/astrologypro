@@ -10530,18 +10530,68 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Duration bar: when the transit entered orb, exact date, and when it leaves orb"
         ]
       },
-      {
-        name: "family-chart",
-        label: "Family Chart",
-        description: "Composite or synastry chart view for the member's family circle group. Displays overlapping natal placements between selected family members and highlights key compatibility aspects and tension points.",
-        group: "Charts",
-        purpose: "Deepens members' astrological practice by extending chart work to their closest relationships within a privacy-safe family circle.",
-        bullets: [
-          "Family member selector — choose 2 to 4 members to include in the composite",
-          "Overlay chart wheel showing combined placements with colour-coded glyphs per person",
-          "Aspect summary table: harmonious, challenging, and neutral aspects with plain-language labels"
-        ]
-      },
+  
+
+
+
+      
+  {
+    "name": "relationship-charts-list",
+    "label": "Relationship Charts",
+    "description": "Community relationship chart dashboard where users can view all available relationship pairs in their family and generate or open synastry chart reports.",
+    "group": "Charts",
+    "subModule": "Relationship Charts",
+    "purpose": "Allows users to generate, access, and manage relationship astrology charts between connected family members or saved relationship pairs.",
+    "bullets": [
+      "Displays all available relationship pairs in card format.",
+      "Each card shows two connected people names.",
+      "Relationship chart cards support Romantic, Friendship, and Business compatibility reports.",
+      "Select type dropdown allows choosing the relationship chart type.",
+      "If a chart already exists, the dropdown shows View action.",
+      "If a chart is not yet generated, the dropdown shows Generate action.",
+      "Refresh button reloads the latest relationship chart data.",
+      "Charts are generated using saved birth details of both individuals.",
+      "Generated relationship charts are stored in the database.",
+      "Users can reopen previously generated compatibility reports without regenerating data.",
+      "Supports synastry relationship analysis for multiple family or partner combinations."
+    ]
+  },
+  {
+    "name": "relationship-chart-generate",
+    "label": "Generate Relationship Chart",
+    "description": "Relationship chart generation flow triggered from the Select type dropdown. Users choose a relationship type and generate a compatibility chart between two selected individuals.",
+     "group": "Charts",
+    "subModule": "Relationship Charts",
+    "purpose": "Generates astrology-based compatibility reports using the selected relationship category and saved birth data.",
+    "bullets": [
+      "Opened from the Select type dropdown menu.",
+      "Users can select Romantic, Friendship, or Business chart type.",
+      "Generate option appears for chart types not yet created.",
+      "System uses stored birth details for both people.",
+      "Compatibility chart is generated using astrology calculations and synastry logic.",
+      "Generated chart data is automatically saved in the database.",
+      "After generation, the Generate option changes to View.",
+      "Users can later reopen the saved chart without recalculating."
+    ]
+  },
+  {
+    "name": "relationship-chart-view",
+    "label": "View Relationship Chart",
+    "description": "Saved relationship chart viewer screen where users can open and review previously generated synastry compatibility reports.",
+    "group": "Charts",
+    "subModule": "Relationship Charts",
+    "purpose": "Allows users to access saved romantic, friendship, or business compatibility chart reports between two individuals.",
+    "bullets": [
+      "Opened using the View option from the relationship type dropdown.",
+      "Displays previously generated compatibility chart results.",
+      "Shows relationship analysis between two selected people.",
+      "Loads saved synastry chart data from the database.",
+      "Users can revisit previously generated charts anytime.",
+      "Supports viewing Romantic, Friendship, and Business compatibility reports.",
+      "Chart results are reused if the same people and relationship type already exist.",
+      "Avoids duplicate horoscope computation for previously generated chart combinations."
+    ]
+  },
       {
         name: "upgrade-to-ms",
         label: "Upgrade to Mystery School",
