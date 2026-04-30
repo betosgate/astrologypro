@@ -394,7 +394,7 @@ export function DivinerManagementClient({
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground z-10 pointer-events-none" />
             <Input
               value={searchValue}
-              placeholder="Search by name, username or phone…"
+              placeholder="Search by name, username, email or phone…"
               onChange={(e) => handleSearchChange(e.target.value)}
               className="pl-9 pr-9"
               autoComplete="off"
