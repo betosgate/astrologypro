@@ -127,7 +127,9 @@ export function AstroChartsSection() {
 
     async function fetchCharts() {
       try {
-        const res = await fetch("/api/community/astro-charts");
+        // Cache-buster ensures the dashboard always reflects recent DB 
+        // changes (like a successful transit generation).
+        const res = await fetch(`/api/community/astro-charts?t=${Date.now()}`);
         if (!res.ok) {
           errorCountRef.current += 1;
           if (errorCountRef.current >= MAX_ERROR_RETRIES) {

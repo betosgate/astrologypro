@@ -10,7 +10,7 @@ export interface UploadVideoResult {
   url: string;
 }
 
-export type TrainingUploadKind = "video" | "pdf";
+export type TrainingUploadKind = "video" | "pdf" | "audio";
 
 export interface UploadVideoOptions {
   file: File;
@@ -43,9 +43,13 @@ function friendlyUploadError(
     serverMessage.includes("exceeded the maximum allowed size");
 
   if (isStorageLimit) {
-    return kind === "pdf"
-      ? "This PDF is larger than the current document upload limit. Please upload a smaller file, or ask an admin to increase the document storage limit."
-      : "This video is larger than the current storage upload limit. Please upload a smaller or compressed video, or ask an admin to increase the training video storage limit.";
+    if (kind === "pdf") {
+      return "This PDF is larger than the current document upload limit. Please upload a smaller file, or ask an admin to increase the document storage limit.";
+    }
+    if (kind === "audio") {
+      return "This audio file is larger than the current upload limit. Please upload a smaller or compressed file, or ask an admin to increase the storage limit.";
+    }
+    return "This video is larger than the current storage upload limit. Please upload a smaller or compressed video, or ask an admin to increase the training video storage limit.";
   }
 
   if (serverMessage.trim()) {
@@ -64,8 +68,18 @@ function uploadTrainingFile({
 }: UploadVideoOptions): Promise<UploadVideoResult> {
   return new Promise<UploadVideoResult>((resolve, reject) => {
     const xhr = new XMLHttpRequest();
-    const processingLabel = kind === "pdf" ? "Processing PDF…" : "Processing video…";
-    const completeLabel = kind === "pdf" ? "PDF upload complete." : "Upload complete.";
+    const processingLabel =
+      kind === "pdf"
+        ? "Processing PDF…"
+        : kind === "audio"
+          ? "Processing audio…"
+          : "Processing video…";
+    const completeLabel =
+      kind === "pdf"
+        ? "PDF upload complete."
+        : kind === "audio"
+          ? "Audio upload complete."
+          : "Upload complete.";
     onProgress?.(0);
     onStatus?.("Preparing upload…");
 
@@ -142,4 +156,8 @@ export function uploadTrainingVideo(options: UploadVideoOptions) {
 
 export function uploadTrainingPdf(options: UploadVideoOptions) {
   return uploadTrainingFile({ ...options, kind: "pdf" });
+}
+
+export function uploadTrainingAudio(options: UploadVideoOptions) {
+  return uploadTrainingFile({ ...options, kind: "audio" });
 }

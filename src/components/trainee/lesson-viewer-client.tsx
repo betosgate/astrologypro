@@ -103,6 +103,7 @@ export type LessonViewerProps = {
   content: string | null;
   videoUrl: string | null; // legacy single video
   pdfUrl: string | null;   // legacy single PDF
+  audioUrl?: string | null; // optional first-class lesson audio (Mystery School Foundation)
   durationMins: number | null;
   videos: LessonVideo[];
   assets: LessonAsset[];
@@ -671,6 +672,7 @@ export function LessonViewerClient(props: LessonViewerProps) {
     content,
     videoUrl,
     pdfUrl,
+    audioUrl,
     durationMins,
     videos,
     assets,
@@ -1024,6 +1026,22 @@ export function LessonViewerClient(props: LessonViewerProps) {
                     setPendingRemediationChoice(activeRemediationChoiceRef.current);
                   }}
                 />
+              </div>
+            )}
+
+            {audioUrl && (
+              <div className="rounded-xl border bg-background/40 p-4 space-y-2">
+                <p className="text-sm font-medium">Audio</p>
+                <audio
+                  src={audioUrl}
+                  controls
+                  controlsList="nodownload"
+                  preload="metadata"
+                  aria-label={`Audio for ${title}`}
+                  className="w-full"
+                >
+                  Your browser does not support the audio element.
+                </audio>
               </div>
             )}
 

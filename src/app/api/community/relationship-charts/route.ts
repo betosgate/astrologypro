@@ -48,7 +48,9 @@ export async function GET() {
   // Fetch family members with their natal charts
   const { data: familyMembers } = await supabase
     .from("community_family_members")
-    .select("id, full_name, natal_chart, age_group, date_of_birth")
+    .select(
+      "id, full_name, natal_chart, age_group, date_of_birth, birth_time, birth_city, birth_country, birth_lat, birth_lng, relationship, natal_status, natal_report_id, natal_report_status, natal_report_generated_at, natal_last_generated_at, chart_updated_at, updated_at, notes"
+    )
     .eq("member_id", member.id)
     .order("created_at", { ascending: true });
 

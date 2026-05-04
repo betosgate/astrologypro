@@ -141,7 +141,7 @@ function SectorDropdown({
         type="button"
         variant="outline"
         size="sm"
-        className="gap-1.5"
+        className="gap-1.5 h-9"
         onClick={() => setOpen((v) => !v)}
       >
         {label} <ChevronDown className="size-3.5" />
