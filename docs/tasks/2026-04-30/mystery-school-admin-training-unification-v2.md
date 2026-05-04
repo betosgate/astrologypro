@@ -1,5 +1,243 @@
 # Mystery School Training Should Be Managed From Admin Training Programs And Lessons
 
+## Current Implementation Status - 2026-05-04
+
+This task is **partially implemented, not complete**.
+
+The targeted lesson audio work is mostly done, but the core source-of-truth migration is still incomplete. The visible Mystery School Foundation learner flow and the old admin Mystery School editor still depend on the legacy week/task tables.
+
+### Completed
+
+- `training_lessons.audio_url` migration exists:
+  - `supabase/migrations/20260504000001_training_lessons_audio_url.sql`
+  - `src/data/migrations/20260504000001_training_lessons_audio_url.ts`
+  - allowlist entry in `src/lib/db/migrations.ts`
+- `/admin/db/migrations` now surfaces newest migrations first, so `20260504000001_training_lessons_audio_url` is visible at the top.
+- Admin lesson create/edit supports first-class lesson audio:
+  - direct audio URL
+  - audio upload
+  - upload progress
+  - audio preview
+- Admin lesson APIs read/write `audio_url`.
+- Trainee training lesson API reads `audio_url`.
+- Shared trainee lesson viewer renders lesson audio.
+- Training access already recognizes Mystery School users through `is_mystery_school`.
+
+### Partially Done
+
+- Training-backed Mystery School nested pages exist:
+  - `/mystery-school/training/[categoryId]`
+  - `/mystery-school/training/[categoryId]/[lessonId]`
+- These pages read from `training_categories` and `training_lessons`.
+- However, they are not yet the primary learner entry flow and are not fully wired to the shared lesson completion/progress model.
+
+### Not Done / Remaining Gaps
+
+- `/mystery-school/training` still loads `/api/mystery-school/foundation`.
+- `/api/mystery-school/foundation` still reads:
+  - `mystery_school_foundation_weeks`
+  - `student_foundation_progress`
+- `/mystery-school/training` still renders:
+  - `FoundationWeek`
+  - old week cards
+  - JSON `tasks`
+  - checkbox completion
+- `/api/mystery-school/foundation/complete-task` still marks legacy JSON tasks complete.
+- The old `complete-task` endpoint still advances `mystery_school_students.training_status` from `foundation` to `decans` when week 12 completes.
+- `/admin/mystery-school` is still an editable content/task checklist editor, so it remains a competing content source.
+- The Training-backed Mystery School lesson page does not currently select or render `audio_url`.
+- The Training-backed Mystery School lesson page does not use the shared lesson completion button/progress flow.
+- There is no current migration that maps all 12 old foundation weeks and JSON tasks into:
+  - one `Mystery School Foundation` training program
+  - one training category per week
+  - one or more real training lessons per old task
+- There is no explicit old progress migration strategy implemented.
+- There is no implemented Training-model-based `foundation -> decans` transition.
+
+### Decision After Audit
+
+The task should now be completed by finishing the source-of-truth migration, not by adding more functionality to the old week/task system.
+
+Use this final target:
+
+- Admin content source of truth: `training_programs`, `training_categories`, `training_lessons`, `training_quizzes`
+- Mystery School learner shell: keep the week-themed `/mystery-school/training` experience
+- Week source: `training_categories`
+- Completable learning units: `training_lessons`
+- Completion source: `lesson_completions`, `category_completions`, `user_category_progress`, `user_program_progress`
+- Old foundation tables: migration input and temporary fallback only
+
+## Completion Plan From Current State
+
+The remaining implementation should be completed in this order.
+
+### 1. Finish the Training-backed learner adapter
+
+Update `/mystery-school/training` so it no longer calls `/api/mystery-school/foundation`.
+
+It should load the Mystery School Foundation program from the Training hierarchy. The adapter should derive:
+
+- week number from category priority or `Week N` title
+- week title from `training_categories.name`
+- week description from `training_categories.description`
+- week completion from category completion state
+- progress from completed lessons / total lessons
+- lesson rows from `training_lessons`
+- locked/unlocked state from the existing Training sequential logic
+
+Required files to update or replace:
+
+- `src/app/mystery-school/training/page.tsx`
+- likely a new route/helper for Mystery School training hierarchy, or reuse `/api/trainee/training/programs`
+
+Acceptance for this step:
+
+- `/mystery-school/training` displays week cards backed by Training categories.
+- Old JSON tasks are no longer rendered as the primary learning units.
+- Each week card links to real lessons.
+
+### 2. Replace checkbox completion with lesson completion
+
+Remove the old checkbox task completion behavior from the learner path.
+
+Use the existing lesson completion flow:
+
+- `POST /api/trainee/training/lessons/[id]/start`
+- `POST /api/trainee/training/lessons/[id]/heartbeat`
+- `POST /api/trainee/training/lessons/[id]/complete`
+- `lesson_completions`
+- `category_completions`
+
+Acceptance for this step:
+
+- Completing all lessons in a category completes the week.
+- Completing all week categories completes the foundation program.
+- The learner does not complete foundation by checking JSON task rows.
+
+### 3. Upgrade the Mystery School lesson page or reuse the shared lesson viewer
+
+The current `/mystery-school/training/[categoryId]/[lessonId]` page is too thin.
+
+Choose one:
+
+- preferred: wrap/reuse the shared `LessonViewerClient` and trainee lesson API behavior in the Mystery School shell
+- acceptable: redirect Mystery School lesson links to the existing shared lesson viewer if the UX remains acceptable
+
+Must support:
+
+- `audio_url`
+- content
+- video
+- PDF
+- quizzes
+- completion CTA
+- locked lesson protection
+- completed state
+- next lesson / next week navigation
+
+Acceptance for this step:
+
+- Lesson audio uploaded from admin Training plays in the Mystery School learner lesson.
+- Learners can complete a Mystery School lesson through the Training completion model.
+
+### 4. Seed or migrate the Mystery School Foundation program structure
+
+Create or repair a migration that ensures the final structure exists.
+
+Required structure:
+
+- Program: `Mystery School Foundation`
+- Program settings:
+  - `is_active = true`
+  - `is_sequential = true`
+  - `allowed_roles = ARRAY['is_mystery_school']`
+- 12 categories:
+  - one per foundation week
+  - priorities 1 through 12
+  - active
+  - sequential if week lesson order should be enforced
+- lessons:
+  - each old JSON task becomes a real lesson
+  - minimum pattern per week:
+    - intro / reading
+    - practice / meditation
+    - reflection / integration
+
+Audio mapping:
+
+- old `mystery_school_foundation_weeks.audio_url` maps to `training_lessons.audio_url`
+- default target: first lesson in that week category
+
+Acceptance for this step:
+
+- The new program is not empty.
+- Every old week has a corresponding category.
+- Every old task has a meaningful lesson replacement.
+- Old weekly audio is preserved on the appropriate lesson.
+
+### 5. Preserve or explicitly reset old progress
+
+Choose and document one rollout path before migration:
+
+- preserve existing progress by mapping completed weeks to category/lesson completions
+- or reset only known test/dev data
+
+Recommended unless production is confirmed empty:
+
+- preserve completed weeks
+- if a legacy week is complete, mark every mapped lesson in that category complete for that learner
+- ensure `category_completions` exists for fully completed mapped weeks
+
+Acceptance for this step:
+
+- The chosen progress strategy is documented in this file.
+- A migration or admin-only repair script implements that strategy.
+
+### 6. Preserve `foundation -> decans` transition through Training completion
+
+Remove the old dependency on `student_foundation_progress.week_completed_at` as the authoritative trigger.
+
+Add a Mystery School-specific completion rule:
+
+- when the `Mystery School Foundation` training program is fully complete
+- and the student is currently `training_status = 'foundation'`
+- update `mystery_school_students.training_status` to `decans`
+
+Do not use the generic trainee graduation helper as-is for this transition. The current generic helper updates `trainees.training_status` to `graduated`, which is not the Mystery School foundation-to-decans domain state.
+
+Acceptance for this step:
+
+- Completing the final foundation lesson/category advances Mystery School status to `decans`.
+- This works without calling `/api/mystery-school/foundation/complete-task`.
+- The implementation location is documented in this file.
+
+### 7. Retire old admin Mystery School foundation editing
+
+After Training-backed content is live:
+
+- stop presenting `/admin/mystery-school` as the main foundation content editor
+- convert it to a progress/migration monitor, or add clear links to Admin Training and make legacy fields read-only
+
+Acceptance for this step:
+
+- Admins edit Mystery School Foundation curriculum from Admin Training.
+- The old page cannot silently create a second source of truth.
+
+### 8. Keep old APIs only as temporary fallback
+
+These routes should not remain the main learner path:
+
+- `/api/mystery-school/foundation`
+- `/api/mystery-school/foundation/complete-task`
+- `/api/admin/mystery-school/foundation`
+- `/api/admin/mystery-school/foundation/[id]`
+
+After migration, either:
+
+- remove them,
+- gate them behind a migration/debug flag,
+- or keep them readonly for audit only.
+
 ## Purpose
 
 Move Mystery School training management into the existing admin Training system so admins control Mystery School curriculum from the same place they already manage programs, categories, lessons, and quizzes.
