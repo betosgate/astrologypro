@@ -56,6 +56,7 @@ export async function POST(request: NextRequest) {
       sourcePortal,
       entry_quarter,
       entry_year,
+      resubscribe,
     } = body as {
       membershipType: string;
       planType?: string;
@@ -63,6 +64,7 @@ export async function POST(request: NextRequest) {
       sourcePortal?: string;
       entry_quarter?: string;
       entry_year?: number;
+      resubscribe?: boolean;
     };
 
     // --- Input validation ---
@@ -75,7 +77,11 @@ export async function POST(request: NextRequest) {
       ? "individual"
       : inferPmPlanType(planType, planId);
 
-    if (isMysterySchool) {
+    // entry_quarter/entry_year identify the cohort for first-time
+    // enrollment. On resubscribe the existing student row already has
+    // these (or has them as null for legacy/seeded rows) — we don't
+    // require them and don't overwrite them on reactivation.
+    if (isMysterySchool && !resubscribe) {
       const validQuarters = ["spring", "summer", "autumn", "winter"];
       if (!entry_quarter || !validQuarters.includes(entry_quarter)) {
         return NextResponse.json(
@@ -146,8 +152,10 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // One-time enrollment fee — create an ad-hoc Stripe Price
-      if (plan.onetime_amount != null && plan.onetime_amount > 0) {
+      // One-time enrollment fee — create an ad-hoc Stripe Price.
+      // Skipped on resubscribe: the original enrollment already paid the
+      // one-time fee; only the recurring subscription is restarted.
+      if (plan.onetime_amount != null && plan.onetime_amount > 0 && !resubscribe) {
         const onetimePrice = await stripe.prices.create({
           currency: (plan.onetime_currency ?? "USD").toLowerCase(),
           unit_amount: Math.round(plan.onetime_amount * 100),
@@ -259,6 +267,10 @@ export async function POST(request: NextRequest) {
     if (isMysterySchool && entry_quarter && entry_year) {
       metadata.entry_quarter = entry_quarter;
       metadata.entry_year = String(entry_year);
+    }
+
+    if (resubscribe) {
+      metadata.resubscribe = "true";
     }
 
     const successUrl = isMysterySchool
