@@ -14,17 +14,45 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Heart, RefreshCw, Loader2, ChevronDown, ChevronUp, Star } from "lucide-react";
+import {
+  CalendarDays,
+  ChevronDown,
+  ChevronUp,
+  Clock,
+  Heart,
+  Loader2,
+  MapPin,
+  RefreshCw,
+  Star,
+  Users,
+} from "lucide-react";
 import Link from "next/link";
 import {
   deriveRelationshipReportState,
   type ChartReportState,
 } from "@/lib/community/chart-report-state";
+import { formatBirthPlace } from "@/lib/community/birth-location";
 
 type FamilyMember = {
   id: string;
   full_name: string;
+  date_of_birth: string | null;
+  birth_time: string | null;
+  birth_city: string | null;
+  birth_country: string | null;
+  birth_lat?: number | null;
+  birth_lng?: number | null;
+  relationship: string | null;
+  age_group: "child" | "adult" | string | null;
   natal_chart: unknown | null;
+  natal_status: string | null;
+  natal_report_id: string | null;
+  natal_report_status: string | null;
+  natal_report_generated_at?: string | null;
+  natal_last_generated_at?: string | null;
+  chart_updated_at: string | null;
+  updated_at?: string | null;
+  notes: string | null;
 };
 
 type Aspect = {
@@ -49,6 +77,12 @@ type RelationshipChart = {
   person_b_id: string;
   chart_data: SynastryData;
   generated_at: string;
+};
+
+type ChartsPagePayload = {
+  familyMembers: FamilyMember[];
+  charts: RelationshipChart[];
+  relationshipReports: RelationshipReportRow[];
 };
 
 /**
@@ -108,6 +142,69 @@ function ctaLabelForState(state: ChartReportState): string {
   }
 }
 
+function statusToneClass(state: ChartReportState): string {
+  switch (state) {
+    case "generated":
+      return "text-green-600 dark:text-green-400";
+    case "stale":
+      return "text-amber-600 dark:text-amber-400";
+    case "failed":
+      return "text-destructive";
+    case "generating":
+      return "text-blue-600 dark:text-blue-400";
+    default:
+      return "text-muted-foreground";
+  }
+}
+
+function formatBirthDate(value: string | null): string {
+  if (!value) return "Birth date missing";
+  return new Date(value + "T12:00:00").toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function getAgeLabel(value: string | null): string | null {
+  if (!value) return null;
+  const dob = new Date(value + "T12:00:00");
+  const age = Math.floor(
+    (Date.now() - dob.getTime()) / (365.25 * 24 * 3600 * 1000)
+  );
+  return Number.isFinite(age) ? `Age ${age}` : null;
+}
+
+function formatBirthTime(value: string | null): string {
+  if (!value) return "Birth time missing";
+  const [hour, minute] = value.split(":");
+  return hour && minute ? `${hour}:${minute}` : value;
+}
+
+function formatMemberSubtitle(member: FamilyMember): string {
+  return [member.relationship, getAgeLabel(member.date_of_birth)]
+    .filter(Boolean)
+    .join(" | ");
+}
+
+async function fetchChartsPagePayload(): Promise<ChartsPagePayload> {
+  const payload: ChartsPagePayload = {
+    familyMembers: [],
+    charts: [],
+    relationshipReports: [],
+  };
+
+  const result = await fetch("/api/community/relationship-charts");
+  if (result.ok) {
+    const data = await result.json();
+    payload.familyMembers = data.familyMembers ?? [];
+    payload.charts = data.charts ?? [];
+    payload.relationshipReports = data.relationshipReports ?? [];
+  }
+
+  return payload;
+}
+
 export default function ChartsPage() {
   const router = useRouter();
   const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
@@ -116,17 +213,17 @@ export default function ChartsPage() {
     RelationshipReportRow[]
   >([]);
   const [loading, setLoading] = useState(true);
+  const [overviewOpen, setOverviewOpen] = useState(false);
+  const [selectedFamilyMode, setSelectedFamilyMode] =
+    useState<RelationshipMode | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   async function load() {
     setLoading(true);
-    const res = await fetch("/api/community/relationship-charts");
-    if (res.ok) {
-      const data = await res.json();
-      setFamilyMembers(data.familyMembers ?? []);
-      setCharts(data.charts ?? []);
-      setRelationshipReports(data.relationshipReports ?? []);
-    }
+    const data = await fetchChartsPagePayload();
+    setFamilyMembers(data.familyMembers);
+    setCharts(data.charts);
+    setRelationshipReports(data.relationshipReports);
     setLoading(false);
   }
 
@@ -134,16 +231,12 @@ export default function ChartsPage() {
     let cancelled = false;
 
     async function loadInitial() {
-      const res = await fetch("/api/community/relationship-charts");
+      const data = await fetchChartsPagePayload();
       if (cancelled) return;
 
-      if (res.ok) {
-        const data = await res.json();
-        if (cancelled) return;
-        setFamilyMembers(data.familyMembers ?? []);
-        setCharts(data.charts ?? []);
-        setRelationshipReports(data.relationshipReports ?? []);
-      }
+      setFamilyMembers(data.familyMembers);
+      setCharts(data.charts);
+      setRelationshipReports(data.relationshipReports);
       setLoading(false);
     }
 
@@ -205,6 +298,21 @@ export default function ChartsPage() {
     );
   }
 
+  function getFamilyOverviewState(mode: RelationshipMode): ChartReportState {
+    if (familyMembers.length < 2) return "missing";
+
+    const states = pairs.map(({ a, b }) =>
+      getReportStateForMode(a.id, b.id, mode)
+    );
+
+    if (states.length === 0) return "missing";
+    if (states.some((state) => state === "generating")) return "generating";
+    if (states.some((state) => state === "failed")) return "failed";
+    if (states.some((state) => state === "stale")) return "stale";
+    if (states.every((state) => state === "generated")) return "generated";
+    return "missing";
+  }
+
   // Build all unique pairings
   const pairs: { a: FamilyMember; b: FamilyMember }[] = [];
   for (let i = 0; i < familyMembers.length; i++) {
@@ -212,7 +320,6 @@ export default function ChartsPage() {
       pairs.push({ a: familyMembers[i], b: familyMembers[j] });
     }
   }
-
 
   return (
     <div className="space-y-6">
@@ -231,6 +338,162 @@ export default function ChartsPage() {
           Refresh
         </Button>
       </div>
+
+      {!loading && familyMembers.length > 0 && (
+        <Card>
+          <button
+            type="button"
+            className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left transition-colors hover:bg-muted/30"
+            aria-expanded={overviewOpen}
+            onClick={() => setOverviewOpen((open) => !open)}
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <Users className="size-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="font-medium text-sm">Family Chart Overview</p>
+                <p className="text-xs text-muted-foreground">
+                  {familyMembers.length} family member{familyMembers.length === 1 ? "" : "s"} | Romantic, friendship, and business reports
+                </p>
+              </div>
+            </div>
+            {overviewOpen ? (
+              <ChevronUp className="size-4 shrink-0 text-muted-foreground" />
+            ) : (
+              <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
+            )}
+          </button>
+
+          {overviewOpen && (
+            <CardContent className="space-y-4 border-t pt-4">
+              <section className="rounded-md border bg-muted/20 p-4">
+                <div className="flex items-center gap-2">
+                  <Users className="size-4 text-muted-foreground" />
+                  <h2 className="text-sm font-semibold">Family Members Included</h2>
+                </div>
+                <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                  {familyMembers.map((member) => (
+                    <div key={member.id} className="rounded-md border bg-background p-3">
+                      <p className="truncate text-sm font-medium">
+                        {member.full_name}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatMemberSubtitle(member) || "Family member"}
+                      </p>
+                      <div className="mt-2 grid gap-1.5 text-xs text-muted-foreground">
+                        <span className="flex items-center gap-1.5">
+                          <CalendarDays className="size-3.5 shrink-0" />
+                          {formatBirthDate(member.date_of_birth)}
+                        </span>
+                        <span className="flex items-center gap-1.5">
+                          <Clock className="size-3.5 shrink-0" />
+                          {formatBirthTime(member.birth_time)}
+                        </span>
+                        <span className="flex items-center gap-1.5">
+                          <MapPin className="size-3.5 shrink-0" />
+                          <span className="truncate">
+                            {formatBirthPlace(
+                              member.birth_city,
+                              member.birth_country
+                            ) || "Birth place missing"}
+                          </span>
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              <div className="grid gap-4 md:grid-cols-3">
+                {RELATIONSHIP_MODES.map((option) => {
+                  const state = getFamilyOverviewState(option.value);
+                  const cta = ctaLabelForState(state);
+                  return (
+                    <section key={option.value} className="rounded-md border p-4">
+                      <div className="flex items-center gap-2">
+                        {option.value === "romantic" ? (
+                          <Heart className="size-4 text-rose-400" />
+                        ) : option.value === "friendship" ? (
+                          <Users className="size-4 text-blue-500" />
+                        ) : (
+                          <Star className="size-4 text-amber-500" />
+                        )}
+                        <h2 className="text-sm font-semibold">
+                          {option.label}
+                        </h2>
+                      </div>
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        {familyMembers.length} family member{familyMembers.length === 1 ? "" : "s"} included.
+                      </p>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="mt-4 w-full"
+                        disabled={familyMembers.length < 2}
+                        onClick={() => setSelectedFamilyMode(option.value)}
+                      >
+                        <span className={statusToneClass(state)}>{cta}</span>
+                      </Button>
+                    </section>
+                  );
+                })}
+              </div>
+
+              {selectedFamilyMode && (
+                <section className="rounded-md border bg-muted/20 p-4">
+                  <div className="flex items-center gap-2">
+                    <Heart className="size-4 text-muted-foreground" />
+                    <h2 className="text-sm font-semibold">
+                      {
+                        RELATIONSHIP_MODES.find(
+                          (mode) => mode.value === selectedFamilyMode
+                        )?.label
+                      }{" "}
+                      Family Chart
+                    </h2>
+                  </div>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                    {familyMembers.map((member) => (
+                      <div
+                        key={`${selectedFamilyMode}-${member.id}`}
+                        className="rounded-md border bg-background p-3"
+                      >
+                        <p className="truncate text-sm font-medium">
+                          {member.full_name}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatMemberSubtitle(member) || "Family member"}
+                        </p>
+                        <div className="mt-2 grid gap-1.5 text-xs text-muted-foreground">
+                          <span className="flex items-center gap-1.5">
+                            <CalendarDays className="size-3.5 shrink-0" />
+                            {formatBirthDate(member.date_of_birth)}
+                          </span>
+                          <span className="flex items-center gap-1.5">
+                            <Clock className="size-3.5 shrink-0" />
+                            {formatBirthTime(member.birth_time)}
+                          </span>
+                          <span className="flex items-center gap-1.5">
+                            <MapPin className="size-3.5 shrink-0" />
+                            <span className="truncate">
+                              {formatBirthPlace(
+                                member.birth_city,
+                                member.birth_country
+                              ) || "Birth place missing"}
+                            </span>
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
+            </CardContent>
+          )}
+        </Card>
+      )}
 
 
       {loading ? (

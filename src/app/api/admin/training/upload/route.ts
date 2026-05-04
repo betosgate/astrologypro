@@ -24,15 +24,17 @@ export const maxDuration = 300;
  * that occurs when the browser client tries to write directly to storage.
  *
  * Body: multipart/form-data with a `file` field and optional `kind`
- * field (`video` | `pdf`).
+ * field (`video` | `pdf` | `audio`).
  * Response (200): { url: string }  — the public URL of the uploaded file
  * Errors: 401, 400, 413, 500
  */
 
 const VIDEO_BUCKET = "training-videos";
 const PDF_BUCKET = "all-frontend-assets";
+const AUDIO_BUCKET = "all-frontend-assets";
 const VIDEO_MAX_FILE_SIZE = 500 * 1024 * 1024; // 500 MB
 const PDF_MAX_FILE_SIZE = 50 * 1024 * 1024; // 50 MB
+const AUDIO_MAX_FILE_SIZE = 50 * 1024 * 1024; // 50 MB — fits the 'all-frontend-assets' bucket cap
 
 const VIDEO_TYPES = new Set([
   "video/mp4",
@@ -43,6 +45,19 @@ const VIDEO_TYPES = new Set([
 ]);
 
 const PDF_TYPES = new Set(["application/pdf"]);
+
+const AUDIO_TYPES = new Set([
+  "audio/mpeg",       // .mp3
+  "audio/mp3",        // some browsers / Safari
+  "audio/mp4",        // .m4a (mp4 audio container)
+  "audio/x-m4a",      // .m4a alt
+  "audio/aac",        // .aac
+  "audio/wav",        // .wav
+  "audio/x-wav",      // .wav alt
+  "audio/webm",       // .webm
+  "audio/ogg",        // .ogg
+  "audio/flac",       // .flac
+]);
 
 function getUploadConfig(kind: string | null) {
   if (kind === "pdf") {
@@ -56,6 +71,20 @@ function getUploadConfig(kind: string | null) {
         "This PDF is larger than the current 50 MB document upload limit. Please upload a smaller file.",
       bucketLimitMessage:
         "This PDF was rejected by the storage bucket size limit. Increase the all-frontend-assets bucket limit if larger training documents need to be supported.",
+    };
+  }
+
+  if (kind === "audio") {
+    return {
+      bucket: AUDIO_BUCKET,
+      maxFileSize: AUDIO_MAX_FILE_SIZE,
+      allowedTypes: AUDIO_TYPES,
+      acceptedLabel: "MP3, M4A, AAC, WAV, OGG, WebM, FLAC",
+      storagePrefix: "training/audio",
+      oversizedMessage:
+        "This audio file is larger than the current 50 MB upload limit. Please upload a smaller or compressed file.",
+      bucketLimitMessage:
+        "This audio file was rejected by the storage bucket size limit. Increase the all-frontend-assets bucket limit if larger training audio files need to be supported.",
     };
   }
 
@@ -116,7 +145,9 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const ext = file.name.split(".").pop() ?? (kind === "pdf" ? "pdf" : "mp4");
+  const ext =
+    file.name.split(".").pop() ??
+    (kind === "pdf" ? "pdf" : kind === "audio" ? "mp3" : "mp4");
   const storagePath = `${config.storagePrefix}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
 
   const admin = createAdminClient();
