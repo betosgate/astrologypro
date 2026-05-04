@@ -131,7 +131,13 @@ export async function POST(request: NextRequest) {
       ]);
 
       const isActivePm = !!memberResult.data;
-      const discountEnabled = settingsResult.data?.ms_pm_discount_enabled ?? true;
+      // Default to `false` to match every other consumer of this flag
+      // (/api/community/settings, /app/community/page.tsx, enrollment-flow,
+      // resubscribe page). When the platform_settings row is missing or the
+      // flag is null, discount is NOT applied — admin must explicitly enable
+      // it via /admin/platform-settings. This keeps the Stripe charge in
+      // sync with what the UI displays.
+      const discountEnabled = settingsResult.data?.ms_pm_discount_enabled ?? false;
 
       if (isActivePm && discountEnabled) {
         planId = "plan_mystery_monthly_pm_discount";
