@@ -392,6 +392,7 @@ export default async function LessonViewerPage({
     content: lessonData.content ?? null,
     videoUrl: lessonData.video_url ?? null,
     pdfUrl: lessonData.pdf_url ?? null,
+    audioUrl: lessonData.audio_url ?? null,
     durationMins: lessonData.duration_mins ?? null,
     videos: lessonData.videos ?? [],
     assets: lessonData.assets ?? [],
