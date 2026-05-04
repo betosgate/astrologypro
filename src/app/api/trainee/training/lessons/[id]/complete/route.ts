@@ -7,6 +7,7 @@ import {
 } from "@/lib/email";
 import { completeLessonAndProgressForUser } from "@/lib/training/completion";
 import { checkAndAwardTrainingGraduation } from "@/lib/training/graduation";
+import { maybeAdvanceMysterySchoolToDecans } from "@/lib/mystery-school/foundation-graduation";
 
 export const dynamic = "force-dynamic";
 
@@ -226,6 +227,16 @@ export async function POST(
     // The shared helper is idempotent and verifies all lessons are done.
     checkAndAwardTrainingGraduation(user.id).catch((err) =>
       console.error("[training-graduation] check failed:", err)
+    );
+
+    // Mystery School foundation→decans transition — fires only when the
+    // completed lesson belongs to the "Mystery School Foundation" program
+    // AND every lesson in that program is complete for this user AND the
+    // student is currently in 'foundation'. Idempotent and additive — the
+    // legacy /api/mystery-school/foundation/complete-task trigger continues
+    // to work in parallel. See spec docs/specs/mystery-school-training-unification.md.
+    maybeAdvanceMysterySchoolToDecans(admin, user.id, lessonId).catch((err) =>
+      console.error("[ms-foundation-graduation] check failed:", err)
     );
   }
 
