@@ -86,6 +86,7 @@ import { MIGRATION_SQL as MIG_20260428000003_RGS } from "@/data/migrations/20260
 import { MIGRATION_SQL as MIG_20260430000002_RSTL } from "@/data/migrations/20260430000002_repair_service_template_links";
 import { MIGRATION_SQL as MIG_20260413000184_MTL } from "@/data/migrations/20260413000184_monthly_transit_lifecycle";
 import { MIGRATION_SQL as MIG_20260504000001_TLAU } from "@/data/migrations/20260504000001_training_lessons_audio_url";
+import { MIGRATION_SQL as MIG_20260504000002_MSFS } from "@/data/migrations/20260504000002_mystery_school_foundation_seed";
 
 /**
  * Allowlisted migrations that the admin migration runner can execute.
@@ -814,6 +815,14 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Adds nullable audio_url TEXT to training_lessons so admins can attach a dedicated audio asset (meditation, weekly intro, guided practice) to a lesson without overloading video_url or pasting URLs into freeform content. Powers the new Audio section in the admin lesson editor and the inline audio player in the trainee lesson view. Strictly additive — IF NOT EXISTS, nullable, no constraints/indexes/RLS changes. Backward-safe: every existing read/write path that does not mention audio_url continues to work unchanged. Spec: docs/specs/mystery-school-training-unification.md.",
     sortKey: "20260504000001",
     sql: MIG_20260504000001_TLAU,
+  },
+  "20260504000002_mystery_school_foundation_seed": {
+    id: "20260504000002_mystery_school_foundation_seed",
+    title: "Mystery School Foundation — seed program + 12 week-categories (Phase 3)",
+    description:
+      "Seeds the canonical 'Mystery School Foundation' training program (allowed_roles=['is_mystery_school'], is_sequential=true, is_active=true) plus 12 empty week-categories (Week 1..Week 12, priorities 1..12, is_sequential=true). Lessons are NOT seeded — admins populate them through /admin/training/lessons/new. Idempotent: program guarded by NOT EXISTS on name, categories guarded by (training_id, priority). Re-running is a no-op. After running, the new /mystery-school/training adapter route returns the 12 (empty) weeks; the legacy fallback continues to render until weeks have at least one lesson. Spec: docs/specs/mystery-school-training-unification.md.",
+    sortKey: "20260504000002",
+    sql: MIG_20260504000002_MSFS,
   },
 };
 

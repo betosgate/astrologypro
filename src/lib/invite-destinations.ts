@@ -13,6 +13,6 @@ export function getInvitedRoleDestination(role: string | undefined): string {
     case "client":
       return "/portal";
     default:
-      return "/portal";
+      return "/onboarding";
   }
 }
