@@ -85,6 +85,7 @@ import { MIGRATION_SQL as MIG_20260430000002_AP15G } from "@/data/migrations/202
 import { MIGRATION_SQL as MIG_20260428000003_RGS } from "@/data/migrations/20260428000003_ritual_global_settings";
 import { MIGRATION_SQL as MIG_20260430000002_RSTL } from "@/data/migrations/20260430000002_repair_service_template_links";
 import { MIGRATION_SQL as MIG_20260413000184_MTL } from "@/data/migrations/20260413000184_monthly_transit_lifecycle";
+import { MIGRATION_SQL as MIG_20260504000001_TLAU } from "@/data/migrations/20260504000001_training_lessons_audio_url";
 
 /**
  * Allowlisted migrations that the admin migration runner can execute.
@@ -805,6 +806,14 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Extends monthly_transits with full lifecycle tracking: generation_status (pending|generated|notified|failed|suppressed), failure_reason, retry_count, last_attempted_at, notified_at, notification_sent. Backfills existing rows to generation_status=generated (or notified when notification_sent=true). Adds indexes for status filtering and family_member_id+month lookups. Required by the ensure-monthly-transits service and the /community/transits page. Strictly additive — IF NOT EXISTS on all columns. Idempotent.",
     sortKey: "20260413000184",
     sql: MIG_20260413000184_MTL,
+  },
+  "20260504000001_training_lessons_audio_url": {
+    id: "20260504000001_training_lessons_audio_url",
+    title: "Training lessons — audio_url (Mystery School Foundation, Phase 2)",
+    description:
+      "Adds nullable audio_url TEXT to training_lessons so admins can attach a dedicated audio asset (meditation, weekly intro, guided practice) to a lesson without overloading video_url or pasting URLs into freeform content. Powers the new Audio section in the admin lesson editor and the inline audio player in the trainee lesson view. Strictly additive — IF NOT EXISTS, nullable, no constraints/indexes/RLS changes. Backward-safe: every existing read/write path that does not mention audio_url continues to work unchanged. Spec: docs/specs/mystery-school-training-unification.md.",
+    sortKey: "20260504000001",
+    sql: MIG_20260504000001_TLAU,
   },
 };
 

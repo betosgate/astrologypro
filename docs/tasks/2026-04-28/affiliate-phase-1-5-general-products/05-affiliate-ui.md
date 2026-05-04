@@ -1,6 +1,6 @@
 # Task 05 — Affiliate UI (Marketing Kit + Products + new-campaign)
 
-- Status: Not Started
+- Status: Code complete 2026-04-30 in working tree (uncommitted). Six file changes: new helper `src/lib/affiliate-marketing-kit.ts` (`fetchMarketingKitItems` does lookup-or-lazy-create), Marketing Kit component rewritten to take an `items` prop (drops the hardcoded `READING_PAGES` constant; categories now sourced from `service_templates.category`); dashboard page now fetches items server-side and renders the kit even on the zero-partnerships path; `/affiliate/products` gets a "General products you can promote" section below the existing assignments grid; `/affiliate/campaigns/new` becomes a two-mode picker (per-diviner vs general) driven by `?assignment=` or `?template=` query params, with a UI toggle when both pools are populated; create-form rewritten to dispatch to either the v2 per-diviner endpoint or the new Phase-1.5 `general-campaigns` endpoint.
 - Priority: P1
 - Depends on: 01, 04
 - Blocks: 08

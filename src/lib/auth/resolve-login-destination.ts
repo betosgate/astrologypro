@@ -36,6 +36,16 @@ export function isTrustedPortal(url: string): boolean {
   );
 }
 
+function needsInvitedDivinerPlan(
+  diviner: PortalCheckData["diviner"]
+): boolean {
+  return (
+    !!diviner &&
+    !diviner.onboarding_completed &&
+    diviner.subscription_status !== "active"
+  );
+}
+
 // ── Role hierarchy ────────────────────────────────────────────────────────────
 // Lower index = higher priority.
 const ROLE_HIERARCHY: Array<{
@@ -55,10 +65,7 @@ const ROLE_HIERARCHY: Array<{
       // invited-but-unpaid state without breaking existing diviners
       // whose wizard set onboarding_completed=true with a 'trialing'
       // subscription. Mirrors the dashboard layout server gate.
-      if (
-        !d.diviner?.onboarding_completed &&
-        d.diviner?.subscription_status !== "active"
-      ) {
+      if (needsInvitedDivinerPlan(d.diviner)) {
         return "/join/diviner/plan";
       }
       if (!d.diviner?.onboarding_completed) {
@@ -179,6 +186,16 @@ export async function resolveLoginDestination({
   adminClient,
 }: ResolveOptions): Promise<string> {
   // 1. Pending contract gate (legal — must sign before entering any portal)
+  const { data: earlyDiviner } = await adminClient
+    .from("diviners")
+    .select("id, onboarding_completed, subscription_status")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (needsInvitedDivinerPlan(earlyDiviner as PortalCheckData["diviner"])) {
+    return "/join/diviner/plan";
+  }
+
   const pendingContract = await getPendingContractDestination(userId).catch(() => null);
   if (pendingContract && !isAdmin) return pendingContract;
 
@@ -202,12 +219,7 @@ export async function resolveLoginDestination({
   // 5. First visit — fetch all role rows in parallel, pick by hierarchy
   const [diviner, trainee, advocate, mysteryStudent, community, client] =
     await Promise.all([
-      adminClient
-        .from("diviners")
-        .select("id, onboarding_completed, subscription_status")
-        .eq("user_id", userId)
-        .maybeSingle()
-        .then((r) => r.data),
+      Promise.resolve(earlyDiviner),
       adminClient
         .from("trainees")
         .select("id, onboarding_completed")

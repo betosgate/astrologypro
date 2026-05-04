@@ -92,7 +92,7 @@ export default async function DashboardLayout({
             <PortalSwitcher portals={portals} currentBase="/dashboard" />
           </div>
         )}
-        <div className="container p-4 pb-20 py-6 lg:p-8 lg:pb-8">
+        <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 max-w-[1600px] py-6 lg:py-8">
           {children}
         </div>
       </main>

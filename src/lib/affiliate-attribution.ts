@@ -43,10 +43,15 @@ export function sanitizeRefCode(value: unknown): string | null {
 
 export interface AttributionContext {
   campaign_id: string;
-  diviner_id: string;
+  diviner_id: string | null;
   owner_type: AffiliateCampaignOwnerType;
   owner_affiliate_id: string | null;
   owner_affiliate_type: AffiliateType | null;
+  /**
+   * Phase 1.5: account-direct ownership (set when owner_affiliate_type='general',
+   * NULL on per-diviner campaigns).
+   */
+  owner_affiliate_account_id: string | null;
   commission_value_snapshot: number | null;
   commission_type_snapshot: AffiliateCommissionType | null;
   source_assignment_id: string | null;
@@ -79,6 +84,7 @@ export async function resolveAffiliateFromRef(
     .from("affiliate_campaigns")
     .select(
       `id, diviner_id, status, owner_type, owner_affiliate_id, owner_affiliate_type,
+       owner_affiliate_account_id,
        source_assignment_id, destination_type, destination_service_template_id`
     )
     .eq("campaign_code", code)
@@ -87,14 +93,26 @@ export async function resolveAffiliateFromRef(
     .maybeSingle();
 
   if (!campaign) return null;
-  if (!campaign.owner_affiliate_id || !campaign.owner_affiliate_type) return null;
+  if (!campaign.owner_affiliate_type) return null;
+
+  // Phase 1.5: per-diviner campaigns require owner_affiliate_id; general
+  // campaigns require owner_affiliate_account_id. The CHECK constraint on
+  // affiliate_campaigns enforces this server-side; this is the client guard.
+  const isPerDiviner =
+    campaign.owner_affiliate_type === "diviner_affiliate" ||
+    campaign.owner_affiliate_type === "social_advocate";
+  const isGeneral = campaign.owner_affiliate_type === "general";
+  if (isPerDiviner && !campaign.owner_affiliate_id) return null;
+  if (isGeneral && !campaign.owner_affiliate_account_id) return null;
 
   return {
     campaign_id: campaign.id as string,
-    diviner_id: campaign.diviner_id as string,
+    diviner_id: (campaign.diviner_id as string | null) ?? null,
     owner_type: campaign.owner_type as AffiliateCampaignOwnerType,
-    owner_affiliate_id: campaign.owner_affiliate_id as string,
+    owner_affiliate_id: (campaign.owner_affiliate_id as string | null) ?? null,
     owner_affiliate_type: campaign.owner_affiliate_type as AffiliateType,
+    owner_affiliate_account_id:
+      (campaign.owner_affiliate_account_id as string | null) ?? null,
     // Snapshot fields no longer read from the campaign (spec v1.2 — rate is
     // stamped on the booking, not on the campaign). Kept in the returned
     // shape as null for backward-compat; dropped entirely in 01b.
@@ -143,11 +161,17 @@ export interface CreditConversionInput {
   /** Copy of bookings.ref_code. Used for conversion row snapshot + campaign lookup. */
   refCode: string | null | undefined;
   /**
-   * bookings.commission_source_assignment_id — authoritative rate source.
-   * NULL means the booking was never stamped (spec §3.8), so no commission
-   * is credited. Stamping happens at booking creation (Task 04 Part A).
+   * bookings.commission_source_assignment_id — authoritative rate source
+   * for per-diviner credits. NULL when the booking was stamped via the
+   * Phase 1.5 general path (use stampedTemplateId then) or not at all.
    */
   stampedAssignmentId: string | null;
+  /**
+   * Phase 1.5: bookings.commission_source_template_id — authoritative
+   * source for general-program credits. Mutually exclusive in practice
+   * with stampedAssignmentId. Both NULL → no commission.
+   */
+  stampedTemplateId: string | null;
   /** bookings.commission_rate_type_stamp — 'percent' or 'flat', or NULL. */
   stampedRateType: "percent" | "flat" | null;
   /** bookings.commission_rate_value_stamp — NUMERIC, or NULL. */
@@ -158,7 +182,17 @@ export interface CreditConversionResult {
   conversionId: string;
   commissionCents: number;
   campaignId: string;
-  affiliateId: string;
+  /**
+   * Junction id (`diviner_affiliates.id`) for per-diviner credits, or NULL
+   * for Phase 1.5 general credits (which have no junction). Use
+   * `affiliateAccountId` when you need the cross-cutting account identity.
+   */
+  affiliateId: string | null;
+  /**
+   * `affiliate_accounts.id`. Always set on a successful credit, regardless
+   * of whether the path was per-diviner or general.
+   */
+  affiliateAccountId: string;
   affiliateType: AffiliateType;
 }
 
@@ -202,81 +236,92 @@ export async function creditAffiliateConversion(
   // — the single live read for fraud enforcement.
 
   if (
-    !params.stampedAssignmentId ||
     !params.stampedRateType ||
-    params.stampedRateValue == null
+    params.stampedRateValue == null ||
+    (!params.stampedAssignmentId && !params.stampedTemplateId)
   ) {
     logEvent(false, "no_stamp");
     return null;
   }
 
-  // Resolve the assignment's junction + affiliate account so we can
-  // (a) re-check status, (b) get the junction id for the conversion row.
-  const { data: assignment } = await admin
-    .from("diviner_service_affiliates")
-    .select("id, affiliate_id, affiliate_type")
-    .eq("id", params.stampedAssignmentId)
-    .maybeSingle();
-  if (!assignment) {
-    logEvent(false, "assignment_gone", {
-      assignmentId: params.stampedAssignmentId,
-    });
-    return null;
-  }
-
-  const { data: junction } = await admin
-    .from("diviner_affiliates")
-    .select("affiliate_account_id")
-    .eq("id", assignment.affiliate_id as string)
-    .maybeSingle();
-  if (!junction || !junction.affiliate_account_id) {
-    logEvent(false, "junction_gone", {
-      assignmentId: params.stampedAssignmentId,
-    });
-    return null;
-  }
-
-  const { data: account } = await admin
-    .from("affiliate_accounts")
-    .select("status, user_id, email")
-    .eq("id", junction.affiliate_account_id as string)
-    .maybeSingle();
-  if (!account || account.status !== "active") {
-    // Fraud-enforcement gate. Even if the booking was stamped at a prior
-    // in-flight moment, a later block/unclaimed status means no commission.
-    logEvent(false, "account_not_active_at_credit", {
-      assignmentId: params.stampedAssignmentId,
-      accountStatus: account?.status ?? null,
-    });
-    return null;
-  }
-
-  // Resolve the campaign from ref_code to get campaign_id for the row.
-  // The campaign itself is no longer authoritative for rate (spec §3.8).
+  // Resolve the campaign from ref_code (needed for campaign_id on the row).
+  // Campaign is not authoritative for rate (spec §3.8) — only for linkage.
   const campaign = await resolveAffiliateFromRef(admin, params.refCode);
   if (!campaign) {
-    // Unusual: stamp was set but campaign went away between booking and
-    // payment. Log and bail — stamp alone doesn't justify a conversion
-    // row without a campaign_id (conversions.campaign_id is NOT NULL).
     logEvent(false, "campaign_missing_at_credit", {
       assignmentId: params.stampedAssignmentId,
+      templateId: params.stampedTemplateId,
     });
     return null;
   }
 
-  // Commission is computed from the stamp, NOT from any campaign read.
+  // Commission is computed from the stamp, NOT from any campaign or
+  // template read. Same math regardless of which path we took.
   const commissionCents = computeCommissionCents(
     params.orderAmountCents,
     params.stampedRateType,
     params.stampedRateValue,
   );
 
-  const { data: inserted, error } = await admin
-    .from("campaign_conversions")
-    .insert({
+  // ── Branch on stamp source ──────────────────────────────────────────────
+
+  let insertPayload: Record<string, unknown>;
+  let resolvedAccountId: string;
+  let recipientUserId: string | null = null;
+  let recipientEmail: string | null = null;
+  let resolvedAffiliateId: string | null = null;
+  let resolvedAffiliateType: AffiliateType;
+
+  if (params.stampedAssignmentId) {
+    // Per-diviner path (Phase 1).
+    const { data: assignment } = await admin
+      .from("diviner_service_affiliates")
+      .select("id, affiliate_id, affiliate_type")
+      .eq("id", params.stampedAssignmentId)
+      .maybeSingle();
+    if (!assignment) {
+      logEvent(false, "assignment_gone", {
+        assignmentId: params.stampedAssignmentId,
+      });
+      return null;
+    }
+
+    const { data: junction } = await admin
+      .from("diviner_affiliates")
+      .select("affiliate_account_id")
+      .eq("id", assignment.affiliate_id as string)
+      .maybeSingle();
+    if (!junction || !junction.affiliate_account_id) {
+      logEvent(false, "junction_gone", {
+        assignmentId: params.stampedAssignmentId,
+      });
+      return null;
+    }
+
+    const { data: account } = await admin
+      .from("affiliate_accounts")
+      .select("status, user_id, email")
+      .eq("id", junction.affiliate_account_id as string)
+      .maybeSingle();
+    if (!account || account.status !== "active") {
+      logEvent(false, "account_not_active_at_credit", {
+        assignmentId: params.stampedAssignmentId,
+        accountStatus: account?.status ?? null,
+      });
+      return null;
+    }
+
+    resolvedAccountId = junction.affiliate_account_id as string;
+    resolvedAffiliateId = assignment.affiliate_id as string;
+    resolvedAffiliateType = assignment.affiliate_type as AffiliateType;
+    recipientUserId = (account as unknown as { user_id?: string }).user_id ?? null;
+    recipientEmail = (account as unknown as { email?: string }).email ?? null;
+
+    insertPayload = {
       campaign_id: campaign.campaign_id,
       affiliate_id: assignment.affiliate_id,
       affiliate_type: assignment.affiliate_type,
+      affiliate_account_id: resolvedAccountId,
       booking_id: params.bookingId,
       ref_code_snapshot: params.refCode ?? null,
       order_reference: params.bookingId,
@@ -285,7 +330,60 @@ export async function creditAffiliateConversion(
       commission_source: "campaign_assignment",
       rate_type_used: params.stampedRateType,
       rate_value_used: params.stampedRateValue,
-    })
+    };
+  } else {
+    // Phase 1.5 general-program path. The booking was stamped via a
+    // service_templates rate; campaign carries the affiliate account
+    // directly (no junction). No re-check of template.affiliate_program_enabled
+    // here — admin can disable for FUTURE bookings; in-flight bookings
+    // honor their stamp (rate-stamping invariant, spec §3.8).
+    if (!campaign.owner_affiliate_account_id) {
+      logEvent(false, "campaign_missing_account_id", {
+        templateId: params.stampedTemplateId,
+        campaignId: campaign.campaign_id,
+      });
+      return null;
+    }
+
+    const { data: account } = await admin
+      .from("affiliate_accounts")
+      .select("status, user_id, email")
+      .eq("id", campaign.owner_affiliate_account_id)
+      .maybeSingle();
+    if (!account || account.status !== "active") {
+      logEvent(false, "account_not_active_at_credit", {
+        templateId: params.stampedTemplateId,
+        accountStatus: account?.status ?? null,
+      });
+      return null;
+    }
+
+    resolvedAccountId = campaign.owner_affiliate_account_id;
+    resolvedAffiliateType = "general";
+    recipientUserId = (account as unknown as { user_id?: string }).user_id ?? null;
+    recipientEmail = (account as unknown as { email?: string }).email ?? null;
+
+    insertPayload = {
+      campaign_id: campaign.campaign_id,
+      affiliate_id: null,
+      affiliate_type: "general",
+      affiliate_account_id: resolvedAccountId,
+      booking_id: params.bookingId,
+      ref_code_snapshot: params.refCode ?? null,
+      order_reference: params.bookingId,
+      order_amount_cents: params.orderAmountCents,
+      commission_amount_cents: commissionCents,
+      commission_source: "campaign_assignment",
+      rate_type_used: params.stampedRateType,
+      rate_value_used: params.stampedRateValue,
+    };
+  }
+
+  // ── Insert + idempotency handling ───────────────────────────────────────
+
+  const { data: inserted, error } = await admin
+    .from("campaign_conversions")
+    .insert(insertPayload)
     .select("id")
     .single();
 
@@ -303,8 +401,11 @@ export async function creditAffiliateConversion(
   logEvent(true, "credited", {
     conversionId: inserted?.id,
     commissionCents,
-    affiliateId: assignment.affiliate_id,
+    affiliateId: resolvedAffiliateId,
+    affiliateType: resolvedAffiliateType,
+    accountId: resolvedAccountId,
     assignmentId: params.stampedAssignmentId,
+    templateId: params.stampedTemplateId,
     stampType: params.stampedRateType,
     stampValue: params.stampedRateValue,
   });
@@ -313,15 +414,13 @@ export async function creditAffiliateConversion(
   // queued to daily digest). Fire-and-forget so a notification failure
   // never blocks the webhook from acknowledging Stripe.
   try {
-    const recipientUserId = (account as unknown as { user_id?: string }).user_id;
-    const recipientEmail = (account as unknown as { email?: string }).email;
     if (recipientUserId && recipientEmail) {
       const { notifyAffiliate } = await import("@/lib/affiliate-notifications");
       const dollars = (commissionCents / 100).toFixed(2);
       await notifyAffiliate({
         admin,
         userId: recipientUserId,
-        affiliateAccountId: junction.affiliate_account_id as string,
+        affiliateAccountId: resolvedAccountId,
         toEmail: recipientEmail,
         kind: "affiliate.conversion",
         title: `Commission earned: $${dollars}`,
@@ -340,7 +439,8 @@ export async function creditAffiliateConversion(
     conversionId: inserted!.id as string,
     commissionCents,
     campaignId: campaign.campaign_id,
-    affiliateId: assignment.affiliate_id as string,
-    affiliateType: assignment.affiliate_type as AffiliateType,
+    affiliateId: resolvedAffiliateId,
+    affiliateAccountId: resolvedAccountId,
+    affiliateType: resolvedAffiliateType,
   };
 }

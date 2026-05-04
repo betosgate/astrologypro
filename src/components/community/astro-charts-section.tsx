@@ -13,7 +13,7 @@ import { Loader2, Moon, Sun, Info, ChevronLeft, ChevronRight } from "lucide-reac
 import Link from "next/link";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
-type ChartData = {
+type LegacyMonthlyTransit = {
   id: string;
   member_id: string;
   month: string;
@@ -39,6 +39,24 @@ type NatalChartItem = {
   date_of_birth: string;
 };
 
+/**
+ * Per-member dashboard transit entry. Mirrors the API's MonthlyTransitItem
+ * shape from /api/community/astro-charts (spec:
+ * tasks/30.04.2026/community-dashboard-monthly-transit-card-sync/
+ * 02-update-astro-charts-api-monthly-list.md).
+ */
+type MonthlyTransitItem = {
+  id: string;
+  family_member_id: string;
+  member_name: string;
+  month: string;
+  transit_data: Record<string, unknown>;
+  generation_status: string | null;
+  full_report_id: string | null;
+  full_report_status: string | null;
+  full_report_generated_at: string | null;
+};
+
 type ApiResponse = {
   natalChart: NatalChartData;
   /**
@@ -48,7 +66,13 @@ type ApiResponse = {
    * to the singular `natalChart` for back-compat.
    */
   natalCharts?: NatalChartItem[];
-  monthlyTransit: ChartData;
+  monthlyTransit: LegacyMonthlyTransit;
+  /**
+   * tasks/30.04.2026/community-dashboard-monthly-transit-card-sync — the
+   * household-scoped transit list. Older API bundles won't include this
+   * field; we fall back to the singular `monthlyTransit` for back-compat.
+   */
+  monthlyTransits?: MonthlyTransitItem[];
   // Older responses won't include status — treat as inferred from data.
   status?: { natal: ApiStatus; transit: ApiStatus };
 };
@@ -71,7 +95,17 @@ export function AstroChartsSection() {
    */
   const [natalCharts, setNatalCharts] = useState<NatalChartItem[]>([]);
   const [activeChartIndex, setActiveChartIndex] = useState(0);
-  const [monthlyTransit, setMonthlyTransit] = useState<ChartData>(null);
+  /**
+   * Transit-side carousel state, mirroring the natal one. `monthlyTransits`
+   * holds every eligible household member's current-month transit row;
+   * `activeTransitIndex` is the slot the user has cycled to. We derive
+   * the legacy single `monthlyTransit` value as the first item so the
+   * existing back-compat code path keeps working during rollout.
+   */
+  const [monthlyTransits, setMonthlyTransits] = useState<MonthlyTransitItem[]>(
+    []
+  );
+  const [activeTransitIndex, setActiveTransitIndex] = useState(0);
   const [natalStatus, setNatalStatus] = useState<ChartStatus>("loading");
   const [transitStatus, setTransitStatus] = useState<ChartStatus>("loading");
   const [showTooltip, setShowTooltip] = useState<"natal" | "transit" | null>(null);
@@ -93,7 +127,9 @@ export function AstroChartsSection() {
 
     async function fetchCharts() {
       try {
-        const res = await fetch("/api/community/astro-charts");
+        // Cache-buster ensures the dashboard always reflects recent DB 
+        // changes (like a successful transit generation).
+        const res = await fetch(`/api/community/astro-charts?t=${Date.now()}`);
         if (!res.ok) {
           errorCountRef.current += 1;
           if (errorCountRef.current >= MAX_ERROR_RETRIES) {
@@ -114,11 +150,14 @@ export function AstroChartsSection() {
         const natal: ApiStatus =
           data.status?.natal ?? (data.natalChart ? "ready" : "empty");
         const transit: ApiStatus =
-          data.status?.transit ?? (data.monthlyTransit ? "ready" : "empty");
+          data.status?.transit ??
+          ((Array.isArray(data.monthlyTransits) &&
+            data.monthlyTransits.length > 0) ||
+          data.monthlyTransit
+            ? "ready"
+            : "empty");
 
-        if (data.monthlyTransit) setMonthlyTransit(data.monthlyTransit);
-
-        // Carousel: prefer the explicit list when the API returns one.
+        // Carousel: prefer the explicit natal list when the API returns one.
         // Old API responses still produce a one-item list from natalChart.
         const nextCharts: NatalChartItem[] =
           Array.isArray(data.natalCharts) && data.natalCharts.length > 0
@@ -131,6 +170,36 @@ export function AstroChartsSection() {
         // family member is removed and the chart count drops by one).
         setActiveChartIndex((idx) =>
           nextCharts.length === 0 ? 0 : Math.min(idx, nextCharts.length - 1)
+        );
+
+        // Same pattern for the household-scoped monthly transit list.
+        // The legacy `monthlyTransit` field on older API responses is
+        // up-converted into a one-item list so the new carousel code
+        // path works during rollout — once the API ships
+        // `monthlyTransits[]` for everyone, the legacy `monthlyTransit`
+        // becomes the head of that list and renders identically.
+        const nextTransits: MonthlyTransitItem[] = Array.isArray(
+          data.monthlyTransits
+        )
+          ? data.monthlyTransits
+          : data.monthlyTransit
+          ? [
+              {
+                id: data.monthlyTransit.id,
+                family_member_id: data.monthlyTransit.member_id,
+                member_name: "",
+                month: data.monthlyTransit.month,
+                transit_data: data.monthlyTransit.transit_data,
+                generation_status: null,
+                full_report_id: null,
+                full_report_status: null,
+                full_report_generated_at: null,
+              },
+            ]
+          : [];
+        setMonthlyTransits(nextTransits);
+        setActiveTransitIndex((idx) =>
+          nextTransits.length === 0 ? 0 : Math.min(idx, nextTransits.length - 1)
         );
 
         setNatalStatus(natal);
@@ -370,18 +439,107 @@ export function AstroChartsSection() {
                 Could not load chart data. Try refreshing the page.
               </p>
             </div>
-          ) : transitStatus === "ready" && monthlyTransit ? (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <Badge variant="default" className="text-xs bg-blue-500">Ready</Badge>
-                <span className="text-xs text-muted-foreground">
-                  {monthlyTransit.month}
-                </span>
-              </div>
-              <Button asChild variant="outline" size="sm" className="w-full">
-                <Link href="/community/transits">View Detailed Transit Report →</Link>
-              </Button>
-            </div>
+          ) : transitStatus === "ready" && monthlyTransits.length > 0 ? (
+            // Spec: tasks/30.04.2026/community-dashboard-monthly-transit-
+            // card-sync. The ready state is now a household-scoped
+            // member carousel — exact mirror of the natal carousel above.
+            // Per-entry CTA reflects full_report_id / full_report_status
+            // and deep-links to the detailed transit route for that
+            // member + month, matching what /community/transits does.
+            (() => {
+              const safeIndex = Math.min(
+                Math.max(activeTransitIndex, 0),
+                monthlyTransits.length - 1
+              );
+              const active = monthlyTransits[safeIndex];
+              const total = monthlyTransits.length;
+              const isMulti = total > 1;
+              const detailedHref = `/community/transits/detailed?familyMemberId=${encodeURIComponent(
+                active.family_member_id
+              )}&month=${encodeURIComponent(active.month)}`;
+              const isPending = active.generation_status === "pending";
+              const ctaLabel = (() => {
+                if (isPending) return "Generating…";
+                if (active.full_report_status === "failed")
+                  return "Retry Transit Report";
+                if (active.full_report_id) return "View Transit Report";
+                return "Generate Transit Report";
+              })();
+              const ctaDisabled = isPending;
+              return (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Badge
+                        variant="default"
+                        className="text-xs bg-blue-500 shrink-0"
+                      >
+                        {active.full_report_id ? "Ready" : "Summary"}
+                      </Badge>
+                      {active.member_name ? (
+                        <span className="text-xs text-muted-foreground truncate">
+                          {active.member_name}
+                        </span>
+                      ) : null}
+                    </div>
+                    {isMulti && (
+                      <span
+                        className="text-[10px] text-muted-foreground tabular-nums shrink-0"
+                        aria-label={`Transit ${safeIndex + 1} of ${total}`}
+                      >
+                        {safeIndex + 1} / {total}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground">{active.month}</p>
+                  <div className="flex items-center gap-1.5">
+                    {isMulti && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        className="size-8 shrink-0"
+                        aria-label="Previous transit"
+                        onClick={() =>
+                          setActiveTransitIndex((idx) =>
+                            (idx - 1 + total) % total
+                          )
+                        }
+                      >
+                        <ChevronLeft className="size-4" />
+                      </Button>
+                    )}
+                    <Button
+                      asChild={!ctaDisabled}
+                      disabled={ctaDisabled}
+                      variant="outline"
+                      size="sm"
+                      className="flex-1"
+                    >
+                      {ctaDisabled ? (
+                        <span>{ctaLabel}</span>
+                      ) : (
+                        <Link href={detailedHref}>{ctaLabel} →</Link>
+                      )}
+                    </Button>
+                    {isMulti && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        className="size-8 shrink-0"
+                        aria-label="Next transit"
+                        onClick={() =>
+                          setActiveTransitIndex((idx) => (idx + 1) % total)
+                        }
+                      >
+                        <ChevronRight className="size-4" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              );
+            })()
           ) : (
             <div className="space-y-2">
               <p className="text-xs text-muted-foreground">

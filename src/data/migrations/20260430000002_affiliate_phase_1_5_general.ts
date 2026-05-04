@@ -104,6 +104,17 @@ ALTER TABLE affiliate_campaigns
       AND destination_service_template_id IS NOT NULL)
   );
 
+-- ─── 2b. tracking_links: relax diviner_id NOT NULL ────────────────────────
+-- General-program campaigns have no specific diviner (the matcher picks
+-- one at booking time). The original tracking_links table from
+-- 20260331000001_initial_schema.sql declared diviner_id NOT NULL — that
+-- predated Phase 1.5. Drop the constraint so general campaigns can insert
+-- their tracking_links row. FK to diviners(id) ON DELETE CASCADE is kept;
+-- NULL passes FK checks since they only enforce on non-null values.
+-- Per-diviner campaigns continue to populate diviner_id as before.
+ALTER TABLE tracking_links
+  ALTER COLUMN diviner_id DROP NOT NULL;
+
 -- ─── 3. bookings: parallel stamp source for general program ────────────────
 ALTER TABLE bookings
   ADD COLUMN IF NOT EXISTS commission_source_template_id UUID
@@ -178,6 +189,32 @@ CREATE POLICY affiliate_updates_own_campaigns
       AND owner_affiliate_account_id = public.current_affiliate_account_id())
   );
 
+-- ─── 5b. admin_action_log: extensions for bulk template-rate updates ─────
+-- Phase 1.5 introduces a bulk endpoint at /api/admin/service-templates/
+-- bulk-set-commission that updates many rows in one shot. Three small
+-- changes to admin_action_log so the bulk action can be audited:
+--   (a) action_kind enum gains 'service_templates_bulk_commission_update'
+--   (b) target_resource_id loses NOT NULL (bulk actions hit many rows)
+--   (c) new payload JSONB column carries structured action params
+-- All idempotent; existing rows pass the new CHECK unchanged.
+
+ALTER TABLE admin_action_log
+  ALTER COLUMN target_resource_id DROP NOT NULL;
+
+ALTER TABLE admin_action_log
+  ADD COLUMN IF NOT EXISTS payload JSONB;
+
+ALTER TABLE admin_action_log
+  DROP CONSTRAINT IF EXISTS admin_action_log_action_kind_check;
+ALTER TABLE admin_action_log
+  ADD CONSTRAINT admin_action_log_action_kind_check
+  CHECK (action_kind IN (
+    'affiliate_assignment_revoked',
+    'affiliate_campaign_archived',
+    'affiliate_conversion_reversed',
+    'service_templates_bulk_commission_update'
+  ));
+
 -- ─── 6. RLS on campaign_conversions: add general-account SELECT ────────────
 -- The existing affiliate_sees_own_conversions policy from 20260427000004
 -- covers per-diviner credits via the junction. Add a parallel policy for
@@ -237,6 +274,26 @@ BEGIN
   IF EXISTS (SELECT 1 FROM service_templates WHERE slug LIKE 'general-%')
      AND NOT EXISTS (SELECT 1 FROM service_templates WHERE is_general = TRUE) THEN
     RAISE EXCEPTION 'is_general backfill from slug pattern produced 0 rows';
+  END IF;
+  -- tracking_links.diviner_id should now be nullable (general campaigns).
+  IF (SELECT is_nullable FROM information_schema.columns
+       WHERE table_schema='public' AND table_name='tracking_links'
+         AND column_name='diviner_id') <> 'YES' THEN
+    RAISE EXCEPTION 'tracking_links.diviner_id NOT NULL was not dropped';
+  END IF;
+  -- admin_action_log.payload column added.
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema='public' AND table_name='admin_action_log'
+      AND column_name='payload'
+  ) THEN
+    RAISE EXCEPTION 'admin_action_log.payload not added';
+  END IF;
+  -- admin_action_log.target_resource_id should now be nullable.
+  IF (SELECT is_nullable FROM information_schema.columns
+       WHERE table_schema='public' AND table_name='admin_action_log'
+         AND column_name='target_resource_id') <> 'YES' THEN
+    RAISE EXCEPTION 'admin_action_log.target_resource_id NOT NULL was not dropped';
   END IF;
 END
 $check$;

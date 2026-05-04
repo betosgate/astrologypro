@@ -56,18 +56,22 @@ export async function GET(request: Request) {
     return NextResponse.json({ data: [], nextCursor: null, hasMore: false });
   }
 
+  // Bug-fix (caught during Task 07): the columns on campaign_conversions
+  // are `converted_at` (not `created_at`) and `reversal_reason` (not
+  // `reversed_reason`). Pre-existing endpoint queried wrong names; the
+  // diviner-side report has been returning DB errors. Fixed here.
   let query = admin
     .from("campaign_conversions")
     .select(
-      "id, campaign_id, affiliate_id, booking_id, order_amount_cents, commission_amount_cents, rate_type_used, rate_value_used, reversed_at, reversed_reason, created_at",
+      "id, campaign_id, affiliate_id, booking_id, order_amount_cents, commission_amount_cents, rate_type_used, rate_value_used, reversed_at, reversal_reason, converted_at",
     )
     .in("campaign_id", campaignIds)
-    .order("created_at", { ascending: false })
+    .order("converted_at", { ascending: false })
     .order("id", { ascending: false })
     .limit(limit + 1);
 
-  if (dateFrom) query = query.gte("created_at", dateFrom);
-  if (dateTo) query = query.lte("created_at", dateTo);
+  if (dateFrom) query = query.gte("converted_at", dateFrom);
+  if (dateTo) query = query.lte("converted_at", dateTo);
   if (affiliateId) query = query.eq("affiliate_id", affiliateId);
   if (status === "earned") query = query.is("reversed_at", null);
   else if (status === "reversed") query = query.not("reversed_at", "is", null);

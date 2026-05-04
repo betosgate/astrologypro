@@ -67,19 +67,31 @@ export async function PATCH(
     );
   }
 
-  // Ownership: the campaign must be affiliate-owned and owned by one of
-  // the caller's junctions.
+  // Ownership: the campaign must be affiliate-owned. Phase 1 (per-diviner)
+  // matches via the caller's junctionIds; Phase 1.5 (general) matches via
+  // the caller's account.id.
   const { data: campaign } = await admin
     .from("affiliate_campaigns")
-    .select("id, status, owner_type, owner_affiliate_id, owner_affiliate_type")
+    .select(
+      "id, status, owner_type, owner_affiliate_id, owner_affiliate_type, owner_affiliate_account_id",
+    )
     .eq("id", id)
     .maybeSingle();
+
+  const isOwnedPerDiviner =
+    !!campaign &&
+    campaign.owner_affiliate_type === "diviner_affiliate" &&
+    ctx.junctionIds.includes(campaign.owner_affiliate_id as string);
+
+  const isOwnedGeneral =
+    !!campaign &&
+    campaign.owner_affiliate_type === "general" &&
+    campaign.owner_affiliate_account_id === ctx.account.id;
 
   if (
     !campaign ||
     campaign.owner_type !== "affiliate" ||
-    campaign.owner_affiliate_type !== "diviner_affiliate" ||
-    !ctx.junctionIds.includes(campaign.owner_affiliate_id as string)
+    (!isOwnedPerDiviner && !isOwnedGeneral)
   ) {
     // Hide existence of foreign campaigns — 404, not 403.
     return problem(404, "Campaign not found");
