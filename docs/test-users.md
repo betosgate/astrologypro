@@ -48,15 +48,22 @@ All accounts are active and confirmed. Use the credentials below to log in at an
 | perennial4@test.astrologypro.com | TestUser123! |
 | perennial5@test.astrologypro.com | TestUser123! |
 
-### Mystery School — portal: `/community`
+### Mystery School — portal: `/mystery-school`
 
-| Email | Password |
-|---|---|
-| mysteryschool1@test.astrologypro.com | TestUser123! |
-| mysteryschool2@test.astrologypro.com | TestUser123! |
-| mysteryschool3@test.astrologypro.com | TestUser123! |
-| mysteryschool4@test.astrologypro.com | TestUser123! |
-| mysteryschool5@test.astrologypro.com | TestUser123! |
+These accounts are seeded as dual-role (`mystery_school_students` + `clients`).
+The login resolver routes them based on Mystery School billing state:
+
+- **Valid Stripe subscription** → `/mystery-school`
+- **Broken billing** (no `stripe_subscription_id`, or paused, or cancelled
+  past `access_expires_at`) → `/join/mystery-school/resubscribe`
+
+| Email | Password | MS Billing | Lands on |
+|---|---|---|---|
+| mysteryschool1@test.astrologypro.com | TestUser123! | broken (no Stripe sub) | `/join/mystery-school/resubscribe` |
+| mysteryschool2@test.astrologypro.com | TestUser123! | broken (no Stripe sub) | `/join/mystery-school/resubscribe` |
+| mysteryschool3@test.astrologypro.com | TestUser123! | valid | `/mystery-school` |
+| mysteryschool4@test.astrologypro.com | TestUser123! | broken (no Stripe sub) | `/join/mystery-school/resubscribe` |
+| mysteryschool5@test.astrologypro.com | TestUser123! | broken (no Stripe sub) | `/join/mystery-school/resubscribe` |
 
 ### Trainees — portal: `/trainee`
 

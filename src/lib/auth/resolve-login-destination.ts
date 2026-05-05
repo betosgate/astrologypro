@@ -12,7 +12,13 @@
  *  4. First visit → pick highest portal by role hierarchy, gate on onboarding
  *
  * Role hierarchy (highest → lowest):
- *  admin > diviner > trainee > social_advo > perennial_mandalism > mystery_school > client
+ *  admin > diviner > trainee > social_advo > perennial_mandalism (active) >
+ *  mystery_school (active+billed) > perennial_mandalism (resubscribe) >
+ *  mystery_school (resubscribe) > client
+ *
+ * "Resubscribe" entries fire when the row exists but billing/status no
+ * longer qualifies for portal access — those users are routed to the
+ * role-specific resubscribe page rather than falling through to /portal.
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -43,6 +49,20 @@ function needsInvitedDivinerPlan(
     !!diviner &&
     !diviner.onboarding_completed &&
     diviner.subscription_status !== "active"
+  );
+}
+
+function hasActiveMysterySchoolAccess(
+  ms: PortalCheckData["mysteryStudent"]
+): boolean {
+  if (!ms) return false;
+  const isCancelledWithAccess =
+    ms.status === "cancelled" &&
+    !!ms.access_expires_at &&
+    new Date(ms.access_expires_at) > new Date();
+  return (
+    hasValidMysterySchoolBilling(ms) &&
+    (ms.status === "active" || isCancelledWithAccess)
   );
 }
 
@@ -111,35 +131,34 @@ const ROLE_HIERARCHY: Array<{
   },
   {
     role: "mystery_school",
-    check: (d) => {
-      if (!d.mysteryStudent) return false;
-      const ms = d.mysteryStudent;
-      const isCancelledWithAccess =
-        ms.status === "cancelled" &&
-        !!ms.access_expires_at &&
-        new Date(ms.access_expires_at) > new Date();
-      return (
-        hasValidMysterySchoolBilling(ms) &&
-        (ms.status === "active" || isCancelledWithAccess)
-      );
-    },
+    check: (d) => hasActiveMysterySchoolAccess(d.mysteryStudent),
     destination: (_d, isInvited) =>
       isInvited ? getInvitedRoleDestination("mystery_school") : "/mystery-school",
   },
   {
-    role: "client",
-    check: (d) => !!d.client,
-    destination: () => "/portal",
-  },
-  {
-    // Cancelled/inactive PM members who have no other qualifying role.
-    // Sends them to the resubscribe page so they can reactivate.
-    role: "perennial_mandalism_cancelled",
+    // PM members whose subscription is no longer active. Placed above
+    // mystery_school_needs_resubscribe so dual-role users (PM + MS, both
+    // broken) reactivate PM first, mirroring the active-state priority.
+    role: "perennial_mandalism_needs_resubscribe",
     check: (d) =>
       !!d.community &&
       d.community.membership_type === "perennial_mandalism" &&
       d.community.membership_status !== "active",
     destination: () => "/join/community/resubscribe",
+  },
+  {
+    // MS row exists but billing is missing/invalid, or status no longer
+    // qualifies for active access (e.g. cancelled past access_expires_at,
+    // paused). Routes the user to the resubscribe page instead of falling
+    // through to /portal via the client entry below.
+    role: "mystery_school_needs_resubscribe",
+    check: (d) => !!d.mysteryStudent && !hasActiveMysterySchoolAccess(d.mysteryStudent),
+    destination: () => "/join/mystery-school/resubscribe",
+  },
+  {
+    role: "client",
+    check: (d) => !!d.client,
+    destination: () => "/portal",
   },
 ];
 
@@ -268,7 +287,10 @@ export async function resolveLoginDestination({
     entry.check(checkData)
   );
 
-  if (qualifiedEntries.length === 0) return "/portal";
+  // Orphan auth users with no role rows go through the generic onboarding
+  // funnel — never the client portal, which is reserved for actual clients
+  // (matched by the `client` hierarchy entry above).
+  if (qualifiedEntries.length === 0) return "/onboarding";
 
   return qualifiedEntries[0].destination(checkData, isInvited);
 }
