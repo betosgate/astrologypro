@@ -214,8 +214,6 @@ export default function ChartsPage() {
   >([]);
   const [loading, setLoading] = useState(true);
   const [overviewOpen, setOverviewOpen] = useState(false);
-  const [selectedFamilyMode, setSelectedFamilyMode] =
-    useState<RelationshipMode | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   async function load() {
@@ -298,19 +296,8 @@ export default function ChartsPage() {
     );
   }
 
-  function getFamilyOverviewState(mode: RelationshipMode): ChartReportState {
-    if (familyMembers.length < 2) return "missing";
-
-    const states = pairs.map(({ a, b }) =>
-      getReportStateForMode(a.id, b.id, mode)
-    );
-
-    if (states.length === 0) return "missing";
-    if (states.some((state) => state === "generating")) return "generating";
-    if (states.some((state) => state === "failed")) return "failed";
-    if (states.some((state) => state === "stale")) return "stale";
-    if (states.every((state) => state === "generated")) return "generated";
-    return "missing";
+  function openFamilyDetailedReport(mode: RelationshipMode) {
+    router.push(`/community/charts/detailed?family=1&mode=${mode}`);
   }
 
   // Build all unique pairings
@@ -407,8 +394,7 @@ export default function ChartsPage() {
 
               <div className="grid gap-4 md:grid-cols-3">
                 {RELATIONSHIP_MODES.map((option) => {
-                  const state = getFamilyOverviewState(option.value);
-                  const cta = ctaLabelForState(state);
+                  const cta = "Generate";
                   return (
                     <section key={option.value} className="rounded-md border p-4">
                       <div className="flex items-center gap-2">
@@ -432,64 +418,14 @@ export default function ChartsPage() {
                         variant="outline"
                         className="mt-4 w-full"
                         disabled={familyMembers.length < 2}
-                        onClick={() => setSelectedFamilyMode(option.value)}
+                        onClick={() => openFamilyDetailedReport(option.value)}
                       >
-                        <span className={statusToneClass(state)}>{cta}</span>
+                        <span className={statusToneClass("missing")}>{cta}</span>
                       </Button>
                     </section>
                   );
                 })}
               </div>
-
-              {selectedFamilyMode && (
-                <section className="rounded-md border bg-muted/20 p-4">
-                  <div className="flex items-center gap-2">
-                    <Heart className="size-4 text-muted-foreground" />
-                    <h2 className="text-sm font-semibold">
-                      {
-                        RELATIONSHIP_MODES.find(
-                          (mode) => mode.value === selectedFamilyMode
-                        )?.label
-                      }{" "}
-                      Family Chart
-                    </h2>
-                  </div>
-                  <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                    {familyMembers.map((member) => (
-                      <div
-                        key={`${selectedFamilyMode}-${member.id}`}
-                        className="rounded-md border bg-background p-3"
-                      >
-                        <p className="truncate text-sm font-medium">
-                          {member.full_name}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {formatMemberSubtitle(member) || "Family member"}
-                        </p>
-                        <div className="mt-2 grid gap-1.5 text-xs text-muted-foreground">
-                          <span className="flex items-center gap-1.5">
-                            <CalendarDays className="size-3.5 shrink-0" />
-                            {formatBirthDate(member.date_of_birth)}
-                          </span>
-                          <span className="flex items-center gap-1.5">
-                            <Clock className="size-3.5 shrink-0" />
-                            {formatBirthTime(member.birth_time)}
-                          </span>
-                          <span className="flex items-center gap-1.5">
-                            <MapPin className="size-3.5 shrink-0" />
-                            <span className="truncate">
-                              {formatBirthPlace(
-                                member.birth_city,
-                                member.birth_country
-                              ) || "Birth place missing"}
-                            </span>
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </section>
-              )}
             </CardContent>
           )}
         </Card>
