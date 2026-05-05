@@ -1067,6 +1067,28 @@ fix the Marketing Kit in isolation**; the underlying schema + stamp +
 endpoints must land first or the fix would just hide the absence of the
 feature.
 
+#### Phase 1.5 follow-up decisions (2026-05-05)
+
+- **`channel='marketing_kit'` is the canonical channel value for
+  Marketing-Kit-spawned general campaigns.** The lazy-create in
+  `fetchMarketingKitItems` (src/lib/affiliate-marketing-kit.ts) tags
+  every general campaign it creates with this channel so analytics can
+  attribute conversions to the Marketing Kit surface separately from
+  generic 'direct'/'other'. The original
+  `affiliate_campaigns_channel_check` allowlist (migration
+  20260417000010) predated Phase 1.5 and rejected this value, causing
+  silent insert failures and an empty Marketing Kit. Migration
+  20260505000001_affiliate_campaigns_channel_marketing_kit extends the
+  allowlist; deploy + run via /admin/db/migrations.
+
+- **Inline admin editor on `/admin/service-templates`.** General-template
+  rows have a new "Affiliate program" item in the row dropdown that
+  opens a dialog with the same Switch + commission type/value fields as
+  the per-template detail-page card. Backed by the existing
+  `PATCH /api/admin/service-templates/[id]` — no new endpoint, no audit
+  drift. Lets admins enable/disable affiliate programs across the
+  general catalog without leaving the list.
+
 ---
 
 ### Phase 2 — Stripe auto-split (future)

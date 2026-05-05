@@ -87,6 +87,7 @@ import { MIGRATION_SQL as MIG_20260430000002_RSTL } from "@/data/migrations/2026
 import { MIGRATION_SQL as MIG_20260413000184_MTL } from "@/data/migrations/20260413000184_monthly_transit_lifecycle";
 import { MIGRATION_SQL as MIG_20260504000001_TLAU } from "@/data/migrations/20260504000001_training_lessons_audio_url";
 import { MIGRATION_SQL as MIG_20260504000002_MSFS } from "@/data/migrations/20260504000002_mystery_school_foundation_seed";
+import { MIGRATION_SQL as MIG_20260505000001_ACCMK } from "@/data/migrations/20260505000001_affiliate_campaigns_channel_marketing_kit";
 
 /**
  * Allowlisted migrations that the admin migration runner can execute.
@@ -823,6 +824,14 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Seeds the canonical 'Mystery School Foundation' training program (allowed_roles=['is_mystery_school'], is_sequential=true, is_active=true) plus 12 empty week-categories (Week 1..Week 12, priorities 1..12, is_sequential=true). Lessons are NOT seeded — admins populate them through /admin/training/lessons/new. Idempotent: program guarded by NOT EXISTS on name, categories guarded by (training_id, priority). Re-running is a no-op. After running, the new /mystery-school/training adapter route returns the 12 (empty) weeks; the legacy fallback continues to render until weeks have at least one lesson. Spec: docs/specs/mystery-school-training-unification.md.",
     sortKey: "20260504000002",
     sql: MIG_20260504000002_MSFS,
+  },
+  "20260505000001_affiliate_campaigns_channel_marketing_kit": {
+    id: "20260505000001_affiliate_campaigns_channel_marketing_kit",
+    title: "Affiliate Phase 1.5 follow-up — allow channel='marketing_kit'",
+    description:
+      "Extends the affiliate_campaigns.channel CHECK allowlist to include 'marketing_kit'. The original allowlist (from 20260417000010) predated Phase 1.5 and only allowed social/email/direct/other. The Marketing Kit lazy-create in fetchMarketingKitItems tags every spawned general campaign with channel='marketing_kit' so analytics can attribute conversions to that surface — without this fix the insert fails with affiliate_campaigns_channel_check violation and the Marketing Kit on /affiliate/dashboard renders empty. Idempotent: DROP CONSTRAINT IF EXISTS + re-ADD with the extended list. NULL is preserved (the old constraint allowed it implicitly via three-valued logic; the new one allows it explicitly). Run AFTER 20260417000010. Spec: docs/specs/affiliate-commission-system.md §10.",
+    sortKey: "20260505000001",
+    sql: MIG_20260505000001_ACCMK,
   },
 };
 
