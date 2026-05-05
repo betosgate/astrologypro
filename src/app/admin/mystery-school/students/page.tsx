@@ -26,6 +26,10 @@ type StudentRow = {
   graduated_at: string | null;
   membership_status: string;
   foundation_weeks_completed: number;
+  /** Optional in v3 — Training-backed lesson count. */
+  foundation_lessons_completed?: number;
+  /** Optional in v3 — "training" or "legacy" depending on data source. */
+  foundation_source?: "training" | "legacy";
   decans_completed: number;
   current_decan_status: string | null;
 };
@@ -79,6 +83,9 @@ function decanStatusIcon(status: string | null) {
 
 export default function AdminMysterySchoolStudentsPage() {
   const [students, setStudents] = useState<StudentRow[]>([]);
+  const [foundationSource, setFoundationSource] = useState<
+    "training" | "legacy" | null
+  >(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -88,7 +95,10 @@ export default function AdminMysterySchoolStudentsPage() {
       .then((r) => r.json())
       .then((d) => {
         if (d.error) setError(d.error);
-        else setStudents(d.students ?? []);
+        else {
+          setStudents(d.students ?? []);
+          setFoundationSource(d.foundation_source ?? null);
+        }
       })
       .catch(() => setError("Failed to load students"))
       .finally(() => setLoading(false));
@@ -119,18 +129,34 @@ export default function AdminMysterySchoolStudentsPage() {
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <div className="flex items-center gap-3 mb-1">
-            <a
+            <Link
               href="/admin/mystery-school"
               className="text-sm text-muted-foreground hover:text-foreground"
             >
               ← Mystery School
-            </a>
+            </Link>
             <span className="text-muted-foreground">/</span>
             <h1 className="text-xl font-bold">Students</h1>
           </div>
           <p className="text-sm text-muted-foreground">
             All enrolled Mystery School students with progress overview.
           </p>
+          {foundationSource && (
+            <p className="text-[11px] text-muted-foreground mt-1">
+              Foundation source:{" "}
+              <span
+                className={
+                  foundationSource === "training"
+                    ? "font-medium text-emerald-600"
+                    : "font-medium text-amber-600"
+                }
+              >
+                {foundationSource === "training"
+                  ? "Admin Training (training_categories)"
+                  : "Legacy student_foundation_progress"}
+              </span>
+            </p>
+          )}
         </div>
       </div>
 

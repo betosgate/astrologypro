@@ -16,61 +16,44 @@ import {
   Circle,
   Lock,
   BookOpen,
-  Music,
   ChevronDown,
   ChevronUp,
   CheckSquare,
-  Square,
   Flame,
   Star,
   PlayCircle,
+  FileText,
+  Music,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 
 export const dynamic = "force-dynamic";
 
-// ─── Legacy (foundation_weeks) types ─────────────────────────────────────────
+/**
+ * Mystery School Foundation learner page (Training-backed).
+ *
+ * Spec: docs/tasks/2026-04-30/mystery-school-admin-training-unification-v3.md
+ *   §1 Make Admin Training the only normal Foundation content source.
+ *   §2 Keep all Foundation progress in Training tables.
+ *
+ * Source of truth:
+ *   • Curriculum  → /api/mystery-school/training/foundation
+ *                   (training_programs / training_categories / training_lessons)
+ *   • Progress    → lesson_progress, lesson_completions, category_completions
+ *
+ * Removed in v3:
+ *   • Legacy fallback to /api/mystery-school/foundation
+ *   • LegacyWeekCard / TaskChecklist / handleTaskComplete
+ *   • Calls to /api/mystery-school/foundation/complete-task
+ *
+ * If the Training program or its lessons are missing, this page renders an
+ * explicit "setup pending" empty state so admins can see the gap and
+ * populate Admin Training. It does NOT silently fall back to the legacy
+ * Foundation editor.
+ */
 
-type TaskDef = {
-  id: string;
-  order: number;
-  title: string;
-  description?: string;
-};
-
-type TaskCompletion = { completed_at: string };
-
-type FoundationWeek = {
-  id: string;
-  week_number: number;
-  title: string;
-  description: string | null;
-  audio_url: string | null;
-  beto_photo_url: string | null;
-  tasks: TaskDef[];
-  unlocked: boolean;
-  completed: boolean;
-  completed_at: string | null;
-  task_completions: Record<string, TaskCompletion>;
-  tasks_done: number;
-  tasks_total: number;
-};
-
-type FoundationData = {
-  student: {
-    id: string;
-    status: string;
-    enrolled_at: string;
-    start_quarter: string;
-  };
-  weeks: FoundationWeek[];
-  total_weeks: number;
-  completed_count: number;
-  q1_complete: boolean;
-};
-
-// ─── Training-backed (new) types ─────────────────────────────────────────────
+// ─── Training-backed types ───────────────────────────────────────────────────
 
 type TrainingWeekLesson = {
   id: string;
@@ -113,122 +96,7 @@ type TrainingFoundationData = {
   program_present: boolean;
 };
 
-// ─── AudioPlayer (legacy) ────────────────────────────────────────────────────
-
-function AudioPlayer({
-  url,
-  betoPhoto,
-}: {
-  url: string;
-  betoPhoto: string | null;
-}) {
-  return (
-    <div className="flex items-center gap-4 rounded-lg bg-muted/60 p-4">
-      {betoPhoto ? (
-        <img
-          src={betoPhoto}
-          alt="Beto"
-          className="size-12 rounded-full object-cover shrink-0"
-        />
-      ) : (
-        <div className="flex size-12 shrink-0 items-center justify-center rounded-full bg-primary/10">
-          <Music className="size-5 text-primary" />
-        </div>
-      )}
-      <div className="flex-1 min-w-0">
-        <p className="text-xs font-medium text-muted-foreground mb-1">
-          Weekly Audio Introduction
-        </p>
-        <audio controls className="w-full h-8" preload="none">
-          <source src={url} />
-          Your browser does not support audio playback.
-        </audio>
-      </div>
-    </div>
-  );
-}
-
-// ─── TaskChecklist (legacy) ──────────────────────────────────────────────────
-
-function TaskChecklist({
-  week,
-  onTaskComplete,
-  completing,
-}: {
-  week: FoundationWeek;
-  onTaskComplete: (weekNumber: number, taskId: string) => Promise<void>;
-  completing: string | null;
-}) {
-  if (week.tasks.length === 0) return null;
-  const sorted = [...week.tasks].sort((a, b) => a.order - b.order);
-  return (
-    <div className="space-y-2">
-      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        Tasks — {week.tasks_done} of {week.tasks_total} complete
-      </p>
-      <ul className="space-y-2">
-        {sorted.map((task) => {
-          const done = !!week.task_completions[task.id];
-          const isSaving = completing === task.id;
-          return (
-            <li
-              key={task.id}
-              className={`flex items-start gap-3 rounded-md border px-3 py-2.5 transition-colors ${
-                done
-                  ? "border-green-500/20 bg-green-50/20"
-                  : "border-border bg-background"
-              }`}
-            >
-              <button
-                type="button"
-                disabled={done || isSaving || !week.unlocked}
-                onClick={() => onTaskComplete(week.week_number, task.id)}
-                className="mt-0.5 shrink-0 disabled:cursor-default"
-                aria-label={done ? `${task.title} complete` : `Complete ${task.title}`}
-              >
-                {isSaving ? (
-                  <Circle className="size-4 animate-pulse text-primary" />
-                ) : done ? (
-                  <CheckSquare className="size-4 text-green-500" />
-                ) : (
-                  <Square className="size-4 text-muted-foreground hover:text-primary transition-colors" />
-                )}
-              </button>
-              <div className="min-w-0">
-                <p
-                  className={`text-sm font-medium ${
-                    done ? "line-through text-muted-foreground" : ""
-                  }`}
-                >
-                  {task.title}
-                </p>
-                {task.description && (
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {task.description}
-                  </p>
-                )}
-                {done && week.task_completions[task.id]?.completed_at && (
-                  <p className="text-[11px] text-muted-foreground mt-0.5">
-                    Completed{" "}
-                    {new Date(
-                      week.task_completions[task.id].completed_at
-                    ).toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
-                    })}
-                  </p>
-                )}
-              </div>
-            </li>
-          );
-        })}
-      </ul>
-    </div>
-  );
-}
-
-// ─── LessonList (training-backed) ────────────────────────────────────────────
+// ─── LessonList ──────────────────────────────────────────────────────────────
 
 function LessonList({ week }: { week: TrainingWeek }) {
   if (week.lessons.length === 0) {
@@ -256,8 +124,14 @@ function LessonList({ week }: { week: TrainingWeek }) {
             <div className="mt-0.5 shrink-0">
               {lesson.completed ? (
                 <CheckSquare className="size-4 text-green-500" />
-              ) : (
+              ) : lesson.audio_url && !lesson.video_url && !lesson.pdf_url ? (
+                <Music className="size-4 text-primary" />
+              ) : lesson.video_url && !lesson.audio_url && !lesson.pdf_url ? (
                 <PlayCircle className="size-4 text-primary" />
+              ) : lesson.pdf_url && !lesson.audio_url && !lesson.video_url ? (
+                <FileText className="size-4 text-primary" />
+              ) : (
+                <BookOpen className="size-4 text-primary" />
               )}
             </div>
             <div className="min-w-0 flex-1">
@@ -296,7 +170,7 @@ function LessonList({ week }: { week: TrainingWeek }) {
   );
 }
 
-// ─── Shared WeekCard (legacy + training share the visual shell) ──────────────
+// ─── Shared WeekCard shell ───────────────────────────────────────────────────
 
 type SharedWeekDisplay = {
   id: string;
@@ -308,9 +182,6 @@ type SharedWeekDisplay = {
   completed_at: string | null;
   units_done: number;
   units_total: number;
-  // Optional legacy-only fields
-  audio_url: string | null;
-  beto_photo_url: string | null;
 };
 
 function WeekCardShell({
@@ -416,61 +287,6 @@ function WeekCardShell({
   );
 }
 
-function LegacyWeekCard({
-  week,
-  onTaskComplete,
-  completing,
-}: {
-  week: FoundationWeek;
-  onTaskComplete: (weekNumber: number, taskId: string) => Promise<void>;
-  completing: string | null;
-}) {
-  const [expanded, setExpanded] = useState(false);
-  const hasContent =
-    !!week.audio_url ||
-    !!week.description ||
-    (week.tasks && week.tasks.length > 0);
-
-  const display: SharedWeekDisplay = {
-    id: week.id,
-    week_number: week.week_number,
-    title: week.title,
-    description: week.description,
-    unlocked: week.unlocked,
-    completed: week.completed,
-    completed_at: week.completed_at,
-    units_done: week.tasks_done,
-    units_total: week.tasks_total,
-    audio_url: week.audio_url,
-    beto_photo_url: week.beto_photo_url,
-  };
-
-  return (
-    <WeekCardShell
-      display={display}
-      expanded={expanded}
-      onToggle={() => setExpanded((v) => !v)}
-      hasContent={hasContent}
-    >
-      {week.audio_url && (
-        <AudioPlayer url={week.audio_url} betoPhoto={week.beto_photo_url} />
-      )}
-      {week.description && (
-        <div className="prose prose-sm max-w-none text-sm text-foreground/80 whitespace-pre-wrap">
-          {week.description}
-        </div>
-      )}
-      {week.tasks.length > 0 && (
-        <TaskChecklist
-          week={week}
-          onTaskComplete={onTaskComplete}
-          completing={completing}
-        />
-      )}
-    </WeekCardShell>
-  );
-}
-
 function TrainingWeekCard({ week }: { week: TrainingWeek }) {
   const [expanded, setExpanded] = useState(false);
   const hasContent =
@@ -486,8 +302,6 @@ function TrainingWeekCard({ week }: { week: TrainingWeek }) {
     completed_at: week.completed_at,
     units_done: week.lessons_done,
     units_total: week.lessons_total,
-    audio_url: null,
-    beto_photo_url: null,
   };
 
   return (
@@ -507,76 +321,71 @@ function TrainingWeekCard({ week }: { week: TrainingWeek }) {
   );
 }
 
+// ─── Setup-pending empty state ───────────────────────────────────────────────
+
+function FoundationSetupPendingState({
+  programPresent,
+}: {
+  programPresent: boolean;
+}) {
+  return (
+    <div className="space-y-6">
+      <div className="relative rounded-xl overflow-hidden border border-yellow-500/20 bg-gradient-to-br from-yellow-950/30 via-background to-background px-6 py-8 shadow-sm">
+        <div className="flex items-center gap-2.5">
+          <div className="flex size-9 items-center justify-center rounded-lg border border-yellow-500/30 bg-yellow-500/10">
+            <Flame className="size-5 text-yellow-400" />
+          </div>
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-yellow-500/70">
+              Mystery School — Foundation Q1
+            </p>
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">
+              Foundation Training
+            </h1>
+          </div>
+        </div>
+      </div>
+      <Card>
+        <CardContent className="py-12 text-center">
+          <div className="flex size-14 items-center justify-center rounded-full bg-yellow-500/10 border border-yellow-500/20 mx-auto mb-4">
+            <BookOpen className="size-7 text-yellow-400/60" />
+          </div>
+          <p className="text-sm font-medium mb-1">
+            Foundation content is being prepared
+          </p>
+          <p className="text-sm text-muted-foreground max-w-md mx-auto">
+            {programPresent
+              ? "The 12-week curriculum exists, but no lessons have been published yet. Please check back soon — your guides are finishing this material now."
+              : "The Foundation program has not been published yet. Please check back soon — your guides are finishing this material now."}
+          </p>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 // ─── Page ────────────────────────────────────────────────────────────────────
 
-type DataSource = "training" | "legacy";
-
-type Loaded =
-  | { source: "training"; data: TrainingFoundationData }
-  | { source: "legacy"; data: FoundationData };
-
 export default function MysterySchoolTrainingPage() {
-  const [loaded, setLoaded] = useState<Loaded | null>(null);
+  const [data, setData] = useState<TrainingFoundationData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [completing, setCompleting] = useState<string | null>(null);
 
-  /**
-   * Adapter-first load with graceful fallback.
-   *
-   * 1. Try /api/mystery-school/training/foundation. If it returns weeks with
-   *    at least one lesson across them, render the new training-backed UI.
-   * 2. Otherwise fall back to /api/mystery-school/foundation (legacy weeks
-   *    table) so production never goes blank during the transition.
-   *
-   * This keeps the page working in three states:
-   *   - migration not yet run → adapter 200 with empty program → fallback
-   *   - migration ran but no lessons added → fallback (preserves legacy UX)
-   *   - migration ran + admin added lessons → new training-backed UI
-   */
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
-
-    let trainingData: TrainingFoundationData | null = null;
     try {
       const res = await fetch("/api/mystery-school/training/foundation");
-      if (res.ok) {
-        const json = (await res.json()) as TrainingFoundationData;
-        trainingData = json;
-      }
-    } catch {
-      // Network or parse error — silently fall through to legacy.
-    }
-
-    const totalLessons =
-      trainingData?.weeks.reduce((sum, w) => sum + w.lessons_total, 0) ?? 0;
-    const useTraining =
-      !!trainingData &&
-      trainingData.program_present &&
-      totalLessons > 0;
-
-    if (useTraining && trainingData) {
-      setLoaded({ source: "training", data: trainingData });
-      setLoading(false);
-      return;
-    }
-
-    // Legacy fallback.
-    try {
-      const res = await fetch("/api/mystery-school/foundation");
       if (!res.ok) {
-        const j = await res.json().catch(() => ({}));
-        setError(
-          (j as { error?: string }).error ?? "Failed to load training content"
-        );
+        const j = (await res.json().catch(() => ({}))) as { error?: string };
+        setError(j.error ?? "Failed to load Foundation content");
         setLoading(false);
         return;
       }
-      const data = (await res.json()) as FoundationData;
-      setLoaded({ source: "legacy", data });
+      const json = (await res.json()) as TrainingFoundationData;
+      setData(json);
     } catch {
-      setError("Failed to load training content");
+      setError("Failed to load Foundation content");
     }
     setLoading(false);
   }, []);
@@ -585,80 +394,15 @@ export default function MysterySchoolTrainingPage() {
     load();
   }, [load]);
 
-  async function handleTaskComplete(weekNumber: number, taskId: string) {
-    setCompleting(taskId);
-    try {
-      const res = await fetch(
-        "/api/mystery-school/foundation/complete-task",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ week_number: weekNumber, task_id: taskId }),
-        }
-      );
-      if (res.ok) {
-        // Optimistic update only meaningful for legacy data
-        setLoaded((prev) => {
-          if (!prev || prev.source !== "legacy") return prev;
-          const now = new Date().toISOString();
-          const weeks = prev.data.weeks.map((w) => {
-            if (w.week_number !== weekNumber) return w;
-            const newCompletions = {
-              ...w.task_completions,
-              [taskId]: { completed_at: now },
-            };
-            const tasksDone = w.tasks.filter(
-              (t) => !!newCompletions[t.id]
-            ).length;
-            const allDone =
-              w.tasks_total > 0 && tasksDone >= w.tasks_total;
-            return {
-              ...w,
-              task_completions: newCompletions,
-              tasks_done: tasksDone,
-              completed: allDone,
-              completed_at: allDone ? now : w.completed_at,
-            };
-          });
-          const updatedWeeks = weeks.map((w, idx) => {
-            if (idx === 0) return { ...w, unlocked: true };
-            const prevWeek = weeks[idx - 1];
-            const prevDone =
-              prevWeek.tasks_total === 0
-                ? !!prevWeek.completed_at
-                : prevWeek.tasks_done >= prevWeek.tasks_total;
-            return { ...w, unlocked: prevDone };
-          });
-          const completedCount = updatedWeeks.filter((w) => w.completed).length;
-          const q1Complete =
-            completedCount >= prev.data.total_weeks &&
-            updatedWeeks.length > 0;
-          return {
-            source: "legacy",
-            data: {
-              ...prev.data,
-              weeks: updatedWeeks,
-              completed_count: completedCount,
-              q1_complete: q1Complete,
-            },
-          };
-        });
-      }
-    } finally {
-      setCompleting(null);
-    }
-  }
-
-  // Common derived values for the hero
   const heroData = useMemo(() => {
-    if (!loaded) return null;
+    if (!data) return null;
     return {
-      student: loaded.data.student,
-      total_weeks: loaded.data.total_weeks,
-      completed_count: loaded.data.completed_count,
-      q1_complete: loaded.data.q1_complete,
+      student: data.student,
+      total_weeks: data.total_weeks,
+      completed_count: data.completed_count,
+      q1_complete: data.q1_complete,
     };
-  }, [loaded]);
+  }, [data]);
 
   if (loading) {
     return (
@@ -684,15 +428,27 @@ export default function MysterySchoolTrainingPage() {
     );
   }
 
-  if (!loaded || !heroData) return null;
+  if (!data || !heroData) return null;
+
+  // Setup-pending: Training program missing OR no lessons published yet.
+  // We show a clear empty state instead of falling back to the legacy
+  // /api/mystery-school/foundation path (removed in v3).
+  const totalLessons = data.weeks.reduce(
+    (sum, w) => sum + w.lessons_total,
+    0
+  );
+  if (!data.program_present || totalLessons === 0) {
+    return (
+      <FoundationSetupPendingState programPresent={data.program_present} />
+    );
+  }
 
   const progressPct =
     heroData.total_weeks > 0
       ? Math.round((heroData.completed_count / heroData.total_weeks) * 100)
       : 0;
 
-  const weekCount = loaded.data.weeks.length;
-  const sourceLabel: DataSource = loaded.source;
+  const weekCount = data.weeks.length;
 
   return (
     <div className="space-y-6">
@@ -780,18 +536,9 @@ export default function MysterySchoolTrainingPage() {
       )}
 
       <div className="space-y-3">
-        {sourceLabel === "training"
-          ? (loaded.data as TrainingFoundationData).weeks.map((week) => (
-              <TrainingWeekCard key={week.id} week={week} />
-            ))
-          : (loaded.data as FoundationData).weeks.map((week) => (
-              <LegacyWeekCard
-                key={week.week_number}
-                week={week}
-                onTaskComplete={handleTaskComplete}
-                completing={completing}
-              />
-            ))}
+        {data.weeks.map((week) => (
+          <TrainingWeekCard key={week.id} week={week} />
+        ))}
       </div>
     </div>
   );

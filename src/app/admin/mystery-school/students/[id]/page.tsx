@@ -72,8 +72,30 @@ type DecanProgressRow = {
 };
 
 type FoundationProgress = {
+  /**
+   * Where the counters below come from.
+   *  - "training" → Mystery School Foundation Training program
+   *                 (training_categories + category_completions).
+   *  - "legacy"   → Falls back to student_foundation_progress only when
+   *                 the Training program is not yet seeded.
+   */
+  source: "training" | "legacy";
   weeks_completed: number;
+  total_weeks: number;
+  lessons_completed: number;
+  /** Backward-compat alias rendered as "Total tasks completed". */
   total_tasks_completed: number;
+  /** Per-week breakdown from Training (empty if source === "legacy"). */
+  weeks?: Array<{
+    category_id: string;
+    week_number: number;
+    title: string;
+    active_lesson_count: number;
+    lessons_completed: number;
+    category_completed_at: string | null;
+    completed: boolean;
+  }>;
+  /** Legacy student_foundation_progress rows (kept for historical view). */
   rows: Array<{
     id: string;
     week_number: number;
@@ -425,25 +447,85 @@ export default function AdminStudentDetailPage({
         </CardContent>
       </Card>
 
-      {/* ── Foundation Progress ────────────────────────────────── */}
+      {/* ── Foundation Progress (Training-backed in v3) ────────── */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm">Q1 Foundation Progress</CardTitle>
+          <div className="flex items-center justify-between gap-2">
+            <CardTitle className="text-sm">Q1 Foundation Progress</CardTitle>
+            <span
+              className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                foundation_progress.source === "training"
+                  ? "bg-emerald-100 text-emerald-800"
+                  : "bg-amber-100 text-amber-800"
+              }`}
+              title={
+                foundation_progress.source === "training"
+                  ? "Sourced from Admin Training (training_categories / lesson_completions)"
+                  : "Training program not yet seeded — falling back to legacy student_foundation_progress"
+              }
+            >
+              {foundation_progress.source === "training"
+                ? "Source: Admin Training"
+                : "Source: Legacy"}
+            </span>
+          </div>
         </CardHeader>
         <CardContent className="space-y-3">
-          <div className="space-y-1">
-            <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <span>Weeks completed</span>
-              <span>{foundation_progress.weeks_completed}/12</span>
-            </div>
-            <Progress
-              value={Math.round((foundation_progress.weeks_completed / 12) * 100)}
-              className="h-1.5"
-            />
-          </div>
-          <p className="text-xs text-muted-foreground">
-            Total tasks completed: {foundation_progress.total_tasks_completed}
-          </p>
+          {(() => {
+            const totalWeeks = foundation_progress.total_weeks || 12;
+            const pct = totalWeeks
+              ? Math.round(
+                  (foundation_progress.weeks_completed / totalWeeks) * 100
+                )
+              : 0;
+            return (
+              <>
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span>Weeks completed</span>
+                    <span>
+                      {foundation_progress.weeks_completed}/{totalWeeks}
+                    </span>
+                  </div>
+                  <Progress value={pct} className="h-1.5" />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {foundation_progress.source === "training"
+                    ? `Lessons completed: ${foundation_progress.lessons_completed}`
+                    : `Total tasks completed: ${foundation_progress.total_tasks_completed}`}
+                </p>
+                {foundation_progress.source === "training" &&
+                  foundation_progress.weeks &&
+                  foundation_progress.weeks.length > 0 && (
+                    <ul className="space-y-1.5 text-xs">
+                      {foundation_progress.weeks.map((w) => (
+                        <li
+                          key={w.category_id}
+                          className="flex items-center justify-between gap-2"
+                        >
+                          <span className="truncate">
+                            <span className="font-mono text-muted-foreground mr-1">
+                              W{w.week_number}
+                            </span>
+                            {w.title}
+                          </span>
+                          <span
+                            className={
+                              w.completed
+                                ? "text-emerald-600"
+                                : "text-muted-foreground"
+                            }
+                          >
+                            {w.lessons_completed}/{w.active_lesson_count}
+                            {w.completed && " · done"}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+              </>
+            );
+          })()}
         </CardContent>
       </Card>
 
