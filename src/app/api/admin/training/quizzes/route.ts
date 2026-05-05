@@ -105,6 +105,9 @@ export async function GET(req: NextRequest) {
 
   const sp = req.nextUrl.searchParams;
   const params = parsePaginationParams(sp);
+  const lessonId = sp.get("lesson_id");
+  const createdFrom = sp.get("created_from");
+  const createdTo = sp.get("created_to");
 
   const admin = createAdminClient();
   try {
@@ -113,12 +116,24 @@ export async function GET(req: NextRequest) {
     let rows = allRows.filter((row) => {
       const matchesSearch =
         !search ||
-        (row.title ?? "").toLowerCase().includes(search) ||
-        (row.lesson_title ?? "").toLowerCase().includes(search);
+        (row.title ?? "").toLowerCase().includes(search);
       const matchesStatus =
         params.status == null ||
         (params.status === "active" ? row.is_active : !row.is_active);
-      return matchesSearch && matchesStatus;
+      const matchesLesson = !lessonId || row.lesson_id === lessonId;
+      const createdAt = row.created_at ? new Date(row.created_at).getTime() : 0;
+      const matchesCreatedFrom =
+        !createdFrom || createdAt >= new Date(createdFrom).getTime();
+      const matchesCreatedTo =
+        !createdTo ||
+        createdAt <= new Date(`${createdTo}T23:59:59`).getTime();
+      return (
+        matchesSearch &&
+        matchesStatus &&
+        matchesLesson &&
+        matchesCreatedFrom &&
+        matchesCreatedTo
+      );
     });
 
     const sortKey =

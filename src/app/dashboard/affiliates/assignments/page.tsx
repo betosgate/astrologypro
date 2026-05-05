@@ -368,7 +368,7 @@ function groupRows(rows: Assignment[], by: "affiliate" | "service") {
 
 // ─── Create dialog ─────────────────────────────────────────────────────────
 function CreateAssignmentDialog({ onCreated }: { onCreated: () => void }) {
-  const [scope, setScope] = useState<"PROFILE" | "SERVICE">("PROFILE");
+  const [scope, setScope] = useState<"PROFILE" | "SERVICE">("SERVICE");
   const [destinations, setDestinations] = useState<ServiceDestination[]>([]);
   const [serviceId, setServiceId] = useState<string | null>(null);
   const [commissionType, setCommissionType] = useState<"percent" | "flat">("percent");
@@ -381,6 +381,7 @@ function CreateAssignmentDialog({ onCreated }: { onCreated: () => void }) {
   const [results, setResults] = useState<AffiliateSearchResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [selected, setSelected] = useState<AffiliateSearchResult | null>(null);
+  const affiliateSelectionDisabled = scope === "SERVICE" && !serviceId;
 
   useEffect(() => {
     // Load destinations once
@@ -392,6 +393,12 @@ function CreateAssignmentDialog({ onCreated }: { onCreated: () => void }) {
 
   // Debounced affiliate search
   useEffect(() => {
+    if (affiliateSelectionDisabled) {
+      setResults([]);
+      setSearching(false);
+      return;
+    }
+
     const trimmed = query.trim();
     const params = new URLSearchParams();
     if (trimmed) params.set("q", trimmed);
@@ -410,7 +417,7 @@ function CreateAssignmentDialog({ onCreated }: { onCreated: () => void }) {
       }
     }, 250);
     return () => clearTimeout(t);
-  }, [query, scope, serviceId]);
+  }, [query, scope, serviceId, affiliateSelectionDisabled]);
 
   async function handleCreate() {
     if (!selected) {
@@ -461,14 +468,24 @@ function CreateAssignmentDialog({ onCreated }: { onCreated: () => void }) {
           <Label>Scope</Label>
           <div className="flex rounded-md border">
             <button
-              onClick={() => setScope("PROFILE")}
+              onClick={() => {
+                setScope("PROFILE");
+                setSelected(null);
+                setQuery("");
+                setResults([]);
+              }}
               className={`flex-1 px-3 py-2 text-sm ${scope === "PROFILE" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
             >
               <User className="inline mr-1.5 size-3.5" />
               Profile
             </button>
             <button
-              onClick={() => setScope("SERVICE")}
+              onClick={() => {
+                setScope("SERVICE");
+                setSelected(null);
+                setQuery("");
+                setResults([]);
+              }}
               className={`flex-1 px-3 py-2 text-sm ${scope === "SERVICE" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
             >
               <BookOpen className="inline mr-1.5 size-3.5" />
@@ -483,7 +500,12 @@ function CreateAssignmentDialog({ onCreated }: { onCreated: () => void }) {
             <select
               className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
               value={serviceId ?? ""}
-              onChange={(e) => setServiceId(e.target.value || null)}
+              onChange={(e) => {
+                setServiceId(e.target.value || null);
+                setSelected(null);
+                setQuery("");
+                setResults([]);
+              }}
             >
               <option value="">— pick a service —</option>
               {destinations.map((d) => (
@@ -500,7 +522,14 @@ function CreateAssignmentDialog({ onCreated }: { onCreated: () => void }) {
           <div className="relative">
             <Search className="absolute left-2.5 top-2.5 size-3.5 text-muted-foreground" />
             <Input
-              placeholder={selected ? selected.name : "Search by name or email…"}
+              disabled={affiliateSelectionDisabled}
+              placeholder={
+                affiliateSelectionDisabled
+                  ? "Select a service first"
+                  : selected
+                    ? selected.name
+                    : "Search by name or email…"
+              }
               value={query}
               onChange={(e) => {
                 setQuery(e.target.value);

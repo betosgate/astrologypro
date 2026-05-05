@@ -169,6 +169,12 @@ async function fetchRows(
     ids?: string[];
     status?: string | null;
     search?: string | null;
+    createdFrom?: string | null;
+    createdTo?: string | null;
+    access?: string | null;
+    programId?: string | null;
+    categoryId?: string | null;
+    lessonId?: string | null;
   },
 ) {
   const admin = createAdminClient();
@@ -190,14 +196,44 @@ async function fetchRows(
     query = query.eq("is_active", false);
   }
 
+  if (entityType === "program") {
+    if (opts.createdFrom) query = query.gte("created_at", opts.createdFrom);
+    if (opts.createdTo) query = query.lte("created_at", `${opts.createdTo}T23:59:59`);
+    if (opts.access === "all_access") {
+      query = query.eq("allowed_roles", "{}");
+    } else if (opts.access) {
+      query = query.contains("allowed_roles", [opts.access]);
+    }
+  }
+
+  if (entityType === "category") {
+    if (opts.programId) query = query.eq("training_id", opts.programId);
+    if (opts.createdFrom) query = query.gte("created_at", opts.createdFrom);
+    if (opts.createdTo) query = query.lte("created_at", `${opts.createdTo}T23:59:59`);
+  }
+
+  if (entityType === "lesson") {
+    if (opts.categoryId) query = query.eq("category_id", opts.categoryId);
+    if (opts.createdFrom) query = query.gte("created_at", opts.createdFrom);
+    if (opts.createdTo) query = query.lte("created_at", `${opts.createdTo}T23:59:59`);
+  }
+
+  if (entityType === "quiz") {
+    if (opts.lessonId) query = query.eq("lesson_id", opts.lessonId);
+    if (opts.createdFrom) query = query.gte("created_at", opts.createdFrom);
+    if (opts.createdTo) query = query.lte("created_at", `${opts.createdTo}T23:59:59`);
+  }
+
   if (opts.search) {
     // ILIKE match on the primary name/title field, and description where
     // applicable. Keeps the export filter aligned with the in-page search.
     const pattern = `%${opts.search.replace(/[%_]/g, (c) => `\\${c}`)}%`;
-    if (entityType === "program" || entityType === "category") {
-      query = query.or(`name.ilike.${pattern},description.ilike.${pattern}`);
+    if (entityType === "program") {
+      query = query.ilike("name", pattern);
+    } else if (entityType === "category") {
+      query = query.ilike("name", pattern);
     } else if (entityType === "lesson") {
-      query = query.or(`title.ilike.${pattern},description.ilike.${pattern}`);
+      query = query.ilike("title", pattern);
     } else {
       query = query.ilike("title", pattern);
     }
@@ -251,6 +287,12 @@ export async function GET(req: NextRequest) {
       ids,
       status: sp.get("status"),
       search: sp.get("search"),
+      createdFrom: sp.get("created_from"),
+      createdTo: sp.get("created_to"),
+      access: sp.get("access"),
+      programId: sp.get("program_id"),
+      categoryId: sp.get("category_id"),
+      lessonId: sp.get("lesson_id"),
     });
     const csv = buildCsv(entity_type, rows);
     return csvResponse(entity_type, csv);

@@ -458,21 +458,24 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
       "Register button completes account setup."
     ]
   },
-  {
-    "name": "diviner-plan-selection",
-    "label": "Become a Diviner Plan Selection",
-    "description": "Plan selection screen shown after diviner registration.",
-    "group": "People",
-    "subModule": "Diviners",
-    "purpose": "Allows the diviner to choose a paid professional plan before dashboard access.",
-    "bullets": [
-      "Shows plan options such as Tarot Reader, Oracle, and Astrologer.",
-      "Selected plan is highlighted.",
-      "Shows setup fee and monthly subscription amount.",
-      "Displays benefits included in the selected plan.",
-      "Continue to Payment button opens Stripe checkout."
-    ]
-  },
+ {
+  "name": "diviner-plan-selection",
+  "label": "Become a Diviner Plan Selection",
+  "description": "Plan selection screen shown after diviner registration.",
+  "group": "People",
+  "subModule": "Diviners",
+  "purpose": "Allows the diviner to choose a paid professional plan before dashboard access.",
+  "bullets": [
+    "Shows plan options such as Tarot Reader, Oracle, and Astrologer.",
+    "Selected plan is highlighted.",
+    "Shows setup fee and monthly subscription amount.",
+    "Displays benefits included in the selected plan.",
+    "Continue to Payment button opens Stripe checkout.",
+    "If a user completes registration but does not select a plan, their onboarding state is saved.",
+    "When the user logs in again later, they are redirected directly to this plan selection screen instead of starting over.",
+    "Prevents users from accessing the dashboard until a plan is selected and onboarding is completed."
+  ]
+},
   {
     "name": "stripe-checkout-empty",
     "label": "Stripe Checkout Empty State",
