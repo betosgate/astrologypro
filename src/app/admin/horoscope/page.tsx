@@ -3202,6 +3202,21 @@ export function HoroscopeToolkitPage({
           setTransitChartSvg(hydrated.transitChartSvg);
           setReturnDate(hydrated.returnDate);
           setShowChartBtn(hydrated.showChartButton);
+
+          // Hydrate family natal charts if present
+          if (Array.isArray(hydrated.results?.family_person_charts)) {
+            const familyCharts: FamilyNatalChartView[] = hydrated.results.family_person_charts.map((c: any) => ({
+              id: c.id,
+              name: c.name || "Family member",
+              chartUrl: c.chart_url || null,
+              freeSvg: c.wheel_svg || null,
+              natalData: c.natal_chart || null,
+            }));
+            if (familyCharts.length > 2) {
+              setFamilyNatalCharts(familyCharts.slice(2));
+            }
+          }
+
           setShowScrollTop(true);
           if (isCommunityToolkit) router.refresh();
           setLoading(false);
@@ -3255,6 +3270,21 @@ export function HoroscopeToolkitPage({
               setTransitChartSvg(hydrated.transitChartSvg);
               setReturnDate(hydrated.returnDate);
               setShowChartBtn(hydrated.showChartButton);
+
+              // Hydrate family natal charts if present
+              if (Array.isArray(hydrated.results?.family_person_charts)) {
+                const familyCharts: FamilyNatalChartView[] = hydrated.results.family_person_charts.map((c: any) => ({
+                  id: c.id,
+                  name: c.name || "Family member",
+                  chartUrl: c.chart_url || null,
+                  freeSvg: c.wheel_svg || null,
+                  natalData: c.natal_chart || null,
+                }));
+                if (familyCharts.length > 2) {
+                  setFamilyNatalCharts(familyCharts.slice(2));
+                }
+              }
+
               setLoading(false);
               return; // EXIT EARLY
             }
@@ -4044,6 +4074,7 @@ export function HoroscopeToolkitPage({
         const astroApiDataPayload = isTwoPerson ? {
           synastry: collected.synastry ?? {},
           composite: collected.composite ?? {},
+          family_person_charts: collected.family_person_charts ?? null,
           self: collected.natal_chart_data ?? {},
           partner: collected.natal_chart_data_p2 ?? {},
           ...(hasFamilyRelationshipContext
