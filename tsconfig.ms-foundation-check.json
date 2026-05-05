@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "src/lib/mystery-school/foundation-progress.ts",
+    "src/app/api/admin/mystery-school/students/route.ts",
+    "src/app/api/admin/mystery-school/students/[id]/route.ts",
+    "src/app/api/admin/mystery-school/training-status/route.ts",
+    "src/app/admin/mystery-school/page.tsx",
+    "src/app/admin/mystery-school/students/page.tsx",
+    "src/app/admin/mystery-school/students/[id]/page.tsx",
+    "src/app/mystery-school/training/page.tsx"
+  ]
+}

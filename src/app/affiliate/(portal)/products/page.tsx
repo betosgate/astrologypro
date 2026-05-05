@@ -10,6 +10,7 @@
 // Spec: docs/specs/affiliate-commission-system.md §6.3
 
 import Link from "next/link";
+import Image from "next/image";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -28,7 +29,16 @@ import {
   AvatarFallback,
   AvatarImage,
 } from "@/components/ui/avatar";
-import { Plus, Megaphone, Package, Globe } from "lucide-react";
+import {
+  ExternalLink,
+  Globe,
+  Megaphone,
+  Package,
+  Plus,
+  Star,
+} from "lucide-react";
+
+const GENERAL_FALLBACK_IMAGE = "/images/services/natal-chart.png";
 
 export const dynamic = "force-dynamic";
 
@@ -67,18 +77,13 @@ export default async function MyProductsPage() {
   // regardless of per-diviner partnerships (spec §10 decision #1).
   const { data: generalTemplates } = await admin
     .from("service_templates")
-    .select("id, name, description, category, commission_value, commission_type")
+    .select(
+      "id, name, slug, description, category, image_url, commission_value, commission_type",
+    )
     .eq("is_general", true)
     .eq("affiliate_program_enabled", true)
     .order("name");
-  const generalRows = (generalTemplates ?? []) as Array<{
-    id: string;
-    name: string;
-    description: string | null;
-    category: string | null;
-    commission_value: string | number | null;
-    commission_type: "percent" | "flat" | null;
-  }>;
+  const generalRows = (generalTemplates ?? []) as GeneralTemplateRow[];
 
   if (junctionIds.length === 0) {
     return (
@@ -232,6 +237,17 @@ export default async function MyProductsPage() {
   );
 }
 
+type GeneralTemplateRow = {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  category: string | null;
+  image_url: string | null;
+  commission_value: string | number | null;
+  commission_type: "percent" | "flat" | null;
+};
+
 function formatGeneralRate(
   type: "percent" | "flat" | null,
   value: string | number | null,
@@ -239,27 +255,16 @@ function formatGeneralRate(
   // Phase 1.5 §10 decision #3: NULL value with program enabled means
   // the platform default of 10% is applied at stamp time.
   if (value === null || value === undefined) {
-    return { display: "10% (platform default)", isDefault: true };
+    return { display: "10% (default)", isDefault: true };
   }
   const numeric = Number(value);
   if (type === "flat") {
-    return { display: `$${numeric.toFixed(2)} per conversion`, isDefault: false };
+    return { display: `$${numeric.toFixed(2)} per sale`, isDefault: false };
   }
-  return { display: `${numeric}%`, isDefault: false };
+  return { display: `${numeric}% commission`, isDefault: false };
 }
 
-function GeneralProductsSection({
-  rows,
-}: {
-  rows: Array<{
-    id: string;
-    name: string;
-    description: string | null;
-    category: string | null;
-    commission_value: string | number | null;
-    commission_type: "percent" | "flat" | null;
-  }>;
-}) {
+function GeneralProductsSection({ rows }: { rows: GeneralTemplateRow[] }) {
   return (
     <section className="space-y-4 border-t pt-6">
       <header>
@@ -276,33 +281,80 @@ function GeneralProductsSection({
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {rows.map((t) => {
           const rate = formatGeneralRate(t.commission_type, t.commission_value);
+          const categoryRaw = (t.category ?? "").trim();
+          const categoryKey = categoryRaw.toLowerCase();
+          const isAstrology = categoryKey === "astrology";
+          const isTarot = categoryKey === "tarot";
           return (
-            <Card key={t.id} className="flex flex-col">
-              <CardHeader>
-                <CardTitle className="text-base">{t.name}</CardTitle>
-                <CardDescription className="space-y-1">
-                  <span className="font-medium text-primary">{rate.display}</span>
-                  {t.category && (
-                    <Badge variant="outline" className="ml-2 text-xs capitalize">
-                      {t.category}
+            <Card key={t.id} className="flex flex-col overflow-hidden">
+              <div className="relative h-36 w-full overflow-hidden bg-muted">
+                <Image
+                  src={t.image_url ?? GENERAL_FALLBACK_IMAGE}
+                  alt={t.name}
+                  fill
+                  className="object-cover transition-transform duration-300 hover:scale-105"
+                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                />
+                <div className="absolute left-2 top-2 flex flex-wrap gap-1">
+                  {categoryRaw && (
+                    <Badge
+                      variant="secondary"
+                      className={`text-[10px] font-semibold ${
+                        isAstrology
+                          ? "bg-violet-100 text-violet-800 dark:bg-violet-950 dark:text-violet-300"
+                          : isTarot
+                            ? "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
+                            : "bg-slate-100 text-slate-800 dark:bg-slate-900 dark:text-slate-200"
+                      }`}
+                    >
+                      {isAstrology ? (
+                        <>
+                          <Star className="mr-0.5 size-2.5" aria-hidden />
+                          Astrology
+                        </>
+                      ) : isTarot ? (
+                        <>🃏 Tarot</>
+                      ) : (
+                        categoryRaw
+                      )}
                     </Badge>
                   )}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="flex flex-1 flex-col gap-3 pt-0 text-sm">
-                {t.description && (
-                  <p className="text-xs text-muted-foreground line-clamp-3">
-                    {t.description}
-                  </p>
-                )}
-                <div className="mt-auto flex justify-end">
-                  <Button asChild size="sm">
-                    <Link href={`/affiliate/campaigns/new?template=${t.id}`}>
-                      <Plus className="size-3.5" aria-hidden />
-                      Create campaign
-                    </Link>
-                  </Button>
+                  <Badge
+                    variant="secondary"
+                    className="bg-emerald-100 text-[10px] font-semibold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
+                  >
+                    {rate.display}
+                  </Badge>
                 </div>
+              </div>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base leading-tight">
+                  {t.name}
+                </CardTitle>
+                {t.description && (
+                  <CardDescription className="line-clamp-3 text-xs leading-relaxed">
+                    {t.description}
+                  </CardDescription>
+                )}
+              </CardHeader>
+              <CardContent className="mt-auto flex items-center justify-end gap-2 pt-0 text-sm">
+                <Button asChild variant="outline" size="sm" className="h-8">
+                  <a
+                    href={`/services/${t.slug}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`Preview ${t.name} (does not log a click)`}
+                  >
+                    <ExternalLink className="size-3.5" aria-hidden />
+                    Preview
+                  </a>
+                </Button>
+                <Button asChild size="sm" className="h-8">
+                  <Link href={`/affiliate/campaigns/new?template=${t.id}`}>
+                    <Plus className="size-3.5" aria-hidden />
+                    Create campaign
+                  </Link>
+                </Button>
               </CardContent>
             </Card>
           );

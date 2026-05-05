@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
 
   let bookingQuery = admin
     .from("bookings")
-    .select("id, status, stripe_payment_intent_id, base_price, diviner_id")
+    .select("id, status, stripe_payment_intent_id, base_price, total_amount, ref_code, commission_source_assignment_id, commission_source_template_id, commission_rate_type_stamp, commission_rate_value_stamp, diviner_id")
     .eq("id", body.booking_id);
 
   if (!adminUser && diviner) {
@@ -62,6 +62,26 @@ export async function POST(req: NextRequest) {
       .from("bookings")
       .update({ status: "confirmed" })
       .eq("id", booking.id);
+
+    // ── Affiliate Attribution Fallback (Free Bookings) ──
+    try {
+      if (booking.commission_source_assignment_id || booking.commission_source_template_id) {
+        const { creditAffiliateConversion } = await import("@/lib/affiliate-attribution");
+        const amountCents = Number(booking.total_amount ?? booking.base_price ?? 0) * 100;
+        await creditAffiliateConversion(admin, {
+          bookingId: booking.id,
+          orderAmountCents: Math.round(amountCents),
+          refCode: (booking.ref_code as string | null) ?? null,
+          stampedAssignmentId: (booking.commission_source_assignment_id as string | null) ?? null,
+          stampedTemplateId: (booking.commission_source_template_id as string | null) ?? null,
+          stampedRateType: (booking.commission_rate_type_stamp as "percent" | "flat" | null) ?? null,
+          stampedRateValue: booking.commission_rate_value_stamp != null ? Number(booking.commission_rate_value_stamp) : null,
+        });
+      }
+    } catch (err) {
+      console.error("[sync-booking] Affiliate conversion credit failed", { bookingId: booking.id, err });
+    }
+
     return NextResponse.json({ synced: true, status: "confirmed", message: "Free booking confirmed" });
   }
 
@@ -110,6 +130,25 @@ export async function POST(req: NextRequest) {
       .update({ status: "paid", paid_at: new Date().toISOString() })
       .eq("booking_id", booking.id)
       .eq("status", "pending_payment");
+
+    // ── Affiliate Attribution Fallback (Paid Bookings) ──
+    try {
+      if (booking.commission_source_assignment_id || booking.commission_source_template_id) {
+        const { creditAffiliateConversion } = await import("@/lib/affiliate-attribution");
+        const amountCents = Number(booking.total_amount ?? booking.base_price ?? 0) * 100;
+        await creditAffiliateConversion(admin, {
+          bookingId: booking.id,
+          orderAmountCents: Math.round(amountCents),
+          refCode: (booking.ref_code as string | null) ?? null,
+          stampedAssignmentId: (booking.commission_source_assignment_id as string | null) ?? null,
+          stampedTemplateId: (booking.commission_source_template_id as string | null) ?? null,
+          stampedRateType: (booking.commission_rate_type_stamp as "percent" | "flat" | null) ?? null,
+          stampedRateValue: booking.commission_rate_value_stamp != null ? Number(booking.commission_rate_value_stamp) : null,
+        });
+      }
+    } catch (err) {
+      console.error("[sync-booking] Affiliate conversion credit failed", { bookingId: booking.id, err });
+    }
 
     return NextResponse.json({ synced: true, status: "confirmed", message: "Payment verified and booking confirmed" });
   }

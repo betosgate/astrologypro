@@ -36,6 +36,7 @@ export async function GET(req: NextRequest) {
   const params = parsePaginationParams(sp);
   const createdFrom = sp.get("created_from");
   const createdTo = sp.get("created_to");
+  const access = sp.get("access")?.trim() || null;
 
   const admin = createAdminClient();
 
@@ -45,7 +46,7 @@ export async function GET(req: NextRequest) {
       "training_programs",
       SELECT_COLS,
       params,
-      ["name", "description"],
+      ["name"],
       ALLOWED_SORTS,
       { column: "priority", ascending: true },
       (q) => {
@@ -53,6 +54,11 @@ export async function GET(req: NextRequest) {
         if (createdFrom) filtered = filtered.gte("created_at", createdFrom);
         if (createdTo)
           filtered = filtered.lte("created_at", createdTo + "T23:59:59");
+        if (access === "all_access") {
+          filtered = filtered.eq("allowed_roles", "{}");
+        } else if (access) {
+          filtered = filtered.contains("allowed_roles", [access]);
+        }
         return filtered;
       },
     );

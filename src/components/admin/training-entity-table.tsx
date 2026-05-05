@@ -109,6 +109,8 @@ interface TrainingEntityTableProps<T extends { id: string; is_active: boolean; n
   /** Filter state needed by the export query. */
   currentSearch: string;
   currentStatus: "all" | "active" | "inactive";
+  currentExtraQuery?: Record<string, string | undefined>;
+  filtersSlot?: React.ReactNode;
   /** Called after a successful mutation (activate/deactivate/delete) so the parent refetches. */
   onMutated: () => Promise<void>;
   /** Table-local refresh button handler. */
@@ -174,6 +176,8 @@ export function TrainingEntityTable<
     filtersActive,
     currentSearch,
     currentStatus,
+    currentExtraQuery,
+    filtersSlot,
     onMutated,
     onRefresh,
     isRefreshing = false,
@@ -244,6 +248,14 @@ export function TrainingEntityTable<
   // ── Pagination ─────────────────────────────────────────────────────────
   const [currentPage, setCurrentPage] = useState(serverPage ?? 1);
   const [pageSize, setPageSize] = useState<number>(serverPageSize ?? 10);
+
+  useEffect(() => {
+    if (serverPage != null) setCurrentPage(serverPage);
+  }, [serverPage]);
+
+  useEffect(() => {
+    if (serverPageSize != null) setPageSize(serverPageSize);
+  }, [serverPageSize]);
 
   // In server-driven mode, total comes from the server response.
   // In client-driven mode, total is the filtered array length.
@@ -463,6 +475,9 @@ export function TrainingEntityTable<
     params.set("entity_type", config.entityType);
     if (currentSearch) params.set("search", currentSearch);
     if (currentStatus !== "all") params.set("status", currentStatus);
+    for (const [key, value] of Object.entries(currentExtraQuery ?? {})) {
+      if (value) params.set(key, value);
+    }
     window.location.href = `/api/admin/training/export?${params.toString()}`;
   }
 
@@ -552,6 +567,8 @@ export function TrainingEntityTable<
       </CardHeader>
 
       <CardContent className="space-y-3">
+        {filtersSlot}
+
         <ConfirmDialog
           open={!!deleteRowTarget}
           title={`Delete ${label}`}
@@ -636,7 +653,7 @@ export function TrainingEntityTable<
         {/* ── Table ───────────────────────────────────────────────────── */}
         {pagedRows.length === 0 ? (
           <p className="py-6 text-center text-sm text-muted-foreground">
-            {rawCount === 0 ? config.emptyText : config.noMatchText}
+            {!filtersActive && rawCount === 0 ? config.emptyText : config.noMatchText}
           </p>
         ) : (
           <div className="rounded-md border overflow-x-auto">

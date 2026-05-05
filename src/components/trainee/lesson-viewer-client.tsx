@@ -185,9 +185,11 @@ function AssetTypeIcon({ type }: { type: LessonAsset["asset_type"] }) {
 function VideoPlayer({
   video,
   onEnded,
+  allowForwardSeek = false,
 }: {
   video: { title: string | null; video_url: string; duration_mins: number | null };
   onEnded?: () => void;
+  allowForwardSeek?: boolean;
 }) {
   const embedUrl = getVideoEmbed(video.video_url);
   const isDirect = isHtml5Video(video.video_url);
@@ -196,12 +198,13 @@ function VideoPlayer({
   const preventForwardSeek = useCallback(
     (event: React.SyntheticEvent<HTMLVideoElement>) => {
       const media = event.currentTarget;
+      if (allowForwardSeek) return;
       const maxAllowed = maxWatchedPositionRef.current + 1;
       if (media.currentTime > maxAllowed) {
         media.currentTime = maxWatchedPositionRef.current;
       }
     },
-    []
+    [allowForwardSeek]
   );
 
   const rememberWatchedPosition = useCallback(
@@ -271,6 +274,7 @@ type TriggerVideoPlayerProps = {
   onEnded?: () => void;
   onPassedIdsChange?: (passedIds: string[]) => void;
   onLessonCompleted?: () => void;
+  allowForwardSeek?: boolean;
   /**
    * Module 05: when the stepwise lesson quiz fires a wrong answer with
    * remediation metadata, the parent passes the seek/replay window here.
@@ -296,6 +300,7 @@ function TriggerVideoPlayer({
   onEnded,
   onPassedIdsChange,
   onLessonCompleted,
+  allowForwardSeek = false,
   remediationRequest,
   onRemediationComplete,
 }: TriggerVideoPlayerProps) {
@@ -524,6 +529,7 @@ function TriggerVideoPlayer({
   const handleSeeking = useCallback(() => {
     const vid = videoRef.current;
     if (!vid) return;
+    if (allowForwardSeek) return;
     const seekTarget = vid.currentTime;
     const boundary = Math.min(
       getPlaybackBoundary(),
@@ -532,7 +538,7 @@ function TriggerVideoPlayer({
     if (seekTarget > boundary) {
       vid.currentTime = boundary;
     }
-  }, [getPlaybackBoundary]);
+  }, [allowForwardSeek, getPlaybackBoundary]);
 
   async function handleAnswerSubmit() {
     if (selectedOption === null || !activeTrigger || submitting) return;
@@ -591,7 +597,13 @@ function TriggerVideoPlayer({
 
   // For non-HTML5 or embed videos, fall back to standard VideoPlayer (no trigger support)
   if (embedUrl || !isDirect) {
-    return <VideoPlayer video={video} onEnded={onEnded} />;
+    return (
+      <VideoPlayer
+        video={video}
+        onEnded={onEnded}
+        allowForwardSeek={allowForwardSeek}
+      />
+    );
   }
 
   const q = activeTrigger?.question;
@@ -829,12 +841,13 @@ export function LessonViewerClient(props: LessonViewerProps) {
   const preventAudioForwardSeek = useCallback(
     (event: React.SyntheticEvent<HTMLAudioElement>) => {
       const media = event.currentTarget;
+      if (isCompleted) return;
       const maxAllowed = audioMaxWatchedPositionRef.current + 1;
       if (media.currentTime > maxAllowed) {
         media.currentTime = audioMaxWatchedPositionRef.current;
       }
     },
-    []
+    [isCompleted]
   );
 
   const handleVideoEnded = () => {
@@ -1087,6 +1100,7 @@ export function LessonViewerClient(props: LessonViewerProps) {
                   onEnded={handleVideoEnded}
                   onPassedIdsChange={setPassedTriggerIds}
                   onLessonCompleted={() => { /* completion is manual via button */ }}
+                  allowForwardSeek={isCompleted}
                   remediationRequest={remediationRequest}
                   onRemediationComplete={() => {
                     remediationPlaybackActiveRef.current = false;
