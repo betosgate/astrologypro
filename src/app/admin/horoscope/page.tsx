@@ -54,7 +54,7 @@ import {
   callNatalWheel, callDecanLookup, saveAstroAiResponse,
 } from "./api";
 import { buildAiPrompts } from "./build-ai-prompts";
-import { formStateFromSavedFormData } from "./saved-form-data";
+import { formStateFromSavedFormData, familyMembersFromSavedFormData, normalizeBirth } from "./saved-form-data";
 import { hydrateSavedAstroReport } from "./saved-report-data";
 import {
   ManualPlanetIcon, ManualZodiacIcon, PlanetSymbol, AspectSymbol,
@@ -2886,7 +2886,20 @@ export function HoroscopeToolkitPage({
   const currentTab = visibleTabs.find((t) => t.slug === currentSlug) ?? fallbackTab;
   const isCommunityToolkit = apiBase.startsWith("/api/community/");
   const effectiveReadOnlyBirthData = readOnlyBirthData || isCommunityToolkit;
-  const familyRelationshipMembers = communityRelationshipFamilyMembers;
+  const familyRelationshipMembers = useMemo(() => {
+    if (communityRelationshipFamilyMembers.length > 0) return communityRelationshipFamilyMembers;
+    const extracted = familyMembersFromSavedFormData(initialSavedReport ?? initialSavedFormData);
+    if (!extracted) return [];
+
+    return extracted.map((m: any, i: number): ToolkitFamilyMemberPrefill => ({
+      id: m.id || `saved-${i}`,
+      fullName: m.fullName || m.full_name || m.name || `Member ${i + 1}`,
+      relationship: m.relationship || null,
+      ageGroup: m.ageGroup || m.age_group || null,
+      birth: normalizeBirth(m)
+    }));
+  }, [communityRelationshipFamilyMembers, initialSavedReport, initialSavedFormData]);
+
   const hasFamilyRelationshipContext = familyRelationshipMembers.length > 0;
   const initialForm = useMemo<FormState>(
     () => formStateFromSavedFormData(initialSavedReport ?? initialSavedFormData),
@@ -4496,8 +4509,8 @@ export function HoroscopeToolkitPage({
                   </div>
                 ) : (
                   <div className="flex flex-col gap-6">
-                    <BirthBlock title="Person 1 (Self)" value={form.person1} onChange={(v) => setForm((f) => ({ ...f, person1: v }))} disabled={loading || effectiveReadOnlyBirthData} />
-                    <BirthBlock title="Person 2 (Partner)" value={form.person2} onChange={(v) => setForm((f) => ({ ...f, person2: v }))} disabled={loading || effectiveReadOnlyBirthData} />
+                    <BirthBlock title={form.name1 || "Person 1 (Self)"} value={form.person1} onChange={(v) => setForm((f) => ({ ...f, person1: v }))} disabled={loading || effectiveReadOnlyBirthData} />
+                    <BirthBlock title={form.name2 || "Person 2 (Partner)"} value={form.person2} onChange={(v) => setForm((f) => ({ ...f, person2: v }))} disabled={loading || effectiveReadOnlyBirthData} />
                   </div>
                 )}
 
@@ -4628,15 +4641,15 @@ export function HoroscopeToolkitPage({
                               <div className="px-4 py-3 flex items-center justify-center gap-2 bg-black text-white border-none rounded-t-lg">
                                 <User className="size-4 text-white" />
                                 <h2 className="text-sm font-semibold text-white text-center">
-                                  {isTwoPersonAiTab ? "Western Chart Horoscope For Self" : "Western Chart Horoscope"}
+                                  {isTwoPersonAiTab ? `Western Chart Horoscope For ${form.name1 || "Self"}` : "Western Chart Horoscope"}
                                 </h2>
                               </div>
                               <div className="p-4">
                                 <NatalChartsRow
                                   svgs={[natalSvg, natalSvgTransit]}
                                   labels={[
-                                    isTwoPersonAiTab ? "Person 1" : "Natal Wheel Chart",
-                                    isTwoPersonAiTab ? "Person 1" : "Natal Wheel Chart"
+                                    isTwoPersonAiTab ? (form.name1 || "Person 1") : "Natal Wheel Chart",
+                                    isTwoPersonAiTab ? (form.name1 || "Person 1") : "Natal Wheel Chart"
                                   ]}
                                   onExpandImg={(src) => setChartModal(src)}
                                 />
@@ -4648,14 +4661,14 @@ export function HoroscopeToolkitPage({
                             <div className="rounded-lg border overflow-hidden">
                               <div className="px-4 py-3 flex items-center justify-center gap-2 bg-black text-white border-none rounded-t-lg">
                                 <Users className="size-4 text-white" />
-                                <h2 className="text-sm font-semibold text-white text-center">Western Chart Horoscope For Partner</h2>
+                                <h2 className="text-sm font-semibold text-white text-center">Western Chart Horoscope For {form.name2 || "Partner"}</h2>
                               </div>
                               <div className="p-4">
                                 <NatalChartsRow
                                   svgs={[natalSvgP2, natalSvgTransitP2]}
                                   labels={[
-                                    "Person 2",
-                                    "Person 2"
+                                    form.name2 || "Person 2",
+                                    form.name2 || "Person 2"
                                   ]}
                                   onExpandImg={(src) => setChartModal(src)}
                                 />

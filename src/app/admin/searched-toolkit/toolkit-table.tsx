@@ -132,7 +132,20 @@ export function ToolkitTable({
                   </TableCell>
                   <TableCell className="py-4">
                     <div className="flex flex-col gap-3 max-w-[300px]">
-                      {formData.self || formData.partner ? (
+                      {formData.partners && Array.isArray(formData.partners) && formData.partners.length > 0 ? (
+                        <div className="space-y-3">
+                          {formData.self && (
+                            <SubjectPayload data={formData.self} label="Self" />
+                          )}
+                          {formData.partners.map((member, idx) => (
+                            <SubjectPayload 
+                              key={member.id || idx} 
+                              data={member} 
+                              label={idx === 0 ? "Partner" : `Member ${idx}`} 
+                            />
+                          ))}
+                        </div>
+                      ) : formData.self || formData.partner ? (
                         <div className="space-y-2.5">
                           <SubjectPayload data={formData.self} label="Self" />
                           {(formData.self && formData.partner) && (
@@ -156,7 +169,7 @@ export function ToolkitTable({
                         <SubjectPayload data={formData} />
                       )}
 
-                      {formData.targetMonth && !formData.self && !formData.person1 && (
+                      {formData.targetMonth && !formData.self && !formData.person1 && !formData.partners && (
                         <div className="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold bg-amber-50 text-amber-700 border-amber-100 uppercase w-fit">
                            Month: {formData.targetMonth}
                         </div>
