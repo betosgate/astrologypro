@@ -24,6 +24,7 @@ import {
   Flame,
   Star,
   PlayCircle,
+  FileText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -256,8 +257,14 @@ function LessonList({ week }: { week: TrainingWeek }) {
             <div className="mt-0.5 shrink-0">
               {lesson.completed ? (
                 <CheckSquare className="size-4 text-green-500" />
-              ) : (
+              ) : lesson.audio_url && !lesson.video_url && !lesson.pdf_url ? (
+                <Music className="size-4 text-primary" />
+              ) : lesson.video_url && !lesson.audio_url && !lesson.pdf_url ? (
                 <PlayCircle className="size-4 text-primary" />
+              ) : lesson.pdf_url && !lesson.audio_url && !lesson.video_url ? (
+                <FileText className="size-4 text-primary" />
+              ) : (
+                <BookOpen className="size-4 text-primary" />
               )}
             </div>
             <div className="min-w-0 flex-1">
@@ -522,16 +529,16 @@ export default function MysterySchoolTrainingPage() {
   const [completing, setCompleting] = useState<string | null>(null);
 
   /**
-   * Adapter-first load with graceful fallback.
+   * Adapter-first load with legacy fallback only when the Training program is
+   * not present yet.
    *
-   * 1. Try /api/mystery-school/training/foundation. If it returns weeks with
-   *    at least one lesson across them, render the new training-backed UI.
-   * 2. Otherwise fall back to /api/mystery-school/foundation (legacy weeks
-   *    table) so production never goes blank during the transition.
+   * If the Training program exists, render its categories even when lessons
+   * are empty. This prevents old Foundation weeks from masking Admin Training
+   * setup gaps.
    *
    * This keeps the page working in three states:
    *   - migration not yet run → adapter 200 with empty program → fallback
-   *   - migration ran but no lessons added → fallback (preserves legacy UX)
+   *   - migration ran but no lessons added → Training UI with setup gaps shown
    *   - migration ran + admin added lessons → new training-backed UI
    */
   const load = useCallback(async () => {
@@ -549,12 +556,9 @@ export default function MysterySchoolTrainingPage() {
       // Network or parse error — silently fall through to legacy.
     }
 
-    const totalLessons =
-      trainingData?.weeks.reduce((sum, w) => sum + w.lessons_total, 0) ?? 0;
     const useTraining =
       !!trainingData &&
-      trainingData.program_present &&
-      totalLessons > 0;
+      trainingData.program_present;
 
     if (useTraining && trainingData) {
       setLoaded({ source: "training", data: trainingData });
