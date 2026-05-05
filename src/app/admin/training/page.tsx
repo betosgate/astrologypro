@@ -13,6 +13,7 @@ import {
   type EntityTableConfig,
 } from "@/components/admin/training-entity-table";
 import type { TrainingEntityRow } from "@/components/admin/training-entity-sheet";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 
 // ─── Entity types ─────────────────────────────────────────────────────────
 
@@ -62,6 +63,14 @@ type Quiz = {
   created_at: string;
 };
 
+type Role = { id: string; role_name: string; slug: string };
+
+type ProgramOption = { id: string; name: string };
+
+type CategoryOption = { id: string; name: string };
+
+type LessonOption = { id: string; title: string };
+
 // ─── Helpers ──────────────────────────────────────────────────────────────
 
 const fmt = (d: string) =>
@@ -104,6 +113,7 @@ function buildUrl(
   state: TableState,
   search: string,
   status: "all" | "active" | "inactive",
+  extra?: Record<string, string | undefined>,
 ): string {
   const params = new URLSearchParams();
   params.set("page", String(state.page));
@@ -112,6 +122,9 @@ function buildUrl(
   params.set("sortDir", state.sortDir);
   if (search) params.set("search", search);
   if (status !== "all") params.set("status", status);
+  for (const [key, value] of Object.entries(extra ?? {})) {
+    if (value) params.set(key, value);
+  }
   return `${base}?${params.toString()}`;
 }
 
@@ -135,17 +148,60 @@ export default function TrainingPage() {
   // Distinguish first load (show skeletons) from subsequent refreshes (show overlay).
   const [initialLoadDone, setInitialLoadDone] = useState(false);
 
-  // Shared filters
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
+  // Table-specific filters. More tables will get their own filters as needed.
+  const [programSearchTerm, setProgramSearchTerm] = useState("");
+  const [debouncedProgramSearchTerm, setDebouncedProgramSearchTerm] = useState("");
+  const [programStatusFilter, setProgramStatusFilter] = useState<"all" | "active" | "inactive">("all");
+  const [programCreatedFrom, setProgramCreatedFrom] = useState("");
+  const [programCreatedTo, setProgramCreatedTo] = useState("");
+  const [programAccessFilter, setProgramAccessFilter] = useState("all");
+  const [roles, setRoles] = useState<Role[]>([]);
+
+  const [categorySearchTerm, setCategorySearchTerm] = useState("");
+  const [debouncedCategorySearchTerm, setDebouncedCategorySearchTerm] = useState("");
+  const [categoryProgramFilter, setCategoryProgramFilter] = useState("all");
+  const [categoryStatusFilter, setCategoryStatusFilter] = useState<"all" | "active" | "inactive">("all");
+  const [categoryCreatedFrom, setCategoryCreatedFrom] = useState("");
+  const [categoryCreatedTo, setCategoryCreatedTo] = useState("");
+
+  const [lessonSearchTerm, setLessonSearchTerm] = useState("");
+  const [debouncedLessonSearchTerm, setDebouncedLessonSearchTerm] = useState("");
+  const [lessonCategoryFilter, setLessonCategoryFilter] = useState("all");
+  const [lessonStatusFilter, setLessonStatusFilter] = useState<"all" | "active" | "inactive">("all");
+  const [lessonCreatedFrom, setLessonCreatedFrom] = useState("");
+  const [lessonCreatedTo, setLessonCreatedTo] = useState("");
+
+  const [quizSearchTerm, setQuizSearchTerm] = useState("");
+  const [debouncedQuizSearchTerm, setDebouncedQuizSearchTerm] = useState("");
+  const [quizLessonFilter, setQuizLessonFilter] = useState("all");
+  const [quizStatusFilter, setQuizStatusFilter] = useState<"all" | "active" | "inactive">("all");
+  const [quizCreatedFrom, setQuizCreatedFrom] = useState("");
+  const [quizCreatedTo, setQuizCreatedTo] = useState("");
+
+  const programHasDateRange = !!programCreatedFrom && !!programCreatedTo;
+  const categoryHasDateRange = !!categoryCreatedFrom && !!categoryCreatedTo;
+  const lessonHasDateRange = !!lessonCreatedFrom && !!lessonCreatedTo;
+  const quizHasDateRange = !!quizCreatedFrom && !!quizCreatedTo;
+
+  const programEffectiveCreatedFrom = programHasDateRange ? programCreatedFrom : "";
+  const programEffectiveCreatedTo = programHasDateRange ? programCreatedTo : "";
+  const categoryEffectiveCreatedFrom = categoryHasDateRange ? categoryCreatedFrom : "";
+  const categoryEffectiveCreatedTo = categoryHasDateRange ? categoryCreatedTo : "";
+  const lessonEffectiveCreatedFrom = lessonHasDateRange ? lessonCreatedFrom : "";
+  const lessonEffectiveCreatedTo = lessonHasDateRange ? lessonCreatedTo : "";
+  const quizEffectiveCreatedFrom = quizHasDateRange ? quizCreatedFrom : "";
+  const quizEffectiveCreatedTo = quizHasDateRange ? quizCreatedTo : "";
 
   // ── FK lookup maps ────────────────────────────────────────────────────
   // Built from UNPAGINATED fetches so every category/lesson label resolves
   // even when the related entity is on a different page. Lightweight — only
   // id + name/title selected. Refreshed on mount + after any mutation.
   const [programMap, setProgramMap] = useState<Record<string, string>>({});
+  const [programOptions, setProgramOptions] = useState<ProgramOption[]>([]);
   const [categoryMap, setCategoryMap] = useState<Record<string, string>>({});
+  const [categoryOptions, setCategoryOptions] = useState<CategoryOption[]>([]);
   const [lessonMap, setLessonMap] = useState<Record<string, string>>({});
+  const [lessonOptions, setLessonOptions] = useState<LessonOption[]>([]);
   // Count of categories per program (needed for the "Categories" column on
   // the programs table). Built from the unpaginated category fetch.
   const [categoriesPerProgram, setCategoriesPerProgram] = useState<Record<string, number>>({});
@@ -162,27 +218,85 @@ export default function TrainingPage() {
       lesRes.ok ? lesRes.json() : { lessons: [] },
     ]);
     const pm: Record<string, string> = {};
-    for (const p of progJson.programs ?? []) pm[p.id] = p.name;
+    const po: ProgramOption[] = [];
+    for (const p of progJson.programs ?? []) {
+      pm[p.id] = p.name;
+      po.push({ id: p.id, name: p.name });
+    }
     setProgramMap(pm);
+    setProgramOptions(po);
     const cm: Record<string, string> = {};
+    const co: CategoryOption[] = [];
     const cpp: Record<string, number> = {};
     for (const c of catJson.categories ?? []) {
       cm[c.id] = c.name;
+      co.push({ id: c.id, name: c.name });
       cpp[c.training_id] = (cpp[c.training_id] ?? 0) + 1;
     }
     setCategoryMap(cm);
+    setCategoryOptions(co);
     setCategoriesPerProgram(cpp);
     const lm: Record<string, string> = {};
-    for (const l of lesJson.lessons ?? []) lm[l.id] = l.title;
+    const lo: LessonOption[] = [];
+    for (const l of lesJson.lessons ?? []) {
+      lm[l.id] = l.title;
+      lo.push({ id: l.id, title: l.title });
+    }
     setLessonMap(lm);
+    setLessonOptions(lo);
   }
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedProgramSearchTerm(programSearchTerm.trim());
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [programSearchTerm]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedCategorySearchTerm(categorySearchTerm.trim());
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [categorySearchTerm]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedLessonSearchTerm(lessonSearchTerm.trim());
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [lessonSearchTerm]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedQuizSearchTerm(quizSearchTerm.trim());
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [quizSearchTerm]);
+
+  useEffect(() => {
+    fetch("/api/admin/roles")
+      .then((res) => (res.ok ? res.json() : { data: [] }))
+      .then((json) => setRoles(json.data ?? []))
+      .catch(() => setRoles([]));
+  }, []);
 
   // ── Server-driven fetch per entity ────────────────────────────────────
   async function loadPrograms(stateOverride?: TableState) {
     const st = stateOverride ?? programState;
     setProgramsRefreshing(true);
     try {
-      const url = buildUrl("/api/admin/training/programs", st, searchTerm, statusFilter);
+      const url = buildUrl(
+        "/api/admin/training/programs",
+        st,
+        debouncedProgramSearchTerm,
+        programStatusFilter,
+        {
+          created_from: programEffectiveCreatedFrom,
+          created_to: programEffectiveCreatedTo,
+          access: programAccessFilter !== "all" ? programAccessFilter : undefined,
+        },
+      );
       const res = await fetch(url);
       if (res.ok) {
         const json = await res.json();
@@ -201,7 +315,17 @@ export default function TrainingPage() {
     const st = stateOverride ?? categoryState;
     setCategoriesRefreshing(true);
     try {
-      const url = buildUrl("/api/admin/training/categories", st, searchTerm, statusFilter);
+      const url = buildUrl(
+        "/api/admin/training/categories",
+        st,
+        debouncedCategorySearchTerm,
+        categoryStatusFilter,
+        {
+          program_id: categoryProgramFilter !== "all" ? categoryProgramFilter : undefined,
+          created_from: categoryEffectiveCreatedFrom,
+          created_to: categoryEffectiveCreatedTo,
+        },
+      );
       const res = await fetch(url);
       if (res.ok) {
         const json = await res.json();
@@ -220,7 +344,17 @@ export default function TrainingPage() {
     const st = stateOverride ?? lessonState;
     setLessonsRefreshing(true);
     try {
-      const url = buildUrl("/api/admin/training/lessons", st, searchTerm, statusFilter);
+      const url = buildUrl(
+        "/api/admin/training/lessons",
+        st,
+        debouncedLessonSearchTerm,
+        lessonStatusFilter,
+        {
+          category_id: lessonCategoryFilter !== "all" ? lessonCategoryFilter : undefined,
+          created_from: lessonEffectiveCreatedFrom,
+          created_to: lessonEffectiveCreatedTo,
+        },
+      );
       const res = await fetch(url);
       if (res.ok) {
         const json = await res.json();
@@ -239,7 +373,17 @@ export default function TrainingPage() {
     const st = stateOverride ?? quizState;
     setQuizzesRefreshing(true);
     try {
-      const url = buildUrl("/api/admin/training/quizzes", st, searchTerm, statusFilter);
+      const url = buildUrl(
+        "/api/admin/training/quizzes",
+        st,
+        debouncedQuizSearchTerm,
+        quizStatusFilter,
+        {
+          lesson_id: quizLessonFilter !== "all" ? quizLessonFilter : undefined,
+          created_from: quizEffectiveCreatedFrom,
+          created_to: quizEffectiveCreatedTo,
+        },
+      );
       const res = await fetch(url);
       if (res.ok) {
         const json = await res.json();
@@ -269,10 +413,96 @@ export default function TrainingPage() {
     }
     void init();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchTerm, statusFilter]);
+  }, []);
 
   // Server-driven: filters are passed to the API, not applied client-side.
-  const filtersActive = !!searchTerm.trim() || statusFilter !== "all";
+  const programFiltersActive =
+    !!programSearchTerm.trim() ||
+    programStatusFilter !== "all" ||
+    programHasDateRange ||
+    programAccessFilter !== "all";
+  const programFilterInputsActive =
+    programFiltersActive || !!programCreatedFrom || !!programCreatedTo;
+
+  const categoryFiltersActive =
+    !!categorySearchTerm.trim() ||
+    categoryProgramFilter !== "all" ||
+    categoryStatusFilter !== "all" ||
+    categoryHasDateRange;
+  const categoryFilterInputsActive =
+    categoryFiltersActive || !!categoryCreatedFrom || !!categoryCreatedTo;
+
+  const lessonFiltersActive =
+    !!lessonSearchTerm.trim() ||
+    lessonCategoryFilter !== "all" ||
+    lessonStatusFilter !== "all" ||
+    lessonHasDateRange;
+  const lessonFilterInputsActive =
+    lessonFiltersActive || !!lessonCreatedFrom || !!lessonCreatedTo;
+
+  const quizFiltersActive =
+    !!quizSearchTerm.trim() ||
+    quizLessonFilter !== "all" ||
+    quizStatusFilter !== "all" ||
+    quizHasDateRange;
+  const quizFilterInputsActive =
+    quizFiltersActive || !!quizCreatedFrom || !!quizCreatedTo;
+
+  useEffect(() => {
+    if (!initialLoadDone) return;
+    const nextState = { ...programState, page: 1 };
+    setProgramState(nextState);
+    void loadPrograms(nextState);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    debouncedProgramSearchTerm,
+    programStatusFilter,
+    programEffectiveCreatedFrom,
+    programEffectiveCreatedTo,
+    programAccessFilter,
+  ]);
+
+  useEffect(() => {
+    if (!initialLoadDone) return;
+    const nextState = { ...lessonState, page: 1 };
+    setLessonState(nextState);
+    void loadLessons(nextState);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    debouncedLessonSearchTerm,
+    lessonCategoryFilter,
+    lessonStatusFilter,
+    lessonEffectiveCreatedFrom,
+    lessonEffectiveCreatedTo,
+  ]);
+
+  useEffect(() => {
+    if (!initialLoadDone) return;
+    const nextState = { ...quizState, page: 1 };
+    setQuizState(nextState);
+    void loadQuizzes(nextState);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    debouncedQuizSearchTerm,
+    quizLessonFilter,
+    quizStatusFilter,
+    quizEffectiveCreatedFrom,
+    quizEffectiveCreatedTo,
+  ]);
+
+  useEffect(() => {
+    if (!initialLoadDone) return;
+    const nextState = { ...categoryState, page: 1 };
+    setCategoryState(nextState);
+    void loadCategories(nextState);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    debouncedCategorySearchTerm,
+    categoryProgramFilter,
+    categoryStatusFilter,
+    categoryEffectiveCreatedFrom,
+    categoryEffectiveCreatedTo,
+  ]);
 
   // ── Mutation handlers that also refresh lookup maps ──────────────────
   // After a mutation (edit/activate/deactivate/delete), refresh both the
@@ -663,6 +893,324 @@ export default function TrainingPage() {
     defaultSortDir: "desc",
   };
 
+  const programFiltersSlot = (
+    <div className="rounded-md border bg-muted/20 p-3">
+      <div className="grid gap-3 md:grid-cols-[minmax(220px,1fr)_160px_160px_150px_190px_auto] md:items-end">
+        <div>
+          <Label className="mb-1 block text-xs">Search by Name</Label>
+          <Input
+            placeholder="Program name..."
+            value={programSearchTerm}
+            onChange={(e) => setProgramSearchTerm(e.target.value)}
+          />
+        </div>
+        <div>
+          <Label className="mb-1 block text-xs">Created From</Label>
+          <Input
+            type="date"
+            value={programCreatedFrom}
+            onChange={(e) => setProgramCreatedFrom(e.target.value)}
+          />
+        </div>
+        <div>
+          <Label className="mb-1 block text-xs">Created To</Label>
+          <Input
+            type="date"
+            value={programCreatedTo}
+            onChange={(e) => setProgramCreatedTo(e.target.value)}
+          />
+        </div>
+        <div>
+          <Label className="mb-1 block text-xs">Status</Label>
+          <select
+            value={programStatusFilter}
+            onChange={(e) =>
+              setProgramStatusFilter(e.target.value as "all" | "active" | "inactive")
+            }
+            className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
+          >
+            <option value="all">All statuses</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
+        </div>
+        <div>
+          <Label className="mb-1 block text-xs">Access</Label>
+          <select
+            value={programAccessFilter}
+            onChange={(e) => setProgramAccessFilter(e.target.value)}
+            className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
+          >
+            <option value="all">All access types</option>
+            <option value="all_access">All authenticated users</option>
+            {roles.map((role) => (
+              <option key={role.slug} value={role.slug}>
+                {role.role_name}
+              </option>
+            ))}
+          </select>
+        </div>
+        {programFilterInputsActive && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setProgramSearchTerm("");
+              setProgramCreatedFrom("");
+              setProgramCreatedTo("");
+              setProgramStatusFilter("all");
+              setProgramAccessFilter("all");
+            }}
+            className="gap-1.5"
+          >
+            <FilterX className="size-3.5" />
+            Reset
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+
+  const categoryFiltersSlot = (
+    <div className="rounded-md border bg-muted/20 p-3">
+      <div className="grid gap-3 md:grid-cols-[minmax(220px,1fr)_220px_150px_160px_160px_auto] md:items-end">
+        <div>
+          <Label className="mb-1 block text-xs">Search by Category</Label>
+          <Input
+            placeholder="Category name..."
+            value={categorySearchTerm}
+            onChange={(e) => setCategorySearchTerm(e.target.value)}
+          />
+        </div>
+        <div>
+          <Label className="mb-1 block text-xs">Program</Label>
+          <SearchableSelect
+            value={categoryProgramFilter}
+            onValueChange={setCategoryProgramFilter}
+            placeholder="All programs"
+            searchPlaceholder="Search programs..."
+            maxInitialDisplay={5}
+            className="h-9 w-full"
+            options={[
+              { value: "all", label: "All programs" },
+              ...programOptions.map((program) => ({
+                value: program.id,
+                label: program.name,
+              })),
+            ]}
+          />
+        </div>
+        <div>
+          <Label className="mb-1 block text-xs">Status</Label>
+          <select
+            value={categoryStatusFilter}
+            onChange={(e) =>
+              setCategoryStatusFilter(e.target.value as "all" | "active" | "inactive")
+            }
+            className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
+          >
+            <option value="all">All statuses</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
+        </div>
+        <div>
+          <Label className="mb-1 block text-xs">Created From</Label>
+          <Input
+            type="date"
+            value={categoryCreatedFrom}
+            onChange={(e) => setCategoryCreatedFrom(e.target.value)}
+          />
+        </div>
+        <div>
+          <Label className="mb-1 block text-xs">Created To</Label>
+          <Input
+            type="date"
+            value={categoryCreatedTo}
+            onChange={(e) => setCategoryCreatedTo(e.target.value)}
+          />
+        </div>
+        {categoryFilterInputsActive && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setCategorySearchTerm("");
+              setCategoryProgramFilter("all");
+              setCategoryStatusFilter("all");
+              setCategoryCreatedFrom("");
+              setCategoryCreatedTo("");
+            }}
+            className="gap-1.5"
+          >
+            <FilterX className="size-3.5" />
+            Reset
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+
+  const lessonFiltersSlot = (
+    <div className="rounded-md border bg-muted/20 p-3">
+      <div className="grid gap-3 md:grid-cols-[minmax(220px,1fr)_220px_150px_160px_160px_auto] md:items-end">
+        <div>
+          <Label className="mb-1 block text-xs">Search by Title</Label>
+          <Input
+            placeholder="Lesson title..."
+            value={lessonSearchTerm}
+            onChange={(e) => setLessonSearchTerm(e.target.value)}
+          />
+        </div>
+        <div>
+          <Label className="mb-1 block text-xs">Category</Label>
+          <SearchableSelect
+            value={lessonCategoryFilter}
+            onValueChange={setLessonCategoryFilter}
+            placeholder="All categories"
+            searchPlaceholder="Search categories..."
+            maxInitialDisplay={5}
+            className="h-9 w-full"
+            options={[
+              { value: "all", label: "All categories" },
+              ...categoryOptions.map((category) => ({
+                value: category.id,
+                label: category.name,
+              })),
+            ]}
+          />
+        </div>
+        <div>
+          <Label className="mb-1 block text-xs">Status</Label>
+          <select
+            value={lessonStatusFilter}
+            onChange={(e) =>
+              setLessonStatusFilter(e.target.value as "all" | "active" | "inactive")
+            }
+            className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
+          >
+            <option value="all">All statuses</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
+        </div>
+        <div>
+          <Label className="mb-1 block text-xs">Created From</Label>
+          <Input
+            type="date"
+            value={lessonCreatedFrom}
+            onChange={(e) => setLessonCreatedFrom(e.target.value)}
+          />
+        </div>
+        <div>
+          <Label className="mb-1 block text-xs">Created To</Label>
+          <Input
+            type="date"
+            value={lessonCreatedTo}
+            onChange={(e) => setLessonCreatedTo(e.target.value)}
+          />
+        </div>
+        {lessonFilterInputsActive && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setLessonSearchTerm("");
+              setLessonCategoryFilter("all");
+              setLessonStatusFilter("all");
+              setLessonCreatedFrom("");
+              setLessonCreatedTo("");
+            }}
+            className="gap-1.5"
+          >
+            <FilterX className="size-3.5" />
+            Reset
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+
+  const quizFiltersSlot = (
+    <div className="rounded-md border bg-muted/20 p-3">
+      <div className="grid gap-3 md:grid-cols-[minmax(220px,1fr)_220px_150px_160px_160px_auto] md:items-end">
+        <div>
+          <Label className="mb-1 block text-xs">Search by Title</Label>
+          <Input
+            placeholder="Quiz title..."
+            value={quizSearchTerm}
+            onChange={(e) => setQuizSearchTerm(e.target.value)}
+          />
+        </div>
+        <div>
+          <Label className="mb-1 block text-xs">Lesson</Label>
+          <SearchableSelect
+            value={quizLessonFilter}
+            onValueChange={setQuizLessonFilter}
+            placeholder="All lessons"
+            searchPlaceholder="Search lessons..."
+            maxInitialDisplay={5}
+            className="h-9 w-full"
+            options={[
+              { value: "all", label: "All lessons" },
+              ...lessonOptions.map((lesson) => ({
+                value: lesson.id,
+                label: lesson.title,
+              })),
+            ]}
+          />
+        </div>
+        <div>
+          <Label className="mb-1 block text-xs">Status</Label>
+          <select
+            value={quizStatusFilter}
+            onChange={(e) =>
+              setQuizStatusFilter(e.target.value as "all" | "active" | "inactive")
+            }
+            className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
+          >
+            <option value="all">All statuses</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
+        </div>
+        <div>
+          <Label className="mb-1 block text-xs">Created From</Label>
+          <Input
+            type="date"
+            value={quizCreatedFrom}
+            onChange={(e) => setQuizCreatedFrom(e.target.value)}
+          />
+        </div>
+        <div>
+          <Label className="mb-1 block text-xs">Created To</Label>
+          <Input
+            type="date"
+            value={quizCreatedTo}
+            onChange={(e) => setQuizCreatedTo(e.target.value)}
+          />
+        </div>
+        {quizFilterInputsActive && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setQuizSearchTerm("");
+              setQuizLessonFilter("all");
+              setQuizStatusFilter("all");
+              setQuizCreatedFrom("");
+              setQuizCreatedTo("");
+            }}
+            className="gap-1.5"
+          >
+            <FilterX className="size-3.5" />
+            Reset
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+
   return (
     <div className="space-y-8">
       <div className="flex items-start justify-between gap-3 flex-wrap">
@@ -672,48 +1220,6 @@ export default function TrainingPage() {
             Manage training programs, categories, lessons, and quizzes.
           </p>
         </div>
-      </div>
-
-      {/* Shared filters */}
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="flex-1 min-w-[200px] max-w-xs">
-          <Label className="text-xs mb-1 block">Search</Label>
-          <Input
-            placeholder="Name, title, or description…"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-        <div>
-          <Label className="text-xs mb-1 block">Status</Label>
-          <select
-            value={statusFilter}
-            onChange={(e) =>
-              setStatusFilter(e.target.value as "all" | "active" | "inactive")
-            }
-            className="flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
-          >
-            <option value="all">All statuses</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-          </select>
-        </div>
-        {filtersActive && (
-          <div className="self-end">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setSearchTerm("");
-                setStatusFilter("all");
-              }}
-              className="gap-1.5"
-            >
-              <FilterX className="size-3.5" />
-              Reset
-            </Button>
-          </div>
-        )}
       </div>
 
       {/* Initial loading skeleton — shown only on first load before data arrives */}
@@ -747,9 +1253,15 @@ export default function TrainingPage() {
             rows={programData.rows}
             serverTotal={programData.total}
             rawCount={programData.total}
-            filtersActive={filtersActive}
-            currentSearch={searchTerm}
-            currentStatus={statusFilter}
+            filtersActive={programFiltersActive}
+            currentSearch={debouncedProgramSearchTerm}
+            currentStatus={programStatusFilter}
+            currentExtraQuery={{
+              created_from: programEffectiveCreatedFrom,
+              created_to: programEffectiveCreatedTo,
+              access: programAccessFilter !== "all" ? programAccessFilter : undefined,
+            }}
+            filtersSlot={programFiltersSlot}
             onMutated={mutatePrograms}
             onRefresh={() => loadPrograms(programState)}
             isRefreshing={programsRefreshing}
@@ -766,9 +1278,15 @@ export default function TrainingPage() {
             rows={categoryData.rows}
             serverTotal={categoryData.total}
             rawCount={categoryData.total}
-            filtersActive={filtersActive}
-            currentSearch={searchTerm}
-            currentStatus={statusFilter}
+            filtersActive={categoryFiltersActive}
+            currentSearch={debouncedCategorySearchTerm}
+            currentStatus={categoryStatusFilter}
+            currentExtraQuery={{
+              program_id: categoryProgramFilter !== "all" ? categoryProgramFilter : undefined,
+              created_from: categoryEffectiveCreatedFrom,
+              created_to: categoryEffectiveCreatedTo,
+            }}
+            filtersSlot={categoryFiltersSlot}
             onMutated={mutateCategories}
             onRefresh={() => loadCategories(categoryState)}
             isRefreshing={categoriesRefreshing}
@@ -785,9 +1303,15 @@ export default function TrainingPage() {
             rows={lessonData.rows}
             serverTotal={lessonData.total}
             rawCount={lessonData.total}
-            filtersActive={filtersActive}
-            currentSearch={searchTerm}
-            currentStatus={statusFilter}
+            filtersActive={lessonFiltersActive}
+            currentSearch={debouncedLessonSearchTerm}
+            currentStatus={lessonStatusFilter}
+            currentExtraQuery={{
+              category_id: lessonCategoryFilter !== "all" ? lessonCategoryFilter : undefined,
+              created_from: lessonEffectiveCreatedFrom,
+              created_to: lessonEffectiveCreatedTo,
+            }}
+            filtersSlot={lessonFiltersSlot}
             onMutated={mutateLessons}
             onRefresh={() => loadLessons(lessonState)}
             isRefreshing={lessonsRefreshing}
@@ -804,9 +1328,15 @@ export default function TrainingPage() {
             rows={quizData.rows}
             serverTotal={quizData.total}
             rawCount={quizData.total}
-            filtersActive={filtersActive}
-            currentSearch={searchTerm}
-            currentStatus={statusFilter}
+            filtersActive={quizFiltersActive}
+            currentSearch={debouncedQuizSearchTerm}
+            currentStatus={quizStatusFilter}
+            currentExtraQuery={{
+              lesson_id: quizLessonFilter !== "all" ? quizLessonFilter : undefined,
+              created_from: quizEffectiveCreatedFrom,
+              created_to: quizEffectiveCreatedTo,
+            }}
+            filtersSlot={quizFiltersSlot}
             onMutated={mutateQuizzes}
             onRefresh={() => loadQuizzes(quizState)}
             isRefreshing={quizzesRefreshing}

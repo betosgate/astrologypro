@@ -42,6 +42,7 @@ import type {
   TabType, TabDef, CityOption, BirthInput, FormState,
   DecanRow, DecanPossibility, DecanAi, DecanSection,
 } from "./types";
+import type { ToolkitFamilyMemberPrefill } from "@/lib/horoscope-toolkit-prefill";
 import {
   parseDecimalTz, parseBirth, freeWheelBody, pad, getPlanetDegree,
   getAspectOrbColor, getPlanetInterpClass, getRelationshipBgClass, parseAspectTitle,
@@ -100,6 +101,14 @@ const RELATIONSHIP_SLUG_TO_REPORT_TYPE = {
   friendship_report_tropical_v2: "friendship",
   business_partner_v2: "partnership",
 } as const;
+
+type FamilyNatalChartView = {
+  id: string;
+  name: string;
+  chartUrl: string | null;
+  freeSvg: string | null;
+  natalData?: unknown;
+};
 
 function isRelationshipSlug(
   slug: string
@@ -2839,6 +2848,7 @@ export interface HoroscopeToolkitPageProps {
    */
   communityRelationshipPersonAId?: string | null;
   communityRelationshipPersonBId?: string | null;
+  communityRelationshipFamilyMembers?: ToolkitFamilyMemberPrefill[];
 }
 
 export function HoroscopeToolkitPage({
@@ -2855,6 +2865,7 @@ export function HoroscopeToolkitPage({
   communityMonthlyMonthKey = null,
   communityRelationshipPersonAId = null,
   communityRelationshipPersonBId = null,
+  communityRelationshipFamilyMembers = [],
 }: HoroscopeToolkitPageProps = {}) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -2875,6 +2886,8 @@ export function HoroscopeToolkitPage({
   const currentTab = visibleTabs.find((t) => t.slug === currentSlug) ?? fallbackTab;
   const isCommunityToolkit = apiBase.startsWith("/api/community/");
   const effectiveReadOnlyBirthData = readOnlyBirthData || isCommunityToolkit;
+  const familyRelationshipMembers = communityRelationshipFamilyMembers;
+  const hasFamilyRelationshipContext = familyRelationshipMembers.length > 0;
   const initialForm = useMemo<FormState>(
     () => formStateFromSavedFormData(initialSavedReport ?? initialSavedFormData),
     [initialSavedFormData, initialSavedReport]
@@ -2903,6 +2916,7 @@ export function HoroscopeToolkitPage({
   const [natalSvgTransit, setNatalSvgTransit] = useState<string | null>(() => initialSavedToolkitState.natalSvgTransit);
   const [natalSvgP2, setNatalSvgP2] = useState<string | null>(() => initialSavedToolkitState.natalSvgP2);
   const [natalSvgTransitP2, setNatalSvgTransitP2] = useState<string | null>(() => initialSavedToolkitState.natalSvgTransitP2);
+  const [familyNatalCharts, setFamilyNatalCharts] = useState<FamilyNatalChartView[]>([]);
   const [returnDate, setReturnDate] = useState<string | null>(() => initialSavedToolkitState.returnDate);
   const [progress, setProgress] = useState<string[]>([]);
   const [showScrollTop, setShowScrollTop] = useState(false);
@@ -2922,6 +2936,7 @@ export function HoroscopeToolkitPage({
     setNatalSvgTransit(initialSavedToolkitState.natalSvgTransit);
     setNatalSvgP2(initialSavedToolkitState.natalSvgP2);
     setNatalSvgTransitP2(initialSavedToolkitState.natalSvgTransitP2);
+    setFamilyNatalCharts([]);
     setTransitChartSvg(initialSavedToolkitState.transitChartSvg);
     setReturnDate(initialSavedToolkitState.returnDate);
     setShowChartBtn(initialSavedToolkitState.showChartButton);
@@ -2946,6 +2961,7 @@ export function HoroscopeToolkitPage({
   useEffect(() => {
     setResults(initialSavedToolkitState.results); setNatalSvg(initialSavedToolkitState.natalSvg); setNatalSvgTransit(initialSavedToolkitState.natalSvgTransit);
     setNatalSvgP2(initialSavedToolkitState.natalSvgP2); setNatalSvgTransitP2(initialSavedToolkitState.natalSvgTransitP2);
+    setFamilyNatalCharts([]);
     setReturnDate(initialSavedToolkitState.returnDate); setError(null); setProgress([]); setForm(initialForm);
     setShowScrollTop(false); setShowChartBtn(initialSavedToolkitState.showChartButton); setTransitChartSvg(initialSavedToolkitState.transitChartSvg);
   }, [currentSlug, initialForm, initialSavedToolkitState]);
@@ -3013,8 +3029,8 @@ export function HoroscopeToolkitPage({
 
   function setTab(slug: string) {
     if (
-      communityRelationshipPersonAId &&
-      communityRelationshipPersonBId &&
+      ((communityRelationshipPersonAId && communityRelationshipPersonBId) ||
+        hasFamilyRelationshipContext) &&
       isRelationshipSlug(slug)
     ) {
       const url = new URL(basePath, window.location.origin);
@@ -3122,6 +3138,7 @@ export function HoroscopeToolkitPage({
     setNatalSvgTransit(null);
     setNatalSvgP2(null);
     setNatalSvgTransitP2(null);
+    setFamilyNatalCharts([]);
     setTransitChartSvg(null);
     setReturnDate(null);
     setProgress([]);
@@ -3166,6 +3183,9 @@ export function HoroscopeToolkitPage({
             question: form.question || undefined,
             futureWeek: form.futureWeek || undefined,
             futureMonth: form.futureMonth || undefined,
+            familyMembers: hasFamilyRelationshipContext
+              ? familyRelationshipMembers
+              : undefined,
           },
         }),
       });
@@ -3609,6 +3629,12 @@ export function HoroscopeToolkitPage({
           person2_birth: birth2,
           persona_city: form.person1?.city ?? "",
           partner_city: form.person2?.city ?? "",
+          ...(hasFamilyRelationshipContext
+            ? {
+              family_members: familyRelationshipMembers,
+              familyMembers: familyRelationshipMembers,
+            }
+            : {}),
         };
         Object.assign(collected, relBase);
         setResults({ ...relBase });
@@ -3739,9 +3765,130 @@ export function HoroscopeToolkitPage({
 
         await Promise.allSettled(relTasks);
 
+        if (hasFamilyRelationshipContext && familyRelationshipMembers.length > 2) {
+          addProgress("Fetching remaining family natal charts…");
+          const extraFamilyChartResults = await Promise.all(
+            familyRelationshipMembers.slice(2).map(async (member) => {
+              if (!member.birth.dob || !member.birth.tob || !member.birth.city) {
+                return {
+                  id: member.id,
+                  name: member.fullName || "Family member",
+                  chartUrl: null,
+                  freeSvg: null,
+                  natalData: null,
+                };
+              }
+
+              const memberBirth = parseBirth(member.birth);
+              const [natalResult, chartResult, freeResult] = await Promise.allSettled([
+                callCompute(
+                  "western_horoscope",
+                  memberBirth as unknown as Record<string, unknown>
+                ),
+                callCompute(
+                  "natal_wheel_chart",
+                  memberBirth as unknown as Record<string, unknown>
+                ),
+                callNatalWheel(
+                  freeWheelBody(member.birth) as unknown as Record<string, unknown>
+                ),
+              ]);
+
+              const chartUrl =
+                chartResult.status === "fulfilled" && chartResult.value?.chart_url
+                  ? chartResult.value.chart_url
+                  : null;
+              const freeSvg =
+                freeResult.status === "fulfilled" && freeResult.value?.results?.output
+                  ? freeResult.value.results.output
+                  : null;
+              const memberNatalData =
+                natalResult.status === "fulfilled" ? natalResult.value : null;
+
+              return {
+                id: member.id,
+                name: member.fullName || "Family member",
+                chartUrl,
+                freeSvg,
+                natalData: memberNatalData,
+              };
+            })
+          );
+
+          setFamilyNatalCharts(extraFamilyChartResults);
+          if (
+            extraFamilyChartResults.some(
+              (chart) => chart.chartUrl || chart.freeSvg
+            )
+          ) {
+            setShowChartBtn(true);
+          }
+          collected.family_natal_charts = extraFamilyChartResults;
+        }
+
+        if (hasFamilyRelationshipContext) {
+          const extraChartsById = new Map(
+            familyNatalCharts.map((chart) => [chart.id, chart])
+          );
+          const latestExtraCharts = Array.isArray(collected.family_natal_charts)
+            ? collected.family_natal_charts as FamilyNatalChartView[]
+            : [];
+          for (const chart of latestExtraCharts) {
+            extraChartsById.set(chart.id, chart);
+          }
+
+          const familyPersonCharts = familyRelationshipMembers.map(
+            (member, index) => {
+              const extraChart = extraChartsById.get(member.id);
+              return {
+                id: member.id,
+                name: member.fullName || `Family Member ${index + 1}`,
+                relationship: member.relationship,
+                ageGroup: member.ageGroup,
+                birth: member.birth,
+                natal_chart:
+                  index === 0
+                    ? collected.natal_chart_data ?? null
+                    : index === 1
+                      ? collected.natal_chart_data_p2 ?? null
+                      : extraChart?.natalData ?? null,
+                chart_url:
+                  index === 0
+                    ? collected.natal_chart_url ?? null
+                    : index === 1
+                      ? collected.natal_chart_url_p2 ?? null
+                      : extraChart?.chartUrl ?? null,
+                wheel_svg:
+                  index === 0
+                    ? collected.natal_transit_svg ?? null
+                    : index === 1
+                      ? collected.natal_transit_svg_p2 ?? null
+                      : extraChart?.freeSvg ?? null,
+              };
+            }
+          );
+
+          collected.family_person_charts = familyPersonCharts;
+          setResults((prev) => ({
+            ...prev,
+            family_person_charts: familyPersonCharts,
+          }));
+        }
+
         // AI Interpretations
         addProgress("Running relationship AI…");
-        const combinedData = { ...(collected.synastry ?? {}), ...collected };
+        const combinedData = {
+          ...(collected.synastry ?? {}),
+          ...collected,
+          ...(hasFamilyRelationshipContext
+            ? {
+              family_members: familyRelationshipMembers,
+              familyMembers: familyRelationshipMembers,
+              family_person_charts: collected.family_person_charts,
+              familyPersonCharts: collected.family_person_charts,
+            }
+            : {}),
+        };
         const prompts = buildAiPrompts(combinedData, currentTab.slug, form.areaOfInquiry || undefined, excludedHoraryDates);
         const aiPromises = prompts.map(async (p) => {
           try {
@@ -3808,6 +3955,14 @@ export function HoroscopeToolkitPage({
           area_of_inquiry: form.areaOfInquiry, // mapping both for compatibility
           futureWeek: form.futureWeek,
           futureMonth: form.futureMonth,
+          ...(hasFamilyRelationshipContext
+            ? {
+              familyMembers: familyRelationshipMembers,
+              family_members: familyRelationshipMembers,
+              familyPersonCharts: collected.family_person_charts,
+              family_person_charts: collected.family_person_charts,
+            }
+            : {}),
         } : {
           ...form.person1,
           ...birth1,
@@ -3816,12 +3971,28 @@ export function HoroscopeToolkitPage({
           area_of_inquiry: form.areaOfInquiry, // mapping both for compatibility
           futureWeek: form.futureWeek,
           futureMonth: form.futureMonth,
+          ...(hasFamilyRelationshipContext
+            ? {
+              familyMembers: familyRelationshipMembers,
+              family_members: familyRelationshipMembers,
+              familyPersonCharts: collected.family_person_charts,
+              family_person_charts: collected.family_person_charts,
+            }
+            : {}),
         };
         const astroApiDataPayload = isTwoPerson ? {
           synastry: collected.synastry ?? {},
           composite: collected.composite ?? {},
           self: collected.natal_chart_data ?? {},
           partner: collected.natal_chart_data_p2 ?? {},
+          ...(hasFamilyRelationshipContext
+            ? {
+              family_members: familyRelationshipMembers,
+              familyMembers: familyRelationshipMembers,
+              family_person_charts: collected.family_person_charts,
+              familyPersonCharts: collected.family_person_charts,
+            }
+            : {}),
         } : {
           ...(collected.natal_chart_data as Record<string, unknown> ?? {}),
           ...collected, 
@@ -3846,6 +4017,14 @@ export function HoroscopeToolkitPage({
           freeNatalWheelChart: collected.natal_transit_svg ?? collected.transit_chart_svg ?? "",
           freeNatalWheelChartForTransit: collected.natal_transit_svg ?? collected.transit_chart_svg ?? "",
           freeNatalWheelChartForTrasit: collected.natal_transit_svg ?? collected.transit_chart_svg ?? "",
+          ...(hasFamilyRelationshipContext
+            ? {
+              family_members: familyRelationshipMembers,
+              familyMembers: familyRelationshipMembers,
+              family_person_charts: collected.family_person_charts,
+              familyPersonCharts: collected.family_person_charts,
+            }
+            : {}),
         };
 
         if (currentTab.slug === "tropical_transits_monthly_v3") {
@@ -3868,6 +4047,14 @@ export function HoroscopeToolkitPage({
           freeNatalWheelChart: collected.natal_chart_url ?? "",
           freeNatalWheelChartForTransit: collected.natal_transit_svg ?? collected.transit_chart_svg ?? "",
           freeNatalWheelChartForTrasit: collected.natal_transit_svg ?? collected.transit_chart_svg ?? "",
+          ...(hasFamilyRelationshipContext
+            ? {
+              family_members: familyRelationshipMembers,
+              familyMembers: familyRelationshipMembers,
+              family_person_charts: collected.family_person_charts,
+              familyPersonCharts: collected.family_person_charts,
+            }
+            : {}),
           ...(isTwoPerson
             ? {
               freeNatalWheelChartP2: collected.natal_chart_url_p2 ?? "",
@@ -4078,6 +4265,38 @@ export function HoroscopeToolkitPage({
     if (initialSavedReport || hasRenderedResult) return "Regenerate";
     return "Generate Reading";
   })();
+  const familyNatalChartViews = hasFamilyRelationshipContext
+    ? familyRelationshipMembers.map((member, index) => {
+      const generatedChart = familyNatalCharts.find(
+        (chart) => chart.id === member.id
+      );
+
+      if (index === 0) {
+        return {
+          id: member.id,
+          name: member.fullName || "Family member",
+          chartUrl: natalSvg,
+          freeSvg: natalSvgTransit,
+        };
+      }
+
+      if (index === 1) {
+        return {
+          id: member.id,
+          name: member.fullName || "Family member",
+          chartUrl: natalSvgP2,
+          freeSvg: natalSvgTransitP2,
+        };
+      }
+
+      return {
+        id: member.id,
+        name: member.fullName || generatedChart?.name || "Family member",
+        chartUrl: generatedChart?.chartUrl ?? null,
+        freeSvg: generatedChart?.freeSvg ?? null,
+      };
+    })
+    : [];
 
   return (
     <div className="horoscope-toolkit h-[calc(100vh-3.5rem)] lg:h-screen overflow-hidden flex flex-col" style={{ background: '#0a0c10' }}>
@@ -4114,12 +4333,46 @@ export function HoroscopeToolkitPage({
           {/* Form */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-semibold">{currentTab.type === "two-person" ? "Enter Both Persons' Data" : "Enter Birth Data"}</CardTitle>
+              <CardTitle className="text-sm font-semibold">
+                {hasFamilyRelationshipContext
+                  ? "Enter All Family Members' Data"
+                  : currentTab.type === "two-person"
+                    ? "Enter Both Persons' Data"
+                    : "Enter Birth Data"}
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-5">
                 {currentTab.type === "single" ? (
                   <BirthBlock value={form.person1} onChange={(v) => setForm((f) => ({ ...f, person1: v }))} disabled={loading || effectiveReadOnlyBirthData} />
+                ) : hasFamilyRelationshipContext ? (
+                  <div className="flex flex-col gap-6">
+                    {familyRelationshipMembers.map((member, index) => {
+                      const value =
+                        index === 0
+                          ? form.person1
+                          : index === 1
+                            ? form.person2
+                            : member.birth;
+                      const onChange =
+                        index === 0
+                          ? (v: BirthInput) =>
+                            setForm((f) => ({ ...f, person1: v }))
+                          : index === 1
+                            ? (v: BirthInput) =>
+                              setForm((f) => ({ ...f, person2: v }))
+                            : () => {};
+                      return (
+                        <BirthBlock
+                          key={member.id}
+                          title={member.fullName || `Family Member ${index + 1}`}
+                          value={value}
+                          onChange={onChange}
+                          disabled={loading || effectiveReadOnlyBirthData}
+                        />
+                      );
+                    })}
+                  </div>
                 ) : (
                   <div className="flex flex-col gap-6">
                     <BirthBlock title="Person 1 (Self)" value={form.person1} onChange={(v) => setForm((f) => ({ ...f, person1: v }))} disabled={loading || effectiveReadOnlyBirthData} />
@@ -4227,44 +4480,68 @@ export function HoroscopeToolkitPage({
 
                     {/* Natal charts — always show first */}
                     <div id="natal-charts-row" className="space-y-6">
-                      {(natalSvg || natalSvgTransit) && (
-                        <div className="rounded-lg border overflow-hidden">
-                          <div className="px-4 py-3 flex items-center justify-center gap-2 bg-black text-white border-none rounded-t-lg">
-                            <User className="size-4 text-white" />
-                            <h2 className="text-sm font-semibold text-white text-center">
-                              {isTwoPersonAiTab ? "Western Chart Horoscope For Self" : "Western Chart Horoscope"}
-                            </h2>
-                          </div>
-                          <div className="p-4">
-                            <NatalChartsRow
-                              svgs={[natalSvg, natalSvgTransit]}
-                              labels={[
-                                isTwoPersonAiTab ? "Person 1" : "Natal Wheel Chart",
-                                isTwoPersonAiTab ? "Person 1" : "Natal Wheel Chart"
-                              ]}
-                              onExpandImg={(src) => setChartModal(src)}
-                            />
-                          </div>
-                        </div>
-                      )}
+                      {hasFamilyRelationshipContext ? (
+                        familyNatalChartViews
+                          .filter((chart) => chart.chartUrl || chart.freeSvg)
+                          .map((chart) => (
+                            <div key={chart.id} className="rounded-lg border overflow-hidden">
+                              <div className="px-4 py-3 flex items-center justify-center gap-2 bg-black text-white border-none rounded-t-lg">
+                                <Users className="size-4 text-white" />
+                                <h2 className="text-sm font-semibold text-white text-center">
+                                  Western Chart Horoscope For {chart.name}
+                                </h2>
+                              </div>
+                              <div className="p-4">
+                                <NatalChartsRow
+                                  svgs={[chart.chartUrl, chart.freeSvg]}
+                                  labels={[chart.name, chart.name]}
+                                  onExpandImg={(src) => setChartModal(src)}
+                                />
+                              </div>
+                            </div>
+                          ))
+                      ) : (
+                        <>
+                          {(natalSvg || natalSvgTransit) && (
+                            <div className="rounded-lg border overflow-hidden">
+                              <div className="px-4 py-3 flex items-center justify-center gap-2 bg-black text-white border-none rounded-t-lg">
+                                <User className="size-4 text-white" />
+                                <h2 className="text-sm font-semibold text-white text-center">
+                                  {isTwoPersonAiTab ? "Western Chart Horoscope For Self" : "Western Chart Horoscope"}
+                                </h2>
+                              </div>
+                              <div className="p-4">
+                                <NatalChartsRow
+                                  svgs={[natalSvg, natalSvgTransit]}
+                                  labels={[
+                                    isTwoPersonAiTab ? "Person 1" : "Natal Wheel Chart",
+                                    isTwoPersonAiTab ? "Person 1" : "Natal Wheel Chart"
+                                  ]}
+                                  onExpandImg={(src) => setChartModal(src)}
+                                />
+                              </div>
+                            </div>
+                          )}
 
-                      {isTwoPersonAiTab && (natalSvgP2 || natalSvgTransitP2) && (
-                        <div className="rounded-lg border overflow-hidden">
-                          <div className="px-4 py-3 flex items-center justify-center gap-2 bg-black text-white border-none rounded-t-lg">
-                            <Users className="size-4 text-white" />
-                            <h2 className="text-sm font-semibold text-white text-center">Western Chart Horoscope For Partner</h2>
-                          </div>
-                          <div className="p-4">
-                            <NatalChartsRow
-                              svgs={[natalSvgP2, natalSvgTransitP2]}
-                              labels={[
-                                "Person 2",
-                                "Person 2"
-                              ]}
-                              onExpandImg={(src) => setChartModal(src)}
-                            />
-                          </div>
-                        </div>
+                          {isTwoPersonAiTab && (natalSvgP2 || natalSvgTransitP2) && (
+                            <div className="rounded-lg border overflow-hidden">
+                              <div className="px-4 py-3 flex items-center justify-center gap-2 bg-black text-white border-none rounded-t-lg">
+                                <Users className="size-4 text-white" />
+                                <h2 className="text-sm font-semibold text-white text-center">Western Chart Horoscope For Partner</h2>
+                              </div>
+                              <div className="p-4">
+                                <NatalChartsRow
+                                  svgs={[natalSvgP2, natalSvgTransitP2]}
+                                  labels={[
+                                    "Person 2",
+                                    "Person 2"
+                                  ]}
+                                  onExpandImg={(src) => setChartModal(src)}
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </>
                       )}
                     </div>
 
