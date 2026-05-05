@@ -198,6 +198,7 @@ function InlineLessonViewer({
         content: lesson.content ?? null,
         videoUrl: lesson.video_url ?? null,
         pdfUrl: lesson.pdf_url ?? null,
+        audioUrl: lesson.audio_url ?? null,
         durationMins: lesson.duration_mins ?? null,
         videos: lesson.videos ?? [],
         assets: lesson.assets ?? [],

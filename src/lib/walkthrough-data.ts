@@ -352,201 +352,198 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
 
 
       // ----------diviners-----------//
-    {
-  "name": "admin_diviners_management",
-  "label": "Diviners: Directory & Management",
-  "description": "The main admin screen for reviewing, filtering, and managing all diviner accounts on the platform.",
-  "group": "People",
-  "subModule": "Diviners",
-  "purpose": "This screen is used to manage the full list of diviners available in the platform. It helps admins review diviner profiles, search for a specific diviner, filter by joined date, monitor active and suspended accounts, and check important operational readiness fields such as Stripe connection, calendar setup, phone availability, affiliate count, certification status, and join date. This page is useful because diviners are service providers in the system, so admins need one central place to track whether each diviner profile is complete, active, visible, and ready for platform use.",
-  "bullets": [
-    "🔢 Result Count — Shows the total number of diviner records available in the system and how many pages are needed to browse them.",
-    "🟡 All Tab — Displays the complete diviner list, including every diviner record regardless of current status.",
-    "🟢 Active Tab — Shows only diviners whose accounts are currently active and available for use on the platform.",
-    "⛔ Suspended Tab — Shows diviners whose accounts are restricted or suspended, making it easier to review blocked or unavailable providers.",
-    "🔍 Search Field — Used to find a diviner quickly by name, username, or phone number without manually checking the full list.",
-    "📅 Joined Date Filter — Used to narrow the diviner list by account join date range, which helps with onboarding review and account tracking.",
-    "🔄 Refresh Button — Reloads the latest diviner data so profile updates, status changes, and newly added diviners appear immediately.",
-    "➕ Add Diviner Button — Opens the workflow to create or register a new diviner account directly from the admin side.",
-    "👤 Diviner Column — Shows the diviner's full display name and email address, which helps identify the person and their linked account.",
-    "🆔 Username Column — Shows the public or system username associated with the diviner profile.",
-    "🟢 Status Column — Shows whether the diviner account is active or in another state, helping admins understand availability at a glance.",
-    "💳 Stripe Column — Indicates whether Stripe or payment-account setup is connected for that diviner, which is important for payment and payout workflows.",
-    "📅 Calendar Column — Indicates whether the diviner has calendar setup or scheduling integration enabled, which is important for booking readiness.",
-    "📞 Phone Column — Indicates whether phone information is available or configured for the diviner profile.",
-    "🤝 Affiliates Column — Shows the number of affiliate relationships or linked affiliate records associated with that diviner account.",
-    "🎓 Certified Column — Shows whether the diviner has certification information or approved professional status recorded in the system.",
-    "📅 Joined Column — Shows the date the diviner account was added to the platform, which helps with lifecycle tracking and onboarding review.",
-    "👁 Preview Action — The eye icon is used to open and review the diviner's full profile details.",
-    "✏️ Edit Action — The pencil icon is used to open the diviner profile in edit mode so admins can update profile data, setup fields, or account information.",
-    "↕️ Sortable Headers — Several table headers can be sorted, helping admins organize diviners by name, username, status, or joined date.",
-    "🧠 Why This Screen Is Useful — It gives admins one control page for diviner discovery, setup review, operational readiness checks, onboarding support, and account management."
-  ]
-},
+    
+  {
+    "name": "admin-diviners-list",
+    "label": "Diviners List",
+    "description": "Admin directory screen showing all diviner accounts with status and setup readiness details.",
+    "group": "People",
+    "subModule": "Diviners",
+    "purpose": "Allows admin to review diviners and start the Add Diviner flow.",
+    "bullets": [
+      "Shows diviner name, email, username, status, Stripe, calendar, phone, affiliates, certified status, and joined date.",
+      "Includes All, Active, and Suspended tabs.",
+      "Includes search and joined date filters.",
+      "Add Diviner button starts the invitation workflow.",
+      "Eye icon previews a diviner profile.",
+      "Pencil icon edits a diviner account."
+    ]
+  },
+  {
+    "name": "admin-invitations-list",
+    "label": "Invitations List",
+    "description": "Admin screen for managing all sent diviner invitations.",
+    "group": "People",
+    "subModule": "Diviners",
+    "purpose": "Allows admin to view, filter, and manage pending or accepted invitations.",
+    "bullets": [
+      "Shows invitation email, role, status, invited by, expiry date, sent date, and actions.",
+      "Tabs filter invitations by All, Pending, Accepted, Expired, and Cancelled.",
+      "Search field filters by email, role, or inviter.",
+      "Invite User button opens the invitation modal."
+    ]
+  },
+  {
+    "name": "invite-user-empty-modal",
+    "label": "Invite User Modal Empty State",
+    "description": "Modal form opened by admin to invite a new diviner user.",
+    "group": "People",
+    "subModule": "Diviners",
+    "purpose": "Collects the email and role before sending a diviner invitation.",
+    "bullets": [
+      "Email address field is required.",
+      "Role dropdown is required.",
+      "Default role can be Diviner.",
+      "Send Invitation button is used to email the invite.",
+      "Cancel closes the modal."
+    ]
+  },
+  {
+    "name": "invite-user-filled-modal",
+    "label": "Invite User Modal Filled State",
+    "description": "Invite modal after admin enters the diviner email address.",
+    "group": "People",
+    "subModule": "Diviners",
+    "purpose": "Confirms invitation details before sending the email.",
+    "bullets": [
+      "Shows entered email address.",
+      "Shows selected role as Diviner.",
+      "Send Invitation button sends the invite.",
+      "After submission, the invitation appears in the list as pending."
+    ]
+  },
+  {
+    "name": "invitation-pending-list",
+    "label": "Invitation Pending State",
+    "description": "Updated invitation table after a new diviner invitation is sent.",
+    "group": "People",
+    "subModule": "Diviners",
+    "purpose": "Shows that the invited diviner has not accepted the invitation yet.",
+    "bullets": [
+      "New email appears in the invitation list.",
+      "Role is shown as Diviner.",
+      "Status is shown as Pending.",
+      "Expiry date shows when the invite link will expire.",
+      "Sent date shows when the invitation email was created."
+    ]
+  },
+  {
+    "name": "diviner-invitation-email",
+    "label": "Diviner Invitation Email",
+    "description": "Email received by the invited diviner with an Accept Invitation button.",
+    "group": "People",
+    "subModule": "Diviners",
+    "purpose": "Allows the invited diviner to open the registration flow from email.",
+    "bullets": [
+      "Shows invitation message for AstrologyPro.",
+      "Identifies the invited role as Diviner.",
+      "Explains that the invitation link expires in 7 days.",
+      "Accept Invitation button opens registration.",
+      "Email can be ignored if invitation was unexpected."
+    ]
+  },
+  {
+    "name": "diviner-registration-form",
+    "label": "Register as a Diviner",
+    "description": "Registration page opened from the invitation email.",
+    "group": "People",
+    "subModule": "Diviners",
+    "purpose": "Lets the invited diviner create their account and public profile URL.",
+    "bullets": [
+      "Email is prefilled from the invitation.",
+      "User enters full name.",
+      "User creates and confirms password.",
+      "User creates a public profile URL.",
+      "Page preview shows public profile name, role, email, and status.",
+      "Register button completes account setup."
+    ]
+  },
+  {
+    "name": "diviner-plan-selection",
+    "label": "Become a Diviner Plan Selection",
+    "description": "Plan selection screen shown after diviner registration.",
+    "group": "People",
+    "subModule": "Diviners",
+    "purpose": "Allows the diviner to choose a paid professional plan before dashboard access.",
+    "bullets": [
+      "Shows plan options such as Tarot Reader, Oracle, and Astrologer.",
+      "Selected plan is highlighted.",
+      "Shows setup fee and monthly subscription amount.",
+      "Displays benefits included in the selected plan.",
+      "Continue to Payment button opens Stripe checkout."
+    ]
+  },
+  {
+    "name": "stripe-checkout-empty",
+    "label": "Stripe Checkout Empty State",
+    "description": "Stripe payment page before card details are entered.",
+    "group": "People",
+    "subModule": "Diviners",
+    "purpose": "Collects payment for the selected diviner plan.",
+    "bullets": [
+      "Shows total due today.",
+      "Shows monthly subscription amount.",
+      "Displays selected plan and setup fee.",
+      "Email is prefilled.",
+      "Card details, cardholder name, and country are required.",
+      "Subscribe button submits payment."
+    ]
+  },
+  {
+    "name": "stripe-checkout-filled-processing",
+    "label": "Stripe Checkout Processing State",
+    "description": "Stripe payment page while processing the payment.",
+    "group": "People",
+    "subModule": "Diviners",
+    "purpose": "Indicates payment is being processed.",
+    "bullets": [
+      "Card details are filled.",
+      "Processing state is visible.",
+      "User waits for confirmation."
+    ]
+  },
+  {
+    "name": "stripe-checkout-success",
+    "label": "Stripe Checkout Success State",
+    "description": "Stripe payment success confirmation screen.",
+    "group": "People",
+    "subModule": "Diviners",
+    "purpose": "Confirms payment is completed.",
+    "bullets": [
+      "Success indicator is shown.",
+      "Payment completed successfully.",
+      "User proceeds to contract signing."
+    ]
+  },
+  {
+    "name": "diviner-contract-page",
+    "label": "Pending Contracts",
+    "description": "Contract signing page after payment.",
+    "group": "People",
+    "subModule": "Diviners",
+    "purpose": "Requires agreement acceptance before access.",
+    "bullets": [
+      "Displays Diviner Service Agreement.",
+      "Scrollable contract content.",
+      "Accept button enabled after review.",
+      "Continue completes onboarding."
+    ]
+  },
+  {
+    "name": "diviner-dashboard-after-onboarding",
+    "label": "Diviner Dashboard",
+    "description": "Dashboard shown after full onboarding completion.",
+    "group": "People",
+    "subModule": "Diviners",
+    "purpose": "Provides access to diviner tools and features.",
+    "bullets": [
+      "Shows dashboard overview.",
+      "Displays sessions and planetary data.",
+      "Profile completion checklist.",
+      "Sidebar navigation for full system access."
+    ]
+  },
 
-{
-  "name": "admin_user_invitations",
-  "label": "Invitations: User Invitation Management",
-  "description": "The admin screen used to manage pending and sent user invitations in one place.",
-  "group": "People",
-  "subModule": "Diviners",
-  "purpose": "This screen is used when admins need to track, search, and manage invitation-based onboarding. It helps the team monitor who has been invited, what state each invitation is in, and whether follow-up action may be needed. The page is useful because not every user is added manually; some users join through invitation workflows. This screen keeps invitation records organized, makes it easy to review pending or expired invites, and supports invite-based account creation from a central place.",
-  "bullets": [
-    "📨 Invitations Header — Identifies this page as the central area for invitation tracking and invite-based onboarding management.",
-    "🔢 Invitation Count Badge — Shows the total number of invitation records currently available in the list view.",
-    "🔍 Search Field — Used to find invitations by email, assigned role, or inviter details without scanning the full list manually.",
-    "🟤 All Tab — Shows every invitation record regardless of status, giving a complete invitation overview.",
-    "⏳ Pending Tab — Shows invitations that were sent but not yet accepted or completed.",
-    "✅ Accepted Tab — Shows invitations that have already been accepted and successfully used.",
-    "⌛ Expired Tab — Shows invitations that are no longer valid because the invitation period ended.",
-    "❌ Cancelled Tab — Shows invitations that were manually cancelled and should no longer be used.",
-    "➕ Invite User Button — Starts the workflow to send a new invitation to a user who should join the platform through invite-based onboarding.",
-    "📋 Invitation Panel — Groups the search tools, status tabs, and invitation results into one structured workspace.",
-    "📭 Empty State Message — When no invitation records match the current view, the screen shows a clear 'No invitations found' message so the admin knows the list is empty rather than broken.",
-    "🧠 Why This Screen Is Useful — It gives admins one simple place to review onboarding progress, monitor invitation status, find missing invite records, and send new invitations when needed."
-  ]
-},
-
-{
-  "name": "admin_diviner_publishing_controls",
-  "label": "Diviners: Publishing Controls",
-  "description": "The admin control screen used to manage which parts of a diviner's public profile can be shown or hidden.",
-  "group": "People",
-  "subModule": "Diviners",
-  "purpose": "This screen is used when an admin needs to control the public visibility of a diviner's profile and related public sections. It helps the platform decide whether a diviner should be fully visible to the public, partially visible, or restricted in certain areas. The purpose of this screen is to protect publishing quality, enforce moderation, manage incomplete profiles, and control what visitors can see on a diviner's public page. It is useful because sometimes a diviner account should stay active internally but some public modules, media types, or session counters may need to be hidden, blocked, or overridden.",
-  "bullets": [
-    "👤 Diviner Header — Shows the diviner's name, username, email, phone number, and service package so the admin knows exactly which profile is being controlled.",
-    "🟢 Status Badge — Shows the current account state, such as active, so the admin can understand whether the diviner is currently enabled in the system.",
-    "🌐 Public Page Button — Opens the public-facing diviner page so the admin can review how the profile currently appears to visitors.",
-    "✏️ Edit User Button — Opens the diviner profile in edit mode so account and profile details can be updated directly.",
-    "🛡️ Publishing Controls Section — This is the main moderation area where admins control public visibility settings for the diviner profile.",
-    "⛔ Block All Public Publishing Toggle — Hides the diviner's entire public presence from publishing, regardless of individual section settings. This is useful when the whole public profile must be disabled quickly.",
-    "📦 Block Specific Public Sections — Lets the admin selectively hide only certain public profile sections instead of blocking the whole page.",
-    "🪪 Hero and Profile Header Option — Hides the top public profile summary area, usually including core identity and profile-introduction details.",
-    "📝 Bio Tab Option — Hides the biography or personal-description section from the public profile.",
-    "💼 Services and Offerings Option — Hides the diviner's service list, packages, or public service offerings from viewers.",
-    "📡 Live Stream and Check-In Option — Hides live session or check-in related public modules when those should not be shown.",
-    "🖼️ Media Gallery Option — Hides the diviner's public media gallery, such as images, videos, or showcase content.",
-    "💬 Testimonials Option — Hides public testimonials or reviews shown on the diviner page.",
-    "📅 Weekly Subscription Offer Option — Hides weekly subscription or recurring offer modules from the public profile.",
-    "🎞️ Block Media Types Section — Lets admins restrict only certain content formats while still allowing other media to remain public.",
-    "🎥 Video Option — Blocks video publishing for that diviner.",
-    "🎧 Audio Option — Blocks audio publishing for that diviner.",
-    "📄 Article Option — Blocks article-style content publishing for that diviner.",
-    "🔗 Link Option — Blocks link-based content publishing for that diviner.",
-    "🖼️ Image Option — Blocks image publishing for that diviner.",
-    "📝 Admin Reason Field — Used to record an internal explanation for why the publishing block or restriction is being applied. This helps with moderation tracking and internal admin clarity.",
-    "📊 Diviner Preference for Public Session Counts Toggle — Controls whether the diviner's public session count preference is being considered in visibility logic.",
-    "⚙️ Admin Override Dropdown — Lets the admin decide whether to use the diviner's own preference or apply an override. This is useful when admin rules need to take priority over profile-level settings.",
-    "🗒️ Override Reason Field — Used to record why the admin override is being applied, helping with audit clarity and team communication.",
-    "💾 Save Publishing Controls Button — Saves all visibility, block, and override settings applied on this screen.",
-    "🎯 Why This Screen Is Used — It is used for public-profile moderation, quality control, incomplete-profile handling, visibility management, content restriction, and platform safety decisions.",
-    "🧠 Main Use Case — Useful when a diviner should remain in the system but some public-facing sections, content formats, or counters need to be hidden or controlled without deleting the account."
-  ]
-},
-
-
-  {
-    "name": "admin_diviner_live_system_overrides",
-    "label": "Diviners: Live System Overrides",
-    "description": "An admin control block used to manage visibility and override behavior for live-related diviner modules.",
-    "group": "People",
-    "subModule": "Diviners",
-    "purpose": "This block is used when the admin wants to control how specific live-facing diviner modules behave. It appears to let the admin review individual public or live modules one by one, choose whether each module should follow the diviner's own setting or an admin override, and add an override reason. The purpose of this block is to give section-level control without changing the whole profile. It is useful when some live features should stay visible, hidden, or admin-controlled for moderation, setup, quality control, or rollout reasons.",
-    "bullets": [
-      "📦 Module-by-Module Control — Each row represents a separate live or public-facing module that can be reviewed individually.",
-      "⚙️ Admin Override Dropdown — Lets the admin decide whether to use the diviner's own preference or apply an admin-controlled visibility rule.",
-      "📝 Override Reason Field — Used to record why the override is being applied, helping with moderation clarity and internal tracking.",
-      "🎯 Why This Block Is Used — Useful when only selected live modules need restriction or control instead of blocking the full public profile.",
-      "🧠 Main Use Case — Helps admins apply fine-grained visibility rules for individual diviner modules while keeping the rest of the profile unchanged."
-    ]
-  },
-  {
-    "name": "admin_diviner_seo_readiness",
-    "label": "Diviners: SEO Readiness",
-    "description": "A readiness-check block that shows whether the diviner profile meets important public-page and search-visibility requirements.",
-    "group": "People",
-    "subModule": "Diviners",
-    "purpose": "This block is used to evaluate whether the diviner's public profile is ready for search indexing and public discovery. It appears to summarize progress through a completion indicator and a checklist of required or recommended items. The purpose of this block is to help admins quickly understand what is complete, what is missing, and what still needs improvement before the profile is treated as SEO-ready. It is useful because public discoverability depends on content completeness, structure, and visibility settings.",
-    "bullets": [
-      "📊 Readiness Percentage — Shows an overall SEO completion score so the admin can quickly judge profile readiness.",
-      "✅ Requirement Checklist — Lists important profile requirements or setup items that affect public search quality.",
-      "⚠️ Missing Item Awareness — Helps identify incomplete content or missing setup that may reduce visibility or discoverability.",
-      "🧾 Summary Notes Area — Can provide supporting comments, issue details, or guidance about what still needs attention.",
-      "🎯 Why This Block Is Used — Helps admins review whether a diviner profile is complete enough for strong public presentation and search performance.",
-      "🧠 Main Use Case — Useful before publishing, promoting, indexing, or quality-approving a diviner's public page."
-    ]
-  },
-  {
-    "name": "admin_diviner_seo_settings",
-    "label": "Diviners: SEO Settings",
-    "description": "A detailed SEO configuration block used to control metadata, indexing behavior, location signals, and social-preview settings for a diviner page.",
-    "group": "People",
-    "subModule": "Diviners",
-    "purpose": "This block is used to configure the public search and sharing behavior of the diviner page. It appears to include fields for city, region, country, index controls, canonical settings, page title, description, keywords, share image, structured data or metadata fields, and social-preview options. The purpose of this block is to make the public diviner page easier to discover, easier to understand for search engines, and better formatted when shared externally. It is useful because SEO settings directly affect visibility, indexing quality, click-through appeal, and how the page appears on search and social platforms.",
-    "bullets": [
-      "📍 Location Fields — Used to define city, region, and country information so the page can carry location relevance.",
-      "🔎 Index / No-Index Controls — Used to decide whether search engines should index the diviner page.",
-      "🔗 Canonical Setting — Helps define the preferred page URL for search engines and reduce duplicate-page confusion.",
-      "📰 SEO Title Field — Used to define the search-result title shown in search engine listings.",
-      "📝 Meta Description Field — Used to define the short summary shown under the page title in search results.",
-      "🏷️ Keyword / Search Terms Fields — Used to reinforce topical relevance and help organize search intent signals.",
-      "🖼️ Share Image / Preview Image — Used to control how the page appears when shared on social or external platforms.",
-      "📣 Social Metadata Toggles — Used to control how preview information is generated for social-sharing platforms.",
-      "🧠 Why This Block Is Used — Helps admins improve search visibility, indexing behavior, page quality, and social-preview appearance.",
-      "🎯 Main Use Case — Useful for public discoverability, local search relevance, branded page presentation, and better traffic quality."
-    ]
-  },
-  {
-    "name": "admin_diviner_profile_metrics_summary",
-    "label": "Diviners: Profile Metrics Summary",
-    "description": "A compact metric-summary block showing key public or operational numbers related to the diviner profile.",
-    "group": "People",
-    "subModule": "Diviners",
-    "purpose": "This block is used to show high-level profile numbers in a quick dashboard format. It appears to include multiple summary tiles, such as counts, totals, service numbers, affiliate numbers, review or content-related totals, and other performance indicators. The purpose of this block is to give admins a fast snapshot of the diviner's current profile scale, engagement, or business readiness without opening multiple sections. It is useful because admins often need quick metrics before deciding whether to update, restrict, optimize, or promote a profile.",
-    "bullets": [
-      "📊 Summary Tiles — Show important counts or totals in a fast, easy-to-scan format.",
-      "🔢 Operational Visibility — Helps admins understand the overall activity or setup level of the profile at a glance.",
-      "📈 Performance Awareness — Makes it easier to compare profile size, readiness, or value without reading full details.",
-      "🎯 Why This Block Is Used — Useful for quick decision-making and account review before deeper edits.",
-      "🧠 Main Use Case — Helps admins judge profile strength, activity, and completeness from one small dashboard area."
-    ]
-  },
-  {
-    "name": "admin_diviner_phone_chat_apps",
-    "label": "Diviners: Phone & Chat Apps",
-    "description": "A communication-management block used to review phone availability and app-based contact or chat setup for the diviner.",
-    "group": "People",
-    "subModule": "Diviners",
-    "purpose": "This block is used to manage how the diviner can be contacted through direct phone or related communication apps. It appears to show phone details, verification or status indicators, and options related to communication channels. The purpose of this block is to help admins confirm whether the diviner's communication setup is complete, safe, and usable for platform workflows. It is useful because live services and user communication often depend on accurate phone and messaging availability.",
-    "bullets": [
-      "📞 Primary Contact Display — Shows the diviner's main phone information for reference and support workflows.",
-      "✅ Communication Readiness — Helps admins review whether direct contact or call setup is valid and usable.",
-      "💬 Chat / App Availability — Indicates whether app-based communication channels are connected or enabled.",
-      "🧠 Why This Block Is Used — Helps ensure the diviner can be contacted correctly through approved communication routes.",
-      "🎯 Main Use Case — Useful for contact validation, support workflows, and live-service readiness."
-    ]
-  },
-  
-  {
-    "name": "admin_diviner_service_dashboard",
-    "label": "Diviners: Service Dashboard",
-    "description": "A detailed service-management block showing the diviner's configured services, categories, prices, durations, status, and setup details.",
-    "group": "People",
-    "subModule": "Diviners",
-    "purpose": "This block is used to review and manage the diviner's offered services. It appears to contain service rows grouped by categories, with information such as service name, service type, prices, durations, active status, and possibly booking-related or package-related settings. The purpose of this block is to help admins verify that the diviner's offerings are configured correctly and are suitable for public display, booking, and monetization. It is useful because the service catalog is one of the main operational parts of the diviner profile.",
-    "bullets": [
-      "📋 Service List — Shows all configured services linked to the diviner account.",
-      "🏷️ Service Category Grouping — Helps organize services by type or service family.",
-      "💲 Price Visibility — Shows what each service costs so admins can review commercial setup.",
-      "⏱️ Duration Visibility — Shows the expected service time, which is important for booking and scheduling logic.",
-      "🟢 Service Status — Indicates whether each service is active, available, or restricted.",
-      "⚙️ Service-Level Controls — May allow the admin to review, toggle, or inspect individual offerings.",
-      "🎯 Why This Block Is Used — Helps verify whether service offerings are complete, correct, and ready for clients.",
-      "🧠 Main Use Case — Useful for monetization review, service-quality checks, booking readiness, and public-offering control."
-    ]
-  },
- 
     
   // ----------Affiliates-------------//
 

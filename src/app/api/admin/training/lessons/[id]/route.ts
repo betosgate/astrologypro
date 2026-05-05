@@ -21,7 +21,7 @@ export async function GET(
   const { data, error } = await admin
     .from("training_lessons")
     .select(
-      "id, category_id, title, description, video_url, pdf_url, content, duration_mins, priority, previous_lesson_id, is_active, created_at"
+      "id, category_id, title, description, video_url, pdf_url, audio_url, content, duration_mins, priority, previous_lesson_id, is_active, created_at"
     )
     .eq("id", id)
     .single();
@@ -50,6 +50,7 @@ export async function PUT(
     description?: string | null;
     video_url?: string | null;
     pdf_url?: string | null;
+    audio_url?: string | null;
     content?: string | null;
     duration_mins?: number | null;
     category_id?: string;
@@ -68,6 +69,7 @@ export async function PUT(
     description,
     video_url,
     pdf_url,
+    audio_url,
     content,
     duration_mins,
     category_id,
@@ -94,6 +96,7 @@ export async function PUT(
       description: description ?? null,
       video_url: video_url ?? null,
       pdf_url: pdf_url ?? null,
+      audio_url: audio_url ?? null,
       content: content ?? null,
       duration_mins: duration_mins ?? null,
       category_id,

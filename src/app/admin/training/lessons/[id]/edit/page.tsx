@@ -18,6 +18,7 @@ import { SectionContainer } from "@/components/shared/section-container";
 import { TrainingNotes } from "@/components/admin/training-notes";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
+  uploadTrainingAudio,
   uploadTrainingPdf,
   uploadTrainingVideo,
 } from "@/lib/training/upload-video";
@@ -83,6 +84,7 @@ interface LessonOption {
 
 type VideoMode = "youtube" | "url" | "upload";
 type PdfMode = "url" | "upload";
+type AudioMode = "url" | "upload";
 
 type ConfirmationState = {
   title: string;
@@ -101,6 +103,18 @@ function detectVideoMode(url: string | null): VideoMode {
 function detectPdfMode(url: string | null): PdfMode {
   if (!url) return "url";
   if (url.includes("storage/v1/object/public/all-frontend-assets") || url.includes("supabase.co/storage")) {
+    return "upload";
+  }
+  return "url";
+}
+
+function detectAudioMode(url: string | null): AudioMode {
+  if (!url) return "url";
+  // Audio uploads land in the all-frontend-assets bucket under training/audio/.
+  if (
+    url.includes("storage/v1/object/public/all-frontend-assets/training/audio") ||
+    url.includes("supabase.co/storage")
+  ) {
     return "upload";
   }
   return "url";
@@ -147,11 +161,21 @@ export default function EditLessonPage() {
   const [pdfUrls, setPdfUrls] = useState<string[]>([]);
   const [pdfPreview, setPdfPreview] = useState<{ url: string; title: string } | null>(null);
 
+  // Audio state — first-class lesson audio (Mystery School Foundation migration).
+  // Mirrors the pattern used by video / PDF: a mode toggle (URL vs upload),
+  // upload progress, and last-uploaded filename.
+  const [audioMode, setAudioMode] = useState<AudioMode>("url");
+  const [audioUploadPercent, setAudioUploadPercent] = useState<number | null>(null);
+  const [audioUploadStatus, setAudioUploadStatus] = useState<string | null>(null);
+  const [uploadedAudioFileName, setUploadedAudioFileName] = useState<string | null>(null);
+  const audioFileInputRef = useRef<HTMLInputElement>(null);
+
   const [form, setForm] = useState({
     title: "",
     description: "",
     video_url: "",
     pdf_url: "",
+    audio_url: "",
     content: "",
     duration_mins: "",
     category_id: "",
@@ -229,6 +253,7 @@ export default function EditLessonPage() {
         const l = lessonData.lesson;
         setVideoMode(detectVideoMode(l.video_url));
         setPdfMode(detectPdfMode(l.pdf_url));
+        setAudioMode(detectAudioMode(l.audio_url));
 
         // Parse pdf_url for multi-PDF support
         let initialPdfUrls: string[] = [];
@@ -254,6 +279,7 @@ export default function EditLessonPage() {
           description: l.description ?? "",
           video_url: l.video_url ?? "",
           pdf_url: formPdfUrl,
+          audio_url: l.audio_url ?? "",
           content: l.content ?? "",
           duration_mins: l.duration_mins != null ? String(l.duration_mins) : "",
           category_id: l.category_id ?? "",
@@ -648,6 +674,67 @@ export default function EditLessonPage() {
     }
   }
 
+  function handleAudioModeChange(mode: AudioMode) {
+    setAudioMode(mode);
+    setUploadedAudioFileName(null);
+    setAudioUploadStatus(null);
+    setAudioUploadPercent(null);
+    setForm((prev) => ({ ...prev, audio_url: "" }));
+    if (audioFileInputRef.current) {
+      audioFileInputRef.current.value = "";
+    }
+  }
+
+  async function handleAudioFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const MAX_MB = 50;
+    if (file.size > MAX_MB * 1024 * 1024) {
+      toast.error(`Audio file must be under ${MAX_MB} MB.`);
+      e.target.value = "";
+      return;
+    }
+
+    // Match the server allowlist in /api/admin/training/upload (kind=audio).
+    const allowed = [
+      "audio/mpeg",
+      "audio/mp3",
+      "audio/mp4",
+      "audio/x-m4a",
+      "audio/aac",
+      "audio/wav",
+      "audio/x-wav",
+      "audio/webm",
+      "audio/ogg",
+      "audio/flac",
+    ];
+    if (!allowed.includes(file.type)) {
+      toast.error("Only MP3, M4A, AAC, WAV, OGG, WebM, or FLAC files are allowed.");
+      e.target.value = "";
+      return;
+    }
+
+    setAudioUploadPercent(0);
+    setAudioUploadStatus("Preparing upload…");
+    try {
+      const { url } = await uploadTrainingAudio({
+        file,
+        onProgress: (percent) => setAudioUploadPercent(percent),
+        onStatus: setAudioUploadStatus,
+      });
+      setForm((prev) => ({ ...prev, audio_url: url }));
+      setUploadedAudioFileName(file.name);
+      toast.success("Audio uploaded.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Upload failed. Please try again.");
+      e.target.value = "";
+    } finally {
+      setAudioUploadPercent(null);
+      setAudioUploadStatus(null);
+    }
+  }
+
   async function handleVideoFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -757,6 +844,7 @@ export default function EditLessonPage() {
           pdf_url: pdfMode === "url"
             ? (form.pdf_url.trim() || null)
             : (pdfUrls.length > 0 ? JSON.stringify(pdfUrls) : null),
+          audio_url: form.audio_url.trim() || null,
           content: form.content.trim() || null,
           duration_mins: form.duration_mins ? parseInt(form.duration_mins, 10) : null,
           category_id: form.category_id,
@@ -1171,6 +1259,88 @@ export default function EditLessonPage() {
                 <p className="text-xs text-muted-foreground break-all">
                   Resource: {form.pdf_url}
                 </p>
+              )}
+            </div>
+
+            {/* Audio — first-class lesson audio (Mystery School Foundation migration).
+                Mirrors the PDF mode-toggle UX so admins get a consistent editor.
+                Stored on training_lessons.audio_url; rendered to learners as an
+                inline HTML5 audio player. */}
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">Audio</label>
+              <div className="flex rounded-lg border bg-muted/30 p-1">
+                {(["url", "upload"] as const).map((mode) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => handleAudioModeChange(mode)}
+                    className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition ${audioMode === mode
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                      }`}
+                  >
+                    {mode === "url" ? "Audio URL" : "Upload Audio"}
+                  </button>
+                ))}
+              </div>
+
+              {audioMode === "url" && (
+                <input
+                  id="audio_url"
+                  name="audio_url"
+                  type="url"
+                  value={form.audio_url}
+                  onChange={handleChange}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                  placeholder="https://..."
+                />
+              )}
+
+              {audioMode === "upload" && (
+                <div className="space-y-2">
+                  <input
+                    ref={audioFileInputRef}
+                    type="file"
+                    accept="audio/mpeg,audio/mp3,audio/mp4,audio/x-m4a,audio/aac,audio/wav,audio/x-wav,audio/webm,audio/ogg,audio/flac"
+                    onChange={handleAudioFileChange}
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm file:mr-3 file:rounded file:border-0 file:bg-primary file:px-3 file:py-1 file:text-xs file:font-medium file:text-primary-foreground"
+                    disabled={audioUploadPercent !== null}
+                  />
+                  {audioUploadPercent !== null && (
+                    <div className="space-y-1">
+                      <Progress value={audioUploadPercent} className="h-2" />
+                      <p className="text-xs text-muted-foreground">
+                        {audioUploadStatus ?? "Uploading audio…"} {audioUploadPercent}%
+                      </p>
+                    </div>
+                  )}
+                  {uploadedAudioFileName && audioUploadPercent === null && (
+                    <p className="text-xs text-green-600">
+                      Uploaded: {uploadedAudioFileName}
+                    </p>
+                  )}
+                  {form.audio_url && !uploadedAudioFileName && (
+                    <p className="text-xs text-muted-foreground break-all">
+                      Current: {form.audio_url}
+                    </p>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    MP3, M4A, AAC, WAV, OGG, WebM or FLAC · max 50 MB
+                  </p>
+                </div>
+              )}
+
+              {form.audio_url && (
+                <div className="rounded-lg border bg-muted/30 p-3">
+                  <audio
+                    src={form.audio_url}
+                    controls
+                    preload="metadata"
+                    className="w-full"
+                  >
+                    Your browser does not support the audio element.
+                  </audio>
+                </div>
               )}
             </div>
 
