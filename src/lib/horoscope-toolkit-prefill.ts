@@ -39,6 +39,14 @@ export interface ToolkitPrefillForm {
   futureMonth: string;
 }
 
+export interface ToolkitFamilyMemberPrefill {
+  id: string;
+  fullName: string;
+  relationship: string | null;
+  ageGroup: string | null;
+  birth: ToolkitBirthInput;
+}
+
 type GeoLookup = {
   label: string;
   lat: number;
@@ -218,4 +226,25 @@ export async function buildToolkitPrefillForm(input: {
     futureWeek: input.futureWeek ?? "",
     futureMonth: input.futureMonth ?? "",
   };
+}
+
+export async function buildToolkitFamilyMemberPrefills(
+  members: Array<
+    ToolkitBirthSeed & {
+      id: string;
+      fullName?: string | null;
+      relationship?: string | null;
+      ageGroup?: string | null;
+    }
+  >,
+): Promise<ToolkitFamilyMemberPrefill[]> {
+  return Promise.all(
+    members.map(async (member) => ({
+      id: member.id,
+      fullName: member.fullName ?? "",
+      relationship: member.relationship ?? null,
+      ageGroup: member.ageGroup ?? null,
+      birth: await buildToolkitBirthInput(member),
+    })),
+  );
 }

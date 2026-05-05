@@ -1,16 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminUser } from "@/lib/admin-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getFoundationWeekTimelineForUser } from "@/lib/mystery-school/foundation-progress";
 
 export const dynamic = "force-dynamic";
 
 /**
  * GET /api/admin/mystery-school/students/[id]
+ *
+ * Spec: docs/tasks/2026-04-30/mystery-school-admin-training-unification-v3.md
+ *   §3 Update Mystery School Admin progress to match Training.
+ *
  * Returns full student detail for the admin view:
  *   - mystery_school_students row
  *   - community_members name/email
  *   - All 36 student_decan_progress rows (with retry and excuse fields)
- *   - Foundation progress (weeks completed + task_completions)
+ *   - Foundation progress, derived from the Mystery School Foundation
+ *     Training program (training_categories + category_completions +
+ *     lesson_completions). Legacy student_foundation_progress is kept as a
+ *     fallback when the Training program is absent.
  *   - Graduation eligibility: count of unexcused missed decans
  */
 export async function GET(
@@ -52,9 +60,17 @@ export async function GET(
     return NextResponse.json({ error: "Student not found" }, { status: 404 });
   }
 
-  // Parallel fetches
-  const [memberRes, decanProgressRes, foundationRes, authUsersRes] = await Promise.all([
-    // Community member info
+  // Parallel fetches.
+  // Foundation progress is read from Training tables via the helper (source
+  // of truth in v3). The legacy student_foundation_progress query is kept
+  // for fallback display when Training is not yet populated.
+  const [
+    memberRes,
+    decanProgressRes,
+    legacyFoundationRes,
+    authUsersRes,
+    trainingTimeline,
+  ] = await Promise.all([
     student.community_member_id
       ? admin
           .from("community_members")
@@ -67,7 +83,6 @@ export async function GET(
           .eq("user_id", student.user_id)
           .maybeSingle(),
 
-    // All decan progress rows for this student
     admin
       .from("student_decan_progress")
       .select(
@@ -81,15 +96,15 @@ export async function GET(
       )
       .eq("student_id", id),
 
-    // Foundation progress
     admin
       .from("student_foundation_progress")
       .select("id, week_number, completed_at, week_completed_at, task_completions")
       .eq("student_id", id)
       .order("week_number"),
 
-    // Auth users for admin email lookup (for excused_by display)
     admin.auth.admin.listUsers({ perPage: 1000 }),
+
+    getFoundationWeekTimelineForUser(admin, student.user_id),
   ]);
 
   type MemberRow = {
@@ -126,7 +141,7 @@ export async function GET(
     updated_at: string;
   };
 
-  type FoundationProgressRow = {
+  type LegacyFoundationProgressRow = {
     id: string;
     week_number: number;
     completed_at: string | null;
@@ -136,7 +151,8 @@ export async function GET(
 
   const member = memberRes.data as unknown as MemberRow | null;
   const decanProgressRows = (decanProgressRes.data ?? []) as unknown as DecanProgressRow[];
-  const foundationRows = (foundationRes.data ?? []) as unknown as FoundationProgressRow[];
+  const legacyFoundationRows = (legacyFoundationRes.data ??
+    []) as unknown as LegacyFoundationProgressRow[];
   const authUsers = authUsersRes.data?.users ?? [];
 
   // Build auth email map for admin name display
@@ -162,11 +178,29 @@ export async function GET(
   const completedCount = decanProgress.filter((r) => r.status === "completed").length;
   const graduationEligible = completedCount === 36 && unexcusedMissedCount === 0;
 
-  // Foundation summary
-  const weeksCompleted = foundationRows.length;
-  const totalTasksCompleted = foundationRows.reduce((sum, row) => {
+  // ── Foundation summary (Training-backed when available) ─────────────────
+  const trainingProgramPresent = trainingTimeline.shape.program_present;
+
+  // Training-derived metrics: a "complete" week is either category_completions
+  // having a row OR every active lesson in that category being complete.
+  const trainingWeeksCompleted = trainingTimeline.weeks.filter(
+    (w) => w.completed
+  ).length;
+  const trainingLessonsCompleted = trainingTimeline.weeks.reduce(
+    (sum, w) => sum + w.lessons_completed,
+    0
+  );
+  const trainingTotalWeeks = trainingTimeline.weeks.length;
+
+  // Legacy fallback metrics (only used when the Training program is absent).
+  const legacyWeeksCompleted = legacyFoundationRows.length;
+  const legacyTasksCompleted = legacyFoundationRows.reduce((sum, row) => {
     return sum + Object.keys(row.task_completions ?? {}).length;
   }, 0);
+
+  const foundationSource: "training" | "legacy" = trainingProgramPresent
+    ? "training"
+    : "legacy";
 
   return NextResponse.json({
     student: {
@@ -182,9 +216,28 @@ export async function GET(
     },
     decan_progress: decanProgress,
     foundation_progress: {
-      weeks_completed: weeksCompleted,
-      total_tasks_completed: totalTasksCompleted,
-      rows: foundationRows,
+      source: foundationSource,
+      // Unified counters used by the admin UI. These mirror the learner
+      // overview when Training is the source of truth.
+      weeks_completed: trainingProgramPresent
+        ? trainingWeeksCompleted
+        : legacyWeeksCompleted,
+      total_weeks: trainingProgramPresent ? trainingTotalWeeks : 12,
+      lessons_completed: trainingProgramPresent
+        ? trainingLessonsCompleted
+        : legacyTasksCompleted,
+      // Kept for backward compatibility with existing UI label.
+      total_tasks_completed: trainingProgramPresent
+        ? trainingLessonsCompleted
+        : legacyTasksCompleted,
+      // Detailed per-week breakdown from Training; empty array if program
+      // not present (UI should fall back to legacy_rows).
+      weeks: trainingTimeline.weeks,
+      // Legacy rows preserved so the admin can see historical task data
+      // even after the cutover.
+      legacy_rows: legacyFoundationRows,
+      // Backward-compat alias used by the existing student detail page.
+      rows: legacyFoundationRows,
     },
     graduation: {
       eligible: graduationEligible,
