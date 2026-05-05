@@ -29,6 +29,7 @@ export async function GET(req: NextRequest) {
   const params = parsePaginationParams(sp);
   const createdFrom = sp.get("created_from");
   const createdTo = sp.get("created_to");
+  const programId = sp.get("program_id");
 
   const admin = createAdminClient();
   try {
@@ -37,11 +38,12 @@ export async function GET(req: NextRequest) {
       "training_categories",
       SELECT_COLS,
       params,
-      ["name", "description"],
+      ["name"],
       ALLOWED_SORTS,
       { column: "priority", ascending: true },
       (q) => {
         let filtered = q;
+        if (programId) filtered = filtered.eq("training_id", programId);
         if (createdFrom) filtered = filtered.gte("created_at", createdFrom);
         if (createdTo) filtered = filtered.lte("created_at", createdTo + "T23:59:59");
         return filtered;

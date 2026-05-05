@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
       "training_lessons",
       SELECT_COLS,
       params,
-      ["title", "description"],
+      ["title"],
       ALLOWED_SORTS,
       { column: "priority", ascending: true },
       (q) => {
