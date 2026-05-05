@@ -191,6 +191,31 @@ function VideoPlayer({
 }) {
   const embedUrl = getVideoEmbed(video.video_url);
   const isDirect = isHtml5Video(video.video_url);
+  const maxWatchedPositionRef = useRef(0);
+
+  const preventForwardSeek = useCallback(
+    (event: React.SyntheticEvent<HTMLVideoElement>) => {
+      const media = event.currentTarget;
+      const maxAllowed = maxWatchedPositionRef.current + 1;
+      if (media.currentTime > maxAllowed) {
+        media.currentTime = maxWatchedPositionRef.current;
+      }
+    },
+    []
+  );
+
+  const rememberWatchedPosition = useCallback(
+    (event: React.SyntheticEvent<HTMLVideoElement>) => {
+      const media = event.currentTarget;
+      if (!media.seeking) {
+        maxWatchedPositionRef.current = Math.max(
+          maxWatchedPositionRef.current,
+          media.currentTime
+        );
+      }
+    },
+    []
+  );
 
   return (
     <div className="w-full overflow-hidden rounded-xl border bg-black">
@@ -212,6 +237,8 @@ function VideoPlayer({
           muted
           playsInline
           className="aspect-video w-full bg-black object-contain"
+          onTimeUpdate={rememberWatchedPosition}
+          onSeeking={preventForwardSeek}
           onEnded={onEnded}
         />
       ) : (
@@ -276,6 +303,7 @@ function TriggerVideoPlayer({
   const isDirect = isHtml5Video(video.video_url);
 
   const videoRef = useRef<HTMLVideoElement>(null);
+  const maxWatchedPositionRef = useRef(Math.max(0, initialPosition));
 
   // Track which triggers have been passed locally (optimistic after API confirms)
   const [localPassedIds, setLocalPassedIds] = useState<Set<string>>(() => {
@@ -473,6 +501,12 @@ function TriggerVideoPlayer({
     if (!vid || activeTrigger || rewindCountdown !== null) return;
 
     const current = vid.currentTime;
+    if (!vid.seeking) {
+      maxWatchedPositionRef.current = Math.max(
+        maxWatchedPositionRef.current,
+        current
+      );
+    }
     for (const trigger of unpassedTriggers) {
       const ts = trigger.trigger_timestamp_seconds;
       // Fire when within 1s window of the trigger timestamp
@@ -491,7 +525,10 @@ function TriggerVideoPlayer({
     const vid = videoRef.current;
     if (!vid) return;
     const seekTarget = vid.currentTime;
-    const boundary = getPlaybackBoundary();
+    const boundary = Math.min(
+      getPlaybackBoundary(),
+      maxWatchedPositionRef.current + 1
+    );
     if (seekTarget > boundary) {
       vid.currentTime = boundary;
     }
@@ -711,6 +748,7 @@ export function LessonViewerClient(props: LessonViewerProps) {
 
   const [activeVideoIdx, setActiveVideoIdx] = useState(0);
   const [isCompleted, setIsCompleted] = useState(initialCompleted);
+  const [mediaCompleted, setMediaCompleted] = useState(initialCompleted);
   const [isQuizPassed, setIsQuizPassed] = useState(quizPassed);
   const [passedTriggerIds, setPassedTriggerIds] = useState<string[]>(
     triggers
@@ -747,9 +785,12 @@ export function LessonViewerClient(props: LessonViewerProps) {
   const remediationPlaybackActiveRef = useRef(false);
   const videoSectionRef = useRef<HTMLDivElement>(null);
   const quizSectionRef = useRef<HTMLDivElement>(null);
+  const audioMaxWatchedPositionRef = useRef(0);
 
   const hasQuiz = quizQuestions.length > 0;
   const hasSidebarRail = sidebarLessons.length > 0;
+  const hasTrackableMedia =
+    !!audioUrl || allVideos.some((video) => isHtml5Video(video.video_url));
 
   // All in-video trigger questions must be answered correctly before completing.
   // A trigger counts as requiring a pass if it has a question attached.
@@ -769,9 +810,35 @@ export function LessonViewerClient(props: LessonViewerProps) {
   // standard quiz if in-video triggers also existed.
   const triggersSatisfied = !hasTriggers || allTriggersPassed;
   const quizSatisfied = !hasQuiz || isQuizPassed;
-  const canComplete = triggersSatisfied && quizSatisfied;
+  const mediaSatisfied = !hasTrackableMedia || mediaCompleted;
+  const canComplete = triggersSatisfied && quizSatisfied && mediaSatisfied;
+
+  const rememberAudioWatchedPosition = useCallback(
+    (event: React.SyntheticEvent<HTMLAudioElement>) => {
+      const media = event.currentTarget;
+      if (!media.seeking) {
+        audioMaxWatchedPositionRef.current = Math.max(
+          audioMaxWatchedPositionRef.current,
+          media.currentTime
+        );
+      }
+    },
+    []
+  );
+
+  const preventAudioForwardSeek = useCallback(
+    (event: React.SyntheticEvent<HTMLAudioElement>) => {
+      const media = event.currentTarget;
+      const maxAllowed = audioMaxWatchedPositionRef.current + 1;
+      if (media.currentTime > maxAllowed) {
+        media.currentTime = audioMaxWatchedPositionRef.current;
+      }
+    },
+    []
+  );
 
   const handleVideoEnded = () => {
+    setMediaCompleted(true);
     // Auto-advance to next video if available
     if (activeVideoIdx < allVideos.length - 1) {
       setActiveVideoIdx((i) => i + 1);
@@ -1040,6 +1107,9 @@ export function LessonViewerClient(props: LessonViewerProps) {
                   preload="metadata"
                   aria-label={`Audio for ${title}`}
                   className="w-full"
+                  onTimeUpdate={rememberAudioWatchedPosition}
+                  onSeeking={preventAudioForwardSeek}
+                  onEnded={() => setMediaCompleted(true)}
                 >
                   Your browser does not support the audio element.
                 </audio>
@@ -1204,7 +1274,9 @@ export function LessonViewerClient(props: LessonViewerProps) {
             disabled={!canComplete}
             disabledReason={
               !canComplete
-                ? !triggersSatisfied && !quizSatisfied
+                ? !mediaSatisfied
+                  ? "Play the lesson audio or video completely before continuing."
+                  : !triggersSatisfied && !quizSatisfied
                   ? "Answer all in-video questions and pass the lesson quiz to complete this lesson."
                   : !triggersSatisfied
                     ? "Answer all in-video quiz questions correctly to complete this lesson."
