@@ -52,6 +52,23 @@ export async function POST(request: NextRequest) {
       typeof body.familyMemberId === "string" ? body.familyMemberId : null;
     const personAId = typeof body.personAId === "string" ? body.personAId : null;
     const personBId = typeof body.personBId === "string" ? body.personBId : null;
+    const familyMemberIds = (
+      Array.isArray(body.extras?.familyMembers)
+        ? body.extras?.familyMembers
+        : Array.isArray(body.extras?.family_members)
+          ? body.extras?.family_members
+          : []
+    )
+      .map((familyMember) =>
+        familyMember &&
+        typeof familyMember === "object" &&
+        "id" in familyMember &&
+        typeof familyMember.id === "string"
+          ? familyMember.id
+          : null
+      )
+      .filter((id): id is string => Boolean(id));
+    const isFamilyOverview = familyMemberIds.length > 0;
 
     if (!toolname) {
       return NextResponse.json(
@@ -59,9 +76,9 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-    if (!familyMemberId && (!personAId || !personBId)) {
+    if (!familyMemberId && !isFamilyOverview && (!personAId || !personBId)) {
       return NextResponse.json(
-        { error: "familyMemberId or relationship pair ids are required" },
+        { error: "familyMemberId, relationship pair ids, or family members are required" },
         { status: 400 }
       );
     }
@@ -121,6 +138,28 @@ export async function POST(request: NextRequest) {
       if ((pairMembers ?? []).length !== 2) {
         return NextResponse.json(
           { error: "Relationship members not found" },
+          { status: 404 }
+        );
+      }
+    }
+
+    if (isFamilyOverview) {
+      const uniqueFamilyMemberIds = Array.from(new Set(familyMemberIds));
+      const { data: familyMembers, error: familyMembersError } = await admin
+        .from("community_family_members")
+        .select("id")
+        .eq("member_id", member.id)
+        .in("id", uniqueFamilyMemberIds);
+
+      if (familyMembersError) {
+        return NextResponse.json(
+          { error: familyMembersError.message },
+          { status: 500 }
+        );
+      }
+      if ((familyMembers ?? []).length !== uniqueFamilyMemberIds.length) {
+        return NextResponse.json(
+          { error: "Family members not found" },
           { status: 404 }
         );
       }
