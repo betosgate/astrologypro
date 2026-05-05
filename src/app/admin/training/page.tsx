@@ -104,6 +104,7 @@ function buildUrl(
   state: TableState,
   search: string,
   status: "all" | "active" | "inactive",
+  extra?: Record<string, string | undefined>,
 ): string {
   const params = new URLSearchParams();
   params.set("page", String(state.page));
@@ -112,6 +113,9 @@ function buildUrl(
   params.set("sortDir", state.sortDir);
   if (search) params.set("search", search);
   if (status !== "all") params.set("status", status);
+  for (const [key, value] of Object.entries(extra ?? {})) {
+    if (value) params.set(key, value);
+  }
   return `${base}?${params.toString()}`;
 }
 
@@ -135,9 +139,11 @@ export default function TrainingPage() {
   // Distinguish first load (show skeletons) from subsequent refreshes (show overlay).
   const [initialLoadDone, setInitialLoadDone] = useState(false);
 
-  // Shared filters
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
+  // Table-specific filters. More tables will get their own filters as needed.
+  const [programSearchTerm, setProgramSearchTerm] = useState("");
+  const [programStatusFilter, setProgramStatusFilter] = useState<"all" | "active" | "inactive">("all");
+  const [programCreatedFrom, setProgramCreatedFrom] = useState("");
+  const [programCreatedTo, setProgramCreatedTo] = useState("");
 
   // ── FK lookup maps ────────────────────────────────────────────────────
   // Built from UNPAGINATED fetches so every category/lesson label resolves
@@ -182,7 +188,16 @@ export default function TrainingPage() {
     const st = stateOverride ?? programState;
     setProgramsRefreshing(true);
     try {
-      const url = buildUrl("/api/admin/training/programs", st, searchTerm, statusFilter);
+      const url = buildUrl(
+        "/api/admin/training/programs",
+        st,
+        programSearchTerm.trim(),
+        programStatusFilter,
+        {
+          created_from: programCreatedFrom,
+          created_to: programCreatedTo,
+        },
+      );
       const res = await fetch(url);
       if (res.ok) {
         const json = await res.json();
@@ -201,7 +216,7 @@ export default function TrainingPage() {
     const st = stateOverride ?? categoryState;
     setCategoriesRefreshing(true);
     try {
-      const url = buildUrl("/api/admin/training/categories", st, searchTerm, statusFilter);
+      const url = buildUrl("/api/admin/training/categories", st, "", "all");
       const res = await fetch(url);
       if (res.ok) {
         const json = await res.json();
@@ -220,7 +235,7 @@ export default function TrainingPage() {
     const st = stateOverride ?? lessonState;
     setLessonsRefreshing(true);
     try {
-      const url = buildUrl("/api/admin/training/lessons", st, searchTerm, statusFilter);
+      const url = buildUrl("/api/admin/training/lessons", st, "", "all");
       const res = await fetch(url);
       if (res.ok) {
         const json = await res.json();
@@ -239,7 +254,7 @@ export default function TrainingPage() {
     const st = stateOverride ?? quizState;
     setQuizzesRefreshing(true);
     try {
-      const url = buildUrl("/api/admin/training/quizzes", st, searchTerm, statusFilter);
+      const url = buildUrl("/api/admin/training/quizzes", st, "", "all");
       const res = await fetch(url);
       if (res.ok) {
         const json = await res.json();
@@ -269,10 +284,22 @@ export default function TrainingPage() {
     }
     void init();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchTerm, statusFilter]);
+  }, []);
 
   // Server-driven: filters are passed to the API, not applied client-side.
-  const filtersActive = !!searchTerm.trim() || statusFilter !== "all";
+  const programFiltersActive =
+    !!programSearchTerm.trim() ||
+    programStatusFilter !== "all" ||
+    !!programCreatedFrom ||
+    !!programCreatedTo;
+
+  useEffect(() => {
+    if (!initialLoadDone) return;
+    const nextState = { ...programState, page: 1 };
+    setProgramState(nextState);
+    void loadPrograms(nextState);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [programSearchTerm, programStatusFilter, programCreatedFrom, programCreatedTo]);
 
   // ── Mutation handlers that also refresh lookup maps ──────────────────
   // After a mutation (edit/activate/deactivate/delete), refresh both the
@@ -663,6 +690,67 @@ export default function TrainingPage() {
     defaultSortDir: "desc",
   };
 
+  const programFiltersSlot = (
+    <div className="rounded-md border bg-muted/20 p-3">
+      <div className="grid gap-3 md:grid-cols-[minmax(220px,1fr)_160px_160px_150px_auto] md:items-end">
+        <div>
+          <Label className="mb-1 block text-xs">Search by Name</Label>
+          <Input
+            placeholder="Program name..."
+            value={programSearchTerm}
+            onChange={(e) => setProgramSearchTerm(e.target.value)}
+          />
+        </div>
+        <div>
+          <Label className="mb-1 block text-xs">Created From</Label>
+          <Input
+            type="date"
+            value={programCreatedFrom}
+            onChange={(e) => setProgramCreatedFrom(e.target.value)}
+          />
+        </div>
+        <div>
+          <Label className="mb-1 block text-xs">Created To</Label>
+          <Input
+            type="date"
+            value={programCreatedTo}
+            onChange={(e) => setProgramCreatedTo(e.target.value)}
+          />
+        </div>
+        <div>
+          <Label className="mb-1 block text-xs">Status</Label>
+          <select
+            value={programStatusFilter}
+            onChange={(e) =>
+              setProgramStatusFilter(e.target.value as "all" | "active" | "inactive")
+            }
+            className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
+          >
+            <option value="all">All statuses</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
+        </div>
+        {programFiltersActive && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setProgramSearchTerm("");
+              setProgramCreatedFrom("");
+              setProgramCreatedTo("");
+              setProgramStatusFilter("all");
+            }}
+            className="gap-1.5"
+          >
+            <FilterX className="size-3.5" />
+            Reset
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+
   return (
     <div className="space-y-8">
       <div className="flex items-start justify-between gap-3 flex-wrap">
@@ -672,48 +760,6 @@ export default function TrainingPage() {
             Manage training programs, categories, lessons, and quizzes.
           </p>
         </div>
-      </div>
-
-      {/* Shared filters */}
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="flex-1 min-w-[200px] max-w-xs">
-          <Label className="text-xs mb-1 block">Search</Label>
-          <Input
-            placeholder="Name, title, or description…"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-        <div>
-          <Label className="text-xs mb-1 block">Status</Label>
-          <select
-            value={statusFilter}
-            onChange={(e) =>
-              setStatusFilter(e.target.value as "all" | "active" | "inactive")
-            }
-            className="flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
-          >
-            <option value="all">All statuses</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-          </select>
-        </div>
-        {filtersActive && (
-          <div className="self-end">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setSearchTerm("");
-                setStatusFilter("all");
-              }}
-              className="gap-1.5"
-            >
-              <FilterX className="size-3.5" />
-              Reset
-            </Button>
-          </div>
-        )}
       </div>
 
       {/* Initial loading skeleton — shown only on first load before data arrives */}
@@ -747,9 +793,14 @@ export default function TrainingPage() {
             rows={programData.rows}
             serverTotal={programData.total}
             rawCount={programData.total}
-            filtersActive={filtersActive}
-            currentSearch={searchTerm}
-            currentStatus={statusFilter}
+            filtersActive={programFiltersActive}
+            currentSearch={programSearchTerm.trim()}
+            currentStatus={programStatusFilter}
+            currentExtraQuery={{
+              created_from: programCreatedFrom,
+              created_to: programCreatedTo,
+            }}
+            filtersSlot={programFiltersSlot}
             onMutated={mutatePrograms}
             onRefresh={() => loadPrograms(programState)}
             isRefreshing={programsRefreshing}
@@ -766,9 +817,9 @@ export default function TrainingPage() {
             rows={categoryData.rows}
             serverTotal={categoryData.total}
             rawCount={categoryData.total}
-            filtersActive={filtersActive}
-            currentSearch={searchTerm}
-            currentStatus={statusFilter}
+            filtersActive={false}
+            currentSearch=""
+            currentStatus="all"
             onMutated={mutateCategories}
             onRefresh={() => loadCategories(categoryState)}
             isRefreshing={categoriesRefreshing}
@@ -785,9 +836,9 @@ export default function TrainingPage() {
             rows={lessonData.rows}
             serverTotal={lessonData.total}
             rawCount={lessonData.total}
-            filtersActive={filtersActive}
-            currentSearch={searchTerm}
-            currentStatus={statusFilter}
+            filtersActive={false}
+            currentSearch=""
+            currentStatus="all"
             onMutated={mutateLessons}
             onRefresh={() => loadLessons(lessonState)}
             isRefreshing={lessonsRefreshing}
@@ -804,9 +855,9 @@ export default function TrainingPage() {
             rows={quizData.rows}
             serverTotal={quizData.total}
             rawCount={quizData.total}
-            filtersActive={filtersActive}
-            currentSearch={searchTerm}
-            currentStatus={statusFilter}
+            filtersActive={false}
+            currentSearch=""
+            currentStatus="all"
             onMutated={mutateQuizzes}
             onRefresh={() => loadQuizzes(quizState)}
             isRefreshing={quizzesRefreshing}
