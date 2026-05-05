@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
       "training_programs",
       SELECT_COLS,
       params,
-      ["name", "description"],
+      ["name"],
       ALLOWED_SORTS,
       { column: "priority", ascending: true },
       (q) => {
