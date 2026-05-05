@@ -22,6 +22,8 @@ import {
   Flame,
   Star,
   PlayCircle,
+  FileText,
+  Music,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -122,8 +124,14 @@ function LessonList({ week }: { week: TrainingWeek }) {
             <div className="mt-0.5 shrink-0">
               {lesson.completed ? (
                 <CheckSquare className="size-4 text-green-500" />
-              ) : (
+              ) : lesson.audio_url && !lesson.video_url && !lesson.pdf_url ? (
+                <Music className="size-4 text-primary" />
+              ) : lesson.video_url && !lesson.audio_url && !lesson.pdf_url ? (
                 <PlayCircle className="size-4 text-primary" />
+              ) : lesson.pdf_url && !lesson.audio_url && !lesson.video_url ? (
+                <FileText className="size-4 text-primary" />
+              ) : (
+                <BookOpen className="size-4 text-primary" />
               )}
             </div>
             <div className="min-w-0 flex-1">

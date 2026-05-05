@@ -3,7 +3,10 @@ import { redirect } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import { buildToolkitPrefillForm } from "@/lib/horoscope-toolkit-prefill";
+import {
+  buildToolkitFamilyMemberPrefills,
+  buildToolkitPrefillForm,
+} from "@/lib/horoscope-toolkit-prefill";
 import { HoroscopeToolkitPage } from "@/app/admin/horoscope/page";
 import {
   loadLinkedRelationshipReport,
@@ -46,6 +49,7 @@ interface SearchParams {
   personBId?: string;
   mode?: string;
   tab?: string;
+  family?: string;
 }
 
 function isRelationshipMode(mode: string | undefined): mode is RelationshipMode {
@@ -61,20 +65,29 @@ export default async function CommunityRelationshipDetailPage({
 }: {
   searchParams: Promise<SearchParams>;
 }) {
-  const { personAId, personBId, mode, tab } = await searchParams;
+  const {
+    personAId,
+    personBId,
+    mode,
+    tab,
+    family: familyParam,
+  } = await searchParams;
+  const isFamilyOverview = familyParam === "1" || familyParam === "true";
 
-  if (!personAId || !personBId || personAId === personBId) {
+  if (!isRelationshipMode(mode)) {
     redirect("/community/charts");
   }
 
-  if (!isRelationshipMode(mode)) {
+  if (!isFamilyOverview && (!personAId || !personBId || personAId === personBId)) {
     redirect("/community/charts");
   }
 
   const selectedMode = mode;
   if (isRelationshipSlug(tab) && RELATIONSHIP_MODE_BY_TAB[tab] !== selectedMode) {
     redirect(
-      `/community/charts/detailed?personAId=${encodeURIComponent(personAId)}&personBId=${encodeURIComponent(personBId)}&mode=${RELATIONSHIP_MODE_BY_TAB[tab]}`
+      isFamilyOverview
+        ? `/community/charts/detailed?family=1&mode=${RELATIONSHIP_MODE_BY_TAB[tab]}`
+        : `/community/charts/detailed?personAId=${encodeURIComponent(personAId!)}&personBId=${encodeURIComponent(personBId!)}&mode=${RELATIONSHIP_MODE_BY_TAB[tab]}`
     );
   }
   const selectedSlug = RELATIONSHIP_TAB_MAP[selectedMode];
@@ -108,10 +121,10 @@ export default async function CommunityRelationshipDetailPage({
   const { data: familyRows } = await admin
     .from("community_family_members")
     .select(
-      "id, full_name, date_of_birth, birth_time, birth_city, birth_country, birth_lat, birth_lng"
+      "id, full_name, date_of_birth, birth_time, birth_city, birth_country, birth_lat, birth_lng, relationship, age_group"
     )
     .eq("member_id", member.id)
-    .in("id", [personAId, personBId]);
+    .order("created_at", { ascending: true });
 
   const family = (familyRows ?? []) as Array<{
     id: string;
@@ -122,10 +135,20 @@ export default async function CommunityRelationshipDetailPage({
     birth_country: string | null;
     birth_lat: number | null;
     birth_lng: number | null;
+    relationship?: string | null;
+    age_group?: string | null;
   }>;
 
-  const personA = family.find((row) => row.id === personAId);
-  const personB = family.find((row) => row.id === personBId);
+  const selectedFamily = isFamilyOverview
+    ? family
+    : family.filter((row) => row.id === personAId || row.id === personBId);
+
+  const personA = isFamilyOverview
+    ? selectedFamily[0]
+    : selectedFamily.find((row) => row.id === personAId);
+  const personB = isFamilyOverview
+    ? selectedFamily[1]
+    : selectedFamily.find((row) => row.id === personBId);
 
   if (!personA || !personB) {
     redirect("/community/charts");
@@ -139,17 +162,19 @@ export default async function CommunityRelationshipDetailPage({
   // then renders the report directly without re-running compute /
   // synastry / composite / AI calls. If null, the toolkit falls back to
   // its existing live-generation flow exactly as before.
-  const savedRelationshipReport = await loadLinkedRelationshipReport({
-    personAId,
-    personBId,
-    reportType: MODE_TO_REPORT_TYPE[selectedMode],
-  }).catch((err) => {
-    console.error(
-      "[community/charts/detailed] loadLinkedRelationshipReport failed:",
-      err,
-    );
-    return null;
-  });
+  const savedRelationshipReport = isFamilyOverview
+    ? null
+    : await loadLinkedRelationshipReport({
+        personAId: personA.id,
+        personBId: personB.id,
+        reportType: MODE_TO_REPORT_TYPE[selectedMode],
+      }).catch((err) => {
+        console.error(
+          "[community/charts/detailed] loadLinkedRelationshipReport failed:",
+          err,
+        );
+        return null;
+      });
 
   const prefill = await buildToolkitPrefillForm({
     person1: {
@@ -171,6 +196,40 @@ export default async function CommunityRelationshipDetailPage({
       birthLng: personB.birth_lng,
     },
   });
+  const familyMemberPrefills = isFamilyOverview
+    ? await buildToolkitFamilyMemberPrefills(
+        selectedFamily.map((familyMember) => ({
+          id: familyMember.id,
+          fullName: familyMember.full_name,
+          relationship: familyMember.relationship ?? null,
+          ageGroup: familyMember.age_group ?? null,
+          dateOfBirth: familyMember.date_of_birth,
+          birthTime: familyMember.birth_time,
+          birthCity: familyMember.birth_city,
+          birthCountry: familyMember.birth_country,
+          birthLat: familyMember.birth_lat,
+          birthLng: familyMember.birth_lng,
+        })),
+      )
+    : [];
+
+  const encodedPrefill = encodeURIComponent(
+    JSON.stringify(
+      isFamilyOverview
+        ? {
+            ...prefill,
+            familyMembers: familyMemberPrefills,
+            family_members: familyMemberPrefills,
+            areaOfInquiry:
+              prefill.areaOfInquiry ||
+              `${selectedFamily.length} family members included in this ${selectedMode} family relationship overview.`,
+          }
+        : prefill,
+    ),
+  );
+  const detailBasePath = isFamilyOverview
+    ? `/community/charts/detailed?family=1&mode=${selectedMode}`
+    : `/community/charts/detailed?personAId=${encodeURIComponent(personA.id)}&personBId=${encodeURIComponent(personB.id)}&mode=${selectedMode}`;
 
   return (
     <div className="space-y-4">
@@ -183,10 +242,10 @@ export default async function CommunityRelationshipDetailPage({
       </Link>
 
       <HoroscopeToolkitPage
-        basePath={`/community/charts/detailed?personAId=${encodeURIComponent(personAId)}&personBId=${encodeURIComponent(personBId)}&mode=${selectedMode}`}
+        basePath={detailBasePath}
         apiBase="/api/community/horoscope"
         allowedSlugs={allowedSlugs}
-        initialPrefill={encodeURIComponent(JSON.stringify(prefill))}
+        initialPrefill={encodedPrefill}
         initialSavedReport={
           savedRelationshipReport
             ? (savedRelationshipReport as Record<string, unknown>)
@@ -197,8 +256,9 @@ export default async function CommunityRelationshipDetailPage({
         // Pair ids drive the post-generate save call to
         // /api/community/saved-reports/relationship/link inside the
         // toolkit, so the next View hydrates from DB.
-        communityRelationshipPersonAId={personAId}
-        communityRelationshipPersonBId={personBId}
+        communityRelationshipPersonAId={isFamilyOverview ? null : personA.id}
+        communityRelationshipPersonBId={isFamilyOverview ? null : personB.id}
+        communityRelationshipFamilyMembers={familyMemberPrefills}
       />
     </div>
   );

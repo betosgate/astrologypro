@@ -36,6 +36,21 @@ export const dynamic = "force-dynamic";
 
 const PROGRAM_NAME = "Mystery School Foundation";
 
+function getFoundationWeekNumber(
+  category: { name: string; priority: number | null },
+  fallback: number
+) {
+  const titleMatch = category.name.match(/^Week\s*(\d+)/i);
+  if (titleMatch) {
+    const parsed = Number.parseInt(titleMatch[1] ?? "", 10);
+    if (Number.isFinite(parsed) && parsed > 0) return parsed;
+  }
+
+  return category.priority && category.priority > 0
+    ? category.priority
+    : fallback;
+}
+
 type WeekLessonShape = {
   id: string;
   title: string;
@@ -234,9 +249,10 @@ export async function GET() {
       lessonsTotal > 0 && lessonsDone >= lessonsTotal;
     const completed = !!categoryCompletedAt || allLessonsDone;
 
-    // Use category.priority as the week_number so the UI's "Week N of 12"
-    // labelling matches the seeded order even if names are renamed.
-    const weekNumber = category.priority || idx + 1;
+    // Prefer an explicit "Week N" prefix from the admin title. Some existing
+    // data has duplicate/shifted priorities, which made the learner UI show
+    // "Week 1" twice even though the titles were Week 1, Week 2, Week 3.
+    const weekNumber = getFoundationWeekNumber(category, idx + 1);
 
     return {
       category,
