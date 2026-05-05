@@ -14,7 +14,7 @@
  * Role hierarchy (highest → lowest):
  *  admin > diviner > trainee > social_advo > perennial_mandalism (active) >
  *  mystery_school (active+billed) > perennial_mandalism (resubscribe) >
- *  mystery_school (resubscribe) > client
+ *  mystery_school (resubscribe) > affiliate (active) > client
  *
  * "Resubscribe" entries fire when the row exists but billing/status no
  * longer qualifies for portal access — those users are routed to the
@@ -156,6 +156,14 @@ const ROLE_HIERARCHY: Array<{
     destination: () => "/join/mystery-school/resubscribe",
   },
   {
+    // Active affiliate accounts. Placed above `client` so a user with both
+    // an affiliate row and an auto-created `clients` row (e.g. from past
+    // bookings or data anomalies) lands on /affiliate, not /portal.
+    role: "affiliate",
+    check: (d) => !!d.affiliate && d.affiliate.status === "active",
+    destination: () => "/affiliate",
+  },
+  {
     role: "client",
     check: (d) => !!d.client,
     destination: () => "/portal",
@@ -187,6 +195,7 @@ interface PortalCheckData {
     onboarding_completed: boolean | null;
   } | null;
   client: { id: string } | null;
+  affiliate: { id: string; status: string } | null;
 }
 
 export interface ResolveOptions {
@@ -236,7 +245,7 @@ export async function resolveLoginDestination({
   if (isAdmin) return "/admin";
 
   // 5. First visit — fetch all role rows in parallel, pick by hierarchy
-  const [diviner, trainee, advocate, mysteryStudent, community, client] =
+  const [diviner, trainee, advocate, mysteryStudent, community, client, affiliate] =
     await Promise.all([
       Promise.resolve(earlyDiviner),
       adminClient
@@ -269,6 +278,12 @@ export async function resolveLoginDestination({
         .eq("user_id", userId)
         .maybeSingle()
         .then((r) => r.data),
+      adminClient
+        .from("affiliate_accounts")
+        .select("id, status")
+        .eq("user_id", userId)
+        .maybeSingle()
+        .then((r) => r.data),
     ]);
 
   const checkData: PortalCheckData = {
@@ -278,6 +293,7 @@ export async function resolveLoginDestination({
     mysteryStudent: mysteryStudent as PortalCheckData["mysteryStudent"],
     community: community as PortalCheckData["community"],
     client: client as PortalCheckData["client"],
+    affiliate: affiliate as PortalCheckData["affiliate"],
   };
 
   // Pick the highest-priority role by the hierarchy order.
