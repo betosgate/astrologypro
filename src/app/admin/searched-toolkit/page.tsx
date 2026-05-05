@@ -13,13 +13,23 @@ import {
   FilterX,
   CalendarDays,
   MapPin,
-  X
+  Trash2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { HoroscopeToolkitPage } from "../horoscope/page";
 
@@ -45,6 +55,9 @@ export default function SearchedToolkitPage() {
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [detailsError, setDetailsError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
   const itemsPerPage = 10;
 
   // Multi-filter state
@@ -84,6 +97,10 @@ export default function SearchedToolkitPage() {
       const data = await res.json();
       if (data.status === "success") {
         setItems(data.results);
+        setSelectedIds((prev) => {
+          const availableIds = new Set((data.results as SavedResponse[]).map((item) => item.id));
+          return new Set([...prev].filter((id) => availableIds.has(id)));
+        });
       } else {
         toast.error(data.error || "Failed to fetch items");
       }
@@ -133,11 +150,77 @@ export default function SearchedToolkitPage() {
       if (data.status === "success") {
         toast.success("Record deleted successfully");
         setItems(prev => prev.filter(item => item.id !== id));
+        setSelectedIds((prev) => {
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
       } else {
         toast.error(data.error || "Failed to delete record");
       }
     } catch (err) {
       toast.error("An error occurred during deletion");
+    }
+  }
+
+  function toggleSelected(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function togglePageSelected() {
+    const pageIds = paginatedItems.map((item) => item.id);
+    const allSelected = pageIds.length > 0 && pageIds.every((id) => selectedIds.has(id));
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (allSelected) {
+        pageIds.forEach((id) => next.delete(id));
+      } else {
+        pageIds.forEach((id) => next.add(id));
+      }
+      return next;
+    });
+  }
+
+  function selectAllFiltered() {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      filteredItems.forEach((item) => next.add(item.id));
+      return next;
+    });
+  }
+
+  async function handleBulkDelete() {
+    const ids = Array.from(selectedIds);
+    if (!ids.length) return;
+
+    try {
+      setBulkDeleting(true);
+      const res = await fetch("/api/admin/searched-toolkit/bulk-delete", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids }),
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok || data.status !== "success") {
+        throw new Error(data.error || "Failed to delete selected records");
+      }
+
+      const deletedIds = Array.isArray(data.deletedIds) ? data.deletedIds : ids;
+      const deletedSet = new Set(deletedIds);
+      setItems((prev) => prev.filter((item) => !deletedSet.has(item.id)));
+      setSelectedIds(new Set());
+      setBulkDeleteOpen(false);
+      toast.success(data.message || "Selected records deleted");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "An error occurred during bulk deletion");
+    } finally {
+      setBulkDeleting(false);
     }
   }
 
@@ -184,6 +267,10 @@ export default function SearchedToolkitPage() {
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
+  const allOnPageSelected =
+    paginatedItems.length > 0 && paginatedItems.every((item) => selectedIds.has(item.id));
+  const allFilteredSelected =
+    filteredItems.length > 0 && filteredItems.every((item) => selectedIds.has(item.id));
 
   // Reset to first page when search changes
   useEffect(() => {
@@ -347,7 +434,52 @@ export default function SearchedToolkitPage() {
             </div>
           ) : (
              <div className="space-y-4">
-               <ToolkitTable items={paginatedItems} onSelect={showDetails} onDelete={handleDelete} />
+               {selectedIds.size > 0 && (
+                 <div className="flex flex-col gap-3 rounded-md border border-amber-200 bg-amber-50/70 p-3 sm:flex-row sm:items-center sm:justify-between">
+                   <div className="text-sm font-medium text-amber-950">
+                     {selectedIds.size} record{selectedIds.size === 1 ? "" : "s"} selected
+                   </div>
+                   <div className="flex flex-wrap items-center gap-2">
+                     {!allFilteredSelected && (
+                       <Button
+                         variant="outline"
+                         size="sm"
+                         onClick={selectAllFiltered}
+                         className="h-8 bg-background text-xs"
+                       >
+                         Select all {filteredItems.length} filtered
+                       </Button>
+                     )}
+                     <Button
+                       variant="ghost"
+                       size="sm"
+                       onClick={() => setSelectedIds(new Set())}
+                       className="h-8 text-xs"
+                     >
+                       Clear selection
+                     </Button>
+                     <Button
+                       variant="destructive"
+                       size="sm"
+                       onClick={() => setBulkDeleteOpen(true)}
+                       className="h-8 gap-1.5 text-xs"
+                     >
+                       <Trash2 className="size-3.5" />
+                       Delete selected
+                     </Button>
+                   </div>
+                 </div>
+               )}
+
+               <ToolkitTable
+                 items={paginatedItems}
+                 onSelect={showDetails}
+                 onDelete={handleDelete}
+                 selectedIds={selectedIds}
+                 allOnPageSelected={allOnPageSelected}
+                 onToggleSelected={toggleSelected}
+                 onTogglePageSelected={togglePageSelected}
+               />
                
                {totalPages > 1 && (
                  <div className="flex items-center justify-between border-t pt-4">
@@ -407,6 +539,39 @@ export default function SearchedToolkitPage() {
           )}
         </CardContent>
       </Card>
+
+      <AlertDialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Delete {selectedIds.size} selected record{selectedIds.size === 1 ? "" : "s"}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              The selected AI response records will be permanently deleted from the database.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={bulkDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700"
+              disabled={bulkDeleting}
+              onClick={(event) => {
+                event.preventDefault();
+                handleBulkDelete();
+              }}
+            >
+              {bulkDeleting ? (
+                <>
+                  <Loader2 className="mr-2 size-4 animate-spin" />
+                  Deleting
+                </>
+              ) : (
+                "Delete selected"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

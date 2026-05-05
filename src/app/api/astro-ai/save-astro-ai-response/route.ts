@@ -81,6 +81,64 @@ function asJsonArray(v: unknown): unknown[] {
   return Array.isArray(v) ? v : [];
 }
 
+function firstJsonArray(body: Record<string, unknown>, keys: string[]): unknown[] {
+  for (const key of keys) {
+    if (Array.isArray(body[key])) return body[key] as unknown[];
+  }
+  return [];
+}
+
+function withFamilyContext(
+  value: Record<string, unknown>,
+  body: Record<string, unknown>,
+): Record<string, unknown> {
+  const familyMembers = firstJsonArray(body, [
+    "familyMembers",
+    "family_members",
+  ]);
+  const familyMemberPayloads = firstJsonArray(body, [
+    "familyMemberPayloads",
+    "family_member_payloads",
+  ]);
+  const familyPersonCharts = firstJsonArray(body, [
+    "familyPersonCharts",
+    "family_person_charts",
+  ]);
+  const partners = firstJsonArray(body, ["partners"]);
+
+  if (
+    !familyMembers.length &&
+    !familyMemberPayloads.length &&
+    !familyPersonCharts.length &&
+    !partners.length
+  ) {
+    return value;
+  }
+
+  return {
+    ...value,
+    ...(partners.length && !Array.isArray(value.partners) ? { partners } : {}),
+    ...(familyMembers.length && !Array.isArray(value.familyMembers)
+      ? { familyMembers }
+      : {}),
+    ...(familyMembers.length && !Array.isArray(value.family_members)
+      ? { family_members: familyMembers }
+      : {}),
+    ...(familyMemberPayloads.length && !Array.isArray(value.familyMemberPayloads)
+      ? { familyMemberPayloads }
+      : {}),
+    ...(familyMemberPayloads.length && !Array.isArray(value.family_member_payloads)
+      ? { family_member_payloads: familyMemberPayloads }
+      : {}),
+    ...(familyPersonCharts.length && !Array.isArray(value.familyPersonCharts)
+      ? { familyPersonCharts: familyPersonCharts }
+      : {}),
+    ...(familyPersonCharts.length && !Array.isArray(value.family_person_charts)
+      ? { family_person_charts: familyPersonCharts }
+      : {}),
+  };
+}
+
 /** Picks the first defined string field from a list of candidate keys. */
 function pickFirstText(
   body: Record<string, unknown>,
@@ -117,19 +175,35 @@ export async function POST(request: NextRequest) {
     }
 
     const incomingId = typeof body._id === "string" ? body._id.trim() : null;
+    const formDataPayload = withFamilyContext(
+      asJsonObject(body.formData ?? body.form_data),
+      body,
+    );
+    const aiResponsePayload = withFamilyContext(
+      asJsonObject(body.ai_response),
+      body,
+    );
+    const natalChartPayload = withFamilyContext(
+      asJsonObject(body.natal_chart),
+      body,
+    );
+    const astroApiDataPayload = withFamilyContext(
+      asJsonObject(body.astro_api_data),
+      body,
+    );
 
     // ── Build the column-aligned payload ──────────────────────────────────
     const dbPayload = {
       condition: asJsonObject(body.condition),
       toolname: asTextOrNull(body.toolname),
-      ai_response: asJsonObject(body.ai_response),
+      ai_response: aiResponsePayload,
       json_condition: asTextOrNull(body.json_condition),
       chat_response: asJsonObject(body.chat_response),
       chat_questions: asJsonArray(body.chat_questions),
-      natal_chart: asJsonObject(body.natal_chart),
+      natal_chart: natalChartPayload,
       // Legacy field is `formData` (camelCase) on the wire.
-      form_data: asJsonObject(body.formData ?? body.form_data),
-      astro_api_data: asJsonObject(body.astro_api_data),
+      form_data: formDataPayload,
+      astro_api_data: astroApiDataPayload,
       summary: asTextOrNull(body.summary),
       free_natal_wheel_chart: asTextOrNull(body.freeNatalWheelChart),
       // The existing production payload misspells "Transit" as "Trasit".

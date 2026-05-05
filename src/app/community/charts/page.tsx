@@ -359,9 +359,9 @@ export default function ChartsPage() {
                   <Users className="size-4 text-muted-foreground" />
                   <h2 className="text-sm font-semibold">Family Members Included</h2>
                 </div>
-                <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                <div className="mt-3 flex flex-wrap justify-center gap-3">
                   {familyMembers.map((member) => (
-                    <div key={member.id} className="rounded-md border bg-background p-3">
+                    <div key={member.id} className="rounded-md border bg-background p-3 w-full sm:w-[calc(50%-0.75rem)] xl:w-[calc(33.333%-1rem)] max-w-[400px]">
                       <p className="truncate text-sm font-medium">
                         {member.full_name}
                       </p>
@@ -394,7 +394,7 @@ export default function ChartsPage() {
 
               <div className="grid gap-4 md:grid-cols-3">
                 {RELATIONSHIP_MODES.map((option) => {
-                  const cta = "Generate";
+                  const cta = "View";
                   return (
                     <section key={option.value} className="rounded-md border p-4">
                       <div className="flex items-center gap-2">
@@ -466,9 +466,8 @@ export default function ChartsPage() {
                 <div className="flex w-full items-center justify-between gap-4 px-5 py-4">
                   <button
                     type="button"
-                    className={`flex min-w-0 flex-1 items-center gap-3 text-left transition-colors ${
-                      synastry ? "hover:text-foreground" : "cursor-default"
-                    }`}
+                    className={`flex min-w-0 flex-1 items-center gap-3 text-left transition-colors ${synastry ? "hover:text-foreground" : "cursor-default"
+                      }`}
                     onClick={() => synastry && setExpandedId(isOpen ? null : pairKey)}
                   >
                     <Heart className="size-5 text-rose-400 shrink-0" />
@@ -496,11 +495,10 @@ export default function ChartsPage() {
                         {Array.from({ length: 5 }).map((_, i) => (
                           <Star
                             key={i}
-                            className={`size-3 ${
-                              i < Math.round(synastry.score / 20)
+                            className={`size-3 ${i < Math.round(synastry.score / 20)
                                 ? "text-amber-400 fill-amber-400"
                                 : "text-gray-200 fill-gray-200"
-                            }`}
+                              }`}
                           />
                         ))}
                         <span className="text-xs text-muted-foreground ml-1">
@@ -515,49 +513,48 @@ export default function ChartsPage() {
                         openDetailedReport(a.id, b.id, value as RelationshipMode)
                       }
                     >
-                        <SelectTrigger
-                          size="sm"
-                          className="w-[150px]"
-                          aria-label={`Select relationship type for ${a.full_name} and ${b.full_name}`}
-                        >
-                          <SelectValue placeholder="Select type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {RELATIONSHIP_MODES.map((option) => {
-                            const state = getReportStateForMode(
-                              a.id,
-                              b.id,
-                              option.value
-                            );
-                            const cta = ctaLabelForState(state);
-                            return (
-                              <SelectItem
-                                key={option.value}
-                                value={option.value}
-                              >
-                                <span className="flex w-full items-center justify-between gap-3">
-                                  <span>{option.label}</span>
-                                  <span
-                                    className={`text-[10px] font-medium uppercase tracking-wider ${
-                                      state === "generated"
-                                        ? "text-green-500"
-                                        : state === "stale"
+                      <SelectTrigger
+                        size="sm"
+                        className="w-[150px]"
+                        aria-label={`Select relationship type for ${a.full_name} and ${b.full_name}`}
+                      >
+                        <SelectValue placeholder="Select type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {RELATIONSHIP_MODES.map((option) => {
+                          const state = getReportStateForMode(
+                            a.id,
+                            b.id,
+                            option.value
+                          );
+                          const cta = ctaLabelForState(state);
+                          return (
+                            <SelectItem
+                              key={option.value}
+                              value={option.value}
+                            >
+                              <span className="flex w-full items-center justify-between gap-3">
+                                <span>{option.label}</span>
+                                <span
+                                  className={`text-[10px] font-medium uppercase tracking-wider ${state === "generated"
+                                      ? "text-green-500"
+                                      : state === "stale"
                                         ? "text-amber-500"
                                         : state === "failed"
-                                        ? "text-destructive"
-                                        : state === "generating"
-                                        ? "text-blue-500"
-                                        : "text-muted-foreground"
+                                          ? "text-destructive"
+                                          : state === "generating"
+                                            ? "text-blue-500"
+                                            : "text-muted-foreground"
                                     }`}
-                                  >
-                                    {cta}
-                                  </span>
+                                >
+                                  {cta}
                                 </span>
-                              </SelectItem>
-                            );
-                          })}
-                        </SelectContent>
-                      </Select>
+                              </span>
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
 
                     {/*
                       Legacy quick-generate/regenerate behavior bypassed:
@@ -615,17 +612,16 @@ export default function ChartsPage() {
                                 <span className="flex w-full items-center justify-between gap-3">
                                   <span>{option.label}</span>
                                   <span
-                                    className={`text-[10px] font-medium uppercase tracking-wider ${
-                                      state === "generated"
+                                    className={`text-[10px] font-medium uppercase tracking-wider ${state === "generated"
                                         ? "text-green-500"
                                         : state === "stale"
-                                        ? "text-amber-500"
-                                        : state === "failed"
-                                        ? "text-destructive"
-                                        : state === "generating"
-                                        ? "text-blue-500"
-                                        : "text-muted-foreground"
-                                    }`}
+                                          ? "text-amber-500"
+                                          : state === "failed"
+                                            ? "text-destructive"
+                                            : state === "generating"
+                                              ? "text-blue-500"
+                                              : "text-muted-foreground"
+                                      }`}
                                   >
                                     {cta}
                                   </span>

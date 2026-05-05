@@ -3946,10 +3946,68 @@ export function HoroscopeToolkitPage({
       // This block captures all AI interpretations, chart URLs, and form data
       // into a single payload and persists it to both legacy and local stores.
       try {
+        const familyFormPersons = hasFamilyRelationshipContext
+          ? familyRelationshipMembers.map((member) => {
+            const parsedBirth =
+              member.birth.dob && member.birth.tob && member.birth.city
+                ? parseBirth(member.birth)
+                : {};
+
+            return {
+              id: member.id,
+              fullName: member.fullName,
+              name: member.fullName,
+              relationship: member.relationship,
+              ageGroup: member.ageGroup,
+              birth: member.birth,
+              ...member.birth,
+              ...parsedBirth,
+            };
+          })
+          : [];
+
+        const familyCharts = hasFamilyRelationshipContext
+          ? familyFormPersons.map((member, index) => {
+            const personChart = Array.isArray(collected.family_person_charts)
+              ? (collected.family_person_charts as Record<string, unknown>[]).find(
+                (chart) => chart.id === member.id
+              )
+              : null;
+
+            return {
+              ...member,
+              natal_chart:
+                personChart?.natal_chart ??
+                (index === 0
+                  ? collected.natal_chart_data ?? null
+                  : index === 1
+                    ? collected.natal_chart_data_p2 ?? null
+                    : null),
+              chart_url:
+                personChart?.chart_url ??
+                (index === 0
+                  ? collected.natal_chart_url ?? null
+                  : index === 1
+                    ? collected.natal_chart_url_p2 ?? null
+                    : null),
+              wheel_svg:
+                personChart?.wheel_svg ??
+                (index === 0
+                  ? collected.natal_transit_svg ?? null
+                  : index === 1
+                    ? collected.natal_transit_svg_p2 ?? null
+                    : null),
+            };
+          })
+          : [];
 
         const formDataPayload = isTwoPerson ? {
-          self: { ...form.person1, ...birth1 },
-          partner: { ...form.person2, ...birth2 },
+          self: hasFamilyRelationshipContext
+            ? familyFormPersons[0] ?? { ...form.person1, ...birth1 }
+            : { ...form.person1, ...birth1 },
+          partner: hasFamilyRelationshipContext
+            ? familyFormPersons[1] ?? { ...form.person2, ...birth2 }
+            : { ...form.person2, ...birth2 },
           question: form.question,
           areaOfInquiry: form.areaOfInquiry,
           area_of_inquiry: form.areaOfInquiry, // mapping both for compatibility
@@ -3957,8 +4015,11 @@ export function HoroscopeToolkitPage({
           futureMonth: form.futureMonth,
           ...(hasFamilyRelationshipContext
             ? {
+              partners: familyFormPersons.slice(1),
               familyMembers: familyRelationshipMembers,
               family_members: familyRelationshipMembers,
+              familyMemberPayloads: familyFormPersons,
+              family_member_payloads: familyFormPersons,
               familyPersonCharts: collected.family_person_charts,
               family_person_charts: collected.family_person_charts,
             }
@@ -3987,8 +4048,11 @@ export function HoroscopeToolkitPage({
           partner: collected.natal_chart_data_p2 ?? {},
           ...(hasFamilyRelationshipContext
             ? {
+              partners: familyCharts.slice(1),
               family_members: familyRelationshipMembers,
               familyMembers: familyRelationshipMembers,
+              family_member_payloads: familyFormPersons,
+              familyMemberPayloads: familyFormPersons,
               family_person_charts: collected.family_person_charts,
               familyPersonCharts: collected.family_person_charts,
             }
@@ -4002,6 +4066,26 @@ export function HoroscopeToolkitPage({
         const natalChartPayload = isTwoPerson ? {
           self: { status: true, chart_url: collected.natal_chart_url ?? "", msg: "Chart created successfully!" },
           partner: { status: true, chart_url: collected.natal_chart_url_p2 ?? "", msg: "Chart created successfully!" },
+          ...(hasFamilyRelationshipContext
+            ? {
+              partners: familyCharts.slice(1).map((chart) => ({
+                id: chart.id,
+                name: chart.name,
+                relationship: chart.relationship,
+                status: Boolean(chart.natal_chart || chart.chart_url || chart.wheel_svg),
+                chart_url: chart.chart_url ?? "",
+                wheel_svg: chart.wheel_svg ?? "",
+                natal_chart: chart.natal_chart ?? null,
+                msg: chart.natal_chart || chart.chart_url || chart.wheel_svg
+                  ? "Chart created successfully!"
+                  : "Chart data unavailable",
+              })),
+              familyMembers: familyCharts,
+              family_members: familyCharts,
+              familyPersonCharts: collected.family_person_charts,
+              family_person_charts: collected.family_person_charts,
+            }
+            : {}),
         } : {
           status: true,
           chart_url: collected.natal_chart_url ?? "",
@@ -4019,8 +4103,11 @@ export function HoroscopeToolkitPage({
           freeNatalWheelChartForTrasit: collected.natal_transit_svg ?? collected.transit_chart_svg ?? "",
           ...(hasFamilyRelationshipContext
             ? {
+              partners: familyFormPersons.slice(1),
               family_members: familyRelationshipMembers,
               familyMembers: familyRelationshipMembers,
+              family_member_payloads: familyFormPersons,
+              familyMemberPayloads: familyFormPersons,
               family_person_charts: collected.family_person_charts,
               familyPersonCharts: collected.family_person_charts,
             }
@@ -4049,8 +4136,11 @@ export function HoroscopeToolkitPage({
           freeNatalWheelChartForTrasit: collected.natal_transit_svg ?? collected.transit_chart_svg ?? "",
           ...(hasFamilyRelationshipContext
             ? {
+              partners: familyFormPersons.slice(1),
               family_members: familyRelationshipMembers,
               familyMembers: familyRelationshipMembers,
+              family_member_payloads: familyFormPersons,
+              familyMemberPayloads: familyFormPersons,
               family_person_charts: collected.family_person_charts,
               familyPersonCharts: collected.family_person_charts,
             }
