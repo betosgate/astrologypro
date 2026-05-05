@@ -1,10 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { redirect, notFound } from "next/navigation";
-import { cookies } from "next/headers";
 import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import { requireMysterySchoolAccess } from "@/lib/mystery-school/access";
+import { selectLessonQuestionsForLearnerCompat } from "@/lib/training/admin-quiz-questions";
+import { listCorrectQuizQuestionProgress } from "@/lib/training/quiz-question-progress";
 import {
   LessonViewerClient,
   type LessonViewerProps,
@@ -56,31 +57,132 @@ function normalizeQuizOptions(options: unknown): { text: string }[] {
  * the lesson read.
  */
 async function fetchLessonDetail(
+  admin: ReturnType<typeof createAdminClient>,
+  userId: string,
   lessonId: string
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): Promise<{ lesson: any; locked: boolean }> {
-  const base =
-    process.env.NEXT_PUBLIC_APP_URL ??
-    `http://localhost:${process.env.PORT ?? 3000}`;
+  const [
+    lessonResult,
+    videosResult,
+    assetsResult,
+    questionsResult,
+    completionResult,
+    quizAttemptResult,
+    triggersResult,
+    triggerProgressResult,
+    lessonProgressResult,
+    quizQuestionProgressResult,
+  ] = await Promise.all([
+    admin
+      .from("training_lessons")
+      .select(
+        "id, category_id, title, description, video_url, pdf_url, audio_url, content, duration_mins, priority, previous_lesson_id, is_active, created_at"
+      )
+      .eq("id", lessonId)
+      .eq("is_active", true)
+      .maybeSingle(),
+    admin
+      .from("lesson_videos")
+      .select("id, title, video_url, duration_mins, priority")
+      .eq("lesson_id", lessonId)
+      .order("priority", { ascending: true }),
+    admin
+      .from("lesson_assets")
+      .select(
+        "id, title, asset_type, url, file_size_bytes, is_downloadable, priority"
+      )
+      .eq("lesson_id", lessonId)
+      .order("priority", { ascending: true }),
+    selectLessonQuestionsForLearnerCompat(admin, lessonId),
+    admin
+      .from("lesson_completions")
+      .select("completed_at")
+      .eq("user_id", userId)
+      .eq("lesson_id", lessonId)
+      .maybeSingle(),
+    admin
+      .from("quiz_attempts")
+      .select("passed, score, total_questions, attempted_at")
+      .eq("user_id", userId)
+      .eq("lesson_id", lessonId)
+      .order("attempted_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    admin
+      .from("lesson_quiz_triggers")
+      .select(
+        "id, trigger_timestamp_seconds, rewind_target_seconds, question_id, priority, quiz_questions(id, question, options, explanation)"
+      )
+      .eq("lesson_id", lessonId)
+      .eq("is_active", true)
+      .order("trigger_timestamp_seconds", { ascending: true }),
+    admin
+      .from("lesson_trigger_progress")
+      .select(
+        "trigger_id, passed, attempts, last_rewind_at, rewatch_required_until_seconds, rewatch_completed, passed_at"
+      )
+      .eq("user_id", userId)
+      .eq("lesson_id", lessonId),
+    admin
+      .from("lesson_progress")
+      .select("last_position_seconds")
+      .eq("user_id", userId)
+      .eq("lesson_id", lessonId)
+      .maybeSingle(),
+    listCorrectQuizQuestionProgress(admin, userId, lessonId),
+  ]);
 
-  const cookieStore = await cookies();
-  const cookieHeader = cookieStore
-    .getAll()
-    .map((c) => `${c.name}=${c.value}`)
-    .join("; ");
+  if (lessonResult.error || !lessonResult.data) {
+    return { lesson: null, locked: false };
+  }
 
-  const res = await fetch(
-    `${base}/api/trainee/training/lessons/${lessonId}`,
-    {
-      headers: { cookie: cookieHeader },
-      cache: "no-store",
-    }
-  );
+  const triggerProgressMap = new Map<string, Record<string, unknown>>();
+  for (const progress of triggerProgressResult.data ?? []) {
+    triggerProgressMap.set(progress.trigger_id, progress);
+  }
 
-  if (res.status === 403) return { lesson: null, locked: true };
-  if (!res.ok) return { lesson: null, locked: false };
-  const json = await res.json();
-  return { lesson: json.lesson ?? null, locked: false };
+  const triggers = (triggersResult.data ?? []).map((trigger) => {
+    const rawQuestion = trigger.quiz_questions as unknown as Record<
+      string,
+      unknown
+    > | null;
+    return {
+      id: trigger.id,
+      trigger_timestamp_seconds: trigger.trigger_timestamp_seconds,
+      rewind_target_seconds: trigger.rewind_target_seconds,
+      question_id: trigger.question_id,
+      question: rawQuestion
+        ? { ...rawQuestion, options: normalizeQuizOptions(rawQuestion.options) }
+        : null,
+      user_progress: triggerProgressMap.get(trigger.id) ?? null,
+    };
+  });
+
+  const quizQuestions = (questionsResult ?? []).map((question) => ({
+    ...question,
+    options: normalizeQuizOptions(question.options),
+  }));
+
+  return {
+    locked: false,
+    lesson: {
+      ...lessonResult.data,
+      videos: videosResult.data ?? [],
+      assets: assetsResult.data ?? [],
+      quiz_questions: quizQuestions,
+      completed: !!completionResult.data,
+      completed_at: completionResult.data?.completed_at ?? null,
+      quiz_passed: quizAttemptResult.data?.passed ?? null,
+      quiz_last_score: quizAttemptResult.data?.score ?? null,
+      quiz_last_total: quizAttemptResult.data?.total_questions ?? null,
+      quiz_last_attempted_at: quizAttemptResult.data?.attempted_at ?? null,
+      quiz_progress: quizQuestionProgressResult.progress,
+      quiz_progress_supported: quizQuestionProgressResult.supported,
+      triggers,
+      last_position_seconds:
+        lessonProgressResult.data?.last_position_seconds ?? 0,
+    },
+  };
 }
 
 export default async function TrainingLessonPage({ params }: Props) {
@@ -98,7 +200,8 @@ export default async function TrainingLessonPage({ params }: Props) {
   if (!access) redirect("/mystery-school/enroll");
 
   // ── 1. Fetch lesson via the shared trainee API ─────────────────────────────
-  const { lesson, locked } = await fetchLessonDetail(lessonId);
+  const admin = createAdminClient();
+  const { lesson, locked } = await fetchLessonDetail(admin, user.id, lessonId);
   if (locked) redirect(`/mystery-school/training`);
   if (!lesson || lesson.category_id !== categoryId) notFound();
 
@@ -106,7 +209,6 @@ export default async function TrainingLessonPage({ params }: Props) {
   // We fetch directly via the admin client (the trainee programs endpoint is
   // overkill here and would re-enumerate every program). Per-lesson completion
   // flags are needed for the sidebar checkmark state.
-  const admin = createAdminClient();
   const [siblingsRes, completionsRes, categoryRes] = await Promise.all([
     admin
       .from("training_lessons")
@@ -135,9 +237,9 @@ export default async function TrainingLessonPage({ params }: Props) {
     id: s.id,
     title: s.title,
     completed: completedSet.has(s.id),
-    is_locked: false, // sequential lock is enforced by the lesson API, not here
+    current: s.id === lessonId,
+    locked: false,
     href: `/mystery-school/training/${categoryId}/${s.id}`,
-    isActive: s.id === lessonId,
   }));
 
   // ── 3. Compute next-route + label ──────────────────────────────────────────

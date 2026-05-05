@@ -63,6 +63,7 @@ export type SidebarLesson = {
   completed: boolean;
   current: boolean;
   locked: boolean;
+  href?: string;
 };
 
 // ---------------------------------------------------------------------------
@@ -1279,7 +1280,10 @@ export function LessonViewerClient(props: LessonViewerProps) {
                         </span>
                       ) : (
                         <Link
-                          href={`/trainee/training/${programId}/${categoryId}/${l.id}`}
+                          href={
+                            l.href ??
+                            `/trainee/training/${programId}/${categoryId}/${l.id}`
+                          }
                           className="flex-1 text-xs truncate hover:text-primary transition-colors"
                         >
                           {l.title}
