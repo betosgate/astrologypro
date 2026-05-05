@@ -484,18 +484,40 @@ Steps:
 
 ### Flow F — Customer pays (conversion written from stamped rate)
 
-**Actor:** Stripe webhook, invoked after successful payment.
-**Handler:** [src/app/api/stripe/webhooks/route.ts](../../src/app/api/stripe/webhooks/route.ts)
+**Three independent trigger paths**, all calling the same idempotent
+`creditAffiliateConversion` library function. Race-safe via the
+`UNIQUE(booking_id)` index on `campaign_conversions`: first write wins,
+subsequent attempts surface PG `23505` and short-circuit as a no-op.
+Each callsite wraps the credit call in a `try/catch` that logs and
+continues — credit failures DO NOT propagate to Stripe (so no 5xx
+auto-retry) and DO NOT fail the customer-visible checkout flow.
 
-Steps:
-1. Booking row is marked `status='confirmed'`.
-2. If BOTH `booking.commission_source_assignment_id` AND
+| Path | Trigger | Handler | Wins when |
+|---|---|---|---|
+| **A. Frontend fallback** | `BookingWizard` calls this fire-and-forget right after `stripe.confirmPayment()` succeeds client-side, before the browser navigates to `/booking/success` | [src/app/api/stripe/confirm-payment/route.ts](../../src/app/api/stripe/confirm-payment/route.ts) | Normal happy path — typically beats the webhook by hundreds of ms |
+| **B. Webhook** | Stripe delivers `payment_intent.succeeded` server-to-server | [src/app/api/stripe/webhooks/route.ts](../../src/app/api/stripe/webhooks/route.ts) (event dispatch at the `case "payment_intent.succeeded"` branch) | Customer's browser closed/crashed before reaching `/booking/success`, OR the fire-and-forget POST in BookingWizard didn't complete |
+| **C. Manual recovery** | Diviner clicks **"Sync payment"** on the booking detail sheet for a stuck `pending` booking | [src/app/api/stripe/sync-booking/route.ts](../../src/app/api/stripe/sync-booking/route.ts) | Both A and B failed silently |
+
+**Localhost note:** Stripe doesn't deliver webhooks to localhost, so dev
+bookings rely entirely on Path A. Stuck conversions on dev bookings
+(visible via `bookings.metadata.referrer LIKE 'http://localhost%'`) are
+typically Path A failures — usually a DB error swallowed by the try/catch
+because local code references columns/types the dev DB hasn't migrated yet.
+
+Steps each path runs (identical):
+1. Verify the `payment_intent` succeeded with Stripe (Path A and C
+   re-fetch via `stripe.paymentIntents.retrieve`; Path B trusts the
+   event payload).
+2. Update `bookings.status='confirmed'` and matching `orders.status='paid'` /
+   `paid_at`. Subsequent paths see `confirmed`/`completed` and short-
+   circuit.
+3. If BOTH `booking.commission_source_assignment_id` AND
    `booking.commission_source_template_id` are NULL → no conversion
    row. Return. (Diviner keeps the full payment — see §1.)
-3. **Re-check affiliate account status at credit time.** Resolve the
+4. **Re-check affiliate account status at credit time.** Resolve the
    affiliate account differently per stamp source:
    - Per-diviner: assignment → junction → account.
-   - Phase 1.5 general: campaign.owner_affiliate_account_id directly.
+   - Phase 1.5 general: `campaign.owner_affiliate_account_id` directly.
 
    Check `affiliate_accounts.status`. If it is not `'active'` (i.e.
    `blocked` or `unclaimed`) → no conversion row written. Log reason
@@ -506,11 +528,11 @@ Steps:
    violation). Unlike rate edits, which are commercial and respect
    in-flight bookings, blocking must freeze payouts even for bookings
    already stamped. This is the only check that re-reads state at
-   webhook time — everything else comes from the stamp. **Notably the
+   credit time — everything else comes from the stamp. **Notably the
    general path does NOT re-check `service_templates.affiliate_program_enabled`:**
    admin disabling the program after a booking is stamped does not
    retroactively invalidate the stamp (rate-stamping invariant).
-4. Otherwise, call `creditAffiliateConversion`:
+5. Otherwise, call `creditAffiliateConversion`:
    - Compute `commission_amount_cents` from `commission_rate_type_stamp` +
      `commission_rate_value_stamp` + the order amount.
    - INSERT into `campaign_conversions`:
@@ -520,12 +542,24 @@ Steps:
      - `campaign_id` = resolved from booking's `ref_code`
      - `rate_type_used` = `booking.commission_rate_type_stamp`
      - `rate_value_used` = `booking.commission_rate_value_stamp`
-     - `booking_id` = booking.id (UNIQUE — guards webhook retries)
+     - `booking_id` = booking.id (UNIQUE — guards multi-path races and
+       webhook retries)
    - The stamped RATE is authoritative. Only `affiliate_accounts.status`
-     is re-read at webhook time.
-5. Commission row is IMMEDIATELY part of the affiliate's ledger. No
+     is re-read at credit time.
+6. Commission row is IMMEDIATELY part of the affiliate's ledger. No
    admin approval step.
-6. Affiliate notifications: in-app immediately, email digested daily.
+7. Affiliate notifications: in-app immediately, email digested daily.
+
+**Diagnostic log prefixes** when credit fails:
+- Path A: `[confirm-payment] Affiliate conversion credit failed`
+- Path B: `[affiliate_conversion] credit failed`
+- Path C: `[sync-booking] Affiliate conversion credit failed`
+
+Plus the inner `creditAffiliateConversion` always emits a structured
+`{event:"affiliate_conversion", matched:bool, reason:string, ...}` log
+line covering: `no_stamp` / `assignment_gone` / `junction_gone` /
+`account_not_active_at_credit` / `campaign_missing_at_credit` /
+`campaign_missing_account_id` / `insert_error` / `already_credited`.
 
 ### Flow G — Diviner edits an affiliate's commission rate
 
@@ -1111,6 +1145,8 @@ This spec gets an update when Phase 2 starts scoping.
 ## 12 — Changelog
 
 Append-only. One line per concrete change. Newest first.
+
+- **2026-04-30 (Flow F clarification — three credit paths)** — Spec §5 Flow F was incomplete. It described only the Stripe webhook path (`/api/stripe/webhooks`) but production has had **three independent credit-trigger paths** since the v2 sprint: (A) frontend fallback at `/api/stripe/confirm-payment` (the BookingWizard fires this fire-and-forget right after `stripe.confirmPayment()` succeeds — typically beats the webhook); (B) the Stripe webhook itself; (C) manual recovery via `/api/stripe/sync-booking` (diviner-triggered "Sync payment" button on a stuck booking). All three call the same idempotent `creditAffiliateConversion`; the `UNIQUE(booking_id)` index on `campaign_conversions` makes them race-safe (first write wins; subsequent attempts log as `already_credited` and short-circuit). Each callsite wraps the credit call in a `try/catch` that logs+continues, so credit failures don't 5xx Stripe (no auto-retry) or break the customer's checkout. **Operational implication:** localhost dev bookings rely entirely on Path A because Stripe doesn't deliver webhooks to localhost — stuck dev conversions are typically Path-A failures (e.g., a column-mismatch swallowed by the try/catch). Path-specific log prefixes: `[confirm-payment]`, `[affiliate_conversion]`, `[sync-booking]`. Flow F now documents all three paths + the diagnostic reason codes emitted by the inner credit function.
 
 - **2026-04-30 (Phase 1.5 implementation, Tasks 01–07)** — General-product affiliate commissions implemented end-to-end across 7 commits (`ab47cb76`, `1c938875`, `87b4db7d`, `8927c670`, `e008fdf3`, `7ce83a45`, `7c7652b2`, `b67bd0a1`). Single migration `20260430000002_affiliate_phase_1_5_general` lands all schema additions; awaits admin-runner application. **Spec deviations recorded in the migration header and folded into §10 above:** (1) `service_templates.commission_type` CHECK uses `('percent','flat')` — original Phase 1.5 design wrote `'percentage'` which would have rejected every booking insert (the v2 stamp pipeline only accepts `('percent','flat')`); (2) `tracking_links.diviner_id` made NULLable — original Phase 1.5 design didn't anticipate that general campaigns have no specific diviner; (3) `admin_action_log` extended with `payload JSONB`, NULLable `target_resource_id`, and new `action_kind='service_templates_bulk_commission_update'` so the bulk-rate endpoint can audit multi-row actions without a single target; (4) `service_templates.is_general` added as the authoritative discriminator (backfilled from `slug LIKE 'general-%'`) — original design relied on slug parsing only. **Stamp + credit (`affiliate-stamp.ts`, `affiliate-attribution.ts`)** branched on `owner_affiliate_type='general'`: stamp resolves account directly from campaign, gates on `affiliate_program_enabled`, defaults to `(percent, 10)` when admin enabled the program but didn't set values; credit writes `affiliate_id=NULL`, `affiliate_type='general'`, `affiliate_account_id` from campaign. Per-diviner credits now also always populate `affiliate_account_id` (resolved via junction) so account-level rollups can skip the junction join. **`/r/[code]` handler** gained the disabled-template 410 gate (Flow D step 3b) and the campaign-destination resolver gained a general branch routing to `/services/<slug>` instead of the `/readings/<slug>` SEO-marketing tree (a Task 03 hotfix correcting an initial wrong path). **New endpoint** `POST /api/affiliate/general-campaigns` parallel to the per-diviner endpoint; archive PATCH at `/api/affiliate/campaigns/[id]` extended to accept general campaigns. **Affiliate UI**: `/affiliate/dashboard` + `/affiliate/products` + `/affiliate/campaigns` (list + detail) + `/affiliate/campaigns/new` (two-mode picker) + Marketing Kit fully rewritten — kit now sources templates from DB and lazy-creates one general campaign per `(account, template)` pair so every share URL is `/r/<real_code>` instead of the broken `?ref=<junctionUUID>` of the v2 era. **Admin UI**: `/admin/service-templates/[id]` AffiliateProgramCard for per-template config; bulk-rate card on the list with confirmation dialog; new "Affiliate program" + "Rate" columns. **Reporting display labels** added to admin conversions/clicks reports + affiliate earnings (`General: <template>` vs `Diviner: <name>`), and the existing reports were switched from junction-id filters to account-id filters so general credits roll up correctly. **Pre-existing v2 reporting bugs caught and fixed during the audit:** (a) `campaign_conversions.created_at`/`reversed_reason` referenced across five endpoints + two pages — real columns are `converted_at`/`reversal_reason`; (b) `campaign_clicks.ip`/`country`/`referrer` on the admin clicks endpoint — real columns are `ip_hash`/`country_code`/`referrer_url`; (c) `fmtRate` helper widened to accept both legacy `'percentage'/'fixed'` and v2 `'percent'/'flat'`. All five surfaces had been silently returning DB errors in production. **Tests (Task 08):** new `tests/integration/affiliate-phase-1-5-general-smoke.test.ts` (8 cases: schema sanity + 5 stamp-resolver paths + general credit insert + rate-stamp invariant + per-diviner `affiliate_account_id` backfill); `tests/integration/affiliate-rls.test.ts` extended with 6 cases for general-path isolation (own/foreign general campaign visibility + diviner anti-leakage + INSERT WITH-CHECK enforcement + own/foreign general conversion visibility); `package.json` aggregator `test:affiliate-commission` chains the new smoke alongside the v2 smoke + RLS + math suites; `scripts/cleanup-affiliate-test-data.ts` extended with the `phase15-` namespace prefix. Manual E2E walkthrough on preview pending. Implementation notes in `docs/tasks/2026-04-28/affiliate-phase-1-5-general-products/IMPLEMENTATION-NOTES.md`.
 
