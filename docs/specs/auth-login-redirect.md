@@ -126,7 +126,14 @@ true provides the destination. Lower index = higher priority.
 | 5 | `mystery_school` | `mystery_school_students` row passes `hasActiveMysterySchoolAccess()` | `/mystery-school` |
 | 6 | `perennial_mandalism_needs_resubscribe` | `community_members.membership_type='perennial_mandalism'` AND `membership_status !== 'active'` | `/join/community/resubscribe` |
 | 7 | `mystery_school_needs_resubscribe` | `mystery_school_students` row exists AND does NOT pass `hasActiveMysterySchoolAccess()` | `/join/mystery-school/resubscribe` |
-| 8 | `client` | `clients` row exists | `/portal` |
+| 8 | `affiliate` | `affiliate_accounts` row exists AND `status='active'` | `/affiliate` |
+| 9 | `client` | `clients` row exists | `/portal` |
+
+> Note: a `clients` row can be auto-created as a side effect of paying for a
+> booking, accepting certain invites, or admin-side data ops — it does NOT
+> reliably indicate that "client" is the user's primary role. Placing
+> `affiliate` above `client` ensures users who are primarily affiliates land
+> on `/affiliate` even if a stray `clients` row exists for them.
 
 ### 3.6 — Orphan-user fallback
 
@@ -277,3 +284,9 @@ display-equals-charge invariant.
   layout-level row-exists branch sending broken-billing users to MS
   resubscribe, MS-discount default aligned across all consumers
   (`?? false`).
+- **2026-05-05** — Added `affiliate` hierarchy entry (#8) above `client`.
+  Resolver now fetches `affiliate_accounts` in parallel with the other
+  role rows and routes active affiliates to `/affiliate` on every login.
+  Fixes the regression where affiliate users (no other role rows) fell
+  through to the `/onboarding` orphan fallback on every login after the
+  initial invite-acceptance redirect.
