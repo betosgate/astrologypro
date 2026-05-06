@@ -64,6 +64,11 @@ type StatusPayload = {
   };
 };
 
+function rememberTrainingScrollTarget(target: string) {
+  if (typeof window === "undefined") return;
+  window.sessionStorage.setItem("adminTrainingScrollTarget", target);
+}
+
 function StatusPill({
   variant,
   children,
@@ -147,31 +152,40 @@ export default function AdminMysterySchoolPage() {
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {[
           {
-            href: status?.links.programs ?? "/admin/training/programs",
+            href: "/admin/training",
+            target: "programs",
             label: "Programs",
             description: "Mystery School Foundation program record",
             icon: GraduationCap,
           },
           {
-            href: status?.links.categories ?? "/admin/training/categories",
+            href: "/admin/training",
+            target: "categories",
             label: "Weeks (Categories)",
             description: "Manage the 12 Foundation week categories",
             icon: Layers,
           },
           {
-            href: status?.links.lessons ?? "/admin/training/lessons",
+            href: "/admin/training",
+            target: "lessons",
             label: "Lessons",
             description: "Audio, content, video, PDF per week",
             icon: ListChecks,
           },
           {
-            href: status?.links.quizzes ?? "/admin/training/quizzes",
+            href: "/admin/training",
+            target: "quizzes",
             label: "Quizzes",
             description: "Lesson and end-of-week assessments",
             icon: ClipboardCheck,
           },
         ].map((item) => (
-          <Link key={item.label} href={item.href} className="group">
+          <Link
+            key={item.label}
+            href={item.href}
+            className="group"
+            onClick={() => rememberTrainingScrollTarget(item.target)}
+          >
             <Card className="h-full transition-colors group-hover:border-primary/40">
               <CardContent className="py-4 px-4 flex items-start gap-3">
                 <div className="flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary shrink-0">
@@ -305,7 +319,11 @@ export default function AdminMysterySchoolPage() {
                         className="h-7"
                       >
                         <Link
-                          href={`${status.links.lessons}?category_id=${week.id}`}
+                          href={
+                            hasLessons
+                              ? `/admin/training/categories/${week.id}/edit`
+                              : `/admin/training/lessons/new?category_id=${week.id}`
+                          }
                         >
                           {hasLessons ? "Edit" : "Add lesson"}
                         </Link>

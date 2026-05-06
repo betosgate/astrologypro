@@ -326,3 +326,205 @@ export async function getFoundationWeekTimelineForUser(
 
   return { shape, weeks };
 }
+
+// ─── 2026-05-06 Foundation → Decans access flow ─────────────────────────────
+// Sprint: docs/tasks/2026-05-06/mystery-school-foundation-decan-access-flow.md
+//
+// Single source of truth for "has this user finished the Admin Training-
+// backed Mystery School Foundation curriculum?". Every gate (decan
+// dashboard, decan detail/action APIs, graduation eligibility, admin
+// student-list phase badge) calls into these helpers so the answer cannot
+// drift between learner UI, admin badges, cron, and graduation.
+//
+// A Foundation week is complete when category_completions has a row for
+// (user, category) OR every active lesson in that category has a
+// lesson_completions row for the user. Foundation is complete when every
+// active week is complete. An "empty week" (no active lessons) is treated
+// as INCOMPLETE for access-gating unless an explicit category_completions
+// row exists.
+
+export interface FoundationCompletion {
+  source: "training";
+  isComplete: boolean;
+  totalWeeks: number;
+  completedWeeks: number;
+  totalLessons: number;
+  completedLessons: number;
+  /** Categories with zero active lessons — treated as incomplete for gating. */
+  emptyWeeks: { categoryId: string; title: string | null }[];
+  /** Categories the user hasn't finished yet (for UI explanations). */
+  missingWeeks: { categoryId: string; title: string | null }[];
+}
+
+const NOT_COMPLETE_FALLBACK: FoundationCompletion = {
+  source: "training",
+  isComplete: false,
+  totalWeeks: 0,
+  completedWeeks: 0,
+  totalLessons: 0,
+  completedLessons: 0,
+  emptyWeeks: [],
+  missingWeeks: [],
+};
+
+/**
+ * Compute Admin Training-backed Foundation completion for a user.
+ *
+ * Returns enough detail for both gating decisions and admin/learner UIs.
+ * NEVER throws — on any unexpected error returns the not-complete
+ * fallback so callers don't accidentally unlock Decans.
+ */
+export async function getFoundationCompletionForUser(
+  admin: SupabaseClient,
+  userId: string,
+): Promise<FoundationCompletion> {
+  try {
+    const { shape, weeks } = await getFoundationWeekTimelineForUser(
+      admin,
+      userId,
+    );
+    if (!shape.program_present || weeks.length === 0) {
+      return { ...NOT_COMPLETE_FALLBACK };
+    }
+
+    let completedWeeks = 0;
+    let totalLessons = 0;
+    let completedLessons = 0;
+    const emptyWeeks: FoundationCompletion["emptyWeeks"] = [];
+    const missingWeeks: FoundationCompletion["missingWeeks"] = [];
+    for (const w of weeks) {
+      totalLessons += w.active_lesson_count;
+      completedLessons += w.lessons_completed;
+      if (w.active_lesson_count === 0) {
+        if (w.category_completed_at) {
+          completedWeeks += 1;
+        } else {
+          emptyWeeks.push({ categoryId: w.category_id, title: w.title });
+          missingWeeks.push({ categoryId: w.category_id, title: w.title });
+        }
+        continue;
+      }
+      if (w.completed) {
+        completedWeeks += 1;
+      } else {
+        missingWeeks.push({ categoryId: w.category_id, title: w.title });
+      }
+    }
+
+    return {
+      source: "training",
+      isComplete: weeks.length > 0 && completedWeeks >= weeks.length,
+      totalWeeks: weeks.length,
+      completedWeeks,
+      totalLessons,
+      completedLessons,
+      emptyWeeks,
+      missingWeeks,
+    };
+  } catch (err) {
+    console.warn(
+      "[ms-foundation-progress] getFoundationCompletionForUser error",
+      err instanceof Error ? err.message : String(err),
+    );
+    return { ...NOT_COMPLETE_FALLBACK };
+  }
+}
+
+/**
+ * Boolean shorthand. Use when the caller only needs a yes/no gate.
+ */
+export async function isFoundationCompleteForUser(
+  admin: SupabaseClient,
+  userId: string,
+): Promise<boolean> {
+  const summary = await getFoundationCompletionForUser(admin, userId);
+  return summary.isComplete;
+}
+
+export type DecanEligibilityReason =
+  | "decans"
+  | "graduated"
+  | "foundation_complete"
+  | "foundation_incomplete"
+  | "not_enrolled";
+
+export interface DecanEligibilityResult {
+  eligible: boolean;
+  reason: DecanEligibilityReason;
+  foundation: FoundationCompletion;
+  trainingStatus: "foundation" | "decans" | "graduated" | null;
+  studentId: string | null;
+}
+
+/**
+ * Resolve whether a user can perform Decan work.
+ *
+ * Eligibility:
+ *   • student.training_status === 'decans' or 'graduated' → eligible (skip
+ *     the Foundation-completion read entirely; the DB has already advanced
+ *     this row), OR
+ *   • Foundation is complete from the Training helper → eligible. Caller
+ *     should also fire `maybeAdvanceMysterySchoolToDecans` to advance the
+ *     row idempotently.
+ *
+ * Returns rich detail so callers can render an appropriate locked UI when
+ * `eligible === false`.
+ */
+export async function assertMysterySchoolDecanEligible(
+  admin: SupabaseClient,
+  userId: string,
+): Promise<DecanEligibilityResult> {
+  const { data: studentRaw } = await admin
+    .from("mystery_school_students")
+    .select("id, training_status")
+    .eq("user_id", userId)
+    .maybeSingle();
+  const student = studentRaw as Record<string, unknown> | null;
+
+  if (!student) {
+    return {
+      eligible: false,
+      reason: "not_enrolled",
+      foundation: { ...NOT_COMPLETE_FALLBACK },
+      trainingStatus: null,
+      studentId: null,
+    };
+  }
+
+  const trainingStatus = (student.training_status as string | null) ?? null;
+  const status =
+    trainingStatus === "decans" ||
+    trainingStatus === "graduated" ||
+    trainingStatus === "foundation"
+      ? (trainingStatus as "decans" | "graduated" | "foundation")
+      : null;
+  const studentId = (student.id as string | null) ?? null;
+
+  if (status === "decans" || status === "graduated") {
+    return {
+      eligible: true,
+      reason: status,
+      foundation: { ...NOT_COMPLETE_FALLBACK, isComplete: true },
+      trainingStatus: status,
+      studentId,
+    };
+  }
+
+  const foundation = await getFoundationCompletionForUser(admin, userId);
+  if (foundation.isComplete) {
+    return {
+      eligible: true,
+      reason: "foundation_complete",
+      foundation,
+      trainingStatus: status,
+      studentId,
+    };
+  }
+  return {
+    eligible: false,
+    reason: "foundation_incomplete",
+    foundation,
+    trainingStatus: status,
+    studentId,
+  };
+}

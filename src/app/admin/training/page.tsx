@@ -415,6 +415,21 @@ export default function TrainingPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    if (!initialLoadDone || typeof window === "undefined") return;
+    const target = window.sessionStorage.getItem("adminTrainingScrollTarget");
+    if (!target) return;
+    window.sessionStorage.removeItem("adminTrainingScrollTarget");
+    window.setTimeout(() => {
+      document
+        .querySelector(`[data-training-section="${target}"]`)
+        ?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }, 50);
+  }, [initialLoadDone]);
+
   // Server-driven: filters are passed to the API, not applied client-side.
   const programFiltersActive =
     !!programSearchTerm.trim() ||
@@ -1248,105 +1263,113 @@ export default function TrainingPage() {
 
       {initialLoadDone && (
         <>
-          <TrainingEntityTable
-            config={programConfig}
-            rows={programData.rows}
-            serverTotal={programData.total}
-            rawCount={programData.total}
-            filtersActive={programFiltersActive}
-            currentSearch={debouncedProgramSearchTerm}
-            currentStatus={programStatusFilter}
-            currentExtraQuery={{
-              created_from: programEffectiveCreatedFrom,
-              created_to: programEffectiveCreatedTo,
-              access: programAccessFilter !== "all" ? programAccessFilter : undefined,
-            }}
-            filtersSlot={programFiltersSlot}
-            onMutated={mutatePrograms}
-            onRefresh={() => loadPrograms(programState)}
-            isRefreshing={programsRefreshing}
-            serverPage={programData.page}
-            serverPageSize={programData.pageSize}
-            onTableStateChange={(st) => {
-              setProgramState(st);
-              void loadPrograms(st);
-            }}
-          />
+          <section data-training-section="programs" className="scroll-mt-24">
+            <TrainingEntityTable
+              config={programConfig}
+              rows={programData.rows}
+              serverTotal={programData.total}
+              rawCount={programData.total}
+              filtersActive={programFiltersActive}
+              currentSearch={debouncedProgramSearchTerm}
+              currentStatus={programStatusFilter}
+              currentExtraQuery={{
+                created_from: programEffectiveCreatedFrom,
+                created_to: programEffectiveCreatedTo,
+                access: programAccessFilter !== "all" ? programAccessFilter : undefined,
+              }}
+              filtersSlot={programFiltersSlot}
+              onMutated={mutatePrograms}
+              onRefresh={() => loadPrograms(programState)}
+              isRefreshing={programsRefreshing}
+              serverPage={programData.page}
+              serverPageSize={programData.pageSize}
+              onTableStateChange={(st) => {
+                setProgramState(st);
+                void loadPrograms(st);
+              }}
+            />
+          </section>
 
-          <TrainingEntityTable
-            config={categoryConfig}
-            rows={categoryData.rows}
-            serverTotal={categoryData.total}
-            rawCount={categoryData.total}
-            filtersActive={categoryFiltersActive}
-            currentSearch={debouncedCategorySearchTerm}
-            currentStatus={categoryStatusFilter}
-            currentExtraQuery={{
-              program_id: categoryProgramFilter !== "all" ? categoryProgramFilter : undefined,
-              created_from: categoryEffectiveCreatedFrom,
-              created_to: categoryEffectiveCreatedTo,
-            }}
-            filtersSlot={categoryFiltersSlot}
-            onMutated={mutateCategories}
-            onRefresh={() => loadCategories(categoryState)}
-            isRefreshing={categoriesRefreshing}
-            serverPage={categoryData.page}
-            serverPageSize={categoryData.pageSize}
-            onTableStateChange={(st) => {
-              setCategoryState(st);
-              void loadCategories(st);
-            }}
-          />
+          <section data-training-section="categories" className="scroll-mt-24">
+            <TrainingEntityTable
+              config={categoryConfig}
+              rows={categoryData.rows}
+              serverTotal={categoryData.total}
+              rawCount={categoryData.total}
+              filtersActive={categoryFiltersActive}
+              currentSearch={debouncedCategorySearchTerm}
+              currentStatus={categoryStatusFilter}
+              currentExtraQuery={{
+                program_id: categoryProgramFilter !== "all" ? categoryProgramFilter : undefined,
+                created_from: categoryEffectiveCreatedFrom,
+                created_to: categoryEffectiveCreatedTo,
+              }}
+              filtersSlot={categoryFiltersSlot}
+              onMutated={mutateCategories}
+              onRefresh={() => loadCategories(categoryState)}
+              isRefreshing={categoriesRefreshing}
+              serverPage={categoryData.page}
+              serverPageSize={categoryData.pageSize}
+              onTableStateChange={(st) => {
+                setCategoryState(st);
+                void loadCategories(st);
+              }}
+            />
+          </section>
 
-          <TrainingEntityTable
-            config={lessonConfig}
-            rows={lessonData.rows}
-            serverTotal={lessonData.total}
-            rawCount={lessonData.total}
-            filtersActive={lessonFiltersActive}
-            currentSearch={debouncedLessonSearchTerm}
-            currentStatus={lessonStatusFilter}
-            currentExtraQuery={{
-              category_id: lessonCategoryFilter !== "all" ? lessonCategoryFilter : undefined,
-              created_from: lessonEffectiveCreatedFrom,
-              created_to: lessonEffectiveCreatedTo,
-            }}
-            filtersSlot={lessonFiltersSlot}
-            onMutated={mutateLessons}
-            onRefresh={() => loadLessons(lessonState)}
-            isRefreshing={lessonsRefreshing}
-            serverPage={lessonData.page}
-            serverPageSize={lessonData.pageSize}
-            onTableStateChange={(st) => {
-              setLessonState(st);
-              void loadLessons(st);
-            }}
-          />
+          <section data-training-section="lessons" className="scroll-mt-24">
+            <TrainingEntityTable
+              config={lessonConfig}
+              rows={lessonData.rows}
+              serverTotal={lessonData.total}
+              rawCount={lessonData.total}
+              filtersActive={lessonFiltersActive}
+              currentSearch={debouncedLessonSearchTerm}
+              currentStatus={lessonStatusFilter}
+              currentExtraQuery={{
+                category_id: lessonCategoryFilter !== "all" ? lessonCategoryFilter : undefined,
+                created_from: lessonEffectiveCreatedFrom,
+                created_to: lessonEffectiveCreatedTo,
+              }}
+              filtersSlot={lessonFiltersSlot}
+              onMutated={mutateLessons}
+              onRefresh={() => loadLessons(lessonState)}
+              isRefreshing={lessonsRefreshing}
+              serverPage={lessonData.page}
+              serverPageSize={lessonData.pageSize}
+              onTableStateChange={(st) => {
+                setLessonState(st);
+                void loadLessons(st);
+              }}
+            />
+          </section>
 
-          <TrainingEntityTable
-            config={quizConfig}
-            rows={quizData.rows}
-            serverTotal={quizData.total}
-            rawCount={quizData.total}
-            filtersActive={quizFiltersActive}
-            currentSearch={debouncedQuizSearchTerm}
-            currentStatus={quizStatusFilter}
-            currentExtraQuery={{
-              lesson_id: quizLessonFilter !== "all" ? quizLessonFilter : undefined,
-              created_from: quizEffectiveCreatedFrom,
-              created_to: quizEffectiveCreatedTo,
-            }}
-            filtersSlot={quizFiltersSlot}
-            onMutated={mutateQuizzes}
-            onRefresh={() => loadQuizzes(quizState)}
-            isRefreshing={quizzesRefreshing}
-            serverPage={quizData.page}
-            serverPageSize={quizData.pageSize}
-            onTableStateChange={(st) => {
-              setQuizState(st);
-              void loadQuizzes(st);
-            }}
-          />
+          <section data-training-section="quizzes" className="scroll-mt-24">
+            <TrainingEntityTable
+              config={quizConfig}
+              rows={quizData.rows}
+              serverTotal={quizData.total}
+              rawCount={quizData.total}
+              filtersActive={quizFiltersActive}
+              currentSearch={debouncedQuizSearchTerm}
+              currentStatus={quizStatusFilter}
+              currentExtraQuery={{
+                lesson_id: quizLessonFilter !== "all" ? quizLessonFilter : undefined,
+                created_from: quizEffectiveCreatedFrom,
+                created_to: quizEffectiveCreatedTo,
+              }}
+              filtersSlot={quizFiltersSlot}
+              onMutated={mutateQuizzes}
+              onRefresh={() => loadQuizzes(quizState)}
+              isRefreshing={quizzesRefreshing}
+              serverPage={quizData.page}
+              serverPageSize={quizData.pageSize}
+              onTableStateChange={(st) => {
+                setQuizState(st);
+                void loadQuizzes(st);
+              }}
+            />
+          </section>
         </>
       )}
     </div>

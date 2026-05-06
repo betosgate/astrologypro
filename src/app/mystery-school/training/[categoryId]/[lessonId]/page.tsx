@@ -4,12 +4,12 @@ import { redirect, notFound } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import { requireMysterySchoolAccess } from "@/lib/mystery-school/access";
+import { getFoundationWeekTimelineForUser } from "@/lib/mystery-school/foundation-progress";
 import { selectLessonQuestionsForLearnerCompat } from "@/lib/training/admin-quiz-questions";
 import { listCorrectQuizQuestionProgress } from "@/lib/training/quiz-question-progress";
 import {
   LessonViewerClient,
   type LessonViewerProps,
-  type SidebarLesson,
 } from "@/components/trainee/lesson-viewer-client";
 
 export const dynamic = "force-dynamic";
@@ -205,21 +205,57 @@ export default async function TrainingLessonPage({ params }: Props) {
   if (locked) redirect(`/mystery-school/training`);
   if (!lesson || lesson.category_id !== categoryId) notFound();
 
+  // ── 1a. Sprint 2026-05-06: enforce sequential Foundation week unlock ──
+  // The training overview already locks weeks visually, but a direct URL
+  // to a future-week lesson must also be blocked. Already-completed
+  // lessons remain reviewable.
+  //
+  // Rules:
+  //   • Week 1 is always unlocked.
+  //   • Week N is unlocked iff Week N-1 is complete.
+  //   • A lesson the user has already completed is always reviewable
+  //     (regardless of week order), so progress reviews work after a
+  //     week's published lessons change.
+  try {
+    const { weeks } = await getFoundationWeekTimelineForUser(admin, user.id);
+    const currentWeekIdx = weeks.findIndex((w) => w.category_id === categoryId);
+    if (currentWeekIdx > 0) {
+      // Determine if this specific lesson has already been completed —
+      // review path is always allowed.
+      const { count: completedThisLesson } = await admin
+        .from("lesson_completions")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .eq("lesson_id", lessonId);
+      const isReview = (completedThisLesson ?? 0) > 0;
+      if (!isReview) {
+        const priorWeek = weeks[currentWeekIdx - 1];
+        if (priorWeek && !priorWeek.completed) {
+          redirect("/mystery-school/training?locked=prior-week");
+        }
+      }
+    }
+  } catch (err) {
+    console.warn(
+      "[ms-training/[categoryId]/[lessonId]] sequential-unlock check failed",
+      err instanceof Error ? err.message : String(err),
+    );
+    // Fail-open on the sequential check — server-side lesson-fetch and
+    // requireMysterySchoolAccess are still in place; we don't want a
+    // helper hiccup to lock out a legitimate learner.
+  }
+
   // ── 2. Sidebar — sibling lessons in this week-category ─────────────────────
   // We fetch directly via the admin client (the trainee programs endpoint is
   // overkill here and would re-enumerate every program). Per-lesson completion
   // flags are needed for the sidebar checkmark state.
-  const [siblingsRes, completionsRes, categoryRes] = await Promise.all([
+  const [siblingsRes, categoryRes] = await Promise.all([
     admin
       .from("training_lessons")
       .select("id, title, priority")
       .eq("category_id", categoryId)
       .eq("is_active", true)
       .order("priority", { ascending: true }),
-    admin
-      .from("lesson_completions")
-      .select("lesson_id")
-      .eq("user_id", user.id),
     admin
       .from("training_categories")
       .select("id, name, training_id")
@@ -228,19 +264,7 @@ export default async function TrainingLessonPage({ params }: Props) {
   ]);
 
   const siblings = siblingsRes.data ?? [];
-  const completedSet = new Set(
-    (completionsRes.data ?? []).map((row) => row.lesson_id)
-  );
   const category = categoryRes.data;
-
-  const sidebarLessons: SidebarLesson[] = siblings.map((s) => ({
-    id: s.id,
-    title: s.title,
-    completed: completedSet.has(s.id),
-    current: s.id === lessonId,
-    locked: false,
-    href: `/mystery-school/training/${categoryId}/${s.id}`,
-  }));
 
   // ── 3. Compute next-route + label ──────────────────────────────────────────
   // If there's another lesson after this one in the same week, link to it.
@@ -320,7 +344,7 @@ export default async function TrainingLessonPage({ params }: Props) {
     isCompleted: lesson.completed === true,
     nextRoute,
     nextLabel,
-    sidebarLessons,
+    sidebarLessons: [],
     triggers: lesson.triggers ?? [],
     lastPositionSeconds: lesson.last_position_seconds ?? 0,
   };

@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
   // Fetch the booking
   const { data: booking } = await admin
     .from("bookings")
-    .select("id, status, stripe_payment_intent_id, diviner_id, base_price, total_amount, ref_code, commission_source_assignment_id, commission_source_template_id, commission_rate_type_stamp, commission_rate_value_stamp")
+    .select("id, status, stripe_payment_intent_id, diviner_id, base_price, total_amount, ref_code, commission_source_assignment_id, commission_source_template_id, commission_rate_type_stamp, commission_rate_value_stamp, affiliate_commission_amount_cents, scheduled_at, duration_minutes")
     .eq("id", body.bookingId)
     .maybeSingle();
 
@@ -136,6 +136,18 @@ export async function POST(req: NextRequest) {
         stampedTemplateId: (booking.commission_source_template_id as string | null) ?? null,
         stampedRateType: (booking.commission_rate_type_stamp as "percent" | "flat" | null) ?? null,
         stampedRateValue: booking.commission_rate_value_stamp != null ? Number(booking.commission_rate_value_stamp) : null,
+        stampedCommissionCents:
+          (booking as Record<string, unknown>).affiliate_commission_amount_cents != null
+            ? Number(
+                (booking as Record<string, unknown>).affiliate_commission_amount_cents,
+              )
+            : null,
+        bookingScheduledAt:
+          ((booking as Record<string, unknown>).scheduled_at as string | null) ?? null,
+        bookingDurationMinutes:
+          (booking as Record<string, unknown>).duration_minutes != null
+            ? Number((booking as Record<string, unknown>).duration_minutes)
+            : null,
       });
       console.log(`[confirm-payment] Affiliate fallback sync completed for bookingId=${booking.id}`);
     }

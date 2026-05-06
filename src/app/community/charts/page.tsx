@@ -83,12 +83,12 @@ type ChartsPagePayload = {
   familyMembers: FamilyMember[];
   charts: RelationshipChart[];
   relationshipReports: RelationshipReportRow[];
+  familyOverviewReports: FamilyOverviewReportRow[];
 };
 
 /**
  * Lifecycle row from `community_relationship_reports`. Used per pair ×
- * report_type to derive whether the CTA should be Generate / View /
- * Regenerate / Retry on this list.
+ * report_type to derive whether the CTA should be Generate / View on this list.
  */
 type RelationshipReportRow = {
   person_a_id: string;
@@ -97,6 +97,13 @@ type RelationshipReportRow = {
   astro_ai_response_id: string | null;
   report_status: string | null;
   invalidated_at: string | null;
+  generated_at: string | null;
+};
+
+type FamilyOverviewReportRow = {
+  mode: "romantic" | "friendship" | "business";
+  astro_ai_response_id: string | null;
+  report_status: string | null;
   generated_at: string | null;
 };
 
@@ -127,29 +134,26 @@ const MODE_TO_REPORT_TYPE: Record<
 function ctaLabelForState(state: ChartReportState): string {
   switch (state) {
     case "generated":
-      return "View";
     case "stale":
-      return "Regenerate";
-    case "failed":
-      return "Retry";
-    case "generating":
-      return "In progress";
     case "locked_for_review":
-      return "Review";
+      return "View";
+    case "failed":
+    case "generating":
     case "missing":
     default:
-      return "Generate";
+      return state === "generating" ? "In progress" : "Generate";
   }
 }
 
 function statusToneClass(state: ChartReportState): string {
   switch (state) {
     case "generated":
-      return "text-green-600 dark:text-green-400";
     case "stale":
-      return "text-amber-600 dark:text-amber-400";
+    case "locked_for_review":
+      return "text-green-600 dark:text-green-400";
     case "failed":
-      return "text-destructive";
+    case "missing":
+      return "text-amber-600 dark:text-amber-400";
     case "generating":
       return "text-blue-600 dark:text-blue-400";
     default:
@@ -192,6 +196,7 @@ async function fetchChartsPagePayload(): Promise<ChartsPagePayload> {
     familyMembers: [],
     charts: [],
     relationshipReports: [],
+    familyOverviewReports: [],
   };
 
   const result = await fetch("/api/community/relationship-charts");
@@ -200,6 +205,7 @@ async function fetchChartsPagePayload(): Promise<ChartsPagePayload> {
     payload.familyMembers = data.familyMembers ?? [];
     payload.charts = data.charts ?? [];
     payload.relationshipReports = data.relationshipReports ?? [];
+    payload.familyOverviewReports = data.familyOverviewReports ?? [];
   }
 
   return payload;
@@ -212,6 +218,9 @@ export default function ChartsPage() {
   const [relationshipReports, setRelationshipReports] = useState<
     RelationshipReportRow[]
   >([]);
+  const [familyOverviewReports, setFamilyOverviewReports] = useState<
+    FamilyOverviewReportRow[]
+  >([]);
   const [loading, setLoading] = useState(true);
   const [overviewOpen, setOverviewOpen] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -222,6 +231,7 @@ export default function ChartsPage() {
     setFamilyMembers(data.familyMembers);
     setCharts(data.charts);
     setRelationshipReports(data.relationshipReports);
+    setFamilyOverviewReports(data.familyOverviewReports);
     setLoading(false);
   }
 
@@ -235,6 +245,7 @@ export default function ChartsPage() {
       setFamilyMembers(data.familyMembers);
       setCharts(data.charts);
       setRelationshipReports(data.relationshipReports);
+      setFamilyOverviewReports(data.familyOverviewReports);
       setLoading(false);
     }
 
@@ -250,7 +261,7 @@ export default function ChartsPage() {
    * Returns "missing" when there's no row yet — the deriver in the
    * shared lib treats that as "Generate". When a saved row exists, the
    * deriver reads `report_status`, `astro_ai_response_id`, and
-   * `invalidated_at` to decide between View, Regenerate, Retry, etc.
+   * `invalidated_at` to decide whether this report exists yet.
    *
    * IMPORTANT: this deliberately ignores `relationship_charts.chart_data`
    * (the legacy lightweight synastry summary). Per the spec, that data
@@ -275,6 +286,16 @@ export default function ChartsPage() {
       invalidated_at: row?.invalidated_at ?? null,
       // Pass undefined chart_data so the deriver doesn't fall back to
       // the legacy synastry summary as proof of a full saved report.
+      chart_data: undefined,
+    });
+  }
+
+  function getFamilyOverviewStateForMode(mode: RelationshipMode): ChartReportState {
+    const row = familyOverviewReports.find((report) => report.mode === mode);
+    return deriveRelationshipReportState({
+      report_id: row?.astro_ai_response_id ?? null,
+      report_status: row?.report_status ?? null,
+      invalidated_at: null,
       chart_data: undefined,
     });
   }
@@ -394,7 +415,8 @@ export default function ChartsPage() {
 
               <div className="grid gap-4 md:grid-cols-3">
                 {RELATIONSHIP_MODES.map((option) => {
-                  const cta = "View";
+                  const state = getFamilyOverviewStateForMode(option.value);
+                  const cta = ctaLabelForState(state);
                   return (
                     <section key={option.value} className="rounded-md border p-4">
                       <div className="flex items-center gap-2">
@@ -420,7 +442,7 @@ export default function ChartsPage() {
                         disabled={familyMembers.length < 2}
                         onClick={() => openFamilyDetailedReport(option.value)}
                       >
-                        <span className={statusToneClass("missing")}>{cta}</span>
+                        <span className={statusToneClass(state)}>{cta}</span>
                       </Button>
                     </section>
                   );
@@ -536,16 +558,7 @@ export default function ChartsPage() {
                               <span className="flex w-full items-center justify-between gap-3">
                                 <span>{option.label}</span>
                                 <span
-                                  className={`text-[10px] font-medium uppercase tracking-wider ${state === "generated"
-                                      ? "text-green-500"
-                                      : state === "stale"
-                                        ? "text-amber-500"
-                                        : state === "failed"
-                                          ? "text-destructive"
-                                          : state === "generating"
-                                            ? "text-blue-500"
-                                            : "text-muted-foreground"
-                                    }`}
+                                  className={`text-[10px] font-medium uppercase tracking-wider ${statusToneClass(state)}`}
                                 >
                                   {cta}
                                 </span>
@@ -612,16 +625,7 @@ export default function ChartsPage() {
                                 <span className="flex w-full items-center justify-between gap-3">
                                   <span>{option.label}</span>
                                   <span
-                                    className={`text-[10px] font-medium uppercase tracking-wider ${state === "generated"
-                                        ? "text-green-500"
-                                        : state === "stale"
-                                          ? "text-amber-500"
-                                          : state === "failed"
-                                            ? "text-destructive"
-                                            : state === "generating"
-                                              ? "text-blue-500"
-                                              : "text-muted-foreground"
-                                      }`}
+                                    className={`text-[10px] font-medium uppercase tracking-wider ${statusToneClass(state)}`}
                                   >
                                     {cta}
                                   </span>
