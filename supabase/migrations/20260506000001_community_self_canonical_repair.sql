@@ -1,7 +1,7 @@
 -- ============================================================================
 -- Community: canonical self-row repair + uniqueness guard
 --
--- Fixes the case where a community account has multiple `self` rows in
+-- Fixes the case where a community account has multiple "self" rows in
 -- community_family_members (one with valid coords, one without; or one with
 -- a linked user_id, one without). Symptom: a member appears both in the
 -- transit-eligible list AND under "1 member needs birth details" on

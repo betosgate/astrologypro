@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "src/lib/community/birth-data-resolver.ts",
+    "src/lib/community/birth-data-readiness.ts",
+    "src/lib/community/family-profile-completion.ts",
+    "src/lib/db/migrations.ts",
+    "src/data/migrations/20260506000001_community_self_canonical_repair.ts",
+    "src/app/community/transits/page.tsx",
+    "src/app/api/community/me/generate-chart/route.ts"
+  ]
+}
