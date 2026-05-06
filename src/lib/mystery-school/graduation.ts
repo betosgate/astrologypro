@@ -12,9 +12,9 @@
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendGraduationCongratulations } from "@/lib/email";
+import { getFoundationCompletionForUser } from "@/lib/mystery-school/foundation-progress";
 
 const TOTAL_DECANS = 36;
-const TOTAL_FOUNDATION_WEEKS = 12;
 
 export interface GraduationEligibilityResult {
   eligible: boolean;
@@ -35,17 +35,32 @@ export async function checkGraduationEligibility(
 ): Promise<GraduationEligibilityResult> {
   const admin = createAdminClient();
 
-  // 1. Q1 foundation check — count weeks where all tasks are marked done.
-  // Filter by week_completed_at IS NOT NULL to avoid counting partial weeks
-  // (student_foundation_progress rows are created when the first task is
-  //  completed, not when the week is fully done).
-  const { count: foundationCount } = await admin
-    .from("student_foundation_progress")
-    .select("id", { count: "exact", head: true })
-    .eq("student_id", studentId)
-    .not("week_completed_at", "is", null);
-
-  const q1Complete = (foundationCount ?? 0) >= TOTAL_FOUNDATION_WEEKS;
+  // 1. Sprint 2026-05-06: Foundation completion uses Admin Training-backed
+  // helper so graduation, learner UI, admin badges, and decan gating
+  // share the same source of truth. Look up user_id for the student so we
+  // can call the user-scoped helper.
+  const { data: studentRow } = await admin
+    .from("mystery_school_students")
+    .select("user_id, training_status")
+    .eq("id", studentId)
+    .maybeSingle();
+  const studentUserId = ((studentRow as Record<string, unknown> | null)
+    ?.user_id as string | null) ?? null;
+  let foundationComplete = false;
+  if (studentUserId) {
+    const completion = await getFoundationCompletionForUser(
+      admin,
+      studentUserId,
+    );
+    foundationComplete = completion.isComplete;
+  }
+  // Already-graduated students are treated as past-Foundation (defensive).
+  const trainingStatus = ((studentRow as Record<string, unknown> | null)
+    ?.training_status as string | null) ?? null;
+  if (trainingStatus === "decans" || trainingStatus === "graduated") {
+    foundationComplete = true;
+  }
+  const q1Complete = foundationComplete;
 
   // 2. Decan completion check — count completed decans
   const { count: completedDecans } = await admin

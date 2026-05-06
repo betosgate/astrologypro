@@ -92,6 +92,7 @@ import { MIGRATION_SQL as MIG_20260505000002_BACC } from "@/data/migrations/2026
 import { MIGRATION_SQL as MIG_20260505000003_AP2 } from "@/data/migrations/20260505000003_affiliate_payouts_phase_2";
 import { MIGRATION_SQL as MIG_20260505000004_AP3 } from "@/data/migrations/20260505000004_affiliate_phase_3_analytics";
 import { MIGRATION_SQL as MIG_20260506000001_CSCR } from "@/data/migrations/20260506000001_community_self_canonical_repair";
+import { MIGRATION_SQL as MIG_20260506000002_MSFC } from "@/data/migrations/20260506000002_mystery_school_foundation_completed_at";
 
 /**
  * Allowlisted migrations that the admin migration runner can execute.
@@ -868,6 +869,14 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Repairs duplicate `relationship='self'` rows in community_family_members per member_id by picking the canonical row by score (valid lat/lng + linked user_id + has natal_report_id + latest update), re-pointing CASCADE FK references (monthly_transits, relationship_charts, community_relationship_reports, return_event_reminders, natal_regeneration_audit) onto the canonical row, then deleting the losing rows. Adds a partial UNIQUE index `ux_family_members_one_self_per_member` preventing future duplicates per member_id where LOWER(relationship)='self'. Preserves astro_ai_responses (no FK to family_member_id, verified). Idempotent + sanity-checked. Sprint plan: tasks/06.05.2026/community-transits-profile-and-display-fixes/.",
     sortKey: "20260506000001",
     sql: MIG_20260506000001_CSCR,
+  },
+  "20260506000002_mystery_school_foundation_completed_at": {
+    id: "20260506000002_mystery_school_foundation_completed_at",
+    title: "Mystery School: foundation_completed_at milestone column",
+    description:
+      "Adds nullable TIMESTAMPTZ column mystery_school_students.foundation_completed_at + partial index. Records the moment a student finished Admin Training-backed Foundation and was advanced to training_status='decans'. Best-effort backfill from started_at/enrolled_at for students already in 'decans' or 'graduated'. Idempotent + sanity-checked. Sprint plan: docs/tasks/2026-05-06/mystery-school-foundation-decan-access-flow.md.",
+    sortKey: "20260506000002",
+    sql: MIG_20260506000002_MSFC,
   },
 };
 

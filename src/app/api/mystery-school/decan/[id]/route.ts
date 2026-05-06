@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { requireMysterySchoolAccess } from "@/lib/mystery-school/access";
+import { requireDecanEligibilityOr403 } from "@/lib/mystery-school/decan-gate";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +22,10 @@ export async function GET(
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  // Sprint 2026-05-06: hard-block Decan detail when Foundation is incomplete.
+  const gate = await requireDecanEligibilityOr403(createAdminClient(), user.id);
+  if (gate) return gate;
 
   const { id } = await params;
   const student = result.student as unknown as { id: string };
