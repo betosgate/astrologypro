@@ -198,7 +198,13 @@ export function normalizeInterpretationText(value: unknown): string {
 }
 
 export const emptyBirth = (): BirthInput => ({ dob: "", tob: "", city: null });
-export const defaultForm = () => ({
-  person1: emptyBirth(), person2: emptyBirth(),
-  areaOfInquiry: "", question: "", futureWeek: "", futureMonth: "",
+export const defaultForm = (): FormState => ({
+  person1: emptyBirth(),
+  person2: emptyBirth(),
+  name1: "",
+  name2: "",
+  areaOfInquiry: "",
+  question: "",
+  futureWeek: "",
+  futureMonth: "",
 });
