@@ -178,8 +178,7 @@ export default async function CommunityFamilyMemberPage({ params }: PageProps) {
     relationship: familyMember.relationship,
     // Pass the saved chart object cast to the completion helper's expected
     // shape; we only need its truthiness for the completion percent.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    natal_chart: familyMember.natal_chart as any,
+    natal_chart: familyMember.natal_chart,
   });
 
   const ringColor =
@@ -211,7 +210,9 @@ export default async function CommunityFamilyMemberPage({ params }: PageProps) {
     ? new Date(familyMember.date_of_birth + "T12:00:00")
     : null;
   const ageYears = dob
-    ? Math.floor((Date.now() - dob.getTime()) / (365.25 * 24 * 3600 * 1000))
+    ? Math.floor(
+        (new Date().getTime() - dob.getTime()) / (365.25 * 24 * 3600 * 1000),
+      )
     : null;
 
   // Build the prefill only when chart-ready to avoid unnecessary
@@ -446,16 +447,18 @@ export default async function CommunityFamilyMemberPage({ params }: PageProps) {
           accepted. */}
 
       {canRenderToolkit ? (
-        <HoroscopeToolkitPage
-          basePath={`/community/family/${familyMember.id}`}
-          apiBase="/api/community/horoscope"
-          allowedSlugs={[NATAL_TAB_SLUG]}
-          initialPrefill={encodedPrefill}
-          initialSavedReport={savedNatalReport}
-          autoSubmitPrefill={!savedNatalReport}
-          readOnlyBirthData={true}
-          communityNatalFamilyMemberId={familyMember.id}
-        />
+        <div id="natal-chart">
+          <HoroscopeToolkitPage
+            basePath={`/community/family/${familyMember.id}`}
+            apiBase="/api/community/horoscope"
+            allowedSlugs={[NATAL_TAB_SLUG]}
+            initialPrefill={encodedPrefill}
+            initialSavedReport={savedNatalReport}
+            autoSubmitPrefill={!savedNatalReport}
+            readOnlyBirthData={true}
+            communityNatalFamilyMemberId={familyMember.id}
+          />
+        </div>
       ) : (
         <Card className="max-w-2xl border-amber-500/40 bg-amber-500/10 dark:bg-amber-950/20">
           <CardHeader className="pb-2">

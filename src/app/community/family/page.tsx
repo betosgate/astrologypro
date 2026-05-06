@@ -30,7 +30,6 @@ import {
 import { formatBirthPlace } from "@/lib/community/birth-location";
 import { SectionContainer } from "@/components/shared/section-container";
 import {
-  ctaForState,
   deriveNatalReportState,
 } from "@/lib/community/chart-report-state";
 
@@ -500,19 +499,12 @@ export default function CommunityFamilyPage() {
                 (365.25 * 24 * 3600 * 1000)
             );
             const reportState = deriveNatalReportState(m);
-            const reportCta = ctaForState(reportState);
-            const chartReady = reportCta.kind === "view";
+            const chartReady = reportState === "generated";
             const chartCtaLabel =
-              reportCta.kind === "view"
+              reportState === "generated"
                 ? "View Chart"
-                : reportCta.kind === "retry"
-                ? "Retry Chart"
-                : reportCta.kind === "regenerate"
-                ? "Update Chart"
-                : reportCta.kind === "generating"
+                : reportState === "generating"
                 ? "Generating Chart..."
-                : reportCta.kind === "locked"
-                ? "Review Chart"
                 : "Generate Chart";
             return (
               <Card key={m.id}>
