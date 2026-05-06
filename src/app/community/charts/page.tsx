@@ -83,6 +83,7 @@ type ChartsPagePayload = {
   familyMembers: FamilyMember[];
   charts: RelationshipChart[];
   relationshipReports: RelationshipReportRow[];
+  familyOverviewReports: FamilyOverviewReportRow[];
 };
 
 /**
@@ -96,6 +97,13 @@ type RelationshipReportRow = {
   astro_ai_response_id: string | null;
   report_status: string | null;
   invalidated_at: string | null;
+  generated_at: string | null;
+};
+
+type FamilyOverviewReportRow = {
+  mode: "romantic" | "friendship" | "business";
+  astro_ai_response_id: string | null;
+  report_status: string | null;
   generated_at: string | null;
 };
 
@@ -188,6 +196,7 @@ async function fetchChartsPagePayload(): Promise<ChartsPagePayload> {
     familyMembers: [],
     charts: [],
     relationshipReports: [],
+    familyOverviewReports: [],
   };
 
   const result = await fetch("/api/community/relationship-charts");
@@ -196,6 +205,7 @@ async function fetchChartsPagePayload(): Promise<ChartsPagePayload> {
     payload.familyMembers = data.familyMembers ?? [];
     payload.charts = data.charts ?? [];
     payload.relationshipReports = data.relationshipReports ?? [];
+    payload.familyOverviewReports = data.familyOverviewReports ?? [];
   }
 
   return payload;
@@ -208,6 +218,9 @@ export default function ChartsPage() {
   const [relationshipReports, setRelationshipReports] = useState<
     RelationshipReportRow[]
   >([]);
+  const [familyOverviewReports, setFamilyOverviewReports] = useState<
+    FamilyOverviewReportRow[]
+  >([]);
   const [loading, setLoading] = useState(true);
   const [overviewOpen, setOverviewOpen] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -218,6 +231,7 @@ export default function ChartsPage() {
     setFamilyMembers(data.familyMembers);
     setCharts(data.charts);
     setRelationshipReports(data.relationshipReports);
+    setFamilyOverviewReports(data.familyOverviewReports);
     setLoading(false);
   }
 
@@ -231,6 +245,7 @@ export default function ChartsPage() {
       setFamilyMembers(data.familyMembers);
       setCharts(data.charts);
       setRelationshipReports(data.relationshipReports);
+      setFamilyOverviewReports(data.familyOverviewReports);
       setLoading(false);
     }
 
@@ -271,6 +286,16 @@ export default function ChartsPage() {
       invalidated_at: row?.invalidated_at ?? null,
       // Pass undefined chart_data so the deriver doesn't fall back to
       // the legacy synastry summary as proof of a full saved report.
+      chart_data: undefined,
+    });
+  }
+
+  function getFamilyOverviewStateForMode(mode: RelationshipMode): ChartReportState {
+    const row = familyOverviewReports.find((report) => report.mode === mode);
+    return deriveRelationshipReportState({
+      report_id: row?.astro_ai_response_id ?? null,
+      report_status: row?.report_status ?? null,
+      invalidated_at: null,
       chart_data: undefined,
     });
   }
@@ -390,7 +415,8 @@ export default function ChartsPage() {
 
               <div className="grid gap-4 md:grid-cols-3">
                 {RELATIONSHIP_MODES.map((option) => {
-                  const cta = "View";
+                  const state = getFamilyOverviewStateForMode(option.value);
+                  const cta = ctaLabelForState(state);
                   return (
                     <section key={option.value} className="rounded-md border p-4">
                       <div className="flex items-center gap-2">
@@ -416,7 +442,7 @@ export default function ChartsPage() {
                         disabled={familyMembers.length < 2}
                         onClick={() => openFamilyDetailedReport(option.value)}
                       >
-                        <span className={statusToneClass("missing")}>{cta}</span>
+                        <span className={statusToneClass(state)}>{cta}</span>
                       </Button>
                     </section>
                   );
