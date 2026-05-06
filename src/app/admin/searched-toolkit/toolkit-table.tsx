@@ -7,7 +7,6 @@ import {
   Mail,
   Trash2,
   Eye,
-  Settings2
 } from "lucide-react";
 import { 
   Table, 
@@ -19,6 +18,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Tooltip,
   TooltipContent,
@@ -41,6 +41,10 @@ interface ToolkitTableProps {
   items: any[];
   onSelect: (id: string) => void;
   onDelete: (id: string, name: string) => void;
+  selectedIds: Set<string>;
+  allOnPageSelected: boolean;
+  onToggleSelected: (id: string) => void;
+  onTogglePageSelected: () => void;
 }
 
 const SubjectPayload = ({ data, label, className }: { data: any, label?: string, className?: string }) => {
@@ -74,13 +78,28 @@ const SubjectPayload = ({ data, label, className }: { data: any, label?: string,
   );
 };
 
-export function ToolkitTable({ items, onSelect, onDelete }: ToolkitTableProps) {
+export function ToolkitTable({
+  items,
+  onSelect,
+  onDelete,
+  selectedIds,
+  allOnPageSelected,
+  onToggleSelected,
+  onTogglePageSelected,
+}: ToolkitTableProps) {
   return (
     <div className="rounded-md border">
       <TooltipProvider>
         <Table>
           <TableHeader className="bg-muted/50">
             <TableRow>
+              <TableHead className="w-10">
+                <Checkbox
+                  aria-label="Select all records on this page"
+                  checked={allOnPageSelected}
+                  onCheckedChange={onTogglePageSelected}
+                />
+              </TableHead>
               <TableHead className="font-semibold text-xs uppercase tracking-wider">Tool Name</TableHead>
               <TableHead className="font-semibold text-xs uppercase tracking-wider">Target / Payload</TableHead>
               <TableHead className="font-semibold text-xs uppercase tracking-wider">User Details</TableHead>
@@ -96,8 +115,16 @@ export function ToolkitTable({ items, onSelect, onDelete }: ToolkitTableProps) {
               return (
                 <TableRow 
                   key={item.id} 
-                  className="group transition-colors hover:bg-muted/30"
+                  className="group transition-colors hover:bg-muted/30 data-[state=selected]:bg-muted/50"
+                  data-state={selectedIds.has(item.id) ? "selected" : undefined}
                 >
+                  <TableCell className="py-4">
+                    <Checkbox
+                      aria-label={`Select ${personName}`}
+                      checked={selectedIds.has(item.id)}
+                      onCheckedChange={() => onToggleSelected(item.id)}
+                    />
+                  </TableCell>
                   <TableCell className="py-4">
                     <Badge variant="outline" className="font-medium bg-background whitespace-nowrap">
                       {item.toolname.replace(/_/g, " ")}
@@ -105,7 +132,20 @@ export function ToolkitTable({ items, onSelect, onDelete }: ToolkitTableProps) {
                   </TableCell>
                   <TableCell className="py-4">
                     <div className="flex flex-col gap-3 max-w-[300px]">
-                      {formData.self || formData.partner ? (
+                      {formData.partners && Array.isArray(formData.partners) && formData.partners.length > 0 ? (
+                        <div className="space-y-3">
+                          {formData.self && (
+                            <SubjectPayload data={formData.self} label="Self" />
+                          )}
+                          {formData.partners.map((member, idx) => (
+                            <SubjectPayload 
+                              key={member.id || idx} 
+                              data={member} 
+                              label={idx === 0 ? "Partner" : `Member ${idx}`} 
+                            />
+                          ))}
+                        </div>
+                      ) : formData.self || formData.partner ? (
                         <div className="space-y-2.5">
                           <SubjectPayload data={formData.self} label="Self" />
                           {(formData.self && formData.partner) && (
@@ -129,7 +169,7 @@ export function ToolkitTable({ items, onSelect, onDelete }: ToolkitTableProps) {
                         <SubjectPayload data={formData} />
                       )}
 
-                      {formData.targetMonth && !formData.self && !formData.person1 && (
+                      {formData.targetMonth && !formData.self && !formData.person1 && !formData.partners && (
                         <div className="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold bg-amber-50 text-amber-700 border-amber-100 uppercase w-fit">
                            Month: {formData.targetMonth}
                         </div>

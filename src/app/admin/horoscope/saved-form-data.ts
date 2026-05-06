@@ -90,7 +90,7 @@ function offsetFromDecimal(value: number): string {
   return `${sign}${twoDigit(hours)}:${twoDigit(minutes)}`;
 }
 
-function normalizeTimezone(source: JsonRecord | null, city: JsonRecord | null) {
+export function normalizeTimezone(source: JsonRecord | null, city: JsonRecord | null) {
   const timezone = asRecord(city?.timezone);
   const offset =
     firstString(timezone, ["offset_string", "utcOffset", "utc_offset"]) ||
@@ -108,7 +108,7 @@ function normalizeTimezone(source: JsonRecord | null, city: JsonRecord | null) {
   };
 }
 
-function normalizeCity(source: JsonRecord | null): CityOption | null {
+export function normalizeCity(source: JsonRecord | null): CityOption | null {
   if (!source) return null;
 
   const rawCity = source.city;
@@ -133,7 +133,7 @@ function normalizeCity(source: JsonRecord | null): CityOption | null {
   };
 }
 
-function normalizeBirth(source: JsonRecord | null): BirthInput {
+export function normalizeBirth(source: JsonRecord | null): BirthInput {
   return {
     dob: dateFromParts(source),
     tob: timeFromParts(source),
@@ -141,7 +141,7 @@ function normalizeBirth(source: JsonRecord | null): BirthInput {
   };
 }
 
-function normalizeMonth(value: string): string {
+export function normalizeMonth(value: string): string {
   if (!value) return "";
   const match = value.match(/^(\d{4})-(\d{2})(?:-\d{2})?$/);
   return match ? `${match[1]}-${match[2]}-01` : "";
@@ -180,6 +180,8 @@ export function formStateFromSavedFormData(input: unknown): FormState {
 
   form.person1 = normalizeBirth(person1Source);
   form.person2 = normalizeBirth(person2Source);
+  form.name1 = firstString(person1Source, ["name", "fullName", "full_name"]);
+  form.name2 = firstString(person2Source, ["name", "fullName", "full_name"]);
   form.areaOfInquiry = firstString(root, [
     "areaOfInquiry",
     "area_of_inquiry",
@@ -203,4 +205,12 @@ export function formStateFromSavedFormData(input: unknown): FormState {
     })();
 
   return form;
+}
+
+export function familyMembersFromSavedFormData(input: unknown): any[] | null {
+  const root = savedFormDataRoot(input);
+  if (!root) return null;
+
+  const partners = root.partners ?? root.family_members ?? root.familyMembers;
+  return Array.isArray(partners) ? partners : null;
 }
