@@ -31,13 +31,13 @@ import {
 import {
   MousePointerClick,
   TrendingUp,
-  Clock,
   DollarSign,
   ArrowRight,
   Users,
 } from "lucide-react";
 import { AffiliateMarketingKit } from "@/components/affiliate/marketing-kit";
 import { fetchMarketingKitItems } from "@/lib/affiliate-marketing-kit";
+import { StripeConnectPanel } from "../_components/StripeConnectPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -204,6 +204,9 @@ export default async function AffiliateDashboardPage() {
           View partnerships <ArrowRight className="size-3.5" aria-hidden />
         </Link>
       </header>
+
+      {/* Phase 2: Stripe Connect onboarding / status */}
+      <StripeConnectPanel />
 
       {/* KPIs */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

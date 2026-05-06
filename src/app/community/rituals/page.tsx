@@ -268,7 +268,7 @@ export default function CommunityRitualsPage() {
         <Button
           asChild
           size="sm"
-          className="bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow-md hover:from-amber-500 hover:to-orange-500"
+          className="bg-primary text-black shadow-md hover:from-amber-500 hover:to-orange-500"
         >
           <Link href="/community/rituals/new">
             <Plus className="mr-2 size-4" />
@@ -523,7 +523,7 @@ export default function CommunityRitualsPage() {
                     {isInProgress ? (
                       <Button
                         size="sm"
-                        className="bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow hover:from-amber-500 hover:to-orange-500"
+                        className="bg-primary text-black shadow hover:from-amber-500 hover:to-orange-500"
                         onClick={() =>
                           router.push(`/community/rituals/${ritual.id}/playback`)
                         }
@@ -534,7 +534,7 @@ export default function CommunityRitualsPage() {
                     ) : (
                       <Button
                         size="sm"
-                        className="bg-gradient-to-r from-amber-600/80 to-orange-600/80 text-white shadow hover:from-amber-500 hover:to-orange-500"
+                        className="bg-primary text-black shadow hover:from-amber-500 hover:to-orange-500"
                         onClick={() => router.push(`/community/rituals/${ritual.id}`)}
                       >
                         <ArrowRight className="mr-1.5 size-3.5" />
