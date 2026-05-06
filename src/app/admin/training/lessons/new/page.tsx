@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { LocalSearchAutocomplete } from "@/components/ui/local-search-autocomplete";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import {
   Card,
@@ -60,6 +60,7 @@ function normalizeYouTubeUrl(input: string): string {
 
 export default function NewLessonPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [categoryLessons, setCategoryLessons] = useState<LessonOption[]>([]);
@@ -102,16 +103,22 @@ export default function NewLessonPage() {
   useEffect(() => {
     async function loadCategories() {
       try {
+        const requestedCategoryId = searchParams.get("category_id");
         // pageSize=1000 ensures all categories are loaded, not just the first 10
         const res = await fetch("/api/admin/training/categories?pageSize=1000");
         if (res.ok) {
           const data = await res.json();
-          setCategories(data.categories ?? []);
-          if (data.categories?.length > 0) {
-            const first = data.categories[0];
-            setForm((prev) => ({ ...prev, category_id: first.id }));
-            setCategoryLabel(first.name);
-            loadLessonsForCategory(first.id);
+          const loadedCategories = data.categories ?? [];
+          setCategories(loadedCategories);
+          if (loadedCategories.length > 0) {
+            const selected =
+              loadedCategories.find(
+                (category: CategoryOption) =>
+                  category.id === requestedCategoryId
+              ) ?? loadedCategories[0];
+            setForm((prev) => ({ ...prev, category_id: selected.id }));
+            setCategoryLabel(selected.name);
+            loadLessonsForCategory(selected.id);
           }
         }
       } catch {
@@ -119,7 +126,7 @@ export default function NewLessonPage() {
       }
     }
     loadCategories();
-  }, []);
+  }, [searchParams]);
 
   async function loadLessonsForCategory(categoryId: string) {
     if (!categoryId) {
