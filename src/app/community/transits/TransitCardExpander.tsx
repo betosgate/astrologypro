@@ -49,6 +49,12 @@ export function TransitCardExpander({
     <>
       {cards.map((card) => {
         const isOpen = expandedId === card.id;
+        const chartCtaLabel =
+          card.chartCtaLabel === "View Natal Chart"
+            ? "View Natal Chart"
+            : card.chartCtaLabel === "Generating Natal Chart..."
+              ? "Generating Natal Chart..."
+              : "Generate Natal Chart";
 
         return (
           <Card key={card.id}>
@@ -73,13 +79,13 @@ export function TransitCardExpander({
                 {card.chartCtaDisabled ? (
                   <Button size="sm" variant="outline" disabled>
                     <Telescope className="mr-1.5 size-4" />
-                    {card.chartCtaLabel}
+                    {chartCtaLabel}
                   </Button>
                 ) : (
                   <Button asChild size="sm" variant="outline">
                     <Link href={card.chartHref}>
                       <Telescope className="mr-1.5 size-4" />
-                      {card.chartCtaLabel}
+                      {chartCtaLabel}
                     </Link>
                   </Button>
                 )}
@@ -152,13 +158,13 @@ export function TransitCardExpander({
                   {card.chartCtaDisabled ? (
                     <Button size="sm" variant="outline" disabled>
                       <Telescope className="mr-1.5 size-4" />
-                      {card.chartCtaLabel}
+                      {chartCtaLabel}
                     </Button>
                   ) : (
                     <Button size="sm" variant="outline" asChild>
                       <Link href={card.chartHref}>
                         <Telescope className="mr-1.5 size-4" />
-                        {card.chartCtaLabel}
+                        {chartCtaLabel}
                       </Link>
                     </Button>
                   )}

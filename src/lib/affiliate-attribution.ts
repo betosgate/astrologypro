@@ -18,6 +18,7 @@ import type {
   AffiliateCommissionType,
   AffiliateDestinationType,
 } from "@/types/affiliate-assignment";
+import { computeRipenessAt } from "@/lib/affiliate-payout-ripeness";
 
 /** Campaign codes are `cmp_` followed by 8 unambiguous alphanumeric chars. */
 const REF_CODE_PATTERN = /^cmp_[A-Za-z0-9]{8}$/;
@@ -176,6 +177,26 @@ export interface CreditConversionInput {
   stampedRateType: "percent" | "flat" | null;
   /** bookings.commission_rate_value_stamp — NUMERIC, or NULL. */
   stampedRateValue: number | null;
+  /**
+   * Phase-2-prerequisite (2026-05-05 sprint): the cents value carved
+   * out at booking creation, persisted on
+   * bookings.affiliate_commission_amount_cents. When provided and
+   * non-negative, used verbatim for the conversion row's
+   * commission_amount_cents — guarantees exact match with what the
+   * platform actually retained at PaymentIntent time. NULL on
+   * pre-2026-05-05 bookings; falls back to recomputing via
+   * computeCommissionCents in that case.
+   */
+  stampedCommissionCents?: number | null;
+  /**
+   * Phase 2 sprint (2026-05-05 affiliate-payouts-phase-2): used by the
+   * payout-ripeness helper to compute when the conversion becomes
+   * eligible for transfer (24h after the session ends). NULL for
+   * non-booking conversions; helper falls back to
+   * `created_at + 24h`.
+   */
+  bookingScheduledAt?: string | Date | null;
+  bookingDurationMinutes?: number | null;
 }
 
 export interface CreditConversionResult {
@@ -256,12 +277,31 @@ export async function creditAffiliateConversion(
   }
 
   // Commission is computed from the stamp, NOT from any campaign or
-  // template read. Same math regardless of which path we took.
-  const commissionCents = computeCommissionCents(
-    params.orderAmountCents,
-    params.stampedRateType,
-    params.stampedRateValue,
-  );
+  // template read. When the booking carries the carved-out cents from
+  // 2026-05-05's task (affiliate_commission_amount_cents), use that
+  // value verbatim — guarantees the conversion row matches what the
+  // platform actually retained at PaymentIntent time. Falls back to
+  // recomputing for pre-2026-05-05 bookings whose column is NULL.
+  const commissionCents =
+    typeof params.stampedCommissionCents === "number" &&
+    params.stampedCommissionCents >= 0
+      ? params.stampedCommissionCents
+      : computeCommissionCents(
+          params.orderAmountCents,
+          params.stampedRateType,
+          params.stampedRateValue,
+        );
+
+  // Phase 2 (2026-05-05 affiliate-payouts-phase-2): stamp ripeness so the
+  // no-show-refunds cron can promote the conversion to `ripe` at the right
+  // time. For booking conversions: 24h after session ends. For non-booking
+  // conversions (subscriptions, general products without a session): 24h
+  // after now.
+  const ripenessAt = computeRipenessAt({
+    bookingScheduledAt: params.bookingScheduledAt ?? null,
+    bookingDurationMinutes: params.bookingDurationMinutes ?? null,
+    conversionCreatedAt: new Date(),
+  }).toISOString();
 
   // ── Branch on stamp source ──────────────────────────────────────────────
 
@@ -330,6 +370,9 @@ export async function creditAffiliateConversion(
       commission_source: "campaign_assignment",
       rate_type_used: params.stampedRateType,
       rate_value_used: params.stampedRateValue,
+      // Phase 2 payouts:
+      ripeness_at: ripenessAt,
+      payout_status: "unpaid",
     };
   } else {
     // Phase 1.5 general-program path. The booking was stamped via a
@@ -376,6 +419,9 @@ export async function creditAffiliateConversion(
       commission_source: "campaign_assignment",
       rate_type_used: params.stampedRateType,
       rate_value_used: params.stampedRateValue,
+      // Phase 2 payouts:
+      ripeness_at: ripenessAt,
+      payout_status: "unpaid",
     };
   }
 
@@ -409,6 +455,23 @@ export async function creditAffiliateConversion(
     stampType: params.stampedRateType,
     stampValue: params.stampedRateValue,
   });
+
+  // Phase 3 prep (Task 10): if this is the affiliate's first conversion
+  // ever, stamp the milestone for funnel analytics. The
+  // .is("first_conversion_at", null) filter makes only the FIRST write win
+  // — subsequent calls are no-ops at the DB level.
+  try {
+    await admin
+      .from("affiliate_accounts")
+      .update({ first_conversion_at: new Date().toISOString() })
+      .eq("id", resolvedAccountId)
+      .is("first_conversion_at", null);
+  } catch (err) {
+    console.error(
+      "[creditAffiliateConversion] first_conversion_at stamp failed",
+      err,
+    );
+  }
 
   // Fire `affiliate.conversion` notification (in-app immediate, email
   // queued to daily digest). Fire-and-forget so a notification failure

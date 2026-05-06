@@ -19,7 +19,7 @@ import { Button } from "@/components/ui/button";
  * The parent is a server component that loads the family member row
  * and renders static JSX. This client sibling owns:
  *
- *   - the "Generate Chart" / "Update Chart" button (calls
+ *   - the "Generate Chart" / "View Chart" button (calls
  *     `POST /api/community/generate-natal`, then `router.refresh()` so
  *     the server component re-reads `community_family_members` and
  *     picks up the new `natal_chart` blob for the Chart Ready badge)
@@ -133,19 +133,28 @@ export function FamilyMemberActions({
             Edit Details
           </Link>
         </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={generateChart}
-          disabled={generating || !hasBirthDataForChart}
-        >
-          {generating ? (
-            <Loader2 className="mr-2 size-4 animate-spin" />
-          ) : (
-            <RefreshCw className="mr-2 size-4" />
-          )}
-          {hasSavedChart ? "Update Chart" : "Generate Chart"}
-        </Button>
+        {hasSavedChart ? (
+          <Button size="sm" variant="outline" asChild>
+            <Link href="#natal-chart">
+              <Star className="mr-2 size-4" />
+              View Chart
+            </Link>
+          </Button>
+        ) : (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={generateChart}
+            disabled={generating || !hasBirthDataForChart}
+          >
+            {generating ? (
+              <Loader2 className="mr-2 size-4 animate-spin" />
+            ) : (
+              <RefreshCw className="mr-2 size-4" />
+            )}
+            Generate Chart
+          </Button>
+        )}
       </div>
 
       {generateError && (

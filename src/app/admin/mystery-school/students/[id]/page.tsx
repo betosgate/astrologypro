@@ -2,6 +2,7 @@
 
 import { useEffect, useState, use } from "react";
 import Link from "next/link";
+import { cn } from "@/lib/utils";
 import {
   Card,
   CardContent,
@@ -31,6 +32,17 @@ import {
   GraduationCap,
   XCircle,
   RotateCcw,
+  Sparkles,
+  Leaf,
+  Compass,
+  Globe,
+  Moon,
+  Home,
+  Layers,
+  Infinity,
+  RefreshCw,
+  User,
+  Sun,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -282,6 +294,23 @@ function ExcuseDialog({
   );
 }
 
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const WEEK_THEMES: Record<number, { color: string; icon: React.ReactNode }> = {
+  1: { color: "from-purple-500/20 to-indigo-500/10", icon: <Sparkles className="size-3.5" /> }, // Awakening
+  2: { color: "from-emerald-500/20 to-teal-500/10", icon: <Leaf className="size-3.5" /> },      // Elements
+  3: { color: "from-amber-500/20 to-orange-500/10", icon: <Compass className="size-3.5" /> },   // Celestial
+  4: { color: "from-blue-500/20 to-cyan-500/10", icon: <Globe className="size-3.5" /> },      // Zodiacal
+  5: { color: "from-rose-500/20 to-pink-500/10", icon: <Moon className="size-3.5" /> },       // Decans
+  6: { color: "from-violet-500/20 to-purple-500/10", icon: <Home className="size-3.5" /> },     // Houses
+  7: { color: "from-sky-500/20 to-blue-500/10", icon: <Layers className="size-3.5" /> },      // Aspects
+  8: { color: "from-fuchsia-500/20 to-purple-500/10", icon: <Infinity className="size-3.5" /> }, // Nodes
+  9: { color: "from-indigo-500/20 to-blue-500/10", icon: <RefreshCw className="size-3.5" /> },  // Transits
+  10: { color: "from-rose-500/20 to-amber-500/10", icon: <User className="size-3.5" /> },      // Inner Planets
+  11: { color: "from-amber-500/20 to-emerald-500/10", icon: <Sun className="size-3.5" /> },    // Synthesis
+  12: { color: "from-indigo-500/20 to-purple-500/10", icon: <GraduationCap className="size-3.5" /> }, // Graduation
+};
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function AdminStudentDetailPage({
@@ -497,31 +526,72 @@ export default function AdminStudentDetailPage({
                 {foundation_progress.source === "training" &&
                   foundation_progress.weeks &&
                   foundation_progress.weeks.length > 0 && (
-                    <ul className="space-y-1.5 text-xs">
-                      {foundation_progress.weeks.map((w) => (
-                        <li
-                          key={w.category_id}
-                          className="flex items-center justify-between gap-2"
-                        >
-                          <span className="truncate">
-                            <span className="font-mono text-muted-foreground mr-1">
-                              W{w.week_number}
-                            </span>
-                            {w.title}
-                          </span>
-                          <span
-                            className={
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 pt-2">
+                      {foundation_progress.weeks.map((w) => {
+                        const theme = WEEK_THEMES[w.week_number] || {
+                          color: "from-slate-500/10 to-slate-500/5",
+                          icon: <Circle className="size-3.5" />,
+                        };
+                        const pct = w.active_lesson_count
+                          ? (w.lessons_completed / w.active_lesson_count) * 100
+                          : 0;
+                        const isStarted = pct > 0 && !w.completed;
+
+                        return (
+                          <div
+                            key={w.category_id}
+                            className={cn(
+                              "relative group overflow-hidden rounded-lg border transition-all hover:shadow-md",
                               w.completed
-                                ? "text-emerald-600"
-                                : "text-muted-foreground"
-                            }
+                                ? "bg-gradient-to-br border-emerald-500/30"
+                                : isStarted 
+                                ? "bg-gradient-to-br border-yellow-500/30"
+                                : "bg-gradient-to-br border-border/50",
+                              theme.color
+                            )}
                           >
-                            {w.lessons_completed}/{w.active_lesson_count}
-                            {w.completed && " · done"}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
+                            <div className="p-3 space-y-2">
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-2">
+                                  <div className={cn(
+                                    "flex size-7 items-center justify-center rounded-full bg-background/50 backdrop-blur-sm shadow-sm",
+                                    w.completed ? "text-emerald-600" : isStarted ? "text-yellow-600" : "text-muted-foreground"
+                                  )}>
+                                    {theme.icon}
+                                  </div>
+                                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                                    Week {w.week_number}
+                                  </span>
+                                </div>
+                                {w.completed && (
+                                  <Badge variant="secondary" className="h-4 px-1.5 text-[8px] bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10 border-none">
+                                    DONE
+                                  </Badge>
+                                )}
+                              </div>
+                              
+                              <h3 className="text-xs font-semibold leading-tight line-clamp-2 min-h-[2rem]">
+                                {w.title}
+                              </h3>
+
+                              <div className="flex items-center justify-between pt-1">
+                                <div className="flex-1 mr-3">
+                                  <div className="h-1.5 w-full bg-primary/20 rounded-full overflow-hidden">
+                                    <div 
+                                      className="h-full bg-primary transition-all"
+                                      style={{ width: `${pct}%` }}
+                                    />
+                                  </div>
+                                </div>
+                                <span className="text-[10px] font-medium tabular-nums text-primary">
+                                  {w.lessons_completed}/{w.active_lesson_count}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   )}
               </>
             );

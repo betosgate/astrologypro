@@ -7,7 +7,11 @@ import {
   deriveNatalReportState,
   ctaForState,
 } from "@/lib/community/chart-report-state";
-import { isBirthDataComplete } from "@/lib/community/birth-data-readiness";
+import {
+  isBirthDataComplete,
+  computeBirthDataReadiness,
+  type BirthDataField,
+} from "@/lib/community/birth-data-readiness";
 import {
   Card,
   CardContent,
@@ -20,6 +24,55 @@ import { TransitCardExpander } from "./TransitCardExpander";
 
 export const metadata = { title: "Monthly Transits - AstrologyPro Community" };
 export const dynamic = "force-dynamic";
+
+/**
+ * Build the user-facing missing-fields hint for the incomplete-family list.
+ *
+ * Coordinate-only-missing case is special-cased: when the only thing
+ * holding the row back is `birth_lat` / `birth_lng` (text fields like city
+ * and country are all present), the user already typed a place but never
+ * picked a city suggestion that resolves to coordinates — telling them to
+ * "add birth date, time and place" is misleading.
+ *
+ * Sprint: tasks/06.05.2026/community-transits-profile-and-display-fixes/01-fix-duplicate-self-profile-coordinate-readiness.md
+ */
+const FIELD_LABELS: Record<BirthDataField, string> = {
+  date_of_birth: "birth date",
+  birth_time: "birth time",
+  birth_city: "birth city",
+  birth_country: "birth country",
+  birth_lat: "birth coordinates",
+  birth_lng: "birth coordinates",
+};
+
+function buildIncompleteHint(missing: BirthDataField[]): string {
+  const onlyCoordsMissing =
+    missing.length > 0 &&
+    missing.every((f) => f === "birth_lat" || f === "birth_lng");
+  if (onlyCoordsMissing) {
+    return "Select the birth city from suggestions to save coordinates.";
+  }
+  if (missing.length === 0) {
+    // Defensive — caller filtered for incomplete, but readiness disagreed.
+    return "Add birth date, time and place to enable monthly transits.";
+  }
+  // Field-specific: dedupe (lat+lng both map to "birth coordinates"),
+  // preserve ordering, then build a friendly list.
+  const seen = new Set<string>();
+  const labels: string[] = [];
+  for (const f of missing) {
+    const lab = FIELD_LABELS[f];
+    if (!seen.has(lab)) {
+      seen.add(lab);
+      labels.push(lab);
+    }
+  }
+  if (labels.length === 1) return `Add ${labels[0]} to enable monthly transits.`;
+  if (labels.length === 2)
+    return `Add ${labels[0]} and ${labels[1]} to enable monthly transits.`;
+  const last = labels.pop();
+  return `Add ${labels.join(", ")}, and ${last} to enable monthly transits.`;
+}
 
 type TransitAspect = {
   transitPlanet: string;
@@ -211,16 +264,10 @@ export default async function TransitsPage() {
     });
     const chartCta = ctaForState(chartState);
     const chartCtaLabel =
-      chartCta.kind === "view"
+      chartState === "generated"
         ? "View Natal Chart"
-        : chartCta.kind === "retry"
-        ? "Retry Natal Chart"
-        : chartCta.kind === "regenerate"
-        ? "Update Natal Chart"
-        : chartCta.kind === "generating"
+        : chartState === "generating"
         ? "Generating Natal Chart..."
-        : chartCta.kind === "locked"
-        ? "Review Natal Chart"
         : "Generate Natal Chart";
     const reportStatusLabel = (() => {
       if (row?.full_report_status === "failed") return "Full report needs attention";
@@ -335,23 +382,27 @@ export default async function TransitsPage() {
             </span>
           </div>
           <div className="space-y-2">
-            {incompleteFamily.map((fm) => (
-              <Card key={fm.id} className="border-amber-500/40 bg-amber-500/5">
-                <CardContent className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <p className="text-sm font-medium">{fm.full_name}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Add birth date, time and place to enable monthly transits.
-                    </p>
-                  </div>
-                  <Button asChild size="sm" variant="outline">
-                    <Link href={`/community/family/${fm.id}`}>
-                      Complete Birth Details
-                    </Link>
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
+            {incompleteFamily.map((fm) => {
+              const readiness = computeBirthDataReadiness(fm);
+              const hint = buildIncompleteHint(readiness.missing);
+              return (
+                <Card key={fm.id} className="border-amber-500/40 bg-amber-500/5">
+                  <CardContent className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-sm font-medium">{fm.full_name}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {hint}
+                      </p>
+                    </div>
+                    <Button asChild size="sm" variant="outline">
+                      <Link href={`/community/family/${fm.id}`}>
+                        Complete Birth Details
+                      </Link>
+                    </Button>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         </div>
       )}
