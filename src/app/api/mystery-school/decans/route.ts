@@ -130,7 +130,7 @@ export async function GET() {
   // learner UI, admin badges, graduation, and decan APIs cannot drift.
   const admin = createAdminClient();
   const eligibility = await assertMysterySchoolDecanEligible(admin, user.id);
-  const q1Complete = eligibility.foundation.isComplete || eligibility.eligible;
+  const q1Complete = eligibility.foundation.isComplete;
 
   // If the helper says Foundation is complete but the row is still in
   // 'foundation', advance it idempotently so the next request short-circuits.
