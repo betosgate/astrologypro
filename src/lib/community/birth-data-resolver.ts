@@ -271,9 +271,27 @@ export async function resolveUserBirthData(
 }
 
 /**
- * Ensure a "self" row exists in community_family_members.
- * If one doesn't exist, create it using the provided birth data.
- * Returns the family_member_id.
+ * Ensure a canonical "self" row exists in community_family_members.
+ *
+ * Lookup priority (most specific → least):
+ *   1. user_id match (the strongest canonical link — Phase 2 invite flow
+ *      sets this when an invited member accepts)
+ *   2. relationship='self' (case-insensitive) — there should only ever be
+ *      one such row per member_id post-2026-05-06 (UNIQUE index added in
+ *      `20260506000001_community_self_canonical_repair.sql`); if more than
+ *      one is found we pick the strongest by score (valid lat/lng + linked
+ *      user_id + has natal_report_id + latest update) instead of taking the
+ *      first arbitrary row
+ *   3. exact full_name match (last-resort, soft heuristic for legacy data)
+ *
+ * If a row is found we PATCH it. Only if nothing matches do we INSERT.
+ *
+ * This avoids the duplicate-self bug where a name-match miss + an existing
+ * self row produced two coexisting rows for the same `member_id` — one with
+ * complete coords, one without — confusing every UI that filters by birth
+ * readiness.
+ *
+ * Sprint: tasks/06.05.2026/community-transits-profile-and-display-fixes/01-fix-duplicate-self-profile-coordinate-readiness.md
  */
 export async function findOrCreateSelfFamilyMember(
   _supabase: SupabaseClient,
@@ -291,38 +309,86 @@ export async function findOrCreateSelfFamilyMember(
 ): Promise<{ id: string; created: boolean }> {
   const admin = createAdminClient();
 
-  // Look for an existing self row
+  // Pull every row for this member; we evaluate priority in code so the
+  // resolution order is auditable.
   const { data: existingRows } = await admin
     .from("community_family_members")
-    .select("id, relationship, user_id, full_name")
+    .select(
+      "id, relationship, user_id, full_name, birth_lat, birth_lng, natal_report_id, updated_at, created_at",
+    )
     .eq("member_id", memberId);
 
-  const existing = (existingRows ?? []).find(
-    (r: { user_id?: string | null; relationship?: string | null; full_name?: string | null }) =>
-      r.user_id === userId ||
-      (r.relationship ?? "").toLowerCase() === "self" ||
-      r.full_name?.toLowerCase() === birthData.fullName.toLowerCase()
+  type Row = {
+    id: string;
+    relationship: string | null;
+    user_id: string | null;
+    full_name: string | null;
+    birth_lat: number | string | null;
+    birth_lng: number | string | null;
+    natal_report_id: string | null;
+    updated_at: string | null;
+    created_at: string | null;
+  };
+  const rows = (existingRows ?? []) as Row[];
+
+  // Score: same shape used by the canonical-repair migration so the
+  // application picks the same row Postgres would pick.
+  const score = (r: Row): number => {
+    const hasCoords = r.birth_lat != null && r.birth_lng != null ? 4 : 0;
+    const hasUser = r.user_id ? 2 : 0;
+    const hasReport = r.natal_report_id ? 1 : 0;
+    return hasCoords + hasUser + hasReport;
+  };
+  const tieBreak = (a: Row, b: Row): number => {
+    const sa = score(a);
+    const sb = score(b);
+    if (sa !== sb) return sb - sa;
+    const ua = (a.updated_at ?? a.created_at ?? "").toString();
+    const ub = (b.updated_at ?? b.created_at ?? "").toString();
+    if (ua !== ub) return ub.localeCompare(ua);
+    return (a.created_at ?? "").localeCompare(b.created_at ?? "");
+  };
+
+  // 1. Strongest signal: user_id match.
+  const byUser = rows.filter((r) => r.user_id === userId);
+  // 2. Any row labelled 'self' (case-insensitive). Sorted strongest first
+  //    so we never pick the empty-coords row when a complete one exists.
+  const bySelf = rows
+    .filter((r) => (r.relationship ?? "").toLowerCase() === "self")
+    .sort(tieBreak);
+  // 3. Soft fallback: exact full-name match.
+  const byName = rows.filter(
+    (r) => r.full_name?.toLowerCase() === birthData.fullName.toLowerCase(),
   );
 
+  const existing: Row | undefined = byUser[0] ?? bySelf[0] ?? byName[0];
+
   if (existing) {
-    // Patch any missing fields (non-destructive)
+    // Non-destructive patch: only overwrite a column when we have a value.
+    // Avoids clobbering existing coords/time when this caller didn't carry
+    // those fields (some endpoints only know name + DOB).
+    const patch: Record<string, unknown> = {
+      user_id: userId,
+      relationship: "self",
+      date_of_birth: birthData.dateOfBirth,
+    };
+    if (birthData.birthTime !== null) patch.birth_time = birthData.birthTime;
+    if (birthData.birthCity !== null) patch.birth_city = birthData.birthCity;
+    if (birthData.birthCountry !== null)
+      patch.birth_country = birthData.birthCountry;
+    if (birthData.birthLat !== null) patch.birth_lat = birthData.birthLat;
+    if (birthData.birthLng !== null) patch.birth_lng = birthData.birthLng;
+
     await admin
       .from("community_family_members")
-      .update({
-        user_id: userId,
-        relationship: "self",
-        date_of_birth: birthData.dateOfBirth,
-        birth_time: birthData.birthTime,
-        birth_city: birthData.birthCity,
-        birth_country: birthData.birthCountry,
-        birth_lat: birthData.birthLat,
-        birth_lng: birthData.birthLng,
-      })
+      .update(patch)
       .eq("id", existing.id);
     return { id: existing.id, created: false };
   }
 
-  // Create a new self row
+  // No matching row — INSERT a new canonical self. The
+  // `ux_family_members_one_self_per_member` partial UNIQUE index (added
+  // 2026-05-06) prevents a race from producing a second self row.
   const { data: inserted, error } = await admin
     .from("community_family_members")
     .insert({
@@ -342,6 +408,19 @@ export async function findOrCreateSelfFamilyMember(
     .single();
 
   if (error || !inserted) {
+    // 23505 = unique_violation — a parallel call won the race; re-fetch
+    // the canonical row and treat as found.
+    const pg = error as unknown as { code?: string } | null;
+    if (pg?.code === "23505") {
+      const { data: raced } = await admin
+        .from("community_family_members")
+        .select("id")
+        .eq("member_id", memberId)
+        .ilike("relationship", "self")
+        .limit(1)
+        .maybeSingle();
+      if (raced?.id) return { id: raced.id as string, created: false };
+    }
     throw new Error(error?.message ?? "Failed to create self family member");
   }
 

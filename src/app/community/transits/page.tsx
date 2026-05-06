@@ -7,7 +7,11 @@ import {
   deriveNatalReportState,
   ctaForState,
 } from "@/lib/community/chart-report-state";
-import { isBirthDataComplete } from "@/lib/community/birth-data-readiness";
+import {
+  isBirthDataComplete,
+  computeBirthDataReadiness,
+  type BirthDataField,
+} from "@/lib/community/birth-data-readiness";
 import {
   Card,
   CardContent,
