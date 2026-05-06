@@ -17,6 +17,7 @@ import {
 interface NavItem {
   label: string;
   href: string;
+  iconNode?: React.ReactNode;
 }
 
 interface MobileNavProps {
@@ -66,6 +67,9 @@ export function MobileNav({
               className="flex items-center gap-3 px-4 py-3 text-sm hover:bg-accent transition-colors"
               onClick={() => setOpen(false)}
             >
+              <div className="text-muted-foreground [&>svg]:size-4">
+                {item.iconNode}
+              </div>
               {item.label}
             </Link>
           ))}
