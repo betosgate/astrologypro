@@ -222,7 +222,7 @@ export default function AdminDecansPage() {
                       <div className="space-y-1">
                         <Label className="text-xs">Type</Label>
                         <select
-                          className="w-full rounded-md border bg-background px-2 py-1.5 text-sm"
+                          className="w-full rounded-md border h-9 px-2 py-1.5 text-sm"
                           value={newStep.stepType}
                           onChange={(e) => setNewStep((s) => ({ ...s, stepType: e.target.value }))}
                         >
