@@ -86,8 +86,8 @@ export default async function MysterySchoolLayout({ children }: { children: Reac
   // /community/* routes redirect MS-only users away — removed to avoid
   // misleading nav behavior (tasks 02 + 03).
   const navLinks = [
-    { label: "Decans", href: "/mystery-school" },
     { label: "Training", href: "/mystery-school/training" },
+    { label: "Decans", href: "/mystery-school" },
     { label: "Graduation", href: "/mystery-school/training/graduation" },
   ];
 

@@ -445,6 +445,7 @@ export type DecanEligibilityReason =
   | "decans"
   | "graduated"
   | "foundation_complete"
+  | "status_mismatch"
   | "foundation_incomplete"
   | "not_enrolled";
 
@@ -500,10 +501,10 @@ export async function assertMysterySchoolDecanEligible(
       : null;
   const studentId = (student.id as string | null) ?? null;
 
-  if (status === "decans" || status === "graduated") {
+  if (status === "graduated") {
     return {
       eligible: true,
-      reason: status,
+      reason: "graduated",
       foundation: { ...NOT_COMPLETE_FALLBACK, isComplete: true },
       trainingStatus: status,
       studentId,
@@ -514,12 +515,23 @@ export async function assertMysterySchoolDecanEligible(
   if (foundation.isComplete) {
     return {
       eligible: true,
-      reason: "foundation_complete",
+      reason: status === "decans" ? "decans" : "foundation_complete",
       foundation,
       trainingStatus: status,
       studentId,
     };
   }
+
+  if (status === "decans") {
+    return {
+      eligible: false,
+      reason: "status_mismatch",
+      foundation,
+      trainingStatus: status,
+      studentId,
+    };
+  }
+
   return {
     eligible: false,
     reason: "foundation_incomplete",
