@@ -31,14 +31,13 @@ import {
 import {
   MousePointerClick,
   TrendingUp,
-  Clock,
   DollarSign,
   ArrowRight,
   Users,
 } from "lucide-react";
 import { AffiliateMarketingKit } from "@/components/affiliate/marketing-kit";
 import { fetchMarketingKitItems } from "@/lib/affiliate-marketing-kit";
-import { StripeConnectPanel } from "./_components/StripeConnectPanel";
+import { StripeConnectPanel } from "../_components/StripeConnectPanel";
 
 export const dynamic = "force-dynamic";
 

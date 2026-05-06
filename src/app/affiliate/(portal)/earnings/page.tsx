@@ -26,8 +26,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { TrendingUp, Clock } from "lucide-react";
-import { OffsetBanner } from "./_components/OffsetBanner";
-import { PayoutHistoryTable } from "./_components/PayoutHistoryTable";
+import { OffsetBanner } from "../_components/OffsetBanner";
+import { PayoutHistoryTable } from "../_components/PayoutHistoryTable";
 
 export const dynamic = "force-dynamic";
 
