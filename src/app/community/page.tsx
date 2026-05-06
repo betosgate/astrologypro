@@ -926,7 +926,7 @@ export default async function CommunityDashboardPage() {
 
   const familyChipData: FamilyChip[] =
     planType === "family" && familyMembers.length > 0 ? buildRealChips() : [];
-  const maxVisibleFamilyChips = 6;
+  const maxVisibleFamilyChips = 5;
   const visibleFamilyChips = familyChipData.slice(0, maxVisibleFamilyChips);
   const hiddenFamilyChipCount = Math.max(
     familyChipData.length - visibleFamilyChips.length,
