@@ -90,6 +90,9 @@ import { MIGRATION_SQL as MIG_20260504000002_MSFS } from "@/data/migrations/2026
 import { MIGRATION_SQL as MIG_20260505000001_ACCMK } from "@/data/migrations/20260505000001_affiliate_campaigns_channel_marketing_kit";
 import { MIGRATION_SQL as MIG_20260505000002_BACC } from "@/data/migrations/20260505000002_booking_affiliate_commission_cents";
 import { MIGRATION_SQL as MIG_20260505000003_AP2 } from "@/data/migrations/20260505000003_affiliate_payouts_phase_2";
+import { MIGRATION_SQL as MIG_20260505000004_AP3 } from "@/data/migrations/20260505000004_affiliate_phase_3_analytics";
+import { MIGRATION_SQL as MIG_20260506000001_CSCR } from "@/data/migrations/20260506000001_community_self_canonical_repair";
+import { MIGRATION_SQL as MIG_20260506000002_MSFC } from "@/data/migrations/20260506000002_mystery_school_foundation_completed_at";
 
 /**
  * Allowlisted migrations that the admin migration runner can execute.
@@ -850,6 +853,30 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Phase 2 schema: adds Stripe Express identity columns + balance_offset_cents to affiliate_accounts; payout_id / paid_at / paid_amount_cents / payout_status to campaign_conversions; creates affiliate_payouts + affiliate_payout_items; adds platform_settings.affiliate_payouts_enabled kill-switch (defaults FALSE); extends admin_action_log.action_kind CHECK with 4 Phase-2 kinds. Bundles Task 10 instrumentation: first_conversion_at + first_payout_at + affiliate_onboarding_rejections. Hard-fails if Phase 1.5 carve-out (bookings.affiliate_commission_amount_cents) hasn't shipped. Idempotent + RLS + sanity-checked. Sprint plan: docs/tasks/2026-05-05/affiliate-payouts-phase-2/.",
     sortKey: "20260505000003",
     sql: MIG_20260505000003_AP2,
+  },
+  "20260505000004_affiliate_phase_3_analytics": {
+    id: "20260505000004_affiliate_phase_3_analytics",
+    title: "Affiliate Analytics Phase 3 — read-only helper functions",
+    description:
+      "Phase 3 dashboards + aggregations layer. Adds 7 SECURITY-INVOKER PostgreSQL helper functions used by admin/affiliate analytics API routes: affiliate_daily_earnings, affiliate_own_cohort_retention, affiliate_median_time_to_payout_days, affiliate_payout_velocity_histogram, affiliate_campaign_roi, affiliate_referred_client_retention, affiliate_1099_ytd_totals (timezone America/New_York for IRS compliance). No table changes — pure additive read layer. Hard-fails if Phase 2 schema (affiliate_payouts, campaign_conversions.payout_status, affiliate_accounts.first_payout_at) hasn't shipped. Idempotent (CREATE OR REPLACE FUNCTION). Sprint plan: docs/tasks/2026-05-05/affiliate-analytics-phase-3/.",
+    sortKey: "20260505000004",
+    sql: MIG_20260505000004_AP3,
+  },
+  "20260506000001_community_self_canonical_repair": {
+    id: "20260506000001_community_self_canonical_repair",
+    title: "Community: canonical self-row repair + uniqueness guard",
+    description:
+      "Repairs duplicate `relationship='self'` rows in community_family_members per member_id by picking the canonical row by score (valid lat/lng + linked user_id + has natal_report_id + latest update), re-pointing CASCADE FK references (monthly_transits, relationship_charts, community_relationship_reports, return_event_reminders, natal_regeneration_audit) onto the canonical row, then deleting the losing rows. Adds a partial UNIQUE index `ux_family_members_one_self_per_member` preventing future duplicates per member_id where LOWER(relationship)='self'. Preserves astro_ai_responses (no FK to family_member_id, verified). Idempotent + sanity-checked. Sprint plan: tasks/06.05.2026/community-transits-profile-and-display-fixes/.",
+    sortKey: "20260506000001",
+    sql: MIG_20260506000001_CSCR,
+  },
+  "20260506000002_mystery_school_foundation_completed_at": {
+    id: "20260506000002_mystery_school_foundation_completed_at",
+    title: "Mystery School: foundation_completed_at milestone column",
+    description:
+      "Adds nullable TIMESTAMPTZ column mystery_school_students.foundation_completed_at + partial index. Records the moment a student finished Admin Training-backed Foundation and was advanced to training_status='decans'. Best-effort backfill from started_at/enrolled_at for students already in 'decans' or 'graduated'. Idempotent + sanity-checked. Sprint plan: docs/tasks/2026-05-06/mystery-school-foundation-decan-access-flow.md.",
+    sortKey: "20260506000002",
+    sql: MIG_20260506000002_MSFC,
   },
 };
 
