@@ -13,6 +13,7 @@ import { OnboardingGuard } from "@/components/community/onboarding-guard";
 import { SectionContainer } from "@/components/shared/section-container";
 import { SubscriptionExpiredView } from "@/components/shared/subscription-expired-view";
 import { getPendingContractDestination } from "@/lib/contract-orchestration";
+import { User } from "lucide-react";
 
 export const metadata = { title: "Community - AstrologyPro" };
 export const dynamic = "force-dynamic";
@@ -154,8 +155,15 @@ export default async function CommunityLayout({ children }: { children: React.Re
             </li>
           </ul>
         </nav>
-        {/* Logout pinned to sidebar bottom */}
-        <div className="border-t px-3 py-3">
+        {/* Account and Logout pinned to sidebar bottom */}
+        <div className="border-t px-3 py-3 space-y-1">
+          <Link
+            href="/account"
+            className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
+            <User className="size-4" />
+            My Account
+          </Link>
           <PortalLogoutButton />
         </div>
       </aside>
@@ -178,12 +186,6 @@ export default async function CommunityLayout({ children }: { children: React.Re
             <div className="ml-auto flex items-center gap-2">
               <PortalSwitcher portals={portals} currentBase="/community" />
               <NotificationBell userId={user.id} />
-              <Link
-                href="/account"
-                className="text-sm text-muted-foreground hover:text-foreground"
-              >
-                Account
-              </Link>
               {/* Mobile-only logout (sidebar handles it on desktop) */}
               <div className="md:hidden">
                 <PortalLogoutButton />
