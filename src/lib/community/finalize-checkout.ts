@@ -269,6 +269,7 @@ export async function finalizePerennialCommunityCheckoutSession(
     await provisionNatalReadiness({
       admin,
       communityMemberId,
+      userId,
       birthData: {
         fullName,
         dateOfBirth: birthDate,

@@ -87,8 +87,7 @@ type ChartsPagePayload = {
 
 /**
  * Lifecycle row from `community_relationship_reports`. Used per pair ×
- * report_type to derive whether the CTA should be Generate / View /
- * Regenerate / Retry on this list.
+ * report_type to derive whether the CTA should be Generate / View on this list.
  */
 type RelationshipReportRow = {
   person_a_id: string;
@@ -127,29 +126,26 @@ const MODE_TO_REPORT_TYPE: Record<
 function ctaLabelForState(state: ChartReportState): string {
   switch (state) {
     case "generated":
-      return "View";
     case "stale":
-      return "Regenerate";
-    case "failed":
-      return "Retry";
-    case "generating":
-      return "In progress";
     case "locked_for_review":
-      return "Review";
+      return "View";
+    case "failed":
+    case "generating":
     case "missing":
     default:
-      return "Generate";
+      return state === "generating" ? "In progress" : "Generate";
   }
 }
 
 function statusToneClass(state: ChartReportState): string {
   switch (state) {
     case "generated":
-      return "text-green-600 dark:text-green-400";
     case "stale":
-      return "text-amber-600 dark:text-amber-400";
+    case "locked_for_review":
+      return "text-green-600 dark:text-green-400";
     case "failed":
-      return "text-destructive";
+    case "missing":
+      return "text-amber-600 dark:text-amber-400";
     case "generating":
       return "text-blue-600 dark:text-blue-400";
     default:
@@ -250,7 +246,7 @@ export default function ChartsPage() {
    * Returns "missing" when there's no row yet — the deriver in the
    * shared lib treats that as "Generate". When a saved row exists, the
    * deriver reads `report_status`, `astro_ai_response_id`, and
-   * `invalidated_at` to decide between View, Regenerate, Retry, etc.
+   * `invalidated_at` to decide whether this report exists yet.
    *
    * IMPORTANT: this deliberately ignores `relationship_charts.chart_data`
    * (the legacy lightweight synastry summary). Per the spec, that data
@@ -536,16 +532,7 @@ export default function ChartsPage() {
                               <span className="flex w-full items-center justify-between gap-3">
                                 <span>{option.label}</span>
                                 <span
-                                  className={`text-[10px] font-medium uppercase tracking-wider ${state === "generated"
-                                      ? "text-green-500"
-                                      : state === "stale"
-                                        ? "text-amber-500"
-                                        : state === "failed"
-                                          ? "text-destructive"
-                                          : state === "generating"
-                                            ? "text-blue-500"
-                                            : "text-muted-foreground"
-                                    }`}
+                                  className={`text-[10px] font-medium uppercase tracking-wider ${statusToneClass(state)}`}
                                 >
                                   {cta}
                                 </span>
@@ -612,16 +599,7 @@ export default function ChartsPage() {
                                 <span className="flex w-full items-center justify-between gap-3">
                                   <span>{option.label}</span>
                                   <span
-                                    className={`text-[10px] font-medium uppercase tracking-wider ${state === "generated"
-                                        ? "text-green-500"
-                                        : state === "stale"
-                                          ? "text-amber-500"
-                                          : state === "failed"
-                                            ? "text-destructive"
-                                            : state === "generating"
-                                              ? "text-blue-500"
-                                              : "text-muted-foreground"
-                                      }`}
+                                    className={`text-[10px] font-medium uppercase tracking-wider ${statusToneClass(state)}`}
                                   >
                                     {cta}
                                   </span>
