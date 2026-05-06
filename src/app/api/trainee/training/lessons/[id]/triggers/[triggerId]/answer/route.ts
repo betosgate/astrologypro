@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { completeLessonAndProgressForUser } from "@/lib/training/completion";
+import { maybeAdvanceMysterySchoolToDecans } from "@/lib/mystery-school/foundation-graduation";
 
 export const dynamic = "force-dynamic";
 
@@ -180,6 +181,27 @@ export async function POST(
     }
 
     if (allTriggersNowPassed) {
+      // Sprint 2026-05-06: complete the lesson server-side so trigger-only
+      // lessons advance the user's Mystery School Foundation progress (and
+      // can fire foundation→decans). Best-effort: a completion failure
+      // does not invalidate the trigger pass — the manual
+      // "Complete & Continue" button still works.
+      try {
+        await completeLessonAndProgressForUser(admin, user.id, lessonId);
+      } catch (err) {
+        console.warn(
+          "[trigger-answer] completeLessonAndProgressForUser failed",
+          { lessonId, userId: user.id, err: err instanceof Error ? err.message : String(err) },
+        );
+      }
+      // Fire-and-forget Mystery School advance — never block the response.
+      maybeAdvanceMysterySchoolToDecans(admin, user.id, lessonId).catch(
+        (err) =>
+          console.warn(
+            "[trigger-answer] maybeAdvanceMysterySchoolToDecans failed",
+            err instanceof Error ? err.message : String(err),
+          ),
+      );
       return NextResponse.json({ correct: true, all_triggers_passed: true });
     }
 

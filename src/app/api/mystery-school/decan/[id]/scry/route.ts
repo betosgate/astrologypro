@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { requireDecanEligibilityOr403 } from "@/lib/mystery-school/decan-gate";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +18,10 @@ export async function GET(
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  // Sprint 2026-05-06: hard-block scry read when Foundation is incomplete.
+  const gateRead = await requireDecanEligibilityOr403(createAdminClient(), user.id);
+  if (gateRead) return gateRead;
 
   const { id: decanId } = await params;
 
@@ -57,6 +62,10 @@ export async function POST(
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  // Sprint 2026-05-06: hard-block scry write when Foundation is incomplete.
+  const gateWrite = await requireDecanEligibilityOr403(createAdminClient(), user.id);
+  if (gateWrite) return gateWrite;
 
   const { id: decanId } = await params;
 
