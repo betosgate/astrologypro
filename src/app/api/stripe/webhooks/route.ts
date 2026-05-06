@@ -35,6 +35,7 @@ import {
 } from "@/lib/revenue-ledger";
 import { PRICING } from "@/lib/constants";
 import { calculateMoneySplit } from "@/lib/money-split";
+import { syncAffiliateStripeStatus } from "@/lib/affiliate-stripe-sync";
 import { finalizePerennialCommunityCheckoutSession } from "@/lib/community/finalize-checkout";
 import { tierToPlanType } from "@/lib/community/pm-entitlement";
 import { ensureUserContractRequirements } from "@/lib/contract-orchestration";
@@ -1787,6 +1788,42 @@ async function handleSubscriptionDeleted(
 }
 
 async function handleAccountUpdated(account: Stripe.Account) {
+  // Sprint 2026-05-05 / Phase 2 Task 02: dispatch on role metadata. The
+  // affiliate Stripe Express accounts are tagged with metadata.role =
+  // "affiliate" by createAffiliateConnectAccount; everything else (including
+  // diviner accounts that lack the metadata) falls through to the legacy
+  // diviner update.
+  const role = (account.metadata?.role as string | undefined) ?? null;
+
+  if (role === "affiliate") {
+    const affiliateAccountId = account.metadata?.affiliateAccountId as
+      | string
+      | undefined;
+    if (!affiliateAccountId) {
+      console.warn(
+        "[webhook] account.updated for affiliate without affiliateAccountId metadata",
+        account.id,
+      );
+      return;
+    }
+    const admin = createAdminClient();
+    try {
+      await syncAffiliateStripeStatus({
+        admin,
+        affiliateAccountId,
+        knownStripeAccountId: account.id,
+      });
+    } catch (err) {
+      console.error("[webhook] affiliate stripe status sync failed", {
+        affiliateAccountId,
+        stripeAccountId: account.id,
+        err: err instanceof Error ? err.message : String(err),
+      });
+    }
+    return;
+  }
+
+  // Legacy diviner behavior — preserved verbatim.
   const supabase = createAdminClient();
 
   const { error } = await supabase
@@ -1799,6 +1836,64 @@ async function handleAccountUpdated(account: Stripe.Account) {
 
   if (error) {
     console.error("Failed to update Connect account status:", error);
+  }
+}
+
+/**
+ * Stripe sends `account.application.deauthorized` when a connected account
+ * revokes the platform's access. For affiliates we null out the cached
+ * Stripe identity, append the dead account ID to prior_stripe_account_ids,
+ * and fire a notification so the affiliate knows to re-onboard.
+ *
+ * Diviner deauthorization is currently out of Phase 2 scope — if no
+ * affiliate row matches we silently return.
+ */
+async function handleAccountDeauthorized(event: Stripe.Event) {
+  const stripeAccountId = (event as { account?: string | null }).account ?? null;
+  if (!stripeAccountId) return;
+
+  const admin = createAdminClient();
+  const { data: row } = await admin
+    .from("affiliate_accounts")
+    .select("id, stripe_account_id, prior_stripe_account_ids")
+    .eq("stripe_account_id", stripeAccountId)
+    .maybeSingle();
+
+  if (!row) return;
+
+  const r = row as Record<string, unknown>;
+  const prior = Array.isArray(r.prior_stripe_account_ids)
+    ? (r.prior_stripe_account_ids as unknown[])
+    : [];
+  await admin
+    .from("affiliate_accounts")
+    .update({
+      stripe_account_id: null,
+      stripe_payouts_enabled: false,
+      stripe_charges_enabled: false,
+      stripe_details_submitted: false,
+      stripe_account_synced_at: new Date().toISOString(),
+      prior_stripe_account_ids: [
+        ...prior,
+        {
+          account_id: stripeAccountId,
+          deauthorized_at: new Date().toISOString(),
+        },
+      ],
+    })
+    .eq("id", r.id as string);
+
+  // Fire affiliate.stripe_disconnected notification (Task 09 adds the kind).
+  try {
+    const { notifyAffiliateStripeDisconnected } = await import(
+      "@/lib/affiliate-notifications"
+    );
+    await notifyAffiliateStripeDisconnected({
+      admin,
+      affiliateAccountId: r.id as string,
+    });
+  } catch (err) {
+    console.error("[webhook] notify deauthorized failed", err);
   }
 }
 
@@ -1909,7 +2004,7 @@ async function handlePaymentIntentSucceeded(
     const { data: bookingForAttribution } = await supabase
       .from("bookings")
       .select(
-        "id, base_price, total_amount, ref_code, commission_source_assignment_id, commission_source_template_id, commission_rate_type_stamp, commission_rate_value_stamp, affiliate_commission_amount_cents",
+        "id, base_price, total_amount, ref_code, commission_source_assignment_id, commission_source_template_id, commission_rate_type_stamp, commission_rate_value_stamp, affiliate_commission_amount_cents, scheduled_at, duration_minutes",
       )
       .eq("id", bookingId)
       .single();
@@ -1958,6 +2053,16 @@ async function handlePaymentIntentSucceeded(
             ? Number(
                 (bookingForAttribution as Record<string, unknown>)
                   .affiliate_commission_amount_cents,
+              )
+            : null,
+        bookingScheduledAt:
+          ((bookingForAttribution as Record<string, unknown>).scheduled_at as
+            | string
+            | null) ?? null,
+        bookingDurationMinutes:
+          (bookingForAttribution as Record<string, unknown>).duration_minutes != null
+            ? Number(
+                (bookingForAttribution as Record<string, unknown>).duration_minutes,
               )
             : null,
       });
@@ -2501,6 +2606,9 @@ export async function POST(request: NextRequest) {
         break;
       case "account.updated":
         await handleAccountUpdated(event.data.object as Stripe.Account);
+        break;
+      case "account.application.deauthorized":
+        await handleAccountDeauthorized(event);
         break;
       default:
         break;

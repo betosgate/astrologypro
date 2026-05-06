@@ -24,7 +24,13 @@ export type AffiliateNotificationKind =
   | "affiliate.conversion"
   | "affiliate.reversal"
   | "admin.override.assignment_revoked"
-  | "admin.override.campaign_archived";
+  | "admin.override.campaign_archived"
+  // Phase 2 (2026-05-05 affiliate-payouts-phase-2 / Task 09)
+  | "affiliate.payout_completed"
+  | "affiliate.payout_failed"
+  | "affiliate.offset_applied"
+  | "affiliate.stripe_disconnected"
+  | "affiliate.stripe_verification_needed";
 
 export interface NotifyAffiliateInput {
   admin: SupabaseClient;
@@ -179,4 +185,156 @@ export function formatRate(
     return `$${n.toFixed(2)} per conversion`;
   }
   return `${n}%`;
+}
+
+// ───────────────────────────────────────────────────────────────────────
+// Phase 2 / Task 09 — affiliate-payout notification helpers.
+// All take (admin, affiliateAccountId, ...kind-specific) and resolve the
+// recipient (auth.users.id, email) internally so call sites stay terse.
+// ───────────────────────────────────────────────────────────────────────
+
+async function resolveAffiliateRecipient(
+  admin: SupabaseClient,
+  affiliateAccountId: string,
+): Promise<{ userId: string; email: string } | null> {
+  const { data: row } = await admin
+    .from("affiliate_accounts")
+    .select("user_id, email")
+    .eq("id", affiliateAccountId)
+    .maybeSingle();
+  const r = row as Record<string, unknown> | null;
+  const userId = (r?.user_id as string | null) ?? null;
+  const email = (r?.email as string | null) ?? null;
+  if (!userId || !email) return null;
+  return { userId, email };
+}
+
+export async function notifyAffiliatePayoutCompleted(input: {
+  admin: SupabaseClient;
+  affiliateAccountId: string;
+  netCents: number;
+  payoutId: string;
+  stripeTransferId: string | null;
+}): Promise<void> {
+  const recipient = await resolveAffiliateRecipient(
+    input.admin,
+    input.affiliateAccountId,
+  );
+  if (!recipient) return;
+  const dollars = (input.netCents / 100).toFixed(2);
+  await notifyAffiliate({
+    admin: input.admin,
+    userId: recipient.userId,
+    affiliateAccountId: input.affiliateAccountId,
+    toEmail: recipient.email,
+    kind: "affiliate.payout_completed",
+    title:
+      input.netCents > 0
+        ? `Payout sent: $${dollars}`
+        : "Payout cycle complete (offset applied)",
+    body:
+      input.netCents > 0
+        ? `Your payout of $${dollars} was transferred to your connected bank account. View details in your affiliate portal.`
+        : "Your earnings this cycle were fully consumed by a previous refund offset. No transfer was sent.",
+    actionUrl: "/affiliate/payouts",
+  });
+}
+
+export async function notifyAffiliatePayoutFailed(input: {
+  admin: SupabaseClient;
+  affiliateAccountId: string;
+  netCents: number;
+  payoutId: string;
+  failureReason: string;
+}): Promise<void> {
+  const recipient = await resolveAffiliateRecipient(
+    input.admin,
+    input.affiliateAccountId,
+  );
+  if (!recipient) return;
+  const dollars = (input.netCents / 100).toFixed(2);
+  await notifyAffiliate({
+    admin: input.admin,
+    userId: recipient.userId,
+    affiliateAccountId: input.affiliateAccountId,
+    toEmail: recipient.email,
+    kind: "affiliate.payout_failed",
+    title: `Payout failed: $${dollars}`,
+    body: `We couldn't send your payout. Reason: ${input.failureReason.slice(0, 200)}. We'll retry automatically; if the problem persists, check your Stripe account status in the affiliate portal.`,
+    actionUrl: "/affiliate/payouts",
+  });
+}
+
+export async function notifyAffiliateOffsetApplied(input: {
+  admin: SupabaseClient;
+  affiliateAccountId: string;
+  offsetIncrementCents: number;
+  newBalanceOffsetCents: number;
+  bookingId: string;
+}): Promise<void> {
+  const recipient = await resolveAffiliateRecipient(
+    input.admin,
+    input.affiliateAccountId,
+  );
+  if (!recipient) return;
+  const incrementDollars = (input.offsetIncrementCents / 100).toFixed(2);
+  const balanceDollars = (input.newBalanceOffsetCents / 100).toFixed(2);
+  await notifyAffiliate({
+    admin: input.admin,
+    userId: recipient.userId,
+    affiliateAccountId: input.affiliateAccountId,
+    toEmail: recipient.email,
+    kind: "affiliate.offset_applied",
+    title: `Refund applied: -$${incrementDollars}`,
+    body: `A refunded booking has reduced your next payout by $${incrementDollars}. Outstanding offset: $${balanceDollars}. Your next earnings cycle will be reduced by this amount before transfer.`,
+    actionUrl: "/affiliate/earnings",
+  });
+}
+
+export async function notifyAffiliateStripeDisconnected(input: {
+  admin: SupabaseClient;
+  affiliateAccountId: string;
+}): Promise<void> {
+  const recipient = await resolveAffiliateRecipient(
+    input.admin,
+    input.affiliateAccountId,
+  );
+  if (!recipient) return;
+  await notifyAffiliate({
+    admin: input.admin,
+    userId: recipient.userId,
+    affiliateAccountId: input.affiliateAccountId,
+    toEmail: recipient.email,
+    kind: "affiliate.stripe_disconnected",
+    title: "Your Stripe account was disconnected",
+    body: "Your Stripe connected account has been deauthorized. Reconnect Stripe in the affiliate portal to keep earning and receiving payouts. Existing campaigns continue to work for now.",
+    actionUrl: "/affiliate/dashboard",
+  });
+}
+
+export async function notifyAffiliateStripeVerificationNeeded(input: {
+  admin: SupabaseClient;
+  affiliateAccountId: string;
+  requirementsCurrentlyDue: string[];
+  requirementsPastDue: string[];
+}): Promise<void> {
+  const recipient = await resolveAffiliateRecipient(
+    input.admin,
+    input.affiliateAccountId,
+  );
+  if (!recipient) return;
+  const total =
+    input.requirementsCurrentlyDue.length + input.requirementsPastDue.length;
+  await notifyAffiliate({
+    admin: input.admin,
+    userId: recipient.userId,
+    affiliateAccountId: input.affiliateAccountId,
+    toEmail: recipient.email,
+    kind: "affiliate.stripe_verification_needed",
+    title: "Stripe verification needed",
+    body: `Stripe needs ${total} additional ${
+      total === 1 ? "item" : "items"
+    } before your account can receive payouts. Open the affiliate portal to finish verification.`,
+    actionUrl: "/affiliate/dashboard",
+  });
 }
