@@ -10717,6 +10717,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
       "Back button allows returning to the previous custom ritual sequence screen."
     ]
   },
+  // ---------------------Tarot_portal screens--------------------//
       {
         name: "tarot-spread-history",
         label: "Tarot Spread History",
