@@ -7,6 +7,7 @@ import {
   CardContent,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
   SelectContent,
@@ -20,7 +21,6 @@ import {
   ChevronUp,
   Clock,
   Heart,
-  Loader2,
   MapPin,
   RefreshCw,
   Star,
@@ -189,6 +189,40 @@ function formatMemberSubtitle(member: FamilyMember): string {
   return [member.relationship, getAgeLabel(member.date_of_birth)]
     .filter(Boolean)
     .join(" | ");
+}
+
+function RelationshipChartsSkeleton() {
+  return (
+    <div className="space-y-4" aria-label="Loading relationship charts">
+      <Card>
+        <div className="flex w-full items-center justify-between gap-4 px-5 py-4">
+          <div className="flex min-w-0 items-center gap-3">
+            <Skeleton className="size-10 shrink-0 rounded-full" />
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-44" />
+              <Skeleton className="h-3 w-72 max-w-[70vw]" />
+            </div>
+          </div>
+          <Skeleton className="size-4 rounded-full" />
+        </div>
+      </Card>
+
+      {[0, 1, 2, 3].map((item) => (
+        <Card key={item}>
+          <div className="flex items-center justify-between gap-4 px-5 py-5">
+            <div className="flex min-w-0 flex-1 items-center gap-3">
+              <Skeleton className="size-5 shrink-0 rounded-full" />
+              <div className="min-w-0 space-y-2">
+                <Skeleton className="h-4 w-56 max-w-[55vw]" />
+                <Skeleton className="h-3 w-72 max-w-[65vw]" />
+              </div>
+            </div>
+            <Skeleton className="h-9 w-[150px] shrink-0" />
+          </div>
+        </Card>
+      ))}
+    </div>
+  );
 }
 
 async function fetchChartsPagePayload(): Promise<ChartsPagePayload> {
@@ -455,9 +489,7 @@ export default function ChartsPage() {
 
 
       {loading ? (
-        <div className="flex justify-center py-12">
-          <Loader2 className="size-6 animate-spin text-muted-foreground" />
-        </div>
+        <RelationshipChartsSkeleton />
       ) : familyMembers.length < 2 ? (
         <Card>
           <CardContent className="flex flex-col items-center gap-4 py-12 text-center">
