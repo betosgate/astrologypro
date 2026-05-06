@@ -26,6 +26,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { TrendingUp, Clock } from "lucide-react";
+import { OffsetBanner } from "./_components/OffsetBanner";
+import { PayoutHistoryTable } from "./_components/PayoutHistoryTable";
 
 export const dynamic = "force-dynamic";
 
@@ -92,6 +94,15 @@ export default async function AffiliateEarningsPage() {
 
   const { account, junctionIds } = ctx;
 
+  // Phase 2: fetch offset data for OffsetBanner
+  const { data: offsetRow } = await admin
+    .from("affiliate_accounts")
+    .select("balance_offset_cents, balance_offset_last_changed_at")
+    .eq("id", account.id)
+    .maybeSingle();
+  const offsetCents = Number((offsetRow as Record<string, unknown> | null)?.balance_offset_cents ?? 0);
+  const offsetLastChangedAt = ((offsetRow as Record<string, unknown> | null)?.balance_offset_last_changed_at as string | null) ?? null;
+
   // Phase 1.5: query by affiliate_account_id (post-migration backfill
   // covers both per-diviner and general credits) instead of by
   // junctionIds (which would miss general conversions whose
@@ -135,6 +146,13 @@ export default async function AffiliateEarningsPage() {
           {junctionIds.length > 0 ? " plus general-program credits." : " — general-program credits only."}
         </p>
       </header>
+
+      {/* Phase 2: refund-after-payout offset alert */}
+      <OffsetBanner
+        offsetCents={offsetCents}
+        offsetLastChangedAt={offsetLastChangedAt}
+        nextCycleEstimateCents={Math.max(0, totalEarned - offsetCents)}
+      />
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Card>
@@ -227,6 +245,8 @@ export default async function AffiliateEarningsPage() {
         </CardContent>
       </Card>
 
+      {/* Phase 2: payout history */}
+      <PayoutHistoryTable />
     </div>
   );
 }
