@@ -88,6 +88,7 @@ import { MIGRATION_SQL as MIG_20260413000184_MTL } from "@/data/migrations/20260
 import { MIGRATION_SQL as MIG_20260504000001_TLAU } from "@/data/migrations/20260504000001_training_lessons_audio_url";
 import { MIGRATION_SQL as MIG_20260504000002_MSFS } from "@/data/migrations/20260504000002_mystery_school_foundation_seed";
 import { MIGRATION_SQL as MIG_20260505000001_ACCMK } from "@/data/migrations/20260505000001_affiliate_campaigns_channel_marketing_kit";
+import { MIGRATION_SQL as MIG_20260505000002_BACC } from "@/data/migrations/20260505000002_booking_affiliate_commission_cents";
 
 /**
  * Allowlisted migrations that the admin migration runner can execute.
@@ -832,6 +833,14 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Extends the affiliate_campaigns.channel CHECK allowlist to include 'marketing_kit'. The original allowlist (from 20260417000010) predated Phase 1.5 and only allowed social/email/direct/other. The Marketing Kit lazy-create in fetchMarketingKitItems tags every spawned general campaign with channel='marketing_kit' so analytics can attribute conversions to that surface — without this fix the insert fails with affiliate_campaigns_channel_check violation and the Marketing Kit on /affiliate/dashboard renders empty. Idempotent: DROP CONSTRAINT IF EXISTS + re-ADD with the extended list. NULL is preserved (the old constraint allowed it implicitly via three-valued logic; the new one allows it explicitly). Run AFTER 20260417000010. Spec: docs/specs/affiliate-commission-system.md §10.",
     sortKey: "20260505000001",
     sql: MIG_20260505000001_ACCMK,
+  },
+  "20260505000002_booking_affiliate_commission_cents": {
+    id: "20260505000002_booking_affiliate_commission_cents",
+    title: "Booking affiliate commission cents — carve-out persistence",
+    description:
+      "Adds bookings.affiliate_commission_amount_cents (nullable INTEGER, CHECK ≥ 0). Persists the cents value carved out from the diviner's destination transfer at Stripe PaymentIntent creation, so the three credit paths (confirm-payment, webhook, sync-booking) and the revenue_ledger_entries write all read the same source of truth — no off-by-one rounding against what was actually retained on platform balance. Pre-existing bookings stay NULL; credit code falls back to recomputing via computeCommissionCents for them. Idempotent + sanity-checked. Sprint plan: docs/tasks/2026-05-05/affiliate-carve-out-at-booking-creation/.",
+    sortKey: "20260505000002",
+    sql: MIG_20260505000002_BACC,
   },
 };
 
