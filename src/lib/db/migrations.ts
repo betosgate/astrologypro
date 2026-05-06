@@ -93,6 +93,7 @@ import { MIGRATION_SQL as MIG_20260505000003_AP2 } from "@/data/migrations/20260
 import { MIGRATION_SQL as MIG_20260505000004_AP3 } from "@/data/migrations/20260505000004_affiliate_phase_3_analytics";
 import { MIGRATION_SQL as MIG_20260506000001_CSCR } from "@/data/migrations/20260506000001_community_self_canonical_repair";
 import { MIGRATION_SQL as MIG_20260506000002_MSFC } from "@/data/migrations/20260506000002_mystery_school_foundation_completed_at";
+import { MIGRATION_SQL as MIG_20260506000003_MSDA } from "@/data/migrations/20260506000003_mystery_school_decan_admin_content";
 
 /**
  * Allowlisted migrations that the admin migration runner can execute.
@@ -877,6 +878,14 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Adds nullable TIMESTAMPTZ column mystery_school_students.foundation_completed_at + partial index. Records the moment a student finished Admin Training-backed Foundation and was advanced to training_status='decans'. Best-effort backfill from started_at/enrolled_at for students already in 'decans' or 'graduated'. Idempotent + sanity-checked. Sprint plan: docs/tasks/2026-05-06/mystery-school-foundation-decan-access-flow.md.",
     sortKey: "20260506000002",
     sql: MIG_20260506000002_MSFC,
+  },
+  "20260506000003_mystery_school_decan_admin_content": {
+    id: "20260506000003_mystery_school_decan_admin_content",
+    title: "Mystery School: Decan admin content (rich content + journals + resources)",
+    description:
+      "Adds admin-managed content columns to decans (intro_video_url, intro_audio_url, ritual_video_url, tarot_explanation, learning_objectives, practice_focus_*, related_audio_url, content_active, content_updated_at). Creates 3 new tables: decan_instructor_journals (Beto/admin per-Decan logs with text/audio/video entries), decan_resources (per-Decan PDFs/videos/audio/links/images), and decan_student_journal_entries (optional student journals with admin review/feedback/rating; complements required scry_journals + mundane_journals which are NOT touched). Includes RLS (service-role full access; authenticated read of published content; self-read/write/update of own draft+revision_requested entries) + updated_at triggers + sanity checks. Idempotent. Sprint plan: docs/tasks/2026-05-06/mystery-school-decan-admin-content-upgrade.md.",
+    sortKey: "20260506000003",
+    sql: MIG_20260506000003_MSDA,
   },
 };
 
