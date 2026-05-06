@@ -200,6 +200,18 @@ function hydrateRelationship(results: JsonRecord, astroApiData: JsonRecord | nul
   if (astroApiData.composite != null) results.composite = astroApiData.composite;
   if (astroApiData.self != null) results.natal_chart_data = astroApiData.self;
   if (astroApiData.partner != null) results.natal_chart_data_p2 = astroApiData.partner;
+  if (astroApiData.family_person_charts != null) {
+    results.family_person_charts = astroApiData.family_person_charts;
+  }
+  if (astroApiData.familyPersonCharts != null) {
+    results.familyPersonCharts = astroApiData.familyPersonCharts;
+  }
+  if (astroApiData.family_members != null) {
+    results.family_members = astroApiData.family_members;
+  }
+  if (astroApiData.familyMembers != null) {
+    results.familyMembers = astroApiData.familyMembers;
+  }
 }
 
 function hydratePlanetReturn(results: JsonRecord, tabSlug: string, aiSections: JsonRecord) {

@@ -111,3 +111,101 @@ export async function reverseConversion(
     affiliateId: existing.affiliate_id as string,
   };
 }
+
+export type ReverseForBookingResult =
+  | { ok: true; conversionId: string; amountCents: number; affiliateId: string }
+  | {
+      ok: false;
+      reason: "no_conversion" | "already_reversed" | "db_error" | "not_found";
+      detail?: string;
+    };
+
+/**
+ * Look up the `campaign_conversions` row for a booking and mark it
+ * reversed. Used by the refund pipeline (see Task 05 of the carve-out
+ * sprint, docs/tasks/2026-05-05/affiliate-carve-out-at-booking-creation/).
+ *
+ * Idempotent + non-throwing:
+ *   - If the booking has no conversion row (non-affiliate booking),
+ *     returns ok=false with reason="no_conversion". This is the
+ *     normal case for most refunds.
+ *   - If the row is already reversed (e.g. duplicate refund webhook),
+ *     returns ok=false with reason="already_reversed".
+ *   - DB errors return ok=false with reason="db_error" + detail. Caller
+ *     should log and continue; a Stripe refund must NOT be rolled back
+ *     because the reversal failed.
+ */
+export async function reverseAffiliateConversionForBooking(input: {
+  admin: SupabaseClient;
+  bookingId: string;
+  reversedBy: string | null;
+  reason: string;
+}): Promise<ReverseForBookingResult> {
+  const { admin, bookingId, reversedBy, reason } = input;
+
+  const { data: conversion, error: fetchErr } = await admin
+    .from("campaign_conversions")
+    .select("id, reversed_at, payout_status, affiliate_id")
+    .eq("booking_id", bookingId)
+    .maybeSingle();
+
+  if (fetchErr) {
+    return { ok: false, reason: "db_error", detail: fetchErr.message };
+  }
+  if (!conversion) {
+    return { ok: false, reason: "no_conversion" };
+  }
+  const c = conversion as Record<string, unknown>;
+  if (c.reversed_at) {
+    return { ok: false, reason: "already_reversed" };
+  }
+
+  // Phase 2 / Task 05: branch on payout_status.
+  //   'unpaid' | 'ripe' | 'paying' | 'blocked' → money still on platform,
+  //                                              reverse the conversion
+  //   'paid'                                   → affiliate already paid,
+  //                                              apply DB-level offset
+  //   'offset_applied'                         → already handled (defensive)
+  const status = (c.payout_status as string | null | undefined) ?? "unpaid";
+
+  if (status === "paid") {
+    const { applyRefundOffsetForBooking } = await import(
+      "@/lib/affiliate-offset"
+    );
+    const offsetResult = await applyRefundOffsetForBooking({
+      admin,
+      bookingId,
+      reason,
+      actorUserId: reversedBy,
+    });
+    if (offsetResult.ok !== true) {
+      const offsetFail = offsetResult;
+      return {
+        ok: false,
+        reason: "db_error",
+        detail: `offset failed: ${offsetFail.reason}${
+          offsetFail.detail ? ` — ${offsetFail.detail}` : ""
+        }`,
+      };
+    }
+    return {
+      ok: true,
+      conversionId: offsetResult.conversionId,
+      amountCents: offsetResult.offsetCents,
+      affiliateId: (c.affiliate_id as string) ?? "",
+    };
+  }
+
+  if (status === "offset_applied") {
+    return { ok: false, reason: "already_reversed" };
+  }
+
+  // Default path — money still on platform, normal reversal applies.
+  const result = await reverseConversion({
+    admin,
+    conversionId: c.id as string,
+    reversedBy,
+    reason,
+  });
+  return result;
+}

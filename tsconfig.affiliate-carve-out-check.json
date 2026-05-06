@@ -1,0 +1,18 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "src/lib/affiliate-attribution.ts",
+    "src/lib/affiliate-reverse-conversion.ts",
+    "src/lib/affiliate-stamp.ts",
+    "src/lib/booking-refund.ts",
+    "src/lib/money-split.ts",
+    "src/lib/db/migrations.ts",
+    "src/data/migrations/20260505000002_booking_affiliate_commission_cents.ts",
+    "src/app/api/stripe/booking-payment/route.ts",
+    "src/app/api/stripe/webhooks/route.ts",
+    "src/app/api/stripe/confirm-payment/route.ts",
+    "src/app/api/stripe/sync-booking/route.ts",
+    "src/app/api/admin/refunds/route.ts",
+    "src/app/api/cron/no-show-refunds/route.ts"
+  ]
+}

@@ -211,16 +211,10 @@ export default async function TransitsPage() {
     });
     const chartCta = ctaForState(chartState);
     const chartCtaLabel =
-      chartCta.kind === "view"
+      chartState === "generated"
         ? "View Natal Chart"
-        : chartCta.kind === "retry"
-        ? "Retry Natal Chart"
-        : chartCta.kind === "regenerate"
-        ? "Update Natal Chart"
-        : chartCta.kind === "generating"
+        : chartState === "generating"
         ? "Generating Natal Chart..."
-        : chartCta.kind === "locked"
-        ? "Review Natal Chart"
         : "Generate Natal Chart";
     const reportStatusLabel = (() => {
       if (row?.full_report_status === "failed") return "Full report needs attention";

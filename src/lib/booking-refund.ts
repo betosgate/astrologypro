@@ -4,6 +4,7 @@ import { sendRefundProcessed } from "@/lib/email";
 import { recordRefundEvent } from "@/lib/refund-events";
 import { applyRefundToRevenueLedger } from "@/lib/revenue-ledger";
 import { createFinanceOperationNote } from "@/lib/finance-ops";
+import { reverseAffiliateConversionForBooking } from "@/lib/affiliate-reverse-conversion";
 
 /**
  * Shared booking-refund pipeline used by every cancel/refund surface
@@ -183,6 +184,28 @@ export async function issueBookingRefund({
       actorRole: initiatedByRole,
       reason: resolvedReason,
     });
+
+    // Sprint 2026-05-05 / Task 05: reverse the affiliate's
+    // campaign_conversions row in the same try block so a refund leaves
+    // no phantom credit for Phase 2 to mistakenly transfer. Helper is
+    // idempotent + non-throwing (returns ok=false with reason on
+    // no_conversion / already_reversed). DB errors logged but do not
+    // roll back the Stripe refund.
+    const reversalResult = await reverseAffiliateConversionForBooking({
+      admin,
+      bookingId,
+      reversedBy: initiatedByUserId,
+      reason: `Booking refunded: ${resolvedReason}`,
+    });
+    if (reversalResult.ok !== true) {
+      const failure = reversalResult;
+      if (failure.reason === "db_error") {
+        console.error("[issueBookingRefund] conversion reversal db error:", {
+          bookingId,
+          detail: failure.detail,
+        });
+      }
+    }
 
     if (initiatedByUserId) {
       await createFinanceOperationNote({
