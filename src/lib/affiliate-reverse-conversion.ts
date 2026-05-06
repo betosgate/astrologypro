@@ -145,7 +145,7 @@ export async function reverseAffiliateConversionForBooking(input: {
 
   const { data: conversion, error: fetchErr } = await admin
     .from("campaign_conversions")
-    .select("id, reversed_at")
+    .select("id, reversed_at, payout_status, affiliate_id")
     .eq("booking_id", bookingId)
     .maybeSingle();
 
@@ -155,13 +155,55 @@ export async function reverseAffiliateConversionForBooking(input: {
   if (!conversion) {
     return { ok: false, reason: "no_conversion" };
   }
-  if ((conversion as { reversed_at?: string | null }).reversed_at) {
+  const c = conversion as Record<string, unknown>;
+  if (c.reversed_at) {
     return { ok: false, reason: "already_reversed" };
   }
 
+  // Phase 2 / Task 05: branch on payout_status.
+  //   'unpaid' | 'ripe' | 'paying' | 'blocked' → money still on platform,
+  //                                              reverse the conversion
+  //   'paid'                                   → affiliate already paid,
+  //                                              apply DB-level offset
+  //   'offset_applied'                         → already handled (defensive)
+  const status = (c.payout_status as string | null | undefined) ?? "unpaid";
+
+  if (status === "paid") {
+    const { applyRefundOffsetForBooking } = await import(
+      "@/lib/affiliate-offset"
+    );
+    const offsetResult = await applyRefundOffsetForBooking({
+      admin,
+      bookingId,
+      reason,
+      actorUserId: reversedBy,
+    });
+    if (offsetResult.ok !== true) {
+      const offsetFail = offsetResult;
+      return {
+        ok: false,
+        reason: "db_error",
+        detail: `offset failed: ${offsetFail.reason}${
+          offsetFail.detail ? ` — ${offsetFail.detail}` : ""
+        }`,
+      };
+    }
+    return {
+      ok: true,
+      conversionId: offsetResult.conversionId,
+      amountCents: offsetResult.offsetCents,
+      affiliateId: (c.affiliate_id as string) ?? "",
+    };
+  }
+
+  if (status === "offset_applied") {
+    return { ok: false, reason: "already_reversed" };
+  }
+
+  // Default path — money still on platform, normal reversal applies.
   const result = await reverseConversion({
     admin,
-    conversionId: (conversion as { id: string }).id,
+    conversionId: c.id as string,
     reversedBy,
     reason,
   });

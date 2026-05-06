@@ -17,6 +17,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { resolveAffiliateForCaller } from "@/lib/affiliate-accounts";
 import { generateCampaignCode } from "@/lib/campaign-code";
 import { rateLimit, rateLimitResponse } from "@/lib/rate-limit";
+import { checkAffiliatePayoutReadiness } from "@/lib/affiliate-payout-readiness";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -24,13 +25,19 @@ export const runtime = "nodejs";
 const CAMPAIGN_CREATE_LIMIT = 20;
 const CAMPAIGN_CREATE_WINDOW_MS = 60 * 60 * 1000; // 1h per affiliate
 
-function problem(status: number, title: string, detail?: string) {
+function problem(
+  status: number,
+  title: string,
+  detail?: string,
+  extras?: Record<string, unknown>,
+) {
   return NextResponse.json(
     {
       type: `https://httpstatuses.io/${status}`,
       title,
       status,
       ...(detail ? { detail } : {}),
+      ...(extras ?? {}),
     },
     { status },
   );
@@ -61,6 +68,22 @@ export async function POST(
   if (!ctx) return problem(403, "Not an active affiliate");
 
   const { account, junctionIds } = ctx;
+
+  // Phase 2 Task 03 gate: block new-campaign creation when the affiliate
+  // hasn't onboarded with Stripe Connect (or onboarding is incomplete).
+  // Existing campaigns and their share links are grandfathered.
+  const readiness = await checkAffiliatePayoutReadiness({
+    admin,
+    userId: user.id,
+  });
+  if (readiness.ready !== true) {
+    const failure = readiness;
+    return problem(403, failure.message, undefined, {
+      code: "affiliate_payout_not_ready",
+      reason: failure.reason,
+      cta: failure.cta,
+    });
+  }
 
   // Rate limit per affiliate account
   const rl = await rateLimit(

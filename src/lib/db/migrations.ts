@@ -89,6 +89,7 @@ import { MIGRATION_SQL as MIG_20260504000001_TLAU } from "@/data/migrations/2026
 import { MIGRATION_SQL as MIG_20260504000002_MSFS } from "@/data/migrations/20260504000002_mystery_school_foundation_seed";
 import { MIGRATION_SQL as MIG_20260505000001_ACCMK } from "@/data/migrations/20260505000001_affiliate_campaigns_channel_marketing_kit";
 import { MIGRATION_SQL as MIG_20260505000002_BACC } from "@/data/migrations/20260505000002_booking_affiliate_commission_cents";
+import { MIGRATION_SQL as MIG_20260505000003_AP2 } from "@/data/migrations/20260505000003_affiliate_payouts_phase_2";
 
 /**
  * Allowlisted migrations that the admin migration runner can execute.
@@ -841,6 +842,14 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Adds bookings.affiliate_commission_amount_cents (nullable INTEGER, CHECK ≥ 0). Persists the cents value carved out from the diviner's destination transfer at Stripe PaymentIntent creation, so the three credit paths (confirm-payment, webhook, sync-booking) and the revenue_ledger_entries write all read the same source of truth — no off-by-one rounding against what was actually retained on platform balance. Pre-existing bookings stay NULL; credit code falls back to recomputing via computeCommissionCents for them. Idempotent + sanity-checked. Sprint plan: docs/tasks/2026-05-05/affiliate-carve-out-at-booking-creation/.",
     sortKey: "20260505000002",
     sql: MIG_20260505000002_BACC,
+  },
+  "20260505000003_affiliate_payouts_phase_2": {
+    id: "20260505000003_affiliate_payouts_phase_2",
+    title: "Affiliate Payouts Phase 2 — Stripe Connect identity, payouts tables, kill-switch",
+    description:
+      "Phase 2 schema: adds Stripe Express identity columns + balance_offset_cents to affiliate_accounts; payout_id / paid_at / paid_amount_cents / payout_status to campaign_conversions; creates affiliate_payouts + affiliate_payout_items; adds platform_settings.affiliate_payouts_enabled kill-switch (defaults FALSE); extends admin_action_log.action_kind CHECK with 4 Phase-2 kinds. Bundles Task 10 instrumentation: first_conversion_at + first_payout_at + affiliate_onboarding_rejections. Hard-fails if Phase 1.5 carve-out (bookings.affiliate_commission_amount_cents) hasn't shipped. Idempotent + RLS + sanity-checked. Sprint plan: docs/tasks/2026-05-05/affiliate-payouts-phase-2/.",
+    sortKey: "20260505000003",
+    sql: MIG_20260505000003_AP2,
   },
 };
 

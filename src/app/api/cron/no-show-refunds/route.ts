@@ -4,6 +4,7 @@ import { stripe } from "@/lib/stripe/client";
 import { sendRefundProcessed } from "@/lib/email";
 import { verifyCronAuth } from "@/lib/cron-auth";
 import { reverseAffiliateConversionForBooking } from "@/lib/affiliate-reverse-conversion";
+import { executeAffiliatePayouts } from "@/lib/affiliate-payout-execution";
 
 export const dynamic = "force-dynamic";
 
@@ -246,5 +247,26 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  return NextResponse.json({ processed, results });
+  // ── Phase 2 Task 04: second pass — affiliate payouts ──────────────────
+  // The two passes are intentionally independent: a payout-pass crash
+  // must NOT cause a no-show-pass rollback, and vice versa.
+  let payoutResult: Awaited<
+    ReturnType<typeof executeAffiliatePayouts>
+  > | null = null;
+  try {
+    payoutResult = await executeAffiliatePayouts({
+      admin,
+      triggerSource: "cron",
+      triggeredBy: null,
+      affiliateBatchSize: 25,
+    });
+  } catch (err) {
+    console.error("[no-show-cron] affiliate payout pass failed:", err);
+  }
+
+  return NextResponse.json({
+    processed,
+    results,
+    affiliatePayouts: payoutResult,
+  });
 }
