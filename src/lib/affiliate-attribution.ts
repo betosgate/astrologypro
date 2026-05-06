@@ -176,6 +176,17 @@ export interface CreditConversionInput {
   stampedRateType: "percent" | "flat" | null;
   /** bookings.commission_rate_value_stamp — NUMERIC, or NULL. */
   stampedRateValue: number | null;
+  /**
+   * Phase-2-prerequisite (2026-05-05 sprint): the cents value carved
+   * out at booking creation, persisted on
+   * bookings.affiliate_commission_amount_cents. When provided and
+   * non-negative, used verbatim for the conversion row's
+   * commission_amount_cents — guarantees exact match with what the
+   * platform actually retained at PaymentIntent time. NULL on
+   * pre-2026-05-05 bookings; falls back to recomputing via
+   * computeCommissionCents in that case.
+   */
+  stampedCommissionCents?: number | null;
 }
 
 export interface CreditConversionResult {
@@ -256,12 +267,20 @@ export async function creditAffiliateConversion(
   }
 
   // Commission is computed from the stamp, NOT from any campaign or
-  // template read. Same math regardless of which path we took.
-  const commissionCents = computeCommissionCents(
-    params.orderAmountCents,
-    params.stampedRateType,
-    params.stampedRateValue,
-  );
+  // template read. When the booking carries the carved-out cents from
+  // 2026-05-05's task (affiliate_commission_amount_cents), use that
+  // value verbatim — guarantees the conversion row matches what the
+  // platform actually retained at PaymentIntent time. Falls back to
+  // recomputing for pre-2026-05-05 bookings whose column is NULL.
+  const commissionCents =
+    typeof params.stampedCommissionCents === "number" &&
+    params.stampedCommissionCents >= 0
+      ? params.stampedCommissionCents
+      : computeCommissionCents(
+          params.orderAmountCents,
+          params.stampedRateType,
+          params.stampedRateValue,
+        );
 
   // ── Branch on stamp source ──────────────────────────────────────────────
 

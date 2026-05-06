@@ -6,6 +6,7 @@ import { sendRefundProcessed } from "@/lib/email";
 import { recordRefundEvent } from "@/lib/refund-events";
 import { applyRefundToRevenueLedger } from "@/lib/revenue-ledger";
 import { createFinanceOperationNote, logFinanceAdminAction } from "@/lib/finance-ops";
+import { reverseAffiliateConversionForBooking } from "@/lib/affiliate-reverse-conversion";
 
 export const runtime = "nodejs";
 
@@ -234,6 +235,26 @@ export async function POST(request: NextRequest) {
     actorRole: "admin",
     reason: reason ?? "Admin-issued refund",
   });
+
+  // Sprint 2026-05-05 / Task 05: reverse the affiliate's
+  // campaign_conversions row so the refund leaves no phantom credit.
+  // Idempotent + non-throwing; logged-and-continue on db_error so the
+  // Stripe refund (already issued above) is never rolled back.
+  const reversalResult = await reverseAffiliateConversionForBooking({
+    admin,
+    bookingId,
+    reversedBy: user.id,
+    reason: `Booking refunded by admin: ${reason ?? "Admin-issued refund"}`,
+  });
+  if (reversalResult.ok !== true) {
+    const failure = reversalResult;
+    if (failure.reason === "db_error") {
+      console.error("[admin/refunds] conversion reversal db error:", {
+        bookingId,
+        detail: failure.detail,
+      });
+    }
+  }
 
   await createFinanceOperationNote({
     createdByUserId: user.id,

@@ -1909,7 +1909,7 @@ async function handlePaymentIntentSucceeded(
     const { data: bookingForAttribution } = await supabase
       .from("bookings")
       .select(
-        "id, base_price, total_amount, ref_code, commission_source_assignment_id, commission_source_template_id, commission_rate_type_stamp, commission_rate_value_stamp",
+        "id, base_price, total_amount, ref_code, commission_source_assignment_id, commission_source_template_id, commission_rate_type_stamp, commission_rate_value_stamp, affiliate_commission_amount_cents",
       )
       .eq("id", bookingId)
       .single();
@@ -1951,6 +1951,14 @@ async function handlePaymentIntentSucceeded(
         stampedRateValue:
           bookingForAttribution.commission_rate_value_stamp != null
             ? Number(bookingForAttribution.commission_rate_value_stamp)
+            : null,
+        stampedCommissionCents:
+          (bookingForAttribution as Record<string, unknown>)
+            .affiliate_commission_amount_cents != null
+            ? Number(
+                (bookingForAttribution as Record<string, unknown>)
+                  .affiliate_commission_amount_cents,
+              )
             : null,
       });
     }
@@ -2046,8 +2054,20 @@ async function handlePaymentIntentSucceeded(
   });
 
   const orderReference = `booking:${bookingId}`;
+  // Read from the booking row first — that's what was actually carved
+  // out at PaymentIntent time (sprint 2026-05-05). Falls back to summing
+  // campaign_conversions for pre-deploy bookings whose column is NULL.
+  const { data: ledgerBooking } = await supabase
+    .from("bookings")
+    .select("affiliate_commission_amount_cents")
+    .eq("id", bookingId)
+    .maybeSingle();
   const affiliateCommissionCents =
-    await getAffiliateCommissionTotalForOrderRef(orderReference);
+    (ledgerBooking as Record<string, unknown> | null)?.affiliate_commission_amount_cents != null
+      ? Number(
+          (ledgerBooking as Record<string, unknown>).affiliate_commission_amount_cents,
+        )
+      : await getAffiliateCommissionTotalForOrderRef(orderReference);
 
   const bookingSplit = calculateMoneySplit({
     grossAmountCents:
