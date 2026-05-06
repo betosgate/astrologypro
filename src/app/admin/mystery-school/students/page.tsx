@@ -30,6 +30,12 @@ type StudentRow = {
   foundation_lessons_completed?: number;
   /** Optional in v3 — "training" or "legacy" depending on data source. */
   foundation_source?: "training" | "legacy";
+  /** Sprint 2026-05-06 — Training-backed Foundation completion flag. */
+  foundation_complete_derived?: boolean;
+  /** Sprint 2026-05-06 — phase derived from Training, not raw training_status. */
+  derived_phase?: "foundation" | "decans" | "graduated";
+  /** Sprint 2026-05-06 — true when DB training_status disagrees with derived. */
+  phase_mismatch?: boolean;
   decans_completed: number;
   current_decan_status: string | null;
 };
@@ -54,6 +60,23 @@ function trainingStatusBadge(status: string) {
   return (
     <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${map[status] ?? "bg-muted text-muted-foreground"}`}>
       {status.charAt(0).toUpperCase() + status.slice(1)}
+    </span>
+  );
+}
+
+/**
+ * Sprint 2026-05-06: render the Training-derived phase + a mismatch
+ * indicator when DB training_status disagrees with reality.
+ */
+function phaseMismatchBadge(student: StudentRow) {
+  if (!student.phase_mismatch) return null;
+  return (
+    <span
+      className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium bg-red-100 text-red-800"
+      title={`DB: ${student.training_status} · Foundation: ${student.foundation_weeks_completed}/12`}
+    >
+      Status mismatch · DB: {student.training_status} · Foundation:{" "}
+      {student.foundation_weeks_completed}/12
     </span>
   );
 }
@@ -115,11 +138,18 @@ export default function AdminMysterySchoolStudentsPage() {
     );
   });
 
+  // Sprint 2026-05-06: summary uses the derived phase so a stale
+  // training_status='decans' on a partially-completed Foundation student
+  // is no longer counted as "In Decan Year".
   const summary = {
     total: students.length,
     active: students.filter((s) => s.membership_status === "active").length,
-    inDecans: students.filter((s) => s.training_status === "decans").length,
-    graduated: students.filter((s) => s.training_status === "graduated").length,
+    inDecans: students.filter(
+      (s) => (s.derived_phase ?? s.training_status) === "decans",
+    ).length,
+    graduated: students.filter(
+      (s) => (s.derived_phase ?? s.training_status) === "graduated",
+    ).length,
   };
 
   return (
@@ -224,8 +254,9 @@ export default function AdminMysterySchoolStudentsPage() {
                         <p className="font-medium text-sm">
                           {s.full_name || <span className="text-muted-foreground italic">No name</span>}
                         </p>
-                        {trainingStatusBadge(s.training_status)}
+                        {trainingStatusBadge(s.derived_phase ?? s.training_status)}
                         {membershipBadge(s.membership_status)}
+                        {phaseMismatchBadge(s)}
                         {s.current_decan_status && (
                           <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium bg-amber-100 text-amber-800">
                             {decanStatusIcon(s.current_decan_status)}

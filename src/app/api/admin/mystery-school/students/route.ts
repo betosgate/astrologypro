@@ -158,6 +158,31 @@ export async function GET() {
       ? trainingWeeks
       : legacyFoundationCount[s.id] ?? 0;
 
+    // Sprint 2026-05-06: derive the phase badge from Admin Training-backed
+    // Foundation completion so the admin list never shows `Decans` for a
+    // student who hasn't actually finished Foundation.
+    //   • Use the same lessons-or-category-completion rule by comparing
+    //     against the program's active week count.
+    //   • Already-graduated students always badge as `Graduated`.
+    //   • If DB training_status disagrees with derived phase, surface a
+    //     `phase_mismatch` flag the UI can render as a secondary badge.
+    const totalWeeks = trainingFoundation.shape.categories.length;
+    const foundationCompleteDerived =
+      trainingProgramPresent &&
+      totalWeeks > 0 &&
+      foundationWeeksCompleted >= totalWeeks;
+    const isGraduated =
+      !!s.graduated_at || s.training_status === "graduated";
+    const derivedPhase: "graduated" | "decans" | "foundation" = isGraduated
+      ? "graduated"
+      : foundationCompleteDerived
+        ? "decans"
+        : "foundation";
+    const phaseMismatch =
+      !isGraduated &&
+      s.training_status === "decans" &&
+      !foundationCompleteDerived;
+
     return {
       id: s.id,
       user_id: s.user_id,
@@ -171,14 +196,29 @@ export async function GET() {
       foundation_weeks_completed: foundationWeeksCompleted,
       foundation_lessons_completed: trainingLessons,
       foundation_source: trainingProgramPresent ? "training" : "legacy",
+      foundation_complete_derived: foundationCompleteDerived,
+      derived_phase: derivedPhase,
+      phase_mismatch: phaseMismatch,
       decans_completed: decanCompleted[s.id] ?? 0,
       current_decan_status: decanCurrentStatus[s.id] ?? null,
     };
   });
 
+  // `In Decan Year` summary uses the derived phase, so a student stuck on
+  // training_status='decans' with stale Foundation progress doesn't get
+  // counted.
+  const inDecanYearCount = result.filter((r) => r.derived_phase === "decans").length;
+  const graduatedCount = result.filter((r) => r.derived_phase === "graduated").length;
+  const foundationCount = result.filter((r) => r.derived_phase === "foundation").length;
+
   return NextResponse.json({
     students: result,
     foundation_source: trainingProgramPresent ? "training" : "legacy",
     foundation_total_weeks: trainingFoundation.shape.categories.length || 12,
+    summary: {
+      in_decan_year: inDecanYearCount,
+      graduated: graduatedCount,
+      foundation: foundationCount,
+    },
   });
 }
