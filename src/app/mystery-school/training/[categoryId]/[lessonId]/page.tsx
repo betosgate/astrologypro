@@ -9,7 +9,6 @@ import { listCorrectQuizQuestionProgress } from "@/lib/training/quiz-question-pr
 import {
   LessonViewerClient,
   type LessonViewerProps,
-  type SidebarLesson,
 } from "@/components/trainee/lesson-viewer-client";
 
 export const dynamic = "force-dynamic";
@@ -209,17 +208,13 @@ export default async function TrainingLessonPage({ params }: Props) {
   // We fetch directly via the admin client (the trainee programs endpoint is
   // overkill here and would re-enumerate every program). Per-lesson completion
   // flags are needed for the sidebar checkmark state.
-  const [siblingsRes, completionsRes, categoryRes] = await Promise.all([
+  const [siblingsRes, categoryRes] = await Promise.all([
     admin
       .from("training_lessons")
       .select("id, title, priority")
       .eq("category_id", categoryId)
       .eq("is_active", true)
       .order("priority", { ascending: true }),
-    admin
-      .from("lesson_completions")
-      .select("lesson_id")
-      .eq("user_id", user.id),
     admin
       .from("training_categories")
       .select("id, name, training_id")
@@ -228,19 +223,7 @@ export default async function TrainingLessonPage({ params }: Props) {
   ]);
 
   const siblings = siblingsRes.data ?? [];
-  const completedSet = new Set(
-    (completionsRes.data ?? []).map((row) => row.lesson_id)
-  );
   const category = categoryRes.data;
-
-  const sidebarLessons: SidebarLesson[] = siblings.map((s) => ({
-    id: s.id,
-    title: s.title,
-    completed: completedSet.has(s.id),
-    current: s.id === lessonId,
-    locked: false,
-    href: `/mystery-school/training/${categoryId}/${s.id}`,
-  }));
 
   // ── 3. Compute next-route + label ──────────────────────────────────────────
   // If there's another lesson after this one in the same week, link to it.
@@ -320,7 +303,7 @@ export default async function TrainingLessonPage({ params }: Props) {
     isCompleted: lesson.completed === true,
     nextRoute,
     nextLabel,
-    sidebarLessons,
+    sidebarLessons: [],
     triggers: lesson.triggers ?? [],
     lastPositionSeconds: lesson.last_position_seconds ?? 0,
   };
