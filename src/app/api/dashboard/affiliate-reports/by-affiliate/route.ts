@@ -82,10 +82,10 @@ export async function GET(request: Request) {
   if (campaignIds.length > 0) {
     let convQuery = admin
       .from("campaign_conversions")
-      .select("affiliate_id, commission_amount_cents, reversed_at, created_at")
+      .select("affiliate_id, commission_amount_cents, reversed_at, converted_at")
       .in("campaign_id", campaignIds)
       .in("affiliate_id", junctionIds);
-    if (since) convQuery = convQuery.gte("created_at", since);
+    if (since) convQuery = convQuery.gte("converted_at", since);
 
     let clicksQuery = admin
       .from("campaign_clicks")
