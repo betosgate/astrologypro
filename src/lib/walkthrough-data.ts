@@ -10013,7 +10013,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
     "name": "nativity_birth_chart",
     "label": "Nativity Birth Chart",
     "description": "A complete Western natal chart reading tool where users enter birth date, time, and place to generate charts, planetary placements, houses, aspects, and AI-based interpretations.",
-    "group": "Community & Worship",
+    "group": "Charts",
     "subModule": "Nativity Birth Chart",
     "purpose": "Helps users understand their personal birth chart by turning birth details into a structured astrological reading with charts, tables, and detailed written interpretations.",
     "bullets": [
@@ -10030,7 +10030,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
     "name": "nativity_chart_wheels",
     "label": "Natal Wheel Charts",
     "description": "Dual visual chart display showing the natal wheel in graphical form, including zodiac signs, houses, planets, and aspect lines.",
-    "group": "Community & Worship",
+    "group": "Charts",
     "subModule": "Nativity Birth Chart",
     "purpose": "Gives users a visual way to inspect their birth chart structure instead of only reading tables and text explanations.",
     "bullets": [
@@ -10047,7 +10047,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
     "name": "nativity_planet_information",
     "label": "Planet Information",
     "description": "A structured planet table listing each planet and point with sign, full degree, house, normalized degree, speed, and retrograde status.",
-    "group": "Community & Worship",
+    "group": "Charts",
     "subModule": "Nativity Birth Chart",
     "purpose": "Makes technical planetary placement data easy to review in one organized section before reading deeper interpretations.",
     "bullets": [
@@ -10064,7 +10064,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
     "name": "nativity_planet_interpretations",
     "label": "Planet Interpretations",
     "description": "Detailed written readings for each planetary placement, explaining how the planet behaves in its zodiac sign, house, degree, and motion.",
-    "group": "Community & Worship",
+    "group": "Charts",
     "subModule": "Nativity Birth Chart",
     "purpose": "Translates raw astrological data into clear meaning so users can understand the emotional, mental, and spiritual significance of each placement.",
     "bullets": [
@@ -10081,7 +10081,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
     "name": "nativity-horoscope-analysis",
     "label": "Deep Astrological Analysis",
     "description": "A detailed horoscope reading view inside the Nativity Birth Chart flow, where users can read extended AI-generated interpretations for planetary placements while still seeing supporting chart data and related interpretation cards in the background.",
-    "group": "Community & Worship",
+    "group": "Charts",
     "subModule": "Nativity Birth Chart",
     "purpose": "Gives users a focused space to read a deeper explanation of a planetary placement without losing the context of the overall birth chart reading.",
     "bullets": [
@@ -10099,7 +10099,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
     "name": "nativity-planet-reading-card",
     "label": "Planet Reading Card",
     "description": "An individual interpretation card for a planetary placement, such as the Sun, showing a readable summary of the placement in sign and house, with controls for expanding the text and opening related decan content.",
-    "group": "Community & Worship",
+    "group": "Charts",
     "subModule": "Nativity Birth Chart",
     "purpose": "Helps users read the meaning of one placement at a time in a simple, easy-to-follow format, while also linking that placement to deeper decan symbolism.",
     "bullets": [
@@ -10117,7 +10117,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
     "name": "nativity-planet-decan-modal",
     "label": "Planet Decan Modal",
     "description": "A modal window that opens from the triangle icon on a planet reading card, showing the decan connected to that planetary placement with symbolic text and image-based esoteric interpretation.",
-    "group": "Community & Worship",
+    "group": "Charts",
     "subModule": "Nativity Birth Chart",
     "purpose": "Lets users explore the decan behind a planetary placement and understand its tarot, symbolic, and mythic correspondences in a dedicated modal view.",
     "bullets": [
@@ -10137,7 +10137,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
     "name": "nativity_house_information",
     "label": "House Information",
     "description": "A house table showing each of the 12 houses with its zodiac sign and cusp degree.",
-    "group": "Community & Worship",
+    "group": "Charts",
     "subModule": "Nativity Birth Chart",
     "purpose": "Helps users understand how the chart is divided into life areas and which sign rules each house cusp.",
     "bullets": [
@@ -10154,7 +10154,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
     "name": "nativity_house_occupancy_map",
     "label": "House Occupancy Map",
     "description": "A visual house layout showing which planets and points fall into each house, alongside house signs and degrees.",
-    "group": "Community & Worship",
+    "group": "Charts",
     "subModule": "Nativity Birth Chart",
     "purpose": "Makes it easier to see planetary distribution across the houses without reading multiple separate tables.",
     "bullets": [
@@ -10171,7 +10171,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
     "name": "nativity_house_interpretations",
     "label": "House Interpretations",
     "description": "Written interpretation cards for each house, explaining what it means for a specific zodiac sign to rule that area of life.",
-    "group": "Community & Worship",
+    "group": "Charts",
     "subModule": "Nativity Birth Chart",
     "purpose": "Turns the house cusp data into practical meaning about identity, money, communication, and other life themes.",
     "bullets": [
@@ -10188,7 +10188,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
   "name": "nativity-dharma-karma",
   "label": "Dharma & Karma Reading",
   "description": "A dedicated section inside the Nativity Birth Chart reading that explains the user's higher purpose and core life lessons through long-form spiritual interpretation.",
-  "group": "Community & Worship",
+  "group": "Charts",
   "subModule": "Nativity Birth Chart",
   "purpose": "Helps users understand their soul direction, spiritual calling, and repeating karmic lessons by translating chart placements into clear personal guidance.",
   "bullets": [
@@ -10208,7 +10208,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
     "name": "nativity_aspect_information",
     "label": "Aspect Information",
     "description": "A full aspect table showing relationships between planets and points, including orb, degree difference, aspect type, and proximity indicator.",
-    "group": "Community & Worship",
+    "group": "Charts",
     "subModule": "Nativity Birth Chart",
     "purpose": "Helps users understand how chart placements interact with each other through supportive or challenging angular relationships.",
     "bullets": [
@@ -10225,7 +10225,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
     "name": "nativity_aspect_interpretations",
     "label": "Aspect Interpretations",
     "description": "Written meaning blocks for specific aspects, explaining emotional, psychological, and spiritual dynamics between two placements.",
-    "group": "Community & Worship",
+    "group": "Charts",
     "subModule": "Nativity Birth Chart",
     "purpose": "Explains how planetary relationships shape the user's personality, inner tension, gifts, and growth patterns.",
     "bullets": [
@@ -10242,7 +10242,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
   "name": "nativity-angles-reading",
   "label": "Ascendant, Midheaven & Vertex Reading",
   "description": "A focused interpretation section inside the Nativity Birth Chart reading that explains key chart angles such as the Ascendant, Midheaven, and Vertex, along with their degrees and deeper meaning.",
-  "group": "Community & Worship",
+  "group": "Charts",
   "subModule": "Nativity Birth Chart",
   "purpose": "Helps users understand the most important chart angles that shape identity, life direction, public path, and meaningful encounters.",
   "bullets": [
@@ -10262,7 +10262,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
     "name": "nativity_lilith_analysis",
     "label": "Lilith Analysis",
     "description": "A focused interpretation section for Lilith, showing sign, degree, house, speed, and a deep written reading about shadow, intensity, and inner emotional truth.",
-    "group": "Community & Worship",
+    "group": "Charts",
     "subModule": "Nativity Birth Chart",
     "purpose": "Gives users a deeper psychological and spiritual reading around hidden instincts, taboo patterns, personal power, and emotional depth.",
     "bullets": [
@@ -10276,6 +10276,229 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
     ]
   },
 
+
+  // --------------------relationship_charts screens--------------------//
+  {
+    "name": "relationship-charts-overview",
+    "label": "Relationship Charts Overview",
+    "description": "Main relationship chart dashboard showing all available family relationship combinations.",
+      "group": "Charts",
+    "subModule": "Relationship Charts",
+    "purpose": "This screen helps users explore synastry and relationship astrology between multiple family members, friends, romantic partners, or business connections. The system automatically generates every possible relationship combination based on the saved family members.",
+    "bullets": [
+      "Displays all generated relationship chart combinations between saved family members.",
+      "Family Chart Overview section summarizes the total number of members included in the relationship system.",
+      "Each relationship card shows two people connected in the chart comparison.",
+      "Select Type dropdown allows users to choose relationship analysis type.",
+      "Relationship types can include Romantic, Friendship, or Business analysis.",
+      "Refresh button reloads updated relationship chart data.",
+      "The system automatically creates pair combinations for every included member.",
+      "Users can quickly open detailed compatibility reports from this screen.",
+      "This screen acts as the main navigation page for all relationship astrology reports."
+    ]
+  },
+  {
+    "name": "family-chart-overview-expanded",
+    "label": "Family Chart Overview Expanded",
+    "description": "Expanded family relationship overview showing all included members and relationship categories.",
+    "group": "Charts",
+    "subModule": "Relationship Charts",
+    "purpose": "This screen gives users a complete overview of all people included in the relationship system before generating deeper astrology compatibility reports.",
+    "bullets": [
+      "Displays all family members included in the relationship analysis.",
+      "Each member card shows full name, relationship type, age, birth date, birth time, and birth location.",
+      "Family overview helps users confirm birth data before analysis generation.",
+      "Romantic section opens romantic compatibility reports.",
+      "Friendship section opens friendship compatibility reports.",
+      "Business section opens professional and business compatibility reports.",
+      "View buttons navigate to detailed relationship astrology pages.",
+      "The overview helps users understand how all family members are connected astrologically.",
+      "This screen acts as the entry point for advanced synastry analysis."
+    ]
+  },
+  {
+    "name": "romantic-relationship-data-entry",
+    "label": "Romantic Relationship Data Entry",
+    "description": "Birth-data confirmation screen for romantic relationship astrology generation.",
+    "group": "Charts",
+    "subModule": "Relationship Charts",
+    "purpose": "This screen allows users to review and update birth details for all included people before generating advanced romantic compatibility astrology reports.",
+    "bullets": [
+      "Displays all included members participating in the romantic relationship analysis.",
+      "Each person includes date of birth, birth time, and birthplace fields.",
+      "Birth locations include timezone and coordinate information.",
+      "Users can update incorrect birth details before report generation.",
+      "24-hour time selection improves astrology chart precision.",
+      "Area of Inquiry field allows users to enter optional relationship questions.",
+      "Regenerate button recalculates relationship charts using updated birth information.",
+      "Accurate birth data improves compatibility analysis and astrological interpretations.",
+      "This screen prepares the astrology engine for deeper synastry calculations."
+    ]
+  },
+  {
+    "name": "western-chart-relationship-visualization",
+    "label": "Western Chart Relationship Visualization",
+    "description": "Visual astrology wheel and synastry chart comparison screen.",
+    "group": "Charts",
+    "subModule": "Relationship Charts",
+    "purpose": "This screen visually displays natal and synastry astrology charts used to analyze relationship compatibility between individuals.",
+    "bullets": [
+      "Displays a western astrology natal chart wheel.",
+      "Shows zodiac signs, houses, planetary positions, and astrological aspects.",
+      "Synastry overlay chart visualizes relationship planetary interactions.",
+      "Colored aspect lines show harmony, tension, and energetic dynamics.",
+      "Planet placements help identify emotional, romantic, and communication patterns.",
+      "Users can visually inspect relationship compatibility through chart geometry.",
+      "Chart wheels help astrologers understand house overlays and planetary influence.",
+      "This visualization is used as the foundation for AI-generated relationship interpretations."
+    ]
+  },
+  {
+    "name": "synastry-horoscope-analysis",
+    "label": "Synastry Horoscope Analysis",
+    "description": "Detailed AI-generated synastry relationship interpretation report.",
+    "group": "Charts",
+    "subModule": "Relationship Charts",
+    "purpose": "This screen provides long-form astrology interpretation based on the combined synastry relationship chart data of all included family members.",
+    "bullets": [
+      "Displays deep astrology interpretations for relationship compatibility.",
+      "Family System Core Theme explains the overall relationship energy pattern.",
+      "Shared Family Identity analysis explains collective personality dynamics.",
+      "Emotional Field Moon Dynamics explains emotional bonding and emotional tension patterns.",
+      "Communication and Mercury Patterns explain communication styles between members.",
+      "Interpretations are generated using planetary positions, zodiac signs, and houses.",
+      "Show More button expands long astrology interpretations.",
+      "The report combines emotional, psychological, and karmic relationship analysis.",
+      "This screen acts as the primary AI astrology interpretation report."
+    ]
+  },
+  {
+    "name": "composite-horoscope-analysis",
+    "label": "Composite Horoscope Analysis",
+    "description": "Composite family astrology report generated from all included relationship charts.",
+    "group": "Charts",
+    "subModule": "Relationship Charts",
+    "purpose": "This screen explains how all included family members function together as one collective energetic system using composite astrology analysis.",
+    "bullets": [
+      "Composite Horoscope section combines all relationship energies into one chart interpretation.",
+      "Family Composite Core Identity explains the shared family personality.",
+      "Shows how each individual contributes to the overall relationship system.",
+      "Composite analysis focuses on collective emotional and social dynamics.",
+      "The report explains shared strengths, values, communication patterns, and emotional structure.",
+      "Astrology houses and planetary conjunctions are used to generate interpretations.",
+      "Show More button expands deeper astrology insights.",
+      "This report helps users understand long-term family and relationship structure."
+    ]
+  },
+  {
+    "name": "davison-relationship-analysis",
+    "label": "Davison Relationship Analysis",
+    "description": "Davison relationship astrology interpretation screen.",
+    "group": "Charts",
+    "subModule": "Relationship Charts",
+    "purpose": "This screen analyzes the shared midpoint relationship energy between all included people using Davison astrology methodology.",
+    "bullets": [
+      "Davison Relationship analysis creates a shared midpoint astrology chart.",
+      "Family Davison Core Identity explains the relationship's shared energetic center.",
+      "The report focuses on long-term shared destiny and collective evolution.",
+      "Planetary midpoint calculations are used for advanced compatibility analysis.",
+      "The report explains how the relationship system behaves as a living energetic structure.",
+      "Interpretations include emotional patterns, responsibilities, communication, and stability themes.",
+      "Show More button expands detailed astrology explanations.",
+      "This analysis is useful for understanding relationship purpose and group evolution."
+    ]
+  },
+  {
+    "name": "major-aspects-connections-analysis",
+    "label": "Major Aspects & Connections Analysis",
+    "description": "Detailed planetary aspect and connection interpretation report.",
+    "group": "Charts",
+    "subModule": "Relationship Charts",
+    "purpose": "This screen explains the strongest planetary connections and astrological aspect patterns influencing the family or relationship system.",
+    "bullets": [
+      "Displays major astrological aspect interpretations between members.",
+      "Planetary connections explain harmony, conflict, emotional attachment, and communication flow.",
+      "Family Davison Core Chart explains the strongest repeated energetic patterns.",
+      "The report analyzes zodiac sign repetition and shared planetary placements.",
+      "Astrological houses are used to explain emotional and social behavior.",
+      "Interpretations help users understand relationship strengths and challenges.",
+      "Show More button expands the detailed aspect report.",
+      "This screen helps users understand deeper energetic compatibility."
+    ]
+  },
+  {
+    "name": "family-compatibility-score",
+    "label": "Family Compatibility Score",
+    "description": "Compatibility scoring and relationship strength summary report.",
+    "group": "Charts",
+    "subModule": "Relationship Charts",
+    "purpose": "This screen summarizes the overall compatibility strength of the relationship or family system using astrology scoring logic.",
+    "bullets": [
+      "Displays an overall compatibility score for the family system.",
+      "Compatibility scoring is generated using planetary harmony and tension analysis.",
+      "Earth, Air, Fire, and Water balance affect compatibility strength.",
+      "The report explains emotional support, communication quality, and long-term stability.",
+      "Strong and challenging planetary aspects influence the final score.",
+      "Astrology interpretations explain why compatibility is high or low.",
+      "Show More button expands deeper compatibility explanations.",
+      "This report gives users a simplified understanding of overall relationship harmony."
+    ]
+  },
+  {
+    "name": "family-elemental-balance",
+    "label": "Family Elemental Balance",
+    "description": "Elemental astrology balance report across all family members.",
+    "group": "Charts",
+    "subModule": "Relationship Charts",
+    "purpose": "This screen explains the balance of Earth, Air, Fire, and Water energies inside the relationship system.",
+    "bullets": [
+      "Analyzes elemental balance across all included astrology charts.",
+      "Earth energy explains stability, routines, and practical behavior.",
+      "Air energy explains communication, ideas, and mental connection.",
+      "Water energy explains emotional bonding and sensitivity.",
+      "Fire energy explains motivation, leadership, and action.",
+      "The report identifies dominant and missing elemental patterns.",
+      "Astrology interpretations explain how elemental imbalance affects relationships.",
+      "Show More button expands deeper elemental analysis.",
+      "This screen helps users understand emotional and energetic balance inside the family."
+    ]
+  },
+  {
+    "name": "timing-transits-analysis",
+    "label": "Timing & Transits Analysis",
+    "description": "Transit and timing astrology interpretation report.",
+    "group": "Charts",
+    "subModule": "Relationship Charts",
+    "purpose": "This screen explains how timing cycles and planetary transits influence the relationship system over time.",
+    "bullets": [
+      "Displays timing and transit-based astrology interpretations.",
+      "Transit analysis explains evolving emotional and relationship phases.",
+      "Planetary movement affects communication, emotions, and family growth.",
+      "The report explains future energetic cycles and relationship timing.",
+      "Shared planetary themes help identify collective growth periods.",
+      "Astrological timing helps users understand periods of change or stability.",
+      "Show More button expands deeper transit interpretations.",
+      "This screen is useful for predictive relationship astrology."
+    ]
+  },
+  {
+    "name": "karmic-soulmate-indicators",
+    "label": "Karmic & Soulmate Indicators",
+    "description": "Karmic relationship and soulmate astrology interpretation screen.",
+    "group": "Charts",
+    "subModule": "Relationship Charts",
+    "purpose": "This screen explains karmic lessons, soulmate indicators, and spiritual relationship patterns using advanced astrology analysis.",
+    "bullets": [
+      "Analyzes karmic patterns between all included family members.",
+      "North Node, Chiron, and karmic house placements are used for interpretation.",
+      "The report explains emotional healing and soul-level lessons.",
+      "Karmic analysis identifies repeated emotional and energetic themes.",
+      "Spiritual growth patterns are explained using astrology placements.",
+      "The report helps users understand deeper relationship purpose.",
+      "Show More button expands the full karmic interpretation.",
+      "This screen focuses on spiritual evolution and long-term soul connections."
+    ]
+  },
 
 
       {
@@ -10534,64 +10757,9 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
 
 
 
-      
-  {
-    "name": "relationship-charts-list",
-    "label": "Relationship Charts",
-    "description": "Community relationship chart dashboard where users can view all available relationship pairs in their family and generate or open synastry chart reports.",
-    "group": "Charts",
-    "subModule": "Relationship Charts",
-    "purpose": "Allows users to generate, access, and manage relationship astrology charts between connected family members or saved relationship pairs.",
-    "bullets": [
-      "Displays all available relationship pairs in card format.",
-      "Each card shows two connected people names.",
-      "Relationship chart cards support Romantic, Friendship, and Business compatibility reports.",
-      "Select type dropdown allows choosing the relationship chart type.",
-      "If a chart already exists, the dropdown shows View action.",
-      "If a chart is not yet generated, the dropdown shows Generate action.",
-      "Refresh button reloads the latest relationship chart data.",
-      "Charts are generated using saved birth details of both individuals.",
-      "Generated relationship charts are stored in the database.",
-      "Users can reopen previously generated compatibility reports without regenerating data.",
-      "Supports synastry relationship analysis for multiple family or partner combinations."
-    ]
-  },
-  {
-    "name": "relationship-chart-generate",
-    "label": "Generate Relationship Chart",
-    "description": "Relationship chart generation flow triggered from the Select type dropdown. Users choose a relationship type and generate a compatibility chart between two selected individuals.",
-     "group": "Charts",
-    "subModule": "Relationship Charts",
-    "purpose": "Generates astrology-based compatibility reports using the selected relationship category and saved birth data.",
-    "bullets": [
-      "Opened from the Select type dropdown menu.",
-      "Users can select Romantic, Friendship, or Business chart type.",
-      "Generate option appears for chart types not yet created.",
-      "System uses stored birth details for both people.",
-      "Compatibility chart is generated using astrology calculations and synastry logic.",
-      "Generated chart data is automatically saved in the database.",
-      "After generation, the Generate option changes to View.",
-      "Users can later reopen the saved chart without recalculating."
-    ]
-  },
-  {
-    "name": "relationship-chart-view",
-    "label": "View Relationship Chart",
-    "description": "Saved relationship chart viewer screen where users can open and review previously generated synastry compatibility reports.",
-    "group": "Charts",
-    "subModule": "Relationship Charts",
-    "purpose": "Allows users to access saved romantic, friendship, or business compatibility chart reports between two individuals.",
-    "bullets": [
-      "Opened using the View option from the relationship type dropdown.",
-      "Displays previously generated compatibility chart results.",
-      "Shows relationship analysis between two selected people.",
-      "Loads saved synastry chart data from the database.",
-      "Users can revisit previously generated charts anytime.",
-      "Supports viewing Romantic, Friendship, and Business compatibility reports.",
-      "Chart results are reused if the same people and relationship type already exist.",
-      "Avoids duplicate horoscope computation for previously generated chart combinations."
-    ]
-  },
+
+
+
       {
         name: "upgrade-to-ms",
         label: "Upgrade to Mystery School",
