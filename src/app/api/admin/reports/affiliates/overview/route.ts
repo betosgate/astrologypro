@@ -40,8 +40,8 @@ export async function GET(request: Request) {
   // Conversion list (period-bounded). Aggregate in JS.
   let convQuery = admin
     .from("campaign_conversions")
-    .select("commission_amount_cents, reversed_at, created_at");
-  if (since) convQuery = convQuery.gte("created_at", since);
+    .select("commission_amount_cents, reversed_at, converted_at");
+  if (since) convQuery = convQuery.gte("converted_at", since);
 
   // Counts of active campaigns + active affiliates (point-in-time, not
   // period-bounded — these are "current state" metrics).

@@ -25,6 +25,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 interface ProvisionNatalReadinessArgs {
   admin: SupabaseClient;
   communityMemberId: string;
+  userId?: string | null;
   // Optional birth data from user metadata (captured at signup if available)
   birthData?: {
     fullName?: string | null;
@@ -38,6 +39,7 @@ interface ProvisionNatalReadinessArgs {
 export async function provisionNatalReadiness({
   admin,
   communityMemberId,
+  userId,
   birthData,
 }: ProvisionNatalReadinessArgs): Promise<void> {
   try {
@@ -51,35 +53,57 @@ export async function provisionNatalReadiness({
     if (!member || member.membership_type !== "perennial_mandalism") return;
     if (member.membership_status !== "active") return;
 
-    // Check if a "Self" profile already exists to avoid creating duplicates
-    const { data: existing } = await admin
+    const fullName =
+      birthData?.fullName ?? member.full_name ?? "Primary Member";
+
+    // Check if a self profile already exists to avoid creating duplicates.
+    // Historical rows used both "Self" and "self"; some are linked by
+    // user_id while older rows only match by name.
+    const { data: existingRows } = await admin
       .from("community_family_members")
-      .select("id, natal_status")
-      .eq("member_id", communityMemberId)
-      .eq("relationship", "Self")
-      .maybeSingle();
+      .select("id, natal_status, user_id, relationship, full_name")
+      .eq("member_id", communityMemberId);
+
+    const existing = (existingRows ?? [])
+      .filter(
+        (row) =>
+          (userId && row.user_id === userId) ||
+          (row.relationship ?? "").toLowerCase() === "self" ||
+          row.full_name === fullName,
+      )
+      .sort((a, b) => {
+        const score = (row: {
+          user_id?: string | null;
+          relationship?: string | null;
+          full_name?: string | null;
+        }) =>
+          (userId && row.user_id === userId ? 4 : 0) +
+          ((row.relationship ?? "").toLowerCase() === "self" ? 2 : 0) +
+          (row.full_name === fullName ? 1 : 0);
+        return score(b) - score(a);
+      })[0];
 
     if (existing) {
       // Profile already provisioned — if it's in not_started and we now have
-      // birth data, upgrade it to queued
-      if (
-        existing.natal_status === "not_started" &&
-        birthData?.dateOfBirth
-      ) {
-        await admin
-          .from("community_family_members")
-          .update({ natal_status: "queued" })
-          .eq("id", existing.id);
+      // birth data, upgrade it to queued. Also normalize relationship casing
+      // and link user_id when available so future lookups find this row.
+      const updateData: Record<string, unknown> = {
+        relationship: "self",
+      };
+      if (userId && !existing.user_id) updateData.user_id = userId;
+      if (existing.natal_status === "not_started" && birthData?.dateOfBirth) {
+        updateData.natal_status = "queued";
       }
+      await admin
+        .from("community_family_members")
+        .update(updateData)
+        .eq("id", existing.id);
       return;
     }
 
     // Determine if birth data is sufficient to queue natal generation
     const hasBirthData = Boolean(birthData?.dateOfBirth);
     const natalStatus = hasBirthData ? "queued" : "not_started";
-
-    const fullName =
-      birthData?.fullName ?? member.full_name ?? "Primary Member";
 
     // Calculate age group if DOB is available
     let ageGroup: "adult" | "child" = "adult";
@@ -96,7 +120,8 @@ export async function provisionNatalReadiness({
       birth_time: birthData?.birthTime ?? null,
       birth_city: birthData?.birthCity ?? null,
       birth_country: birthData?.birthCountry ?? null,
-      relationship: "Self",
+      user_id: userId ?? null,
+      relationship: "self",
       age_group: ageGroup,
       natal_status: natalStatus,
     });

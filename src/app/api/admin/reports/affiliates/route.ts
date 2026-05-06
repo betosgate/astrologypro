@@ -172,12 +172,12 @@ export async function GET(req: NextRequest) {
     let commQuery = db
       .from("campaign_conversions")
       .select(
-        "id, affiliate_id, commission_amount_cents, reversed_at, created_at, campaign:affiliate_campaigns(diviner_id)",
+        "id, affiliate_id, commission_amount_cents, reversed_at, converted_at, campaign:affiliate_campaigns(diviner_id)",
       )
-      .order("created_at", { ascending: false })
+      .order("converted_at", { ascending: false })
       .order("id", { ascending: false });
     if (since) {
-      commQuery = commQuery.gte("created_at", since.toISOString());
+      commQuery = commQuery.gte("converted_at", since.toISOString());
     }
     const { data: commissions, error: commErr } = await commQuery;
     if (commErr) throw commErr;
@@ -187,7 +187,7 @@ export async function GET(req: NextRequest) {
       affiliate_id: string;
       commission_amount_cents: number | null;
       reversed_at: string | null;
-      created_at: string;
+      converted_at: string;
       campaign: { diviner_id: string | null } | { diviner_id: string | null }[] | null;
     };
     const commRows = (commissions ?? []) as unknown as ConversionRow[];
@@ -324,7 +324,7 @@ export async function GET(req: NextRequest) {
     // Monthly breakdown for diviner affiliate commissions
     const affMonthMap = new Map<string, number>();
     for (const c of commRows) {
-      const key = toMonthKey(c.created_at);
+      const key = toMonthKey(c.converted_at);
       const cents = Number(c.commission_amount_cents ?? 0);
       affMonthMap.set(key, (affMonthMap.get(key) ?? 0) + cents);
     }
