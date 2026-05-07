@@ -302,12 +302,23 @@ export function AstroChartsSection() {
               const active = natalCharts[safeIndex];
               const total = natalCharts.length;
               const isMulti = total > 1;
+              const isGenerated =
+                active.natal_chart && Object.keys(active.natal_chart).length > 0;
+              const ctaLabel = isGenerated
+                ? "View Full Chart"
+                : "Generate Natal Chart";
+
               return (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2 min-w-0">
-                      <Badge variant="default" className="text-xs shrink-0">
-                        Chart Ready
+                      <Badge
+                        variant="default"
+                        className={`text-xs shrink-0 ${
+                          !isGenerated ? "bg-amber-500" : ""
+                        }`}
+                      >
+                        {isGenerated ? "Chart Ready" : "Ready to Generate"}
                       </Badge>
                       <span className="text-xs text-muted-foreground truncate">
                         {active.full_name}
@@ -349,15 +360,9 @@ export function AstroChartsSection() {
                         <ChevronLeft className="size-4" />
                       </Button>
                     )}
-                    {/*
-                      Deep-link into the family-member detail route where
-                      the shared HoroscopeToolkitPage renders the chart.
-                      Uses the *active* carousel member, not always the
-                      first one.
-                    */}
                     <Button asChild variant="outline" size="sm" className="flex-1">
                       <Link href={`/community/family/${active.id}`}>
-                        View Full Chart →
+                        {ctaLabel} →
                       </Link>
                     </Button>
                     {isMulti && (
@@ -380,17 +385,11 @@ export function AstroChartsSection() {
             })()
           ) : (
             <div className="space-y-2">
-              {/*
-                Task 04: keep empty-state copy honest — do not imply a generation
-                job is running. Link straight to the shared toolkit route
-                (`/community/horoscope`), where the user can complete birth
-                data or render their chart.
-              */}
               <p className="text-xs text-muted-foreground">
-                No natal chart found yet. Open Horoscope to generate or view your chart.
+                No natal chart found yet.
               </p>
-              <Button asChild variant="outline" size="sm">
-                <Link href="/community/horoscope">Open Horoscope</Link>
+              <Button asChild variant="outline" size="sm" className="w-full">
+                <Link href="/community/charts">Generate Natal Chart →</Link>
               </Button>
             </div>
           )}

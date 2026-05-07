@@ -253,22 +253,7 @@ export function HouseholdReadinessSection({
       ? (chartsReadyCount / chartsEligibleCount) * 100
       : 0;
   const missingDetailsProgress = missingDetailsCount === 0 ? 100 : 35;
-  const checklistAction =
-    missingDetailsCount > 0 ? (
-      <Link
-        href={completeDetailsHref}
-        className="inline-flex text-xs font-medium text-primary hover:underline"
-      >
-        Complete missing data →
-      </Link>
-    ) : chartsEligibleCount > 0 && chartsReadyCount < chartsEligibleCount ? (
-      <Link
-        href="/community/charts"
-        className="inline-flex text-xs font-medium text-primary hover:underline"
-      >
-        Generate missing charts →
-      </Link>
-    ) : null;
+  const checklistAction = null;
 
   return (
     <Card>
@@ -358,7 +343,7 @@ export function HouseholdReadinessSection({
             </p>
             {checklistAction}
           </div>
-          <ul className="space-y-1.5">
+          <ul className="flex flex-wrap items-center gap-x-6 gap-y-2">
             <ChecklistRow ok={selfBirthDataComplete} text={selfStatusText} />
             <ChecklistRow
               ok={
