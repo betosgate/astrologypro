@@ -1,6 +1,6 @@
 # Task 02 - Redesign Household Readiness Card UI
 
-- Status: Planned
+- Status: Done
 - Priority: P1
 - Area: UI / Community Dashboard
 - Route: `/community`
@@ -65,8 +65,22 @@ Build one dashboard card with three clear zones:
 
 ## Acceptance Criteria
 
-- [ ] Card title no longer creates confusion between self birth data and household readiness.
-- [ ] The card shows more than two circular meters.
-- [ ] The card has useful actions that match the current state.
-- [ ] The card does not visually duplicate the `Your Circle` member grid.
-- [ ] Mobile layout remains readable without text overlap.
+- [x] Card title no longer creates confusion between self birth data and household readiness.
+- [x] The card shows more than two circular meters.
+- [x] The card has useful actions that match the current state.
+- [x] The card does not visually duplicate the `Your Circle` member grid.
+- [x] Mobile layout remains readable without text overlap.
+
+---
+
+## Implementation Notes
+
+- New component: `src/components/community/household-readiness-section.tsx`.
+- Title: **`Household Readiness`**.
+- Three zones built per spec:
+  1. **Top metric tiles** (4): `Your Birth Data`, `Members Complete`, `Charts Ready`, `Missing Details`. Tile tone is green when fully ready, amber when action is needed, neutral when there's nothing yet to measure (e.g. zero chart-eligible members). Replaces the two circular rings — fewer pixels, more truth.
+  2. **Status checklist**: self birth-data state (with specific missing fields when known), members-complete summary, charts summary, plus a "members still need details" line that only appears when `missingDetailsCount > 0`.
+  3. **Action area**: `Manage Family` and `View Charts` always; `Complete Missing Details` appears only when `missingDetailsCount > 0`. When everything is set up, a positive confirmation line replaces the action prompt.
+- Mobile (375px): metric tiles wrap to 2 columns, action buttons take `flex-1` so they wrap cleanly without overflow.
+- Tablet/desktop: metric tiles render as 4 columns (`sm:grid-cols-4`); buttons revert to natural width (`sm:flex-none`).
+- Old `profile-progress-section.tsx` is left in place but no longer imported — kept for traceability per the project's consolidation pattern.

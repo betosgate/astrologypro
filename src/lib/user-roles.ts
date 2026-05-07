@@ -132,7 +132,7 @@ export async function getUserPortals(
       portals.push({
         role: "mystery_school",
         label: "Mystery School",
-        href: "/mystery-school",
+        href: "/mystery-school/training",
       });
     }
   }

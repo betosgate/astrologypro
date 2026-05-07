@@ -1,6 +1,6 @@
 # Task 03 - Wire Household Readiness Metrics And Actions
 
-- Status: Planned
+- Status: Done
 - Priority: P1
 - Area: Data / Community Dashboard
 - Route: `/community`
@@ -72,9 +72,31 @@ Show actions based on real state:
 
 ## Acceptance Criteria
 
-- [ ] Self readiness and household readiness are calculated separately.
-- [ ] Household completeness is based on actual member birth details, not member count alone.
-- [ ] Chart-ready count reflects generated/saved natal charts.
-- [ ] Missing-details count matches the members that need action.
-- [ ] CTA labels and destinations match the current data state.
-- [ ] No backend or frontend code relies on hardcoded `100%` household readiness.
+- [x] Self readiness and household readiness are calculated separately.
+- [x] Household completeness is based on actual member birth details, not member count alone.
+- [x] Chart-ready count reflects generated/saved natal charts.
+- [x] Missing-details count matches the members that need action.
+- [x] CTA labels and destinations match the current data state.
+- [x] No backend or frontend code relies on hardcoded `100%` household readiness.
+
+---
+
+## Wiring Summary (`src/app/community/page.tsx`)
+
+| Metric | Source |
+|---|---|
+| `selfBirthDataPercent` | Existing `profilePct` (34/33/33 split over `community_members.{date_of_birth, birth_time, birth_city}`) |
+| `selfBirthDataComplete` | `hasDob && hasBirthTime && hasBirthCity` |
+| `selfMissingFields` | Existing `profileMissingFields` |
+| `completeMemberCount` | `(selfBirthDataComplete ? 1 : 0)` + family rows passing `isBirthDataComplete(...)` |
+| `totalMemberCount` | `familyMembers.length + 1` |
+| `missingDetailsCount` | `totalMemberCount - completeMemberCount` |
+| `chartsReadyCount` | Family rows where `deriveNatalReportState(fm) === "generated"`, plus self chart when self is not in the family table |
+| `chartsEligibleCount` | `householdCompleteCount` (you can't generate a chart without complete birth data) |
+
+Family-row query was extended to include `birth_lat`, `birth_lng`, `birth_time_unknown` so `isBirthDataComplete` (the chart-flow gate) can run without an extra fetch. No new API or DB call was introduced — all metrics are derived from data already loaded for the dashboard.
+
+CTA destinations:
+- `Manage Family` → `/community/family`
+- `View Charts` → `/community/charts`
+- `Complete Missing Details` → `/community/family` (rendered only when `missingDetailsCount > 0`)
