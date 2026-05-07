@@ -43,6 +43,9 @@ export default async function OnboardingLayout({
       isInvited: user.user_metadata?.invited_by_admin === true,
       adminClient: admin,
     });
+    if (destination === "/onboarding") {
+      return <>{children}</>;
+    }
     redirect(destination);
   }
 

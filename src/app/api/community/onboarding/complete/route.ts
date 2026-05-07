@@ -147,7 +147,7 @@ export async function POST(req: NextRequest) {
         { status: 422 }
       );
     }
-    if (!gender || typeof gender !== "string") {
+    if (!gender || typeof gender !== "string" || !gender.trim()) {
       return NextResponse.json({ error: "Gender is required." }, { status: 422 });
     }
     if (!state || typeof state !== "string" || !state.trim()) {
@@ -158,8 +158,8 @@ export async function POST(req: NextRequest) {
     }
 
     const zipVal = typeof zip === "string" ? zip.trim() : "";
-    if (!/^\d{5}$/.test(zipVal)) {
-      return NextResponse.json({ error: "Zip must be exactly 5 digits." }, { status: 422 });
+    if (!/^[0-9A-Za-z -]{3,12}$/.test(zipVal)) {
+      return NextResponse.json({ error: "Postal code is required." }, { status: 422 });
     }
     if (!address || typeof address !== "string" || !address.trim()) {
       return NextResponse.json({ error: "Address is required." }, { status: 422 });
@@ -167,10 +167,10 @@ export async function POST(req: NextRequest) {
     if (!occupation || typeof occupation !== "string" || !occupation.trim()) {
       return NextResponse.json({ error: "Occupation is required." }, { status: 422 });
     }
-    if (!date_of_birth || typeof date_of_birth !== "string") {
+    if (!date_of_birth || typeof date_of_birth !== "string" || !date_of_birth.trim()) {
       return NextResponse.json({ error: "Date of birth is required." }, { status: 422 });
     }
-    if (!birth_time || typeof birth_time !== "string") {
+    if (!birth_time || typeof birth_time !== "string" || !birth_time.trim()) {
       return NextResponse.json({ error: "Birth time is required." }, { status: 422 });
     }
 
