@@ -155,8 +155,11 @@ export async function GET() {
     // ── Natal carousel: same rule as before — only members whose stored
     //    natal_chart passes shape validation. Unchanged behaviour for
     //    back-compat with the existing carousel UI.
+    // ── Natal carousel: include every household member with complete birth 
+    //    data, even if their chart hasn't been generated yet. This allows 
+    //    the dashboard to show a "Generate" CTA for them.
     natalCharts = familyRows
-      .filter((row) => deriveNatalReportState(row) === "generated")
+      .filter((row) => isBirthDataComplete(row))
       .map((row) => ({
         id: row.id,
         full_name: row.full_name,
@@ -164,7 +167,7 @@ export async function GET() {
         natal_chart: isValidNatalChart(row.natal_chart) ? row.natal_chart : {},
       }));
 
-    natalChart = natalCharts[0] ?? null;
+    natalChart = natalCharts.find((c) => Object.keys(c.natal_chart).length > 0) ?? natalCharts[0] ?? null;
     natalStatus = natalCharts.length === 0 ? "empty" : "ready";
 
     // ── Monthly transit list: gated on complete birth data, NOT on
