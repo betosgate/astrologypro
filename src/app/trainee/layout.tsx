@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { getUserPortals } from "@/lib/user-roles";
 import { PortalSwitcher } from "@/components/shared/portal-switcher";
@@ -11,6 +12,13 @@ import { getPendingContractDestination } from "@/lib/contract-orchestration";
 export const metadata = { title: "Trainee Portal - AstrologyPro" };
 
 export default async function TraineeLayout({ children }: { children: React.ReactNode }) {
+  const hdrs = await headers();
+  const pathname = hdrs.get("x-pathname");
+
+  if (pathname === "/trainee/diviner-upgrade/success") {
+    return <>{children}</>;
+  }
+
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
