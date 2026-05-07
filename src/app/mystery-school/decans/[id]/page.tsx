@@ -29,6 +29,9 @@ import {
   AlertTriangle,
   PlayCircle,
   RotateCcw,
+  User,
+  Globe,
+  Compass,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -328,7 +331,35 @@ export default function DecanPage({ params }: { params: Promise<{ id: string }> 
     setLoading(false);
   }
 
-  useEffect(() => { load(); }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    let cancelled = false;
+
+    async function fetchDecan() {
+      const res = await fetch(`/api/mystery-school/decan/${id}`);
+      if (cancelled) return;
+
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        if (!cancelled) {
+          setError(j.error ?? "Failed to load decan");
+          setLoading(false);
+        }
+        return;
+      }
+
+      const payload = (await res.json()) as DecanData;
+      if (!cancelled) {
+        setData(payload);
+        setLoading(false);
+      }
+    }
+
+    void fetchDecan();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
 
   async function handleScrySubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -418,9 +449,30 @@ export default function DecanPage({ params }: { params: Promise<{ id: string }> 
 
   // Preview and locked: content visible but no submissions
   const canSubmit = isActive || isGrace;
+  const requirementItems = [
+    { done: progress?.ritual_done, label: "Ritual", detail: "Perform the guided working" },
+    { done: progress?.scry_done, label: "Scrying", detail: "Submit the card reflection" },
+    { done: progress?.journal_done, label: "Mundane journal", detail: "Complete all three impact sections" },
+  ];
+  const requirementCount = requirementItems.filter((item) => item.done).length;
+  const requirementPercent = Math.round((requirementCount / requirementItems.length) * 100);
+  const statusLabel = isCompleted
+    ? "Completed"
+    : isMissed
+      ? "Missed"
+      : isGrace
+        ? "Grace Period"
+        : isPreview
+          ? "Preview"
+          : isActive
+            ? "Active"
+            : "Locked";
+  const windowLabel = progress
+    ? `${formatShortDate(progress.window_open)} - ${formatShortDate(progress.window_close)}`
+    : "Awaiting unlock";
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-6xl space-y-4">
 
       {/* ── Back ───────────────────────────────────────────────── */}
       <Link
@@ -431,24 +483,25 @@ export default function DecanPage({ params }: { params: Promise<{ id: string }> 
       </Link>
 
       {/* ── Header ─────────────────────────────────────────────── */}
-      <div className="space-y-3">
+      <section className="space-y-6 rounded-3xl border border-amber-500/25 bg-[linear-gradient(135deg,rgba(234,179,8,0.14),rgba(15,23,42,0.82)_34%,rgba(15,23,42,0.98))] p-6 shadow-[0_30px_90px_rgba(0,0,0,0.28)] sm:p-8">
         {/* Artwork */}
         {decan.artwork_url && (
-          <div className="relative h-40 w-full overflow-hidden rounded-lg border">
+          <div className="relative h-56 w-full overflow-hidden rounded-2xl border border-amber-500/20 sm:h-72">
             <Image
               src={decan.artwork_url}
               alt={decan.decan_name ?? decan.title}
               fill
-              className="object-cover"
-              sizes="(max-width: 768px) 100vw, 640px"
+              className="object-cover opacity-80"
+              sizes="(max-width: 768px) 100vw, 1024px"
             />
+            <div className="absolute inset-0 bg-gradient-to-r from-background/85 via-background/35 to-transparent" />
           </div>
         )}
 
-        <div className="flex items-center gap-3 flex-wrap">
-          <span className="text-3xl">{PLANET_GLYPHS[decan.planet] ?? "●"}</span>
+        <div className="flex items-start gap-4 flex-wrap">
+          <span className="flex size-12 shrink-0 items-center justify-center rounded-lg border border-amber-500/30 bg-amber-500/10 text-3xl text-amber-200">{PLANET_GLYPHS[decan.planet] ?? "●"}</span>
           <div>
-            <h1 className="text-2xl font-bold">
+            <h1 className="text-3xl font-bold tracking-normal">
               {decan.decan_name ?? decan.title}
             </h1>
             <p className="text-muted-foreground text-sm">{decan.sign} · {decan.planet}</p>
@@ -470,32 +523,63 @@ export default function DecanPage({ params }: { params: Promise<{ id: string }> 
           )}
         </div>
 
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div className="rounded-2xl border border-border/60 bg-background/40 px-4 py-3">
+            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-amber-300">
+              Status
+            </p>
+            <p className="mt-2 text-lg font-bold">{statusLabel}</p>
+          </div>
+          <div className="rounded-2xl border border-border/60 bg-background/40 px-4 py-3">
+            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-amber-300">
+              Active Window
+            </p>
+            <p className="mt-2 text-lg font-bold">{windowLabel}</p>
+          </div>
+          <div className="rounded-2xl border border-border/60 bg-background/40 px-4 py-3">
+            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-amber-300">
+              Completion
+            </p>
+            <p className="mt-2 text-lg font-bold">
+              {requirementCount} / {requirementItems.length}
+            </p>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div className="flex items-center justify-between text-[11px] font-black uppercase tracking-[0.22em] text-amber-300">
+            <span>Journey Progress</span>
+            <span>{requirementPercent}% complete</span>
+          </div>
+          <div className="h-2 overflow-hidden rounded-full bg-amber-500/10">
+            <div
+              className="h-full rounded-full bg-amber-400 transition-all duration-500"
+              style={{ width: `${requirementPercent}%` }}
+            />
+          </div>
+        </div>
+
         {/* Tarot card chip + library link */}
         {decan.tarot_card_ref && (
           <div className="flex items-center gap-2 flex-wrap">
-            <div className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium bg-muted/40">
-              <Star className="size-3 text-muted-foreground" />
+            <div className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/45 px-3 py-1 text-xs font-medium">
+              <Star className="size-3 text-amber-300" />
               {decan.tarot_card_ref}
             </div>
             <Link
               href={`/community/tarot?card=${encodeURIComponent(decan.tarot_card_ref)}`}
-              className="text-xs text-primary hover:underline"
+              className="text-xs text-amber-300 hover:underline"
             >
-              Open {decan.tarot_card_ref} in Tarot library →
+              Open card in Tarot library →
             </Link>
           </div>
         )}
 
-        {/* Preview text */}
-        {decan.preview_text && (
-          <p className="text-sm text-muted-foreground italic">{decan.preview_text}</p>
-        )}
-
-        {/* Description */}
-        {decan.description && (
-          <p className="text-sm text-muted-foreground">{decan.description}</p>
-        )}
-      </div>
+        <div className="max-w-3xl space-y-2 text-sm leading-6 text-muted-foreground">
+          {decan.preview_text && <p className="text-foreground/90">{decan.preview_text}</p>}
+          {decan.description && <p>{decan.description}</p>}
+        </div>
+      </section>
 
       {/* ── Status banners ──────────────────────────────────────── */}
       {isGrace && progress && <GraceBanner progress={progress} />}
@@ -544,61 +628,48 @@ export default function DecanPage({ params }: { params: Promise<{ id: string }> 
 
       {/* ── Main content (visible for active, grace, preview, completed — hidden for missed) */}
       {!isLocked && !isMissed && (
-        <>
-          {/* Progress checklist */}
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm">Completion Checklist</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {[
-                { done: progress?.ritual_done, label: "Ritual performed" },
-                { done: progress?.scry_done, label: "Scrying journal submitted" },
-                { done: progress?.journal_done, label: "Mundane impact journal submitted" },
-              ].map((item) => (
-                <div key={item.label} className="flex items-center gap-2 text-sm">
-                  {item.done ? (
-                    <CheckCircle2 className="size-4 text-green-500 shrink-0" />
-                  ) : (
-                    <Circle className="size-4 text-muted-foreground shrink-0" />
-                  )}
-                  <span className={item.done ? "line-through text-muted-foreground" : ""}>
-                    {item.label}
-                  </span>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-
+        <div className="grid items-start gap-8 xl:grid-cols-[minmax(0,1fr)_320px]">
+          <div>
           {/* ── Ritual performer ─────────────────────────────────── */}
-          <section className="space-y-3">
-            <div className="flex items-center gap-2">
-              <Scroll className="size-4 text-muted-foreground" />
-              <h2 className="font-semibold">Ritual</h2>
+          <section className="space-y-4 pt-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="size-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Scroll className="size-5 text-primary" />
+                </div>
+                <h2 className="font-bold tracking-tight text-xl">Ritual Practice</h2>
+              </div>
               {progress?.ritual_done && (
-                <Badge className="bg-green-100 text-green-800 border-0 text-[10px]">Done</Badge>
+                <Badge className="bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 px-3 py-1 text-[10px] uppercase tracking-widest font-black">
+                  Completed
+                </Badge>
               )}
             </div>
 
             {ritualSteps.length === 0 ? (
-              <Card>
-                <CardContent className="py-6 text-center text-sm text-muted-foreground">
-                  Ritual content coming soon.
+              <Card className="border-border/60 shadow-sm overflow-hidden">
+                <CardContent className="py-12 text-center text-sm text-muted-foreground flex flex-col items-center gap-4">
+                  <div className="size-16 rounded-full bg-muted/50 flex items-center justify-center">
+                    <Scroll className="size-6 text-muted-foreground/50 opacity-50" />
+                  </div>
+                  <p className="font-medium">Ritual content coming soon.</p>
                 </CardContent>
               </Card>
             ) : (
-              <Card className="border-primary/20">
-                <CardContent className="py-5 px-5 space-y-3">
+              <Card className="border-border/60 shadow-sm overflow-hidden">
+                <CardContent className="p-6">
                   {progress?.ritual_done ? (
-                    <div className="flex items-center gap-3">
-                      <CheckCircle2 className="size-5 text-green-500 shrink-0" />
+                    <div className="flex items-center gap-4 bg-emerald-500/5 border border-emerald-500/10 rounded-xl p-5">
+                      <div className="size-12 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0 border border-emerald-500/20">
+                        <CheckCircle2 className="size-6 text-emerald-600" />
+                      </div>
                       <div>
-                        <p className="text-sm font-medium">Ritual completed</p>
+                        <p className="text-base font-bold text-emerald-800">Ritual successfully completed</p>
                         {ritualExecution?.completed_at && (
-                          <p className="text-xs text-muted-foreground">
-                            Completed{" "}
+                          <p className="text-sm font-medium text-emerald-600/80 mt-0.5">
+                            Recorded on{" "}
                             {new Date(ritualExecution.completed_at).toLocaleDateString("en-US", {
-                              month: "short",
+                              month: "long",
                               day: "numeric",
                               year: "numeric",
                             })}
@@ -607,28 +678,44 @@ export default function DecanPage({ params }: { params: Promise<{ id: string }> 
                       </div>
                     </div>
                   ) : (
-                    <>
-                      <p className="text-sm text-muted-foreground">
-                        This ritual has {ritualSteps.length} guided step
-                        {ritualSteps.length !== 1 ? "s" : ""}.
-                        {ritualInProgress &&
-                          ` You are on step ${ritualExecution!.current_step + 1} of ${ritualExecution!.total_steps}.`}
-                      </p>
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-6 bg-muted/20 border border-border/40 rounded-xl p-6">
+                      <div className="space-y-1.5 text-center sm:text-left">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-primary">Guided Practice</p>
+                        <p className="text-base font-medium text-foreground/90">
+                          This ritual consists of {ritualSteps.length} sequence step{ritualSteps.length !== 1 ? "s" : ""}.
+                        </p>
+                        <div className="flex flex-wrap justify-center gap-2 pt-1 sm:justify-start">
+                          {ritualSteps.map((step) => (
+                            <span
+                              key={step.id}
+                              className="rounded-full border border-border/50 bg-background/60 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground"
+                            >
+                              {step.step_type}
+                            </span>
+                          ))}
+                        </div>
+                        {ritualInProgress && (
+                          <p className="text-sm font-bold text-amber-600 mt-2 flex items-center justify-center sm:justify-start gap-1.5">
+                            <PlayCircle className="size-4" /> Resuming at step {ritualExecution!.current_step + 1} of {ritualExecution!.total_steps}
+                          </p>
+                        )}
+                      </div>
                       {canSubmit ? (
-                        <Link href={`/mystery-school/decans/${id}/ritual`}>
-                          <Button size="sm" variant={ritualInProgress ? "default" : "outline"}>
-                            <PlayCircle className="mr-1.5 size-3.5" />
+                        <Link href={`/mystery-school/decans/${id}/ritual`} className="w-full sm:w-auto">
+                          <Button size="lg" className="w-full sm:w-auto font-bold shadow-sm" variant={ritualInProgress ? "default" : "default"}>
+                            <PlayCircle className="mr-2 size-5" />
                             {ritualInProgress ? "Continue Ritual" : "Begin Ritual"}
                           </Button>
                         </Link>
                       ) : (
-                        <p className="text-xs text-muted-foreground">
+                        <div className="px-4 py-3 bg-background border border-border/50 rounded-lg text-sm font-bold text-muted-foreground flex items-center justify-center gap-2">
+                          <Lock className="size-4 text-muted-foreground/60" />
                           {isPreview
-                            ? "Ritual available once the action window opens."
-                            : "Ritual window is closed."}
-                        </p>
+                            ? "Available when action window opens"
+                            : "Ritual window is closed"}
+                        </div>
                       )}
-                    </>
+                    </div>
                   )}
                 </CardContent>
               </Card>
@@ -636,273 +723,416 @@ export default function DecanPage({ params }: { params: Promise<{ id: string }> 
           </section>
 
           {/* ── Scrying journal ──────────────────────────────────── */}
-          <section className="space-y-3">
-            <div className="flex items-center gap-2 flex-wrap">
-              <Eye className="size-4 text-muted-foreground" />
-              <h2 className="font-semibold">Scrying Journal</h2>
-              {decan.tarot_card_ref && (
-                <Link
-                  href={`/community/tarot?card=${encodeURIComponent(decan.tarot_card_ref)}`}
-                  className="text-xs text-primary hover:underline"
-                >
-                  {decan.tarot_card_ref} →
-                </Link>
-              )}
+          <section className="space-y-4 pt-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="size-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Eye className="size-5 text-primary" />
+                </div>
+                <div>
+                  <h2 className="font-bold tracking-tight text-xl">Scrying Journal</h2>
+                  {decan.tarot_card_ref && (
+                    <Link
+                      href={`/community/tarot?card=${encodeURIComponent(decan.tarot_card_ref)}`}
+                      className="text-xs text-primary/80 hover:text-primary transition-colors flex items-center gap-1.5 font-medium mt-0.5"
+                    >
+                      <Star className="size-3" /> Card Reference: {decan.tarot_card_ref}
+                    </Link>
+                  )}
+                </div>
+              </div>
               {progress?.scry_done && (
-                <Badge className="bg-green-100 text-green-800 border-0 text-[10px]">Submitted</Badge>
+                <Badge className="bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 px-3 py-1 text-[10px] uppercase tracking-widest font-black">
+                  Submitted
+                </Badge>
               )}
             </div>
-            {scryJournal ? (
-              /* Past entry — read-only */
-              <Card>
-                <CardHeader className="pb-1">
-                  <CardDescription className="text-xs">
-                    Submitted{" "}
-                    {new Date(scryJournal.submitted_at).toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
-                    })}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="pt-0 space-y-3">
-                  {scryJournal.assigned_card && (
-                    <p className="text-sm">
-                      <span className="font-medium">Assigned card:</span>{" "}
-                      {scryJournal.assigned_card}
-                      {scryJournal.alternate_card && (
-                        <span className="text-muted-foreground">
-                          {" "}(you drew: {scryJournal.alternate_card})
-                        </span>
+
+            <Card className="border-border/60 shadow-sm overflow-hidden">
+              <CardContent className="p-6">
+                {scryJournal ? (
+                  /* Past entry — read-only */
+                  <div className="space-y-5">
+                    <div className="flex items-center justify-between border-b border-border/50 pb-5">
+                      <div className="space-y-1">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Status</p>
+                        <p className="text-sm font-bold">Recorded</p>
+                      </div>
+                      <div className="text-right space-y-1">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Date</p>
+                        <p className="text-sm font-bold">
+                          {new Date(scryJournal.submitted_at).toLocaleDateString("en-US", {
+                            month: "long", day: "numeric", year: "numeric",
+                          })}
+                        </p>
+                      </div>
+                    </div>
+                    {scryJournal.assigned_card && (
+                      <div className="bg-muted/30 rounded-xl p-5 border border-border/40">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1.5">Assigned Card</p>
+                        <p className="font-bold">{scryJournal.assigned_card}</p>
+                        {scryJournal.alternate_card && (
+                          <p className="text-sm text-muted-foreground mt-1.5">
+                            Alternate drawn: <span className="font-bold text-foreground">{scryJournal.alternate_card}</span>
+                          </p>
+                        )}
+                      </div>
+                    )}
+                    <div className="pt-2">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-3">Experience</p>
+                      <p className="text-sm whitespace-pre-wrap leading-relaxed text-foreground/90">
+                        {scryJournal.experience_text ?? scryJournal.content}
+                      </p>
+                    </div>
+                  </div>
+                ) : canSubmit ? (
+                  <form onSubmit={handleScrySubmit} className="space-y-6">
+                    {/* Assigned card (read from decan) */}
+                    {decan.tarot_card_ref && (
+                      <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 px-5 py-4">
+                        <p className="text-[10px] text-amber-600/80 uppercase tracking-widest font-black mb-1.5">
+                          Assigned Card
+                        </p>
+                        <p className="text-base font-bold text-amber-600 flex items-center gap-2">
+                          <Star className="size-4" /> {decan.tarot_card_ref}
+                        </p>
+                      </div>
+                    )}
+                    {/* Alternate card checkbox */}
+                    <div className="rounded-xl border border-border/50 bg-muted/20 p-5 space-y-4">
+                      <div className="flex items-start gap-3">
+                        <Checkbox
+                          id="scry-alt-card"
+                          className="mt-0.5"
+                          checked={scryHasAltCard}
+                          onCheckedChange={(checked) => setScryHasAltCard(checked === true)}
+                        />
+                        <Label htmlFor="scry-alt-card" className="text-sm leading-snug cursor-pointer font-bold">
+                          I drew a different card during this scrying session
+                        </Label>
+                      </div>
+                      {scryHasAltCard && (
+                        <div className="pl-7 space-y-2">
+                          <Label htmlFor="scry-alt-card-input" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Card drawn</Label>
+                          <Input
+                            id="scry-alt-card-input"
+                            className="bg-background"
+                            value={scryAlternateCard}
+                            onChange={(e) => setScryAlternateCard(e.target.value)}
+                            placeholder="e.g. The Tower, 7 of Cups…"
+                          />
+                        </div>
                       )}
+                    </div>
+                    {/* Experience textarea */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="scry-text" className="text-sm font-bold">
+                          Describe your scrying experience
+                        </Label>
+                        <CharCounter value={scryExperienceText} min={50} />
+                      </div>
+                      <Textarea
+                        id="scry-text"
+                        className="resize-y min-h-[140px] bg-background/50 focus:bg-background"
+                        placeholder="What images, symbols, or insights arose? What did the card reveal about this decan's energy?"
+                        value={scryExperienceText}
+                        onChange={(e) => setScryExperienceText(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <Button type="submit" className="w-full sm:w-auto" disabled={submittingScry || !scryValid}>
+                      {submittingScry ? "Submitting…" : "Submit Scrying Journal"}
+                    </Button>
+                  </form>
+                ) : (
+                  <div className="py-12 text-center text-sm text-muted-foreground flex flex-col items-center gap-4">
+                    <div className="size-16 rounded-full bg-muted/50 flex items-center justify-center">
+                      <Lock className="size-6 text-muted-foreground/50" />
+                    </div>
+                    <p className="font-medium">
+                      {isPreview
+                        ? "Submission available once the action window opens."
+                        : "Scrying journal not yet submitted."}
                     </p>
-                  )}
-                  <p className="text-sm whitespace-pre-wrap">
-                    {scryJournal.experience_text ?? scryJournal.content}
-                  </p>
-                </CardContent>
-              </Card>
-            ) : canSubmit ? (
-              <form onSubmit={handleScrySubmit} className="space-y-4">
-                {/* Assigned card (read from decan) */}
-                {decan.tarot_card_ref && (
-                  <div className="rounded-lg border border-border/60 bg-muted/30 px-4 py-3">
-                    <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium mb-0.5">
-                      Your assigned card for this decan
-                    </p>
-                    <p className="text-sm font-semibold">{decan.tarot_card_ref}</p>
                   </div>
                 )}
-                {/* Alternate card checkbox */}
-                <div className="flex items-start gap-3">
-                  <Checkbox
-                    id="scry-alt-card"
-                    checked={scryHasAltCard}
-                    onCheckedChange={(checked) => setScryHasAltCard(checked === true)}
-                  />
-                  <Label htmlFor="scry-alt-card" className="text-sm leading-snug cursor-pointer">
-                    I drew a different card during this scrying session
-                  </Label>
-                </div>
-                {scryHasAltCard && (
-                  <div className="pl-6 space-y-1.5">
-                    <Label htmlFor="scry-alt-card-input" className="text-xs">Card you drew</Label>
-                    <Input
-                      id="scry-alt-card-input"
-                      value={scryAlternateCard}
-                      onChange={(e) => setScryAlternateCard(e.target.value)}
-                      placeholder="e.g. The Tower, 7 of Cups…"
-                    />
-                  </div>
-                )}
-                {/* Experience textarea */}
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="scry-text" className="text-sm font-medium">
-                      Describe your scrying experience
-                    </Label>
-                    <CharCounter value={scryExperienceText} min={50} />
-                  </div>
-                  <Textarea
-                    id="scry-text"
-                    placeholder="What images, symbols, or insights arose? What did the card reveal about this decan's energy?"
-                    value={scryExperienceText}
-                    onChange={(e) => setScryExperienceText(e.target.value)}
-                    rows={5}
-                    required
-                  />
-                </div>
-                <Button type="submit" size="sm" disabled={submittingScry || !scryValid}>
-                  {submittingScry ? "Submitting…" : "Submit Scrying Journal"}
-                </Button>
-              </form>
-            ) : (
-              <Card>
-                <CardContent className="py-6 text-center text-sm text-muted-foreground">
-                  {isPreview
-                    ? "Submission available once the action window opens."
-                    : "Scrying journal not yet submitted."}
-                </CardContent>
-              </Card>
-            )}
+              </CardContent>
+            </Card>
           </section>
 
           {/* ── Mundane impact journal ───────────────────────────── */}
-          <section className="space-y-3">
-            <div className="flex items-center gap-2">
-              <BookOpen className="size-4 text-muted-foreground" />
-              <h2 className="font-semibold">Mundane Impact Journal</h2>
+          <section className="space-y-4 pt-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="size-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <BookOpen className="size-5 text-primary" />
+                </div>
+                <h2 className="font-bold tracking-tight text-xl">Mundane Impact Journal</h2>
+              </div>
               {progress?.journal_done && (
-                <Badge className="bg-green-100 text-green-800 border-0 text-[10px]">Submitted</Badge>
+                <Badge className="bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 px-3 py-1 text-[10px] uppercase tracking-widest font-black">
+                  Submitted
+                </Badge>
               )}
             </div>
-            {mundaneJournal ? (
-              /* Past entry — read-only */
-              <Card>
-                <CardHeader className="pb-1">
-                  <CardDescription className="text-xs">
-                    Submitted{" "}
-                    {new Date(mundaneJournal.submitted_at).toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
-                    })}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="pt-0 space-y-4">
-                  {mundaneJournal.relationships_section ? (
-                    <>
-                      <div>
-                        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1">
-                          Relationships &amp; Personal Connections
-                        </p>
-                        <p className="text-sm whitespace-pre-wrap">{mundaneJournal.relationships_section}</p>
+
+            <Card className="border-border/60 shadow-sm overflow-hidden">
+              <CardContent className="p-6">
+                {mundaneJournal ? (
+                  /* Past entry — read-only */
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-between border-b border-border/50 pb-5">
+                      <div className="space-y-1">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Status</p>
+                        <p className="text-sm font-bold">Recorded</p>
                       </div>
-                      <div>
-                        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1">
-                          Business &amp; Work
+                      <div className="text-right space-y-1">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Date</p>
+                        <p className="text-sm font-bold">
+                          {new Date(mundaneJournal.submitted_at).toLocaleDateString("en-US", {
+                            month: "long", day: "numeric", year: "numeric",
+                          })}
                         </p>
-                        <p className="text-sm whitespace-pre-wrap">{mundaneJournal.business_work_section}</p>
                       </div>
-                      <div>
-                        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1">
-                          Shifts in Perception
-                        </p>
-                        <p className="text-sm whitespace-pre-wrap">{mundaneJournal.shifts_perception_section}</p>
+                    </div>
+                    {mundaneJournal.relationships_section ? (
+                      <div className="space-y-4">
+                        <div className="bg-muted/20 rounded-xl p-5 border border-border/40">
+                          <p className="text-[10px] font-black uppercase tracking-widest text-primary mb-2 flex items-center gap-2">
+                            <User className="size-3" /> Relationships &amp; Personal Connections
+                          </p>
+                          <p className="text-sm whitespace-pre-wrap leading-relaxed text-foreground/90">{mundaneJournal.relationships_section}</p>
+                        </div>
+                        <div className="bg-muted/20 rounded-xl p-5 border border-border/40">
+                          <p className="text-[10px] font-black uppercase tracking-widest text-primary mb-2 flex items-center gap-2">
+                            <Globe className="size-3" /> Business &amp; Work
+                          </p>
+                          <p className="text-sm whitespace-pre-wrap leading-relaxed text-foreground/90">{mundaneJournal.business_work_section}</p>
+                        </div>
+                        <div className="bg-muted/20 rounded-xl p-5 border border-border/40">
+                          <p className="text-[10px] font-black uppercase tracking-widest text-primary mb-2 flex items-center gap-2">
+                            <Compass className="size-3" /> Shifts in Perception
+                          </p>
+                          <p className="text-sm whitespace-pre-wrap leading-relaxed text-foreground/90">{mundaneJournal.shifts_perception_section}</p>
+                        </div>
                       </div>
-                    </>
-                  ) : (
-                    <p className="text-sm whitespace-pre-wrap">{mundaneJournal.content}</p>
-                  )}
-                </CardContent>
-              </Card>
-            ) : canSubmit ? (
-              <form onSubmit={handleJournalSubmit} className="space-y-5">
-                {/* Section progress bar */}
-                <div className="space-y-1">
-                  <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span>{journalSectionsComplete} of 3 sections complete</span>
-                    <span>{Math.round((journalSectionsComplete / 3) * 100)}%</span>
+                    ) : (
+                      <div className="pt-2">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-3">Impact</p>
+                        <p className="text-sm whitespace-pre-wrap leading-relaxed text-foreground/90">{mundaneJournal.content}</p>
+                      </div>
+                    )}
                   </div>
-                  <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
-                    <div
-                      className="h-full rounded-full bg-primary transition-all duration-300"
-                      style={{ width: `${(journalSectionsComplete / 3) * 100}%` }}
-                    />
+                ) : canSubmit ? (
+                  <form onSubmit={handleJournalSubmit} className="space-y-6">
+                    {/* Section progress bar */}
+                    <div className="bg-primary/5 rounded-xl p-5 border border-primary/10 mb-6">
+                      <div className="space-y-2.5">
+                        <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-primary">
+                          <span>{journalSectionsComplete} of 3 sections complete</span>
+                          <span>{Math.round((journalSectionsComplete / 3) * 100)}%</span>
+                        </div>
+                        <div className="h-2 w-full rounded-full bg-primary/15 overflow-hidden">
+                          <div
+                            className="h-full rounded-full bg-primary transition-all duration-500"
+                            style={{ width: `${(journalSectionsComplete / 3) * 100}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    {/* Relationships section */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="journal-rel" className="text-sm font-bold flex items-center gap-2">
+                          <User className="size-4 text-muted-foreground" /> Relationships &amp; Personal Connections
+                        </Label>
+                        <CharCounter value={relSection} min={100} />
+                      </div>
+                      <Textarea
+                        id="journal-rel"
+                        className="resize-y min-h-[120px] bg-background/50 focus:bg-background"
+                        placeholder="How has this decan's energy manifested in your personal relationships and connections?"
+                        value={relSection}
+                        onChange={(e) => setRelSection(e.target.value)}
+                        required
+                      />
+                    </div>
+                    {/* Business / Work section */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="journal-biz" className="text-sm font-bold flex items-center gap-2">
+                          <Globe className="size-4 text-muted-foreground" /> Business &amp; Work
+                        </Label>
+                        <CharCounter value={bizSection} min={100} />
+                      </div>
+                      <Textarea
+                        id="journal-biz"
+                        className="resize-y min-h-[120px] bg-background/50 focus:bg-background"
+                        placeholder="What shifts or events have you noticed in your professional life, work, or material affairs?"
+                        value={bizSection}
+                        onChange={(e) => setBizSection(e.target.value)}
+                        required
+                      />
+                    </div>
+                    {/* Shifts in perception section */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="journal-shift" className="text-sm font-bold flex items-center gap-2">
+                          <Compass className="size-4 text-muted-foreground" /> Shifts in Perception
+                        </Label>
+                        <CharCounter value={shiftSection} min={100} />
+                      </div>
+                      <Textarea
+                        id="journal-shift"
+                        className="resize-y min-h-[120px] bg-background/50 focus:bg-background"
+                        placeholder="How has your perception, worldview, or inner understanding shifted during this decan period?"
+                        value={shiftSection}
+                        onChange={(e) => setShiftSection(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <Button
+                      type="submit"
+                      className="w-full sm:w-auto mt-6"
+                      disabled={submittingJournal || journalSectionsComplete < 3}
+                    >
+                      {submittingJournal ? "Submitting…" : "Submit Mundane Journal"}
+                    </Button>
+                  </form>
+                ) : (
+                  <div className="py-12 text-center text-sm text-muted-foreground flex flex-col items-center gap-4">
+                    <div className="size-16 rounded-full bg-muted/50 flex items-center justify-center">
+                      <Lock className="size-6 text-muted-foreground/50" />
+                    </div>
+                    <p className="font-medium">
+                      {isPreview
+                        ? "Submission available once the action window opens."
+                        : "Mundane journal not yet submitted."}
+                    </p>
                   </div>
-                </div>
-                {/* Relationships section */}
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="journal-rel" className="text-sm font-medium">
-                      Relationships &amp; Personal Connections
-                    </Label>
-                    <CharCounter value={relSection} min={100} />
-                  </div>
-                  <Textarea
-                    id="journal-rel"
-                    placeholder="How has this decan's energy manifested in your personal relationships and connections?"
-                    value={relSection}
-                    onChange={(e) => setRelSection(e.target.value)}
-                    rows={4}
-                    required
-                  />
-                </div>
-                {/* Business / Work section */}
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="journal-biz" className="text-sm font-medium">
-                      Business &amp; Work
-                    </Label>
-                    <CharCounter value={bizSection} min={100} />
-                  </div>
-                  <Textarea
-                    id="journal-biz"
-                    placeholder="What shifts or events have you noticed in your professional life, work, or material affairs?"
-                    value={bizSection}
-                    onChange={(e) => setBizSection(e.target.value)}
-                    rows={4}
-                    required
-                  />
-                </div>
-                {/* Shifts in perception section */}
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="journal-shift" className="text-sm font-medium">
-                      Shifts in Perception
-                    </Label>
-                    <CharCounter value={shiftSection} min={100} />
-                  </div>
-                  <Textarea
-                    id="journal-shift"
-                    placeholder="How has your perception, worldview, or inner understanding shifted during this decan period?"
-                    value={shiftSection}
-                    onChange={(e) => setShiftSection(e.target.value)}
-                    rows={4}
-                    required
-                  />
-                </div>
-                <Button
-                  type="submit"
-                  size="sm"
-                  disabled={submittingJournal || journalSectionsComplete < 3}
-                >
-                  {submittingJournal ? "Submitting…" : "Submit Mundane Journal"}
-                </Button>
-              </form>
-            ) : (
-              <Card>
-                <CardContent className="py-6 text-center text-sm text-muted-foreground">
-                  {isPreview
-                    ? "Submission available once the action window opens."
-                    : "Mundane journal not yet submitted."}
-                </CardContent>
-              </Card>
-            )}
+                )}
+              </CardContent>
+            </Card>
           </section>
 
           {submitError && (
-            <p className="text-sm text-destructive">{submitError}</p>
+            <div className="p-4 rounded-lg bg-destructive/10 border border-destructive/20 text-sm text-destructive font-medium flex items-center gap-2">
+              <AlertTriangle className="size-4" />
+              {submitError}
+            </div>
           )}
 
           {/* ── Completed celebration ─────────────────────────────── */}
           {isCompleted && (
-            <Card className="border-amber-400/30 bg-amber-50/20">
-              <CardContent className="py-4 text-center">
-                <Star className="mx-auto mb-2 size-6 text-amber-500" />
-                <p className="text-sm font-semibold">
-                  {decan.decan_name ?? decan.title} complete.
-                </p>
-                <Link
-                  href="/mystery-school"
-                  className="text-xs text-primary hover:underline mt-1 block"
-                >
-                  Return to Decan Calendar →
-                </Link>
+            <div className="pt-8 pb-4">
+              <Card className="border-emerald-500/30 bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 shadow-md overflow-hidden relative">
+                <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
+                  <Star className="size-32" />
+                </div>
+                <CardContent className="py-10 flex flex-col items-center text-center relative z-10">
+                  <div className="size-16 rounded-full bg-emerald-500/20 flex items-center justify-center mb-5 border border-emerald-500/30 shadow-[0_0_15px_rgba(16,185,129,0.3)]">
+                    <Star className="size-8 text-emerald-600" />
+                  </div>
+                  <h3 className="text-2xl font-black text-emerald-700 mb-2 tracking-tight">
+                    {decan.decan_name ?? decan.title} Complete
+                  </h3>
+                  <p className="text-sm text-emerald-600/90 max-w-sm mb-8 font-medium">
+                    You have successfully performed the rituals and recorded your observations for this decan.
+                  </p>
+                  <Button asChild variant="outline" className="border-emerald-500/50 hover:bg-emerald-500/10 hover:text-emerald-700 font-bold">
+                    <Link href="/mystery-school">
+                      <ArrowLeft className="mr-2 size-4" /> Return to Calendar
+                    </Link>
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+          </div>
+
+          <aside className="space-y-4 xl:sticky xl:top-6">
+            <Card className="overflow-hidden border-amber-500/15 bg-[linear-gradient(180deg,rgba(234,179,8,0.06),rgba(15,23,42,0.92)_42%)]">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-lg">Completion Checklist</CardTitle>
+                <CardDescription>
+                  Each working needs all three parts before this decan is fully concluded.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-[11px] font-black uppercase tracking-[0.22em] text-amber-300">
+                    <span>Progress</span>
+                    <span>{requirementPercent}%</span>
+                  </div>
+                  <div className="h-2 overflow-hidden rounded-full bg-amber-500/10">
+                    <div
+                      className="h-full rounded-full bg-amber-400 transition-all duration-500"
+                      style={{ width: `${requirementPercent}%` }}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  {requirementItems.map((item) => (
+                    <div
+                      key={item.label}
+                      className={[
+                        "rounded-xl border px-4 py-3",
+                        item.done
+                          ? "border-emerald-500/25 bg-emerald-500/10"
+                          : "border-border/60 bg-background/35",
+                      ].join(" ")}
+                    >
+                      <div className="flex items-start gap-3">
+                        {item.done ? (
+                          <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-emerald-400" />
+                        ) : (
+                          <Circle className="mt-0.5 size-5 shrink-0 text-muted-foreground" />
+                        )}
+                        <div className="space-y-1">
+                          <p className="text-sm font-semibold">{item.label}</p>
+                          <p className="text-xs text-muted-foreground">{item.detail}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </CardContent>
             </Card>
-          )}
-        </>
+
+            <Card className="border-border/60 bg-card/70">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg">Decan Correspondence</CardTitle>
+                <CardDescription>
+                  Core references held together while you work through the ritual and journals.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4 text-sm">
+                <div className="rounded-xl border border-border/50 bg-background/40 p-4">
+                  <p className="text-[10px] font-black uppercase tracking-[0.22em] text-muted-foreground">
+                    Planetary Ruler
+                  </p>
+                  <p className="mt-2 text-base font-bold">{decan.planet}</p>
+                </div>
+                <div className="rounded-xl border border-border/50 bg-background/40 p-4">
+                  <p className="text-[10px] font-black uppercase tracking-[0.22em] text-muted-foreground">
+                    Zodiac Sign
+                  </p>
+                  <p className="mt-2 text-base font-bold">{decan.sign}</p>
+                </div>
+                {decan.tarot_card_ref && (
+                  <div className="rounded-xl border border-border/50 bg-background/40 p-4">
+                    <p className="text-[10px] font-black uppercase tracking-[0.22em] text-muted-foreground">
+                      Tarot Focus
+                    </p>
+                    <p className="mt-2 text-base font-bold">{decan.tarot_card_ref}</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </aside>
+        </div>
       )}
     </div>
   );
