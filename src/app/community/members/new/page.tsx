@@ -27,6 +27,10 @@ import {
   ChevronUp,
   Loader2,
 } from "lucide-react";
+import {
+  BirthCityAutocomplete,
+  extractCountryFromCityLabel,
+} from "@/components/community/birth-city-autocomplete";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -78,6 +82,13 @@ const INITIAL_FORM = {
   // Demographics
   gender: "",
   relationship_status: "",
+  // Birth details
+  date_of_birth: "",
+  birth_time: "",
+  birth_city: "",
+  birth_country: "",
+  birth_lat: "",
+  birth_lng: "",
   // Location
   state: "",
   city: "",
@@ -108,6 +119,7 @@ const INITIAL_FORM = {
   specificQuestions: "",
   goalsOutcomes: "",
   additional_info: "",
+  notes: "",
   // Status
   status: "active",
 };
@@ -141,6 +153,13 @@ const INTAKE_FIELDS = [
   ["additional_info", "Additional Notes"],
 ] as [keyof FormState, string][];
 
+function formatUsPhone(value: string) {
+  const digits = value.replace(/\D/g, "").slice(0, 10);
+  if (digits.length <= 3) return digits;
+  if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+  return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function AddMemberPage() {
@@ -154,9 +173,28 @@ export default function AddMemberPage() {
     setForm((prev) => ({ ...prev, [field]: value }));
   }
 
+  function handlePhoneChange(value: string) {
+    set("phone", formatUsPhone(value));
+  }
+
   function handleReset() {
     setForm({ ...INITIAL_FORM });
     setError(null);
+  }
+
+  function handleBirthCityChange(
+    label: string,
+    option?: { label: string; lat: number; lng: number }
+  ) {
+    setForm((prev) => ({
+      ...prev,
+      birth_city: label,
+      birth_lat: option ? String(option.lat) : "",
+      birth_lng: option ? String(option.lng) : "",
+      birth_country: option
+        ? extractCountryFromCityLabel(option.label) || prev.birth_country
+        : prev.birth_country,
+    }));
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -175,20 +213,32 @@ export default function AddMemberPage() {
       setError("Email is required.");
       return;
     }
+    if (form.phone.trim()) {
+      const phoneDigits = form.phone.replace(/\D/g, "");
+      if (phoneDigits.length !== 10) {
+        setError("Phone must be a 10-digit number.");
+        return;
+      }
+    }
+    if (!form.date_of_birth.trim()) {
+      setError("Date of birth is required.");
+      return;
+    }
 
     setSaving(true);
     try {
+      const phoneDigits = form.phone.replace(/\D/g, "");
       const res = await fetch("/api/community/members/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form }),
+        body: JSON.stringify({ ...form, phone: phoneDigits || "" }),
       });
       const data = await res.json();
       if (!res.ok) {
         setError(data.error ?? "Failed to add member.");
         return;
       }
-      router.push("/community");
+      router.push("/community/family");
     } catch {
       setError("Unexpected error. Please try again.");
     } finally {
@@ -201,15 +251,15 @@ export default function AddMemberPage() {
       {/* Header */}
       <div className="flex items-center gap-3">
         <Button variant="outline" size="sm" asChild>
-          <Link href="/community">
+          <Link href="/community/family">
             <ArrowLeft className="mr-1.5 size-4" />
-            Dashboard
+            Family
           </Link>
         </Button>
         <div>
-          <h1 className="text-xl font-bold tracking-tight">Add Perennial Mandalism Member</h1>
+          <h1 className="text-xl font-bold tracking-tight">Add Family Member</h1>
           <p className="text-sm text-muted-foreground">
-            Fill in the member details and intake information below.
+            Fill in the member details and birth information below.
           </p>
         </div>
       </div>
@@ -285,8 +335,10 @@ export default function AddMemberPage() {
                   id="phone"
                   type="tel"
                   value={form.phone}
-                  onChange={(e) => set("phone", e.target.value)}
+                  onChange={(e) => handlePhoneChange(e.target.value)}
                   placeholder="+1 (555) 000-0000"
+                  inputMode="tel"
+                  maxLength={14}
                 />
               </div>
             </div>
@@ -329,6 +381,90 @@ export default function AddMemberPage() {
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* ── Birth Details ─────────────────────────────────────────────── */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Birth Details</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="date_of_birth">
+                  Date of Birth <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="date_of_birth"
+                  type="date"
+                  value={form.date_of_birth}
+                  onChange={(e) => set("date_of_birth", e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="birth_time">Birth Time</Label>
+                <Input
+                  id="birth_time"
+                  type="time"
+                  value={form.birth_time}
+                  onChange={(e) => set("birth_time", e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="birth_city">Birth City</Label>
+                <BirthCityAutocomplete
+                  id="birth_city"
+                  value={form.birth_city}
+                  onChange={handleBirthCityChange}
+                  placeholder="Search birth city"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="birth_country">Birth Country</Label>
+                <Input
+                  id="birth_country"
+                  value={form.birth_country}
+                  onChange={(e) => set("birth_country", e.target.value)}
+                  placeholder="Birth country"
+                />
+              </div>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="birth_lat">Birth Latitude</Label>
+                <Input
+                  id="birth_lat"
+                  value={form.birth_lat}
+                  onChange={(e) => set("birth_lat", e.target.value)}
+                  placeholder="Auto-filled from city"
+                  inputMode="decimal"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="birth_lng">Birth Longitude</Label>
+                <Input
+                  id="birth_lng"
+                  value={form.birth_lng}
+                  onChange={(e) => set("birth_lng", e.target.value)}
+                  placeholder="Auto-filled from city"
+                  inputMode="decimal"
+                />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="notes">Notes</Label>
+              <Textarea
+                id="notes"
+                value={form.notes}
+                onChange={(e) => set("notes", e.target.value)}
+                rows={2}
+                placeholder="Optional notes about this family member"
+              />
             </div>
           </CardContent>
         </Card>
@@ -461,7 +597,7 @@ export default function AddMemberPage() {
             Reset
           </Button>
           <Button type="button" variant="ghost" asChild>
-            <Link href="/community">Cancel</Link>
+            <Link href="/community/family">Cancel</Link>
           </Button>
         </div>
       </form>

@@ -50,7 +50,10 @@ import { getCommunityDashboardFeed } from "@/lib/dashboard-content";
 import { calcFamilyProfileCompletion } from "@/lib/community/family-profile-completion";
 import { formatBirthPlace } from "@/lib/community/birth-location";
 import { deriveNatalReportState } from "@/lib/community/chart-report-state";
-import { isBirthDataComplete } from "@/lib/community/birth-data-readiness";
+import {
+  computeBirthDataReadiness,
+  isBirthDataComplete,
+} from "@/lib/community/birth-data-readiness";
 import { SectionContainer } from "@/components/shared/section-container";
 
 export const metadata = { title: "Community - AstrologyPro" };
@@ -261,7 +264,7 @@ export default async function CommunityDashboardPage() {
   const { data: member } = await supabase
     .from("community_members")
     .select(
-      "id, full_name, email, membership_type, membership_status, plan_type, joined_at, expires_at, pm_tier_id, current_period_end, extra_member_count, date_of_birth, birth_time, birth_city"
+      "id, full_name, email, membership_type, membership_status, plan_type, joined_at, expires_at, pm_tier_id, current_period_end, extra_member_count, date_of_birth, birth_time, birth_city, birth_country"
     )
     .eq("user_id", user.id)
     .maybeSingle();
@@ -412,6 +415,14 @@ export default async function CommunityDashboardPage() {
     );
   }
   const familyMembers = familyMembersResult.data ?? [];
+  const selfFamilyMember = familyMembers.find(
+    (fm) =>
+      fm.user_id === user.id ||
+      (fm.relationship ?? "").toLowerCase() === "self"
+  );
+  const nonSelfFamilyMembers = familyMembers.filter(
+    (fm) => fm.id !== selfFamilyMember?.id
+  );
   const otherMembers = otherMembersResult.data ?? [];
   const recentWisdom = recentWisdomResult.data ?? [];
   const recentBlog = recentBlogResult.data ?? [];
@@ -634,32 +645,49 @@ export default async function CommunityDashboardPage() {
   // best-effort cross-role sync had not yet populated the `clients` row.
   const memberBirthFields = {
     date_of_birth:
-      (member as { date_of_birth?: string | null }).date_of_birth ?? null,
+      selfFamilyMember?.date_of_birth ??
+      (member as { date_of_birth?: string | null }).date_of_birth ??
+      null,
     birth_time:
-      (member as { birth_time?: string | null }).birth_time ?? null,
+      selfFamilyMember?.birth_time ??
+      (member as { birth_time?: string | null }).birth_time ??
+      null,
     birth_city:
-      (member as { birth_city?: string | null }).birth_city ?? null,
+      selfFamilyMember?.birth_city ??
+      (member as { birth_city?: string | null }).birth_city ??
+      null,
+    birth_country:
+      selfFamilyMember?.birth_country ??
+      (member as { birth_country?: string | null }).birth_country ??
+      null,
+    birth_lat: selfFamilyMember?.birth_lat ?? null,
+    birth_lng: selfFamilyMember?.birth_lng ?? null,
   };
-  const hasDob = Boolean(
-    memberBirthFields.date_of_birth &&
-      String(memberBirthFields.date_of_birth).trim() !== ""
+  const selfBirthReadiness = computeBirthDataReadiness(memberBirthFields);
+  const selfBirthDataComplete = selfBirthReadiness.complete;
+  const selfBirthDataFieldCount = 6;
+  const profilePct = Math.round(
+    ((selfBirthDataFieldCount - selfBirthReadiness.missing.length) /
+      selfBirthDataFieldCount) *
+      100
   );
-  const hasBirthTime = Boolean(
-    memberBirthFields.birth_time &&
-      String(memberBirthFields.birth_time).trim() !== ""
-  );
-  const hasBirthCity = Boolean(
-    memberBirthFields.birth_city &&
-      String(memberBirthFields.birth_city).trim() !== ""
-  );
-  let profilePct = 0;
-  if (hasDob) profilePct += 34;
-  if (hasBirthTime) profilePct += 33;
-  if (hasBirthCity) profilePct += 33;
-  const profileMissingFields: string[] = [];
-  if (!hasDob) profileMissingFields.push("Date of birth");
-  if (!hasBirthTime) profileMissingFields.push("Birth time");
-  if (!hasBirthCity) profileMissingFields.push("Birth city");
+  const profileMissingFields = selfBirthReadiness.missing.map((field) => {
+    switch (field) {
+      case "date_of_birth":
+        return "Date of birth";
+      case "birth_time":
+        return "Birth time";
+      case "birth_city":
+        return "Birth city";
+      case "birth_country":
+        return "Birth country";
+      case "birth_lat":
+      case "birth_lng":
+        return "Birth city coordinates";
+      default:
+        return field;
+    }
+  });
 
   // ── Household Readiness Card metrics ─────────────────────────────────────
   // Spec: tasks/06.05.2026/community-dashboard-household-readiness-card/
@@ -680,10 +708,8 @@ export default async function CommunityDashboardPage() {
   // card is selling chart-readiness, not generic profile completeness.
   // The lower "Your Circle" section keeps using `calcFamilyProfileCompletion`
   // for its richer per-member profile view.
-  const selfBirthDataComplete = hasDob && hasBirthTime && hasBirthCity;
-
   // Family rows readiness (chart-eligibility view).
-  const familyMembersBirthComplete = familyMembers.filter((fm) =>
+  const familyMembersBirthComplete = nonSelfFamilyMembers.filter((fm) =>
     isBirthDataComplete({
       date_of_birth: fm.date_of_birth ?? null,
       birth_time: fm.birth_time ?? null,
@@ -697,7 +723,7 @@ export default async function CommunityDashboardPage() {
   // Total visible household = family rows + 1 (primary member). We do NOT
   // cap at maxMembers here — the readiness card reports actual visible
   // members, while membership/billing surfaces handle plan-limit display.
-  const householdTotalCount = familyMembers.length + 1;
+  const householdTotalCount = nonSelfFamilyMembers.length + 1;
   const householdCompleteCount =
     (selfBirthDataComplete ? 1 : 0) + familyMembersBirthComplete.length;
   const householdMissingDetailsCount =
@@ -741,7 +767,7 @@ export default async function CommunityDashboardPage() {
       String(user.user_metadata.avatar_url).trim() !== ""
   );
   const pcHasFullName = Boolean(member.full_name && member.full_name.trim() !== "");
-  const pcHasBirthData = hasDob && hasBirthTime && hasBirthCity;
+  const pcHasBirthData = selfBirthDataComplete;
   const pcHasNatalChart = pcFamilyMembers.some(
     (fm) => deriveNatalReportState(fm) === "generated"
   );
@@ -882,17 +908,15 @@ export default async function CommunityDashboardPage() {
   // reads and writes), not from `clients` (a broader client-domain record
   // that can be stale, missing, or unsynced for PM members).
   //
-  // Reuse the already-derived booleans `hasDob`, `hasBirthTime`, and
-  // `hasBirthCity` computed earlier from `memberBirthFields` so the card,
-  // the profile-completion widget, and the progress bar all agree on a
-  // single source of truth for the PM member's own birth data.
+  // Reuse the chart/transit readiness computed earlier from the canonical
+  // self row so the dashboard never claims chart readiness without saved
+  // coordinates.
   //
   // Scope: only the logged-in PM member's own cosmic blueprint card.
   // Household/family-member chart logic is intentionally left unchanged.
-  const ownChartMissingFields: string[] = [];
-  if (!hasDob) ownChartMissingFields.push("date of birth");
-  if (!hasBirthTime) ownChartMissingFields.push("birth time");
-  if (!hasBirthCity) ownChartMissingFields.push("birth city");
+  const ownChartMissingFields = profileMissingFields.map((field) =>
+    field.toLowerCase()
+  );
   const ownChartReady = ownChartMissingFields.length === 0;
   const relationshipChartCount = pcRelCharts.length;
 

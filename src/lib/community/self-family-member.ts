@@ -9,6 +9,8 @@ export type CommunitySelfMemberSource = {
   birth_time?: string | null;
   birth_city?: string | null;
   birth_country?: string | null;
+  birth_lat?: number | string | null;
+  birth_lng?: number | string | null;
 };
 
 type ExistingFamilyRow = {
@@ -58,9 +60,10 @@ function sortStrongestSelfRow(a: ExistingFamilyRow, b: ExistingFamilyRow) {
 export async function ensureCanonicalSelfFamilyMember(
   member: CommunitySelfMemberSource,
   userId: string,
-  options?: { admin?: SupabaseClient },
+  options?: { admin?: SupabaseClient; overwriteProfileFields?: boolean },
 ): Promise<{ id: string; created: boolean } | null> {
   const admin = options?.admin ?? createAdminClient();
+  const overwriteProfileFields = options?.overwriteProfileFields === true;
   const fullName = member.full_name?.trim() || "Self";
 
   const { data: existingRows, error: existingError } = await admin
@@ -94,18 +97,32 @@ export async function ensureCanonicalSelfFamilyMember(
       relationship: "self",
     };
 
-    if (!existing.full_name && fullName) patch.full_name = fullName;
-    if (!existing.date_of_birth && member.date_of_birth) {
+    if ((overwriteProfileFields || !existing.full_name) && fullName) {
+      patch.full_name = fullName;
+    }
+    if (
+      (overwriteProfileFields || !existing.date_of_birth) &&
+      member.date_of_birth
+    ) {
       patch.date_of_birth = member.date_of_birth;
     }
-    if (!existing.birth_time && member.birth_time) {
+    if ((overwriteProfileFields || !existing.birth_time) && member.birth_time) {
       patch.birth_time = member.birth_time;
     }
-    if (!existing.birth_city && member.birth_city) {
+    if ((overwriteProfileFields || !existing.birth_city) && member.birth_city) {
       patch.birth_city = member.birth_city;
     }
-    if (!existing.birth_country && member.birth_country) {
+    if (
+      (overwriteProfileFields || !existing.birth_country) &&
+      member.birth_country
+    ) {
       patch.birth_country = member.birth_country;
+    }
+    if (member.birth_lat !== undefined) {
+      patch.birth_lat = member.birth_lat;
+    }
+    if (member.birth_lng !== undefined) {
+      patch.birth_lng = member.birth_lng;
     }
 
     const { error: updateError } = await admin
@@ -135,6 +152,8 @@ export async function ensureCanonicalSelfFamilyMember(
       birth_time: member.birth_time ?? null,
       birth_city: member.birth_city ?? null,
       birth_country: member.birth_country ?? null,
+      birth_lat: member.birth_lat ?? null,
+      birth_lng: member.birth_lng ?? null,
       natal_status: member.date_of_birth ? "queued" : "not_started",
     })
     .select("id")

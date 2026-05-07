@@ -57,6 +57,8 @@ interface CommunityMember {
   date_of_birth: string | null;
   birth_time: string | null;
   birth_city: string | null;
+  birth_lat?: number | string | null;
+  birth_lng?: number | string | null;
   // Required by the shared Horoscope Toolkit (`/community/horoscope`).
   // Loaded/persisted via `community_members.birth_country`. See
   // `tasks/22.04.2026/community-horoscope-birth-country`.
@@ -99,6 +101,12 @@ export function CommunityProfileForm({
   const [birthTime, setBirthTime] = useState(member.birth_time ?? "");
   const [birthCity, setBirthCity] = useState(member.birth_city ?? "");
   const [birthCountry, setBirthCountry] = useState(member.birth_country ?? "");
+  const [birthLat, setBirthLat] = useState(
+    member.birth_lat == null ? "" : String(member.birth_lat)
+  );
+  const [birthLng, setBirthLng] = useState(
+    member.birth_lng == null ? "" : String(member.birth_lng)
+  );
   const [address, setAddress] = useState(member.address ?? "");
   const [city, setCity] = useState(member.city ?? "");
   const [state, setState] = useState(member.state ?? "");
@@ -138,6 +146,8 @@ export function CommunityProfileForm({
       birthTime,
       birthCity,
       birthCountry,
+      birthLat,
+      birthLng,
       address,
       city,
       state,
@@ -147,7 +157,11 @@ export function CommunityProfileForm({
   );
 
   function focusField(fieldKey: string) {
-    document.getElementById(fieldKey)?.scrollIntoView({
+    const targetId =
+      fieldKey === "community-birth-coordinates"
+        ? "community-birth-city"
+        : fieldKey;
+    document.getElementById(targetId)?.scrollIntoView({
       behavior: "smooth",
       block: "center",
     });
@@ -260,6 +274,8 @@ export function CommunityProfileForm({
           date_of_birth: dateOfBirth || null,
           birth_time: birthTime || null,
           birth_city: birthCity.trim() || null,
+          birth_lat: birthLat === "" ? null : Number(birthLat),
+          birth_lng: birthLng === "" ? null : Number(birthLng),
           // `/api/community/onboarding/complete` already accepts and persists
           // `birth_country` via `trimStr(birth_country)` — we just need to
           // send it. Empty string → null.
@@ -483,13 +499,15 @@ export function CommunityProfileForm({
               <BirthCityAutocomplete
                 id="community-birth-city"
                 value={birthCity}
-                onChange={(label) => {
+                onChange={(label, option) => {
                   setBirthCity(label);
-                  // Prefill Birth Country from the city label ONLY when the
-                  // Country field is currently empty. We never overwrite a
-                  // value the user has already set — the user stays in
-                  // control of the country string.
-                  if (!birthCountry.trim()) {
+                  setBirthLat(option ? String(option.lat) : "");
+                  setBirthLng(option ? String(option.lng) : "");
+                  // A selected autocomplete option is the authoritative
+                  // geocoded place. Keep country aligned with that selection
+                  // so stale county/state text cannot leave the row looking
+                  // complete while chart coordinates are missing.
+                  if (option) {
                     const guessed = extractCountryFromCityLabel(label);
                     if (guessed) setBirthCountry(guessed);
                   }
