@@ -270,7 +270,7 @@ export default function EditMandalismContentPage() {
         </Card>
 
         {/* Core fields */}
-        <Card className="max-w-2xl">
+        <Card>
           <CardHeader>
             <CardTitle>Content Details</CardTitle>
           </CardHeader>
