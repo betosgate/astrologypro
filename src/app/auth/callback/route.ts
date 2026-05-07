@@ -77,6 +77,7 @@ export async function GET(request: NextRequest) {
             provisionNatalReadiness({
               admin,
               communityMemberId: newMember.id,
+              userId: user.id,
               birthData: {
                 fullName: (metadata.full_name ?? metadata.name ?? null) as string | null,
                 dateOfBirth: (metadata.date_of_birth ?? null) as string | null,
@@ -91,6 +92,7 @@ export async function GET(request: NextRequest) {
           provisionNatalReadiness({
             admin,
             communityMemberId: existing.id,
+            userId: user.id,
             birthData: {
               fullName: (metadata.full_name ?? metadata.name ?? null) as string | null,
               dateOfBirth: (metadata.date_of_birth ?? null) as string | null,

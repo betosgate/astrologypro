@@ -875,7 +875,7 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
     id: "20260506000002_mystery_school_foundation_completed_at",
     title: "Mystery School: foundation_completed_at milestone column",
     description:
-      "Adds nullable TIMESTAMPTZ column mystery_school_students.foundation_completed_at + partial index. Records the moment a student finished Admin Training-backed Foundation and was advanced to training_status='decans'. Best-effort backfill from started_at/enrolled_at for students already in 'decans' or 'graduated'. Idempotent + sanity-checked. Sprint plan: docs/tasks/2026-05-06/mystery-school-foundation-decan-access-flow.md.",
+      "Adds nullable TIMESTAMPTZ column mystery_school_students.foundation_completed_at + partial index. Records the moment a student finished Admin Training-backed Foundation and was advanced to training_status='decans'. Best-effort backfill from enrollment_date/enrolled_at for students already in 'decans' or 'graduated'. Idempotent + sanity-checked. Sprint plan: docs/tasks/2026-05-06/mystery-school-foundation-decan-access-flow.md.",
     sortKey: "20260506000002",
     sql: MIG_20260506000002_MSFC,
   },

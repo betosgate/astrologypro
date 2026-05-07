@@ -233,7 +233,7 @@ export default function AdminDoctrineLinksPage() {
                   <select
                     value={form.link_type}
                     onChange={(e) => setForm((f) => ({ ...f, link_type: e.target.value }))}
-                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                    className="w-full h-9 rounded-md border border-input px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                   >
                     {LINK_TYPES.map((t) => (
                       <option key={t.value} value={t.value}>

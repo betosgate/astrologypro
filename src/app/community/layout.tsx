@@ -13,6 +13,11 @@ import { OnboardingGuard } from "@/components/community/onboarding-guard";
 import { SectionContainer } from "@/components/shared/section-container";
 import { SubscriptionExpiredView } from "@/components/shared/subscription-expired-view";
 import { getPendingContractDestination } from "@/lib/contract-orchestration";
+import { 
+  User, LayoutDashboard, Video, Radio, Calendar, BookOpen, 
+  ClipboardList, Users, Star, TrendingUp, Flame, Sparkles, 
+  Globe, Compass, Telescope, HeartHandshake, BookMarked 
+} from "lucide-react";
 
 export const metadata = { title: "Community - AstrologyPro" };
 export const dynamic = "force-dynamic";
@@ -101,23 +106,23 @@ export default async function CommunityLayout({ children }: { children: React.Re
   ];
 
   const navLinks = [
-    { label: "Home", href: "/community" },
-    { label: "Sessions", href: "/community/sessions" },
-    { label: "Broadcasts", href: "/community/broadcasts" },
-    { label: "Events", href: "/community/events" },
-    { label: "Resources", href: "/community/resources" },
-    { label: "My Plan", href: "/community/plan" },
-    { label: "Family", href: "/community/family" },
-    { label: "Charts", href: "/community/charts" },
-    { label: "Transits", href: "/community/transits" },
-    { label: "Rituals", href: "/community/rituals" },
-    { label: "Tarot", href: "/community/tarot" },
-    { label: "Mundane", href: "/community/mundane" },
-    { label: "Ingress Charts", href: "/community/ingress-charts" },
-    { label: "Horoscope", href: "/community/horoscope" },
-    { label: "Service", href: "/community/sunday-service" },
-    { label: "Library", href: "/community/library" },
-    { label: "Profile", href: "/community/profile" },
+    { label: "Home", href: "/community", iconNode: <LayoutDashboard className="size-4" /> },
+    { label: "Sessions", href: "/community/sessions", iconNode: <Video className="size-4" /> },
+    { label: "Broadcasts", href: "/community/broadcasts", iconNode: <Radio className="size-4" /> },
+    { label: "Events", href: "/community/events", iconNode: <Calendar className="size-4" /> },
+    { label: "Resources", href: "/community/resources", iconNode: <BookOpen className="size-4" /> },
+    { label: "My Plan", href: "/community/plan", iconNode: <ClipboardList className="size-4" /> },
+    { label: "Family", href: "/community/family", iconNode: <Users className="size-4" /> },
+    { label: "Charts", href: "/community/charts", iconNode: <Star className="size-4" /> },
+    { label: "Transits", href: "/community/transits", iconNode: <TrendingUp className="size-4" /> },
+    { label: "Rituals", href: "/community/rituals", iconNode: <Flame className="size-4" /> },
+    { label: "Tarot", href: "/community/tarot", iconNode: <Sparkles className="size-4" /> },
+    { label: "Mundane", href: "/community/mundane", iconNode: <Globe className="size-4" /> },
+    { label: "Ingress Charts", href: "/community/ingress-charts", iconNode: <Compass className="size-4" /> },
+    { label: "Horoscope", href: "/community/horoscope", iconNode: <Telescope className="size-4" /> },
+    { label: "Service", href: "/community/sunday-service", iconNode: <HeartHandshake className="size-4" /> },
+    { label: "Library", href: "/community/library", iconNode: <BookMarked className="size-4" /> },
+    { label: "Profile", href: "/community/profile", iconNode: <User className="size-4" /> },
   ];
 
   return (
@@ -143,9 +148,10 @@ export default async function CommunityLayout({ children }: { children: React.Re
                 <NavLink
                   href={link.href}
                   exact={link.href === "/community"}
-                  className="block w-full"
+                  className="w-full"
                 >
-                  {link.label}
+                  {link.iconNode}
+                  <span>{link.label}</span>
                 </NavLink>
               </li>
             ))}
@@ -154,8 +160,15 @@ export default async function CommunityLayout({ children }: { children: React.Re
             </li>
           </ul>
         </nav>
-        {/* Logout pinned to sidebar bottom */}
-        <div className="border-t px-3 py-3">
+        {/* Account and Logout pinned to sidebar bottom */}
+        <div className="border-t px-3 py-3 space-y-1">
+          <Link
+            href="/account"
+            className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
+            <User className="size-4" />
+            My Account
+          </Link>
           <PortalLogoutButton />
         </div>
       </aside>
@@ -178,12 +191,6 @@ export default async function CommunityLayout({ children }: { children: React.Re
             <div className="ml-auto flex items-center gap-2">
               <PortalSwitcher portals={portals} currentBase="/community" />
               <NotificationBell userId={user.id} />
-              <Link
-                href="/account"
-                className="text-sm text-muted-foreground hover:text-foreground"
-              >
-                Account
-              </Link>
               {/* Mobile-only logout (sidebar handles it on desktop) */}
               <div className="md:hidden">
                 <PortalLogoutButton />

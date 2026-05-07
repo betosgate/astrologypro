@@ -21,10 +21,11 @@ CREATE INDEX IF NOT EXISTS idx_mystery_school_students_foundation_completed_at
   WHERE foundation_completed_at IS NOT NULL;
 
 -- Best-effort backfill: any student already in 'decans' or 'graduated'
--- has implicitly finished Foundation. Use started_at if present, else
--- enrolled_at, else NOW(). Never overwrites an existing value.
+-- has implicitly finished Foundation. There is no mystery_school_students
+-- started_at column; use enrollment_date when present, then enrolled_at,
+-- then NOW(). Never overwrites an existing value.
 UPDATE public.mystery_school_students
-   SET foundation_completed_at = COALESCE(started_at, enrolled_at, NOW())
+   SET foundation_completed_at = COALESCE(enrollment_date, enrolled_at, NOW())
  WHERE foundation_completed_at IS NULL
    AND training_status IN ('decans', 'graduated');
 

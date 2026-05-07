@@ -534,7 +534,7 @@ export default async function CommunityDashboardPage() {
 
   // Best renewal date: PM prefers the API's Stripe current_period_end.
   const renewalDate: string | null =
-    (isPerennial ? pmApiSubscription?.current_period_end ?? null : null) ??
+    (isPerennial ? pmApiSubscription?.current_period_end : null) ??
     (member as { current_period_end?: string | null }).current_period_end ??
     member.expires_at ??
     null;
@@ -926,6 +926,12 @@ export default async function CommunityDashboardPage() {
 
   const familyChipData: FamilyChip[] =
     planType === "family" && familyMembers.length > 0 ? buildRealChips() : [];
+  const maxVisibleFamilyChips = 5;
+  const visibleFamilyChips = familyChipData.slice(0, maxVisibleFamilyChips);
+  const hiddenFamilyChipCount = Math.max(
+    familyChipData.length - visibleFamilyChips.length,
+    0
+  );
   const showFamilyEmptyState = planType === "family" && familyMembers.length === 0;
 
   return (
@@ -1051,7 +1057,7 @@ export default async function CommunityDashboardPage() {
                   aria-hidden="true"
                 />
               </span>
-              {familyChipData.map((chip) => {
+              {visibleFamilyChips.map((chip) => {
                 const chipContent = (
                   <>
                     <User className="size-3.5 text-muted-foreground" aria-hidden="true" />
@@ -1106,6 +1112,15 @@ export default async function CommunityDashboardPage() {
                   </div>
                 );
               })}
+              {hiddenFamilyChipCount > 0 && (
+                <Link
+                  href="/community/family"
+                  className="inline-flex items-center rounded-full border border-primary/30 bg-primary/5 px-3 py-1 text-sm font-medium text-primary transition-colors hover:border-primary/50 hover:bg-primary/10 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  aria-label={`View ${hiddenFamilyChipCount} more family member${hiddenFamilyChipCount === 1 ? "" : "s"}`}
+                >
+                  +{hiddenFamilyChipCount} more
+                </Link>
+              )}
             </div>
             <div className="h-px w-full bg-border/50" />
           </div>

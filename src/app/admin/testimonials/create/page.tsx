@@ -293,7 +293,7 @@ export default function CreateTestimonialPage() {
                   id="diviner_id"
                   value={form.diviner_id}
                   onChange={(e) => setForm({ ...form, diviner_id: e.target.value })}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="flex h-9 w-full rounded-md border border-input px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   required
                 >
                   <option value="">— Select Diviner —</option>

@@ -373,7 +373,7 @@ export function TestimonialRequestsTableClient({
             </div>
             <div>
               <select
-                className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex h-9 w-full items-center justify-between rounded-md border border-input px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 value={currentStatus}
                 onChange={(e) => pushParams({ status: e.target.value === "all" ? "" : e.target.value })}
               >
@@ -385,7 +385,7 @@ export function TestimonialRequestsTableClient({
               </select>
             </div>
 
-            <div className="flex items-center space-x-2 bg-background border border-input rounded-md px-3 h-10 ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
+            <div className="flex items-center space-x-2 border border-input rounded-md px-3 h-9 ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
               <span className="text-xs text-muted-foreground whitespace-nowrap hidden lg:inline-block">Submitted Start </span>
               <input
                 type="date"
@@ -394,7 +394,7 @@ export function TestimonialRequestsTableClient({
                 onChange={e => pushParams({ submittedFrom: e.target.value })}
               />
             </div>
-            <div className="flex items-center space-x-2 bg-background border border-input rounded-md px-3 h-10 ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
+            <div className="flex items-center space-x-2 border border-input rounded-md px-3 h-9 ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
               <span className="text-xs text-muted-foreground whitespace-nowrap hidden lg:inline-block">Submitted End </span>
               <input
                 type="date"
@@ -404,7 +404,7 @@ export function TestimonialRequestsTableClient({
               />
             </div>
 
-            <div className="flex items-center space-x-2 bg-background border border-input rounded-md px-3 h-10 ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
+            <div className="flex items-center space-x-2 border border-input rounded-md px-3 h-9 ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
               <span className="text-xs text-muted-foreground whitespace-nowrap hidden lg:inline-block">Updated Start </span>
               <input
                 type="date"
@@ -413,7 +413,7 @@ export function TestimonialRequestsTableClient({
                 onChange={e => pushParams({ updatedFrom: e.target.value })}
               />
             </div>
-            <div className="flex items-center space-x-2 bg-background border border-input rounded-md px-3 h-10 ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
+            <div className="flex items-center space-x-2 border border-input rounded-md px-3 h-9 ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
               <span className="text-xs text-muted-foreground whitespace-nowrap hidden lg:inline-block">Updated End </span>
               <input
                 type="date"
