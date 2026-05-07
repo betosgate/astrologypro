@@ -71,6 +71,8 @@ interface CommunityMember {
   membership_status: string;
   joined_at: string;
   expires_at: string | null;
+  current_period_end?: string | null;
+  last_payment_date?: string | null;
 }
 
 interface CommunityProfileFormProps {
@@ -603,17 +605,31 @@ export function CommunityProfileForm({
           <div className="flex justify-between">
             <span className="text-muted-foreground">Member Since</span>
             <span className="font-medium">
-              {new Date(member.joined_at).toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+              {new Date(member.joined_at).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
             </span>
           </div>
-          {member.expires_at && (
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Expires</span>
-              <span className="font-medium">
-                {new Date(member.expires_at).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
-              </span>
-            </div>
-          )}
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Last Payment</span>
+            <span className="font-medium">
+              {member.last_payment_date
+                ? new Date(member.last_payment_date).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
+                : "—"}
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">
+              {member.membership_status === "cancelled" || member.membership_status === "canceled"
+                ? "Cancelled On"
+                : member.membership_status === "cancelling"
+                ? "Access Until"
+                : "Next Billing"}
+            </span>
+            <span className="font-medium">
+              {(member.current_period_end || member.expires_at)
+                ? new Date((member.current_period_end || member.expires_at)!).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
+                : "—"}
+            </span>
+          </div>
         </CardContent>
       </Card>
 
