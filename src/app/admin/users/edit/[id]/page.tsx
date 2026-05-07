@@ -172,7 +172,7 @@ export default function UserEditPage() {
                     id="videoProvider"
                     value={videoProvider}
                     onChange={(e) => setVideoProvider(e.target.value)}
-                    className="w-full rounded-md border bg-transparent px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary"
+                    className="w-full h-9 rounded-md border bg-transparent px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary"
                   >
                     <option value="daily">Daily.co (Default)</option>
                     <option value="chime">AWS Chime SDK</option>
@@ -186,7 +186,7 @@ export default function UserEditPage() {
                     id="phoneProvider"
                     value={phoneProvider}
                     onChange={(e) => setPhoneProvider(e.target.value)}
-                    className="w-full rounded-md border bg-transparent px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary"
+                    className="w-full h-9 rounded-md border bg-transparent px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary"
                   >
                     <option value="twilio">Twilio (Default)</option>
                     <option value="chime">AWS Chime PSTN</option>

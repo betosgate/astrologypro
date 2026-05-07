@@ -1,14 +1,14 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import type { ComponentType } from "react";
 import {
   AlertTriangle,
   CheckCircle2,
+  CircleAlert,
+  CircleCheck,
   Sparkles,
   Telescope,
-  UserCheck,
-  UserPlus,
   Users,
 } from "lucide-react";
 import Link from "next/link";
@@ -73,58 +73,100 @@ export interface HouseholdReadinessProps {
   completeDetailsHref?: string;
 }
 
-/**
- * Tile color tokens. Green for complete/view-ready, amber/orange for
- * action-needed states. Dark blue card body matches the existing
- * dashboard card style.
- */
-function tileTone(
-  variant: "ok" | "warn" | "neutral"
-): { bg: string; text: string; border: string } {
+function metricTone(
+  variant: "ok" | "warn" | "neutral" | "accent"
+): { text: string; stroke: string; track: string; iconBg: string } {
   switch (variant) {
     case "ok":
       return {
-        bg: "bg-emerald-500/10",
         text: "text-emerald-700 dark:text-emerald-300",
-        border: "border-emerald-500/30",
+        stroke: "stroke-emerald-500",
+        track: "stroke-emerald-500/15",
+        iconBg: "bg-emerald-500/15",
       };
     case "warn":
       return {
-        bg: "bg-amber-500/10",
         text: "text-amber-700 dark:text-amber-300",
-        border: "border-amber-500/30",
+        stroke: "stroke-amber-500",
+        track: "stroke-amber-500/15",
+        iconBg: "bg-amber-500/15",
+      };
+    case "accent":
+      return {
+        text: "text-violet-700 dark:text-violet-300",
+        stroke: "stroke-violet-500",
+        track: "stroke-violet-500/15",
+        iconBg: "bg-violet-500/15",
       };
     case "neutral":
     default:
       return {
-        bg: "bg-muted/40",
         text: "text-foreground",
-        border: "border-border",
+        stroke: "stroke-sky-500",
+        track: "stroke-sky-500/15",
+        iconBg: "bg-sky-500/15",
       };
   }
 }
 
-interface MetricTileProps {
+interface CircleMetricProps {
   label: string;
   value: string;
   caption?: string;
-  variant: "ok" | "warn" | "neutral";
+  progress: number;
+  variant: "ok" | "warn" | "neutral" | "accent";
+  icon: ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
 }
 
-function MetricTile({ label, value, caption, variant }: MetricTileProps) {
-  const tone = tileTone(variant);
+function CircleMetric({
+  label,
+  value,
+  caption,
+  progress,
+  variant,
+  icon: Icon,
+}: CircleMetricProps) {
+  const tone = metricTone(variant);
+  const normalized = Math.max(0, Math.min(100, progress));
+  const circumference = 2 * Math.PI * 38;
+  const dashOffset = circumference - (normalized / 100) * circumference;
+
   return (
-    <div
-      className={`rounded-lg border ${tone.border} ${tone.bg} px-3 py-2.5 flex flex-col gap-0.5 min-w-0`}
-    >
-      <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground truncate">
+    <div className="flex min-w-0 flex-col items-center text-center">
+      <div className={`mb-2 flex size-7 items-center justify-center rounded-full ${tone.iconBg}`}>
+        <Icon className={`size-3.5 ${tone.text}`} aria-hidden />
+      </div>
+      <div className="relative size-24">
+        <svg className="-rotate-90 size-24" viewBox="0 0 96 96" aria-hidden="true">
+          <circle
+            cx="48"
+            cy="48"
+            r="38"
+            fill="none"
+            strokeWidth="8"
+            className={tone.track}
+          />
+          <circle
+            cx="48"
+            cy="48"
+            r="38"
+            fill="none"
+            strokeWidth="8"
+            strokeLinecap="round"
+            strokeDasharray={circumference}
+            strokeDashoffset={dashOffset}
+            className={`${tone.stroke} transition-[stroke-dashoffset] duration-500`}
+          />
+        </svg>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className="text-base font-bold text-foreground">{value}</span>
+        </div>
+      </div>
+      <p className="mt-2 text-xs font-semibold leading-tight text-foreground">
         {label}
       </p>
-      <p className={`text-base font-semibold leading-tight ${tone.text}`}>
-        {value}
-      </p>
       {caption ? (
-        <p className="text-[10px] text-muted-foreground leading-tight truncate">
+        <p className="mt-1 text-[11px] leading-tight text-muted-foreground">
           {caption}
         </p>
       ) : null}
@@ -204,25 +246,57 @@ export function HouseholdReadinessSection({
           missingDetailsCount === 1 ? "" : "s"
         } still need birth details`
       : null;
+  const memberProgress =
+    totalMemberCount > 0 ? (completeMemberCount / totalMemberCount) * 100 : 0;
+  const chartsProgress =
+    chartsEligibleCount > 0
+      ? (chartsReadyCount / chartsEligibleCount) * 100
+      : 0;
+  const missingDetailsProgress = missingDetailsCount === 0 ? 100 : 35;
+  const checklistAction =
+    missingDetailsCount > 0 ? (
+      <Link
+        href={completeDetailsHref}
+        className="inline-flex text-xs font-medium text-primary hover:underline"
+      >
+        Complete missing data →
+      </Link>
+    ) : chartsEligibleCount > 0 && chartsReadyCount < chartsEligibleCount ? (
+      <Link
+        href="/community/charts"
+        className="inline-flex text-xs font-medium text-primary hover:underline"
+      >
+        Generate missing charts →
+      </Link>
+    ) : null;
 
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="text-sm flex items-center gap-1.5">
-          <Users className="size-4 text-muted-foreground" aria-hidden="true" />
-          Household Readiness
-        </CardTitle>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <CardTitle className="text-sm flex items-center gap-1.5">
+              <Users className="size-4 text-muted-foreground" aria-hidden="true" />
+              Household Readiness
+            </CardTitle>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Track birth data, charts, and setup progress at a glance.
+            </p>
+          </div>
+        </div>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {/* ── Top metric row ───────────────────────────────────────────── */}
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-          <MetricTile
-            label="Your Birth Data"
+      <CardContent className="space-y-5">
+        {/* ── Circular readiness indicators ────────────────────────────── */}
+        <div className="grid grid-cols-2 gap-x-4 gap-y-6 lg:grid-cols-4">
+          <CircleMetric
+            label="Birth Data"
             value={`${selfBirthDataPercent}%`}
             caption={selfBirthDataComplete ? "Complete" : "Needs details"}
+            progress={selfBirthDataPercent}
             variant={selfBirthDataComplete ? "ok" : "warn"}
+            icon={selfBirthDataComplete ? CircleCheck : CircleAlert}
           />
-          <MetricTile
+          <CircleMetric
             label="Members Complete"
             value={`${completeMemberCount} / ${totalMemberCount}`}
             caption={
@@ -230,15 +304,17 @@ export function HouseholdReadinessSection({
                 ? "All set"
                 : "Birth data ready"
             }
+            progress={memberProgress}
             variant={
               totalMemberCount === 0
                 ? "neutral"
                 : completeMemberCount === totalMemberCount
-                  ? "ok"
+                  ? "accent"
                   : "warn"
             }
+            icon={Users}
           />
-          <MetricTile
+          <CircleMetric
             label="Charts Ready"
             value={
               chartsEligibleCount === 0
@@ -250,8 +326,9 @@ export function HouseholdReadinessSection({
                 ? "Pending birth data"
                 : chartsReadyCount === chartsEligibleCount
                   ? "All generated"
-                  : "Generate charts"
+                  : `${chartsEligibleCount - chartsReadyCount} remaining`
             }
+            progress={chartsProgress}
             variant={
               chartsEligibleCount === 0
                 ? "neutral"
@@ -259,69 +336,47 @@ export function HouseholdReadinessSection({
                   ? "ok"
                   : "warn"
             }
+            icon={Telescope}
           />
-          <MetricTile
+          <CircleMetric
             label="Missing Details"
             value={String(missingDetailsCount)}
             caption={
               missingDetailsCount === 0 ? "Nothing pending" : "Needs action"
             }
+            progress={missingDetailsProgress}
             variant={missingDetailsCount === 0 ? "ok" : "warn"}
+            icon={missingDetailsCount === 0 ? CheckCircle2 : AlertTriangle}
           />
         </div>
 
-        {/* ── Status checklist ────────────────────────────────────────── */}
-        <ul className="space-y-1.5">
-          <ChecklistRow ok={selfBirthDataComplete} text={selfStatusText} />
-          <ChecklistRow
-            ok={
-              totalMemberCount > 0 && completeMemberCount === totalMemberCount
-            }
-            text={membersCompleteText}
-          />
-          <ChecklistRow
-            ok={
-              chartsEligibleCount > 0 && chartsReadyCount === chartsEligibleCount
-            }
-            text={chartsText}
-          />
-          {missingDetailsText ? (
-            <ChecklistRow ok={false} text={missingDetailsText} />
-          ) : null}
-        </ul>
-
-        {/* ── Action area ─────────────────────────────────────────────── */}
-        <div className="flex flex-wrap items-center gap-2 pt-1">
-          {missingDetailsCount > 0 ? (
-            <Button asChild size="sm" className="flex-1 sm:flex-none">
-              <Link href={completeDetailsHref}>
-                <UserPlus className="mr-1.5 size-3.5" />
-                Complete Missing Details
-              </Link>
-            </Button>
-          ) : null}
-          <Button
-            asChild
-            size="sm"
-            variant={missingDetailsCount > 0 ? "outline" : "default"}
-            className="flex-1 sm:flex-none"
-          >
-            <Link href="/community/family">
-              <UserCheck className="mr-1.5 size-3.5" />
-              Manage Family
-            </Link>
-          </Button>
-          <Button
-            asChild
-            size="sm"
-            variant="outline"
-            className="flex-1 sm:flex-none"
-          >
-            <Link href="/community/charts">
-              <Telescope className="mr-1.5 size-3.5" />
-              View Charts
-            </Link>
-          </Button>
+        <div className="space-y-2">
+          {/* ── Status checklist ──────────────────────────────────────── */}
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-xs font-semibold text-foreground">
+              Readiness Checklist
+            </p>
+            {checklistAction}
+          </div>
+          <ul className="space-y-1.5">
+            <ChecklistRow ok={selfBirthDataComplete} text={selfStatusText} />
+            <ChecklistRow
+              ok={
+                totalMemberCount > 0 && completeMemberCount === totalMemberCount
+              }
+              text={membersCompleteText}
+            />
+            <ChecklistRow
+              ok={
+                chartsEligibleCount > 0 &&
+                chartsReadyCount === chartsEligibleCount
+              }
+              text={chartsText}
+            />
+            {missingDetailsText ? (
+              <ChecklistRow ok={false} text={missingDetailsText} />
+            ) : null}
+          </ul>
         </div>
 
         {/* When everything is set up, soften the card with a positive
