@@ -214,7 +214,7 @@ AS $$
   -- may differ; admin can cross-check against revenue_ledger_entries.
   SELECT
     cc.campaign_id,
-    COALESCE(camp.name, camp.share_code)::text AS campaign_name,
+    COALESCE(camp.name, camp.campaign_code)::text AS campaign_name,
     COUNT(*)::bigint AS conversion_count,
     COALESCE(SUM(cc.order_amount_cents), 0)::bigint AS gross_cents,
     COALESCE(SUM(cc.commission_amount_cents), 0)::bigint AS commission_paid_cents,
@@ -233,7 +233,7 @@ AS $$
   LEFT JOIN affiliate_campaigns camp ON camp.id = cc.campaign_id
   WHERE cc.reversed_at IS NULL
     AND cc.converted_at >= p_cutoff
-  GROUP BY cc.campaign_id, camp.name, camp.share_code
+  GROUP BY cc.campaign_id, camp.name, camp.campaign_code
   ORDER BY commission_paid_cents DESC
   LIMIT 20;
 $$;

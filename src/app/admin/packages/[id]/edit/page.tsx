@@ -109,7 +109,7 @@ export default function EditPackagePage() {
         <h1 className="mt-2 text-2xl font-bold tracking-tight">Edit Package</h1>
       </div>
 
-      <Card className="max-w-2xl">
+      <Card className="w-full">
         <CardHeader>
           <CardTitle>Package Details</CardTitle>
         </CardHeader>
