@@ -547,11 +547,19 @@ export default async function CommunityDashboardPage() {
     null;
 
   // Best renewal date: PM prefers the API's Stripe current_period_end.
-  const renewalDate: string | null =
+  let renewalDate: string | null =
     (isPerennial ? pmApiSubscription?.current_period_end : null) ??
     (member as { current_period_end?: string | null }).current_period_end ??
     member.expires_at ??
     null;
+
+  if (!renewalDate && member.membership_status === "active") {
+    const d = new Date(member.joined_at || user.created_at);
+    const now = new Date();
+    d.setFullYear(now.getFullYear(), now.getMonth());
+    if (d < now) d.setMonth(d.getMonth() + 1);
+    renewalDate = d.toISOString();
+  }
 
   const membershipSubscription: MembershipSubscription = {
     membership_type:
@@ -1071,6 +1079,16 @@ export default async function CommunityDashboardPage() {
             >
               {isCancelling ? "Cancelling" : (member.membership_status ?? "active")}
             </Badge>
+
+            {/* Member since date */}
+            <span className="text-xs text-muted-foreground">
+              Member since{" "}
+              {new Date(member.joined_at).toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+              })}
+            </span>
             {/* Days remaining until next billing / access end */}
             {daysRemaining !== null && !isCancelling && (
               <span className="text-xs text-muted-foreground flex items-center gap-1">
@@ -1088,7 +1106,8 @@ export default async function CommunityDashboardPage() {
                   : `${daysRemaining}d of access remaining`}
               </span>
             )}
-            {/* Next billing date */}
+            {/* Next billing date (Commented out per user request) */}
+            {/*
             {renewalDate && !isCancelling && (
               <span className="text-xs text-muted-foreground">
                 Next billing:{" "}
@@ -1099,6 +1118,10 @@ export default async function CommunityDashboardPage() {
                 })}
               </span>
             )}
+            */}
+
+            {/* Last payment (Commented out per user request) */}
+            {/*
             {isPerennial && pmApiSubscription?.last_payment_date && (
               <span className="text-xs text-muted-foreground">
                 Last payment:{" "}
@@ -1109,14 +1132,8 @@ export default async function CommunityDashboardPage() {
                 })}
               </span>
             )}
-            <span className="text-xs text-muted-foreground">
-              Member since{" "}
-              {new Date(member.joined_at).toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-                year: "numeric",
-              })}
-            </span>
+            */}
+
           </div>
           {/* Profile completion mini bar */}
           <div className="flex items-center gap-3 min-w-0">
