@@ -333,7 +333,7 @@ export default async function CommunityDashboardPage() {
         // /community/transits uses). Without coordinates a row may pass
         // text-field checks but still be ineligible for chart generation.
         // Spec: tasks/06.05.2026/community-dashboard-household-readiness-card/03-wire-household-readiness-metrics-and-actions.md
-        "id, user_id, full_name, relationship, date_of_birth, birth_time, birth_time_unknown, birth_city, birth_country, birth_lat, birth_lng, natal_chart, natal_status, natal_report_id, natal_report_status"
+        "id, user_id, full_name, relationship, date_of_birth, birth_time, birth_city, birth_country, birth_lat, birth_lng, natal_chart, natal_status, natal_report_id, natal_report_status"
       )
       .eq("member_id", member.id)
       .limit(10),
@@ -412,6 +412,12 @@ export default async function CommunityDashboardPage() {
   ]);
 
   const client = clientResult.data;
+  if (familyMembersResult.error) {
+    console.error(
+      "[community] Failed to load family members for dashboard",
+      familyMembersResult.error
+    );
+  }
   const familyMembers = familyMembersResult.data ?? [];
   const otherMembers = otherMembersResult.data ?? [];
   const recentWisdom = recentWisdomResult.data ?? [];
