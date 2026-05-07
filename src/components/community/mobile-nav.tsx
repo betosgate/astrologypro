@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Menu } from "lucide-react";
+import { Menu, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PortalLogoutButton } from "@/components/portal/logout-button";
@@ -17,6 +17,7 @@ import {
 interface NavItem {
   label: string;
   href: string;
+  iconNode?: React.ReactNode;
 }
 
 interface MobileNavProps {
@@ -66,11 +67,22 @@ export function MobileNav({
               className="flex items-center gap-3 px-4 py-3 text-sm hover:bg-accent transition-colors"
               onClick={() => setOpen(false)}
             >
+              <div className="text-muted-foreground [&>svg]:size-4">
+                {item.iconNode}
+              </div>
               {item.label}
             </Link>
           ))}
         </nav>
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t bg-background">
+        <div className="absolute bottom-0 left-0 right-0 p-4 border-t bg-background space-y-2">
+          <Link
+            href="/account"
+            className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-muted-foreground rounded-lg transition-colors hover:bg-muted hover:text-foreground"
+            onClick={() => setOpen(false)}
+          >
+            <User className="h-4 w-4" />
+            My Account
+          </Link>
           <PortalLogoutButton
             variant="outline"
             size="sm"

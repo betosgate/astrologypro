@@ -16,7 +16,7 @@ const containerVariants = cva(
         none: "py-0",
         sm: "py-4",
         md: "py-6 lg:py-8",
-        lg: "py-10 lg:py-16",
+        lg: "py-10",
         xl: "py-16 lg:py-24",
       },
     },
@@ -29,7 +29,7 @@ const containerVariants = cva(
 
 interface SectionContainerProps
   extends React.HTMLAttributes<HTMLDivElement>,
-    VariantProps<typeof containerVariants> {
+  VariantProps<typeof containerVariants> {
   as?: React.ElementType;
 }
 
