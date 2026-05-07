@@ -236,6 +236,13 @@ type PrefillResponse = {
   }>;
 };
 
+type AddressSearchResult = {
+  label: string;
+  city: string;
+  state: string;
+  zip: string;
+};
+
 export default function OnboardingPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -267,6 +274,8 @@ export default function OnboardingPage() {
   function patch(fields: Partial<ProfileForm>) {
     setForm((prev) => ({ ...prev, ...fields }));
   }
+
+
 
   function updateHouseholdMember(
     index: number,
@@ -405,9 +414,10 @@ export default function OnboardingPage() {
       if (form.phone.replace(/\D/g, "").length !== 10) {
         return "Phone must be a 10-digit number.";
       }
-      if (!form.gender) return "Gender is required.";
-      if (!form.occupation.trim()) return "Occupation is required.";
-      if (!form.birthTime) return "Birth time is required.";
+      if (!form.gender?.trim()) return "Gender is required.";
+      if (!form.occupation?.trim()) return "Occupation is required.";
+      if (!form.dateOfBirth?.trim()) return "Date of birth is required.";
+      if (!form.birthTime?.trim()) return "Birth time is required.";
       if (!form.birthCity.trim()) return "Birth city is required.";
       if (!form.birthCountry.trim()) return "Birth country is required.";
     }
@@ -416,7 +426,9 @@ export default function OnboardingPage() {
       if (!form.address.trim()) return "Address is required.";
       if (!form.city.trim()) return "City is required.";
       if (!form.state.trim()) return "State is required.";
-      if (!/^\d{5}$/.test(form.zip.trim())) return "Zip must be exactly 5 digits.";
+      if (!/^[0-9A-Za-z -]{3,12}$/.test(form.zip.trim())) {
+        return "Postal code is required.";
+      }
     }
 
     if (householdStepEnabled && targetStep === 3) {
@@ -533,7 +545,19 @@ export default function OnboardingPage() {
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(data.error || "Something went wrong. Please try again.");
+        const message = data.error || "Something went wrong. Please try again.";
+        setError(message);
+        if (
+          /first name|last name|email|phone|gender|occupation|date of birth|birth time|birth city|birth country/i.test(
+            message
+          )
+        ) {
+          setStep(1);
+        } else if (/address|city|state|postal|zip/i.test(message)) {
+          setStep(2);
+        } else if (/household member|couple plan|family plan/i.test(message)) {
+          setStep(householdStepEnabled ? 3 : 1);
+        }
         return;
       }
 
@@ -804,12 +828,14 @@ export default function OnboardingPage() {
                 </Label>
                 <Input
                   id="zip"
-                  inputMode="numeric"
-                  maxLength={5}
+                  inputMode="text"
+                  maxLength={12}
                   value={form.zip}
                   onChange={(e) =>
                     patch({
-                      zip: e.target.value.replace(/\D/g, "").slice(0, 5),
+                      zip: e.target.value
+                        .replace(/[^0-9A-Za-z -]/g, "")
+                        .slice(0, 12),
                     })
                   }
                 />
@@ -999,13 +1025,14 @@ export default function OnboardingPage() {
             </button>
 
             {questionnaireOpen && (
-              <div className="space-y-3">
+              <div className="grid gap-4 sm:grid-cols-2">
                 {QUESTIONNAIRE_FIELDS.map(([key, label]) => (
                   <div key={key} className="space-y-1.5">
                     <Label htmlFor={`q-${key}`}>{label}</Label>
                     <Textarea
                       id={`q-${key}`}
-                      rows={2}
+                      rows={1}
+                      className="min-h-[52px] resize-none"
                       value={(form as unknown as Record<string, string>)[key] ?? ""}
                       onChange={(e) =>
                         patch({ [key]: e.target.value } as Partial<ProfileForm>)

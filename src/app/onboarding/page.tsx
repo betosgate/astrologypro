@@ -450,7 +450,7 @@ function OnboardingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const isInvited = searchParams.get("invited") === "true";
-  const supabase = createClient();
+  const [supabase] = useState(() => createClient());
 
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
