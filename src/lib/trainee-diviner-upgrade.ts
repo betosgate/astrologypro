@@ -1,6 +1,10 @@
 import Stripe from "stripe";
 import { ensureUserContractRequirements } from "@/lib/contract-orchestration";
 import {
+  inferProfessionalDivinationCourseTrack,
+  servicePackageForProfessionalDivinationCourseTrack,
+} from "@/lib/professional-divination-course";
+import {
   getDefaultRoleServicePackageCode,
   getRoleServicePackages,
 } from "@/lib/role-service-packages";
@@ -49,7 +53,10 @@ export async function provisionTraineeDivinerUpgradeFromSession(
     return null;
   }
 
-  if (session.metadata?.type !== "trainee_diviner_upgrade") {
+  if (
+    session.metadata?.type !== "trainee_diviner_upgrade" &&
+    session.metadata?.itemKey !== "professional_divination_course"
+  ) {
     return null;
   }
 
@@ -93,7 +100,11 @@ export async function provisionTraineeDivinerUpgradeFromSession(
     (authUser?.user_metadata?.name as string | undefined) ??
     email.split("@")[0] ??
     "Diviner";
+  const selectedCourseTrack = inferProfessionalDivinationCourseTrack(
+    session.metadata?.planName ?? null,
+  );
   const servicePackageCode =
+    servicePackageForProfessionalDivinationCourseTrack(selectedCourseTrack) ??
     trainee?.service_package_code ??
     getDefaultRoleServicePackageCode(roleServicePackages, "diviner");
 
