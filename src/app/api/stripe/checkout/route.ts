@@ -134,7 +134,7 @@ export async function POST(request: NextRequest) {
     const successPath =
       itemKey === "perennial_mandalism_community"
         ? "/perennial-signup/success?session_id={CHECKOUT_SESSION_ID}"
-        : itemKey === "trainee_program"
+        : itemKey === "trainee_program" || itemKey === "trainee_diviner_bundle"
           ? "/trainee-signup/success?session_id={CHECKOUT_SESSION_ID}"
           : itemKey === "professional_divination_course"
             ? "/get-started/success?session_id={CHECKOUT_SESSION_ID}"

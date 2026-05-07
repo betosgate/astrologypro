@@ -44,12 +44,12 @@ export default async function PendingContractsPage({
   // Stripe can return to /contracts/pending before the webhook has finished
   // creating the new role + contract requirements. For professional diviner
   // purchases, re-run provisioning once before deciding to redirect.
-  if (requirements.length === 0 && (source === "trainee-upgrade" || source === "get-started")) {
+  if (requirements.length === 0 && (source === "trainee-upgrade" || source === "get-started" || source === "trainee-bundle")) {
     if (sessionId) {
       await finalizeTraineeDivinerUpgradeFromSessionId({
         userId: user.id,
         sessionId,
-        markTraineePaid: source === "trainee-upgrade",
+        markTraineePaid: source === "trainee-upgrade" || source === "trainee-bundle",
       });
     }
     await ensureUserContractRequirements(user.id, "post_login");

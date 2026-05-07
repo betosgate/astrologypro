@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { stripe } from "@/lib/stripe/client";
 import { createClient } from "@/lib/supabase/server";
+import { finalizeTraineeDivinerUpgradeFromSessionId } from "@/lib/trainee-diviner-upgrade";
 
 export const dynamic = "force-dynamic";
 export const metadata = {
@@ -34,7 +35,7 @@ function titleCase(value: string | null | undefined) {
     .replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
-async function getCheckoutDetails(sessionId: string) {
+async function getCheckoutData(sessionId: string) {
   const session = await stripe.checkout.sessions.retrieve(sessionId, {
     expand: ["line_items"],
   });
@@ -46,11 +47,14 @@ async function getCheckoutDetails(sessionId: string) {
     sessionWithLines.line_items?.data?.find((item) => item.description)?.description ??
     "Trainee Program";
 
-  return [
-    ["Amount paid", formatCheckoutAmount(session.amount_total, session.currency)],
-    ["Recent plan", planName],
-    ["Payment status", titleCase(session.payment_status)],
-  ];
+  return {
+    itemKey: session.metadata?.itemKey,
+    details: [
+      ["Amount paid", formatCheckoutAmount(session.amount_total, session.currency)],
+      ["Recent plan", planName],
+      ["Payment status", titleCase(session.payment_status)],
+    ],
+  };
 }
 
 export default async function TraineeSignupSuccessPage({
@@ -75,10 +79,28 @@ export default async function TraineeSignupSuccessPage({
     redirect(`/login?redirect=${encodeURIComponent(loginRedirect)}`);
   }
 
-  // The next step is the trainee profile completion
-  const nextHref = `/join/trainee/profile?session_id=${encodeURIComponent(sessionId)}`;
-  
-  const checkoutDetails = await getCheckoutDetails(sessionId);
+  const { itemKey, details: checkoutDetails } = await getCheckoutData(sessionId);
+
+  let nextStepText = "Complete your profile and setup your training preferences before entering the dashboard.";
+  let nextHref = `/join/trainee/profile?session_id=${encodeURIComponent(sessionId)}`;
+  let accountActivatedText = "Stripe returned a successful checkout and your trainee access has been provisioned.";
+
+  if (itemKey === "trainee_diviner_bundle") {
+    const result = await finalizeTraineeDivinerUpgradeFromSessionId({
+      sessionId,
+      userId: user.id,
+      markTraineePaid: true,
+      ensureContracts: true,
+    });
+
+    if (!result?.divinerSaved) {
+      redirect("/get-started?error=provision-failed");
+    }
+
+    nextStepText = "Review your required contract agreement and set up your profile before entering the dashboards.";
+    nextHref = `/contracts/pending?source=trainee-bundle&session_id=${encodeURIComponent(sessionId)}&next=${encodeURIComponent("/join/trainee/profile?session_id=" + encodeURIComponent(sessionId))}`;
+    accountActivatedText = "Stripe returned a successful checkout and your trainee & diviner access has been provisioned.";
+  }
 
   return (
     <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center overflow-hidden p-6">
@@ -119,8 +141,7 @@ export default async function TraineeSignupSuccessPage({
                 <div>
                   <p className="text-sm font-semibold text-white">Account activated</p>
                   <p className="mt-1 text-xs leading-relaxed text-white/50">
-                    Stripe returned a successful checkout and your trainee
-                    access has been provisioned.
+                    {accountActivatedText}
                   </p>
                 </div>
               </div>
@@ -134,7 +155,7 @@ export default async function TraineeSignupSuccessPage({
                 <div>
                   <p className="text-sm font-semibold text-white">Next step</p>
                   <p className="mt-1 text-xs leading-relaxed text-white/50">
-                    Complete your profile and setup your training preferences before entering the dashboard.
+                    {nextStepText}
                   </p>
                 </div>
               </div>
