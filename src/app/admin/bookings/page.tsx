@@ -586,7 +586,7 @@ export default async function AdminBookingsPage({
                 name="search"
                 defaultValue={params.search ?? ""}
                 placeholder="Search client..."
-                className="h-9 w-48 rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                className="h-9 w-48 rounded-md border px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               />
             </div>
             <div className="flex flex-col gap-1">
@@ -594,7 +594,7 @@ export default async function AdminBookingsPage({
               <select
                 name="status"
                 defaultValue={params.status ?? "all"}
-                className="h-9 rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                className="h-9 rounded-md border px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               >
                 <option value="all">All statuses</option>
                 <option value="pending">Pending</option>
@@ -611,7 +611,7 @@ export default async function AdminBookingsPage({
                 <select
                   name="diviner_id"
                   defaultValue={params.diviner_id ?? ""}
-                  className="h-9 rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                  className="h-9 rounded-md border px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                 >
                   <option value="">All diviners</option>
                   {divinerOptions.map((d) => (
@@ -628,7 +628,7 @@ export default async function AdminBookingsPage({
                 type="date"
                 name="from"
                 defaultValue={params.from ?? ""}
-                className="h-9 rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                className="h-9 rounded-md border px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               />
             </div>
             <div className="flex flex-col gap-1">
@@ -637,7 +637,7 @@ export default async function AdminBookingsPage({
                 type="date"
                 name="to"
                 defaultValue={params.to ?? ""}
-                className="h-9 rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                className="h-9 rounded-md border px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               />
             </div>
             <Button type="submit" size="sm">Filter</Button>

@@ -14,6 +14,7 @@ const tabs = [
   { href: "/admin/reports/affiliates/clicks", label: "Clicks" },
   { href: "/admin/reports/affiliates/conversions", label: "Conversions" },
   { href: "/admin/reports/affiliates/rate-history", label: "Rate history" },
+  { href: "/admin/reports/affiliates/payouts", label: "Payouts" },
 ];
 
 export function ReportsTabs() {

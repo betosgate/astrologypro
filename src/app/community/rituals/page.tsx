@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
   SelectContent,
@@ -53,6 +54,62 @@ function getDisplayTags(ritualName: string, tags: string[]): string[] {
   );
 
   return primaryTags.length > 0 ? primaryTags : tags;
+}
+
+function RitualsPageSkeleton() {
+  return (
+    <div className="space-y-4" aria-label="Loading rituals">
+      <div className="rounded-2xl border border-amber-500/10 bg-gradient-to-r from-amber-950/15 via-card to-card p-4">
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="min-w-[220px] flex-1 space-y-2">
+            <Skeleton className="h-3 w-24" />
+            <Skeleton className="h-10 w-full" />
+          </div>
+          <div className="min-w-[180px] space-y-2">
+            <Skeleton className="h-3 w-16" />
+            <Skeleton className="h-10 w-full" />
+          </div>
+          <div className="min-w-[160px] space-y-2">
+            <Skeleton className="h-3 w-20" />
+            <Skeleton className="h-10 w-full" />
+          </div>
+          <div className="min-w-[160px] space-y-2">
+            <Skeleton className="h-3 w-16" />
+            <Skeleton className="h-10 w-full" />
+          </div>
+          <Skeleton className="h-10 w-24" />
+        </div>
+      </div>
+
+      <Skeleton className="h-3 w-40" />
+
+      {[0, 1, 2, 3].map((item) => (
+        <div
+          key={item}
+          className="rounded-2xl border border-amber-500/10 bg-gradient-to-r from-amber-950/20 via-card to-card px-5 py-4"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex min-w-0 flex-1 items-center gap-4">
+              <Skeleton className="size-10 shrink-0 rounded-xl" />
+              <div className="min-w-0 flex-1 space-y-2">
+                <Skeleton className="h-4 w-72 max-w-[60vw]" />
+                <Skeleton className="h-3 w-56 max-w-[50vw]" />
+                <div className="flex gap-1.5">
+                  <Skeleton className="h-5 w-20 rounded-full" />
+                  <Skeleton className="h-5 w-24 rounded-full" />
+                  <Skeleton className="h-5 w-16 rounded-full" />
+                </div>
+              </div>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              <Skeleton className="h-9 w-28" />
+              <Skeleton className="size-9 rounded-md" />
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 export default function CommunityRitualsPage() {
@@ -268,7 +325,7 @@ export default function CommunityRitualsPage() {
         <Button
           asChild
           size="sm"
-          className="bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow-md hover:from-amber-500 hover:to-orange-500"
+          className="cursor-pointer bg-primary text-black shadow-md hover:from-amber-500 hover:to-orange-500"
         >
           <Link href="/community/rituals/new">
             <Plus className="mr-2 size-4" />
@@ -362,7 +419,7 @@ export default function CommunityRitualsPage() {
                 setDateFrom("");
                 setDateTo("");
               }}
-              className="border-amber-500/20"
+              className="cursor-pointer border-amber-500/20 disabled:cursor-not-allowed"
             >
               <X className="mr-2 size-4" />
               Clear
@@ -372,9 +429,7 @@ export default function CommunityRitualsPage() {
       )}
 
       {loadingInitial && !hasLoadedOnce ? (
-        <div className="flex justify-center py-16">
-          <Loader2 className="size-6 animate-spin text-amber-400/60" />
-        </div>
+        <RitualsPageSkeleton />
       ) : rituals.length === 0 && !hasActiveFilters ? (
         <div className="relative overflow-hidden rounded-2xl border border-amber-500/20 bg-gradient-to-br from-amber-950/30 via-background to-orange-950/20 px-8 py-14 text-center shadow-xl">
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_0%,rgba(245,158,11,0.1),transparent_70%)]" />
@@ -390,7 +445,7 @@ export default function CommunityRitualsPage() {
             </div>
             <Button
               asChild
-              className="bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow-md hover:from-amber-500 hover:to-orange-500"
+              className="cursor-pointer bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow-md hover:from-amber-500 hover:to-orange-500"
             >
               <Link href="/community/rituals/new">
                 <Sparkles className="mr-2 size-4" />
@@ -523,7 +578,7 @@ export default function CommunityRitualsPage() {
                     {isInProgress ? (
                       <Button
                         size="sm"
-                        className="bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow hover:from-amber-500 hover:to-orange-500"
+                        className="cursor-pointer bg-primary text-black shadow hover:from-amber-500 hover:to-orange-500"
                         onClick={() =>
                           router.push(`/community/rituals/${ritual.id}/playback`)
                         }
@@ -534,7 +589,7 @@ export default function CommunityRitualsPage() {
                     ) : (
                       <Button
                         size="sm"
-                        className="bg-gradient-to-r from-amber-600/80 to-orange-600/80 text-white shadow hover:from-amber-500 hover:to-orange-500"
+                        className="cursor-pointer bg-primary text-black shadow hover:from-amber-500 hover:to-orange-500"
                         onClick={() => router.push(`/community/rituals/${ritual.id}`)}
                       >
                         <ArrowRight className="mr-1.5 size-3.5" />
@@ -545,7 +600,7 @@ export default function CommunityRitualsPage() {
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                      className="cursor-pointer text-muted-foreground hover:bg-destructive/10 hover:text-destructive disabled:cursor-not-allowed"
                       disabled={deleting === ritual.id}
                       onClick={() => setRitualToDelete({ id: ritual.id, name: ritual.ritual_name })}
                       aria-label={`Delete ritual ${ritual.ritual_name}`}
