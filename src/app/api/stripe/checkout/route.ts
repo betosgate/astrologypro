@@ -119,7 +119,9 @@ export async function POST(request: NextRequest) {
         ? "/perennial-signup/success?session_id={CHECKOUT_SESSION_ID}"
         : itemKey === "trainee_program"
           ? "/join/trainee/profile?session_id={CHECKOUT_SESSION_ID}"
-          : "/onboarding?session_id={CHECKOUT_SESSION_ID}";
+          : itemKey === "professional_divination_course"
+            ? "/get-started/success?session_id={CHECKOUT_SESSION_ID}"
+            : "/onboarding?session_id={CHECKOUT_SESSION_ID}";
 
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
@@ -140,8 +142,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ url: session.url });
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const detail = (error as any)?.raw ?? (error as any)?.code ?? "";
+    const errorRecord = error as { raw?: unknown; code?: unknown };
+    const detail = errorRecord.raw ?? errorRecord.code ?? "";
     console.error("Stripe checkout error:", msg, detail);
     return NextResponse.json(
       { error: msg, detail },

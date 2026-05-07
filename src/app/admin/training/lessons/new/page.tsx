@@ -446,7 +446,7 @@ export default function NewLessonPage() {
                 value={form.title}
                 onChange={handleChange}
                 required
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                className="w-full rounded-md border border-input px-3 py-2 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
                 placeholder="e.g. Introduction to Birth Charts"
               />
             </div>
@@ -485,7 +485,7 @@ export default function NewLessonPage() {
                 id="previous_lesson_id"
                 value={form.previous_lesson_id}
                 onChange={handlePreviousLessonChange}
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
+                className="w-full h-9 rounded-md border border-input px-3 py-2 text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <option value="">— None (first lesson) —</option>
                 {categoryLessons.map((l) => (
@@ -510,7 +510,7 @@ export default function NewLessonPage() {
                 value={form.description}
                 onChange={handleChange}
                 rows={3}
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                className="w-full rounded-md border border-input px-3 py-2 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
                 placeholder="Brief description of this lesson"
               />
             </div>
@@ -546,7 +546,7 @@ export default function NewLessonPage() {
                         video_url: normalizeYouTubeUrl(e.target.value),
                       }))
                     }
-                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                    className="w-full rounded-md border border-input px-3 py-2 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
                     placeholder="https://www.youtube.com/watch?v=..."
                   />
                   <p className="text-xs text-muted-foreground">
@@ -563,7 +563,7 @@ export default function NewLessonPage() {
                     setForm((prev) => ({ ...prev, video_url: e.target.value }))
                   }
                   onBlur={(e) => void handleMainVideoUrlBlur(e.target.value)}
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                  className="w-full rounded-md border border-input px-3 py-2 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
                   placeholder="https://example.com/video.mp4"
                 />
               )}
@@ -575,7 +575,7 @@ export default function NewLessonPage() {
                     type="file"
                     accept="video/mp4,video/webm,video/ogg,video/quicktime,video/x-msvideo"
                     onChange={handleVideoFileChange}
-                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm file:mr-3 file:rounded file:border-0 file:bg-primary file:px-3 file:py-1 file:text-xs file:font-medium file:text-primary-foreground"
+                    className="w-full rounded-md border border-input px-3 py-2 text-sm file:mr-3 file:rounded file:border-0 file:bg-primary file:px-3 file:py-1 file:text-xs file:font-medium file:text-primary-foreground"
                     disabled={uploadPercent !== null}
                   />
                   {uploadPercent !== null && (
@@ -624,7 +624,7 @@ export default function NewLessonPage() {
                   type="url"
                   value={form.pdf_url}
                   onChange={handleChange}
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                  className="w-full rounded-md border border-input px-3 py-2 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
                   placeholder="https://..."
                 />
               )}
@@ -744,7 +744,7 @@ export default function NewLessonPage() {
                   type="url"
                   value={form.audio_url}
                   onChange={handleChange}
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                  className="w-full rounded-md border border-input px-3 py-2 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
                   placeholder="https://..."
                 />
               )}
@@ -756,7 +756,7 @@ export default function NewLessonPage() {
                     type="file"
                     accept="audio/mpeg,audio/mp3,audio/mp4,audio/x-m4a,audio/aac,audio/wav,audio/x-wav,audio/webm,audio/ogg,audio/flac"
                     onChange={handleAudioFileChange}
-                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm file:mr-3 file:rounded file:border-0 file:bg-primary file:px-3 file:py-1 file:text-xs file:font-medium file:text-primary-foreground"
+                    className="w-full rounded-md border border-input px-3 py-2 text-sm file:mr-3 file:rounded file:border-0 file:bg-primary file:px-3 file:py-1 file:text-xs file:font-medium file:text-primary-foreground"
                     disabled={audioUploadPercent !== null}
                   />
                   {audioUploadPercent !== null && (
@@ -803,7 +803,7 @@ export default function NewLessonPage() {
                 value={form.content}
                 onChange={handleChange}
                 rows={6}
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                className="w-full rounded-md border border-input px-3 py-2 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
                 placeholder="Lesson body text or notes…"
               />
             </div>
@@ -821,7 +821,7 @@ export default function NewLessonPage() {
                   min="0"
                   value={form.duration_mins}
                   onChange={handleChange}
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                  className="w-full rounded-md border border-input px-3 py-2 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
                   placeholder="Auto-populated when video metadata is available"
                 />
               </div>
@@ -838,7 +838,7 @@ export default function NewLessonPage() {
                   min="0"
                   value={form.priority}
                   onChange={handleChange}
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                  className="w-full rounded-md border border-input px-3 py-2 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
                 />
               </div>
             </div>
