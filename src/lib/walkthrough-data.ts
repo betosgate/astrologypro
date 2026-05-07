@@ -547,6 +547,263 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
     ]
   },
 
+
+  
+  {
+    "name": "diviner-subscription-settings",
+    "label": "Diviner Subscription Settings",
+    "description": "Subscription and membership management screen for diviners using the AstrologyPro platform.",
+    "group": "People",
+    "subModule": "Diviners",
+    "purpose": "Allows diviners to manage their subscription status, billing information, renewal cycle, and membership access for astrology services on the platform.",
+    "bullets": [
+      "Displays the main settings dashboard for diviner accounts.",
+      "Shows current subscription membership status.",
+      "Verified Partner badge identifies approved diviner accounts.",
+      "Subscription section displays active billing information.",
+      "Enrollment date shows when the diviner joined the platform.",
+      "Billing section displays monthly subscription pricing.",
+      "Next renewal date informs the diviner about upcoming billing cycles.",
+      "Manage Subscription button allows plan and billing management.",
+      "Settings navigation includes Account, Payments, Calendar, Notifications, Phone, and Loyalty tabs.",
+      "The screen acts as the central subscription-management area for diviner accounts."
+    ]
+  },
+  {
+    "name": "stripe-connect-setup",
+    "label": "Stripe Connect Integration",
+    "description": "Stripe payment onboarding and payout connection screen for diviner financial setup.",
+    "group": "People",
+    "subModule": "Diviners",
+    "purpose": "Allows diviners to connect Stripe accounts for accepting client payments, processing charges, and receiving payouts securely through the platform.",
+    "bullets": [
+      "Displays Stripe Connect integration status.",
+      "Charges section indicates whether payment collection is enabled.",
+      "Payouts section indicates whether bank payouts are enabled.",
+      "Connect Stripe Account button launches the Stripe onboarding process.",
+      "Stripe onboarding uses secure external Stripe-hosted verification pages.",
+      "Users can configure payment-processing capabilities through Stripe.",
+      "The integration enables diviners to accept payments from clients directly.",
+      "The screen acts as the payment-gateway integration center for diviners."
+    ]
+  },
+  {
+    "name": "stripe-phone-verification",
+    "label": "Stripe Phone Verification",
+    "description": "Initial Stripe onboarding step used for phone verification and account identification.",
+    "group": "People",
+    "subModule": "Diviners",
+    "purpose": "Collects contact information required by Stripe before financial onboarding can continue.",
+    "bullets": [
+      "Displays Stripe-hosted onboarding workflow.",
+      "Business branding is shown on the onboarding page.",
+      "Users can enter phone-number information for verification.",
+      "Test account mode is supported for sandbox environments.",
+      "Stripe Terms of Service and Privacy Policy are displayed.",
+      "Submit button validates onboarding information.",
+      "The step initializes Stripe account verification for the diviner."
+    ]
+  },
+  {
+    "name": "stripe-business-type-selection",
+    "label": "Stripe Business Type Selection",
+    "description": "Business classification step within the Stripe onboarding process.",
+    "group": "People",
+    "subModule": "Diviners",
+    "purpose": "Allows diviners to define their business entity type for financial compliance and payment processing.",
+    "bullets": [
+      "Users can select a business structure such as Individual or Company.",
+      "Business type impacts payout and compliance requirements.",
+      "Stripe uses the information for identity and tax verification.",
+      "Continue button advances the onboarding workflow.",
+      "Business setup instructions are displayed to guide the user.",
+      "The screen helps configure financial identity requirements."
+    ]
+  },
+  {
+    "name": "stripe-personal-details-verification",
+    "label": "Stripe Personal Details Verification",
+    "description": "Identity-verification form for Stripe onboarding.",
+    "group": "People",
+    "subModule": "Diviners",
+    "purpose": "Collects personal identity information required for regulatory and financial compliance.",
+    "bullets": [
+      "Users enter legal first and last names.",
+      "Email address is collected for account communication.",
+      "Date of birth is required for identity verification.",
+      "Home-address details are collected for compliance validation.",
+      "Phone number is required for account security.",
+      "Last four digits of the Social Security Number are collected.",
+      "Country and state selectors help validate regional compliance.",
+      "Continue button saves the verification details.",
+      "The screen supports financial identity verification and fraud prevention."
+    ]
+  },
+  {
+    "name": "stripe-business-details-configuration_v1",
+    "label": "Stripe Business Details Configuration",
+    "description": "Business-information setup screen for Stripe financial onboarding.",
+    "group": "People",
+    "subModule": "Diviners",
+    "purpose": "Allows diviners to define business category, industry, and website information for payment processing approval.",
+    "bullets": [
+      "Industry selector categorizes the diviner business type.",
+      "Website field captures the official business or service URL.",
+      "Stripe validates website information for compliance purposes.",
+      "Product or service descriptions may be required if no website exists.",
+      "Continue button advances the Stripe onboarding process.",
+      "The screen helps Stripe assess risk and business legitimacy."
+    ]
+  },
+  {
+    "name": "stripe-bank-selection",
+    "label": "Stripe Bank Account Selection",
+    "description": "Bank-account connection and payout setup screen for Stripe onboarding.",
+    "group": "People",
+    "subModule": "Diviners",
+    "purpose": "Allows diviners to select and connect bank accounts for receiving Stripe payouts.",
+    "bullets": [
+      "Search field helps locate banking institutions.",
+      "Users can choose OAuth and non-OAuth bank integrations.",
+      "Bank availability and connection status are displayed visually.",
+      "Manual bank-account entry is supported.",
+      "Continue button confirms selected payout methods.",
+      "The screen enables secure payout account configuration."
+    ]
+  },
+  {
+    "name": "stripe-bank-consent-modal",
+    "label": "Stripe Bank Connection Consent",
+    "description": "Consent modal displayed before connecting financial institutions through Stripe.",
+    "group": "People",
+    "subModule": "Diviners",
+    "purpose": "Obtains user permission before Stripe accesses bank-account information.",
+    "bullets": [
+      "Explains encrypted bank-account connection process.",
+      "Displays security and privacy messaging.",
+      "Users can review access permissions before continuing.",
+      "Agree and Continue button authorizes account linking.",
+      "Manual verification option is also available.",
+      "The modal ensures financial-consent compliance."
+    ]
+  },
+  {
+    "name": "stripe-oauth-bank-login",
+    "label": "Stripe OAuth Bank Login",
+    "description": "OAuth-based financial institution login screen for Stripe bank linking.",
+    "group": "People",
+    "subModule": "Diviners",
+    "purpose": "Redirects users to authenticate with their banking institution securely.",
+    "bullets": [
+      "Displays the selected banking institution.",
+      "Users authenticate directly with the bank provider.",
+      "OAuth flow securely shares limited account access.",
+      "Continue button launches bank authentication.",
+      "Users can select different banks if needed.",
+      "The workflow ensures secure third-party bank authorization."
+    ]
+  },
+  {
+    "name": "stripe-account-selection",
+    "label": "Stripe Financial Account Selection",
+    "description": "Bank-account selection interface after successful financial authentication.",
+    "group": "People",
+    "subModule": "Diviners",
+    "purpose": "Allows diviners to choose which financial accounts should be connected to Stripe payouts.",
+    "bullets": [
+      "Lists available connected bank accounts.",
+      "Users can select multiple accounts if supported.",
+      "Account-ending digits help identify each bank account.",
+      "Stripe displays connection permissions before confirmation.",
+      "Connect Accounts button finalizes the linkage process.",
+      "The screen manages payout-account authorization."
+    ]
+  },
+  {
+    "name": "stripe-link-account-saving_v22",
+    "label": "Stripe Link Account Saving",
+    "description": "Stripe Link information-saving screen for faster future account onboarding.",
+    "group": "People",
+    "subModule": "Diviners",
+    "purpose": "Allows users to save payment and account details securely using Stripe Link.",
+    "bullets": [
+      "Displays encrypted data-saving information.",
+      "Users can save email and phone-number details.",
+      "Stripe Link accelerates future financial onboarding flows.",
+      "Save with Link button stores reusable account information.",
+      "Users may continue without saving details.",
+      "The screen enhances onboarding convenience and security."
+    ]
+  },
+  {
+    "name": "stripe-bank-link-success",
+    "label": "Stripe Bank Connection Success",
+    "description": "Confirmation screen shown after successful Stripe bank-account linking.",
+    "group": "People",
+    "subModule": "Diviners",
+    "purpose": "Confirms successful financial-account connection and onboarding completion.",
+    "bullets": [
+      "Displays successful payout-account connection confirmation.",
+      "Users receive onboarding completion feedback.",
+      "Done button exits the onboarding process.",
+      "Stripe confirms the selected accounts are now connected.",
+      "The screen finalizes the financial-linking workflow."
+    ]
+  },
+  {
+    "name": "stripe-linked-bank-management",
+    "label": "Stripe Linked Bank Management",
+    "description": "Bank-account management screen showing connected payout accounts.",
+    "group": "People",
+    "subModule": "Diviners",
+    "purpose": "Allows diviners to manage linked Stripe payout accounts and select preferred payout destinations.",
+    "bullets": [
+      "Displays all linked bank accounts.",
+      "Linked badges indicate active Stripe connections.",
+      "Users can select a preferred payout account.",
+      "Bank-account identifiers display masked account numbers.",
+      "Additional bank accounts can be linked manually.",
+      "Continue button proceeds with payout configuration.",
+      "The screen acts as the payout-account management center."
+    ]
+  },
+  {
+    "name": "stripe-review-and-submit",
+    "label": "Stripe Review & Submit",
+    "description": "Final Stripe onboarding review screen before activation.",
+    "group": "People",
+    "subModule": "Diviners",
+    "purpose": "Allows diviners to review all submitted onboarding information before final Stripe account activation.",
+    "bullets": [
+      "Displays business-type information summary.",
+      "Professional details are shown for verification.",
+      "Public statement descriptor information is displayed.",
+      "Personal identity details are summarized.",
+      "Selected payout-account details are displayed.",
+      "Edit buttons allow correction of onboarding sections.",
+      "Agreement and disclosure documents are referenced.",
+      "Agree and Submit button finalizes Stripe onboarding.",
+      "The screen acts as the final compliance-review checkpoint."
+    ]
+  },
+  {
+    "name": "stripe-payment-dashboard-enabled",
+    "label": "Stripe Payments Dashboard Enabled",
+    "description": "Post-onboarding Stripe payment-management dashboard for diviners.",
+    "group": "People",
+    "subModule": "Diviners",
+    "purpose": "Displays live payment-processing and payout status after successful Stripe activation.",
+    "bullets": [
+      "Charges status indicates payment collection is enabled.",
+      "Payout status confirms bank transfers are active.",
+      "Available balance displays current Stripe account funds.",
+      "Pending balance shows upcoming payout amounts.",
+      "Payout schedule explains transfer timing.",
+      "Recent payouts section tracks payment disbursement history.",
+      "Stripe account identifier is displayed for reference.",
+      "The dashboard acts as the operational payment center for diviners."
+    ]
+  },
     
   // ----------Affiliates-------------//
 
