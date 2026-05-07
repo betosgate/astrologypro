@@ -95,17 +95,43 @@ export async function POST(req: NextRequest) {
     const admin = createAdminClient();
 
     // ── Look up trainee ──
-    const { data: trainee, error: lookupError } = await admin
+    let { data: trainee, error: lookupError } = await admin
       .from("trainees")
       .select("id, service_package_code")
       .eq("user_id", user.id)
-      .single();
+      .maybeSingle();
 
-    if (lookupError || !trainee) {
+    if (lookupError) {
       return NextResponse.json(
-        { error: "Trainee record not found." },
-        { status: 404 }
+        { error: "Error looking up trainee record." },
+        { status: 500 }
       );
+    }
+
+    if (!trainee) {
+      // Webhook might not have fired yet, create the trainee record now
+      const username = (user.user_metadata?.username as string) || user.email!.split("@")[0] || "trainee";
+      const { data: newTrainee, error: insertError } = await admin
+        .from("trainees")
+        .insert({
+          user_id: user.id,
+          name: display_name.trim(),
+          email: user.email!,
+          username,
+          training_status: "active",
+          onboarding_completed: false,
+        })
+        .select("id, service_package_code")
+        .single();
+
+      if (insertError) {
+        console.error("[trainee/profile/complete] Failed to create trainee:", insertError);
+        return NextResponse.json(
+          { error: "Failed to initialize trainee record." },
+          { status: 500 }
+        );
+      }
+      trainee = newTrainee;
     }
 
     const allowedSpecialtiesForPackage = new Set(
