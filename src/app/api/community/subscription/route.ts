@@ -5,6 +5,18 @@ import { resolveEntitlementFromRow } from "@/lib/community/pm-entitlement";
 
 export const dynamic = "force-dynamic";
 
+function derivePeriodStart(periodEndIso: string, interval = "month"): string {
+  const periodStart = new Date(periodEndIso);
+  if (interval === "year") {
+    periodStart.setFullYear(periodStart.getFullYear() - 1);
+  } else if (interval === "week") {
+    periodStart.setDate(periodStart.getDate() - 7);
+  } else {
+    periodStart.setMonth(periodStart.getMonth() - 1);
+  }
+  return periodStart.toISOString();
+}
+
 /**
  * GET /api/community/subscription
  *
@@ -71,7 +83,7 @@ export async function GET() {
     const { data: member, error } = await admin
       .from("community_members")
       .select(
-        "id, membership_type, membership_status, plan_type, pm_tier_id, stripe_subscription_id, joined_at, expires_at"
+        "id, membership_type, membership_status, plan_type, pm_tier_id, stripe_subscription_id, joined_at, current_period_end, expires_at"
       )
       .eq("user_id", user.id)
       .single();
@@ -113,22 +125,65 @@ export async function GET() {
       memberCount = (count ?? 0) + 1;
     }
 
-    // Derive renewal_date: prefer expires_at, else derive from Stripe if available
-    let renewalDate: string | null = member.expires_at ?? null;
+    // Derive renewal_date from the same source order as Community UI:
+    // live Stripe current_period_end, then stored current_period_end, then
+    // expires_at for cancelled/manual legacy access windows.
+    let renewalDate: string | null = null;
+    let lastPaymentDate: string | null = null;
 
-    if (!renewalDate && member.stripe_subscription_id && member.membership_status === "active") {
+    if (member.stripe_subscription_id && member.membership_status === "active") {
       try {
         const { stripe } = await import("@/lib/stripe/client");
         const sub = await stripe.subscriptions.retrieve(
-          member.stripe_subscription_id
-        ) as unknown as { current_period_end?: number };
-        if (sub.current_period_end) {
-          renewalDate = new Date(sub.current_period_end * 1000).toISOString();
+          member.stripe_subscription_id,
+          { expand: ["latest_invoice"] }
+        ) as unknown as {
+          current_period_end?: number;
+          latest_invoice?:
+            | {
+                created?: number | null;
+                status_transitions?: {
+                  paid_at?: number | null;
+                } | null;
+              }
+            | string
+            | null;
+          items?: {
+            data?: Array<{
+              current_period_start?: number;
+              current_period_end?: number;
+            }>;
+          };
+        };
+        const periodEnd =
+          sub.items?.data?.[0]?.current_period_end ?? sub.current_period_end;
+        if (periodEnd) {
+          renewalDate = new Date(periodEnd * 1000).toISOString();
+        }
+        const latestInvoice =
+          sub.latest_invoice && typeof sub.latest_invoice !== "string"
+            ? sub.latest_invoice
+            : null;
+        const paidAt =
+          latestInvoice?.status_transitions?.paid_at ??
+          latestInvoice?.created ??
+          sub.items?.data?.[0]?.current_period_start ??
+          null;
+        if (paidAt) {
+          lastPaymentDate = new Date(paidAt * 1000).toISOString();
         }
       } catch {
         // Non-fatal — proceed without renewal date
       }
     }
+
+    renewalDate =
+      renewalDate ??
+      ((member as { current_period_end?: string | null }).current_period_end ?? null) ??
+      member.expires_at ??
+      null;
+    lastPaymentDate =
+      lastPaymentDate ?? (renewalDate ? derivePeriodStart(renewalDate) : null);
 
     // Amount: PM uses the canonical tier's base_price_usd when resolved.
     // MS and legacy-fallback PM use the hardcoded LEGACY_PLAN_AMOUNTS map.
@@ -161,6 +216,7 @@ export async function GET() {
         amount,
         currency: "usd",
         renewal_date: renewalDate,
+        last_payment_date: lastPaymentDate,
         created_at: member.joined_at,
         member_count: Math.min(memberCount, maxMembers),
         max_members: maxMembers,

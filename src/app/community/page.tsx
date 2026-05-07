@@ -128,6 +128,7 @@ type PmApiSubscription = {
   id: string;
   status: string;
   current_period_end: string | null;
+  last_payment_date?: string | null;
   cancel_at_period_end: boolean;
   amount: number;
   currency: string;
@@ -178,6 +179,14 @@ async function fetchPmSubscription(): Promise<PmApiSubscription | null> {
     const body = (await res.json()) as {
       subscription?: PmApiSubscription | null;
     };
+    console.log("[community] /api/pm/subscription", {
+      route: "/community",
+      status: res.status,
+      subscription_status: body.subscription?.status ?? null,
+      current_period_end: body.subscription?.current_period_end ?? null,
+      last_payment_date: body.subscription?.last_payment_date ?? null,
+      cancel_at_period_end: body.subscription?.cancel_at_period_end ?? null,
+    });
     return body.subscription ?? null;
   } catch (err) {
     console.error("[community] PM subscription API error:", err);
@@ -581,7 +590,10 @@ export default async function CommunityDashboardPage() {
         ? billingCycleFromInterval(pmApiSubscription?.interval)
         : null) ?? "monthly",
     renewal_date: renewalDate,
-    created_at: member.joined_at,
+    last_payment_date: isPerennial
+      ? pmApiSubscription?.last_payment_date ?? null
+      : null,
+    created_at: (member.joined_at && typeof member.joined_at === "string" && member.joined_at.trim() !== "") ? member.joined_at : user.created_at,
     member_count: memberCount,
     max_members: maxMembers,
   };
@@ -1088,10 +1100,21 @@ export default async function CommunityDashboardPage() {
                 })}
               </span>
             )}
+            {isPerennial && pmApiSubscription?.last_payment_date && (
+              <span className="text-xs text-muted-foreground">
+                Last payment:{" "}
+                {new Date(pmApiSubscription.last_payment_date).toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                })}
+              </span>
+            )}
             <span className="text-xs text-muted-foreground">
               Member since{" "}
               {new Date(member.joined_at).toLocaleDateString("en-US", {
                 month: "short",
+                day: "numeric",
                 year: "numeric",
               })}
             </span>
