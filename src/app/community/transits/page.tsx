@@ -12,6 +12,7 @@ import {
   computeBirthDataReadiness,
   type BirthDataField,
 } from "@/lib/community/birth-data-readiness";
+import { ensureCanonicalSelfFamilyMember } from "@/lib/community/self-family-member";
 import {
   Card,
   CardContent,
@@ -136,12 +137,16 @@ export default async function TransitsPage() {
 
   const { data: member } = await supabase
     .from("community_members")
-    .select("id, membership_status")
+    .select(
+      "id, user_id, full_name, membership_status, date_of_birth, birth_time, birth_city, birth_country"
+    )
     .eq("user_id", user.id)
     .single();
 
   if (!member) redirect("/get-started");
   if (member.membership_status !== "active") redirect("/join/community/resubscribe");
+
+  await ensureCanonicalSelfFamilyMember(member, user.id);
 
   const now = new Date();
   const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;

@@ -307,6 +307,9 @@ export function AstroChartsSection() {
               const ctaLabel = isGenerated
                 ? "View Full Chart"
                 : "Generate Natal Chart";
+              const ctaHref = isGenerated
+                ? `/community/family/${active.id}`
+                : "/community/family";
 
               return (
                 <div className="space-y-2">
@@ -361,7 +364,7 @@ export function AstroChartsSection() {
                       </Button>
                     )}
                     <Button asChild variant="outline" size="sm" className="flex-1">
-                      <Link href={`/community/family/${active.id}`}>
+                      <Link href={ctaHref}>
                         {ctaLabel} →
                       </Link>
                     </Button>
@@ -389,7 +392,7 @@ export function AstroChartsSection() {
                 No natal chart found yet.
               </p>
               <Button asChild variant="outline" size="sm" className="w-full">
-                <Link href="/community/charts">Generate Natal Chart →</Link>
+                <Link href="/community/family">Generate Natal Chart →</Link>
               </Button>
             </div>
           )}
@@ -465,15 +468,23 @@ export function AstroChartsSection() {
                 return "Generate Transit Report";
               })();
               const ctaDisabled = isPending;
+              const ctaHref = active.full_report_id
+                ? detailedHref
+                : "/community/transits";
+              const statusLabel = active.full_report_id
+                ? "Report Ready"
+                : "Ready to Generate";
               return (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2 min-w-0">
                       <Badge
                         variant="default"
-                        className="text-xs bg-blue-500 shrink-0"
+                        className={`text-xs shrink-0 ${
+                          active.full_report_id ? "bg-blue-500" : "bg-amber-500"
+                        }`}
                       >
-                        {active.full_report_id ? "Ready" : "Summary"}
+                        {statusLabel}
                       </Badge>
                       {active.member_name ? (
                         <span className="text-xs text-muted-foreground truncate">
@@ -518,7 +529,7 @@ export function AstroChartsSection() {
                       {ctaDisabled ? (
                         <span>{ctaLabel}</span>
                       ) : (
-                        <Link href={detailedHref}>{ctaLabel} →</Link>
+                        <Link href={ctaHref}>{ctaLabel} →</Link>
                       )}
                     </Button>
                     {isMulti && (

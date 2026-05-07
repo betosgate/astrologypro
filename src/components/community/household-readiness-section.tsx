@@ -177,19 +177,26 @@ function CircleMetric({
 interface ChecklistRowProps {
   ok: boolean;
   text: string;
+  href?: string;
 }
 
-function ChecklistRow({ ok, text }: ChecklistRowProps) {
+function ChecklistRow({ ok, text, href }: ChecklistRowProps) {
   const Icon = ok ? CheckCircle2 : AlertTriangle;
   const color = ok
     ? "text-emerald-600 dark:text-emerald-400"
     : "text-amber-600 dark:text-amber-400";
+  const textClass = ok ? "text-foreground" : "text-muted-foreground";
+
   return (
     <li className="flex items-start gap-2 text-xs">
       <Icon className={`size-3.5 shrink-0 mt-0.5 ${color}`} aria-hidden="true" />
-      <span className={ok ? "text-foreground" : "text-muted-foreground"}>
-        {text}
-      </span>
+      {!ok && href ? (
+        <Link className={`${textClass} underline-offset-4 hover:underline`} href={href}>
+          {text}
+        </Link>
+      ) : (
+        <span className={textClass}>{text}</span>
+      )}
     </li>
   );
 }
@@ -244,7 +251,7 @@ export function HouseholdReadinessSection({
     missingDetailsCount > 0
       ? `${missingDetailsCount} member${
           missingDetailsCount === 1 ? "" : "s"
-        } still need birth details`
+        } still need${missingDetailsCount === 1 ? "s" : ""} birth details`
       : null;
   const memberProgress =
     totalMemberCount > 0 ? (completeMemberCount / totalMemberCount) * 100 : 0;
@@ -253,7 +260,6 @@ export function HouseholdReadinessSection({
       ? (chartsReadyCount / chartsEligibleCount) * 100
       : 0;
   const missingDetailsProgress = missingDetailsCount === 0 ? 100 : 35;
-  const checklistAction = null;
 
   return (
     <Card>
@@ -341,15 +347,19 @@ export function HouseholdReadinessSection({
             <p className="text-xs font-semibold text-foreground">
               Readiness Checklist
             </p>
-            {checklistAction}
           </div>
           <ul className="flex flex-wrap items-center gap-x-6 gap-y-2">
-            <ChecklistRow ok={selfBirthDataComplete} text={selfStatusText} />
+            <ChecklistRow
+              ok={selfBirthDataComplete}
+              text={selfStatusText}
+              href="/community/profile"
+            />
             <ChecklistRow
               ok={
                 totalMemberCount > 0 && completeMemberCount === totalMemberCount
               }
               text={membersCompleteText}
+              href={completeDetailsHref}
             />
             <ChecklistRow
               ok={
@@ -357,9 +367,14 @@ export function HouseholdReadinessSection({
                 chartsReadyCount === chartsEligibleCount
               }
               text={chartsText}
+              href="/community/family"
             />
             {missingDetailsText ? (
-              <ChecklistRow ok={false} text={missingDetailsText} />
+              <ChecklistRow
+                ok={false}
+                text={missingDetailsText}
+                href={completeDetailsHref}
+              />
             ) : null}
           </ul>
         </div>
