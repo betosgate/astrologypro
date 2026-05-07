@@ -41,7 +41,7 @@ import {
 import Link from "next/link";
 import { AstroChartsSection } from "@/components/community/astro-charts-section";
 import { ChartQuickActions } from "@/components/community/chart-quick-actions";
-import { ProfileProgressSection } from "@/components/community/profile-progress-section";
+import { HouseholdReadinessSection } from "@/components/community/household-readiness-section";
 import { MembershipCard, type MembershipSubscription } from "@/components/community/membership-card";
 import { ManageSubscriptionButton } from "@/components/mystery-school/manage-subscription-button";
 import { ProfileCompletionCard, type ProfileCompletionData } from "@/components/community/profile-completion-card";
@@ -51,6 +51,7 @@ import { getCommunityDashboardFeed } from "@/lib/dashboard-content";
 import { calcFamilyProfileCompletion } from "@/lib/community/family-profile-completion";
 import { formatBirthPlace } from "@/lib/community/birth-location";
 import { deriveNatalReportState } from "@/lib/community/chart-report-state";
+import { isBirthDataComplete } from "@/lib/community/birth-data-readiness";
 import { SectionContainer } from "@/components/shared/section-container";
 
 export const metadata = { title: "Community - AstrologyPro" };
@@ -127,6 +128,7 @@ type PmApiSubscription = {
   id: string;
   status: string;
   current_period_end: string | null;
+  last_payment_date?: string | null;
   cancel_at_period_end: boolean;
   amount: number;
   currency: string;
@@ -177,6 +179,14 @@ async function fetchPmSubscription(): Promise<PmApiSubscription | null> {
     const body = (await res.json()) as {
       subscription?: PmApiSubscription | null;
     };
+    console.log("[community] /api/pm/subscription", {
+      route: "/community",
+      status: res.status,
+      subscription_status: body.subscription?.status ?? null,
+      current_period_end: body.subscription?.current_period_end ?? null,
+      last_payment_date: body.subscription?.last_payment_date ?? null,
+      cancel_at_period_end: body.subscription?.cancel_at_period_end ?? null,
+    });
     return body.subscription ?? null;
   } catch (err) {
     console.error("[community] PM subscription API error:", err);
@@ -318,7 +328,12 @@ export default async function CommunityDashboardPage() {
     supabase
       .from("community_family_members")
       .select(
-        "id, user_id, full_name, relationship, date_of_birth, birth_time, birth_city, birth_country, natal_chart, natal_status, natal_report_id, natal_report_status"
+        // birth_lat / birth_lng are needed for the household-readiness card
+        // to use the chart-flow `isBirthDataComplete` gate (the same rule
+        // /community/transits uses). Without coordinates a row may pass
+        // text-field checks but still be ineligible for chart generation.
+        // Spec: tasks/06.05.2026/community-dashboard-household-readiness-card/03-wire-household-readiness-metrics-and-actions.md
+        "id, user_id, full_name, relationship, date_of_birth, birth_time, birth_city, birth_country, birth_lat, birth_lng, natal_chart, natal_status, natal_report_id, natal_report_status"
       )
       .eq("member_id", member.id)
       .limit(10),
@@ -397,6 +412,12 @@ export default async function CommunityDashboardPage() {
   ]);
 
   const client = clientResult.data;
+  if (familyMembersResult.error) {
+    console.error(
+      "[community] Failed to load family members for dashboard",
+      familyMembersResult.error
+    );
+  }
   const familyMembers = familyMembersResult.data ?? [];
   const otherMembers = otherMembersResult.data ?? [];
   const recentWisdom = recentWisdomResult.data ?? [];
@@ -575,7 +596,10 @@ export default async function CommunityDashboardPage() {
         ? billingCycleFromInterval(pmApiSubscription?.interval)
         : null) ?? "monthly",
     renewal_date: renewalDate,
-    created_at: member.joined_at,
+    last_payment_date: isPerennial
+      ? pmApiSubscription?.last_payment_date ?? null
+      : null,
+    created_at: (member.joined_at && typeof member.joined_at === "string" && member.joined_at.trim() !== "") ? member.joined_at : user.created_at,
     member_count: memberCount,
     max_members: maxMembers,
   };
@@ -635,6 +659,80 @@ export default async function CommunityDashboardPage() {
   if (!hasDob) profileMissingFields.push("Date of birth");
   if (!hasBirthTime) profileMissingFields.push("Birth time");
   if (!hasBirthCity) profileMissingFields.push("Birth city");
+
+  // ── Household Readiness Card metrics ─────────────────────────────────────
+  // Spec: tasks/06.05.2026/community-dashboard-household-readiness-card/
+  //         03-wire-household-readiness-metrics-and-actions.md
+  //
+  // Replaces the legacy two-ring "Birth Data Readiness" card whose
+  // "Household Members 100%" was based on raw member count, not actual
+  // per-member birth-data completeness. We compute three distinct
+  // dimensions per household so the dashboard never claims everything
+  // is set up when half the members are missing chart-eligible data:
+  //
+  //   selfBirthDataComplete  — primary member's chart-eligibility
+  //   completeMemberCount    — household members ready for chart gen
+  //   natalChartsReadyCount  — household members with a generated chart
+  //
+  // We deliberately use `isBirthDataComplete` (the chart-generation gate
+  // shared with /community/transits) for family rows because the readiness
+  // card is selling chart-readiness, not generic profile completeness.
+  // The lower "Your Circle" section keeps using `calcFamilyProfileCompletion`
+  // for its richer per-member profile view.
+  const selfBirthDataComplete = hasDob && hasBirthTime && hasBirthCity;
+
+  // Family rows readiness (chart-eligibility view).
+  const familyMembersBirthComplete = familyMembers.filter((fm) =>
+    isBirthDataComplete({
+      date_of_birth: fm.date_of_birth ?? null,
+      birth_time: fm.birth_time ?? null,
+      birth_city: fm.birth_city ?? null,
+      birth_country: (fm as { birth_country?: string | null }).birth_country ?? null,
+      birth_lat: (fm as { birth_lat?: number | string | null }).birth_lat ?? null,
+      birth_lng: (fm as { birth_lng?: number | string | null }).birth_lng ?? null,
+    })
+  );
+
+  // Total visible household = family rows + 1 (primary member). We do NOT
+  // cap at maxMembers here — the readiness card reports actual visible
+  // members, while membership/billing surfaces handle plan-limit display.
+  const householdTotalCount = familyMembers.length + 1;
+  const householdCompleteCount =
+    (selfBirthDataComplete ? 1 : 0) + familyMembersBirthComplete.length;
+  const householdMissingDetailsCount =
+    householdTotalCount - householdCompleteCount;
+
+  // Chart-readiness per row. `deriveNatalReportState` is the same helper
+  // used by Your Circle and the natal CTA, so counts here always agree
+  // with the per-row badges below.
+  const familyChartsReadyCount = familyMembers.filter(
+    (fm) => deriveNatalReportState(fm) === "generated"
+  ).length;
+
+  // Self chart readiness: prefer the family row representing self if one
+  // exists; otherwise fall back to the existing `pcFamilyMembers` lookup
+  // which is already wired below.
+  const selfFamilyRow =
+    familyMembers.find((fm) => fm.user_id === user.id) ??
+    familyMembers.find(
+      (fm) => (fm.relationship ?? "").toLowerCase() === "self"
+    ) ??
+    null;
+  const selfChartReady =
+    selfFamilyRow != null
+      ? deriveNatalReportState(selfFamilyRow) === "generated"
+      : false;
+
+  // To avoid double-counting when self IS a family row.
+  const selfIsInFamilyRows = selfFamilyRow != null;
+  const householdNatalChartsReadyCount = selfIsInFamilyRows
+    ? familyChartsReadyCount
+    : familyChartsReadyCount + (selfChartReady ? 1 : 0);
+
+  // Eligibility = how many household members CAN have a chart generated
+  // right now. We derive this from the same completeness rule so the
+  // "Charts Ready X / Y" denominator never exceeds the actually-eligible set.
+  const householdNatalChartsEligibleCount = householdCompleteCount;
 
   // ── Full profile completion data (weighted, for ProfileCompletionCard) ────
   const hasPhoto = Boolean(
@@ -1008,10 +1106,21 @@ export default async function CommunityDashboardPage() {
                 })}
               </span>
             )}
+            {isPerennial && pmApiSubscription?.last_payment_date && (
+              <span className="text-xs text-muted-foreground">
+                Last payment:{" "}
+                {new Date(pmApiSubscription.last_payment_date).toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                })}
+              </span>
+            )}
             <span className="text-xs text-muted-foreground">
               Member since{" "}
               {new Date(member.joined_at).toLocaleDateString("en-US", {
                 month: "short",
+                day: "numeric",
                 year: "numeric",
               })}
             </span>
@@ -1415,11 +1524,21 @@ export default async function CommunityDashboardPage() {
 
         {/* Profile Progress + Astro Charts */}
         <div className="grid gap-4 sm:grid-cols-2">
-          {/* Profile Completion Progress Ring */}
-          <ProfileProgressSection
-            profilePct={profilePct}
-            membersCount={memberCount}
-            missingFields={profileMissingFields}
+          {/* Household Readiness — replaces the legacy two-ring
+              "Birth Data Readiness" card. The legacy card claimed
+              `Household Members 100%` based on raw count; this one
+              reports actual per-member chart-eligibility, chart-ready
+              counts, and outstanding-details counts.
+              Spec: tasks/06.05.2026/community-dashboard-household-readiness-card/ */}
+          <HouseholdReadinessSection
+            selfBirthDataPercent={profilePct}
+            selfBirthDataComplete={selfBirthDataComplete}
+            selfMissingFields={profileMissingFields}
+            completeMemberCount={householdCompleteCount}
+            totalMemberCount={householdTotalCount}
+            missingDetailsCount={householdMissingDetailsCount}
+            chartsReadyCount={householdNatalChartsReadyCount}
+            chartsEligibleCount={householdNatalChartsEligibleCount}
           />
 
           {/* Astro Charts polling/display */}
@@ -2123,7 +2242,7 @@ export default async function CommunityDashboardPage() {
                     size="default"
                     className="bg-gradient-to-r from-purple-500 to-violet-500 hover:from-purple-600 hover:to-violet-600 text-white font-semibold shadow-lg shadow-purple-900/40"
                   >
-                    <Link href="/mystery-school">
+                    <Link href="/mystery-school/training">
                       Open Mystery School →
                     </Link>
                   </Button>

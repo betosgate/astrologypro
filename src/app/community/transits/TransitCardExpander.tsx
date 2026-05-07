@@ -22,6 +22,23 @@ export type TransitCardData = {
   memberName: string;
   harmoniousCount: number;
   challengingCount: number;
+  /**
+   * True only when a real, validated monthly transit summary exists for
+   * this row. When false, the supportive/challenging counts are NOT
+   * meaningful — they default to zero because the source payload was
+   * missing/invalid, not because the sky is empty. Consumers must use
+   * this flag to gate aspect-count rendering so we don't display the
+   * misleading "0 supportive · 0 challenging" subtitle as a fallback.
+   *
+   * Spec: tasks/06.05.2026/community-transits-profile-and-display-fixes/02-hide-misleading-zero-aspect-counts.md
+   */
+  hasValidTransitSummary: boolean;
+  /**
+   * Neutral one-line label shown in place of the aspect-count subtitle
+   * when no valid summary exists (e.g. "Summary not available yet").
+   * `null` only when the aspect-count subtitle itself is being shown.
+   */
+  transitSummaryLabel: string | null;
   fullReportCta: {
     label: string;
     kind: "generate" | "view" | "retry";
@@ -70,7 +87,9 @@ export function TransitCardExpander({
                 <div className="min-w-0">
                   <p className="font-medium text-sm">{card.memberName}</p>
                   <p className="text-xs text-muted-foreground">
-                    {card.harmoniousCount} supportive · {card.challengingCount} challenging aspects
+                    {card.hasValidTransitSummary
+                      ? `${card.harmoniousCount} supportive · ${card.challengingCount} challenging aspects`
+                      : card.transitSummaryLabel ?? "Summary not available yet"}
                   </p>
                 </div>
               </button>
@@ -131,7 +150,9 @@ export function TransitCardExpander({
                       Snapshot
                     </p>
                     <p className="mt-1 font-medium">
-                      {card.harmoniousCount} supportive · {card.challengingCount} challenging
+                      {card.hasValidTransitSummary
+                        ? `${card.harmoniousCount} supportive · ${card.challengingCount} challenging`
+                        : card.transitSummaryLabel ?? "Summary not available yet"}
                     </p>
                   </div>
                 </div>

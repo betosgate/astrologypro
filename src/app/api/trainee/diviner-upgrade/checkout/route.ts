@@ -174,7 +174,7 @@ export async function POST(request: NextRequest) {
         traineeId: trainee.id,
       },
       success_url: `${origin}/trainee/diviner-upgrade/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${origin}/trainee?upgrade=cancelled`,
+      cancel_url: `${origin}/join/diviner/error?source=trainee-upgrade&reason=cancelled`,
     });
 
     return NextResponse.json({ checkout_url: session.url });

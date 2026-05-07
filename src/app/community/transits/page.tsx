@@ -226,6 +226,13 @@ export default async function TransitsPage() {
       (s, p) => s + p.aspects.filter((a) => !a.isHarmonious).length,
       0
     ) ?? 0;
+    // Aspect-count display gate. When no valid monthly summary payload
+    // exists, the zero counts above are NOT real — they're the
+    // `?? 0` fallback. The card subtitle and snapshot must hide those
+    // numbers and show a neutral status string instead.
+    //
+    // Spec: tasks/06.05.2026/community-transits-profile-and-display-fixes/02-hide-misleading-zero-aspect-counts.md
+    const hasValidTransitSummary = validTransitData !== null;
 
     const reportState = deriveMonthlyReportState(
       {
@@ -276,6 +283,15 @@ export default async function TransitsPage() {
       if (!validTransitData) return "Summary not generated yet";
       return "Full report not generated yet";
     })();
+    // Neutral subtitle text shown in place of the aspect counts when
+    // `hasValidTransitSummary` is false. We mirror the report-status
+    // wording so the card explains *why* counts are missing rather than
+    // implying a calculation actually returned zero aspects.
+    const transitSummaryLabel: string | null = hasValidTransitSummary
+      ? null
+      : isPending
+        ? "Summary generating"
+        : "Summary not available yet";
 
     return {
       id: row?.id ?? `${familyMember.id}-${currentMonth}`,
@@ -283,6 +299,8 @@ export default async function TransitsPage() {
       memberName: familyMember.full_name,
       harmoniousCount,
       challengingCount,
+      hasValidTransitSummary,
+      transitSummaryLabel,
       fullReportCta,
       detailedHref,
       chartHref,
