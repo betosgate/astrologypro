@@ -2123,7 +2123,7 @@ export default async function CommunityDashboardPage() {
                     size="default"
                     className="bg-gradient-to-r from-purple-500 to-violet-500 hover:from-purple-600 hover:to-violet-600 text-white font-semibold shadow-lg shadow-purple-900/40"
                   >
-                    <Link href="/mystery-school">
+                    <Link href="/mystery-school/training">
                       Open Mystery School →
                     </Link>
                   </Button>
