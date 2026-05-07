@@ -9718,6 +9718,95 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
       },
     ],
     screens: [
+
+      
+  {
+    "name": "perennial-mandalism-membership-dashboard",
+    "label": "Perennial Mandalism Membership Dashboard",
+    "description": "Main membership overview dashboard for Perennial Mandalism users.",
+    "group": "Community",
+    "subModule": "Perennial Mandalism",
+    "purpose": "This screen gives members a complete overview of their active Perennial Mandalism subscription, family members, renewal details, membership usage, and quick access to important spiritual and astrology features.",
+    "bullets": [
+      "Displays the active Perennial Mandalism membership plan.",
+      "Shows current membership status such as Active.",
+      "Displays remaining days until membership renewal.",
+      "Shows next billing or renewal date.",
+      "Member since section displays the original join date.",
+      "Journey progress bar tracks the user’s onboarding and astrology setup completion percentage.",
+      "Family member chips display all members connected to the subscription.",
+      "Relationship labels such as Self, Spouse, Child, and Friend identify family connections.",
+      "My Profile button opens the member profile management section.",
+      "Get a Reading button allows users to book astrology or spiritual readings.",
+      "Sacred Library button opens spiritual texts and learning resources.",
+      "Agreements button opens signed contracts and membership agreements.",
+      "Membership section shows current billing amount and subscription plan.",
+      "Member slot usage bar displays how many family-member slots are currently used.",
+      "Upgrade Plan button allows users to increase membership limits or features.",
+      "Manage Subscription button opens billing and subscription management.",
+      "This screen acts as the central dashboard for membership, billing, family management, and spiritual journey progress."
+    ]
+  },
+  {
+    "name": "add-perennial-mandalism-member-form",
+    "label": "Add Perennial Mandalism Member Form",
+    "description": "Detailed onboarding form used to add a new family or relationship member into the Perennial Mandalism system.",
+    "group": "Community",
+    "subModule": "Perennial Mandalism",
+    "purpose": "This screen allows users to enroll and manage additional family members inside the Perennial Mandalism astrology ecosystem so relationship charts, compatibility analysis, transits, and spiritual readings can be generated for the entire family structure.",
+    "bullets": [
+      "Contact Information section captures member identity and communication details.",
+      "Relation Type dropdown defines the connection between the user and the added member.",
+      "First Name and Last Name fields identify the new member profile.",
+      "Email and Phone fields are used for communication and account linking.",
+      "Demographics section stores gender and relationship status information.",
+      "Location section captures address, city, state, and ZIP information.",
+      "Intake Questionnaire section collects deep personal and emotional insights.",
+      "Personality field helps astrologers understand character and behavioral traits.",
+      "Strengths and improvement areas help generate personalized spiritual guidance.",
+      "Long-Term Goals section records life direction and future aspirations.",
+      "Major Life Events field captures important personal history.",
+      "Relationship with Family field explains family dynamics and emotional connections.",
+      "Biggest Current Challenges section identifies active struggles or stress areas.",
+      "Spiritual Practices field records meditation, rituals, or spiritual habits.",
+      "Guidance on a Specific Decision field helps users request focused astrology guidance.",
+      "Specific Questions section allows members to ask personalized astrology questions.",
+      "Additional Notes field stores extra contextual information for readings.",
+      "Membership Status section controls whether the member is active or inactive.",
+      "Submit button saves the member profile into the Perennial Mandalism system.",
+      "Reset button clears entered form data.",
+      "Cancel button exits the member onboarding workflow.",
+      "This form acts as the foundation for generating accurate astrology charts and relationship reports."
+    ]
+  },
+  {
+    "name": "perennial-mandalism-home-dashboard",
+    "label": "Perennial Mandalism Home Dashboard",
+    "description": "Main spiritual and astrology dashboard for Perennial Mandalism members.",
+    "group": "Community",
+    "subModule": "Perennial Mandalism",
+    "purpose": "This screen provides quick access to astrology tools, relationship charts, rituals, transits, readings, and family management while tracking the user’s overall spiritual journey progress.",
+    "bullets": [
+      "Add Member section allows users to enroll additional family or relationship members.",
+      "Add Member button opens the full family-member onboarding form.",
+      "Journey Setup progress bar tracks completion milestones inside the astrology platform.",
+      "Milestone status informs users about the next required astrology setup action.",
+      "Generate Relationship Chart shortcut opens compatibility chart generation workflows.",
+      "Quick Actions section provides fast access to commonly used spiritual tools.",
+      "View Chart action opens natal or personal astrology charts.",
+      "Transits action opens current planetary transit analysis.",
+      "Create Ritual action helps users create personalized spiritual rituals.",
+      "Sacred Texts action opens spiritual learning materials and wisdom resources.",
+      "Manage Family action opens family-member management and relationship setup.",
+      "Book a Reading action allows users to schedule astrology consultations.",
+      "Your Charts & Astrology section centralizes astrology tools and chart generation.",
+      "Quick Chart Generation allows one-click astrology reports using saved birth data.",
+      "Natal Chart shortcut opens the personal birth chart.",
+      "Monthly Transits shortcut opens forecast and planetary movement analysis.",
+      "Relationship Charts shortcut opens compatibility and synastry reports.",
+      "This dashboard acts as the main spiritual control center for astrology activities, rituals, family management, and relationship insights."
+    ]
+  },
       { 
         name: "hub", 
         label: "Community Hub", 
@@ -10500,6 +10589,121 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
     ]
   },
 
+  // --------------------monthly_transits screens--------------------//
+  
+  {
+    "name": "monthly-transits-overview",
+    "label": "Monthly Transits Overview",
+    "description": "Overview dashboard showing monthly transit access and astrology report generation for all connected family members.",
+    "group": "Charts",
+    "subModule": "Monthly Transits",
+    "purpose": "This screen allows users to view, generate, and manage monthly transit astrology reports for themselves and connected family members using saved birth-chart data.",
+    "bullets": [
+      "Displays the Monthly Transits dashboard for the selected month and year.",
+      "Shows how current planetary movements affect the family system.",
+      "Professional reading banner encourages users to book astrology consultations.",
+      "Member discount notice informs users about reduced pricing for community members.",
+      "Book a Reading button opens astrology reading and consultation booking.",
+      "Displays all family members who currently have transit access.",
+      "Each member card shows the person’s name and transit status.",
+      "Supportive and challenging aspect counters summarize planetary influences.",
+      "View Natal Chart button opens the member’s birth chart.",
+      "View Transit Report button opens the generated monthly astrology report.",
+      "Generate Natal Chart button creates a natal chart if one does not exist.",
+      "Generate Transit Report button creates a new monthly transit analysis.",
+      "Dropdown action menu allows additional report-related actions.",
+      "The screen acts as a centralized monthly astrology report manager for all connected members."
+    ]
+  },
+  {
+    "name": "monthly-transits-report-generator",
+    "label": "Monthly Transits Report Generator",
+    "description": "Transit report setup screen used to generate monthly transit and lunar return astrology reports.",
+    "group": "Charts",
+    "subModule": "Monthly Transits",
+    "purpose": "This screen allows users to configure and regenerate a personalized monthly astrology report using birth details, lunar-return data, and current planetary transit positions.",
+    "bullets": [
+      "Displays the selected member’s monthly transit report workspace.",
+      "Saved report section shows the report month and generation date.",
+      "Regenerate button refreshes the astrology report using updated transit calculations.",
+      "Monthly Transits + Lunar Return tab combines transit analysis with lunar-return interpretation.",
+      "Birth-data section displays saved natal information.",
+      "Date of Birth field stores the member’s birth date.",
+      "Time of Birth fields capture precise birth-time calculations.",
+      "Place of Birth field is used for geographic astrology calculations.",
+      "Location coordinates and timezone improve transit accuracy.",
+      "Select Month option allows generation for different forecast months.",
+      "Area of Inquiry field lets users request guidance on specific life topics.",
+      "Examples include career, relationships, emotional clarity, and personal growth.",
+      "Regenerate button recreates the astrology report using the updated inputs.",
+      "This screen acts as the main configuration panel for personalized monthly transit forecasting."
+    ]
+  },
+  {
+    "name": "monthly-transits-chart-view",
+    "label": "Monthly Transits Chart View",
+    "description": "Visual astrology chart section showing natal and transit chart overlays for monthly interpretation.",
+    "group": "Charts",
+    "subModule": "Monthly Transits",
+    "purpose": "This screen visually compares natal astrology placements with current planetary transit activity to help users understand emotional, spiritual, and life-cycle influences for the selected month.",
+    "bullets": [
+      "Displays the Monthly Transits + Lunar Return chart workspace.",
+      "Left chart shows the natal birth-chart wheel.",
+      "Right chart displays transit overlays and current planetary movement interactions.",
+      "Planetary aspect lines visually represent supportive and challenging energies.",
+      "Zodiac signs and house placements help astrologers interpret timing and life themes.",
+      "Transit overlays show how current planets interact with natal placements.",
+      "Users can visually identify conjunctions, squares, trines, sextiles, and oppositions.",
+      "The chart supports emotional, relationship, career, and spiritual forecasting.",
+      "Regenerate button allows updated chart recalculation.",
+      "The screen provides a professional astrology-chart visualization for monthly analysis."
+    ]
+  },
+  {
+    "name": "western-chart-horoscope-view",
+    "label": "Western Chart Horoscope View",
+    "description": "Detailed western astrology chart visualization used for horoscope and planetary aspect interpretation.",
+    "group": "Charts",
+    "subModule": "Monthly Transits",
+    "purpose": "This screen displays a western astrology chart used for advanced horoscope interpretation, planetary aspects, transit overlays, and natal-chart analysis.",
+    "bullets": [
+      "Displays a complete western astrology horoscope wheel.",
+      "Zodiac signs are positioned around the outer ring of the chart.",
+      "Inner chart lines display planetary aspect relationships.",
+      "Colored aspect lines represent harmonious and challenging interactions.",
+      "Planetary glyphs identify celestial-body placements.",
+      "House divisions organize life themes such as relationships, career, and spirituality.",
+      "Ascendant and Descendant markers identify chart orientation.",
+      "Transit overlays help astrologers compare current planetary movement against natal placements.",
+      "The chart supports deep horoscope interpretation and predictive astrology analysis.",
+      "This screen acts as the main western astrology visualization interface."
+    ]
+  },
+  {
+    "name": "future-lunar-metrics-and-transits",
+    "label": "Future Lunar Metrics & Transit Relations",
+    "description": "Future transit and lunar-cycle analytics table used for predictive astrology forecasting.",
+    "group": "Charts",
+    "subModule": "Monthly Transits",
+    "purpose": "This screen provides detailed monthly lunar metrics and future planetary transit relationships to help users understand important astrological timings and upcoming energetic influences.",
+    "bullets": [
+      "Future Lunar Metrics section summarizes important moon-cycle information.",
+      "Month column identifies the selected astrology forecast month.",
+      "Moon Day field tracks the lunar calendar day.",
+      "Moon Illumination percentage displays moon visibility strength.",
+      "Moon Phase identifies stages such as New Moon or Full Moon.",
+      "Moon Sign displays the zodiac sign occupied by the Moon.",
+      "Future Tropical Transits Monthly Relation table lists upcoming transit events.",
+      "Date column shows when each planetary interaction occurs.",
+      "Natal Planet column identifies the user’s birth-chart planet involved in the transit.",
+      "Transit Type column explains the planetary aspect relationship.",
+      "Examples include Sextile, Square, Trine, Conjunction, and Opposition.",
+      "Transit Planet column identifies the active moving planet affecting the natal chart.",
+      "This table helps users prepare for emotionally important or energetically intense periods.",
+      "Astrologers can use the data for forecasting, guidance, ritual timing, and decision planning.",
+      "The screen acts as a predictive astrology analytics and transit-tracking system."
+    ]
+  },
 
       {
         name: "pm-notifications",
@@ -10809,6 +11013,62 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Aspect interpretation list sorted by significance — most impactful aspects described first"
         ]
       },
+
+
+      
+  {
+    "name": "profile-management-dashboard",
+    "label": "Profile Management Dashboard",
+    "description": "Main user-profile management screen used to manage personal information, birth details, and membership data.",
+    "group": "Account",
+
+    "purpose": "This screen allows users to manage their astrology profile, personal identity details, birth information, spiritual questionnaire data, and membership setup used throughout the astrology platform.",
+    "bullets": [
+      "Displays the user profile management workspace.",
+      "Profile completion tracker shows how many required fields are completed.",
+      "Progress percentage visually indicates setup completion status.",
+      "Completion progress affects chart generation and journey tracking.",
+      "Profile Photo section allows users to upload or replace their profile image.",
+      "Supported image formats include JPEG, PNG, WebP, and GIF.",
+      "Personal Information section stores the user's name, email, phone number, gender, occupation, and relationship status.",
+      "Birth Data section is used for natal-chart and horoscope calculations.",
+      "Date of Birth field captures birth-date information.",
+      "Birth Time field improves astrological accuracy for chart generation.",
+      "Birth City and Birth Country fields are used for geographic astrology calculations.",
+      "Address section stores location and mailing information.",
+      "Spiritual Journey Questionnaire section captures spiritual and personal-development information.",
+      "Membership section displays the active astrology program and member status.",
+      "Member Since information shows the user enrollment date.",
+      "Save Changes button updates the profile information across the astrology platform.",
+      "The screen acts as the primary identity and astrology-profile configuration center."
+    ]
+  },
+  {
+    "name": "account-and-security-management",
+    "label": "Account & Security Management",
+    "description": "Account settings screen used to manage user profile access, portals, password security, and account navigation.",
+    "group": "Account",
+  
+    "purpose": "This screen allows users to manage account-level settings, portal access, password security, and connected astrology communities from one centralized location.",
+    "bullets": [
+      "Displays the main My Account settings workspace.",
+      "Profile section shows the user’s registered name and email address.",
+      "Account-created date displays when the account was originally registered.",
+      "Edit Profile button opens the profile-management form.",
+      "My Portals section displays all accessible astrology communities and portals.",
+      "Users can switch between different portals such as Community and Mystery School.",
+      "Open button launches the selected portal experience.",
+      "Portal access depends on membership permissions and subscriptions.",
+      "Change Password section allows secure credential updates.",
+      "Current Password field is required before changing account credentials.",
+      "New Password field accepts updated secure passwords.",
+      "Confirm New Password field prevents password-entry mistakes.",
+      "Password visibility icons allow users to show or hide typed passwords.",
+      "Update Password button securely saves the new password.",
+      "Logout option securely signs the user out from the platform.",
+      "The screen acts as the main account-security and portal-access management center."
+    ]
+  },
       {
         name: "pm-legal",
         label: "PM Legal & Terms",
