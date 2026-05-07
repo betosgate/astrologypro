@@ -124,7 +124,7 @@ export default function EditWebinarPage() {
         <h1 className="mt-2 text-2xl font-bold tracking-tight">Edit Webinar</h1>
       </div>
 
-      <Card className="max-w-2xl">
+      <Card>
         <CardHeader>
           <CardTitle>Webinar Details</CardTitle>
         </CardHeader>

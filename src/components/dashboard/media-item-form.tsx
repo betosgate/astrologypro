@@ -323,7 +323,7 @@ export function MediaItemForm({
   }
 
   return (
-    <div className="max-w-3xl space-y-6">
+    <div className=" space-y-6">
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="icon" asChild>
           <Link href="/dashboard/media">

@@ -45,7 +45,6 @@ import { HouseholdReadinessSection } from "@/components/community/household-read
 import { MembershipCard, type MembershipSubscription } from "@/components/community/membership-card";
 import { ManageSubscriptionButton } from "@/components/mystery-school/manage-subscription-button";
 import { ProfileCompletionCard, type ProfileCompletionData } from "@/components/community/profile-completion-card";
-import { ProgressRing } from "@/components/community/progress-ring";
 import { DashboardFeedPreview } from "@/components/community/dashboard-feed-preview";
 import { getCommunityDashboardFeed } from "@/lib/dashboard-content";
 import { calcFamilyProfileCompletion } from "@/lib/community/family-profile-completion";
@@ -81,12 +80,6 @@ export const dynamic = "force-dynamic";
 //   if (m.natal_chart && Object.keys(m.natal_chart).length > 0) pct += 10;
 //   return pct;
 // }
-
-function ringColor(pct: number): string {
-  if (pct >= 100) return "hsl(142, 71%, 45%)";
-  if (pct >= 60) return "hsl(var(--primary))";
-  return "hsl(25, 90%, 55%)";
-}
 
 function journeySetupCtaLabel(key?: string): string {
   switch (key) {
@@ -128,6 +121,7 @@ type PmApiSubscription = {
   id: string;
   status: string;
   current_period_end: string | null;
+  last_payment_date?: string | null;
   cancel_at_period_end: boolean;
   amount: number;
   currency: string;
@@ -178,6 +172,14 @@ async function fetchPmSubscription(): Promise<PmApiSubscription | null> {
     const body = (await res.json()) as {
       subscription?: PmApiSubscription | null;
     };
+    console.log("[community] /api/pm/subscription", {
+      route: "/community",
+      status: res.status,
+      subscription_status: body.subscription?.status ?? null,
+      current_period_end: body.subscription?.current_period_end ?? null,
+      last_payment_date: body.subscription?.last_payment_date ?? null,
+      cancel_at_period_end: body.subscription?.cancel_at_period_end ?? null,
+    });
     return body.subscription ?? null;
   } catch (err) {
     console.error("[community] PM subscription API error:", err);
@@ -324,7 +326,7 @@ export default async function CommunityDashboardPage() {
         // /community/transits uses). Without coordinates a row may pass
         // text-field checks but still be ineligible for chart generation.
         // Spec: tasks/06.05.2026/community-dashboard-household-readiness-card/03-wire-household-readiness-metrics-and-actions.md
-        "id, user_id, full_name, relationship, date_of_birth, birth_time, birth_time_unknown, birth_city, birth_country, birth_lat, birth_lng, natal_chart, natal_status, natal_report_id, natal_report_status"
+        "id, user_id, full_name, relationship, date_of_birth, birth_time, birth_city, birth_country, birth_lat, birth_lng, natal_chart, natal_status, natal_report_id, natal_report_status"
       )
       .eq("member_id", member.id)
       .limit(10),
@@ -403,6 +405,12 @@ export default async function CommunityDashboardPage() {
   ]);
 
   const client = clientResult.data;
+  if (familyMembersResult.error) {
+    console.error(
+      "[community] Failed to load family members for dashboard",
+      familyMembersResult.error
+    );
+  }
   const familyMembers = familyMembersResult.data ?? [];
   const otherMembers = otherMembersResult.data ?? [];
   const recentWisdom = recentWisdomResult.data ?? [];
@@ -581,7 +589,10 @@ export default async function CommunityDashboardPage() {
         ? billingCycleFromInterval(pmApiSubscription?.interval)
         : null) ?? "monthly",
     renewal_date: renewalDate,
-    created_at: member.joined_at,
+    last_payment_date: isPerennial
+      ? pmApiSubscription?.last_payment_date ?? null
+      : null,
+    created_at: (member.joined_at && typeof member.joined_at === "string" && member.joined_at.trim() !== "") ? member.joined_at : user.created_at,
     member_count: memberCount,
     max_members: maxMembers,
   };
@@ -1088,10 +1099,21 @@ export default async function CommunityDashboardPage() {
                 })}
               </span>
             )}
+            {isPerennial && pmApiSubscription?.last_payment_date && (
+              <span className="text-xs text-muted-foreground">
+                Last payment:{" "}
+                {new Date(pmApiSubscription.last_payment_date).toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                })}
+              </span>
+            )}
             <span className="text-xs text-muted-foreground">
               Member since{" "}
               {new Date(member.joined_at).toLocaleDateString("en-US", {
                 month: "short",
+                day: "numeric",
                 year: "numeric",
               })}
             </span>
@@ -1773,7 +1795,7 @@ export default async function CommunityDashboardPage() {
                 <h3 className="text-sm font-semibold">Family & Relationships</h3>
                 {familyMembers.length > 0 && (
                   <Badge variant="secondary" className="text-xs">
-                    {familyMembers.length} member{familyMembers.length !== 1 ? "s" : ""}
+                    {familyMembers.length} household profile{familyMembers.length !== 1 ? "s" : ""}
                   </Badge>
                 )}
               </div>
@@ -1907,58 +1929,56 @@ export default async function CommunityDashboardPage() {
                           )}
                         </div>
 
-                        {/* Profile completion ring + link */}
-                        <div className="flex items-center justify-between gap-3">
-                          <ProgressRing
-                            percentage={completionPct}
-                            size={56}
-                            strokeWidth={6}
-                            color={ringColor(completionPct)}
-                          />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs text-muted-foreground leading-snug">
-                              Profile {profileComplete ? "complete" : "incomplete"}
-                            </p>
-                            {/*
-                              Task 02 — missing-field summary for incomplete
-                              members. `truncate` + `title` makes sure rare
-                              long strings still fit the card and remain
-                              discoverable on hover.
-                            */}
-                            {!profileComplete && missingSummary && (
-                              <p
-                                className="text-[11px] text-amber-600/90 leading-snug mt-0.5 truncate"
-                                title={`Missing: ${missingDisplay.join(", ")}`}
-                              >
-                                Missing: {missingSummary}
-                              </p>
-                            )}
-                            {/*
-                              Task 03 — helper line on the complete-but-no-chart
-                              state so the user sees at a glance that chart
-                              generation is the next step, not more profile
-                              editing.
-                            */}
-                            {profileComplete && !hasNatalChart && (
-                              <p className="text-[11px] text-muted-foreground leading-snug mt-0.5">
-                                Ready to generate chart
-                              </p>
-                            )}
-                            {!profileComplete && (
-                              <Button asChild variant="link" size="sm" className="h-auto p-0 mt-0.5 text-xs text-primary">
-                                <Link href={completeProfileHref}>
-                                  Complete Profile →
-                                </Link>
-                              </Button>
-                            )}
-                            {profileComplete && !hasNatalChart && (
-                              <Button asChild variant="link" size="sm" className="h-auto p-0 mt-0.5 text-xs text-primary">
-                                <Link href={`/community/family/${m.id}`}>
-                                  Generate Chart →
-                                </Link>
-                              </Button>
-                            )}
+                        {/* Compact status rows — Household Readiness owns the large rings. */}
+                        <div className="space-y-2">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Badge
+                              variant="outline"
+                              className={`text-[10px] px-1.5 py-0 ${
+                                profileComplete
+                                  ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-700"
+                                  : "border-amber-500/40 bg-amber-500/10 text-amber-700"
+                              }`}
+                            >
+                              {profileComplete ? "Profile complete" : `${completionPct}% profile`}
+                            </Badge>
+                            <Badge
+                              variant="outline"
+                              className={`text-[10px] px-1.5 py-0 ${
+                                hasNatalChart
+                                  ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-700"
+                                  : "border-amber-500/40 bg-amber-500/10 text-amber-700"
+                              }`}
+                            >
+                              {hasNatalChart ? "Chart Ready" : "Chart Pending"}
+                            </Badge>
                           </div>
+
+                          {!profileComplete && missingSummary && (
+                            <p
+                              className="text-[11px] text-amber-600/90 leading-snug truncate"
+                              title={`Missing: ${missingDisplay.join(", ")}`}
+                            >
+                              Missing: {missingSummary}
+                            </p>
+                          )}
+
+                          {!profileComplete && (
+                            <Link
+                              href={completeProfileHref}
+                              className="inline-flex text-xs font-medium text-primary hover:underline"
+                            >
+                              Complete profile →
+                            </Link>
+                          )}
+                          {profileComplete && !hasNatalChart && (
+                            <Link
+                              href={`/community/family/${m.id}`}
+                              className="inline-flex text-xs font-medium text-primary hover:underline"
+                            >
+                              Generate chart →
+                            </Link>
+                          )}
                         </div>
                       </CardContent>
                     </Card>

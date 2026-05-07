@@ -239,7 +239,7 @@ export default function AddMemberPage() {
                 id="gender"
                 value={form.gender}
                 onChange={(e) => set("gender", e.target.value)}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="flex h-9 w-full rounded-md border border-input px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <option value="">Select...</option>
                 {GENDER_OPTIONS.map((g) => (
@@ -300,7 +300,7 @@ export default function AddMemberPage() {
                 id="membership_type"
                 value={form.membership_type}
                 onChange={(e) => set("membership_type", e.target.value)}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="flex h-9 w-full rounded-md border border-input px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <option value="individual">Individual</option>
                 <option value="family">Family</option>
@@ -312,7 +312,7 @@ export default function AddMemberPage() {
                 id="relation_type"
                 value={form.relation_type}
                 onChange={(e) => set("relation_type", e.target.value)}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="flex h-9 w-full rounded-md border border-input px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <option value="">Select...</option>
                 {RELATION_TYPES.map((r) => (
@@ -328,7 +328,7 @@ export default function AddMemberPage() {
                 id="relationship_status"
                 value={form.relationship_status}
                 onChange={(e) => set("relationship_status", e.target.value)}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="flex h-9 w-full rounded-md border border-input px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <option value="">Select...</option>
                 <option value="single">Single</option>

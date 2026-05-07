@@ -24,6 +24,8 @@ export interface MembershipSubscription {
   billing_cycle?: "monthly" | "annual" | null;
   /** ISO date string for next renewal — from current_period_end (Stripe) or expires_at */
   renewal_date: string | null;
+  /** ISO date string for the latest successful subscription invoice payment. */
+  last_payment_date?: string | null;
   created_at: string;
   member_count: number;
   max_members: number;
@@ -82,7 +84,7 @@ export function MembershipCard({ subscription, userEmail }: MembershipCardProps)
       ? "Cancelled On"
       : subscription.status === "cancelling"
         ? "Access Until"
-        : "Next Renewal";
+        : "Next Billing";
 
   const isFamily = subscription.plan_type === "family";
   const canUpgrade =
@@ -144,6 +146,11 @@ export function MembershipCard({ subscription, userEmail }: MembershipCardProps)
           <div>
             <dt className="text-xs text-muted-foreground">Member Since</dt>
             <dd className="font-medium mt-0.5">{formatDate(subscription.created_at)}</dd>
+          </div>
+
+          <div>
+            <dt className="text-xs text-muted-foreground">Last Payment</dt>
+            <dd className="font-medium mt-0.5">{formatDate(subscription.last_payment_date ?? null)}</dd>
           </div>
 
           <div>
