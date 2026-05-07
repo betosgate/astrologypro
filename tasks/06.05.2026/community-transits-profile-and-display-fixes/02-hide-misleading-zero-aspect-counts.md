@@ -1,6 +1,6 @@
 # Task 02 - Hide Misleading Zero Aspect Counts
 
-- Status: Planned
+- Status: Done
 - Priority: P1
 - Area: Perennial / Community / Monthly Transits / UI
 - Routes: `/community/transits`
@@ -67,11 +67,11 @@ validTransitData !== null
 
 ## Acceptance Criteria
 
-- [ ] `/community/transits` no longer shows `0 supportive · 0 challenging aspects` for missing/invalid summaries.
-- [ ] Valid monthly summaries still show accurate supportive/challenging counts.
-- [ ] Expanded `Snapshot` does not show misleading zero-count fallback data.
-- [ ] Transit and natal CTA routing remains unchanged.
-- [ ] No monthly transit generation logic is changed.
+- [x] `/community/transits` no longer shows `0 supportive · 0 challenging aspects` for missing/invalid summaries.
+- [x] Valid monthly summaries still show accurate supportive/challenging counts.
+- [x] Expanded `Snapshot` does not show misleading zero-count fallback data.
+- [x] Transit and natal CTA routing remains unchanged.
+- [x] No monthly transit generation logic is changed.
 
 ## QA Checklist
 

@@ -331,7 +331,35 @@ export default function DecanPage({ params }: { params: Promise<{ id: string }> 
     setLoading(false);
   }
 
-  useEffect(() => { load(); }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    let cancelled = false;
+
+    async function fetchDecan() {
+      const res = await fetch(`/api/mystery-school/decan/${id}`);
+      if (cancelled) return;
+
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        if (!cancelled) {
+          setError(j.error ?? "Failed to load decan");
+          setLoading(false);
+        }
+        return;
+      }
+
+      const payload = (await res.json()) as DecanData;
+      if (!cancelled) {
+        setData(payload);
+        setLoading(false);
+      }
+    }
+
+    void fetchDecan();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
 
   async function handleScrySubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -428,6 +456,20 @@ export default function DecanPage({ params }: { params: Promise<{ id: string }> 
   ];
   const requirementCount = requirementItems.filter((item) => item.done).length;
   const requirementPercent = Math.round((requirementCount / requirementItems.length) * 100);
+  const statusLabel = isCompleted
+    ? "Completed"
+    : isMissed
+      ? "Missed"
+      : isGrace
+        ? "Grace Period"
+        : isPreview
+          ? "Preview"
+          : isActive
+            ? "Active"
+            : "Locked";
+  const windowLabel = progress
+    ? `${formatShortDate(progress.window_open)} - ${formatShortDate(progress.window_close)}`
+    : "Awaiting unlock";
 
   return (
     <div className="mx-auto max-w-6xl space-y-4">
@@ -441,10 +483,10 @@ export default function DecanPage({ params }: { params: Promise<{ id: string }> 
       </Link>
 
       {/* ── Header ─────────────────────────────────────────────── */}
-      <section className="space-y-5 rounded-xl border border-amber-500/25 bg-[linear-gradient(135deg,rgba(234,179,8,0.12),rgba(15,23,42,0.78)_36%,rgba(15,23,42,0.96))] p-5 sm:p-7">
+      <section className="space-y-6 rounded-3xl border border-amber-500/25 bg-[linear-gradient(135deg,rgba(234,179,8,0.14),rgba(15,23,42,0.82)_34%,rgba(15,23,42,0.98))] p-6 shadow-[0_30px_90px_rgba(0,0,0,0.28)] sm:p-8">
         {/* Artwork */}
         {decan.artwork_url && (
-          <div className="relative h-48 w-full overflow-hidden rounded-lg border border-amber-500/20 sm:h-64">
+          <div className="relative h-56 w-full overflow-hidden rounded-2xl border border-amber-500/20 sm:h-72">
             <Image
               src={decan.artwork_url}
               alt={decan.decan_name ?? decan.title}
@@ -452,6 +494,7 @@ export default function DecanPage({ params }: { params: Promise<{ id: string }> 
               className="object-cover opacity-80"
               sizes="(max-width: 768px) 100vw, 1024px"
             />
+            <div className="absolute inset-0 bg-gradient-to-r from-background/85 via-background/35 to-transparent" />
           </div>
         )}
 
@@ -480,6 +523,42 @@ export default function DecanPage({ params }: { params: Promise<{ id: string }> 
           )}
         </div>
 
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div className="rounded-2xl border border-border/60 bg-background/40 px-4 py-3">
+            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-amber-300">
+              Status
+            </p>
+            <p className="mt-2 text-lg font-bold">{statusLabel}</p>
+          </div>
+          <div className="rounded-2xl border border-border/60 bg-background/40 px-4 py-3">
+            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-amber-300">
+              Active Window
+            </p>
+            <p className="mt-2 text-lg font-bold">{windowLabel}</p>
+          </div>
+          <div className="rounded-2xl border border-border/60 bg-background/40 px-4 py-3">
+            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-amber-300">
+              Completion
+            </p>
+            <p className="mt-2 text-lg font-bold">
+              {requirementCount} / {requirementItems.length}
+            </p>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div className="flex items-center justify-between text-[11px] font-black uppercase tracking-[0.22em] text-amber-300">
+            <span>Journey Progress</span>
+            <span>{requirementPercent}% complete</span>
+          </div>
+          <div className="h-2 overflow-hidden rounded-full bg-amber-500/10">
+            <div
+              className="h-full rounded-full bg-amber-400 transition-all duration-500"
+              style={{ width: `${requirementPercent}%` }}
+            />
+          </div>
+        </div>
+
         {/* Tarot card chip + library link */}
         {decan.tarot_card_ref && (
           <div className="flex items-center gap-2 flex-wrap">
@@ -500,32 +579,6 @@ export default function DecanPage({ params }: { params: Promise<{ id: string }> 
           {decan.preview_text && <p className="text-foreground/90">{decan.preview_text}</p>}
           {decan.description && <p>{decan.description}</p>}
         </div>
-      </section>
-
-      <section className="grid gap-3 sm:grid-cols-3">
-        {requirementItems.map((item) => (
-          <div
-            key={item.label}
-            className={[
-              "rounded-lg border p-4",
-              item.done
-                ? "border-green-500/25 bg-green-500/10"
-                : "border-border/60 bg-card/55",
-            ].join(" ")}
-          >
-            <div className="flex items-start gap-3">
-              {item.done ? (
-                <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-green-400" />
-              ) : (
-                <Circle className="mt-0.5 size-5 shrink-0 text-muted-foreground" />
-              )}
-              <div>
-                <p className="text-sm font-semibold">{item.label}</p>
-                <p className="mt-1 text-xs text-muted-foreground">{item.detail}</p>
-              </div>
-            </div>
-          </div>
-        ))}
       </section>
 
       {/* ── Status banners ──────────────────────────────────────── */}
@@ -575,7 +628,8 @@ export default function DecanPage({ params }: { params: Promise<{ id: string }> 
 
       {/* ── Main content (visible for active, grace, preview, completed — hidden for missed) */}
       {!isLocked && !isMissed && (
-        <>
+        <div className="grid items-start gap-8 xl:grid-cols-[minmax(0,1fr)_320px]">
+          <div>
           {/* ── Ritual performer ─────────────────────────────────── */}
           <section className="space-y-4 pt-4">
             <div className="flex items-center justify-between">
@@ -630,6 +684,16 @@ export default function DecanPage({ params }: { params: Promise<{ id: string }> 
                         <p className="text-base font-medium text-foreground/90">
                           This ritual consists of {ritualSteps.length} sequence step{ritualSteps.length !== 1 ? "s" : ""}.
                         </p>
+                        <div className="flex flex-wrap justify-center gap-2 pt-1 sm:justify-start">
+                          {ritualSteps.map((step) => (
+                            <span
+                              key={step.id}
+                              className="rounded-full border border-border/50 bg-background/60 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground"
+                            >
+                              {step.step_type}
+                            </span>
+                          ))}
+                        </div>
                         {ritualInProgress && (
                           <p className="text-sm font-bold text-amber-600 mt-2 flex items-center justify-center sm:justify-start gap-1.5">
                             <PlayCircle className="size-4" /> Resuming at step {ritualExecution!.current_step + 1} of {ritualExecution!.total_steps}
@@ -985,7 +1049,90 @@ export default function DecanPage({ params }: { params: Promise<{ id: string }> 
               </Card>
             </div>
           )}
-        </>
+          </div>
+
+          <aside className="space-y-4 xl:sticky xl:top-6">
+            <Card className="overflow-hidden border-amber-500/15 bg-[linear-gradient(180deg,rgba(234,179,8,0.06),rgba(15,23,42,0.92)_42%)]">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-lg">Completion Checklist</CardTitle>
+                <CardDescription>
+                  Each working needs all three parts before this decan is fully concluded.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-[11px] font-black uppercase tracking-[0.22em] text-amber-300">
+                    <span>Progress</span>
+                    <span>{requirementPercent}%</span>
+                  </div>
+                  <div className="h-2 overflow-hidden rounded-full bg-amber-500/10">
+                    <div
+                      className="h-full rounded-full bg-amber-400 transition-all duration-500"
+                      style={{ width: `${requirementPercent}%` }}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  {requirementItems.map((item) => (
+                    <div
+                      key={item.label}
+                      className={[
+                        "rounded-xl border px-4 py-3",
+                        item.done
+                          ? "border-emerald-500/25 bg-emerald-500/10"
+                          : "border-border/60 bg-background/35",
+                      ].join(" ")}
+                    >
+                      <div className="flex items-start gap-3">
+                        {item.done ? (
+                          <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-emerald-400" />
+                        ) : (
+                          <Circle className="mt-0.5 size-5 shrink-0 text-muted-foreground" />
+                        )}
+                        <div className="space-y-1">
+                          <p className="text-sm font-semibold">{item.label}</p>
+                          <p className="text-xs text-muted-foreground">{item.detail}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-border/60 bg-card/70">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg">Decan Correspondence</CardTitle>
+                <CardDescription>
+                  Core references held together while you work through the ritual and journals.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4 text-sm">
+                <div className="rounded-xl border border-border/50 bg-background/40 p-4">
+                  <p className="text-[10px] font-black uppercase tracking-[0.22em] text-muted-foreground">
+                    Planetary Ruler
+                  </p>
+                  <p className="mt-2 text-base font-bold">{decan.planet}</p>
+                </div>
+                <div className="rounded-xl border border-border/50 bg-background/40 p-4">
+                  <p className="text-[10px] font-black uppercase tracking-[0.22em] text-muted-foreground">
+                    Zodiac Sign
+                  </p>
+                  <p className="mt-2 text-base font-bold">{decan.sign}</p>
+                </div>
+                {decan.tarot_card_ref && (
+                  <div className="rounded-xl border border-border/50 bg-background/40 p-4">
+                    <p className="text-[10px] font-black uppercase tracking-[0.22em] text-muted-foreground">
+                      Tarot Focus
+                    </p>
+                    <p className="mt-2 text-base font-bold">{decan.tarot_card_ref}</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </aside>
+        </div>
       )}
     </div>
   );
