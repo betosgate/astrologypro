@@ -20,7 +20,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, AlertCircle, Loader2 } from "lucide-react";
+import {
+  ArrowLeft,
+  AlertCircle,
+  ChevronDown,
+  ChevronUp,
+  Loader2,
+} from "lucide-react";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -108,11 +114,39 @@ const INITIAL_FORM = {
 
 type FormState = typeof INITIAL_FORM;
 
+const INTAKE_FIELDS = [
+  ["personality", "Personality"],
+  ["strengths", "Strengths"],
+  ["lifeAreasFulfilling", "Life Areas That Are Fulfilling"],
+  ["lifeAreasImprovement", "Life Areas for Improvement"],
+  ["longTermGoals", "Long-Term Goals"],
+  ["majorLifeEvents", "Major Life Events"],
+  ["relationship_with_family", "Relationship with Family"],
+  ["biggest_current_challenges", "Biggest Current Challenges"],
+  ["mainConcern", "Main Concern"],
+  ["additionalInfo", "Additional Info"],
+  ["achieveFromReading", "What They Hope to Achieve from Reading"],
+  ["focus_on_specific_relationships", "Focus on Specific Relationships"],
+  ["stressManagement", "Stress Management"],
+  ["workLifeBalance", "Work-Life Balance"],
+  ["concerns_about_romantic_life", "Concerns About Romantic Life"],
+  ["social_life_fulfillment", "Social Life Fulfillment"],
+  ["spiritualPractices", "Spiritual Practices"],
+  ["guidance_on_specific_decision", "Guidance on a Specific Decision"],
+  ["ongoing_projects_or_plans", "Ongoing Projects or Plans"],
+  ["selfDiscovery", "Self-Discovery"],
+  ["externalInfluences", "External Influences"],
+  ["specificQuestions", "Specific Questions"],
+  ["goalsOutcomes", "Goals & Outcomes"],
+  ["additional_info", "Additional Notes"],
+] as [keyof FormState, string][];
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function AddMemberPage() {
   const router = useRouter();
   const [form, setForm] = useState<FormState>({ ...INITIAL_FORM });
+  const [showQuestionnaire, setShowQuestionnaire] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -353,53 +387,39 @@ export default function AddMemberPage() {
 
         {/* ── Intake Questionnaire ──────────────────────────────────────── */}
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Intake Questionnaire</CardTitle>
+          <CardHeader>
+            <button
+              type="button"
+              className="flex w-full items-center justify-between text-left"
+              onClick={() => setShowQuestionnaire((open) => !open)}
+            >
+              <CardTitle className="text-base">Intake Questionnaire</CardTitle>
+              {showQuestionnaire ? (
+                <ChevronUp className="size-4" />
+              ) : (
+                <ChevronDown className="size-4" />
+              )}
+            </button>
           </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 sm:grid-cols-2">
-              {(
-                [
-                  ["personality", "Personality"],
-                  ["strengths", "Strengths"],
-                  ["lifeAreasFulfilling", "Life Areas That Are Fulfilling"],
-                  ["lifeAreasImprovement", "Life Areas for Improvement"],
-                  ["longTermGoals", "Long-Term Goals"],
-                  ["majorLifeEvents", "Major Life Events"],
-                  ["relationship_with_family", "Relationship with Family"],
-                  ["biggest_current_challenges", "Biggest Current Challenges"],
-                  ["mainConcern", "Main Concern"],
-                  ["additionalInfo", "Additional Info"],
-                  ["achieveFromReading", "What They Hope to Achieve from Reading"],
-                  ["focus_on_specific_relationships", "Focus on Specific Relationships"],
-                  ["stressManagement", "Stress Management"],
-                  ["workLifeBalance", "Work-Life Balance"],
-                  ["concerns_about_romantic_life", "Concerns About Romantic Life"],
-                  ["social_life_fulfillment", "Social Life Fulfillment"],
-                  ["spiritualPractices", "Spiritual Practices"],
-                  ["guidance_on_specific_decision", "Guidance on a Specific Decision"],
-                  ["ongoing_projects_or_plans", "Ongoing Projects or Plans"],
-                  ["selfDiscovery", "Self-Discovery"],
-                  ["externalInfluences", "External Influences"],
-                  ["specificQuestions", "Specific Questions"],
-                  ["goalsOutcomes", "Goals & Outcomes"],
-                  ["additional_info", "Additional Notes"],
-                ] as [keyof FormState, string][]
-              ).map(([field, label]) => (
-                <div key={field} className="space-y-2">
-                  <Label htmlFor={field} className="text-sm">{label}</Label>
-                  <Textarea
-                    id={field}
-                    value={form[field]}
-                    onChange={(e) => set(field, e.target.value)}
-                    rows={1}
-                    className="resize-none min-h-[52px]"
-                    placeholder={`Enter ${label.toLowerCase()}…`}
-                  />
-                </div>
-              ))}
-            </div>
-          </CardContent>
+          {showQuestionnaire && (
+            <CardContent>
+              <div className="grid gap-4 pb-6 sm:grid-cols-2">
+                {INTAKE_FIELDS.map(([field, label]) => (
+                  <div key={field} className="space-y-2">
+                    <Label htmlFor={field} className="text-sm">{label}</Label>
+                    <Textarea
+                      id={field}
+                      value={form[field]}
+                      onChange={(e) => set(field, e.target.value)}
+                      rows={1}
+                      className="min-h-[52px] resize-none"
+                      placeholder={`Enter ${label.toLowerCase()}...`}
+                    />
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          )}
         </Card>
 
         {/* ── Status ────────────────────────────────────────────────────── */}

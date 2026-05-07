@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { requireMysterySchoolAccess } from "@/lib/mystery-school/access";
 import { stripe } from "@/lib/stripe/client";
+import { assertMysterySchoolDecanEligible } from "@/lib/mystery-school/foundation-progress";
+import { maybeAdvanceMysterySchoolToDecans } from "@/lib/mystery-school/foundation-graduation";
 
 export const dynamic = "force-dynamic";
 
@@ -121,16 +124,56 @@ export async function GET() {
     } catch {}
   }
 
-  // Q1 complete check — count weeks where all tasks are done (week_completed_at set).
-  // student_foundation_progress rows are created when the first task is completed,
-  // so we must filter on week_completed_at to avoid counting partial weeks.
-  const { count: q1Count } = await supabase
-    .from("student_foundation_progress")
-    .select("id", { count: "exact", head: true })
-    .eq("student_id", studentTyped.id)
-    .not("week_completed_at", "is", null);
+  // Sprint 2026-05-06: gate Decan dashboard on Admin Training-backed
+  // Foundation completion. The legacy `student_foundation_progress` count
+  // is replaced by the shared `assertMysterySchoolDecanEligible` helper so
+  // learner UI, admin badges, graduation, and decan APIs cannot drift.
+  const admin = createAdminClient();
+  const eligibility = await assertMysterySchoolDecanEligible(admin, user.id);
+  const q1Complete = eligibility.foundation.isComplete;
 
-  const q1Complete = (q1Count ?? 0) >= 12;
+  // If the helper says Foundation is complete but the row is still in
+  // 'foundation', advance it idempotently so the next request short-circuits.
+  if (
+    eligibility.eligible &&
+    eligibility.reason === "foundation_complete"
+  ) {
+    maybeAdvanceMysterySchoolToDecans(admin, user.id, null).catch((err) =>
+      console.warn(
+        "[decans/route] maybeAdvanceMysterySchoolToDecans failed",
+        err instanceof Error ? err.message : String(err),
+      ),
+    );
+  }
+
+  // Hard lock — Foundation incomplete → return a structured locked
+  // response instead of any actionable Decan state. The UI uses this to
+  // show "Complete Foundation Training to unlock the Decan year."
+  if (!eligibility.eligible) {
+    return NextResponse.json({
+      decan_access_locked: true,
+      lock_reason: "foundation_incomplete",
+      foundation: {
+        completedWeeks: eligibility.foundation.completedWeeks,
+        totalWeeks: eligibility.foundation.totalWeeks,
+        completedLessons: eligibility.foundation.completedLessons,
+        totalLessons: eligibility.foundation.totalLessons,
+      },
+      student: {
+        id: studentTyped.id,
+        trainingStatus: "foundation",
+        startQuarter: studentTyped.start_quarter,
+      },
+      decans: [],
+      completedCount: 0,
+      totalDecans: 36,
+      current_decan_number: null,
+      q1_complete: false,
+      graduation_eligible: false,
+      unexcused_missed_count: 0,
+      subscription: subscriptionSummary,
+    });
+  }
 
   // All 36 decans with new metadata columns
   const { data: decansRaw, error: decansError } = await supabase

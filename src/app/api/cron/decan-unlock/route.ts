@@ -46,11 +46,14 @@ export async function GET(request: NextRequest) {
     .from("decans")
     .select("id, decan_number, start_month, start_day, end_month, end_day");
 
-  // All mystery school students in foundation or decans training phase
+  // Sprint 2026-05-06: Decan lifecycle only runs for Decan-phase students.
+  // Foundation students must NOT receive preview/active rows — that
+  // surfaces actionable Decan work in the dashboard before Foundation is
+  // complete, undermining the gate everywhere else.
   const { data: students } = await admin
     .from("mystery_school_students")
     .select("id, training_status")
-    .in("training_status", ["foundation", "decans"]);
+    .in("training_status", ["decans"]);
 
   if (!decans || !students) {
     return NextResponse.json({ previewed: 0, unlocked: 0, graced: 0, missed: 0, retried: 0 });

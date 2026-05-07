@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { requireMysterySchoolAccess } from "@/lib/mystery-school/access";
+import { requireDecanEligibilityOr403 } from "@/lib/mystery-school/decan-gate";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +22,10 @@ export async function GET(
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  // Sprint 2026-05-06: hard-block Decan detail when Foundation is incomplete.
+  const gate = await requireDecanEligibilityOr403(createAdminClient(), user.id);
+  if (gate) return gate;
 
   const { id } = await params;
   const student = result.student as unknown as { id: string };
@@ -73,9 +79,7 @@ export async function GET(
 
   if (!decanRes.data) return NextResponse.json({ error: "Decan not found" }, { status: 404 });
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const decan = decanRes.data as any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const prog = progressRes.data as any;
   const now = new Date();
   const currentYear = now.getFullYear();
@@ -116,10 +120,8 @@ export async function GET(
     daysRemaining = Math.max(0, Math.ceil((graceClose.getTime() - now.getTime()) / 86400000));
   }
 
-  return NextResponse.json({
-    decan,
-    ritualSteps: ritualsRes.data ?? [],
-    progress: prog
+  const effectiveProgress =
+    prog
       ? {
           ...prog,
           status: liveStatus,
@@ -128,7 +130,32 @@ export async function GET(
           grace_close: graceClose.toISOString(),
           days_remaining: daysRemaining,
         }
-      : null,
+      : liveStatus !== "locked"
+        ? {
+            status: liveStatus,
+            ritual_done: false,
+            scry_done: false,
+            journal_done: false,
+            unlocked_at: null,
+            completed_at: null,
+            window_open: windowOpen.toISOString(),
+            window_close: windowClose.toISOString(),
+            grace_close: graceClose.toISOString(),
+            missed_at: null,
+            retry_year: null,
+            retry_window_open: null,
+            retry_window_close: null,
+            admin_excused: false,
+            excuse_reason: null,
+            excused_at: null,
+            days_remaining: daysRemaining,
+          }
+        : null;
+
+  return NextResponse.json({
+    decan,
+    ritualSteps: ritualsRes.data ?? [],
+    progress: effectiveProgress,
     scryJournal: scryRes.data ?? null,
     mundaneJournal: journalRes.data ?? null,
     ritualExecution: execRes.data ?? null,

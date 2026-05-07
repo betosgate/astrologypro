@@ -1,0 +1,25 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "src/lib/db/migrations.ts",
+    "src/data/migrations/20260506000002_mystery_school_foundation_completed_at.ts",
+    "src/lib/mystery-school/foundation-progress.ts",
+    "src/lib/mystery-school/foundation-graduation.ts",
+    "src/lib/mystery-school/graduation.ts",
+    "src/lib/mystery-school/decan-gate.ts",
+    "src/app/api/mystery-school/decans/route.ts",
+    "src/app/api/mystery-school/decan/[id]/route.ts",
+    "src/app/api/mystery-school/decan/[id]/ritual/route.ts",
+    "src/app/api/mystery-school/decan/[id]/ritual/start/route.ts",
+    "src/app/api/mystery-school/decan/[id]/ritual/step/route.ts",
+    "src/app/api/mystery-school/decan/[id]/ritual-complete/route.ts",
+    "src/app/api/mystery-school/decan/[id]/scry/route.ts",
+    "src/app/api/mystery-school/decan/[id]/journal/route.ts",
+    "src/app/api/cron/decan-unlock/route.ts",
+    "src/app/api/cron/graduation-check/route.ts",
+    "src/app/api/trainee/training/lessons/[id]/triggers/[triggerId]/answer/route.ts",
+    "src/app/mystery-school/training/[categoryId]/[lessonId]/page.tsx",
+    "src/app/api/admin/mystery-school/students/route.ts",
+    "src/app/admin/mystery-school/students/page.tsx"
+  ]
+}
