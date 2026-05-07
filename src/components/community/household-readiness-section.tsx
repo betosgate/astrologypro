@@ -1,18 +1,14 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import type { ComponentType } from "react";
 import {
   AlertTriangle,
-  ArrowRight,
   CheckCircle2,
   CircleAlert,
   CircleCheck,
   Sparkles,
   Telescope,
-  UserCheck,
-  UserPlus,
   Users,
 } from "lucide-react";
 import Link from "next/link";
@@ -257,6 +253,22 @@ export function HouseholdReadinessSection({
       ? (chartsReadyCount / chartsEligibleCount) * 100
       : 0;
   const missingDetailsProgress = missingDetailsCount === 0 ? 100 : 35;
+  const checklistAction =
+    missingDetailsCount > 0 ? (
+      <Link
+        href={completeDetailsHref}
+        className="inline-flex text-xs font-medium text-primary hover:underline"
+      >
+        Complete missing data →
+      </Link>
+    ) : chartsEligibleCount > 0 && chartsReadyCount < chartsEligibleCount ? (
+      <Link
+        href="/community/charts"
+        className="inline-flex text-xs font-medium text-primary hover:underline"
+      >
+        Generate missing charts →
+      </Link>
+    ) : null;
 
   return (
     <Card>
@@ -314,7 +326,7 @@ export function HouseholdReadinessSection({
                 ? "Pending birth data"
                 : chartsReadyCount === chartsEligibleCount
                   ? "All generated"
-                  : "Generate charts"
+                  : `${chartsEligibleCount - chartsReadyCount} remaining`
             }
             progress={chartsProgress}
             variant={
@@ -338,80 +350,33 @@ export function HouseholdReadinessSection({
           />
         </div>
 
-        <div className="grid gap-4 lg:grid-cols-[1fr_210px]">
+        <div className="space-y-2">
           {/* ── Status checklist ──────────────────────────────────────── */}
-          <div className="space-y-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-xs font-semibold text-foreground">
               Readiness Checklist
             </p>
-            <ul className="space-y-1.5">
-              <ChecklistRow ok={selfBirthDataComplete} text={selfStatusText} />
-              <ChecklistRow
-                ok={
-                  totalMemberCount > 0 && completeMemberCount === totalMemberCount
-                }
-                text={membersCompleteText}
-              />
-              <ChecklistRow
-                ok={
-                  chartsEligibleCount > 0 &&
-                  chartsReadyCount === chartsEligibleCount
-                }
-                text={chartsText}
-              />
-              {missingDetailsText ? (
-                <ChecklistRow ok={false} text={missingDetailsText} />
-              ) : null}
-            </ul>
+            {checklistAction}
           </div>
-
-          {/* ── Action area ───────────────────────────────────────────── */}
-          <div className="space-y-2">
-            <p className="text-xs font-semibold text-foreground">
-              Quick Actions
-            </p>
-            <div className="space-y-2">
-              <Button
-                asChild
-                size="sm"
-                variant={missingDetailsCount > 0 ? "outline" : "default"}
-                className="w-full justify-between"
-              >
-                <Link href="/community/family">
-                  <span className="inline-flex items-center">
-                    <UserCheck className="mr-1.5 size-3.5" />
-                    Manage Family
-                  </span>
-                  <ArrowRight className="size-3.5" aria-hidden />
-                </Link>
-              </Button>
-              <Button
-                asChild
-                size="sm"
-                variant="outline"
-                className="w-full justify-between"
-              >
-                <Link href="/community/charts">
-                  <span className="inline-flex items-center">
-                    <Telescope className="mr-1.5 size-3.5" />
-                    View Charts
-                  </span>
-                  <ArrowRight className="size-3.5" aria-hidden />
-                </Link>
-              </Button>
-              {missingDetailsCount > 0 ? (
-                <Button asChild size="sm" className="w-full justify-between">
-                  <Link href={completeDetailsHref}>
-                    <span className="inline-flex items-center">
-                      <UserPlus className="mr-1.5 size-3.5" />
-                      Complete Missing Data
-                    </span>
-                    <ArrowRight className="size-3.5" aria-hidden />
-                  </Link>
-                </Button>
-              ) : null}
-            </div>
-          </div>
+          <ul className="space-y-1.5">
+            <ChecklistRow ok={selfBirthDataComplete} text={selfStatusText} />
+            <ChecklistRow
+              ok={
+                totalMemberCount > 0 && completeMemberCount === totalMemberCount
+              }
+              text={membersCompleteText}
+            />
+            <ChecklistRow
+              ok={
+                chartsEligibleCount > 0 &&
+                chartsReadyCount === chartsEligibleCount
+              }
+              text={chartsText}
+            />
+            {missingDetailsText ? (
+              <ChecklistRow ok={false} text={missingDetailsText} />
+            ) : null}
+          </ul>
         </div>
 
         {/* When everything is set up, soften the card with a positive

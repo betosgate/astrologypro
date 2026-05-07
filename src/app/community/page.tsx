@@ -45,7 +45,6 @@ import { HouseholdReadinessSection } from "@/components/community/household-read
 import { MembershipCard, type MembershipSubscription } from "@/components/community/membership-card";
 import { ManageSubscriptionButton } from "@/components/mystery-school/manage-subscription-button";
 import { ProfileCompletionCard, type ProfileCompletionData } from "@/components/community/profile-completion-card";
-import { ProgressRing } from "@/components/community/progress-ring";
 import { DashboardFeedPreview } from "@/components/community/dashboard-feed-preview";
 import { getCommunityDashboardFeed } from "@/lib/dashboard-content";
 import { calcFamilyProfileCompletion } from "@/lib/community/family-profile-completion";
@@ -81,12 +80,6 @@ export const dynamic = "force-dynamic";
 //   if (m.natal_chart && Object.keys(m.natal_chart).length > 0) pct += 10;
 //   return pct;
 // }
-
-function ringColor(pct: number): string {
-  if (pct >= 100) return "hsl(142, 71%, 45%)";
-  if (pct >= 60) return "hsl(var(--primary))";
-  return "hsl(25, 90%, 55%)";
-}
 
 function journeySetupCtaLabel(key?: string): string {
   switch (key) {
@@ -1802,7 +1795,7 @@ export default async function CommunityDashboardPage() {
                 <h3 className="text-sm font-semibold">Family & Relationships</h3>
                 {familyMembers.length > 0 && (
                   <Badge variant="secondary" className="text-xs">
-                    {familyMembers.length} member{familyMembers.length !== 1 ? "s" : ""}
+                    {familyMembers.length} household profile{familyMembers.length !== 1 ? "s" : ""}
                   </Badge>
                 )}
               </div>
@@ -1936,58 +1929,56 @@ export default async function CommunityDashboardPage() {
                           )}
                         </div>
 
-                        {/* Profile completion ring + link */}
-                        <div className="flex items-center justify-between gap-3">
-                          <ProgressRing
-                            percentage={completionPct}
-                            size={56}
-                            strokeWidth={6}
-                            color={ringColor(completionPct)}
-                          />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs text-muted-foreground leading-snug">
-                              Profile {profileComplete ? "complete" : "incomplete"}
-                            </p>
-                            {/*
-                              Task 02 — missing-field summary for incomplete
-                              members. `truncate` + `title` makes sure rare
-                              long strings still fit the card and remain
-                              discoverable on hover.
-                            */}
-                            {!profileComplete && missingSummary && (
-                              <p
-                                className="text-[11px] text-amber-600/90 leading-snug mt-0.5 truncate"
-                                title={`Missing: ${missingDisplay.join(", ")}`}
-                              >
-                                Missing: {missingSummary}
-                              </p>
-                            )}
-                            {/*
-                              Task 03 — helper line on the complete-but-no-chart
-                              state so the user sees at a glance that chart
-                              generation is the next step, not more profile
-                              editing.
-                            */}
-                            {profileComplete && !hasNatalChart && (
-                              <p className="text-[11px] text-muted-foreground leading-snug mt-0.5">
-                                Ready to generate chart
-                              </p>
-                            )}
-                            {!profileComplete && (
-                              <Button asChild variant="link" size="sm" className="h-auto p-0 mt-0.5 text-xs text-primary">
-                                <Link href={completeProfileHref}>
-                                  Complete Profile →
-                                </Link>
-                              </Button>
-                            )}
-                            {profileComplete && !hasNatalChart && (
-                              <Button asChild variant="link" size="sm" className="h-auto p-0 mt-0.5 text-xs text-primary">
-                                <Link href={`/community/family/${m.id}`}>
-                                  Generate Chart →
-                                </Link>
-                              </Button>
-                            )}
+                        {/* Compact status rows — Household Readiness owns the large rings. */}
+                        <div className="space-y-2">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Badge
+                              variant="outline"
+                              className={`text-[10px] px-1.5 py-0 ${
+                                profileComplete
+                                  ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-700"
+                                  : "border-amber-500/40 bg-amber-500/10 text-amber-700"
+                              }`}
+                            >
+                              {profileComplete ? "Profile complete" : `${completionPct}% profile`}
+                            </Badge>
+                            <Badge
+                              variant="outline"
+                              className={`text-[10px] px-1.5 py-0 ${
+                                hasNatalChart
+                                  ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-700"
+                                  : "border-amber-500/40 bg-amber-500/10 text-amber-700"
+                              }`}
+                            >
+                              {hasNatalChart ? "Chart Ready" : "Chart Pending"}
+                            </Badge>
                           </div>
+
+                          {!profileComplete && missingSummary && (
+                            <p
+                              className="text-[11px] text-amber-600/90 leading-snug truncate"
+                              title={`Missing: ${missingDisplay.join(", ")}`}
+                            >
+                              Missing: {missingSummary}
+                            </p>
+                          )}
+
+                          {!profileComplete && (
+                            <Link
+                              href={completeProfileHref}
+                              className="inline-flex text-xs font-medium text-primary hover:underline"
+                            >
+                              Complete profile →
+                            </Link>
+                          )}
+                          {profileComplete && !hasNatalChart && (
+                            <Link
+                              href={`/community/family/${m.id}`}
+                              className="inline-flex text-xs font-medium text-primary hover:underline"
+                            >
+                              Generate chart →
+                            </Link>
+                          )}
                         </div>
                       </CardContent>
                     </Card>
