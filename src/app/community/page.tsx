@@ -140,6 +140,20 @@ type PmApiSubscription = {
   tier_name?: string | null;
 };
 
+type CommunityApiSubscription = {
+  membership_type: string;
+  plan_type: string;
+  plan_label: string;
+  status: string;
+  amount: number;
+  currency: string;
+  renewal_date: string | null;
+  last_payment_date: string | null;
+  created_at: string;
+  member_count: number;
+  max_members: number;
+};
+
 function stripeCentsToAmount(cents: number): number {
   return Number((cents / 100).toFixed(2));
 }
@@ -186,6 +200,36 @@ async function fetchPmSubscription(): Promise<PmApiSubscription | null> {
     return body.subscription ?? null;
   } catch (err) {
     console.error("[community] PM subscription API error:", err);
+    return null;
+  }
+}
+
+async function fetchCommunitySubscription(): Promise<CommunityApiSubscription | null> {
+  try {
+    const hdrs = await headers();
+    const host = hdrs.get("x-forwarded-host") ?? hdrs.get("host");
+    const protocol =
+      hdrs.get("x-forwarded-proto") ??
+      (host?.startsWith("localhost") ? "http" : "https");
+    const origin = host ? `${protocol}://${host}` : APP_URL;
+    const cookie = hdrs.get("cookie");
+
+    const res = await fetch(`${origin}/api/community/subscription`, {
+      cache: "no-store",
+      headers: cookie ? { cookie } : undefined,
+    });
+
+    if (!res.ok) {
+      console.error("[community] Failed to fetch community subscription API", res.status);
+      return null;
+    }
+
+    const body = (await res.json()) as {
+      subscription?: CommunityApiSubscription | null;
+    };
+    return body.subscription ?? null;
+  } catch (err) {
+    console.error("[community] Community subscription API error:", err);
     return null;
   }
 }
@@ -309,6 +353,7 @@ export default async function CommunityDashboardPage() {
     platformSettingsResult,
     mysterySchoolStudentResult,
     pmApiSubscription,
+    communityApiSubscription,
   ] = await Promise.all([
     // Client profile for progress ring calculation
     supabase
@@ -405,6 +450,7 @@ export default async function CommunityDashboardPage() {
       .maybeSingle(),
 
     isPerennial ? fetchPmSubscription() : Promise.resolve(null),
+    fetchCommunitySubscription(),
   ]);
 
   const client = clientResult.data;
@@ -521,7 +567,7 @@ export default async function CommunityDashboardPage() {
     formatDateLong(mysterySchoolStudent?.access_expires_at ?? mysterySchoolCurrentPeriodEnd);
   const mysterySchoolRenewalDate =
     mysterySchoolStudent?.status === "active"
-      ? formatDateLong(mysterySchoolCurrentPeriodEnd)
+      ? (communityApiSubscription?.renewal_date ? formatDateLong(communityApiSubscription.renewal_date) : formatDateLong(mysterySchoolCurrentPeriodEnd))
       : null;
   const mysterySchoolBillingLabel = mysterySchoolRecurringAmount
     ? `${formatCurrency(mysterySchoolRecurringAmount, mysterySchoolRecurringCurrency)}/month`
