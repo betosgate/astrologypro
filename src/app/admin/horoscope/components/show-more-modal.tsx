@@ -1,10 +1,10 @@
 "use client";
 import { cn } from "@/lib/utils";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle,
+  Dialog, DialogContent, DialogTitle,
 } from "@/components/ui/dialog";
 import { Loader2, X, Maximize2, Sparkles } from "lucide-react";
 import { AstroHeaderParts, PlanetSymbol, SmartHeading } from "./astro-icons";
@@ -15,10 +15,7 @@ import { ASPECT_TYPE_WORDS } from "../constants";
 // ─── Chart Image Modal ────────────────────────────────────────────────────────
 
 export function ChartImageModal({ src, open, onClose }: { src: string; open: boolean; onClose: () => void }) {
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); return () => setMounted(false); }, []);
-
-  if (!open || !mounted) return null;
+  if (!open || typeof document === "undefined") return null;
 
   return createPortal(
     <div className="fixed inset-0 z-[999999] bg-black flex flex-col items-center justify-center animate-in fade-in duration-300">
@@ -37,7 +34,6 @@ export function ChartImageModal({ src, open, onClose }: { src: string; open: boo
             className="w-full h-full min-w-full min-h-full flex justify-center items-center scale-110"
           />
         ) : (
-          // eslint-disable-next-line @next/next/no-img-element
           <img
             src={src}
             alt="Fullscreen Astrological Visualization"
@@ -69,27 +65,14 @@ export function ShowMoreModal({ title, content, loading, open, onClose, aspectTi
   const { p1, aspectType, p2 } = isAspect ? parseAspectTitle(aspectTitle ?? title) : { p1: "", aspectType: "", p2: "" };
   const [showFullImage, setShowFullImage] = useState(false);
 
-  useEffect(() => {
-    if (!open) setShowFullImage(false);
-  }, [open]);
-
-  useEffect(() => {
-    if (!open) return;
-    
-    // Prevent the inner result container from scrolling while modal is open
-    const scrollContainer = document.querySelector(".result-scroll-container") as HTMLElement | null;
-    if (scrollContainer) {
-      const originalOverflow = scrollContainer.style.overflowY;
-      scrollContainer.style.overflowY = "hidden";
-      return () => {
-        scrollContainer.style.overflowY = originalOverflow;
-      };
-    }
-  }, [open]);
+  function handleClose() {
+    setShowFullImage(false);
+    onClose();
+  }
 
   return (
     <>
-      <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <Dialog open={open} onOpenChange={(o) => !o && handleClose()}>
         <DialogContent
           className="sm:max-w-4xl max-h-[85vh] p-0 overflow-hidden flex flex-col bg-slate-950 border-white/10"
           showCloseButton={false}
@@ -97,7 +80,7 @@ export function ShowMoreModal({ title, content, loading, open, onClose, aspectTi
           onCloseAutoFocus={(event) => event.preventDefault()}
         >
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="absolute top-4 right-4 z-50 size-9 flex items-center justify-center rounded-full bg-slate-900/90 border border-amber-500/40 text-amber-500 hover:bg-slate-800 hover:border-amber-500 hover:text-amber-400 transition-all active:scale-90 shadow-[0_0_20px_rgba(245,158,11,0.15)] group"
             aria-label="Close modal"
           >
@@ -105,9 +88,9 @@ export function ShowMoreModal({ title, content, loading, open, onClose, aspectTi
           </button>
 
           <div className="px-6 pt-4 pb-0 pr-2 shrink-0 flex flex-col items-center">
-            <h2 className="text-xl md:text-2xl font-bold uppercase tracking-[0.2em] gold-text text-center">
+            <DialogTitle className="text-xl md:text-2xl font-bold uppercase tracking-[0.2em] gold-text text-center">
               Deep Astrological Analysis
-            </h2>
+            </DialogTitle>
           </div>
 
           <div className="flex-1 overflow-y-auto custom-scrollbar bg-slate-950/50">
@@ -179,7 +162,6 @@ export function ShowMoreModal({ title, content, loading, open, onClose, aspectTi
                     </h4>
                   </div>
                   <div className="relative group rounded-xl border border-amber-500/20 overflow-hidden bg-slate-950 shadow-[0_0_50px_rgba(245,158,11,0.08)] transition-all hover:border-amber-500/40 w-full">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={pictureUrl} alt={title} className="w-full h-auto max-h-[600px] object-contain transition-transform duration-1000 group-hover:scale-[1.05]" />
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-950/40 via-transparent to-transparent pointer-events-none" />
 
@@ -205,7 +187,7 @@ export function ShowMoreModal({ title, content, loading, open, onClose, aspectTi
       {pictureUrl && (
         <ChartImageModal
           src={pictureUrl}
-          open={showFullImage}
+          open={open && showFullImage}
           onClose={() => { setShowFullImage(false); }}
         />
       )}
@@ -216,6 +198,7 @@ export function ShowMoreModal({ title, content, loading, open, onClose, aspectTi
 // ─── useShowMore Hook ─────────────────────────────────────────────────────────
 
 export function useShowMore() {
+  const scrollTopBeforeOpenRef = useRef<number | null>(null);
   const [modal, setModal] = useState<{
     title: string;
     content: string;
@@ -227,6 +210,24 @@ export function useShowMore() {
     bgClass?: string;
     pictureUrl?: string | null;
   } | null>(null);
+
+  function getResultScrollContainer() {
+    return document.querySelector(".result-scroll-container") as HTMLElement | null;
+  }
+
+  function restoreResultScroll() {
+    const scrollTop = scrollTopBeforeOpenRef.current;
+    if (scrollTop === null) return;
+
+    const restore = () => {
+      const container = getResultScrollContainer();
+      if (container) container.scrollTop = scrollTop;
+    };
+
+    restore();
+    requestAnimationFrame(restore);
+    setTimeout(restore, 0);
+  }
 
   function buildPicturePayload(
     type: "planet" | "house" | "aspect" | "generic",
@@ -315,6 +316,7 @@ export function useShowMore() {
     rawData?: any,
     horarySection?: "astrological_aspect" | "summary",
   ) {
+    scrollTopBeforeOpenRef.current = getResultScrollContainer()?.scrollTop ?? window.scrollY;
     let resolvedType = promptType ?? (aspectTitle ? "aspect" : "generic");
 
     // Auto-detect type from title if generic
@@ -558,7 +560,10 @@ export function useShowMore() {
     }
   }
 
-  function close() { setModal(null); }
+  function close() {
+    setModal(null);
+    restoreResultScroll();
+  }
 
   return { modal, trigger, close };
 }

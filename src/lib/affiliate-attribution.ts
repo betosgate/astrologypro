@@ -62,14 +62,17 @@ export interface AttributionContext {
 }
 
 /**
- * Resolve a ref_code to an active, affiliate-owned campaign.
+ * Resolve a ref_code to an active campaign (affiliate-owned OR diviner-owned).
  *
  * Returns null if:
  *   - refCode is missing or doesn't match the canonical format
  *   - no campaign matches
  *   - the campaign is not currently `status='active'`
- *   - the campaign is not `owner_type='affiliate'` (diviner-owned
- *     campaigns never credit commission)
+ *   - for affiliate-owned: owner_affiliate_type is missing or required owner
+ *     fields are not set
+ *
+ * Diviner-owned campaigns (owner_type='diviner') are now returned so the
+ * creditAffiliateConversion diviner-self path can credit the conversion.
  *
  * Uses the admin client to avoid RLS blocking the lookup — callers are
  * expected to be server-side trusted code (Stripe webhook, etc.).
@@ -90,10 +93,29 @@ export async function resolveAffiliateFromRef(
     )
     .eq("campaign_code", code)
     .eq("status", "active")
-    .eq("owner_type", "affiliate")
     .maybeSingle();
 
   if (!campaign) return null;
+
+  // Diviner-owned campaigns have no affiliate fields — return context directly.
+  if (campaign.owner_type === "diviner") {
+    return {
+      campaign_id: campaign.id as string,
+      diviner_id: (campaign.diviner_id as string | null) ?? null,
+      owner_type: campaign.owner_type as AffiliateCampaignOwnerType,
+      owner_affiliate_id: null,
+      owner_affiliate_type: null,
+      owner_affiliate_account_id: null,
+      commission_value_snapshot: null,
+      commission_type_snapshot: null,
+      source_assignment_id: null,
+      destination_type: (campaign.destination_type as AffiliateDestinationType | null) ?? null,
+      destination_service_template_id:
+        (campaign.destination_service_template_id as string | null) ?? null,
+      status: campaign.status as string,
+    };
+  }
+
   if (!campaign.owner_affiliate_type) return null;
 
   // Phase 1.5: per-diviner campaigns require owner_affiliate_id; general
@@ -173,6 +195,12 @@ export interface CreditConversionInput {
    * with stampedAssignmentId. Both NULL → no commission.
    */
   stampedTemplateId: string | null;
+  /**
+   * Diviner-owned campaign path: bookings.commission_source_campaign_id.
+   * Set when the booking was referred via the diviner's own campaign link.
+   * Mutually exclusive with stampedAssignmentId and stampedTemplateId.
+   */
+  stampedCampaignId?: string | null;
   /** bookings.commission_rate_type_stamp — 'percent' or 'flat', or NULL. */
   stampedRateType: "percent" | "flat" | null;
   /** bookings.commission_rate_value_stamp — NUMERIC, or NULL. */
@@ -259,7 +287,7 @@ export async function creditAffiliateConversion(
   if (
     !params.stampedRateType ||
     params.stampedRateValue == null ||
-    (!params.stampedAssignmentId && !params.stampedTemplateId)
+    (!params.stampedAssignmentId && !params.stampedTemplateId && !params.stampedCampaignId)
   ) {
     logEvent(false, "no_stamp");
     return null;
@@ -374,6 +402,42 @@ export async function creditAffiliateConversion(
       ripeness_at: ripenessAt,
       payout_status: "unpaid",
     };
+  } else if (params.stampedCampaignId) {
+    // ── Diviner-self-referral path ──────────────────────────────────────────
+    // The booking came from the diviner's own campaign link. No affiliate
+    // junction; the commission is earned by the diviner directly.
+    // We record the conversion so dashboard counts and commission_spent
+    // totals are accurate. recipient fields stay null (payout goes to the
+    // diviner via their existing Stripe Connected Account, not an affiliate
+    // account). No notification is sent.
+    //
+    // We use "diviner_affiliate" as a sentinel affiliate_type so existing
+    // reporting queries that filter by affiliate_type still include these
+    // rows; the is_diviner_self_referral flag distinguishes them.
+    resolvedAccountId = "00000000-0000-0000-0000-000000000000"; // placeholder; not used for payout
+    resolvedAffiliateType = "diviner_affiliate";
+    resolvedAffiliateId = null;
+
+    insertPayload = {
+      campaign_id: campaign.campaign_id,
+      affiliate_id: null,
+      affiliate_type: "diviner_affiliate",
+      affiliate_account_id: null,
+      booking_id: params.bookingId,
+      ref_code_snapshot: params.refCode ?? null,
+      order_reference: params.bookingId,
+      order_amount_cents: params.orderAmountCents,
+      commission_amount_cents: commissionCents,
+      commission_source: "campaign_assignment",
+      rate_type_used: params.stampedRateType,
+      rate_value_used: params.stampedRateValue,
+      // Diviner self-referral flag:
+      is_diviner_self_referral: true,
+      // Phase 2 payouts — not applicable to self-referral; set unpaid but
+      // payout pipeline will skip rows where affiliate_account_id IS NULL.
+      ripeness_at: ripenessAt,
+      payout_status: "unpaid",
+    };
   } else {
     // Phase 1.5 general-program path. The booking was stamped via a
     // service_templates rate; campaign carries the affiliate account
@@ -457,27 +521,33 @@ export async function creditAffiliateConversion(
   });
 
   // Phase 3 prep (Task 10): if this is the affiliate's first conversion
-  // ever, stamp the milestone for funnel analytics. The
-  // .is("first_conversion_at", null) filter makes only the FIRST write win
-  // — subsequent calls are no-ops at the DB level.
-  try {
-    await admin
-      .from("affiliate_accounts")
-      .update({ first_conversion_at: new Date().toISOString() })
-      .eq("id", resolvedAccountId)
-      .is("first_conversion_at", null);
-  } catch (err) {
-    console.error(
-      "[creditAffiliateConversion] first_conversion_at stamp failed",
-      err,
-    );
+  // ever, stamp the milestone for funnel analytics. Skip for diviner
+  // self-referral rows (no affiliate_account_id).
+  if (resolvedAccountId !== "00000000-0000-0000-0000-000000000000") {
+    try {
+      await admin
+        .from("affiliate_accounts")
+        .update({ first_conversion_at: new Date().toISOString() })
+        .eq("id", resolvedAccountId)
+        .is("first_conversion_at", null);
+    } catch (err) {
+      console.error(
+        "[creditAffiliateConversion] first_conversion_at stamp failed",
+        err,
+      );
+    }
   }
 
   // Fire `affiliate.conversion` notification (in-app immediate, email
-  // queued to daily digest). Fire-and-forget so a notification failure
-  // never blocks the webhook from acknowledging Stripe.
+  // queued to daily digest). Skip for diviner self-referral rows (no
+  // affiliate account recipient). Fire-and-forget so a notification
+  // failure never blocks the webhook from acknowledging Stripe.
   try {
-    if (recipientUserId && recipientEmail) {
+    if (
+      recipientUserId &&
+      recipientEmail &&
+      resolvedAccountId !== "00000000-0000-0000-0000-000000000000"
+    ) {
       const { notifyAffiliate } = await import("@/lib/affiliate-notifications");
       const dollars = (commissionCents / 100).toFixed(2);
       await notifyAffiliate({
@@ -503,6 +573,9 @@ export async function creditAffiliateConversion(
     commissionCents,
     campaignId: campaign.campaign_id,
     affiliateId: resolvedAffiliateId,
+    // For diviner self-referral, affiliateAccountId is the sentinel placeholder.
+    // Callers that need the real affiliate account should check affiliateType
+    // and affiliateId; if both are null, it is a diviner self-referral.
     affiliateAccountId: resolvedAccountId,
     affiliateType: resolvedAffiliateType,
   };
