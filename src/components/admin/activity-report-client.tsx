@@ -305,7 +305,7 @@ function FiltersBar({
         <select
           value={filters.category}
           onChange={(e) => onChange({ ...filters, category: e.target.value })}
-          className="h-8 rounded-md border border-input bg-background px-2 text-xs text-foreground"
+          className="h-8 rounded-md border border-input px-2 text-xs text-foreground"
         >
           <option value="">All categories</option>
           {["auth", "booking", "payment", "reading", "subscription", "admin", "system"].map((c) => (
