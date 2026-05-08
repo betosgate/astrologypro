@@ -9,13 +9,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   CalendarDays,
   ChevronDown,
   ChevronUp,
@@ -114,6 +107,12 @@ const RELATIONSHIP_MODES = [
 ] as const;
 
 type RelationshipMode = (typeof RELATIONSHIP_MODES)[number]["value"];
+
+function RelationshipModeIcon({ mode }: { mode: RelationshipMode }) {
+  if (mode === "romantic") return <Heart className="size-4 text-rose-400" />;
+  if (mode === "friendship") return <Users className="size-4 text-blue-500" />;
+  return <Star className="size-4 text-amber-500" />;
+}
 
 /**
  * UI mode → canonical `report_type` enum on community_relationship_reports.
@@ -454,13 +453,7 @@ export default function ChartsPage() {
                   return (
                     <section key={option.value} className="rounded-md border p-4">
                       <div className="flex items-center gap-2">
-                        {option.value === "romantic" ? (
-                          <Heart className="size-4 text-rose-400" />
-                        ) : option.value === "friendship" ? (
-                          <Users className="size-4 text-blue-500" />
-                        ) : (
-                          <Star className="size-4 text-amber-500" />
-                        )}
+                        <RelationshipModeIcon mode={option.value} />
                         <h2 className="text-sm font-semibold">
                           {option.label}
                         </h2>
@@ -517,13 +510,13 @@ export default function ChartsPage() {
 
             return (
               <Card key={pairKey}>
-                <div className="flex w-full items-center justify-between gap-4 px-5 py-4">
-                  <button
-                    type="button"
-                    className={`flex min-w-0 flex-1 items-center gap-3 text-left transition-colors ${synastry ? "hover:text-foreground" : "cursor-default"
-                      }`}
-                    onClick={() => synastry && setExpandedId(isOpen ? null : pairKey)}
-                  >
+                <button
+                  type="button"
+                  className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left transition-colors hover:bg-muted/30"
+                  aria-expanded={isOpen}
+                  onClick={() => setExpandedId(isOpen ? null : pairKey)}
+                >
+                  <div className="flex min-w-0 flex-1 items-center gap-3">
                     <Heart className="size-5 text-rose-400 shrink-0" />
                     <div className="min-w-0">
                       <p className="font-medium text-sm">
@@ -537,11 +530,11 @@ export default function ChartsPage() {
                         </p>
                       ) : (
                         <p className="text-xs text-muted-foreground">
-                          Choose a relationship type to open the detailed report
+                          Romantic, friendship, and business reports
                         </p>
                       )}
                     </div>
-                  </button>
+                  </div>
 
                   <div className="flex items-center gap-2 shrink-0">
                     {synastry && (
@@ -561,46 +554,6 @@ export default function ChartsPage() {
                       </div>
                     )}
 
-                    <Select
-                      value=""
-                      onValueChange={(value) =>
-                        openDetailedReport(a.id, b.id, value as RelationshipMode)
-                      }
-                    >
-                      <SelectTrigger
-                        size="sm"
-                        className="w-[150px]"
-                        aria-label={`Select relationship type for ${a.full_name} and ${b.full_name}`}
-                      >
-                        <SelectValue placeholder="Select type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {RELATIONSHIP_MODES.map((option) => {
-                          const state = getReportStateForMode(
-                            a.id,
-                            b.id,
-                            option.value
-                          );
-                          const cta = ctaLabelForState(state);
-                          return (
-                            <SelectItem
-                              key={option.value}
-                              value={option.value}
-                            >
-                              <span className="flex w-full items-center justify-between gap-3">
-                                <span>{option.label}</span>
-                                <span
-                                  className={`text-[10px] font-medium uppercase tracking-wider ${statusToneClass(state)}`}
-                                >
-                                  {cta}
-                                </span>
-                              </span>
-                            </SelectItem>
-                          );
-                        })}
-                      </SelectContent>
-                    </Select>
-
                     {/*
                       Legacy quick-generate/regenerate behavior bypassed:
                       this screen no longer calls POST /api/community/relationship-charts
@@ -609,64 +562,43 @@ export default function ChartsPage() {
                       uses the selected type plus pre-populated birth data.
                     */}
 
-                    {synastry && (
-                      <>
-                        {isOpen ? (
-                          <ChevronUp className="size-4 text-muted-foreground" />
-                        ) : (
-                          <ChevronDown className="size-4 text-muted-foreground" />
-                        )}
-                      </>
+                    {isOpen ? (
+                      <ChevronUp className="size-4 text-muted-foreground" />
+                    ) : (
+                      <ChevronDown className="size-4 text-muted-foreground" />
                     )}
                   </div>
-                </div>
+                </button>
 
-                {isOpen && synastry && (
-                  <CardContent className="border-t pt-4 space-y-5">
-                    <div className="rounded-lg border bg-primary/5 p-4">
-                      <p className="text-sm font-medium">Open the full diviner-style report</p>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        Reuse the saved birth data for this pair and load the same detailed relationship toolkit used in practitioner sessions.
-                      </p>
-                      <Select
-                        value=""
-                        onValueChange={(value) =>
-                          openDetailedReport(a.id, b.id, value as RelationshipMode)
-                        }
-                      >
-                        <SelectTrigger
-                          size="sm"
-                          className="mt-3 w-[180px]"
-                          aria-label={`Select detailed report type for ${a.full_name} and ${b.full_name}`}
-                        >
-                          <SelectValue placeholder="Select report type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {RELATIONSHIP_MODES.map((option) => {
-                            const state = getReportStateForMode(
-                              a.id,
-                              b.id,
-                              option.value
-                            );
-                            const cta = ctaLabelForState(state);
-                            return (
-                              <SelectItem
-                                key={option.value}
-                                value={option.value}
-                              >
-                                <span className="flex w-full items-center justify-between gap-3">
-                                  <span>{option.label}</span>
-                                  <span
-                                    className={`text-[10px] font-medium uppercase tracking-wider ${statusToneClass(state)}`}
-                                  >
-                                    {cta}
-                                  </span>
-                                </span>
-                              </SelectItem>
-                            );
-                          })}
-                        </SelectContent>
-                      </Select>
+                {isOpen && (
+                  <CardContent className="border-t pt-4">
+                    <div className="grid gap-4 md:grid-cols-3">
+                      {RELATIONSHIP_MODES.map((option) => {
+                        const state = getReportStateForMode(a.id, b.id, option.value);
+                        const cta = ctaLabelForState(state);
+                        return (
+                          <section key={option.value} className="rounded-md border p-4">
+                            <div className="flex items-center gap-2">
+                              <RelationshipModeIcon mode={option.value} />
+                              <h2 className="text-sm font-semibold">
+                                {option.label}
+                              </h2>
+                            </div>
+                            <p className="mt-2 text-xs text-muted-foreground">
+                              {a.full_name} &amp; {b.full_name}
+                            </p>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              className="mt-4 w-full"
+                              onClick={() => openDetailedReport(a.id, b.id, option.value)}
+                            >
+                              <span className={statusToneClass(state)}>{cta}</span>
+                            </Button>
+                          </section>
+                        );
+                      })}
                     </div>
 
                     {/*
