@@ -203,7 +203,7 @@ export default function ProductsListPage() {
               ))}
             </div>
             <select
-              className="rounded-md border border-input bg-background px-3 py-1.5 text-sm"
+              className="rounded-md h-9 border border-input px-3 py-1.5 text-sm"
               value={pageSize}
               onChange={(e) => setPageSize(Number(e.target.value))}
             >

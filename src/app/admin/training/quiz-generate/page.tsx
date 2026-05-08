@@ -214,7 +214,7 @@ export default function QuizGeneratePage() {
                 <div className="space-y-2">
                   <Label>Assign to lesson (optional)</Label>
                   <select
-                    className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+                    className="w-full rounded-md border h-9 px-3 py-2 text-sm"
                     value={lessonId}
                     onChange={(e) => setLessonId(e.target.value)}
                   >

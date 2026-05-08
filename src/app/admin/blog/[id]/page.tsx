@@ -580,7 +580,7 @@ export default function BlogEditorPage() {
                 <select
                   value={status}
                   onChange={(e) => setStatus(e.target.value as BlogStatus)}
-                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
+                  className="flex h-9 w-full rounded-md border border-input px-3 py-1 text-sm shadow-sm"
                 >
                   {VALID_STATUSES.map((s) => (
                     <option key={s} value={s}>{STATUS_LABELS[s]}</option>
@@ -634,7 +634,7 @@ export default function BlogEditorPage() {
                 <select
                   value={authorId}
                   onChange={(e) => setAuthorId(e.target.value)}
-                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
+                  className="flex h-9 w-full rounded-md border border-input px-3 py-1 text-sm shadow-sm"
                 >
                   <option value="">— None —</option>
                   {authors.map((a) => (
@@ -647,7 +647,7 @@ export default function BlogEditorPage() {
                 <select
                   value={seriesId}
                   onChange={(e) => setSeriesId(e.target.value)}
-                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
+                  className="flex h-9 w-full rounded-md border border-input px-3 py-1 text-sm shadow-sm"
                 >
                   <option value="">— None —</option>
                   {seriesList.map((s) => (
@@ -787,7 +787,7 @@ export default function BlogEditorPage() {
                 <select
                   value={difficultyLevel}
                   onChange={(e) => setDifficultyLevel(e.target.value)}
-                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
+                  className="flex h-9 w-full rounded-md border border-input px-3 py-1 text-sm shadow-sm"
                 >
                   <option value="">— None —</option>
                   {DIFFICULTY_LEVELS.map((d) => (
@@ -802,7 +802,7 @@ export default function BlogEditorPage() {
                 <select
                   value={contentIntent}
                   onChange={(e) => setContentIntent(e.target.value)}
-                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
+                  className="flex h-9 w-full rounded-md border border-input px-3 py-1 text-sm shadow-sm"
                 >
                   <option value="">— None —</option>
                   {CONTENT_INTENTS.map((c) => (
