@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronDown } from "lucide-react";
@@ -27,17 +27,14 @@ export function NavDropdown({ label, items, icon }: NavDropdownProps) {
   const childMatches = items.some(
     (item) => pathname === item.href || pathname.startsWith(item.href + "/"),
   );
-  const [open, setOpen] = useState(childMatches);
-
-  useEffect(() => {
-    if (childMatches) setOpen(true);
-  }, [childMatches]);
+  const [open, setOpen] = useState(false);
+  const expanded = childMatches || open;
 
   return (
     <div className="flex flex-col">
       <button
         type="button"
-        aria-expanded={open}
+        aria-expanded={expanded}
         onClick={() => setOpen((v) => !v)}
         className={cn(
           "flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm font-medium transition-colors",
@@ -53,12 +50,12 @@ export function NavDropdown({ label, items, icon }: NavDropdownProps) {
         <ChevronDown
           className={cn(
             "size-4 transition-transform",
-            open ? "rotate-180" : "rotate-0",
+            expanded ? "rotate-180" : "rotate-0",
           )}
           aria-hidden="true"
         />
       </button>
-      {open && (
+      {expanded && (
         <ul className="mt-0.5 flex flex-col gap-0.5 pl-3">
           {items.map((item) => {
             const isActive =
