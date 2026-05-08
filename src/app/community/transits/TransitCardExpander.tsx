@@ -12,9 +12,11 @@ import {
   ChevronDown,
   ChevronUp,
   FileText,
+  Sparkles,
   Telescope,
 } from "lucide-react";
 import Link from "next/link";
+import type { MonthlyTransitReportSummaryItem } from "@/lib/community/monthly-transit-report-summary";
 
 export type TransitCardData = {
   id: string;
@@ -52,6 +54,7 @@ export type TransitCardData = {
   hasSavedFullReport: boolean;
   month: string;
   reportStatusLabel: string;
+  reportSummaryItems: MonthlyTransitReportSummaryItem[];
   highlights: string[];
 };
 
@@ -72,6 +75,21 @@ export function TransitCardExpander({
             : card.chartCtaLabel === "Generating Natal Chart..."
               ? "Generating Natal Chart..."
               : "Generate Natal Chart";
+        const hasReportSummary = card.reportSummaryItems.length > 0;
+        const summaryLabel = hasReportSummary
+          ? `${card.reportSummaryItems.length} report highlight${
+              card.reportSummaryItems.length === 1 ? "" : "s"
+            }`
+          : card.hasValidTransitSummary
+            ? `${card.harmoniousCount} supportive · ${card.challengingCount} challenging aspects`
+            : card.transitSummaryLabel ?? "Summary not available yet";
+        const snapshotLabel = hasReportSummary
+          ? `${card.reportSummaryItems.length} report-derived highlight${
+              card.reportSummaryItems.length === 1 ? "" : "s"
+            }`
+          : card.hasValidTransitSummary
+            ? `${card.harmoniousCount} supportive · ${card.challengingCount} challenging`
+            : card.transitSummaryLabel ?? "Summary not available yet";
 
         return (
           <Card key={card.id}>
@@ -87,9 +105,7 @@ export function TransitCardExpander({
                 <div className="min-w-0">
                   <p className="font-medium text-sm">{card.memberName}</p>
                   <p className="text-xs text-muted-foreground">
-                    {card.hasValidTransitSummary
-                      ? `${card.harmoniousCount} supportive · ${card.challengingCount} challenging aspects`
-                      : card.transitSummaryLabel ?? "Summary not available yet"}
+                    {summaryLabel}
                   </p>
                 </div>
               </button>
@@ -149,15 +165,39 @@ export function TransitCardExpander({
                     <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
                       Snapshot
                     </p>
-                    <p className="mt-1 font-medium">
-                      {card.hasValidTransitSummary
-                        ? `${card.harmoniousCount} supportive · ${card.challengingCount} challenging`
-                        : card.transitSummaryLabel ?? "Summary not available yet"}
-                    </p>
+                    <p className="mt-1 font-medium">{snapshotLabel}</p>
                   </div>
                 </div>
 
-                {card.highlights.length > 0 && (
+                {hasReportSummary ? (
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      Transit Snapshot
+                    </p>
+                    <ul className="space-y-2">
+                      {card.reportSummaryItems.map((item, i) => (
+                        <li
+                          key={i}
+                          className="flex gap-2 text-sm leading-relaxed text-muted-foreground"
+                        >
+                          <Sparkles className="mt-0.5 size-3.5 shrink-0 text-primary" />
+                          <span>
+                            <span className="font-medium text-foreground">
+                              {item.date ? `${item.date}: ` : ""}
+                              {item.title}
+                            </span>
+                            {item.description ? ` - ${item.description}` : ""}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : card.hasSavedFullReport ? (
+                  <div className="rounded-md border border-dashed px-3 py-2 text-sm text-muted-foreground">
+                    Saved report found, but no summary-ready monthly transit
+                    items were available in the report payload.
+                  </div>
+                ) : card.highlights.length > 0 ? (
                   <div className="space-y-2">
                     <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                       Transit Snapshot
@@ -173,7 +213,7 @@ export function TransitCardExpander({
                       ))}
                     </div>
                   </div>
-                )}
+                ) : null}
 
                 <div className="flex items-center gap-2 pt-1 flex-wrap">
                   {card.chartCtaDisabled ? (
@@ -198,13 +238,18 @@ export function TransitCardExpander({
                         : "Generate Transit Report"}
                     </Link>
                   </Button>
-                  {card.hasSavedFullReport && (
+                  {/*
+                    Regeneration is intentionally hidden for now.
+                    Keep this CTA code in place so it can be restored without
+                    rebuilding the action.
+                  */}
+                  {/* {card.hasSavedFullReport && (
                     <Button size="sm" variant="outline" asChild>
                       <Link href={`${card.detailedHref}&regenerate=1`}>
                         Regenerate Transit Report
                       </Link>
                     </Button>
-                  )}
+                  )} */}
                   <Button size="sm" variant="ghost" asChild>
                     <Link href="/diviner">
                       <BookOpen className="mr-1.5 size-4" />

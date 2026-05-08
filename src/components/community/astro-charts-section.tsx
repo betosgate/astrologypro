@@ -501,7 +501,18 @@ export function AstroChartsSection() {
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-muted-foreground">{active.month}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Month:{" "}
+                    {active.month
+                      ? new Date(active.month + "-01T12:00:00").toLocaleDateString(
+                          "en-US",
+                          {
+                            month: "long",
+                            year: "numeric",
+                          }
+                        )
+                      : ""}
+                  </p>
                   <div className="flex items-center gap-1.5">
                     {isMulti && (
                       <Button

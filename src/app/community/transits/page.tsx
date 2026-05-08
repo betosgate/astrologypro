@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 import { ensureCurrentMonthTransitsForMember } from "@/lib/community/ensure-monthly-transits";
 import { isValidMonthlyTransit } from "@/lib/community/chart-validators";
@@ -22,6 +23,10 @@ import { TrendingUp, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { BookReadingButton } from "./BookReadingButton";
 import { TransitCardExpander } from "./TransitCardExpander";
+import {
+  buildMonthlyTransitSummaryFromReport,
+  type MonthlyTransitReportSummaryItem,
+} from "@/lib/community/monthly-transit-report-summary";
 
 export const metadata = { title: "Monthly Transits - AstrologyPro Community" };
 export const dynamic = "force-dynamic";
@@ -107,6 +112,14 @@ type TransitRow = {
   full_report_status: string | null;
   full_report_generated_at: string | null;
   community_family_members: { full_name: string };
+};
+
+type SavedMonthlyReportRow = {
+  id: string;
+  ai_response: unknown;
+  astro_api_data: unknown;
+  form_data: unknown;
+  created_at: string | null;
 };
 
 type FamilyTransitOwner = {
@@ -217,6 +230,33 @@ export default async function TransitsPage() {
   const transitByFamilyId = new Map(
     familyTransits.map((row) => [row.family_member_id, row])
   );
+  const linkedFullReportIds = Array.from(
+    new Set(
+      familyTransits
+        .map((row) => row.full_report_id)
+        .filter((id): id is string => Boolean(id))
+    )
+  );
+  const savedReportById = new Map<string, SavedMonthlyReportRow>();
+
+  if (linkedFullReportIds.length > 0) {
+    const admin = createAdminClient();
+    const { data: savedReports, error: savedReportsError } = await admin
+      .from("astro_ai_responses")
+      .select("id, ai_response, astro_api_data, form_data, created_at")
+      .in("id", linkedFullReportIds);
+
+    if (savedReportsError) {
+      console.warn(
+        "[transits/page] failed to load linked saved monthly reports:",
+        savedReportsError.message
+      );
+    }
+
+    for (const report of (savedReports ?? []) as SavedMonthlyReportRow[]) {
+      savedReportById.set(report.id, report);
+    }
+  }
 
   // Pre-compute card data server-side for the client expander
   const cardData = eligibleFamily.map((familyMember) => {
@@ -298,6 +338,13 @@ export default async function TransitsPage() {
       : isPending
         ? "Summary generating"
         : "Summary not available yet";
+    const savedFullReport = row?.full_report_id
+      ? savedReportById.get(row.full_report_id)
+      : null;
+    const reportSummaryItems: MonthlyTransitReportSummaryItem[] =
+      savedFullReport && row?.full_report_status === "generated"
+        ? buildMonthlyTransitSummaryFromReport(savedFullReport, 3)
+        : [];
 
     return {
       id: row?.id ?? `${familyMember.id}-${currentMonth}`,
@@ -317,6 +364,7 @@ export default async function TransitsPage() {
       hasSavedFullReport,
       month: row?.month ?? currentMonth,
       reportStatusLabel,
+      reportSummaryItems,
       highlights: validTransitData?.highlights.slice(0, 3) ?? [],
     };
   });

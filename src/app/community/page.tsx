@@ -1070,16 +1070,20 @@ export default async function CommunityDashboardPage() {
     ];
 
     for (const fm of familyMembers) {
+      const rel = (fm.relationship ?? "").trim();
+      const normalizedRel = normalizeRel(rel);
+      const isSelfRelationship =
+        normalizedRel === "self" || normalizedRel === "primary";
       // Dedup against primary member — stable id first, name fallback.
       const isSameAsPrimaryByUser =
         (fm as { user_id?: string | null }).user_id != null &&
         (fm as { user_id?: string | null }).user_id === user.id;
       const isSameAsPrimaryByName =
+        isSelfRelationship &&
         primarySelfName !== "" &&
         (fm.full_name ?? "").trim().toLowerCase() === primarySelfName;
       if (isSameAsPrimaryByUser || isSameAsPrimaryByName) continue;
 
-      const rel = (fm.relationship ?? "").trim();
       const missing = rel === "";
       chips.push({
         id: fm.id,
