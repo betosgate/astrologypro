@@ -27,6 +27,7 @@ export type StampReason =
   | "destination_mismatch"
   | "account_not_active"
   | "program_disabled"
+  | "no_commission_config"
   | "lookup_error";
 
 export interface StampResult {
@@ -37,6 +38,13 @@ export interface StampResult {
    * other null). NULL on per-diviner stamps.
    */
   source_template_id: string | null;
+  /**
+   * Diviner-owned campaign path: set when the referral code resolves to a
+   * campaign the diviner created for themselves (owner_type='diviner').
+   * Mutually exclusive with source_assignment_id and source_template_id.
+   * Maps to bookings.commission_source_campaign_id.
+   */
+  source_campaign_id: string | null;
   rate_type_stamp: StampRateType | null;
   rate_value_stamp: number | null;
   /**
@@ -59,6 +67,7 @@ export interface ResolveStampInput {
 const NO_STAMP = (reason: StampReason): StampResult => ({
   source_assignment_id: null,
   source_template_id: null,
+  source_campaign_id: null,
   rate_type_stamp: null,
   rate_value_stamp: null,
   affiliate_account_id: null,
@@ -86,7 +95,7 @@ export async function resolveStampForBooking(
   const { data: campaign, error: campaignErr } = await admin
     .from("affiliate_campaigns")
     .select(
-      "id, diviner_id, status, owner_type, owner_affiliate_id, owner_affiliate_type, owner_affiliate_account_id, source_assignment_id, destination_type, destination_service_template_id",
+      "id, diviner_id, status, owner_type, owner_affiliate_id, owner_affiliate_type, owner_affiliate_account_id, source_assignment_id, destination_type, destination_service_template_id, commission_type, commission_value",
     )
     .eq("campaign_code", code)
     .maybeSingle();
@@ -99,7 +108,66 @@ export async function resolveStampForBooking(
     return NO_STAMP("lookup_error");
   }
   if (!campaign) return NO_STAMP("no_campaign");
-  if (campaign.status !== "active" || campaign.owner_type !== "affiliate") {
+  if (campaign.status !== "active") return NO_STAMP("campaign_inactive");
+
+  // ── Diviner-owned campaign path ────────────────────────────────────────
+  // When the diviner creates their own campaign (owner_type='diviner'), there
+  // is no affiliate junction. The commission is paid to the diviner themselves
+  // based on the campaign's commission_type + commission_value.
+  if (campaign.owner_type === "diviner") {
+    // Must have a commission rate configured on the campaign.
+    if (
+      !campaign.commission_type ||
+      campaign.commission_value == null
+    ) {
+      console.log(
+        JSON.stringify({
+          event: "affiliate_stamp_skipped",
+          refCode: code,
+          reason: "no_commission_config",
+          campaignId: campaign.id,
+          note: "Diviner-owned campaign has no commission_type/commission_value configured",
+        }),
+      );
+      return NO_STAMP("no_commission_config");
+    }
+
+    // Destination match: SERVICE → template_id; PROFILE → diviner_id.
+    let templateId: string | null = null;
+    if (input.serviceId) {
+      const { data: svc } = await admin
+        .from("services")
+        .select("template_id")
+        .eq("id", input.serviceId)
+        .maybeSingle();
+      templateId = (svc?.template_id as string | null) ?? null;
+    }
+
+    const matchesService =
+      campaign.destination_type === "SERVICE" &&
+      campaign.destination_service_template_id != null &&
+      campaign.destination_service_template_id === templateId;
+    const matchesProfile =
+      campaign.destination_type === "PROFILE" &&
+      campaign.diviner_id === input.divinerId;
+
+    if (!matchesService && !matchesProfile) {
+      return NO_STAMP("destination_mismatch");
+    }
+
+    return {
+      source_assignment_id: null,
+      source_template_id: null,
+      source_campaign_id: campaign.id as string,
+      rate_type_stamp: campaign.commission_type as StampRateType,
+      rate_value_stamp: Number(campaign.commission_value),
+      affiliate_account_id: null, // no affiliate account; diviner is the recipient
+      reason: "stamped",
+    };
+  }
+
+  // ── Affiliate-owned campaign paths (owner_type='affiliate') ────────────
+  if (campaign.owner_type !== "affiliate") {
     return NO_STAMP("campaign_inactive");
   }
 
@@ -147,6 +215,7 @@ export async function resolveStampForBooking(
     return {
       source_assignment_id: null,
       source_template_id: template.id as string,
+      source_campaign_id: null,
       rate_type_stamp: rateType,
       rate_value_stamp: rateValue,
       affiliate_account_id: account.id as string,
@@ -222,6 +291,7 @@ export async function resolveStampForBooking(
   return {
     source_assignment_id: assignment.id as string,
     source_template_id: null,
+    source_campaign_id: null,
     rate_type_stamp: (assignment.commission_type as StampRateType) ?? "percent",
     rate_value_stamp: Number(assignment.commission_value ?? 0),
     affiliate_account_id: junction.affiliate_account_id as string,
