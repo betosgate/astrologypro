@@ -5,15 +5,13 @@ import { ArrowRight, CheckCircle2, CreditCard, ScrollText, ShieldCheck, Sparkles
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ensureUserContractRequirements } from "@/lib/contract-orchestration";
-import { finalizePerennialCommunityCheckoutFromSessionId } from "@/lib/community/finalize-checkout";
 import { stripe } from "@/lib/stripe/client";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { finalizeTraineeDivinerUpgradeFromSessionId } from "@/lib/trainee-diviner-upgrade";
 
 export const dynamic = "force-dynamic";
 export const metadata = {
-  title: "Finalizing Perennial Mandalism - AstrologyPro",
+  title: "Trainee Program - Payment Successful - AstrologyPro",
 };
 
 function firstParam(value: string | string[] | undefined) {
@@ -37,7 +35,7 @@ function titleCase(value: string | null | undefined) {
     .replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
-async function getCheckoutDetails(sessionId: string) {
+async function getCheckoutData(sessionId: string) {
   const session = await stripe.checkout.sessions.retrieve(sessionId, {
     expand: ["line_items"],
   });
@@ -47,72 +45,19 @@ async function getCheckoutDetails(sessionId: string) {
   const planName =
     session.metadata?.planName ??
     sessionWithLines.line_items?.data?.find((item) => item.description)?.description ??
-    "Perennial Mandalism";
+    "Trainee Program";
 
-  return [
-    ["Amount paid", formatCheckoutAmount(session.amount_total, session.currency)],
-    ["Recent plan", planName],
-    ["Payment status", titleCase(session.payment_status)],
-  ];
+  return {
+    itemKey: session.metadata?.itemKey,
+    details: [
+      ["Amount paid", formatCheckoutAmount(session.amount_total, session.currency)],
+      ["Recent plan", planName],
+      ["Payment status", titleCase(session.payment_status)],
+    ],
+  };
 }
 
-async function finalizeLegacyPerennialCommunitySignup({
-  session,
-  userId,
-}: {
-  session: Stripe.Checkout.Session;
-  userId: string;
-}) {
-  if (session.metadata?.userId !== userId) return false;
-  if (session.status !== "complete" || session.payment_status === "unpaid") {
-    return false;
-  }
-
-  const admin = createAdminClient();
-  const planId = session.metadata?.planId ?? null;
-  const subscriptionId =
-    typeof session.subscription === "string"
-      ? session.subscription
-      : session.subscription?.id;
-
-  const {
-    data: { user: authUser },
-  } = await admin.auth.admin.getUserById(userId);
-  const email = authUser?.email ?? "";
-  const fullName =
-    (authUser?.user_metadata?.name as string | undefined) ??
-    (authUser?.user_metadata?.full_name as string | undefined) ??
-    null;
-
-  const { error } = await admin.from("community_members").upsert(
-    {
-      user_id: userId,
-      email,
-      full_name: fullName,
-      membership_type: "perennial_mandalism",
-      membership_status: "active",
-      plan_type: "individual",
-      stripe_subscription_id: subscriptionId ?? null,
-      joined_at: new Date().toISOString(),
-      onboarding_completed: false,
-      intake_data: planId ? { selected_plan_id: planId } : {},
-    },
-    { onConflict: "user_id" },
-  );
-
-  if (error) {
-    console.error(
-      "[perennial-signup/success] failed to finalize legacy community signup:",
-      error,
-    );
-    return false;
-  }
-
-  await ensureUserContractRequirements(userId, "post_login");
-  return true;
-}
-
-export default async function PerennialSignupSuccessPage({
+export default async function TraineeSignupSuccessPage({
   searchParams,
 }: {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
@@ -121,10 +66,10 @@ export default async function PerennialSignupSuccessPage({
   const sessionId = firstParam(resolvedSearchParams.session_id);
 
   if (!sessionId) {
-    redirect("/perennial-signup?error=missing-session");
+    redirect("/get-started?error=missing-session");
   }
 
-  const loginRedirect = `/perennial-signup/success?session_id=${encodeURIComponent(sessionId)}`;
+  const loginRedirect = `/trainee-signup/success?session_id=${encodeURIComponent(sessionId)}`;
   const supabase = await createClient();
   const {
     data: { user },
@@ -134,33 +79,28 @@ export default async function PerennialSignupSuccessPage({
     redirect(`/login?redirect=${encodeURIComponent(loginRedirect)}`);
   }
 
-  const contractsHref = `/contracts/pending?source=community-checkout&session_id=${encodeURIComponent(sessionId)}&next=${encodeURIComponent("/community")}`;
-  const session = await stripe.checkout.sessions.retrieve(sessionId);
+  const { itemKey, details: checkoutDetails } = await getCheckoutData(sessionId);
 
-  if (session.metadata?.type === "community") {
-    const result = await finalizePerennialCommunityCheckoutFromSessionId({
+  let nextStepText = "Complete your profile and setup your training preferences before entering the dashboard.";
+  let nextHref = `/join/trainee/profile?session_id=${encodeURIComponent(sessionId)}`;
+  let accountActivatedText = "Stripe returned a successful checkout and your trainee access has been provisioned.";
+
+  if (itemKey === "trainee_diviner_bundle") {
+    const result = await finalizeTraineeDivinerUpgradeFromSessionId({
       sessionId,
       userId: user.id,
+      markTraineePaid: true,
       ensureContracts: true,
     });
 
-    if (!result?.communityMemberSaved) {
-      redirect("/switch?subscribed=true&pm=provision-failed");
+    if (!result?.divinerSaved) {
+      redirect("/get-started?error=provision-failed");
     }
-  } else if (session.metadata?.type === "perennial_community_signup") {
-    const finalized = await finalizeLegacyPerennialCommunitySignup({
-      session,
-      userId: user.id,
-    });
 
-    if (!finalized) {
-      redirect("/switch?subscribed=true&pm=provision-failed");
-    }
-  } else {
-    await ensureUserContractRequirements(user.id, "post_login");
+    nextStepText = "Review your required contract agreement and set up your profile before entering the dashboards.";
+    nextHref = `/contracts/pending?source=trainee-bundle&session_id=${encodeURIComponent(sessionId)}&next=${encodeURIComponent("/join/trainee/profile?session_id=" + encodeURIComponent(sessionId))}`;
+    accountActivatedText = "Stripe returned a successful checkout and your trainee & diviner access has been provisioned.";
   }
-
-  const checkoutDetails = await getCheckoutDetails(sessionId);
 
   return (
     <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center overflow-hidden p-6">
@@ -174,7 +114,7 @@ export default async function PerennialSignupSuccessPage({
               <Sparkles className="size-full" />
             </div>
             <Badge className="mb-4 border-violet-400/30 bg-violet-400/15 text-[10px] font-bold uppercase tracking-widest text-violet-200 hover:bg-violet-400/15">
-              Perennial Mandalism
+              Trainee Program
             </Badge>
             <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
               <div className="flex size-16 shrink-0 items-center justify-center rounded-2xl border border-violet-300/25 bg-violet-400/15 shadow-lg shadow-violet-500/10">
@@ -185,8 +125,8 @@ export default async function PerennialSignupSuccessPage({
                   Payment successful
                 </h1>
                 <p className="mt-2 max-w-xl text-sm leading-relaxed text-white/65">
-                  Your Perennial Mandalism membership is active. Complete the
-                  required agreement step, then continue into the community.
+                  Your Trainee Program access is active. Review the payment
+                  details, then continue to complete your profile.
                 </p>
               </div>
             </div>
@@ -199,10 +139,9 @@ export default async function PerennialSignupSuccessPage({
                   <ShieldCheck className="size-5" />
                 </span>
                 <div>
-                  <p className="text-sm font-semibold text-white">Membership active</p>
+                  <p className="text-sm font-semibold text-white">Account activated</p>
                   <p className="mt-1 text-xs leading-relaxed text-white/50">
-                    Stripe returned a successful checkout and your community
-                    access has been provisioned.
+                    {accountActivatedText}
                   </p>
                 </div>
               </div>
@@ -216,8 +155,7 @@ export default async function PerennialSignupSuccessPage({
                 <div>
                   <p className="text-sm font-semibold text-white">Next step</p>
                   <p className="mt-1 text-xs leading-relaxed text-white/50">
-                    Review and accept any pending contracts before entering
-                    Perennial Mandalism.
+                    {nextStepText}
                   </p>
                 </div>
               </div>
@@ -245,7 +183,7 @@ export default async function PerennialSignupSuccessPage({
 
           <div className="border-t border-white/10 bg-slate-950/35 px-6 py-5 sm:px-8">
             <Button asChild size="lg" className="w-full bg-gradient-to-r from-violet-500 to-purple-500 font-bold text-white hover:from-violet-400 hover:to-purple-400">
-              <Link href={contractsHref}>
+              <Link href={nextHref}>
                 Go to Next Step
                 <ArrowRight className="ml-2 size-4" />
               </Link>

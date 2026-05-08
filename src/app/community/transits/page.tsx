@@ -12,6 +12,7 @@ import {
   computeBirthDataReadiness,
   type BirthDataField,
 } from "@/lib/community/birth-data-readiness";
+import { ensureCanonicalSelfFamilyMember } from "@/lib/community/self-family-member";
 import {
   Card,
   CardContent,
@@ -110,6 +111,7 @@ type TransitRow = {
 
 type FamilyTransitOwner = {
   id: string;
+  relationship: string | null;
   full_name: string;
   natal_chart: unknown;
   natal_status: string | null;
@@ -136,12 +138,16 @@ export default async function TransitsPage() {
 
   const { data: member } = await supabase
     .from("community_members")
-    .select("id, membership_status")
+    .select(
+      "id, user_id, full_name, membership_status, date_of_birth, birth_time, birth_city, birth_country"
+    )
     .eq("user_id", user.id)
     .single();
 
   if (!member) redirect("/get-started");
   if (member.membership_status !== "active") redirect("/join/community/resubscribe");
+
+  await ensureCanonicalSelfFamilyMember(member, user.id);
 
   const now = new Date();
   const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
@@ -155,7 +161,7 @@ export default async function TransitsPage() {
   const { data: familyRows } = await supabase
     .from("community_family_members")
     .select(
-      "id, full_name, natal_chart, natal_status, natal_report_id, natal_report_status, natal_report_generated_at, natal_last_generated_at, chart_updated_at, updated_at, date_of_birth, birth_time, birth_city, birth_country, birth_lat, birth_lng"
+      "id, full_name, relationship, natal_chart, natal_status, natal_report_id, natal_report_status, natal_report_generated_at, natal_last_generated_at, chart_updated_at, updated_at, date_of_birth, birth_time, birth_city, birth_country, birth_lat, birth_lng"
     )
     .eq("member_id", member.id);
 
@@ -403,6 +409,10 @@ export default async function TransitsPage() {
             {incompleteFamily.map((fm) => {
               const readiness = computeBirthDataReadiness(fm);
               const hint = buildIncompleteHint(readiness.missing);
+              const isSelf = (fm.relationship ?? "").toLowerCase() === "self";
+              const completeHref = isSelf
+                ? "/community/profile"
+                : `/community/family/${fm.id}/edit`;
               return (
                 <Card key={fm.id} className="border-amber-500/40 bg-amber-500/5">
                   <CardContent className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
@@ -413,7 +423,7 @@ export default async function TransitsPage() {
                       </p>
                     </div>
                     <Button asChild size="sm" variant="outline">
-                      <Link href={`/community/family/${fm.id}`}>
+                      <Link href={completeHref}>
                         Complete Birth Details
                       </Link>
                     </Button>

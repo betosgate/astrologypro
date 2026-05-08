@@ -10,6 +10,7 @@ import {
   computeBirthDataReadiness,
   buildNatalChartFromBirthData,
 } from "@/lib/community/birth-data-readiness";
+import { ensureCanonicalSelfFamilyMember } from "@/lib/community/self-family-member";
 import {
   findSavedReportMatch,
   SAVED_REPORT_MATCH_SELECT,
@@ -29,7 +30,9 @@ async function getMember(supabase: Awaited<ReturnType<typeof createClient>>) {
   if (!user) return null;
   const { data: member } = await supabase
     .from("community_members")
-    .select("id, membership_status")
+    .select(
+      "id, user_id, full_name, membership_status, date_of_birth, birth_time, birth_city, birth_country"
+    )
     .eq("user_id", user.id)
     .single();
   return member ? { ...member, user_id: user.id } : null;
@@ -78,6 +81,8 @@ export async function GET() {
   if (!member) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (member.membership_status !== "active")
     return NextResponse.json({ error: "Inactive membership" }, { status: 403 });
+
+  await ensureCanonicalSelfFamilyMember(member, member.user_id);
 
   // Fetch family members with their natal charts
   const { data: familyMembers } = await supabase

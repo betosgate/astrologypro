@@ -7,11 +7,12 @@ export const dynamic = "force-dynamic";
 /**
  * POST /api/community/members/create
  *
- * Creates a new Perennial Mandalism family/community member record linked to
- * the authenticated user's community membership.
+ * Creates a new family member record linked to the authenticated user's
+ * community membership.
  *
- * Required: firstname, lastname, email
- * Optional: all intake questionnaire fields stored in intake_data JSONB
+ * Required: firstname, lastname, email, date_of_birth
+ * Optional: contact/intake fields are stored as notes metadata where the
+ * family-member table has no dedicated column.
  */
 export async function POST(req: NextRequest) {
   try {
@@ -39,6 +40,12 @@ export async function POST(req: NextRequest) {
       phone,
       gender,
       relationship_status,
+      date_of_birth,
+      birth_time,
+      birth_city,
+      birth_country,
+      birth_lat,
+      birth_lng,
       state,
       city,
       zip,
@@ -68,6 +75,7 @@ export async function POST(req: NextRequest) {
       specificQuestions,
       goalsOutcomes,
       additional_info,
+      notes,
       status,
     } = body;
 
@@ -81,10 +89,23 @@ export async function POST(req: NextRequest) {
     if (!email || typeof email !== "string" || !String(email).trim()) {
       return NextResponse.json({ error: "Email is required." }, { status: 422 });
     }
+    if (
+      !date_of_birth ||
+      typeof date_of_birth !== "string" ||
+      !String(date_of_birth).trim()
+    ) {
+      return NextResponse.json({ error: "Date of birth is required." }, { status: 422 });
+    }
 
     // Basic email format check
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email).trim())) {
+    const normalizedEmail = String(email).trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
       return NextResponse.json({ error: "Invalid email address." }, { status: 422 });
+    }
+
+    const phoneDigits = typeof phone === "string" ? phone.replace(/\D/g, "") : "";
+    if (phoneDigits && phoneDigits.length !== 10) {
+      return NextResponse.json({ error: "Phone must be a 10-digit number." }, { status: 422 });
     }
 
     const admin = createAdminClient();
@@ -92,7 +113,7 @@ export async function POST(req: NextRequest) {
     // Verify the authenticated user has an active community membership
     const { data: member } = await admin
       .from("community_members")
-      .select("id, membership_status, plan_type")
+      .select("id")
       .eq("user_id", user.id)
       .single();
 
@@ -103,60 +124,129 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Collect intake questionnaire fields into JSONB
-    const intakeData = {
-      personality: personality ?? null,
-      strengths: strengths ?? null,
-      lifeAreasFulfilling: lifeAreasFulfilling ?? null,
-      lifeAreasImprovement: lifeAreasImprovement ?? null,
-      longTermGoals: longTermGoals ?? null,
-      majorLifeEvents: majorLifeEvents ?? null,
-      relationship_with_family: relationship_with_family ?? null,
-      biggest_current_challenges: biggest_current_challenges ?? null,
-      mainConcern: mainConcern ?? null,
-      additionalInfo: additionalInfo ?? null,
-      achieveFromReading: achieveFromReading ?? null,
-      focus_on_specific_relationships: focus_on_specific_relationships ?? null,
-      stressManagement: stressManagement ?? null,
-      workLifeBalance: workLifeBalance ?? null,
-      concerns_about_romantic_life: concerns_about_romantic_life ?? null,
-      social_life_fulfillment: social_life_fulfillment ?? null,
-      spiritualPractices: spiritualPractices ?? null,
-      guidance_on_specific_decision: guidance_on_specific_decision ?? null,
-      ongoing_projects_or_plans: ongoing_projects_or_plans ?? null,
-      selfDiscovery: selfDiscovery ?? null,
-      externalInfluences: externalInfluences ?? null,
-      specificQuestions: specificQuestions ?? null,
-      goalsOutcomes: goalsOutcomes ?? null,
-      additional_info: additional_info ?? null,
-    };
-
     const fullName = `${String(firstname).trim()} ${String(lastname).trim()}`;
+    const trimmedDateOfBirth = String(date_of_birth).trim();
+    const dob = new Date(trimmedDateOfBirth);
+    if (Number.isNaN(dob.getTime())) {
+      return NextResponse.json({ error: "Invalid date of birth." }, { status: 422 });
+    }
+
+    const ageYears =
+      (new Date().getTime() - dob.getTime()) / (365.25 * 24 * 3600 * 1000);
+    const ageGroup = ageYears < 14 ? "child" : "adult";
+
+    const lat =
+      birth_lat == null || birth_lat === ""
+        ? null
+        : Number.isFinite(Number(birth_lat))
+          ? Number(birth_lat)
+          : null;
+    const lng =
+      birth_lng == null || birth_lng === ""
+        ? null
+        : Number.isFinite(Number(birth_lng))
+          ? Number(birth_lng)
+          : null;
+
+    const optionalLines = [
+      notes ? `Notes: ${String(notes).trim()}` : "",
+      phoneDigits ? `Phone: ${phoneDigits}` : "",
+      gender ? `Gender: ${String(gender).trim()}` : "",
+      relationship_status
+        ? `Relationship status: ${String(relationship_status).trim()}`
+        : "",
+      address ? `Address: ${String(address).trim()}` : "",
+      city ? `City: ${String(city).trim()}` : "",
+      state ? `State: ${String(state).trim()}` : "",
+      zip ? `ZIP: ${String(zip).trim()}` : "",
+      personality ? `Personality: ${String(personality).trim()}` : "",
+      strengths ? `Strengths: ${String(strengths).trim()}` : "",
+      lifeAreasFulfilling
+        ? `Life areas fulfilling: ${String(lifeAreasFulfilling).trim()}`
+        : "",
+      lifeAreasImprovement
+        ? `Life areas for improvement: ${String(lifeAreasImprovement).trim()}`
+        : "",
+      longTermGoals ? `Long-term goals: ${String(longTermGoals).trim()}` : "",
+      majorLifeEvents
+        ? `Major life events: ${String(majorLifeEvents).trim()}`
+        : "",
+      relationship_with_family
+        ? `Relationship with family: ${String(relationship_with_family).trim()}`
+        : "",
+      biggest_current_challenges
+        ? `Biggest current challenges: ${String(biggest_current_challenges).trim()}`
+        : "",
+      mainConcern ? `Main concern: ${String(mainConcern).trim()}` : "",
+      additionalInfo ? `Additional info: ${String(additionalInfo).trim()}` : "",
+      achieveFromReading
+        ? `Reading goal: ${String(achieveFromReading).trim()}`
+        : "",
+      focus_on_specific_relationships
+        ? `Relationship focus: ${String(focus_on_specific_relationships).trim()}`
+        : "",
+      stressManagement
+        ? `Stress management: ${String(stressManagement).trim()}`
+        : "",
+      workLifeBalance
+        ? `Work-life balance: ${String(workLifeBalance).trim()}`
+        : "",
+      concerns_about_romantic_life
+        ? `Romantic concerns: ${String(concerns_about_romantic_life).trim()}`
+        : "",
+      social_life_fulfillment
+        ? `Social life fulfillment: ${String(social_life_fulfillment).trim()}`
+        : "",
+      spiritualPractices
+        ? `Spiritual practices: ${String(spiritualPractices).trim()}`
+        : "",
+      guidance_on_specific_decision
+        ? `Decision guidance: ${String(guidance_on_specific_decision).trim()}`
+        : "",
+      ongoing_projects_or_plans
+        ? `Ongoing projects/plans: ${String(ongoing_projects_or_plans).trim()}`
+        : "",
+      selfDiscovery ? `Self-discovery: ${String(selfDiscovery).trim()}` : "",
+      externalInfluences
+        ? `External influences: ${String(externalInfluences).trim()}`
+        : "",
+      specificQuestions
+        ? `Specific questions: ${String(specificQuestions).trim()}`
+        : "",
+      goalsOutcomes ? `Goals/outcomes: ${String(goalsOutcomes).trim()}` : "",
+      additional_info ? `Additional notes: ${String(additional_info).trim()}` : "",
+      status ? `Status: ${String(status).trim()}` : "",
+    ].filter(Boolean);
 
     const { data: newMember, error: insertError } = await admin
-      .from("community_members")
+      .from("community_family_members")
       .insert({
+        member_id: member.id,
         full_name: fullName,
-        first_name: String(firstname).trim(),
-        last_name: String(lastname).trim(),
-        email: String(email).trim().toLowerCase(),
-        phone: phone ? String(phone).trim() : null,
-        gender: gender ? String(gender).trim() : null,
-        relationship_status: relationship_status ? String(relationship_status).trim() : null,
-        relation_type: relation_type ? String(relation_type).trim() : null,
-        state: state ? String(state).trim() : null,
-        city: city ? String(city).trim() : null,
-        zip: zip ? String(zip).trim() : null,
-        address: address ? String(address).trim() : null,
-        intake_data: Object.keys(intakeData).some((k) => intakeData[k as keyof typeof intakeData] !== null)
-          ? intakeData
-          : null,
-        membership_type: "perennial_mandalism",
-        membership_status: status === "active" ? "active" : "pending",
-        plan_type: member.plan_type ?? "individual",
-        joined_at: new Date().toISOString(),
+        date_of_birth: trimmedDateOfBirth,
+        birth_time:
+          typeof birth_time === "string" && birth_time.trim()
+            ? birth_time.trim()
+            : null,
+        birth_city:
+          typeof birth_city === "string" && birth_city.trim()
+            ? birth_city.trim()
+            : null,
+        birth_country:
+          typeof birth_country === "string" && birth_country.trim()
+            ? birth_country.trim()
+            : null,
+        birth_lat: lat,
+        birth_lng: lng,
+        relationship:
+          typeof relation_type === "string" && relation_type.trim()
+            ? relation_type.trim()
+            : null,
+        notes: optionalLines.length ? optionalLines.join("\n") : null,
+        age_group: ageGroup,
+        invite_email: normalizedEmail,
       })
-      .select("id, full_name, email")
+      .select("id, full_name, invite_email")
       .single();
 
     if (insertError) {

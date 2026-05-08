@@ -55,7 +55,8 @@ export async function provisionTraineeDivinerUpgradeFromSession(
 
   if (
     session.metadata?.type !== "trainee_diviner_upgrade" &&
-    session.metadata?.itemKey !== "professional_divination_course"
+    session.metadata?.itemKey !== "professional_divination_course" &&
+    session.metadata?.itemKey !== "trainee_diviner_bundle"
   ) {
     return null;
   }
@@ -162,7 +163,23 @@ export async function provisionTraineeDivinerUpgradeFromSession(
     }
   }
 
-  if (options?.ensureContracts) {
+  // If this is a combo bundle, we MUST ensure the trainee record exists 
+  // in case the webhook hasn't fired yet, so they get both portals.
+  if (session.metadata?.itemKey === "trainee_diviner_bundle") {
+    await admin.from("trainees").upsert(
+      {
+        user_id: userId,
+        name: displayName,
+        email,
+        username,
+        training_status: "active",
+        onboarding_completed: false,
+      },
+      { onConflict: "user_id" }
+    );
+  }
+
+  if (options?.ensureContracts ?? true) {
     await ensureUserContractRequirements(userId, "post_login");
   }
 

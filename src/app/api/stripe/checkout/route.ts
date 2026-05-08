@@ -57,10 +57,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid plan" }, { status: 400 });
     }
 
-    const hasRecurring = Boolean(dbPlan.stripe_price_id);
+    const hasRecurring = Boolean(
+      dbPlan.stripe_price_id &&
+      dbPlan.recurring_amount &&
+      dbPlan.recurring_amount > 0
+    );
     const hasOneTime = typeof dbPlan.onetime_amount === "number" && dbPlan.onetime_amount > 0;
 
-    if (!hasRecurring && !hasOneTime) {
+    if (!hasRecurring && !hasOneTime && !dbPlan.stripe_price_id) {
       return NextResponse.json(
         { error: "Plan has no configured price. Contact support." },
         { status: 422 }
@@ -83,21 +87,34 @@ export async function POST(request: NextRequest) {
 
     if (hasRecurring && dbPlan.stripe_price_id) {
       lineItems.push({ price: dbPlan.stripe_price_id, quantity: 1 });
-    }
-
-    if (hasOneTime && dbPlan.onetime_amount) {
-      lineItems.push({
-        price_data: {
-          currency: (dbPlan.onetime_currency ?? dbPlan.recurring_currency ?? "USD").toLowerCase(),
-          unit_amount: Math.round(dbPlan.onetime_amount * 100),
-          product_data: {
-            name: hasRecurring
-              ? `${dbPlan.display_name} - Setup Fee`
-              : dbPlan.display_name,
+      
+      if (hasOneTime && dbPlan.onetime_amount) {
+        lineItems.push({
+          price_data: {
+            currency: (dbPlan.onetime_currency ?? dbPlan.recurring_currency ?? "USD").toLowerCase(),
+            unit_amount: Math.round(dbPlan.onetime_amount * 100),
+            product_data: {
+              name: `${dbPlan.display_name} - Setup Fee`,
+            },
           },
-        },
-        quantity: 1,
-      });
+          quantity: 1,
+        });
+      }
+    } else {
+      if (dbPlan.stripe_price_id) {
+        lineItems.push({ price: dbPlan.stripe_price_id, quantity: 1 });
+      } else if (hasOneTime && dbPlan.onetime_amount) {
+        lineItems.push({
+          price_data: {
+            currency: (dbPlan.onetime_currency ?? dbPlan.recurring_currency ?? "USD").toLowerCase(),
+            unit_amount: Math.round(dbPlan.onetime_amount * 100),
+            product_data: {
+              name: dbPlan.display_name,
+            },
+          },
+          quantity: 1,
+        });
+      }
     }
 
     const existingCustomers = await stripe.customers.list({
@@ -117,8 +134,8 @@ export async function POST(request: NextRequest) {
     const successPath =
       itemKey === "perennial_mandalism_community"
         ? "/perennial-signup/success?session_id={CHECKOUT_SESSION_ID}"
-        : itemKey === "trainee_program"
-          ? "/join/trainee/profile?session_id={CHECKOUT_SESSION_ID}"
+        : itemKey === "trainee_program" || itemKey === "trainee_diviner_bundle"
+          ? "/trainee-signup/success?session_id={CHECKOUT_SESSION_ID}"
           : itemKey === "professional_divination_course"
             ? "/get-started/success?session_id={CHECKOUT_SESSION_ID}"
             : "/onboarding?session_id={CHECKOUT_SESSION_ID}";
