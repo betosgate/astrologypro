@@ -942,7 +942,7 @@ export default function TrainingPage() {
             onChange={(e) =>
               setProgramStatusFilter(e.target.value as "all" | "active" | "inactive")
             }
-            className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
+            className="flex h-9 w-full rounded-md border border-input px-3 py-1 text-sm shadow-sm"
           >
             <option value="all">All statuses</option>
             <option value="active">Active</option>
@@ -954,7 +954,7 @@ export default function TrainingPage() {
           <select
             value={programAccessFilter}
             onChange={(e) => setProgramAccessFilter(e.target.value)}
-            className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
+            className="flex h-9 w-full rounded-md border border-input px-3 py-1 text-sm shadow-sm"
           >
             <option value="all">All access types</option>
             <option value="all_access">All authenticated users</option>
@@ -1022,7 +1022,7 @@ export default function TrainingPage() {
             onChange={(e) =>
               setCategoryStatusFilter(e.target.value as "all" | "active" | "inactive")
             }
-            className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
+            className="flex h-9 w-full rounded-md border border-input px-3 py-1 text-sm shadow-sm"
           >
             <option value="all">All statuses</option>
             <option value="active">Active</option>
@@ -1102,7 +1102,7 @@ export default function TrainingPage() {
             onChange={(e) =>
               setLessonStatusFilter(e.target.value as "all" | "active" | "inactive")
             }
-            className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
+            className="flex h-9 w-full rounded-md border border-input px-3 py-1 text-sm shadow-sm"
           >
             <option value="all">All statuses</option>
             <option value="active">Active</option>
@@ -1182,7 +1182,7 @@ export default function TrainingPage() {
             onChange={(e) =>
               setQuizStatusFilter(e.target.value as "all" | "active" | "inactive")
             }
-            className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
+            className="flex h-9 w-full rounded-md border border-input px-3 py-1 text-sm shadow-sm"
           >
             <option value="all">All statuses</option>
             <option value="active">Active</option>
