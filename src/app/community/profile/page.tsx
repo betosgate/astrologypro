@@ -70,18 +70,45 @@ export default async function CommunityProfilePage() {
 
   if (!member) redirect("/get-started");
 
-  member.joined_at = (member.joined_at && member.joined_at.trim() !== "") ? member.joined_at : user.created_at;
+  const { data: selfFamilyMember } = await supabase
+    .from("community_family_members")
+    .select("birth_lat, birth_lng")
+    .eq("member_id", member.id)
+    .or(`user_id.eq.${user.id},relationship.ilike.self`)
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
 
-  if (member.membership_type !== "mystery_school") {
+  const memberWithSelfCoordinates = {
+    ...member,
+    birth_lat: selfFamilyMember?.birth_lat ?? null,
+    birth_lng: selfFamilyMember?.birth_lng ?? null,
+  };
+
+  memberWithSelfCoordinates.joined_at =
+    memberWithSelfCoordinates.joined_at &&
+    memberWithSelfCoordinates.joined_at.trim() !== ""
+      ? memberWithSelfCoordinates.joined_at
+      : user.created_at;
+
+  if (memberWithSelfCoordinates.membership_type !== "mystery_school") {
     const pmSub = await fetchPmSubscription();
     if (pmSub) {
-      if (pmSub.current_period_end) member.current_period_end = pmSub.current_period_end;
+      if (pmSub.current_period_end) {
+        memberWithSelfCoordinates.current_period_end = pmSub.current_period_end;
+      }
       if (pmSub.last_payment_date) {
-        (member as typeof member & { last_payment_date?: string | null }).last_payment_date =
+        (
+          memberWithSelfCoordinates as typeof memberWithSelfCoordinates & {
+            last_payment_date?: string | null;
+          }
+        ).last_payment_date =
           pmSub.last_payment_date;
       }
-      if (pmSub.status) member.membership_status = pmSub.status;
-      if (pmSub.cancel_at_period_end) member.membership_status = "cancelling";
+      if (pmSub.status) memberWithSelfCoordinates.membership_status = pmSub.status;
+      if (pmSub.cancel_at_period_end) {
+        memberWithSelfCoordinates.membership_status = "cancelling";
+      }
     }
   }
 
@@ -103,7 +130,7 @@ export default async function CommunityProfilePage() {
 
 
         <CommunityProfileForm
-          member={member}
+          member={memberWithSelfCoordinates}
           userId={user.id}
           initialAvatarUrl={initialAvatarUrl}
         />

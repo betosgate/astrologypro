@@ -531,8 +531,6 @@ export default function CommunityFamilyPage() {
             const chartCtaLabel =
               reportState === "generated"
                 ? "View Chart"
-                : reportState === "generating"
-                ? "Generating Chart..."
                 : "Generate Chart";
             return (
               <Card key={m.id}>

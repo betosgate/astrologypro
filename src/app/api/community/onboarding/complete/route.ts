@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { syncProfileAcrossRoles } from "@/lib/profile-sync";
 import { tierToPlanType } from "@/lib/community/pm-entitlement";
+import { ensureCanonicalSelfFamilyMember } from "@/lib/community/self-family-member";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +26,12 @@ const HOUSEHOLD_LIMITS: Record<string, number> = {
 
 function trimStr(value: unknown): string | null {
   return value && typeof value === "string" ? value.trim() || null : null;
+}
+
+function normalizeCoordinate(value: unknown): number | null {
+  if (value == null || value === "") return null;
+  const numberValue = Number(value);
+  return Number.isFinite(numberValue) ? numberValue : null;
 }
 
 function getHouseholdLimit(
@@ -124,6 +131,8 @@ export async function POST(req: NextRequest) {
       practicalSpiritualPref,
       birth_city,
       birth_country,
+      birth_lat,
+      birth_lng,
       mainConcern,
       additionalInfo,
     } = body;
@@ -211,15 +220,22 @@ export async function POST(req: NextRequest) {
         ? existingIntake.selected_plan_id
         : null;
     const householdLimit = getHouseholdLimit(selectedPlanId, member.plan_type);
-    const familyMembers = normalizeFamilyMembers(body.family_members);
+    const shouldSyncFamilyMembers = Array.isArray(body.family_members);
+    const familyMembers = shouldSyncFamilyMembers
+      ? normalizeFamilyMembers(body.family_members)
+      : [];
 
-    if (selectedPlanId === "plan_pm_couple" && familyMembers.length !== 1) {
+    if (
+      shouldSyncFamilyMembers &&
+      selectedPlanId === "plan_pm_couple" &&
+      familyMembers.length !== 1
+    ) {
       return NextResponse.json(
         { error: "Couple plans require exactly one household member." },
         { status: 422 }
       );
     }
-    if (familyMembers.length > householdLimit) {
+    if (shouldSyncFamilyMembers && familyMembers.length > householdLimit) {
       return NextResponse.json(
         { error: `This plan allows up to ${householdLimit} household members.` },
         { status: 422 }
@@ -339,11 +355,27 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: updateError.message }, { status: 500 });
     }
 
+    await ensureCanonicalSelfFamilyMember(
+      {
+        id: member.id,
+        user_id: user.id,
+        full_name: fullName,
+        date_of_birth: trimStr(date_of_birth),
+        birth_time: trimStr(birth_time),
+        birth_city: trimStr(birth_city),
+        birth_country: trimStr(birth_country),
+        birth_lat: normalizeCoordinate(birth_lat),
+        birth_lng: normalizeCoordinate(birth_lng),
+      },
+      user.id,
+      { admin, overwriteProfileFields: true },
+    );
+
     const submittedIds = familyMembers
       .map((familyMember) => familyMember.id)
       .filter((id): id is string => typeof id === "string" && id.length > 0);
 
-    if (householdLimit > 0) {
+    if (shouldSyncFamilyMembers && householdLimit > 0) {
       const retainedIds = [...submittedIds];
 
       for (const familyMember of familyMembers) {
@@ -394,7 +426,9 @@ export async function POST(req: NextRequest) {
       let deleteQuery = admin
         .from("community_family_members")
         .delete()
-        .eq("member_id", member.id);
+        .eq("member_id", member.id)
+        .neq("user_id", user.id)
+        .not("relationship", "ilike", "self");
 
       if (retainedIds.length > 0) {
         deleteQuery = deleteQuery.not("id", "in", `(${retainedIds.join(",")})`);

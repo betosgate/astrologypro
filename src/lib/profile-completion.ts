@@ -66,6 +66,8 @@ export type CommunityProfileValues = {
   // `/community/profile` reflects the same contract as the
   // `/community/horoscope` missing-data check.
   birthCountry: string;
+  birthLat: string;
+  birthLng: string;
   address: string;
   city: string;
   state: string;
@@ -74,9 +76,9 @@ export type CommunityProfileValues = {
 };
 
 /**
- * Key used as the DOM id of each field's <Input>. Clicking a "missing"
- * chip scrolls to this id. Keep keys stable — Profile page `focusField()`
- * passes them to `document.getElementById`.
+ * Stable key for each completion field. Most keys also match the DOM id of
+ * their input; virtual fields such as birth coordinates are mapped by the
+ * form before scrolling.
  */
 export const COMMUNITY_PROFILE_FIELD_KEYS = {
   firstName: "community-first-name",
@@ -87,6 +89,7 @@ export const COMMUNITY_PROFILE_FIELD_KEYS = {
   birthTime: "community-birth-time",
   birthCity: "community-birth-city",
   birthCountry: "community-birth-country",
+  birthCoordinates: "community-birth-coordinates",
   address: "community-address",
   city: "community-city",
   state: "community-state",
@@ -111,6 +114,11 @@ export function getCommunityProfileFields(
     { key: COMMUNITY_PROFILE_FIELD_KEYS.birthTime, label: "Birth time", value: values.birthTime },
     { key: COMMUNITY_PROFILE_FIELD_KEYS.birthCity, label: "Birth city", value: values.birthCity },
     { key: COMMUNITY_PROFILE_FIELD_KEYS.birthCountry, label: "Birth country", value: values.birthCountry },
+    {
+      key: COMMUNITY_PROFILE_FIELD_KEYS.birthCoordinates,
+      label: "Birth city coordinates",
+      value: values.birthLat && values.birthLng,
+    },
     { key: COMMUNITY_PROFILE_FIELD_KEYS.address, label: "Address", value: values.address },
     { key: COMMUNITY_PROFILE_FIELD_KEYS.city, label: "City", value: values.city },
     { key: COMMUNITY_PROFILE_FIELD_KEYS.state, label: "State", value: values.state },
