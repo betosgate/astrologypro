@@ -693,6 +693,7 @@ export async function POST(request: NextRequest) {
           ? {
               commission_source_assignment_id: stamp.source_assignment_id,
               commission_source_template_id: stamp.source_template_id,
+              commission_source_campaign_id: stamp.source_campaign_id,
               commission_rate_type_stamp: stamp.rate_type_stamp,
               commission_rate_value_stamp: stamp.rate_value_stamp,
               affiliate_commission_amount_cents: affiliateCommissionCents,

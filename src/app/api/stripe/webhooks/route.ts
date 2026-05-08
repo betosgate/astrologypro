@@ -2004,20 +2004,26 @@ async function handlePaymentIntentSucceeded(
     const { data: bookingForAttribution } = await supabase
       .from("bookings")
       .select(
-        "id, base_price, total_amount, ref_code, commission_source_assignment_id, commission_source_template_id, commission_rate_type_stamp, commission_rate_value_stamp, affiliate_commission_amount_cents, scheduled_at, duration_minutes",
+        "id, base_price, total_amount, ref_code, commission_source_assignment_id, commission_source_template_id, commission_source_campaign_id, commission_rate_type_stamp, commission_rate_value_stamp, affiliate_commission_amount_cents, scheduled_at, duration_minutes",
       )
       .eq("id", bookingId)
       .single();
 
     // Stamping happens at booking creation (spec §3.8 / Phase 1.5).
-    // Credit fires when EITHER source column is populated:
-    //   commission_source_assignment_id → per-diviner credit (Phase 1)
+    // Credit fires when ANY source column is populated:
+    //   commission_source_assignment_id → per-diviner affiliate credit (Phase 1)
     //   commission_source_template_id   → general-program credit (Phase 1.5)
-    // Both NULL → no commission; diviner keeps the full payment.
+    //   commission_source_campaign_id   → diviner self-referral credit
+    // All NULL → no commission; diviner keeps the full payment.
+    const sourceCampaignId =
+      ((bookingForAttribution as Record<string, unknown> | null)
+        ?.commission_source_campaign_id as string | null) ?? null;
+
     if (
       bookingForAttribution &&
       (bookingForAttribution.commission_source_assignment_id ||
-        bookingForAttribution.commission_source_template_id)
+        bookingForAttribution.commission_source_template_id ||
+        sourceCampaignId)
     ) {
       const amountCents =
         Number(
@@ -2038,6 +2044,7 @@ async function handlePaymentIntentSucceeded(
           (bookingForAttribution.commission_source_template_id as
             | string
             | null) ?? null,
+        stampedCampaignId: sourceCampaignId,
         stampedRateType:
           (bookingForAttribution.commission_rate_type_stamp as
             | "percent"
