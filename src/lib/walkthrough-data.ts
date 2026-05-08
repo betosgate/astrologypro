@@ -1276,6 +1276,195 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
     ]
   },
 
+  {
+  "name": "affiliate_dashboard_overview",
+  "label": "Affiliate Dashboard Overview",
+  "description": "After completing Stripe onboarding, campaign setup, and referral sharing, affiliates can monitor their complete performance from the dashboard.",
+  "group": "People",
+  "subModule": "Diviners",
+  "purpose": "This dashboard gives affiliates a centralized overview of earnings, campaign performance, marketing links, and referral analytics.",
+  "bullets": [
+    "Affiliate logs into the Affiliate Portal dashboard.",
+    "Dashboard displays connected Stripe account status.",
+    "Stripe verification confirms payouts are enabled.",
+    "Open Stripe Dashboard button allows affiliates to manage payout settings.",
+    "Statistics cards display total clicks, conversions, and total earnings.",
+    "Marketing Kit section shows available promotional landing pages.",
+    "Each marketing card contains campaign image, commission percentage, and referral link.",
+    "Affiliate can copy referral links directly from the dashboard.",
+    "Preview button opens the customer-facing landing page.",
+    "Dashboard automatically tracks customer clicks and successful conversions.",
+    "Recent Campaigns section displays all active affiliate campaigns.",
+    "Campaign table includes campaign name, referral code, and current status.",
+    "Affiliate earnings increase automatically after successful customer bookings.",
+    "All campaign analytics are updated in real time after purchases.",
+    "Dashboard helps affiliates monitor performance and optimize promotions."
+  ]
+},
+
+
+
+// -------------Marketing & Campaign Management-----------------//
+  {
+    "name": "campaign_management_dashboard",
+    "label": "Campaign Management Dashboard",
+    "description": "Diviners can manage and monitor all marketing campaigns directly from the marketing module dashboard.",
+    "group": "People",
+    "subModule": "Campaign Management",
+    "purpose": "Allows diviners to create, monitor, and analyze promotional campaigns without needing affiliate assistance.",
+    "bullets": [
+      "Diviner opens the Marketing module from the sidebar navigation.",
+      "Campaigns section displays all active and inactive campaigns.",
+      "Dashboard shows total campaigns, total affiliates, conversions, and commission spending.",
+      "Campaign table displays campaign name, destination type, URL code, status, and conversion count.",
+      "Analytics tab helps track campaign performance.",
+      "Status filter allows diviners to filter campaigns by active or inactive state.",
+      "Create Campaign button opens the campaign creation workflow.",
+      "Each campaign row contains quick action buttons for viewing or managing campaigns.",
+      "Campaign performance updates automatically after bookings or conversions.",
+      "Marketing dashboard acts as the central campaign management area."
+    ]
+  },
+  {
+    "name": "campaign_creation_modal",
+    "label": "Campaign Creation Modal",
+    "description": "Diviners can create direct promotional campaigns for services, profile pages, or astrology offerings.",
+    "group": "People",
+    "subModule": "Campaign Management",
+    "purpose": "Enables diviners to independently create referral campaigns and promotional service links.",
+    "bullets": [
+      "Clicking Create Campaign opens the campaign setup modal.",
+      "Diviner enters campaign name and optional campaign description.",
+      "Campaign destination can be selected as profile page or specific service.",
+      "Available services are displayed with category, duration, and pricing.",
+      "Diviner selects which astrology service should receive traffic.",
+      "Optional marketing channel selection supports platforms like Facebook.",
+      "Start date and end date can be configured for campaign duration.",
+      "UTM parameters help track marketing traffic sources.",
+      "Create Campaign button generates a unique campaign referral URL.",
+      "Campaign settings are saved automatically after successful creation."
+    ]
+  },
+  {
+    "name": "campaign_created_confirmation",
+    "label": "Campaign Created Confirmation",
+    "description": "After creating a campaign, the system generates a shareable campaign URL for promotions and bookings.",
+    "group": "People",
+    "subModule": "Campaign Management",
+    "purpose": "Provides diviners with direct campaign links for sharing across websites, social media, and affiliates.",
+    "bullets": [
+      "System displays successful campaign creation confirmation.",
+      "Generated campaign URL is automatically created for sharing.",
+      "Copy button copies the referral URL to clipboard.",
+      "External launch button opens the campaign in a new browser tab.",
+      "Campaign code is generated automatically for tracking purposes.",
+      "Done button closes the confirmation modal.",
+      "Create Another button starts a new campaign setup process.",
+      "Campaign URL redirects customers directly to the booking experience.",
+      "All conversions from the campaign are tracked automatically.",
+      "Campaign performance becomes visible in the analytics dashboard."
+    ]
+  },
+  {
+    "name": "service_landing_page_12",
+    "label": "Astrology Service Landing Page",
+    "description": "Customers opening the campaign link are redirected to the astrology service landing page.",
+    "group": "People",
+    "subModule": "Campaign Management",
+    "purpose": "Introduces the astrology service and encourages visitors to start the booking process.",
+    "bullets": [
+      "Campaign URL opens the service landing page in a new tab.",
+      "Service page displays astrology category and practitioner information.",
+      "Customers can view service pricing and session duration.",
+      "Book This Reading button starts the booking workflow.",
+      "Service overview explains the reading purpose and experience.",
+      "What's Included section describes session features and benefits.",
+      "Landing page includes service imagery and astrology branding.",
+      "Visitors can review practitioner information before booking.",
+      "Pricing and session details are clearly visible.",
+      "Page is optimized for campaign conversion and direct booking."
+    ]
+  },
+  {
+    "name": "booking_date_time_selection_13",
+    "label": "Booking Date And Time Selection",
+    "description": "Customers select available session dates and time slots before continuing to booking confirmation.",
+    "group": "People",
+    "subModule": "Campaign Management",
+    "purpose": "Allows customers to schedule astrology sessions based on available practitioner times.",
+    "bullets": [
+      "Booking workflow begins with date and time selection.",
+      "Calendar component displays available appointment dates.",
+      "Available time slots are shown according to local timezone.",
+      "Selected service name and pricing are displayed.",
+      "Customer chooses preferred session timing.",
+      "Time slots automatically update based on practitioner availability.",
+      "Selected appointment duration is displayed.",
+      "Next button continues the booking process.",
+      "Back button returns customer to previous step.",
+      "Timezone conversion ensures accurate appointment scheduling."
+    ]
+  },
+  {
+    "name": "booking_contact_form_14",
+    "label": "Booking Contact Information",
+    "description": "Customers provide personal and astrology birth details required for the session.",
+    "group": "People",
+    "subModule": "Campaign Management",
+    "purpose": "Collects customer information needed for astrology analysis and appointment communication.",
+    "bullets": [
+      "Customer enters full name, email, and phone number.",
+      "Birth information section collects date and place of birth.",
+      "Place search helps customers select birth location accurately.",
+      "Notes field allows customers to provide additional context.",
+      "Phone number is required for session communication.",
+      "Astrology readings depend on accurate birth information.",
+      "Validation ensures required fields are completed.",
+      "Next button moves to payment confirmation.",
+      "Back button returns to scheduling step.",
+      "All information is securely stored with the booking."
+    ]
+  },
+  {
+    "name": "booking_payment_screen_16",
+    "label": "Booking Payment And Confirmation",
+    "description": "Customers review booking details and complete secure online payment.",
+    "group": "People",
+    "subModule": "Campaign Management",
+    "purpose": "Handles secure checkout and payment confirmation for astrology bookings.",
+    "bullets": [
+      "Booking summary displays service, duration, date, and timezone.",
+      "Customer details are shown before payment submission.",
+      "Payment section supports card, Cash App Pay, and Amazon Pay.",
+      "Stripe secure checkout integration processes payments safely.",
+      "Card information fields support major payment providers.",
+      "Country and billing information can be configured.",
+      "Pay Now button completes the booking transaction.",
+      "Booking total is displayed before payment confirmation.",
+      "Secure checkout indicators improve customer trust.",
+      "Payment data is processed securely through Stripe."
+    ]
+  },
+  {
+    "name": "booking_confirmation_success",
+    "label": "Booking Success Confirmation",
+    "description": "After successful payment, the customer receives booking confirmation and session access details.",
+    "group": "People",
+    "subModule": "Campaign Management",
+    "purpose": "Confirms successful booking creation and provides access to upcoming astrology sessions.",
+    "bullets": [
+      "Booking Confirmed message appears after successful payment.",
+      "Session details include date, time, timezone, and schedule.",
+      "Join Your Session button provides direct meeting access.",
+      "Add To Calendar option downloads calendar event file.",
+      "Confirmation email is automatically sent to the customer.",
+      "Booking information is stored in the scheduling system.",
+      "Customer can return later using session access link.",
+      "Session reminder workflows can trigger automatically.",
+      "Confirmation screen finalizes the booking journey.",
+      "Campaign conversion tracking is updated after booking success."
+    ]
+  },
   // ----------Affiliates-------------//
 
     
