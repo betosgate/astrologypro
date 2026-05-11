@@ -63,6 +63,10 @@ import {
 import { InvitationDetailSheet } from "./invitation-detail-sheet";
 import { ALL_USER_TYPES } from "./user-type-options";
 
+const INVITABLE_USER_TYPES = ALL_USER_TYPES.filter(
+  (role) => role.value !== "client"
+);
+
 export interface InvitationRow {
   id: string;
   email: string;
@@ -225,10 +229,10 @@ export function InvitationsClient({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [detailInvitation, setDetailInvitation] = useState<InvitationRow | null>(null);
   const lockedRole =
-    ALL_USER_TYPES.find((role) => role.value === initialRoleSlug) ?? null;
+    INVITABLE_USER_TYPES.find((role) => role.value === initialRoleSlug) ?? null;
   const lockedRoleId = lockedRole?.value ?? "";
 
-  const selectedRole = ALL_USER_TYPES.find((role) => role.value === inviteRole);
+  const selectedRole = INVITABLE_USER_TYPES.find((role) => role.value === inviteRole);
   const isAffiliate =
     selectedRole?.value.toLowerCase().includes("affiliate") ||
     selectedRole?.value.toLowerCase().includes("advocate");
@@ -717,7 +721,7 @@ export function InvitationsClient({
                 className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               >
                 <option value="">Select a role…</option>
-                {ALL_USER_TYPES.map((role) => (
+                {INVITABLE_USER_TYPES.map((role) => (
                   <option key={role.value} value={role.value}>
                     {role.label}
                   </option>

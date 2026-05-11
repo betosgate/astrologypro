@@ -496,7 +496,7 @@ export default function ChartsPage() {
               </p>
             </div>
             <Button asChild size="sm">
-              <Link href="/community/family">Manage Family</Link>
+              <Link href="/community/plan?tab=members">Manage Family</Link>
             </Button>
           </CardContent>
         </Card>
