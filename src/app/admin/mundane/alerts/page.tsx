@@ -162,7 +162,7 @@ export default function AlertCenterPage() {
   const unreadCount = notifications.filter((n) => !n.is_read).length;
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-6">
       {/* Header */}
       <div>
         <div className="flex items-center gap-2">
@@ -285,7 +285,7 @@ export default function AlertCenterPage() {
                   <div className="space-y-1">
                     <label className="text-xs font-medium">Rule Type</label>
                     <Select value={newRuleType} onValueChange={setNewRuleType}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         {RULE_TYPES.map((r) => (
                           <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
@@ -296,7 +296,7 @@ export default function AlertCenterPage() {
                   <div className="space-y-1">
                     <label className="text-xs font-medium">Priority</label>
                     <Select value={newRulePriority} onValueChange={setNewRulePriority}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         {["low", "medium", "high", "critical"].map((p) => (
                           <SelectItem key={p} value={p} className="capitalize">{p}</SelectItem>
