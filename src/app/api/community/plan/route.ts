@@ -109,20 +109,53 @@ export async function GET() {
       max_total_members: t.max_total_members,
     });
 
-    const availableTiers: MappedTier[] = (rawTiers ?? []).map(
-      (t) => mapTier(t as RawTier)
-    );
+    const availableTiers: MappedTier[] = [
+      {
+        id: "plan_pm_individual",
+        name: "Individual Plan",
+        description: "Single member access to the Perennial Mandalism community.",
+        base_price: 19.95,
+        included_members: 1,
+        extra_member_price: 0,
+        max_total_members: 1,
+      },
+      {
+        id: "plan_pm_couple",
+        name: "Couple Plan",
+        description: "Two members sharing one household — joint access to the community.",
+        base_price: 29.95,
+        included_members: 2,
+        extra_member_price: 0,
+        max_total_members: 2,
+      },
+      {
+        id: "plan_pm_family",
+        name: "Family Plan",
+        description: "Up to 5 family members — full household access to the community.",
+        base_price: 39.95,
+        included_members: 5,
+        extra_member_price: 0,
+        max_total_members: 5,
+      },
+    ];
 
-    // Resolve the member's current tier from pm_tier_id. Fall back to the
-    // lowest-order active tier only when pm_tier_id is NULL or invalid.
     const savedTierId = (member as { pm_tier_id?: string | null }).pm_tier_id ?? null;
     let tier: MappedTier | null = null;
     if (savedTierId) {
       tier = availableTiers.find((t) => t.id === savedTierId) ?? null;
       if (!tier) {
-        console.warn(
-          `[community/plan] pm_tier_id=${savedTierId} for member ${member.id} does not match any active tier — falling back to lowest-order tier`
-        );
+        // Fallback: check if the saved tier ID belongs to pm_plan_tiers and map by name
+        const { data: dbTier } = await admin
+          .from("pm_plan_tiers")
+          .select("name")
+          .eq("id", savedTierId)
+          .single();
+        if (dbTier) {
+          const name = dbTier.name.toLowerCase();
+          if (name.includes("individual")) tier = availableTiers[0];
+          else if (name.includes("couple")) tier = availableTiers[1];
+          else if (name.includes("family")) tier = availableTiers[2];
+        }
       }
     }
     if (!tier) tier = availableTiers[0] ?? null;
