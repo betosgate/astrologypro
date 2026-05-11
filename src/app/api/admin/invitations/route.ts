@@ -186,10 +186,11 @@ export async function POST(req: NextRequest) {
       ? `${APP_URL}/join/diviner?email=${encodeURIComponent(emailLower)}&inviteToken=${encodeURIComponent(token)}`
       : `${APP_URL}/invitations/${token}/accept`;
 
-  await sendPlatformInvitationEmail({
+  const emailResult = await sendPlatformInvitationEmail({
     to: emailLower,
     roleSlug: role_slug,
     acceptUrl,
+    invitationId: invitation.id,
   });
 
   return NextResponse.json(
@@ -197,6 +198,7 @@ export async function POST(req: NextRequest) {
       id: invitation.id,
       email: invitation.email,
       token, // only time the raw token is returned
+      messageId: emailResult.id,
     },
     { status: 201 }
   );

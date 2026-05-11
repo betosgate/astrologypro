@@ -183,7 +183,7 @@ export default function FamilyMemberNewPage() {
   // Render
   // ---------------------------------------------------------------------------
   return (
-    <div className="space-y-6 max-w-2xl">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-3">
         <Button variant="outline" size="sm" asChild>
@@ -264,7 +264,7 @@ export default function FamilyMemberNewPage() {
                   Relationship <span className="text-destructive">*</span>
                 </Label>
                 <Select value={relationship} onValueChange={setRelationship}>
-                  <SelectTrigger id="relationship">
+                  <SelectTrigger id="relationship" className="w-full">
                     <SelectValue placeholder="Select relationship" />
                   </SelectTrigger>
                   <SelectContent>
