@@ -17,7 +17,7 @@ import {
   LayoutDashboard, Video, Radio, Calendar, BookOpen,
   ClipboardList, Users, Star, TrendingUp, Flame, Sparkles, 
   Globe, Compass, Telescope, HeartHandshake, BookMarked,
-  Package, IdCard, UserCog
+  Package, IdCard, UserCog, Tags, Settings2
 } from "lucide-react";
 
 export const metadata = { title: "Community - AstrologyPro" };
@@ -102,8 +102,8 @@ export default async function CommunityLayout({ children }: { children: React.Re
   const membershipLabel = "Perennial Mandalism";
 
   const productSubItems = [
-    { label: "Product Category", href: "/admin/perennial-content/categories" },
-    { label: "Product Management", href: "/admin/perennial-content/products" },
+    { label: "Product Category", href: "/admin/perennial-content/categories", icon: <Tags className="size-4" /> },
+    { label: "Product Management", href: "/admin/perennial-content/products", icon: <Settings2 className="size-4" /> },
   ];
 
   const navLinks = [

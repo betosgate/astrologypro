@@ -758,7 +758,7 @@ export default function PerennialSignupPage() {
                               })
                             }
                           >
-                            <SelectTrigger id={fid(m.id, "relationType")}>
+                            <SelectTrigger id={fid(m.id, "relationType")} className="w-full">
                               <SelectValue placeholder="Couple / Family" />
                             </SelectTrigger>
                             <SelectContent>
@@ -777,7 +777,7 @@ export default function PerennialSignupPage() {
                             onValueChange={(v) => patch(m.id, { subRelation: v })}
                             disabled={!m.relationType}
                           >
-                            <SelectTrigger id={fid(m.id, "subRelation")}>
+                            <SelectTrigger id={fid(m.id, "subRelation")} className="w-full">
                               <SelectValue
                                 placeholder={
                                   m.relationType
@@ -862,7 +862,7 @@ export default function PerennialSignupPage() {
                           value={m.gender}
                           onValueChange={(v) => patch(m.id, { gender: v })}
                         >
-                          <SelectTrigger id={fid(m.id, "gender")}>
+                          <SelectTrigger id={fid(m.id, "gender")} className="w-full">
                             <SelectValue placeholder="Select" />
                           </SelectTrigger>
                           <SelectContent>
@@ -980,7 +980,7 @@ export default function PerennialSignupPage() {
                               patch(m.id, { relationship_status: v })
                             }
                           >
-                            <SelectTrigger id={fid(m.id, "relationship_status")}>
+                            <SelectTrigger id={fid(m.id, "relationship_status")} className="w-full">
                               <SelectValue placeholder="Select" />
                             </SelectTrigger>
                             <SelectContent>
