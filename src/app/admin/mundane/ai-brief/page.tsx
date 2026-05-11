@@ -146,7 +146,7 @@ export default function AiBriefPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-3xl">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -255,7 +255,7 @@ export default function AiBriefPage() {
               </div>
             ) : (
               <select
-                className="flex-1 h-9 rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                className="flex-1 h-9 rounded-md border px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                 value={selectedProjectId}
                 onChange={(e) => {
                   setSelectedProjectId(e.target.value);

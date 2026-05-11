@@ -208,7 +208,12 @@ export default async function CommunityTransitDetailPage({
             ) : null}
           </p>
         </div>
-        {savedReport && !forceRegenerate && targetFamilyMemberId ? (
+        {/*
+          Regeneration is intentionally hidden for now.
+          Keep this CTA code in place so it can be restored without
+          rebuilding the action.
+        */}
+        {/* {savedReport && !forceRegenerate && targetFamilyMemberId ? (
           <Button asChild variant="outline" size="sm">
             <Link
               href={`/community/transits/detailed?familyMemberId=${targetFamilyMemberId}&month=${requestedMonth}&regenerate=1`}
@@ -217,7 +222,7 @@ export default async function CommunityTransitDetailPage({
               Regenerate
             </Link>
           </Button>
-        ) : null}
+        ) : null} */}
       </div>
 
       <HoroscopeToolkitPage

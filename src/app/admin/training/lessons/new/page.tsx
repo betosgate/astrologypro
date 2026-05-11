@@ -113,7 +113,7 @@ export default function NewLessonPage() {
           if (loadedCategories.length > 0) {
             const selected =
               loadedCategories.find(
-                (category: CategoryOption) =>
+                (category: Category) =>
                   category.id === requestedCategoryId
               ) ?? loadedCategories[0];
             setForm((prev) => ({ ...prev, category_id: selected.id }));
