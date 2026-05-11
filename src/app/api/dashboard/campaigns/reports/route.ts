@@ -48,7 +48,8 @@ export async function GET(request: NextRequest) {
     const { data: campaignsData, error: campErr } = await admin
       .from("affiliate_campaigns")
       .select("id, name, status, start_date, end_date, commission_type, commission_value, budget_cap_cents, spent_cents, target_product_type, destination_type, destination_service_template_id, channel, created_at")
-      .eq("diviner_id", diviner.id);
+      .eq("diviner_id", diviner.id)
+      .eq("owner_type", "diviner");
 
     if (campErr) throw campErr;
 

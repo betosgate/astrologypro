@@ -88,6 +88,7 @@ function collectAiSections(aiResponse: JsonRecord): JsonRecord {
 
   for (const [key, value] of Object.entries(aiResponse)) {
     if (NON_AI_RESPONSE_KEYS.has(key)) continue;
+    if (key in sections) continue;
     sections[key] = normalizeDeep(value);
   }
 
