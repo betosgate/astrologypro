@@ -63,6 +63,10 @@ import {
 import { InvitationDetailSheet } from "./invitation-detail-sheet";
 import { ALL_USER_TYPES } from "./user-type-options";
 
+const INVITABLE_USER_TYPES = ALL_USER_TYPES.filter(
+  (role) => role.value !== "client"
+);
+
 export interface InvitationRow {
   id: string;
   email: string;
@@ -221,13 +225,14 @@ export function InvitationsClient({
   const [parentDiviner, setParentDiviner] = useState("");
   const [inviting, setInviting] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [copyingId, setCopyingId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [detailInvitation, setDetailInvitation] = useState<InvitationRow | null>(null);
   const lockedRole =
-    ALL_USER_TYPES.find((role) => role.value === initialRoleSlug) ?? null;
+    INVITABLE_USER_TYPES.find((role) => role.value === initialRoleSlug) ?? null;
   const lockedRoleId = lockedRole?.value ?? "";
 
-  const selectedRole = ALL_USER_TYPES.find((role) => role.value === inviteRole);
+  const selectedRole = INVITABLE_USER_TYPES.find((role) => role.value === inviteRole);
   const isAffiliate =
     selectedRole?.value.toLowerCase().includes("affiliate") ||
     selectedRole?.value.toLowerCase().includes("advocate");
@@ -326,11 +331,14 @@ export function InvitationsClient({
       const response = await fetch(`/api/admin/invitations/${invitationId}/resend`, {
         method: "POST",
       });
-      if (!response.ok) throw new Error("Failed to resend invitation");
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error((data as { error?: string }).error ?? "Failed to resend invitation");
+      }
       toast.success("Invitation resent");
       pushParams({ page: String(page) });
-    } catch {
-      toast.error("Failed to resend invitation");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to resend invitation");
     }
   }
 
@@ -354,13 +362,33 @@ export function InvitationsClient({
     }
   }
 
-  function copyInviteLink(invitationId: string) {
-    const url = `${window.location.origin}/invite/${invitationId}`;
-    navigator.clipboard.writeText(url).then(() => {
+  async function copyInviteLink(invitationId: string) {
+    const loadingToastId = toast.loading("Generating a fresh invite link...");
+    setCopyingId(invitationId);
+
+    try {
+      const response = await fetch(`/api/admin/invitations/${invitationId}/copy-link`, {
+        method: "POST",
+      });
+      const data = (await response.json().catch(() => ({}))) as {
+        error?: string;
+        acceptUrl?: string;
+      };
+      if (!response.ok || !data.acceptUrl) {
+        throw new Error(data.error ?? "Failed to generate invitation link");
+      }
+
+      await navigator.clipboard.writeText(data.acceptUrl);
       setCopiedId(invitationId);
-      toast.success("Link copied");
+      toast.success("Fresh invite link copied", { id: loadingToastId });
       setTimeout(() => setCopiedId(null), 2000);
-    });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to generate invitation link", {
+        id: loadingToastId,
+      });
+    } finally {
+      setCopyingId((current) => (current === invitationId ? null : current));
+    }
   }
 
   return (
@@ -521,7 +549,9 @@ export function InvitationsClient({
                       const normalizedStatus = invitation.status.toLowerCase();
                       const canResend = normalizedStatus === "pending" || normalizedStatus === "expired";
                       const canCancel = normalizedStatus === "pending";
-                      const canCopyLink = normalizedStatus === "pending";
+                      const canCopyLink =
+                        normalizedStatus === "pending" &&
+                        invitation.role_slug.toLowerCase() === "diviner";
 
                       return (
                         <TableRow key={invitation.id} data-selected={selectedIds.has(invitation.id) ? "true" : undefined}>
@@ -562,29 +592,43 @@ export function InvitationsClient({
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
                                 <DropdownMenuItem
-                                  onClick={() => setDetailInvitation(invitation)}
+                                  onSelect={(event) => {
+                                    event.preventDefault();
+                                    setDetailInvitation(invitation);
+                                  }}
                                   className="flex items-center gap-2"
+                                  disabled={copyingId === invitation.id}
                                 >
                                   <Eye className="size-3.5" />
                                   View Details
                                 </DropdownMenuItem>
                                 {canCopyLink ? (
                                   <DropdownMenuItem
-                                    onClick={() => copyInviteLink(invitation.id)}
+                                    onSelect={(event) => {
+                                      event.preventDefault();
+                                      void copyInviteLink(invitation.id);
+                                    }}
                                     className="flex items-center gap-2"
+                                    disabled={copyingId === invitation.id}
                                   >
-                                    {copiedId === invitation.id ? (
+                                    {copyingId === invitation.id ? (
+                                      <Loader2 className="size-3.5 animate-spin" />
+                                    ) : copiedId === invitation.id ? (
                                       <Check className="size-3.5 text-green-600" />
                                     ) : (
                                       <Copy className="size-3.5" />
                                     )}
-                                    Copy Link
+                                    {copyingId === invitation.id ? "Generating Link..." : "Copy Link"}
                                   </DropdownMenuItem>
                                 ) : null}
                                 {canResend ? (
                                   <DropdownMenuItem
-                                    onClick={() => handleResend(invitation.id)}
+                                    onSelect={(event) => {
+                                      event.preventDefault();
+                                      void handleResend(invitation.id);
+                                    }}
                                     className="flex items-center gap-2"
+                                    disabled={copyingId === invitation.id}
                                   >
                                     <Send className="size-3.5" />
                                     Resend
@@ -598,6 +642,7 @@ export function InvitationsClient({
                                         <DropdownMenuItem
                                           onSelect={(event) => event.preventDefault()}
                                           className="flex items-center gap-2 text-red-600"
+                                          disabled={copyingId === invitation.id}
                                         >
                                           <X className="size-3.5" />
                                           Cancel Invitation
@@ -676,7 +721,7 @@ export function InvitationsClient({
                 className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               >
                 <option value="">Select a role…</option>
-                {ALL_USER_TYPES.map((role) => (
+                {INVITABLE_USER_TYPES.map((role) => (
                   <option key={role.value} value={role.value}>
                     {role.label}
                   </option>

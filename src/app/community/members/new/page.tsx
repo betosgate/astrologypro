@@ -75,6 +75,7 @@ const US_STATES = [
 const INITIAL_FORM = {
   // Contact
   relation_type: "",
+  other_relation_type: "",
   firstname: "",
   lastname: "",
   email: "",
@@ -228,10 +229,15 @@ export default function AddMemberPage() {
     setSaving(true);
     try {
       const phoneDigits = form.phone.replace(/\D/g, "");
+      const finalRelationType =
+        form.relation_type === "Other" && form.other_relation_type.trim() !== ""
+          ? form.other_relation_type.trim()
+          : form.relation_type;
+
       const res = await fetch("/api/community/members/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, phone: phoneDigits || "" }),
+        body: JSON.stringify({ ...form, phone: phoneDigits || "", relation_type: finalRelationType }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -276,7 +282,7 @@ export default function AddMemberPage() {
               <div className="space-y-1.5">
                 <Label htmlFor="relation_type">Relation Type</Label>
                 <Select value={form.relation_type} onValueChange={(v) => set("relation_type", v)}>
-                  <SelectTrigger id="relation_type">
+                  <SelectTrigger id="relation_type" className="w-full">
                     <SelectValue placeholder="Select relation" />
                   </SelectTrigger>
                   <SelectContent>
@@ -286,6 +292,20 @@ export default function AddMemberPage() {
                   </SelectContent>
                 </Select>
               </div>
+              {form.relation_type === "Other" && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="other_relation_type">
+                    Specify Relation <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="other_relation_type"
+                    placeholder="e.g. Mentor, Neighbor"
+                    value={form.other_relation_type}
+                    onChange={(e) => set("other_relation_type", e.target.value)}
+                    required
+                  />
+                </div>
+              )}
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
@@ -355,7 +375,7 @@ export default function AddMemberPage() {
               <div className="space-y-1.5">
                 <Label htmlFor="gender">Gender</Label>
                 <Select value={form.gender} onValueChange={(v) => set("gender", v)}>
-                  <SelectTrigger id="gender">
+                  <SelectTrigger id="gender" className="w-full">
                     <SelectValue placeholder="Select gender" />
                   </SelectTrigger>
                   <SelectContent>
@@ -371,7 +391,7 @@ export default function AddMemberPage() {
                   value={form.relationship_status}
                   onValueChange={(v) => set("relationship_status", v)}
                 >
-                  <SelectTrigger id="relationship_status">
+                  <SelectTrigger id="relationship_status" className="w-full">
                     <SelectValue placeholder="Select status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -497,7 +517,7 @@ export default function AddMemberPage() {
               <div className="space-y-1.5">
                 <Label htmlFor="state">State</Label>
                 <Select value={form.state} onValueChange={(v) => set("state", v)}>
-                  <SelectTrigger id="state">
+                  <SelectTrigger id="state" className="w-full">
                     <SelectValue placeholder="State" />
                   </SelectTrigger>
                   <SelectContent>
@@ -526,7 +546,7 @@ export default function AddMemberPage() {
           <CardHeader>
             <button
               type="button"
-              className="flex w-full items-center justify-between text-left"
+              className="flex w-full cursor-pointer items-center justify-between text-left"
               onClick={() => setShowQuestionnaire((open) => !open)}
             >
               <CardTitle className="text-base">Intake Questionnaire</CardTitle>
@@ -567,7 +587,7 @@ export default function AddMemberPage() {
             <div className="space-y-1.5">
               <Label htmlFor="status">Status</Label>
               <Select value={form.status} onValueChange={(v) => set("status", v)}>
-                <SelectTrigger id="status">
+                <SelectTrigger id="status" className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

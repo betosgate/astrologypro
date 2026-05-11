@@ -384,7 +384,7 @@ export default function ChartsPage() {
         <Card>
           <button
             type="button"
-            className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left transition-colors hover:bg-muted/30"
+            className="flex w-full cursor-pointer items-center justify-between gap-4 px-5 py-4 text-left transition-colors hover:bg-muted/30"
             aria-expanded={overviewOpen}
             onClick={() => setOverviewOpen((open) => !open)}
           >
@@ -496,7 +496,7 @@ export default function ChartsPage() {
               </p>
             </div>
             <Button asChild size="sm">
-              <Link href="/community/family">Manage Family</Link>
+              <Link href="/community/plan?tab=members">Manage Family</Link>
             </Button>
           </CardContent>
         </Card>
@@ -512,7 +512,7 @@ export default function ChartsPage() {
               <Card key={pairKey}>
                 <button
                   type="button"
-                  className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left transition-colors hover:bg-muted/30"
+                  className="flex w-full cursor-pointer items-center justify-between gap-4 px-5 py-4 text-left transition-colors hover:bg-muted/30"
                   aria-expanded={isOpen}
                   onClick={() => setExpandedId(isOpen ? null : pairKey)}
                 >

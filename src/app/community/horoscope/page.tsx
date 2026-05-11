@@ -88,7 +88,7 @@ function MissingBirthDataCard({ missing }: { missing: string[] }) {
             <Link href="/community/profile">Complete Profile</Link>
           </Button>
           <Button asChild size="sm" variant="outline">
-            <Link href="/community/family">Manage Family Birth Details</Link>
+            <Link href="/community/plan?tab=members">Manage Family Birth Details</Link>
           </Button>
         </div>
       </CardContent>
