@@ -112,7 +112,7 @@ export function MembershipCard({ subscription, userEmail }: MembershipCardProps)
     ? "text-red-500"
     : needsAttention
       ? "text-amber-500"
-      : "text-emerald-500";
+      : "text-primary";
 
   const isFamily = subscription.plan_type === "family";
   const canUpgrade =
