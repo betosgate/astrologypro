@@ -708,7 +708,7 @@ export default function OnboardingPage() {
                   value={form.gender}
                   onValueChange={(value) => patch({ gender: value })}
                 >
-                  <SelectTrigger id="gender">
+                  <SelectTrigger id="gender" className="w-full">
                     <SelectValue placeholder="Select" />
                   </SelectTrigger>
                   <SelectContent>
@@ -998,7 +998,7 @@ export default function OnboardingPage() {
                 value={form.relationship_status}
                 onValueChange={(value) => patch({ relationship_status: value })}
               >
-                <SelectTrigger id="relationship_status">
+                <SelectTrigger id="relationship_status" className="w-full">
                   <SelectValue placeholder="Select" />
                 </SelectTrigger>
                 <SelectContent>

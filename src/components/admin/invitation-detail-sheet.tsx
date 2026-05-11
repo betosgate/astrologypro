@@ -81,7 +81,14 @@ export function InvitationDetailSheet({
               <InfoRow label="Sent at" value={fmtDateTime(invitation.created_at)} />
               <InfoRow label="Expires at" value={fmtDateTime(invitation.expires_at)} />
               <InfoRow label="Resent count" value={String(invitation.resent_count ?? 0)} />
-              <InfoRow label="Link" value={`/invite/${invitation.id}`} />
+              <InfoRow
+                label="Link"
+                value={
+                  invitation.role_slug === "diviner"
+                    ? "Generated on demand from the Copy Link action"
+                    : "No public copyable link available"
+                }
+              />
             </div>
 
             <div className="mt-4 rounded-lg border p-4 text-sm text-muted-foreground">

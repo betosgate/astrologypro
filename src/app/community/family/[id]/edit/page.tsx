@@ -297,7 +297,7 @@ export default function FamilyMemberEditPage() {
               <div className="space-y-1.5">
                 <Label htmlFor="relationship">Relationship</Label>
                 <Select value={relationship} onValueChange={setRelationship}>
-                  <SelectTrigger id="relationship">
+                  <SelectTrigger id="relationship" className="w-full">
                     <SelectValue placeholder="Select relationship" />
                   </SelectTrigger>
                   <SelectContent>
