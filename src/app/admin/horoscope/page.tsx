@@ -2936,6 +2936,7 @@ export function HoroscopeToolkitPage({
   const [showChartBtn, setShowChartBtn] = useState(() => initialSavedToolkitState.showChartButton);
   const [chartModal, setChartModal] = useState<string | null>(null);
   const [transitChartSvg, setTransitChartSvg] = useState<string | null>(() => initialSavedToolkitState.transitChartSvg);
+  const [isPrintableResultReady, setIsPrintableResultReady] = useState(false);
   const [dacenPsibality, setDacenPsibality] = useState<DecanPossibility[]>([]);
   const [decanPlanet, setDecanPlanet] = useState<{ name: string; sign: string } | null>(null);
   const [excludedHoraryDates, setExcludedHoraryDates] = useState<string>("");
@@ -3082,6 +3083,7 @@ export function HoroscopeToolkitPage({
   }
 
   function printResult() {
+    if (!printReady) return;
     const el = resultRef.current;
     if (!el) return;
     const win = window.open("", "_blank");
@@ -4431,6 +4433,57 @@ export function HoroscopeToolkitPage({
       };
     })
     : [];
+  const hasPrintableChartVisual = Boolean(
+    natalSvg ||
+    natalSvgTransit ||
+    natalSvgP2 ||
+    natalSvgTransitP2 ||
+    transitChartSvg ||
+    familyNatalChartViews.some((chart) => chart.chartUrl || chart.freeSvg)
+  );
+  const hasAiData = Boolean(ai && Object.keys(ai).length > 0);
+  const hasPrintableResultData = (() => {
+    if (!results || Object.keys(results).length === 0) return false;
+    if (isTransit) {
+      return Boolean(
+        results.transit_data ||
+        results.lunar_metrics ||
+        transitChartSvg ||
+        ai.tropical_transits_weekly ||
+        ai.tropical_transits_monthly ||
+        ai.lunar_metrics
+      );
+    }
+    if (isTwoPersonAiTab) {
+      return hasPrintableChartVisual || hasAiData;
+    }
+    if (currentSlug === "western_horoscope_v2") {
+      return Boolean(natalData || hasPrintableChartVisual || hasAiData);
+    }
+    return hasRenderedResult;
+  })();
+  useEffect(() => {
+    if (loading || pendingAutoSubmit || error || !hasPrintableResultData) {
+      setIsPrintableResultReady(false);
+      return;
+    }
+
+    const frame = requestAnimationFrame(() => {
+      setIsPrintableResultReady(Boolean(resultRef.current));
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, [error, hasPrintableResultData, loading, pendingAutoSubmit]);
+
+  const printReady =
+    !loading &&
+    !pendingAutoSubmit &&
+    !error &&
+    hasPrintableResultData &&
+    isPrintableResultReady;
+  const printUnavailableLabel = loading
+    ? "Print is unavailable while the chart is generating"
+    : "Print is unavailable until the chart is ready";
 
   return (
     <div className="horoscope-toolkit h-[calc(100vh-3.5rem)] lg:h-screen overflow-hidden flex flex-col" style={{ background: '#0a0c10' }}>
@@ -4597,8 +4650,22 @@ export function HoroscopeToolkitPage({
                       <Zap className="size-5 text-amber-500" />
                       <h2 className="text-base font-bold">Results</h2>
                       <Badge variant="outline" className="text-amber-600 border-amber-400 text-xs">{currentTab.label}</Badge>
-                      <button onClick={printResult} className="ml-auto flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors border rounded px-2 py-1">
-                        <Printer className="size-3" />Print
+                      <button
+                        type="button"
+                        onClick={printResult}
+                        disabled={!printReady}
+                        aria-disabled={!printReady}
+                        aria-label={printReady ? "Print chart report" : printUnavailableLabel}
+                        title={printReady ? "Print" : printUnavailableLabel}
+                        className={cn(
+                          "ml-auto flex items-center gap-1.5 rounded border px-2 py-1 text-xs transition-colors",
+                          printReady
+                            ? "text-muted-foreground hover:text-foreground"
+                            : "cursor-not-allowed text-muted-foreground/45 opacity-60"
+                        )}
+                      >
+                        <Printer className="size-3" />
+                        Print
                       </button>
                     </div>
 
@@ -4846,7 +4913,20 @@ export function HoroscopeToolkitPage({
               <ArrowUp className="size-5" />
             </button>
           )}
-          <button onClick={printResult} className="fixed bottom-2 right-4 z-50 size-11 rounded-full bg-background border shadow-lg hover:bg-muted transition flex items-center justify-center" title="Print">
+          <button
+            type="button"
+            onClick={printResult}
+            disabled={!printReady}
+            aria-disabled={!printReady}
+            aria-label={printReady ? "Print chart report" : printUnavailableLabel}
+            className={cn(
+              "fixed bottom-2 right-4 z-50 flex size-11 items-center justify-center rounded-full border bg-background shadow-lg transition",
+              printReady
+                ? "hover:bg-muted"
+                : "cursor-not-allowed opacity-50"
+            )}
+            title={printReady ? "Print" : printUnavailableLabel}
+          >
             <Printer className="size-4" />
           </button>
         </>
