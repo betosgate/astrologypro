@@ -9,6 +9,8 @@ import { APP_URL } from "@/lib/constants";
 import { formatCurrency } from "@/lib/format";
 import { getServiceCategoryLabel, isTimeBasedPublicService } from "@/lib/public-services";
 import { getServiceLandingTemplates } from "@/lib/service-landings";
+import { MarketingFooter } from "@/components/marketing/footer";
+import { MarketingHeader } from "@/components/marketing/header";
 
 export const metadata: Metadata = {
   title: "All Reading Services | AstrologyPro",
@@ -28,6 +30,7 @@ export default async function ServicesHubPage() {
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(245,158,11,0.12),_transparent_35%),linear-gradient(180deg,_#0b1020_0%,_#111827_100%)] text-white">
+      <MarketingHeader />
       <div className="mx-auto max-w-6xl px-4 py-16">
         <div className="max-w-3xl">
           <p className="text-sm font-medium uppercase tracking-[0.22em] text-amber-300/80">
@@ -94,6 +97,7 @@ export default async function ServicesHubPage() {
           ))}
         </div>
       </div>
+      <MarketingFooter />
     </div>
   );
 }

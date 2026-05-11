@@ -209,7 +209,7 @@ export default function AdminReportsConversionsPage() {
                 setStatus(v as "all" | "earned" | "reversed")
               }
             >
-              <SelectTrigger id="status">
+              <SelectTrigger id="status" className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

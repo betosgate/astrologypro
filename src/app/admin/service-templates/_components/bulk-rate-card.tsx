@@ -110,7 +110,7 @@ export function BulkRateCard() {
               onValueChange={(v: RateType) => setType(v)}
               disabled={submitting}
             >
-              <SelectTrigger id="bulk-type">
+              <SelectTrigger id="bulk-type" className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

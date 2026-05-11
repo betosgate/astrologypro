@@ -198,7 +198,7 @@ export default function AdminReportsClicksPage() {
               value={isBot}
               onValueChange={(v) => setIsBot(v as "all" | "true" | "false")}
             >
-              <SelectTrigger id="is-bot">
+              <SelectTrigger id="is-bot" className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
