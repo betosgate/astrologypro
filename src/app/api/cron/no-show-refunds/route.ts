@@ -3,6 +3,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { stripe } from "@/lib/stripe/client";
 import { sendRefundProcessed } from "@/lib/email";
 import { verifyCronAuth } from "@/lib/cron-auth";
+import { reverseAffiliateConversionForBooking } from "@/lib/affiliate-reverse-conversion";
+import { executeAffiliatePayouts } from "@/lib/affiliate-payout-execution";
 
 export const dynamic = "force-dynamic";
 
@@ -194,6 +196,29 @@ export async function GET(request: NextRequest) {
         })
         .eq("id", booking.id);
 
+      // Sprint 2026-05-05 / Task 05: reverse the affiliate's
+      // campaign_conversions row only when an actual Stripe refund
+      // went out (partial no-show with refundAmountCents=0 should NOT
+      // reverse the conversion). Idempotent + non-throwing; logged
+      // and continued on db_error.
+      if (refundAmountCents > 0 && booking.stripe_payment_intent_id) {
+        const reversalResult = await reverseAffiliateConversionForBooking({
+          admin,
+          bookingId: booking.id,
+          reversedBy: null,
+          reason: `No-show ${refundPercent}% refund: ${refundReason}`,
+        });
+        if (reversalResult.ok !== true) {
+          const failure = reversalResult;
+          if (failure.reason === "db_error") {
+            console.error("[no-show-cron] conversion reversal db error:", {
+              bookingId: booking.id,
+              detail: failure.detail,
+            });
+          }
+        }
+      }
+
       // Email the client
       if (client?.email && diviner?.display_name) {
         await sendRefundProcessed({
@@ -222,5 +247,26 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  return NextResponse.json({ processed, results });
+  // ── Phase 2 Task 04: second pass — affiliate payouts ──────────────────
+  // The two passes are intentionally independent: a payout-pass crash
+  // must NOT cause a no-show-pass rollback, and vice versa.
+  let payoutResult: Awaited<
+    ReturnType<typeof executeAffiliatePayouts>
+  > | null = null;
+  try {
+    payoutResult = await executeAffiliatePayouts({
+      admin,
+      triggerSource: "cron",
+      triggeredBy: null,
+      affiliateBatchSize: 25,
+    });
+  } catch (err) {
+    console.error("[no-show-cron] affiliate payout pass failed:", err);
+  }
+
+  return NextResponse.json({
+    processed,
+    results,
+    affiliatePayouts: payoutResult,
+  });
 }

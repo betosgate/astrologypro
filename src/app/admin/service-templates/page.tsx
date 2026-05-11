@@ -48,6 +48,7 @@ import {
   ExternalLink,
   Loader2,
   MoreHorizontal,
+  Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -63,6 +64,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { BulkRateCard } from "./_components/bulk-rate-card";
+import { AffiliateProgramDialog } from "./_components/affiliate-program-dialog";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -109,6 +111,8 @@ export default function ServiceTemplatesPage() {
 
   const [deactivateTarget, setDeactivateTarget] = useState<ServiceTemplateRow | null>(null);
   const [hardDeleteTarget, setHardDeleteTarget] = useState<ServiceTemplateRow | null>(null);
+  const [affiliateProgramTarget, setAffiliateProgramTarget] =
+    useState<ServiceTemplateRow | null>(null);
   const [deactivating, setDeactivating] = useState(false);
   const [hardDeleting, setHardDeleting] = useState(false);
 
@@ -486,6 +490,14 @@ export default function ServiceTemplatesPage() {
                               Open public page
                             </DropdownMenuItem>
                           )}
+                          {t.is_general === true && (
+                            <DropdownMenuItem
+                              onClick={() => setAffiliateProgramTarget(t)}
+                            >
+                              <Sparkles className="mr-2 h-4 w-4" />
+                              Affiliate program
+                            </DropdownMenuItem>
+                          )}
                           <DropdownMenuItem asChild>
                             <Link href={`/admin/service-templates/${t.id}`}>
                               <Pencil className="mr-2 h-4 w-4" />
@@ -611,6 +623,14 @@ export default function ServiceTemplatesPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AffiliateProgramDialog
+        target={affiliateProgramTarget}
+        onClose={() => setAffiliateProgramTarget(null)}
+        onSaved={() => {
+          fetchTemplates();
+        }}
+      />
     </div>
   );
 }

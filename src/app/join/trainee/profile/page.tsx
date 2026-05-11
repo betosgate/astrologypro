@@ -352,10 +352,7 @@ function TraineeProfileContent() {
               {/* ─── Step 2: Specialties & Interests ─── */}
               {step === 2 && (
                 <div className="space-y-6">
-                  <div className="rounded-lg border bg-muted/30 p-3 text-sm text-muted-foreground">
-                    Current package:{" "}
-                    <span className="font-medium text-foreground">{packageLabel}</span>
-                  </div>
+
                   <div className="space-y-3">
                     <Label>Specialties / Areas of Interest</Label>
                     <div className="flex flex-wrap gap-2">

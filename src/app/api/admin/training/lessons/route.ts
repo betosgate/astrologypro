@@ -6,7 +6,7 @@ import { parsePaginationParams, paginatedList } from "@/lib/training/admin-list"
 export const dynamic = "force-dynamic";
 
 const SELECT_COLS =
-  "id, category_id, title, description, video_url, duration_mins, priority, previous_lesson_id, is_active, created_at";
+  "id, category_id, title, description, video_url, audio_url, duration_mins, priority, previous_lesson_id, is_active, created_at";
 
 const ALLOWED_SORTS: Record<string, string> = {
   title: "title",
@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
       "training_lessons",
       SELECT_COLS,
       params,
-      ["title", "description"],
+      ["title"],
       ALLOWED_SORTS,
       { column: "priority", ascending: true },
       (q) => {
@@ -76,6 +76,7 @@ export async function POST(req: NextRequest) {
     description?: string | null;
     video_url?: string | null;
     pdf_url?: string | null;
+    audio_url?: string | null;
     content?: string | null;
     duration_mins?: number | null;
     category_id?: string;
@@ -94,6 +95,7 @@ export async function POST(req: NextRequest) {
     description,
     video_url,
     pdf_url,
+    audio_url,
     content,
     duration_mins,
     category_id,
@@ -120,6 +122,7 @@ export async function POST(req: NextRequest) {
       description: description ?? null,
       video_url: video_url ?? null,
       pdf_url: pdf_url ?? null,
+      audio_url: audio_url ?? null,
       content: content ?? null,
       duration_mins: duration_mins ?? null,
       category_id,

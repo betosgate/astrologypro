@@ -127,7 +127,7 @@ export default function NewProgramPage() {
                 value={form.name}
                 onChange={handleChange}
                 required
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                className="w-full rounded-md border border-input px-3 py-2 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
                 placeholder="e.g. Diviner Certification Program"
               />
             </div>
@@ -143,7 +143,7 @@ export default function NewProgramPage() {
                 value={form.description}
                 onChange={handleChange}
                 rows={3}
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                className="w-full rounded-md border border-input px-3 py-2 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
                 placeholder="Brief description of this training program"
               />
             </div>
@@ -160,7 +160,7 @@ export default function NewProgramPage() {
                 min="0"
                 value={form.priority}
                 onChange={handleChange}
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                className="w-full rounded-md border border-input px-3 py-2 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
               />
               <p className="text-xs text-muted-foreground">Lower number = shown first.</p>
             </div>

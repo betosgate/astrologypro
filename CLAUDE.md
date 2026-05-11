@@ -13,6 +13,7 @@ that area MUST update the spec in the same commit.
 | Area | Spec |
 |---|---|
 | Affiliate / commission / campaign flow | `docs/specs/affiliate-commission-system.md` |
+| Login redirect / role hierarchy / resubscribe gates | `docs/specs/auth-login-redirect.md` |
 
 ---
 

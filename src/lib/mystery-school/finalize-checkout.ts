@@ -13,6 +13,7 @@ export async function finalizeMysterySchoolCheckoutSession(
   const admin = createAdminClient();
   const userId = session.metadata?.userId;
   const membershipType = session.metadata?.membershipType;
+  const isResubscribe = session.metadata?.resubscribe === "true";
 
   if (!userId || membershipType !== "mystery_school") {
     throw new Error("Invalid Mystery School checkout session metadata.");
@@ -33,6 +34,32 @@ export async function finalizeMysterySchoolCheckoutSession(
     null) as string | null;
   const subscriptionId = getCheckoutSubscriptionId(session);
   const enrollmentDate = new Date().toISOString();
+
+  // Resubscribe path — the row already exists. Touch only the fields
+  // that should change on reactivation. We must NOT overwrite the
+  // original `enrolled_at`, `enrollment_date`, `training_status`,
+  // `entry_quarter`/`entry_year`, or `one_time_fee_amount` — those
+  // describe the original enrollment and the user's progress.
+  if (isResubscribe) {
+    const { data: student, error: updateError } = await admin
+      .from("mystery_school_students")
+      .update({
+        stripe_subscription_id: subscriptionId,
+        status: "active",
+        paused_at: null,
+        cancelled_at: null,
+        access_expires_at: null,
+      })
+      .eq("user_id", userId)
+      .select("id, user_id, stripe_subscription_id, status")
+      .single();
+
+    if (updateError || !student) {
+      throw new Error("Failed to reactivate Mystery School student access.");
+    }
+
+    return { student };
+  }
 
   const { data: existingMember } = await admin
     .from("community_members")

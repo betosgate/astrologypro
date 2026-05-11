@@ -17,6 +17,8 @@ export interface MatchSavedReportBody {
     question?: string;
     futureWeek?: string;
     futureMonth?: string;
+    familyMembers?: unknown[];
+    family_members?: unknown[];
   } | null;
   limit?: number;
   familyMemberId?: string;
@@ -218,6 +220,61 @@ function splitPersons(formData: JsonRecord | null): {
   return { self, partner };
 }
 
+function identityFromFamilyValue(value: unknown): Identity {
+  const record = asRecord(value);
+  return identityFrom(asRecord(record?.birth) ?? record);
+}
+
+function familyIdentitiesFromFormData(formData: JsonRecord | null): Identity[] {
+  if (!formData) return [];
+
+  const directMembers =
+    (Array.isArray(formData.familyMemberPayloads) && formData.familyMemberPayloads) ||
+    (Array.isArray(formData.family_member_payloads) && formData.family_member_payloads) ||
+    (Array.isArray(formData.familyMembers) && formData.familyMembers) ||
+    (Array.isArray(formData.family_members) && formData.family_members) ||
+    null;
+  if (directMembers) return directMembers.map(identityFromFamilyValue);
+
+  const chartMembers =
+    (Array.isArray(formData.familyPersonCharts) && formData.familyPersonCharts) ||
+    (Array.isArray(formData.family_person_charts) && formData.family_person_charts) ||
+    null;
+  if (chartMembers) return chartMembers.map(identityFromFamilyValue);
+
+  const { self, partner } = splitPersons(formData);
+  const partners =
+    (Array.isArray(formData.partners) && formData.partners) ||
+    (Array.isArray(formData.partner) && formData.partner) ||
+    [];
+
+  return [self, ...partners, Array.isArray(formData.partner) ? null : partner]
+    .filter(Boolean)
+    .map(identityFromFamilyValue);
+}
+
+function familyIdentitiesFromBody(body: MatchSavedReportBody): Identity[] {
+  const members =
+    (Array.isArray(body.extras?.familyMembers) && body.extras?.familyMembers) ||
+    (Array.isArray(body.extras?.family_members) && body.extras?.family_members) ||
+    [];
+
+  return members.map(identityFromFamilyValue).filter(isComplete);
+}
+
+function familyIdentitiesMatch(reqFamily: Identity[], rowFamily: Identity[]): boolean {
+  if (!reqFamily.length) return true;
+  if (rowFamily.length !== reqFamily.length) return false;
+
+  const unmatched = [...rowFamily];
+  return reqFamily.every((reqId) => {
+    const index = unmatched.findIndex((rowId) => identityMatches(reqId, rowId));
+    if (index < 0) return false;
+    unmatched.splice(index, 1);
+    return true;
+  });
+}
+
 function reqIdentitiesFromBody(body: MatchSavedReportBody): {
   self: Identity;
   partner: Identity | null;
@@ -258,6 +315,7 @@ export function findSavedReportMatch(
   candidates: unknown[]
 ): JsonRecord | null {
   const reqIds = reqIdentitiesFromBody(body);
+  const reqFamilyIds = familyIdentitiesFromBody(body);
 
   if (!isComplete(reqIds.self)) return null;
   if (reqIds.twoPerson && (!reqIds.partner || !isComplete(reqIds.partner))) {
@@ -316,6 +374,13 @@ export function findSavedReportMatch(
 
     const { self: rowSelf, partner: rowPartner } = splitPersons(formData);
     const rowSelfId = identityFrom(rowSelf);
+
+    if (reqFamilyIds.length) {
+      if (!familyIdentitiesMatch(reqFamilyIds, familyIdentitiesFromFormData(formData))) {
+        continue;
+      }
+      return row;
+    }
 
     if (reqIds.twoPerson) {
       if (!rowPartner) continue;

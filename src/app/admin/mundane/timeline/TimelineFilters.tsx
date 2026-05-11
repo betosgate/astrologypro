@@ -124,7 +124,7 @@ export function TimelineFilters({ activeTypes, entityId, entities }: Props) {
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs font-medium text-muted-foreground shrink-0">Entity:</span>
           <select
-            className="h-7 rounded border bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+            className="h-7 rounded border px-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
             value={entityId ?? ""}
             onChange={(e) => setEntity(e.target.value || null)}
           >

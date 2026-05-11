@@ -54,15 +54,24 @@ export default async function MysterySchoolLayout({ children }: { children: Reac
             membershipStatus={expiredStudent.status}
             billingPortalEndpoint="/api/mystery-school/billing-portal"
             hasStripeSubscription={!!expiredStudent.stripe_subscription_id}
-            resubscribeHref="/join/community"
+            resubscribeHref="/join/mystery-school/resubscribe"
             accessEndedAt={expiredStudent.access_expires_at ?? expiredStudent.cancelled_at}
           />
         </div>
       );
     }
 
-    // Never enrolled — send to the join/enrollment page
-    redirect("/join/community");
+    // Row exists but doesn't match the wasEnrolled buckets above — e.g.
+    // status='active' with no stripe_subscription_id (broken billing on
+    // an otherwise-active row). Send these users to resubscribe rather
+    // than first-time enrollment, so the existing row is preserved and
+    // they don't pay the one-time fee twice.
+    if (expiredStudent) {
+      redirect("/join/mystery-school/resubscribe");
+    }
+
+    // Never enrolled — first-time enrollment flow.
+    redirect("/join/mystery-school");
   }
 
   const { data: member } = await supabase
@@ -77,8 +86,8 @@ export default async function MysterySchoolLayout({ children }: { children: Reac
   // /community/* routes redirect MS-only users away — removed to avoid
   // misleading nav behavior (tasks 02 + 03).
   const navLinks = [
-    { label: "Decans", href: "/mystery-school" },
     { label: "Training", href: "/mystery-school/training" },
+    { label: "Decans", href: "/mystery-school" },
     { label: "Graduation", href: "/mystery-school/training/graduation" },
   ];
 

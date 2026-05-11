@@ -27,6 +27,8 @@ export interface BirthInput {
 export interface FormState {
   person1: BirthInput;
   person2: BirthInput;
+  name1: string;
+  name2: string;
   areaOfInquiry: string;
   question: string;
   futureWeek: string;

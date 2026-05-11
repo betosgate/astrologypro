@@ -47,7 +47,7 @@ export async function GET(request: Request) {
   let query = admin
     .from("campaign_clicks")
     .select(
-      "id, campaign_id, campaign_code, destination_type, destination_id, affiliate_id, ip, country, user_agent, referrer, is_bot, is_unique_click, created_at",
+      "id, campaign_id, campaign_code, destination_type, destination_id, affiliate_id, ip_hash, country_code, user_agent, referrer_url, is_bot, is_unique_click, created_at",
     )
     .eq("diviner_id", diviner.id)
     .order("created_at", { ascending: false })
@@ -56,7 +56,7 @@ export async function GET(request: Request) {
 
   if (dateFrom) query = query.gte("created_at", dateFrom);
   if (dateTo) query = query.lte("created_at", dateTo);
-  if (country) query = query.eq("country", country);
+  if (country) query = query.eq("country_code", country);
   if (affiliateId) query = query.eq("affiliate_id", affiliateId);
   if (isBot === "true") query = query.eq("is_bot", true);
   else if (isBot === "false") query = query.eq("is_bot", false);

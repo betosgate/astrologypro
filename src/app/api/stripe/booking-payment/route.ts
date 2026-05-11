@@ -14,6 +14,7 @@ import { isDivinerPayoutReadyForPaidServices } from "@/lib/payout-readiness";
 import { calculateMoneySplit } from "@/lib/money-split";
 import { getSessionLinkForBooking } from "@/lib/service-toolkit-mapping";
 import { resolveStampForBooking } from "@/lib/affiliate-stamp";
+import { computeCommissionCents } from "@/lib/affiliate-attribution";
 import {
   generateBookingCallPin,
   getActiveChimePhoneNumber,
@@ -541,17 +542,69 @@ export async function POST(request: NextRequest) {
     const effectivePlatformFeePercent = memberDiscountApplied
       ? Math.max(basePlatformFeePercent - 5, 10)
       : basePlatformFeePercent;
+
+    // Resolve the commission rate stamp BEFORE the money split so the
+    // affiliate carve-out (Phase-2-prerequisite, sprint
+    // docs/tasks/2026-05-05/affiliate-carve-out-at-booking-creation/) can
+    // feed into calculateMoneySplit. If refCode is valid AND all five
+    // §3.8 conditions pass, the stamp fields get populated on the booking
+    // row at creation time and become the authoritative rate for
+    // commission payout when the Stripe webhook fires. If any condition
+    // fails, the stamp fields stay NULL and the booking will never earn
+    // commission — the diviner keeps 100% of the payment.
+    const stamp = await resolveStampForBooking(adminSupabase, {
+      refCode: refCode ?? null,
+      divinerId: resolvedDivinerId,
+      serviceId,
+    });
+    if (refCode && stamp.reason !== "stamped") {
+      console.log(
+        JSON.stringify({
+          event: "affiliate_stamp_skipped",
+          refCode,
+          reason: stamp.reason,
+          divinerId: resolvedDivinerId,
+          serviceId,
+        }),
+      );
+    }
+
+    // Phase-2-prerequisite carve-out: when the booking is stamped,
+    // compute the cents the affiliate is owed and feed it into the
+    // money split so the PaymentIntent's application_fee_amount
+    // includes the affiliate's share. Diviner's destination transfer
+    // is correspondingly reduced. Non-stamped bookings → 0 cents →
+    // unchanged from current behavior.
+    const grossAmountCentsForCarveOut = Math.round(finalPrice * 100);
+    const affiliateCommissionCents =
+      stamp.reason === "stamped"
+        ? computeCommissionCents(
+            grossAmountCentsForCarveOut,
+            stamp.rate_type_stamp,
+            stamp.rate_value_stamp,
+          )
+        : 0;
+
     const grossAmountCents = Math.round(finalPrice * 100);
     const bookingSplit = calculateMoneySplit({
       grossAmountCents,
       platformFeePercent: effectivePlatformFeePercent,
+      affiliateCommissionCents,
       platformFeeRule:
         typeof (service as Record<string, unknown>).platform_fee_percent === "number"
           ? "service_platform_fee_percent"
           : "global_platform_fee_percent",
+      affiliateRule:
+        affiliateCommissionCents > 0 ? "stamped_affiliate_share" : "no_affiliate_share",
       memberDiscountApplied,
     });
-    const platformFee = bookingSplit.platformFeeCents / 100;
+    // What stays on platform balance: platform's true fee + affiliate's
+    // share (Phase 2 will later transfer the affiliate share out to the
+    // affiliate's connected account). The diviner's destination transfer
+    // is the remainder, equal to bookingSplit.divinerNetAmountCents.
+    const platformPlusAffiliateCents =
+      bookingSplit.platformFeeCents + bookingSplit.affiliateCommissionCents;
+    const platformFee = platformPlusAffiliateCents / 100;
     // freeSlot=true means the client selected an unscoped availability (no service_id).
     // Verify this server-side: if the best-matched template has no service_id, honour the override.
     const bestTemplateServiceId =
@@ -607,29 +660,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Resolve the commission rate stamp BEFORE the booking insert.
-    // If refCode is valid AND all five §3.8 conditions pass, the stamp
-    // fields get populated on the booking row at creation time and
-    // become the authoritative rate for commission payout when the
-    // Stripe webhook fires. If any condition fails, the stamp fields
-    // stay NULL and the booking will never earn commission — the
-    // diviner keeps 100% of the payment.
-    const stamp = await resolveStampForBooking(adminSupabase, {
-      refCode: refCode ?? null,
-      divinerId: resolvedDivinerId,
-      serviceId,
-    });
-    if (refCode && stamp.reason !== "stamped") {
-      console.log(
-        JSON.stringify({
-          event: "affiliate_stamp_skipped",
-          refCode,
-          reason: stamp.reason,
-          divinerId: resolvedDivinerId,
-          serviceId,
-        }),
-      );
-    }
+    // (Stamp resolution moved above the money split — see top of this
+    // function. The `stamp` and `affiliateCommissionCents` locals are
+    // already in scope here for the booking insert.)
 
     // Create booking record with pending status
     // Use admin client — guest bookers have no session so RLS would block the insert
@@ -660,8 +693,10 @@ export async function POST(request: NextRequest) {
           ? {
               commission_source_assignment_id: stamp.source_assignment_id,
               commission_source_template_id: stamp.source_template_id,
+              commission_source_campaign_id: stamp.source_campaign_id,
               commission_rate_type_stamp: stamp.rate_type_stamp,
               commission_rate_value_stamp: stamp.rate_value_stamp,
+              affiliate_commission_amount_cents: affiliateCommissionCents,
             }
           : {}),
         ...(callPin
@@ -757,6 +792,11 @@ export async function POST(request: NextRequest) {
           grossAmountCents: String(bookingSplit.grossAmountCents),
           platformFeeCents: String(bookingSplit.platformFeeCents),
           divinerGrossAmountCents: String(bookingSplit.divinerGrossAmountCents),
+          divinerNetAmountCents: String(bookingSplit.divinerNetAmountCents),
+          affiliateCommissionCents: String(bookingSplit.affiliateCommissionCents),
+          applicationFeeCents: String(
+            bookingSplit.platformFeeCents + bookingSplit.affiliateCommissionCents,
+          ),
           splitPlatformFeePercent: String(bookingSplit.trace.platformFeePercent),
           splitPlatformFeeRule: bookingSplit.trace.platformFeeRule,
           splitAffiliateRule: bookingSplit.trace.affiliateRule,

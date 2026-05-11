@@ -36,9 +36,9 @@ export async function GET(request: Request) {
   let convQuery = admin
     .from("campaign_conversions")
     .select(
-      "commission_amount_cents, reversed_at, campaign:affiliate_campaigns(diviner_id)",
+      "commission_amount_cents, reversed_at, converted_at, campaign:affiliate_campaigns(diviner_id)",
     );
-  if (since) convQuery = convQuery.gte("created_at", since);
+  if (since) convQuery = convQuery.gte("converted_at", since);
 
   let clicksQuery = admin
     .from("campaign_clicks")

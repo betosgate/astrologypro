@@ -16,6 +16,7 @@ import { Loader2, DollarSign, Wallet, Users, TrendingUp } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 import { ReportsTabs } from "./_components/reports-tabs";
 import { EmergencyOverridesPanel } from "./_components/emergency-overrides-panel";
+import { PayoutsKillSwitchPanel } from "./_components/payouts-kill-switch-panel";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -550,6 +551,7 @@ function CombinedTab({ combined }: { combined: AffiliateReport["combined"] }) {
         </CardContent>
       </Card>
 
+      <PayoutsKillSwitchPanel />
       <EmergencyOverridesPanel />
     </div>
   );

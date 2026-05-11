@@ -146,7 +146,7 @@ export default function CreateTestimonialRequestPage() {
                   id="testimonial_for"
                   value={form.testimonial_for}
                   onChange={(e) => setForm({ ...form, testimonial_for: e.target.value })}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="flex h-9 w-full rounded-md border border-input px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <option value="">— Select Diviner —</option>
                   {diviners.map((d) => (

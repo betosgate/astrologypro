@@ -263,7 +263,7 @@ export function TrainingQuizForm({
                   onChange={(e) =>
                     setForm((prev) => ({ ...prev, lesson_id: e.target.value }))
                   }
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
+                  className="w-full h-9 rounded-md border border-input px-3 py-2 text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <option value="">Select lesson</option>
                   {lessonOptions.map((lesson) => (
@@ -352,7 +352,7 @@ export function TrainingQuizForm({
                       id="correct-answer"
                       value={draft.correct_answer}
                       onChange={(e) => updateDraft("correct_answer", e.target.value)}
-                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
+                      className="w-full h-9 rounded-md border border-input px-3 py-2 text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
                     >
                       <option value="0">Option A</option>
                       <option value="1">Option B</option>

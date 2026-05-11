@@ -41,16 +41,19 @@ import {
 import Link from "next/link";
 import { AstroChartsSection } from "@/components/community/astro-charts-section";
 import { ChartQuickActions } from "@/components/community/chart-quick-actions";
-import { ProfileProgressSection } from "@/components/community/profile-progress-section";
+import { HouseholdReadinessSection } from "@/components/community/household-readiness-section";
 import { MembershipCard, type MembershipSubscription } from "@/components/community/membership-card";
 import { ManageSubscriptionButton } from "@/components/mystery-school/manage-subscription-button";
 import { ProfileCompletionCard, type ProfileCompletionData } from "@/components/community/profile-completion-card";
-import { ProgressRing } from "@/components/community/progress-ring";
 import { DashboardFeedPreview } from "@/components/community/dashboard-feed-preview";
 import { getCommunityDashboardFeed } from "@/lib/dashboard-content";
 import { calcFamilyProfileCompletion } from "@/lib/community/family-profile-completion";
 import { formatBirthPlace } from "@/lib/community/birth-location";
 import { deriveNatalReportState } from "@/lib/community/chart-report-state";
+import {
+  computeBirthDataReadiness,
+  isBirthDataComplete,
+} from "@/lib/community/birth-data-readiness";
 import { SectionContainer } from "@/components/shared/section-container";
 
 export const metadata = { title: "Community - AstrologyPro" };
@@ -80,12 +83,6 @@ export const dynamic = "force-dynamic";
 //   if (m.natal_chart && Object.keys(m.natal_chart).length > 0) pct += 10;
 //   return pct;
 // }
-
-function ringColor(pct: number): string {
-  if (pct >= 100) return "hsl(142, 71%, 45%)";
-  if (pct >= 60) return "hsl(var(--primary))";
-  return "hsl(25, 90%, 55%)";
-}
 
 function journeySetupCtaLabel(key?: string): string {
   switch (key) {
@@ -127,6 +124,7 @@ type PmApiSubscription = {
   id: string;
   status: string;
   current_period_end: string | null;
+  last_payment_date?: string | null;
   cancel_at_period_end: boolean;
   amount: number;
   currency: string;
@@ -140,6 +138,20 @@ type PmApiSubscription = {
   stripe_customer_id?: string | null;
   tier_id?: string | null;
   tier_name?: string | null;
+};
+
+type CommunityApiSubscription = {
+  membership_type: string;
+  plan_type: string;
+  plan_label: string;
+  status: string;
+  amount: number;
+  currency: string;
+  renewal_date: string | null;
+  last_payment_date: string | null;
+  created_at: string;
+  member_count: number;
+  max_members: number;
 };
 
 function stripeCentsToAmount(cents: number): number {
@@ -177,9 +189,47 @@ async function fetchPmSubscription(): Promise<PmApiSubscription | null> {
     const body = (await res.json()) as {
       subscription?: PmApiSubscription | null;
     };
+    console.log("[community] /api/pm/subscription", {
+      route: "/community",
+      status: res.status,
+      subscription_status: body.subscription?.status ?? null,
+      current_period_end: body.subscription?.current_period_end ?? null,
+      last_payment_date: body.subscription?.last_payment_date ?? null,
+      cancel_at_period_end: body.subscription?.cancel_at_period_end ?? null,
+    });
     return body.subscription ?? null;
   } catch (err) {
     console.error("[community] PM subscription API error:", err);
+    return null;
+  }
+}
+
+async function fetchCommunitySubscription(): Promise<CommunityApiSubscription | null> {
+  try {
+    const hdrs = await headers();
+    const host = hdrs.get("x-forwarded-host") ?? hdrs.get("host");
+    const protocol =
+      hdrs.get("x-forwarded-proto") ??
+      (host?.startsWith("localhost") ? "http" : "https");
+    const origin = host ? `${protocol}://${host}` : APP_URL;
+    const cookie = hdrs.get("cookie");
+
+    const res = await fetch(`${origin}/api/community/subscription`, {
+      cache: "no-store",
+      headers: cookie ? { cookie } : undefined,
+    });
+
+    if (!res.ok) {
+      console.error("[community] Failed to fetch community subscription API", res.status);
+      return null;
+    }
+
+    const body = (await res.json()) as {
+      subscription?: CommunityApiSubscription | null;
+    };
+    return body.subscription ?? null;
+  } catch (err) {
+    console.error("[community] Community subscription API error:", err);
     return null;
   }
 }
@@ -258,7 +308,7 @@ export default async function CommunityDashboardPage() {
   const { data: member } = await supabase
     .from("community_members")
     .select(
-      "id, full_name, email, membership_type, membership_status, plan_type, joined_at, expires_at, pm_tier_id, current_period_end, extra_member_count, date_of_birth, birth_time, birth_city"
+      "id, full_name, email, membership_type, membership_status, plan_type, joined_at, expires_at, pm_tier_id, current_period_end, extra_member_count, date_of_birth, birth_time, birth_city, birth_country"
     )
     .eq("user_id", user.id)
     .maybeSingle();
@@ -303,6 +353,7 @@ export default async function CommunityDashboardPage() {
     platformSettingsResult,
     mysterySchoolStudentResult,
     pmApiSubscription,
+    communityApiSubscription,
   ] = await Promise.all([
     // Client profile for progress ring calculation
     supabase
@@ -318,7 +369,12 @@ export default async function CommunityDashboardPage() {
     supabase
       .from("community_family_members")
       .select(
-        "id, user_id, full_name, relationship, date_of_birth, birth_time, birth_city, birth_country, natal_chart, natal_status, natal_report_id, natal_report_status"
+        // birth_lat / birth_lng are needed for the household-readiness card
+        // to use the chart-flow `isBirthDataComplete` gate (the same rule
+        // /community/transits uses). Without coordinates a row may pass
+        // text-field checks but still be ineligible for chart generation.
+        // Spec: tasks/06.05.2026/community-dashboard-household-readiness-card/03-wire-household-readiness-metrics-and-actions.md
+        "id, user_id, full_name, relationship, date_of_birth, birth_time, birth_city, birth_country, birth_lat, birth_lng, natal_chart, natal_status, natal_report_id, natal_report_status"
       )
       .eq("member_id", member.id)
       .limit(10),
@@ -394,10 +450,25 @@ export default async function CommunityDashboardPage() {
       .maybeSingle(),
 
     isPerennial ? fetchPmSubscription() : Promise.resolve(null),
+    fetchCommunitySubscription(),
   ]);
 
   const client = clientResult.data;
+  if (familyMembersResult.error) {
+    console.error(
+      "[community] Failed to load family members for dashboard",
+      familyMembersResult.error
+    );
+  }
   const familyMembers = familyMembersResult.data ?? [];
+  const selfFamilyMember = familyMembers.find(
+    (fm) =>
+      fm.user_id === user.id ||
+      (fm.relationship ?? "").toLowerCase() === "self"
+  );
+  const nonSelfFamilyMembers = familyMembers.filter(
+    (fm) => fm.id !== selfFamilyMember?.id
+  );
   const otherMembers = otherMembersResult.data ?? [];
   const recentWisdom = recentWisdomResult.data ?? [];
   const recentBlog = recentBlogResult.data ?? [];
@@ -496,7 +567,7 @@ export default async function CommunityDashboardPage() {
     formatDateLong(mysterySchoolStudent?.access_expires_at ?? mysterySchoolCurrentPeriodEnd);
   const mysterySchoolRenewalDate =
     mysterySchoolStudent?.status === "active"
-      ? formatDateLong(mysterySchoolCurrentPeriodEnd)
+      ? (communityApiSubscription?.renewal_date ? formatDateLong(communityApiSubscription.renewal_date) : formatDateLong(mysterySchoolCurrentPeriodEnd))
       : null;
   const mysterySchoolBillingLabel = mysterySchoolRecurringAmount
     ? `${formatCurrency(mysterySchoolRecurringAmount, mysterySchoolRecurringCurrency)}/month`
@@ -533,11 +604,19 @@ export default async function CommunityDashboardPage() {
     null;
 
   // Best renewal date: PM prefers the API's Stripe current_period_end.
-  const renewalDate: string | null =
-    (isPerennial ? pmApiSubscription?.current_period_end ?? null : null) ??
+  let renewalDate: string | null =
+    (isPerennial ? pmApiSubscription?.current_period_end : null) ??
     (member as { current_period_end?: string | null }).current_period_end ??
     member.expires_at ??
     null;
+
+  if (!renewalDate && member.membership_status === "active") {
+    const d = new Date(member.joined_at || user.created_at);
+    const now = new Date();
+    d.setFullYear(now.getFullYear(), now.getMonth());
+    if (d < now) d.setMonth(d.getMonth() + 1);
+    renewalDate = d.toISOString();
+  }
 
   const membershipSubscription: MembershipSubscription = {
     membership_type:
@@ -575,7 +654,10 @@ export default async function CommunityDashboardPage() {
         ? billingCycleFromInterval(pmApiSubscription?.interval)
         : null) ?? "monthly",
     renewal_date: renewalDate,
-    created_at: member.joined_at,
+    last_payment_date: isPerennial
+      ? pmApiSubscription?.last_payment_date ?? null
+      : null,
+    created_at: (member.joined_at && typeof member.joined_at === "string" && member.joined_at.trim() !== "") ? member.joined_at : user.created_at,
     member_count: memberCount,
     max_members: maxMembers,
   };
@@ -609,32 +691,121 @@ export default async function CommunityDashboardPage() {
   // best-effort cross-role sync had not yet populated the `clients` row.
   const memberBirthFields = {
     date_of_birth:
-      (member as { date_of_birth?: string | null }).date_of_birth ?? null,
+      selfFamilyMember?.date_of_birth ??
+      (member as { date_of_birth?: string | null }).date_of_birth ??
+      null,
     birth_time:
-      (member as { birth_time?: string | null }).birth_time ?? null,
+      selfFamilyMember?.birth_time ??
+      (member as { birth_time?: string | null }).birth_time ??
+      null,
     birth_city:
-      (member as { birth_city?: string | null }).birth_city ?? null,
+      selfFamilyMember?.birth_city ??
+      (member as { birth_city?: string | null }).birth_city ??
+      null,
+    birth_country:
+      selfFamilyMember?.birth_country ??
+      (member as { birth_country?: string | null }).birth_country ??
+      null,
+    birth_lat: selfFamilyMember?.birth_lat ?? null,
+    birth_lng: selfFamilyMember?.birth_lng ?? null,
   };
-  const hasDob = Boolean(
-    memberBirthFields.date_of_birth &&
-      String(memberBirthFields.date_of_birth).trim() !== ""
+  const selfBirthReadiness = computeBirthDataReadiness(memberBirthFields);
+  const selfBirthDataComplete = selfBirthReadiness.complete;
+  const selfBirthDataFieldCount = 6;
+  const profilePct = Math.round(
+    ((selfBirthDataFieldCount - selfBirthReadiness.missing.length) /
+      selfBirthDataFieldCount) *
+      100
   );
-  const hasBirthTime = Boolean(
-    memberBirthFields.birth_time &&
-      String(memberBirthFields.birth_time).trim() !== ""
+  const profileMissingFields = selfBirthReadiness.missing.map((field) => {
+    switch (field) {
+      case "date_of_birth":
+        return "Date of birth";
+      case "birth_time":
+        return "Birth time";
+      case "birth_city":
+        return "Birth city";
+      case "birth_country":
+        return "Birth country";
+      case "birth_lat":
+      case "birth_lng":
+        return "Birth city coordinates";
+      default:
+        return field;
+    }
+  });
+
+  // ── Household Readiness Card metrics ─────────────────────────────────────
+  // Spec: tasks/06.05.2026/community-dashboard-household-readiness-card/
+  //         03-wire-household-readiness-metrics-and-actions.md
+  //
+  // Replaces the legacy two-ring "Birth Data Readiness" card whose
+  // "Household Members 100%" was based on raw member count, not actual
+  // per-member birth-data completeness. We compute three distinct
+  // dimensions per household so the dashboard never claims everything
+  // is set up when half the members are missing chart-eligible data:
+  //
+  //   selfBirthDataComplete  — primary member's chart-eligibility
+  //   completeMemberCount    — household members ready for chart gen
+  //   natalChartsReadyCount  — household members with a generated chart
+  //
+  // We deliberately use `isBirthDataComplete` (the chart-generation gate
+  // shared with /community/transits) for family rows because the readiness
+  // card is selling chart-readiness, not generic profile completeness.
+  // The lower "Your Circle" section keeps using `calcFamilyProfileCompletion`
+  // for its richer per-member profile view.
+  // Family rows readiness (chart-eligibility view).
+  const familyMembersBirthComplete = nonSelfFamilyMembers.filter((fm) =>
+    isBirthDataComplete({
+      date_of_birth: fm.date_of_birth ?? null,
+      birth_time: fm.birth_time ?? null,
+      birth_city: fm.birth_city ?? null,
+      birth_country: (fm as { birth_country?: string | null }).birth_country ?? null,
+      birth_lat: (fm as { birth_lat?: number | string | null }).birth_lat ?? null,
+      birth_lng: (fm as { birth_lng?: number | string | null }).birth_lng ?? null,
+    })
   );
-  const hasBirthCity = Boolean(
-    memberBirthFields.birth_city &&
-      String(memberBirthFields.birth_city).trim() !== ""
-  );
-  let profilePct = 0;
-  if (hasDob) profilePct += 34;
-  if (hasBirthTime) profilePct += 33;
-  if (hasBirthCity) profilePct += 33;
-  const profileMissingFields: string[] = [];
-  if (!hasDob) profileMissingFields.push("Date of birth");
-  if (!hasBirthTime) profileMissingFields.push("Birth time");
-  if (!hasBirthCity) profileMissingFields.push("Birth city");
+
+  // Total visible household = family rows + 1 (primary member). We do NOT
+  // cap at maxMembers here — the readiness card reports actual visible
+  // members, while membership/billing surfaces handle plan-limit display.
+  const householdTotalCount = nonSelfFamilyMembers.length + 1;
+  const householdCompleteCount =
+    (selfBirthDataComplete ? 1 : 0) + familyMembersBirthComplete.length;
+  const householdMissingDetailsCount =
+    householdTotalCount - householdCompleteCount;
+
+  // Chart-readiness per row. `deriveNatalReportState` is the same helper
+  // used by Your Circle and the natal CTA, so counts here always agree
+  // with the per-row badges below.
+  const familyChartsReadyCount = familyMembers.filter(
+    (fm) => deriveNatalReportState(fm) === "generated"
+  ).length;
+
+  // Self chart readiness: prefer the family row representing self if one
+  // exists; otherwise fall back to the existing `pcFamilyMembers` lookup
+  // which is already wired below.
+  const selfFamilyRow =
+    familyMembers.find((fm) => fm.user_id === user.id) ??
+    familyMembers.find(
+      (fm) => (fm.relationship ?? "").toLowerCase() === "self"
+    ) ??
+    null;
+  const selfChartReady =
+    selfFamilyRow != null
+      ? deriveNatalReportState(selfFamilyRow) === "generated"
+      : false;
+
+  // To avoid double-counting when self IS a family row.
+  const selfIsInFamilyRows = selfFamilyRow != null;
+  const householdNatalChartsReadyCount = selfIsInFamilyRows
+    ? familyChartsReadyCount
+    : familyChartsReadyCount + (selfChartReady ? 1 : 0);
+
+  // Eligibility = how many household members CAN have a chart generated
+  // right now. We derive this from the same completeness rule so the
+  // "Charts Ready X / Y" denominator never exceeds the actually-eligible set.
+  const householdNatalChartsEligibleCount = householdCompleteCount;
 
   // ── Full profile completion data (weighted, for ProfileCompletionCard) ────
   const hasPhoto = Boolean(
@@ -642,7 +813,7 @@ export default async function CommunityDashboardPage() {
       String(user.user_metadata.avatar_url).trim() !== ""
   );
   const pcHasFullName = Boolean(member.full_name && member.full_name.trim() !== "");
-  const pcHasBirthData = hasDob && hasBirthTime && hasBirthCity;
+  const pcHasBirthData = selfBirthDataComplete;
   const pcHasNatalChart = pcFamilyMembers.some(
     (fm) => deriveNatalReportState(fm) === "generated"
   );
@@ -783,17 +954,15 @@ export default async function CommunityDashboardPage() {
   // reads and writes), not from `clients` (a broader client-domain record
   // that can be stale, missing, or unsynced for PM members).
   //
-  // Reuse the already-derived booleans `hasDob`, `hasBirthTime`, and
-  // `hasBirthCity` computed earlier from `memberBirthFields` so the card,
-  // the profile-completion widget, and the progress bar all agree on a
-  // single source of truth for the PM member's own birth data.
+  // Reuse the chart/transit readiness computed earlier from the canonical
+  // self row so the dashboard never claims chart readiness without saved
+  // coordinates.
   //
   // Scope: only the logged-in PM member's own cosmic blueprint card.
   // Household/family-member chart logic is intentionally left unchanged.
-  const ownChartMissingFields: string[] = [];
-  if (!hasDob) ownChartMissingFields.push("date of birth");
-  if (!hasBirthTime) ownChartMissingFields.push("birth time");
-  if (!hasBirthCity) ownChartMissingFields.push("birth city");
+  const ownChartMissingFields = profileMissingFields.map((field) =>
+    field.toLowerCase()
+  );
   const ownChartReady = ownChartMissingFields.length === 0;
   const relationshipChartCount = pcRelCharts.length;
 
@@ -901,16 +1070,20 @@ export default async function CommunityDashboardPage() {
     ];
 
     for (const fm of familyMembers) {
+      const rel = (fm.relationship ?? "").trim();
+      const normalizedRel = normalizeRel(rel);
+      const isSelfRelationship =
+        normalizedRel === "self" || normalizedRel === "primary";
       // Dedup against primary member — stable id first, name fallback.
       const isSameAsPrimaryByUser =
         (fm as { user_id?: string | null }).user_id != null &&
         (fm as { user_id?: string | null }).user_id === user.id;
       const isSameAsPrimaryByName =
+        isSelfRelationship &&
         primarySelfName !== "" &&
         (fm.full_name ?? "").trim().toLowerCase() === primarySelfName;
       if (isSameAsPrimaryByUser || isSameAsPrimaryByName) continue;
 
-      const rel = (fm.relationship ?? "").trim();
       const missing = rel === "";
       chips.push({
         id: fm.id,
@@ -926,6 +1099,12 @@ export default async function CommunityDashboardPage() {
 
   const familyChipData: FamilyChip[] =
     planType === "family" && familyMembers.length > 0 ? buildRealChips() : [];
+  const maxVisibleFamilyChips = 5;
+  const visibleFamilyChips = familyChipData.slice(0, maxVisibleFamilyChips);
+  const hiddenFamilyChipCount = Math.max(
+    familyChipData.length - visibleFamilyChips.length,
+    0
+  );
   const showFamilyEmptyState = planType === "family" && familyMembers.length === 0;
 
   return (
@@ -974,6 +1153,16 @@ export default async function CommunityDashboardPage() {
             >
               {isCancelling ? "Cancelling" : (member.membership_status ?? "active")}
             </Badge>
+
+            {/* Member since date */}
+            <span className="text-xs text-muted-foreground">
+              Member since{" "}
+              {new Date(member.joined_at).toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+              })}
+            </span>
             {/* Days remaining until next billing / access end */}
             {daysRemaining !== null && !isCancelling && (
               <span className="text-xs text-muted-foreground flex items-center gap-1">
@@ -991,7 +1180,8 @@ export default async function CommunityDashboardPage() {
                   : `${daysRemaining}d of access remaining`}
               </span>
             )}
-            {/* Next billing date */}
+            {/* Next billing date (Commented out per user request) */}
+            {/*
             {renewalDate && !isCancelling && (
               <span className="text-xs text-muted-foreground">
                 Next billing:{" "}
@@ -1002,13 +1192,22 @@ export default async function CommunityDashboardPage() {
                 })}
               </span>
             )}
-            <span className="text-xs text-muted-foreground">
-              Member since{" "}
-              {new Date(member.joined_at).toLocaleDateString("en-US", {
-                month: "short",
-                year: "numeric",
-              })}
-            </span>
+            */}
+
+            {/* Last payment (Commented out per user request) */}
+            {/*
+            {isPerennial && pmApiSubscription?.last_payment_date && (
+              <span className="text-xs text-muted-foreground">
+                Last payment:{" "}
+                {new Date(pmApiSubscription.last_payment_date).toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                })}
+              </span>
+            )}
+            */}
+
           </div>
           {/* Profile completion mini bar */}
           <div className="flex items-center gap-3 min-w-0">
@@ -1051,7 +1250,7 @@ export default async function CommunityDashboardPage() {
                   aria-hidden="true"
                 />
               </span>
-              {familyChipData.map((chip) => {
+              {visibleFamilyChips.map((chip) => {
                 const chipContent = (
                   <>
                     <User className="size-3.5 text-muted-foreground" aria-hidden="true" />
@@ -1106,6 +1305,15 @@ export default async function CommunityDashboardPage() {
                   </div>
                 );
               })}
+              {hiddenFamilyChipCount > 0 && (
+                <Link
+                  href="/community/family"
+                  className="inline-flex items-center rounded-full border border-primary/30 bg-primary/5 px-3 py-1 text-sm font-medium text-primary transition-colors hover:border-primary/50 hover:bg-primary/10 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  aria-label={`View ${hiddenFamilyChipCount} more family member${hiddenFamilyChipCount === 1 ? "" : "s"}`}
+                >
+                  +{hiddenFamilyChipCount} more
+                </Link>
+              )}
             </div>
             <div className="h-px w-full bg-border/50" />
           </div>
@@ -1400,11 +1608,21 @@ export default async function CommunityDashboardPage() {
 
         {/* Profile Progress + Astro Charts */}
         <div className="grid gap-4 sm:grid-cols-2">
-          {/* Profile Completion Progress Ring */}
-          <ProfileProgressSection
-            profilePct={profilePct}
-            membersCount={memberCount}
-            missingFields={profileMissingFields}
+          {/* Household Readiness — replaces the legacy two-ring
+              "Birth Data Readiness" card. The legacy card claimed
+              `Household Members 100%` based on raw count; this one
+              reports actual per-member chart-eligibility, chart-ready
+              counts, and outstanding-details counts.
+              Spec: tasks/06.05.2026/community-dashboard-household-readiness-card/ */}
+          <HouseholdReadinessSection
+            selfBirthDataPercent={profilePct}
+            selfBirthDataComplete={selfBirthDataComplete}
+            selfMissingFields={profileMissingFields}
+            completeMemberCount={householdCompleteCount}
+            totalMemberCount={householdTotalCount}
+            missingDetailsCount={householdMissingDetailsCount}
+            chartsReadyCount={householdNatalChartsReadyCount}
+            chartsEligibleCount={householdNatalChartsEligibleCount}
           />
 
           {/* Astro Charts polling/display */}
@@ -1668,7 +1886,7 @@ export default async function CommunityDashboardPage() {
                 <h3 className="text-sm font-semibold">Family & Relationships</h3>
                 {familyMembers.length > 0 && (
                   <Badge variant="secondary" className="text-xs">
-                    {familyMembers.length} member{familyMembers.length !== 1 ? "s" : ""}
+                    {familyMembers.length} household profile{familyMembers.length !== 1 ? "s" : ""}
                   </Badge>
                 )}
               </div>
@@ -1802,58 +2020,56 @@ export default async function CommunityDashboardPage() {
                           )}
                         </div>
 
-                        {/* Profile completion ring + link */}
-                        <div className="flex items-center justify-between gap-3">
-                          <ProgressRing
-                            percentage={completionPct}
-                            size={56}
-                            strokeWidth={6}
-                            color={ringColor(completionPct)}
-                          />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs text-muted-foreground leading-snug">
-                              Profile {profileComplete ? "complete" : "incomplete"}
-                            </p>
-                            {/*
-                              Task 02 — missing-field summary for incomplete
-                              members. `truncate` + `title` makes sure rare
-                              long strings still fit the card and remain
-                              discoverable on hover.
-                            */}
-                            {!profileComplete && missingSummary && (
-                              <p
-                                className="text-[11px] text-amber-600/90 leading-snug mt-0.5 truncate"
-                                title={`Missing: ${missingDisplay.join(", ")}`}
-                              >
-                                Missing: {missingSummary}
-                              </p>
-                            )}
-                            {/*
-                              Task 03 — helper line on the complete-but-no-chart
-                              state so the user sees at a glance that chart
-                              generation is the next step, not more profile
-                              editing.
-                            */}
-                            {profileComplete && !hasNatalChart && (
-                              <p className="text-[11px] text-muted-foreground leading-snug mt-0.5">
-                                Ready to generate chart
-                              </p>
-                            )}
-                            {!profileComplete && (
-                              <Button asChild variant="link" size="sm" className="h-auto p-0 mt-0.5 text-xs text-primary">
-                                <Link href={completeProfileHref}>
-                                  Complete Profile →
-                                </Link>
-                              </Button>
-                            )}
-                            {profileComplete && !hasNatalChart && (
-                              <Button asChild variant="link" size="sm" className="h-auto p-0 mt-0.5 text-xs text-primary">
-                                <Link href={`/community/family/${m.id}`}>
-                                  Generate Chart →
-                                </Link>
-                              </Button>
-                            )}
+                        {/* Compact status rows — Household Readiness owns the large rings. */}
+                        <div className="space-y-2">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Badge
+                              variant="outline"
+                              className={`text-[10px] px-1.5 py-0 ${
+                                profileComplete
+                                  ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-700"
+                                  : "border-amber-500/40 bg-amber-500/10 text-amber-700"
+                              }`}
+                            >
+                              {profileComplete ? "Profile complete" : `${completionPct}% profile`}
+                            </Badge>
+                            <Badge
+                              variant="outline"
+                              className={`text-[10px] px-1.5 py-0 ${
+                                hasNatalChart
+                                  ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-700"
+                                  : "border-amber-500/40 bg-amber-500/10 text-amber-700"
+                              }`}
+                            >
+                              {hasNatalChart ? "Chart Ready" : "Chart Pending"}
+                            </Badge>
                           </div>
+
+                          {!profileComplete && missingSummary && (
+                            <p
+                              className="text-[11px] text-amber-600/90 leading-snug truncate"
+                              title={`Missing: ${missingDisplay.join(", ")}`}
+                            >
+                              Missing: {missingSummary}
+                            </p>
+                          )}
+
+                          {!profileComplete && (
+                            <Link
+                              href={completeProfileHref}
+                              className="inline-flex text-xs font-medium text-primary hover:underline"
+                            >
+                              Complete profile →
+                            </Link>
+                          )}
+                          {profileComplete && !hasNatalChart && (
+                            <Link
+                              href={`/community/family/${m.id}`}
+                              className="inline-flex text-xs font-medium text-primary hover:underline"
+                            >
+                              Generate chart →
+                            </Link>
+                          )}
                         </div>
                       </CardContent>
                     </Card>
@@ -2108,7 +2324,7 @@ export default async function CommunityDashboardPage() {
                     size="default"
                     className="bg-gradient-to-r from-purple-500 to-violet-500 hover:from-purple-600 hover:to-violet-600 text-white font-semibold shadow-lg shadow-purple-900/40"
                   >
-                    <Link href="/mystery-school">
+                    <Link href="/mystery-school/training">
                       Open Mystery School →
                     </Link>
                   </Button>

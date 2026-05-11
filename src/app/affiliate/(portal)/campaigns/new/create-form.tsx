@@ -188,7 +188,7 @@ export function CampaignCreateForm({
                 onValueChange={setAssignmentId}
                 disabled={submitting || assignmentOptions.length === 0}
               >
-                <SelectTrigger id="assignment">
+                <SelectTrigger id="assignment" className="w-full">
                   <SelectValue placeholder="Pick a product…" />
                 </SelectTrigger>
                 <SelectContent>
@@ -213,7 +213,7 @@ export function CampaignCreateForm({
                 onValueChange={setTemplateId}
                 disabled={submitting || templateOptions.length === 0}
               >
-                <SelectTrigger id="template">
+                <SelectTrigger id="template" className="w-full">
                   <SelectValue placeholder="Pick a product…" />
                 </SelectTrigger>
                 <SelectContent>

@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
   // Fetch the booking
   const { data: booking } = await admin
     .from("bookings")
-    .select("id, status, stripe_payment_intent_id, diviner_id")
+    .select("id, status, stripe_payment_intent_id, diviner_id, base_price, total_amount, ref_code, commission_source_assignment_id, commission_source_template_id, commission_rate_type_stamp, commission_rate_value_stamp, affiliate_commission_amount_cents, scheduled_at, duration_minutes")
     .eq("id", body.bookingId)
     .maybeSingle();
 
@@ -117,6 +117,43 @@ export async function POST(req: NextRequest) {
     .update({ status: "paid", paid_at: new Date().toISOString() })
     .eq("booking_id", body.bookingId)
     .eq("status", "pending_payment");
+
+  // ── Affiliate Attribution Fallback ──
+  // Idempotent: safe to run even if webhook beats this to it.
+  try {
+    if (
+      booking.commission_source_assignment_id ||
+      booking.commission_source_template_id
+    ) {
+      const { creditAffiliateConversion } = await import("@/lib/affiliate-attribution");
+      const amountCents = Number(booking.total_amount ?? booking.base_price ?? 0) * 100;
+
+      await creditAffiliateConversion(admin, {
+        bookingId: booking.id,
+        orderAmountCents: Math.round(amountCents),
+        refCode: (booking.ref_code as string | null) ?? null,
+        stampedAssignmentId: (booking.commission_source_assignment_id as string | null) ?? null,
+        stampedTemplateId: (booking.commission_source_template_id as string | null) ?? null,
+        stampedRateType: (booking.commission_rate_type_stamp as "percent" | "flat" | null) ?? null,
+        stampedRateValue: booking.commission_rate_value_stamp != null ? Number(booking.commission_rate_value_stamp) : null,
+        stampedCommissionCents:
+          (booking as Record<string, unknown>).affiliate_commission_amount_cents != null
+            ? Number(
+                (booking as Record<string, unknown>).affiliate_commission_amount_cents,
+              )
+            : null,
+        bookingScheduledAt:
+          ((booking as Record<string, unknown>).scheduled_at as string | null) ?? null,
+        bookingDurationMinutes:
+          (booking as Record<string, unknown>).duration_minutes != null
+            ? Number((booking as Record<string, unknown>).duration_minutes)
+            : null,
+      });
+      console.log(`[confirm-payment] Affiliate fallback sync completed for bookingId=${booking.id}`);
+    }
+  } catch (err) {
+    console.error("[confirm-payment] Affiliate conversion credit failed", { bookingId: booking.id, err });
+  }
 
   console.log(
     `[confirm-payment] Payment verified and booking confirmed: bookingId=${body.bookingId}, paymentIntent=${body.paymentIntentId}`

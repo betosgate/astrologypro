@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Users,
   Plus,
@@ -30,7 +31,6 @@ import {
 import { formatBirthPlace } from "@/lib/community/birth-location";
 import { SectionContainer } from "@/components/shared/section-container";
 import {
-  ctaForState,
   deriveNatalReportState,
 } from "@/lib/community/chart-report-state";
 
@@ -78,6 +78,35 @@ type FamilyEntitlement = {
   maxMembers: number;
   hasLegacyDrift: boolean;
 };
+
+function FamilyMembersSkeleton() {
+  return (
+    <div className="space-y-3" aria-label="Loading family members">
+      <div className="flex items-center justify-between">
+        <Skeleton className="h-4 w-36" />
+        <Skeleton className="h-4 w-24" />
+      </div>
+
+      {[0, 1, 2, 3].map((item) => (
+        <Card key={item}>
+          <div className="flex w-full items-center justify-between gap-4 px-5 py-5">
+            <div className="flex min-w-0 items-center gap-3">
+              <Skeleton className="size-9 shrink-0 rounded-full" />
+              <div className="min-w-0 space-y-2">
+                <Skeleton className="h-4 w-40 max-w-[50vw]" />
+                <Skeleton className="h-3 w-64 max-w-[60vw]" />
+              </div>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              <Skeleton className="h-6 w-14 rounded-full" />
+              <Skeleton className="size-4 rounded-full" />
+            </div>
+          </div>
+        </Card>
+      ))}
+    </div>
+  );
+}
 
 export default function CommunityFamilyPage() {
   const [members, setMembers] = useState<FamilyMember[]>([]);
@@ -461,9 +490,7 @@ export default function CommunityFamilyPage() {
 
       {/* Member list */}
       {loading ? (
-        <div className="flex justify-center py-12">
-          <Loader2 className="size-6 animate-spin text-muted-foreground" />
-        </div>
+        <FamilyMembersSkeleton />
       ) : members.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center gap-4 py-12 text-center">
@@ -500,19 +527,10 @@ export default function CommunityFamilyPage() {
                 (365.25 * 24 * 3600 * 1000)
             );
             const reportState = deriveNatalReportState(m);
-            const reportCta = ctaForState(reportState);
-            const chartReady = reportCta.kind === "view";
+            const chartReady = reportState === "generated";
             const chartCtaLabel =
-              reportCta.kind === "view"
+              reportState === "generated"
                 ? "View Chart"
-                : reportCta.kind === "retry"
-                ? "Retry Chart"
-                : reportCta.kind === "regenerate"
-                ? "Update Chart"
-                : reportCta.kind === "generating"
-                ? "Generating Chart..."
-                : reportCta.kind === "locked"
-                ? "Review Chart"
                 : "Generate Chart";
             return (
               <Card key={m.id}>

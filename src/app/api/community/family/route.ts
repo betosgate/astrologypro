@@ -6,6 +6,7 @@ import {
   resolveEntitlementFromRow,
   type PmEntitlement,
 } from "@/lib/community/pm-entitlement";
+import { ensureCanonicalSelfFamilyMember } from "@/lib/community/self-family-member";
 
 export const dynamic = "force-dynamic";
 
@@ -33,7 +34,9 @@ async function getMemberAndEntitlement() {
 
   const { data: member } = await supabase
     .from("community_members")
-    .select("id, membership_status, pm_tier_id, plan_type")
+    .select(
+      "id, user_id, full_name, membership_status, pm_tier_id, plan_type, date_of_birth, birth_time, birth_city, birth_country"
+    )
     .eq("user_id", user.id)
     .single();
 
@@ -84,13 +87,15 @@ function buildFamilyPayload(
  * canonical entitlement state (is_family_entitled, max_members, tier).
  */
 export async function GET() {
-  const { member, entitlement, supabase } = await getMemberAndEntitlement();
-  if (!member || !entitlement) {
+  const { user, member, entitlement, supabase } = await getMemberAndEntitlement();
+  if (!user || !member || !entitlement) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   if (member.membership_status !== "active") {
     return NextResponse.json({ error: "Inactive membership" }, { status: 403 });
   }
+
+  await ensureCanonicalSelfFamilyMember(member, user.id);
 
   const { data, error } = await supabase
     .from("community_family_members")

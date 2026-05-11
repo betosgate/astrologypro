@@ -352,202 +352,1119 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
 
 
       // ----------diviners-----------//
-    {
-  "name": "admin_diviners_management",
-  "label": "Diviners: Directory & Management",
-  "description": "The main admin screen for reviewing, filtering, and managing all diviner accounts on the platform.",
+    
+  {
+    "name": "admin-diviners-list",
+    "label": "Diviners List",
+    "description": "Admin directory screen showing all diviner accounts with status and setup readiness details.",
+    "group": "People",
+    "subModule": "Diviners",
+    "purpose": "Allows admin to review diviners and start the Add Diviner flow.",
+    "bullets": [
+      "Shows diviner name, email, username, status, Stripe, calendar, phone, affiliates, certified status, and joined date.",
+      "Includes All, Active, and Suspended tabs.",
+      "Includes search and joined date filters.",
+      "Add Diviner button starts the invitation workflow.",
+      "Eye icon previews a diviner profile.",
+      "Pencil icon edits a diviner account."
+    ]
+  },
+  {
+    "name": "admin-invitations-list",
+    "label": "Invitations List",
+    "description": "Admin screen for managing all sent diviner invitations.",
+    "group": "People",
+    "subModule": "Diviners",
+    "purpose": "Allows admin to view, filter, and manage pending or accepted invitations.",
+    "bullets": [
+      "Shows invitation email, role, status, invited by, expiry date, sent date, and actions.",
+      "Tabs filter invitations by All, Pending, Accepted, Expired, and Cancelled.",
+      "Search field filters by email, role, or inviter.",
+      "Invite User button opens the invitation modal."
+    ]
+  },
+  {
+    "name": "invite-user-empty-modal",
+    "label": "Invite User Modal Empty State",
+    "description": "Modal form opened by admin to invite a new diviner user.",
+    "group": "People",
+    "subModule": "Diviners",
+    "purpose": "Collects the email and role before sending a diviner invitation.",
+    "bullets": [
+      "Email address field is required.",
+      "Role dropdown is required.",
+      "Default role can be Diviner.",
+      "Send Invitation button is used to email the invite.",
+      "Cancel closes the modal."
+    ]
+  },
+  {
+    "name": "invite-user-filled-modal",
+    "label": "Invite User Modal Filled State",
+    "description": "Invite modal after admin enters the diviner email address.",
+    "group": "People",
+    "subModule": "Diviners",
+    "purpose": "Confirms invitation details before sending the email.",
+    "bullets": [
+      "Shows entered email address.",
+      "Shows selected role as Diviner.",
+      "Send Invitation button sends the invite.",
+      "After submission, the invitation appears in the list as pending."
+    ]
+  },
+  {
+    "name": "invitation-pending-list",
+    "label": "Invitation Pending State",
+    "description": "Updated invitation table after a new diviner invitation is sent.",
+    "group": "People",
+    "subModule": "Diviners",
+    "purpose": "Shows that the invited diviner has not accepted the invitation yet.",
+    "bullets": [
+      "New email appears in the invitation list.",
+      "Role is shown as Diviner.",
+      "Status is shown as Pending.",
+      "Expiry date shows when the invite link will expire.",
+      "Sent date shows when the invitation email was created."
+    ]
+  },
+  {
+    "name": "diviner-invitation-email",
+    "label": "Diviner Invitation Email",
+    "description": "Email received by the invited diviner with an Accept Invitation button.",
+    "group": "People",
+    "subModule": "Diviners",
+    "purpose": "Allows the invited diviner to open the registration flow from email.",
+    "bullets": [
+      "Shows invitation message for AstrologyPro.",
+      "Identifies the invited role as Diviner.",
+      "Explains that the invitation link expires in 7 days.",
+      "Accept Invitation button opens registration.",
+      "Email can be ignored if invitation was unexpected."
+    ]
+  },
+  {
+    "name": "diviner-registration-form",
+    "label": "Register as a Diviner",
+    "description": "Registration page opened from the invitation email.",
+    "group": "People",
+    "subModule": "Diviners",
+    "purpose": "Lets the invited diviner create their account and public profile URL.",
+    "bullets": [
+      "Email is prefilled from the invitation.",
+      "User enters full name.",
+      "User creates and confirms password.",
+      "User creates a public profile URL.",
+      "Page preview shows public profile name, role, email, and status.",
+      "Register button completes account setup."
+    ]
+  },
+ {
+  "name": "diviner-plan-selection",
+  "label": "Become a Diviner Plan Selection",
+  "description": "Plan selection screen shown after diviner registration.",
   "group": "People",
   "subModule": "Diviners",
-  "purpose": "This screen is used to manage the full list of diviners available in the platform. It helps admins review diviner profiles, search for a specific diviner, filter by joined date, monitor active and suspended accounts, and check important operational readiness fields such as Stripe connection, calendar setup, phone availability, affiliate count, certification status, and join date. This page is useful because diviners are service providers in the system, so admins need one central place to track whether each diviner profile is complete, active, visible, and ready for platform use.",
+  "purpose": "Allows the diviner to choose a paid professional plan before dashboard access.",
   "bullets": [
-    "🔢 Result Count — Shows the total number of diviner records available in the system and how many pages are needed to browse them.",
-    "🟡 All Tab — Displays the complete diviner list, including every diviner record regardless of current status.",
-    "🟢 Active Tab — Shows only diviners whose accounts are currently active and available for use on the platform.",
-    "⛔ Suspended Tab — Shows diviners whose accounts are restricted or suspended, making it easier to review blocked or unavailable providers.",
-    "🔍 Search Field — Used to find a diviner quickly by name, username, or phone number without manually checking the full list.",
-    "📅 Joined Date Filter — Used to narrow the diviner list by account join date range, which helps with onboarding review and account tracking.",
-    "🔄 Refresh Button — Reloads the latest diviner data so profile updates, status changes, and newly added diviners appear immediately.",
-    "➕ Add Diviner Button — Opens the workflow to create or register a new diviner account directly from the admin side.",
-    "👤 Diviner Column — Shows the diviner's full display name and email address, which helps identify the person and their linked account.",
-    "🆔 Username Column — Shows the public or system username associated with the diviner profile.",
-    "🟢 Status Column — Shows whether the diviner account is active or in another state, helping admins understand availability at a glance.",
-    "💳 Stripe Column — Indicates whether Stripe or payment-account setup is connected for that diviner, which is important for payment and payout workflows.",
-    "📅 Calendar Column — Indicates whether the diviner has calendar setup or scheduling integration enabled, which is important for booking readiness.",
-    "📞 Phone Column — Indicates whether phone information is available or configured for the diviner profile.",
-    "🤝 Affiliates Column — Shows the number of affiliate relationships or linked affiliate records associated with that diviner account.",
-    "🎓 Certified Column — Shows whether the diviner has certification information or approved professional status recorded in the system.",
-    "📅 Joined Column — Shows the date the diviner account was added to the platform, which helps with lifecycle tracking and onboarding review.",
-    "👁 Preview Action — The eye icon is used to open and review the diviner's full profile details.",
-    "✏️ Edit Action — The pencil icon is used to open the diviner profile in edit mode so admins can update profile data, setup fields, or account information.",
-    "↕️ Sortable Headers — Several table headers can be sorted, helping admins organize diviners by name, username, status, or joined date.",
-    "🧠 Why This Screen Is Useful — It gives admins one control page for diviner discovery, setup review, operational readiness checks, onboarding support, and account management."
+    "Shows plan options such as Tarot Reader, Oracle, and Astrologer.",
+    "Selected plan is highlighted.",
+    "Shows setup fee and monthly subscription amount.",
+    "Displays benefits included in the selected plan.",
+    "Continue to Payment button opens Stripe checkout.",
+    "If a user completes registration but does not select a plan, their onboarding state is saved.",
+    "When the user logs in again later, they are redirected directly to this plan selection screen instead of starting over.",
+    "Prevents users from accessing the dashboard until a plan is selected and onboarding is completed."
   ]
 },
+  {
+    "name": "stripe-checkout-empty",
+    "label": "Stripe Checkout Empty State",
+    "description": "Stripe payment page before card details are entered.",
+    "group": "People",
+    "subModule": "Diviners",
+    "purpose": "Collects payment for the selected diviner plan.",
+    "bullets": [
+      "Shows total due today.",
+      "Shows monthly subscription amount.",
+      "Displays selected plan and setup fee.",
+      "Email is prefilled.",
+      "Card details, cardholder name, and country are required.",
+      "Subscribe button submits payment."
+    ]
+  },
+  {
+    "name": "stripe-checkout-filled-processing",
+    "label": "Stripe Checkout Processing State",
+    "description": "Stripe payment page while processing the payment.",
+    "group": "People",
+    "subModule": "Diviners",
+    "purpose": "Indicates payment is being processed.",
+    "bullets": [
+      "Card details are filled.",
+      "Processing state is visible.",
+      "User waits for confirmation."
+    ]
+  },
+  {
+    "name": "stripe-checkout-success",
+    "label": "Stripe Checkout Success State",
+    "description": "Stripe payment success confirmation screen.",
+    "group": "People",
+    "subModule": "Diviners",
+    "purpose": "Confirms payment is completed.",
+    "bullets": [
+      "Success indicator is shown.",
+      "Payment completed successfully.",
+      "User proceeds to contract signing."
+    ]
+  },
+  {
+    "name": "diviner-contract-page",
+    "label": "Pending Contracts",
+    "description": "Contract signing page after payment.",
+    "group": "People",
+    "subModule": "Diviners",
+    "purpose": "Requires agreement acceptance before access.",
+    "bullets": [
+      "Displays Diviner Service Agreement.",
+      "Scrollable contract content.",
+      "Accept button enabled after review.",
+      "Continue completes onboarding."
+    ]
+  },
+  // ------------ After Onboarding -----------//
+  {
+    "name": "diviner-dashboard-after-onboarding",
+    "label": "Diviner Dashboard",
+    "description": "Dashboard shown after full onboarding completion.",
+    "group": "People",
+    "subModule": "Diviners",
+    "purpose": "Provides access to diviner tools and features.",
+    "bullets": [
+      "Shows dashboard overview.",
+      "Displays sessions and planetary data.",
+      "Profile completion checklist.",
+      "Sidebar navigation for full system access."
+    ]
+  },
 
-{
-  "name": "admin_user_invitations",
-  "label": "Invitations: User Invitation Management",
-  "description": "The admin screen used to manage pending and sent user invitations in one place.",
-  "group": "People",
-  "subModule": "Diviners",
-  "purpose": "This screen is used when admins need to track, search, and manage invitation-based onboarding. It helps the team monitor who has been invited, what state each invitation is in, and whether follow-up action may be needed. The page is useful because not every user is added manually; some users join through invitation workflows. This screen keeps invitation records organized, makes it easy to review pending or expired invites, and supports invite-based account creation from a central place.",
-  "bullets": [
-    "📨 Invitations Header — Identifies this page as the central area for invitation tracking and invite-based onboarding management.",
-    "🔢 Invitation Count Badge — Shows the total number of invitation records currently available in the list view.",
-    "🔍 Search Field — Used to find invitations by email, assigned role, or inviter details without scanning the full list manually.",
-    "🟤 All Tab — Shows every invitation record regardless of status, giving a complete invitation overview.",
-    "⏳ Pending Tab — Shows invitations that were sent but not yet accepted or completed.",
-    "✅ Accepted Tab — Shows invitations that have already been accepted and successfully used.",
-    "⌛ Expired Tab — Shows invitations that are no longer valid because the invitation period ended.",
-    "❌ Cancelled Tab — Shows invitations that were manually cancelled and should no longer be used.",
-    "➕ Invite User Button — Starts the workflow to send a new invitation to a user who should join the platform through invite-based onboarding.",
-    "📋 Invitation Panel — Groups the search tools, status tabs, and invitation results into one structured workspace.",
-    "📭 Empty State Message — When no invitation records match the current view, the screen shows a clear 'No invitations found' message so the admin knows the list is empty rather than broken.",
-    "🧠 Why This Screen Is Useful — It gives admins one simple place to review onboarding progress, monitor invitation status, find missing invite records, and send new invitations when needed."
-  ]
-},
 
-{
-  "name": "admin_diviner_publishing_controls",
-  "label": "Diviners: Publishing Controls",
-  "description": "The admin control screen used to manage which parts of a diviner's public profile can be shown or hidden.",
-  "group": "People",
-  "subModule": "Diviners",
-  "purpose": "This screen is used when an admin needs to control the public visibility of a diviner's profile and related public sections. It helps the platform decide whether a diviner should be fully visible to the public, partially visible, or restricted in certain areas. The purpose of this screen is to protect publishing quality, enforce moderation, manage incomplete profiles, and control what visitors can see on a diviner's public page. It is useful because sometimes a diviner account should stay active internally but some public modules, media types, or session counters may need to be hidden, blocked, or overridden.",
-  "bullets": [
-    "👤 Diviner Header — Shows the diviner's name, username, email, phone number, and service package so the admin knows exactly which profile is being controlled.",
-    "🟢 Status Badge — Shows the current account state, such as active, so the admin can understand whether the diviner is currently enabled in the system.",
-    "🌐 Public Page Button — Opens the public-facing diviner page so the admin can review how the profile currently appears to visitors.",
-    "✏️ Edit User Button — Opens the diviner profile in edit mode so account and profile details can be updated directly.",
-    "🛡️ Publishing Controls Section — This is the main moderation area where admins control public visibility settings for the diviner profile.",
-    "⛔ Block All Public Publishing Toggle — Hides the diviner's entire public presence from publishing, regardless of individual section settings. This is useful when the whole public profile must be disabled quickly.",
-    "📦 Block Specific Public Sections — Lets the admin selectively hide only certain public profile sections instead of blocking the whole page.",
-    "🪪 Hero and Profile Header Option — Hides the top public profile summary area, usually including core identity and profile-introduction details.",
-    "📝 Bio Tab Option — Hides the biography or personal-description section from the public profile.",
-    "💼 Services and Offerings Option — Hides the diviner's service list, packages, or public service offerings from viewers.",
-    "📡 Live Stream and Check-In Option — Hides live session or check-in related public modules when those should not be shown.",
-    "🖼️ Media Gallery Option — Hides the diviner's public media gallery, such as images, videos, or showcase content.",
-    "💬 Testimonials Option — Hides public testimonials or reviews shown on the diviner page.",
-    "📅 Weekly Subscription Offer Option — Hides weekly subscription or recurring offer modules from the public profile.",
-    "🎞️ Block Media Types Section — Lets admins restrict only certain content formats while still allowing other media to remain public.",
-    "🎥 Video Option — Blocks video publishing for that diviner.",
-    "🎧 Audio Option — Blocks audio publishing for that diviner.",
-    "📄 Article Option — Blocks article-style content publishing for that diviner.",
-    "🔗 Link Option — Blocks link-based content publishing for that diviner.",
-    "🖼️ Image Option — Blocks image publishing for that diviner.",
-    "📝 Admin Reason Field — Used to record an internal explanation for why the publishing block or restriction is being applied. This helps with moderation tracking and internal admin clarity.",
-    "📊 Diviner Preference for Public Session Counts Toggle — Controls whether the diviner's public session count preference is being considered in visibility logic.",
-    "⚙️ Admin Override Dropdown — Lets the admin decide whether to use the diviner's own preference or apply an override. This is useful when admin rules need to take priority over profile-level settings.",
-    "🗒️ Override Reason Field — Used to record why the admin override is being applied, helping with audit clarity and team communication.",
-    "💾 Save Publishing Controls Button — Saves all visibility, block, and override settings applied on this screen.",
-    "🎯 Why This Screen Is Used — It is used for public-profile moderation, quality control, incomplete-profile handling, visibility management, content restriction, and platform safety decisions.",
-    "🧠 Main Use Case — Useful when a diviner should remain in the system but some public-facing sections, content formats, or counters need to be hidden or controlled without deleting the account."
-  ]
-},
-
-
-  {
-    "name": "admin_diviner_live_system_overrides",
-    "label": "Diviners: Live System Overrides",
-    "description": "An admin control block used to manage visibility and override behavior for live-related diviner modules.",
-    "group": "People",
-    "subModule": "Diviners",
-    "purpose": "This block is used when the admin wants to control how specific live-facing diviner modules behave. It appears to let the admin review individual public or live modules one by one, choose whether each module should follow the diviner's own setting or an admin override, and add an override reason. The purpose of this block is to give section-level control without changing the whole profile. It is useful when some live features should stay visible, hidden, or admin-controlled for moderation, setup, quality control, or rollout reasons.",
-    "bullets": [
-      "📦 Module-by-Module Control — Each row represents a separate live or public-facing module that can be reviewed individually.",
-      "⚙️ Admin Override Dropdown — Lets the admin decide whether to use the diviner's own preference or apply an admin-controlled visibility rule.",
-      "📝 Override Reason Field — Used to record why the override is being applied, helping with moderation clarity and internal tracking.",
-      "🎯 Why This Block Is Used — Useful when only selected live modules need restriction or control instead of blocking the full public profile.",
-      "🧠 Main Use Case — Helps admins apply fine-grained visibility rules for individual diviner modules while keeping the rest of the profile unchanged."
-    ]
-  },
-  {
-    "name": "admin_diviner_seo_readiness",
-    "label": "Diviners: SEO Readiness",
-    "description": "A readiness-check block that shows whether the diviner profile meets important public-page and search-visibility requirements.",
-    "group": "People",
-    "subModule": "Diviners",
-    "purpose": "This block is used to evaluate whether the diviner's public profile is ready for search indexing and public discovery. It appears to summarize progress through a completion indicator and a checklist of required or recommended items. The purpose of this block is to help admins quickly understand what is complete, what is missing, and what still needs improvement before the profile is treated as SEO-ready. It is useful because public discoverability depends on content completeness, structure, and visibility settings.",
-    "bullets": [
-      "📊 Readiness Percentage — Shows an overall SEO completion score so the admin can quickly judge profile readiness.",
-      "✅ Requirement Checklist — Lists important profile requirements or setup items that affect public search quality.",
-      "⚠️ Missing Item Awareness — Helps identify incomplete content or missing setup that may reduce visibility or discoverability.",
-      "🧾 Summary Notes Area — Can provide supporting comments, issue details, or guidance about what still needs attention.",
-      "🎯 Why This Block Is Used — Helps admins review whether a diviner profile is complete enough for strong public presentation and search performance.",
-      "🧠 Main Use Case — Useful before publishing, promoting, indexing, or quality-approving a diviner's public page."
-    ]
-  },
-  {
-    "name": "admin_diviner_seo_settings",
-    "label": "Diviners: SEO Settings",
-    "description": "A detailed SEO configuration block used to control metadata, indexing behavior, location signals, and social-preview settings for a diviner page.",
-    "group": "People",
-    "subModule": "Diviners",
-    "purpose": "This block is used to configure the public search and sharing behavior of the diviner page. It appears to include fields for city, region, country, index controls, canonical settings, page title, description, keywords, share image, structured data or metadata fields, and social-preview options. The purpose of this block is to make the public diviner page easier to discover, easier to understand for search engines, and better formatted when shared externally. It is useful because SEO settings directly affect visibility, indexing quality, click-through appeal, and how the page appears on search and social platforms.",
-    "bullets": [
-      "📍 Location Fields — Used to define city, region, and country information so the page can carry location relevance.",
-      "🔎 Index / No-Index Controls — Used to decide whether search engines should index the diviner page.",
-      "🔗 Canonical Setting — Helps define the preferred page URL for search engines and reduce duplicate-page confusion.",
-      "📰 SEO Title Field — Used to define the search-result title shown in search engine listings.",
-      "📝 Meta Description Field — Used to define the short summary shown under the page title in search results.",
-      "🏷️ Keyword / Search Terms Fields — Used to reinforce topical relevance and help organize search intent signals.",
-      "🖼️ Share Image / Preview Image — Used to control how the page appears when shared on social or external platforms.",
-      "📣 Social Metadata Toggles — Used to control how preview information is generated for social-sharing platforms.",
-      "🧠 Why This Block Is Used — Helps admins improve search visibility, indexing behavior, page quality, and social-preview appearance.",
-      "🎯 Main Use Case — Useful for public discoverability, local search relevance, branded page presentation, and better traffic quality."
-    ]
-  },
-  {
-    "name": "admin_diviner_profile_metrics_summary",
-    "label": "Diviners: Profile Metrics Summary",
-    "description": "A compact metric-summary block showing key public or operational numbers related to the diviner profile.",
-    "group": "People",
-    "subModule": "Diviners",
-    "purpose": "This block is used to show high-level profile numbers in a quick dashboard format. It appears to include multiple summary tiles, such as counts, totals, service numbers, affiliate numbers, review or content-related totals, and other performance indicators. The purpose of this block is to give admins a fast snapshot of the diviner's current profile scale, engagement, or business readiness without opening multiple sections. It is useful because admins often need quick metrics before deciding whether to update, restrict, optimize, or promote a profile.",
-    "bullets": [
-      "📊 Summary Tiles — Show important counts or totals in a fast, easy-to-scan format.",
-      "🔢 Operational Visibility — Helps admins understand the overall activity or setup level of the profile at a glance.",
-      "📈 Performance Awareness — Makes it easier to compare profile size, readiness, or value without reading full details.",
-      "🎯 Why This Block Is Used — Useful for quick decision-making and account review before deeper edits.",
-      "🧠 Main Use Case — Helps admins judge profile strength, activity, and completeness from one small dashboard area."
-    ]
-  },
-  {
-    "name": "admin_diviner_phone_chat_apps",
-    "label": "Diviners: Phone & Chat Apps",
-    "description": "A communication-management block used to review phone availability and app-based contact or chat setup for the diviner.",
-    "group": "People",
-    "subModule": "Diviners",
-    "purpose": "This block is used to manage how the diviner can be contacted through direct phone or related communication apps. It appears to show phone details, verification or status indicators, and options related to communication channels. The purpose of this block is to help admins confirm whether the diviner's communication setup is complete, safe, and usable for platform workflows. It is useful because live services and user communication often depend on accurate phone and messaging availability.",
-    "bullets": [
-      "📞 Primary Contact Display — Shows the diviner's main phone information for reference and support workflows.",
-      "✅ Communication Readiness — Helps admins review whether direct contact or call setup is valid and usable.",
-      "💬 Chat / App Availability — Indicates whether app-based communication channels are connected or enabled.",
-      "🧠 Why This Block Is Used — Helps ensure the diviner can be contacted correctly through approved communication routes.",
-      "🎯 Main Use Case — Useful for contact validation, support workflows, and live-service readiness."
-    ]
-  },
   
   {
-    "name": "admin_diviner_service_dashboard",
-    "label": "Diviners: Service Dashboard",
-    "description": "A detailed service-management block showing the diviner's configured services, categories, prices, durations, status, and setup details.",
+    "name": "diviner-subscription-settings",
+    "label": "Diviner Subscription Settings",
+    "description": "Subscription and membership management screen for diviners using the AstrologyPro platform.",
     "group": "People",
     "subModule": "Diviners",
-    "purpose": "This block is used to review and manage the diviner's offered services. It appears to contain service rows grouped by categories, with information such as service name, service type, prices, durations, active status, and possibly booking-related or package-related settings. The purpose of this block is to help admins verify that the diviner's offerings are configured correctly and are suitable for public display, booking, and monetization. It is useful because the service catalog is one of the main operational parts of the diviner profile.",
+    "purpose": "Allows diviners to manage their subscription status, billing information, renewal cycle, and membership access for astrology services on the platform.",
     "bullets": [
-      "📋 Service List — Shows all configured services linked to the diviner account.",
-      "🏷️ Service Category Grouping — Helps organize services by type or service family.",
-      "💲 Price Visibility — Shows what each service costs so admins can review commercial setup.",
-      "⏱️ Duration Visibility — Shows the expected service time, which is important for booking and scheduling logic.",
-      "🟢 Service Status — Indicates whether each service is active, available, or restricted.",
-      "⚙️ Service-Level Controls — May allow the admin to review, toggle, or inspect individual offerings.",
-      "🎯 Why This Block Is Used — Helps verify whether service offerings are complete, correct, and ready for clients.",
-      "🧠 Main Use Case — Useful for monetization review, service-quality checks, booking readiness, and public-offering control."
+      "Displays the main settings dashboard for diviner accounts.",
+      "Shows current subscription membership status.",
+      "Verified Partner badge identifies approved diviner accounts.",
+      "Subscription section displays active billing information.",
+      "Enrollment date shows when the diviner joined the platform.",
+      "Billing section displays monthly subscription pricing.",
+      "Next renewal date informs the diviner about upcoming billing cycles.",
+      "Manage Subscription button allows plan and billing management.",
+      "Settings navigation includes Account, Payments, Calendar, Notifications, Phone, and Loyalty tabs.",
+      "The screen acts as the central subscription-management area for diviner accounts."
     ]
   },
- 
+  {
+    "name": "stripe-connect-setup",
+    "label": "Stripe Connect Integration",
+    "description": "Stripe payment onboarding and payout connection screen for diviner financial setup.",
+    "group": "People",
+    "subModule": "Diviners",
+    "purpose": "Allows diviners to connect Stripe accounts for accepting client payments, processing charges, and receiving payouts securely through the platform.",
+    "bullets": [
+      "Displays Stripe Connect integration status.",
+      "Charges section indicates whether payment collection is enabled.",
+      "Payouts section indicates whether bank payouts are enabled.",
+      "Connect Stripe Account button launches the Stripe onboarding process.",
+      "Stripe onboarding uses secure external Stripe-hosted verification pages.",
+      "Users can configure payment-processing capabilities through Stripe.",
+      "The integration enables diviners to accept payments from clients directly.",
+      "The screen acts as the payment-gateway integration center for diviners."
+    ]
+  },
+  {
+    "name": "stripe-phone-verification",
+    "label": "Stripe Phone Verification",
+    "description": "Initial Stripe onboarding step used for phone verification and account identification.",
+    "group": "People",
+    "subModule": "Diviners",
+    "purpose": "Collects contact information required by Stripe before financial onboarding can continue.",
+    "bullets": [
+      "Displays Stripe-hosted onboarding workflow.",
+      "Business branding is shown on the onboarding page.",
+      "Users can enter phone-number information for verification.",
+      "Test account mode is supported for sandbox environments.",
+      "Stripe Terms of Service and Privacy Policy are displayed.",
+      "Submit button validates onboarding information.",
+      "The step initializes Stripe account verification for the diviner."
+    ]
+  },
+  {
+    "name": "stripe-business-type-selection",
+    "label": "Stripe Business Type Selection",
+    "description": "Business classification step within the Stripe onboarding process.",
+    "group": "People",
+    "subModule": "Diviners",
+    "purpose": "Allows diviners to define their business entity type for financial compliance and payment processing.",
+    "bullets": [
+      "Users can select a business structure such as Individual or Company.",
+      "Business type impacts payout and compliance requirements.",
+      "Stripe uses the information for identity and tax verification.",
+      "Continue button advances the onboarding workflow.",
+      "Business setup instructions are displayed to guide the user.",
+      "The screen helps configure financial identity requirements."
+    ]
+  },
+  {
+    "name": "stripe-personal-details-verification",
+    "label": "Stripe Personal Details Verification",
+    "description": "Identity-verification form for Stripe onboarding.",
+    "group": "People",
+    "subModule": "Diviners",
+    "purpose": "Collects personal identity information required for regulatory and financial compliance.",
+    "bullets": [
+      "Users enter legal first and last names.",
+      "Email address is collected for account communication.",
+      "Date of birth is required for identity verification.",
+      "Home-address details are collected for compliance validation.",
+      "Phone number is required for account security.",
+      "Last four digits of the Social Security Number are collected.",
+      "Country and state selectors help validate regional compliance.",
+      "Continue button saves the verification details.",
+      "The screen supports financial identity verification and fraud prevention."
+    ]
+  },
+  {
+    "name": "stripe-business-details-configuration_v1",
+    "label": "Stripe Business Details Configuration",
+    "description": "Business-information setup screen for Stripe financial onboarding.",
+    "group": "People",
+    "subModule": "Diviners",
+    "purpose": "Allows diviners to define business category, industry, and website information for payment processing approval.",
+    "bullets": [
+      "Industry selector categorizes the diviner business type.",
+      "Website field captures the official business or service URL.",
+      "Stripe validates website information for compliance purposes.",
+      "Product or service descriptions may be required if no website exists.",
+      "Continue button advances the Stripe onboarding process.",
+      "The screen helps Stripe assess risk and business legitimacy."
+    ]
+  },
+  {
+    "name": "stripe-bank-selection",
+    "label": "Stripe Bank Account Selection",
+    "description": "Bank-account connection and payout setup screen for Stripe onboarding.",
+    "group": "People",
+    "subModule": "Diviners",
+    "purpose": "Allows diviners to select and connect bank accounts for receiving Stripe payouts.",
+    "bullets": [
+      "Search field helps locate banking institutions.",
+      "Users can choose OAuth and non-OAuth bank integrations.",
+      "Bank availability and connection status are displayed visually.",
+      "Manual bank-account entry is supported.",
+      "Continue button confirms selected payout methods.",
+      "The screen enables secure payout account configuration."
+    ]
+  },
+  {
+    "name": "stripe-bank-consent-modal",
+    "label": "Stripe Bank Connection Consent",
+    "description": "Consent modal displayed before connecting financial institutions through Stripe.",
+    "group": "People",
+    "subModule": "Diviners",
+    "purpose": "Obtains user permission before Stripe accesses bank-account information.",
+    "bullets": [
+      "Explains encrypted bank-account connection process.",
+      "Displays security and privacy messaging.",
+      "Users can review access permissions before continuing.",
+      "Agree and Continue button authorizes account linking.",
+      "Manual verification option is also available.",
+      "The modal ensures financial-consent compliance."
+    ]
+  },
+  {
+    "name": "stripe-oauth-bank-login",
+    "label": "Stripe OAuth Bank Login",
+    "description": "OAuth-based financial institution login screen for Stripe bank linking.",
+    "group": "People",
+    "subModule": "Diviners",
+    "purpose": "Redirects users to authenticate with their banking institution securely.",
+    "bullets": [
+      "Displays the selected banking institution.",
+      "Users authenticate directly with the bank provider.",
+      "OAuth flow securely shares limited account access.",
+      "Continue button launches bank authentication.",
+      "Users can select different banks if needed.",
+      "The workflow ensures secure third-party bank authorization."
+    ]
+  },
+  {
+    "name": "stripe-account-selection",
+    "label": "Stripe Financial Account Selection",
+    "description": "Bank-account selection interface after successful financial authentication.",
+    "group": "People",
+    "subModule": "Diviners",
+    "purpose": "Allows diviners to choose which financial accounts should be connected to Stripe payouts.",
+    "bullets": [
+      "Lists available connected bank accounts.",
+      "Users can select multiple accounts if supported.",
+      "Account-ending digits help identify each bank account.",
+      "Stripe displays connection permissions before confirmation.",
+      "Connect Accounts button finalizes the linkage process.",
+      "The screen manages payout-account authorization."
+    ]
+  },
+  {
+    "name": "stripe-link-account-saving_v22",
+    "label": "Stripe Link Account Saving",
+    "description": "Stripe Link information-saving screen for faster future account onboarding.",
+    "group": "People",
+    "subModule": "Diviners",
+    "purpose": "Allows users to save payment and account details securely using Stripe Link.",
+    "bullets": [
+      "Displays encrypted data-saving information.",
+      "Users can save email and phone-number details.",
+      "Stripe Link accelerates future financial onboarding flows.",
+      "Save with Link button stores reusable account information.",
+      "Users may continue without saving details.",
+      "The screen enhances onboarding convenience and security."
+    ]
+  },
+  {
+    "name": "stripe-bank-link-success",
+    "label": "Stripe Bank Connection Success",
+    "description": "Confirmation screen shown after successful Stripe bank-account linking.",
+    "group": "People",
+    "subModule": "Diviners",
+    "purpose": "Confirms successful financial-account connection and onboarding completion.",
+    "bullets": [
+      "Displays successful payout-account connection confirmation.",
+      "Users receive onboarding completion feedback.",
+      "Done button exits the onboarding process.",
+      "Stripe confirms the selected accounts are now connected.",
+      "The screen finalizes the financial-linking workflow."
+    ]
+  },
+  {
+    "name": "stripe-linked-bank-management",
+    "label": "Stripe Linked Bank Management",
+    "description": "Bank-account management screen showing connected payout accounts.",
+    "group": "People",
+    "subModule": "Diviners",
+    "purpose": "Allows diviners to manage linked Stripe payout accounts and select preferred payout destinations.",
+    "bullets": [
+      "Displays all linked bank accounts.",
+      "Linked badges indicate active Stripe connections.",
+      "Users can select a preferred payout account.",
+      "Bank-account identifiers display masked account numbers.",
+      "Additional bank accounts can be linked manually.",
+      "Continue button proceeds with payout configuration.",
+      "The screen acts as the payout-account management center."
+    ]
+  },
+  {
+    "name": "stripe-review-and-submit",
+    "label": "Stripe Review & Submit",
+    "description": "Final Stripe onboarding review screen before activation.",
+    "group": "People",
+    "subModule": "Diviners",
+    "purpose": "Allows diviners to review all submitted onboarding information before final Stripe account activation.",
+    "bullets": [
+      "Displays business-type information summary.",
+      "Professional details are shown for verification.",
+      "Public statement descriptor information is displayed.",
+      "Personal identity details are summarized.",
+      "Selected payout-account details are displayed.",
+      "Edit buttons allow correction of onboarding sections.",
+      "Agreement and disclosure documents are referenced.",
+      "Agree and Submit button finalizes Stripe onboarding.",
+      "The screen acts as the final compliance-review checkpoint."
+    ]
+  },
+  {
+    "name": "stripe-payment-dashboard-enabled",
+    "label": "Stripe Payments Dashboard Enabled",
+    "description": "Post-onboarding Stripe payment-management dashboard for diviners.",
+    "group": "People",
+    "subModule": "Diviners",
+    "purpose": "Displays live payment-processing and payout status after successful Stripe activation.",
+    "bullets": [
+      "Charges status indicates payment collection is enabled.",
+      "Payout status confirms bank transfers are active.",
+      "Available balance displays current Stripe account funds.",
+      "Pending balance shows upcoming payout amounts.",
+      "Payout schedule explains transfer timing.",
+      "Recent payouts section tracks payment disbursement history.",
+      "Stripe account identifier is displayed for reference.",
+      "The dashboard acts as the operational payment center for diviners."
+    ]
+  },
+
+//-----------------Service Catalog and Scheduling-----------------//
+  
+  {
+    "name": "diviner-service-catalog",
+    "label": "Service Catalog",
+    "description": "Diviners can browse and select astrology service types from the service catalog. Each service card displays duration, pricing guidance, and whether birth data is required.",
+    "group": "People",
+    "subModule": "Diviners",
+    "purpose": "Allows diviners to explore available astrology services and start configuring offerings for their public profile.",
+    "bullets": [
+      "Displays all available astrology service types.",
+      "Each service card contains service title, duration, suggested pricing, and birth data requirement.",
+      "Diviners can add services to their personal offerings.",
+      "Services include natal chart, solar return, weekly transits, relationship readings, and predictive astrology.",
+      "Service cards include quick action buttons for setup.",
+      "Designed to simplify onboarding of diviner services.",
+      "Acts as the starting point for the service publishing workflow."
+    ]
+  },
+  {
+    "name": "diviner-add-service-modal",
+    "label": "Add Service Modal",
+    "description": "After selecting a service from the catalog, the diviner configures pricing and activates the service setup process.",
+    "group": "People",
+    "subModule": "Diviners",
+    "purpose": "Allows diviners to define their own service pricing before adding the service into their active workspace.",
+    "bullets": [
+      "Opens when the diviner clicks the Add Service button.",
+      "Displays selected service details including duration and category.",
+      "Supports custom pricing configuration.",
+      "Shows suggested default pricing guidance.",
+      "Allows the diviner to confirm and add the service.",
+      "Birth data requirements are shown when applicable.",
+      "Added services become available for scheduling and publishing."
+    ]
+  },
+  {
+    "name": "diviner-availability-empty-state",
+    "label": "Availability Empty State",
+    "description": "Initial availability screen shown when no schedules have been created yet.",
+    "group": "People",
+    "subModule": "Diviners",
+    "purpose": "Encourages diviners to create booking schedules so clients can reserve sessions.",
+    "bullets": [
+      "Displays a no schedules available message.",
+      "Provides a New Schedule action button.",
+      "Introduces booking availability management.",
+      "Acts as the starting point for scheduling setup.",
+      "Supports future service booking activation.",
+      "Helps diviners configure working hours and session windows."
+    ]
+  },
+  {
+    "name": "diviner-create-availability-schedule",
+    "label": "Create Availability Schedule",
+    "description": "Diviners create booking schedules linked to their services using configurable dates, weekdays, durations, and timezones.",
+    "group": "People",
+    "subModule": "Diviners",
+    "purpose": "Allows diviners to define when clients can book astrology sessions.",
+    "bullets": [
+      "Supports linking schedules to specific services.",
+      "Allows selection of weekdays for availability.",
+      "Supports start and end date configuration.",
+      "Allows start and end booking times.",
+      "Session duration can be configured.",
+      "Timezone selection is supported.",
+      "Optional notes and instructions can be added for clients.",
+      "Schedules determine client booking windows.",
+      "Created schedules become visible in the availability dashboard."
+    ]
+  },
+  {
+    "name": "diviner-availability-dashboard",
+    "label": "Availability Dashboard",
+    "description": "Displays all created availability schedules with active status, timings, and linked services.",
+    "group": "People",
+    "subModule": "Diviners",
+    "purpose": "Provides schedule management for diviners after availability windows are created.",
+    "bullets": [
+      "Displays all configured schedules.",
+      "Shows active or inactive schedule status.",
+      "Displays linked service information.",
+      "Shows available weekdays and timing windows.",
+      "Supports edit and delete actions.",
+      "Includes activation toggle for schedules.",
+      "Helps manage booking availability across services."
+    ]
+  },
+  {
+    "name": "diviner-landing-page-services-offline",
+    "label": "Landing Page Services - Offline",
+    "description": "Landing page management screen where services are initially added but remain offline before being published.",
+    "group": "People",
+    "subModule": "Diviners",
+    "purpose": "Allows diviners to manage visibility and customization of their public service pages.",
+    "bullets": [
+      "Displays total services statistics.",
+      "Shows live and offline service counts.",
+      "Services can remain unpublished initially.",
+      "Supports service search and category filtering.",
+      "Customize action allows editing landing page content.",
+      "Analytics links are available for service performance tracking.",
+      "Offline toggle prevents public visibility."
+    ]
+  },
+  {
+    "name": "diviner-landing-page-services-live",
+    "label": "Landing Page Services - Live",
+    "description": "After enabling the service toggle, the diviner publishes the service landing page publicly.",
+    "group": "People",
+    "subModule": "Diviners",
+    "purpose": "Allows diviners to make astrology services publicly visible and bookable.",
+    "bullets": [
+      "Service status changes from offline to live.",
+      "Live toggle activates public visibility.",
+      "View live page action becomes available.",
+      "Services can now receive traffic and bookings.",
+      "Analytics tracking is enabled for live services.",
+      "Landing pages support marketing campaigns.",
+      "Published services are accessible to clients and affiliates."
+    ]
+  },
+  {
+    "name": "diviner-affiliate-dashboard-empty",
+    "label": "Affiliate Dashboard Empty State",
+    "description": "Initial affiliate management dashboard shown before agreement signing and affiliate invitations.",
+    "group": "People",
+    "subModule": "Diviners",
+    "purpose": "Introduces affiliate management and referral commission tracking for diviners.",
+    "bullets": [
+      "Displays affiliate performance summary cards.",
+      "Shows commissions, payouts, and balances.",
+      "Prompts the diviner to sign the affiliate agreement.",
+      "Affiliate invitations remain blocked until agreement acceptance.",
+      "Supports future referral and commission tracking.",
+      "Provides invitation management actions."
+    ]
+  },
+  {
+    "name": "diviner-affiliate-agreement",
+    "label": "Affiliate Program Agreement",
+    "description": "Agreement review screen where diviners must accept affiliate program terms before inviting partners.",
+    "group": "People",
+    "subModule": "Diviners",
+    "purpose": "Ensures affiliate partnerships comply with platform terms and commission policies.",
+    "bullets": [
+      "Displays affiliate program legal agreement.",
+      "Includes commission rules and payment policies.",
+      "Explains referral tracking and attribution.",
+      "Requires agreement checkbox confirmation.",
+      "Sign agreement button activates affiliate functionality.",
+      "Agreement acceptance unlocks affiliate invitations.",
+      "Supports compliance and audit tracking."
+    ]
+  },
+  {
+    "name": "diviner-invite-affiliate-modal",
+    "label": "Invite Affiliate Modal",
+    "description": "Diviners can invite affiliate partners by email after signing the affiliate agreement.",
+    "group": "People",
+    "subModule": "Diviners",
+    "purpose": "Allows diviners to onboard referral partners and grow traffic through affiliate marketing.",
+    "bullets": [
+      "Supports affiliate invitation via email.",
+      "Captures affiliate name and email.",
+      "Allows optional personal message.",
+      "Supports configurable commission setup.",
+      "Invitation links have expiration periods.",
+      "Send Invitation action dispatches email invitations.",
+      "Affiliate tracking starts after acceptance."
+    ]
+  },
+  {
+    "name": "diviner-affiliate-list",
+    "label": "Affiliate List Management",
+    "description": "Displays invited affiliates and their onboarding status after invitations are sent.",
+    "group": "People",
+    "subModule": "Diviners",
+    "purpose": "Allows diviners to monitor affiliate invitations, statuses, and commissions.",
+    "bullets": [
+      "Displays affiliate records in a table layout.",
+      "Shows affiliate email and commission details.",
+      "Tracks invitation status such as pending.",
+      "Displays invitation creation date.",
+      "Supports affiliate management actions.",
+      "Provides visibility into referral onboarding.",
+      "Used for long-term affiliate relationship management."
+    ]
+  },
+  {
+    "name": "affiliate-email-invitation",
+    "label": "Affiliate Invitation Email",
+    "description": "Email invitation sent to affiliate partners containing referral onboarding instructions.",
+    "group": "People",
+    "subModule": "Diviners",
+    "purpose": "Allows invited affiliates to access the affiliate registration flow securely.",
+    "bullets": [
+      "Includes invitation acceptance button.",
+      "Displays personal message from the diviner.",
+      "Explains affiliate earning process.",
+      "Contains invitation expiration details.",
+      "Provides referral onboarding instructions.",
+      "Supports affiliate program growth.",
+      "Acts as the entry point for affiliate registration."
+    ]
+  },
+  {
+    "name": "affiliate-invitation-registration",
+    "label": "Affiliate Invitation Registration",
+    "description": "Affiliate registration form where invited partners create their accounts and accept invitations.",
+    "group": "People",
+    "subModule": "Diviners",
+    "purpose": "Allows affiliate partners to complete onboarding and access the affiliate portal.",
+    "bullets": [
+      "Displays affiliate invitation details.",
+      "Pre-fills affiliate email information.",
+      "Supports password setup.",
+      "Allows optional phone number entry.",
+      "Includes personal invitation message.",
+      "Create account and accept button completes onboarding.",
+      "Successful registration redirects the affiliate into the portal dashboard."
+    ]
+  },
+  {
+    "name": "affiliate-portal-dashboard",
+    "label": "Affiliate Portal Dashboard",
+    "description": "Affiliate dashboard where partners track referrals, clicks, conversions, and commissions.",
+    "group": "People",
+    "subModule": "Diviners",
+    "purpose": "Provides affiliates with marketing tools and referral tracking after successful onboarding.",
+    "bullets": [
+      "Displays affiliate performance metrics.",
+      "Tracks clicks and conversions.",
+      "Shows total earnings information.",
+      "Supports Stripe payout connection.",
+      "Displays marketing kit and referral campaigns.",
+      "Provides unique referral links.",
+      "Includes copy link and preview actions.",
+      "Allows affiliates to promote astrology services externally."
+    ]
+  },
     
+  {
+  "name": "affiliate_stripe_onboarding",
+  "label": "Affiliate Stripe Account Setup",
+  "description": "After accepting the affiliate invitation and entering the affiliate dashboard, the affiliate must connect and create a Stripe account before receiving commissions and payouts.",
+  "group": "People",
+  "subModule": "Diviners",
+  "purpose": "This onboarding flow ensures affiliates securely connect with Stripe so referral commissions, payouts, and financial transactions can be processed correctly through the platform.",
+  "bullets": [
+    "Affiliate receives invitation email from the Diviner.",
+    "Affiliate clicks the invitation link from the email.",
+    "Invitation acceptance form opens with affiliate information prefilled.",
+    "Affiliate enters personal details such as name, phone number, and password.",
+    "Affiliate clicks the 'Create account & accept' button.",
+    "After account creation, affiliate is redirected to the Affiliate Dashboard.",
+    "Affiliate dashboard displays referral statistics, marketing kit links, and payout setup requirements.",
+    "Before earning payouts, affiliate must connect a Stripe account.",
+    "Affiliate clicks the 'Connect Stripe' button from the dashboard.",
+    "Stripe onboarding page opens in secure hosted mode.",
+    "Stripe onboarding screen informs the affiliate that the platform partners with Stripe for secure payments and financial services.",
+    "Affiliate enters email address and phone number during Stripe onboarding.",
+    "Stripe verification uses secure OTP and identity confirmation steps.",
+    "Affiliate submits onboarding information through the Stripe form.",
+    "After successful verification, the Stripe account becomes connected to the affiliate profile.",
+    "Connected Stripe account enables commission payout processing.",
+    "Affiliate can now receive referral earnings and payout transfers.",
+    "Affiliate dashboard continues showing clicks, conversions, earnings, and referral performance analytics.",
+    "Affiliate can share marketing links and referral campaigns after Stripe onboarding completion.",
+    "The entire affiliate onboarding process follows the same walkthrough structure already used in the Diviner onboarding and service publishing flow."
+  ]
+},
+
+
+
+  {
+    "name": "affiliate_assignment_modal",
+    "label": "Affiliate Assignment Creation",
+    "description": "Diviner can assign affiliates to services or profiles with commission-based partnerships.",
+    "group": "People",
+    "subModule": "Diviners",
+    "purpose": "This screen allows Diviners to connect affiliates with services and define commission rules for referral earnings.",
+    "bullets": [
+      "Diviner opens the Affiliates module from the Marketing section.",
+      "Clicking 'New Assignment' opens the affiliate assignment modal.",
+      "Diviner can choose assignment scope as Profile or Service.",
+      "Service scope assigns affiliates to a specific astrology service.",
+      "Diviner selects a service such as Nativity Birth Chart.",
+      "Affiliate can be searched using email or affiliate name.",
+      "Affiliate search results display available affiliate accounts.",
+      "Diviner selects the affiliate from the list.",
+      "Commission type can be Percentage or Flat amount.",
+      "Commission value defines how much the affiliate earns per booking.",
+      "Optional private notes help internal affiliate management.",
+      "Create Assignment button activates the affiliate partnership."
+    ]
+  },
+  {
+    "name": "affiliate_campaign_dashboard",
+    "label": "Affiliate Campaign Dashboard",
+    "description": "Affiliate dashboard displays all created campaigns, earnings, clicks, and conversion analytics.",
+    "group": "People",
+    "subModule": "Diviners",
+    "purpose": "This dashboard helps affiliates monitor campaign performance and referral earnings.",
+    "bullets": [
+      "Affiliate logs into the Affiliate Portal.",
+      "Campaign dashboard displays active campaigns.",
+      "Statistics cards show total campaigns, clicks, and earnings.",
+      "Campaign table lists all affiliate referral campaigns.",
+      "Each campaign displays status, clicks, conversions, and revenue.",
+      "Affiliate can open campaign details for deeper analytics.",
+      "New Campaign button allows affiliates to create referral campaigns.",
+      "Campaign performance updates automatically after successful bookings."
+    ]
+  },
+  {
+    "name": "new_affiliate_campaign",
+    "label": "Create Affiliate Campaign",
+    "description": "Affiliates create referral campaigns connected to assigned services or products.",
+    "group": "People",
+    "subModule": "Diviners",
+    "purpose": "This screen allows affiliates to generate trackable referral campaigns for marketing promotions.",
+    "bullets": [
+      "Affiliate clicks the 'New Campaign' button.",
+      "Affiliate chooses campaign type.",
+      "Per-diviner campaigns are linked to specific Diviner partnerships.",
+      "General product campaigns promote platform-wide products.",
+      "Affiliate selects an assigned product from the dropdown.",
+      "Selected product displays commission percentage.",
+      "Campaign name helps affiliates track marketing performance.",
+      "Optional notes describe target audience or promotion plans.",
+      "Channel field can store marketing platforms such as Instagram or YouTube.",
+      "UTM fields support advanced marketing analytics.",
+      "Create Campaign button generates the referral campaign."
+    ]
+  },
+  {
+    "name": "campaign_detail_analytics",
+    "label": "Affiliate Campaign Details",
+    "description": "Campaign detail page displays analytics, referral URL, conversions, and earnings.",
+    "group": "People",
+    "subModule": "Diviners",
+    "purpose": "This screen helps affiliates monitor referral performance and share campaign links.",
+    "bullets": [
+      "Campaign detail page displays campaign status.",
+      "Unique referral URL is generated for sharing.",
+      "Affiliate can copy and share the campaign link.",
+      "Analytics cards display clicks, conversions, earnings, and reversed transactions.",
+      "Recent conversions section tracks booking activity.",
+      "Campaign statistics update automatically after customer bookings.",
+      "Archive button allows campaign deactivation."
+    ]
+  },
+  {
+    "name": "service_landing_page",
+    "label": "Affiliate Service Landing Page",
+    "description": "Customers visiting affiliate referral links land on the service booking page.",
+    "group": "People",
+    "subModule": "Diviners",
+    "purpose": "This page introduces the astrology service and allows customers to begin booking.",
+    "bullets": [
+      "Customer opens the affiliate referral URL.",
+      "Landing page displays service title and description.",
+      "Diviner profile information is displayed.",
+      "Service pricing and session duration are visible.",
+      "Included features explain what customers receive.",
+      "Book This Reading button starts the booking process.",
+      "Affiliate referral tracking remains attached throughout the booking flow."
+    ]
+  },
+  {
+    "name": "booking_date_time_selection",
+    "label": "Booking Date & Time",
+    "description": "Customer selects available booking schedule before continuing payment steps.",
+    "group": "People",
+    "subModule": "Diviners",
+    "purpose": "This step allows customers to choose available appointment dates and times.",
+    "bullets": [
+      "Customer selects a booking date from the calendar.",
+      "Available time slots are displayed dynamically.",
+      "Timezone information is shown for accuracy.",
+      "Selected service and session price are visible.",
+      "Customer chooses a preferred appointment time.",
+      "Next button continues the booking process."
+    ]
+  },
+  {
+    "name": "booking_contact_information",
+    "label": "Booking Contact Information",
+    "description": "Customer enters personal and birth information required for astrology sessions.",
+    "group": "People",
+    "subModule": "Diviners",
+    "purpose": "This step collects booking contact details and astrology birth information.",
+    "bullets": [
+      "Customer enters full name and email address.",
+      "Phone number is required for communication.",
+      "Date of birth is collected for astrology analysis.",
+      "Place of birth helps generate accurate astrology readings.",
+      "Optional notes can describe customer expectations or requests.",
+      "Next button continues to payment confirmation."
+    ]
+  },
+  {
+    "name": "booking_contact_filled_1",
+    "label": "Completed Contact Information",
+    "description": "Customer contact and birth information is successfully completed before payment.",
+    "group": "People",
+    "subModule": "Diviners",
+    "purpose": "This screen confirms that required booking information has been entered correctly.",
+    "bullets": [
+      "Customer information fields are completed.",
+      "Birth details are validated successfully.",
+      "Location information displays timezone support.",
+      "Notes section stores additional customer instructions.",
+      "Customer can review details before payment.",
+      "Next button opens payment confirmation step."
+    ]
+  },
+  {
+    "name": "booking_payment_confirmation",
+    "label": "Confirm & Pay",
+    "description": "Customer reviews booking summary and completes secure Stripe payment.",
+    "group": "People",
+    "subModule": "Diviners",
+    "purpose": "This step securely processes booking payments and confirms the astrology session.",
+    "bullets": [
+      "Booking summary displays service details.",
+      "Session duration, date, and timezone are visible.",
+      "Stripe payment system handles secure checkout.",
+      "Customer can select payment methods such as Card, Cash App Pay, or Amazon Pay.",
+      "Card information is securely entered through Stripe.",
+      "Country and billing details are validated.",
+      "Pay Now button processes the booking payment."
+    ]
+  },
+  {
+    "name": "stripe_checkout_details",
+    "label": "Stripe Checkout Form",
+    "description": "Stripe secure checkout collects payment and optional customer account information.",
+    "group": "People",
+    "subModule": "Diviners",
+    "purpose": "This section securely validates payment information before final booking confirmation.",
+    "bullets": [
+      "Customer enters card details securely.",
+      "Expiration date and security code are validated.",
+      "Billing country is selected.",
+      "Optional Link checkout allows faster future payments.",
+      "Customer can save payment details securely.",
+      "Stripe encryption protects sensitive payment information.",
+      "Successful payment automatically completes booking."
+    ]
+  },
+  {
+    "name": "booking_confirmation_screen",
+    "label": "Booking Confirmation",
+    "description": "Successful booking confirmation is displayed after payment completion.",
+    "group": "People",
+    "subModule": "Diviners",
+    "purpose": "This screen confirms the booking and provides session access information.",
+    "bullets": [
+      "Booking confirmation message is displayed.",
+      "Session date and time are confirmed.",
+      "Customer can join the session directly from the confirmation page.",
+      "Calendar integration allows saving the appointment.",
+      "Confirmation email is automatically sent.",
+      "Affiliate conversion tracking updates successfully.",
+      "Affiliate earnings are recorded after successful payment."
+    ]
+  },
+
+  {
+  "name": "affiliate_dashboard_overview",
+  "label": "Affiliate Dashboard Overview",
+  "description": "After completing Stripe onboarding, campaign setup, and referral sharing, affiliates can monitor their complete performance from the dashboard.",
+  "group": "People",
+  "subModule": "Diviners",
+  "purpose": "This dashboard gives affiliates a centralized overview of earnings, campaign performance, marketing links, and referral analytics.",
+  "bullets": [
+    "Affiliate logs into the Affiliate Portal dashboard.",
+    "Dashboard displays connected Stripe account status.",
+    "Stripe verification confirms payouts are enabled.",
+    "Open Stripe Dashboard button allows affiliates to manage payout settings.",
+    "Statistics cards display total clicks, conversions, and total earnings.",
+    "Marketing Kit section shows available promotional landing pages.",
+    "Each marketing card contains campaign image, commission percentage, and referral link.",
+    "Affiliate can copy referral links directly from the dashboard.",
+    "Preview button opens the customer-facing landing page.",
+    "Dashboard automatically tracks customer clicks and successful conversions.",
+    "Recent Campaigns section displays all active affiliate campaigns.",
+    "Campaign table includes campaign name, referral code, and current status.",
+    "Affiliate earnings increase automatically after successful customer bookings.",
+    "All campaign analytics are updated in real time after purchases.",
+    "Dashboard helps affiliates monitor performance and optimize promotions."
+  ]
+},
+
+
+
+// -------------Marketing & Campaign Management-----------------//
+  {
+    "name": "campaign_management_dashboard",
+    "label": "Campaign Management Dashboard",
+    "description": "Diviners can manage and monitor all marketing campaigns directly from the marketing module dashboard.",
+    "group": "People",
+    "subModule": "Campaign Management",
+    "purpose": "Allows diviners to create, monitor, and analyze promotional campaigns without needing affiliate assistance.",
+    "bullets": [
+      "Diviner opens the Marketing module from the sidebar navigation.",
+      "Campaigns section displays all active and inactive campaigns.",
+      "Dashboard shows total campaigns, total affiliates, conversions, and commission spending.",
+      "Campaign table displays campaign name, destination type, URL code, status, and conversion count.",
+      "Analytics tab helps track campaign performance.",
+      "Status filter allows diviners to filter campaigns by active or inactive state.",
+      "Create Campaign button opens the campaign creation workflow.",
+      "Each campaign row contains quick action buttons for viewing or managing campaigns.",
+      "Campaign performance updates automatically after bookings or conversions.",
+      "Marketing dashboard acts as the central campaign management area."
+    ]
+  },
+  {
+    "name": "campaign_creation_modal",
+    "label": "Campaign Creation Modal",
+    "description": "Diviners can create direct promotional campaigns for services, profile pages, or astrology offerings.",
+    "group": "People",
+    "subModule": "Campaign Management",
+    "purpose": "Enables diviners to independently create referral campaigns and promotional service links.",
+    "bullets": [
+      "Clicking Create Campaign opens the campaign setup modal.",
+      "Diviner enters campaign name and optional campaign description.",
+      "Campaign destination can be selected as profile page or specific service.",
+      "Available services are displayed with category, duration, and pricing.",
+      "Diviner selects which astrology service should receive traffic.",
+      "Optional marketing channel selection supports platforms like Facebook.",
+      "Start date and end date can be configured for campaign duration.",
+      "UTM parameters help track marketing traffic sources.",
+      "Create Campaign button generates a unique campaign referral URL.",
+      "Campaign settings are saved automatically after successful creation."
+    ]
+  },
+  {
+    "name": "campaign_created_confirmation",
+    "label": "Campaign Created Confirmation",
+    "description": "After creating a campaign, the system generates a shareable campaign URL for promotions and bookings.",
+    "group": "People",
+    "subModule": "Campaign Management",
+    "purpose": "Provides diviners with direct campaign links for sharing across websites, social media, and affiliates.",
+    "bullets": [
+      "System displays successful campaign creation confirmation.",
+      "Generated campaign URL is automatically created for sharing.",
+      "Copy button copies the referral URL to clipboard.",
+      "External launch button opens the campaign in a new browser tab.",
+      "Campaign code is generated automatically for tracking purposes.",
+      "Done button closes the confirmation modal.",
+      "Create Another button starts a new campaign setup process.",
+      "Campaign URL redirects customers directly to the booking experience.",
+      "All conversions from the campaign are tracked automatically.",
+      "Campaign performance becomes visible in the analytics dashboard."
+    ]
+  },
+  {
+    "name": "service_landing_page_12",
+    "label": "Astrology Service Landing Page",
+    "description": "Customers opening the campaign link are redirected to the astrology service landing page.",
+    "group": "People",
+    "subModule": "Campaign Management",
+    "purpose": "Introduces the astrology service and encourages visitors to start the booking process.",
+    "bullets": [
+      "Campaign URL opens the service landing page in a new tab.",
+      "Service page displays astrology category and practitioner information.",
+      "Customers can view service pricing and session duration.",
+      "Book This Reading button starts the booking workflow.",
+      "Service overview explains the reading purpose and experience.",
+      "What's Included section describes session features and benefits.",
+      "Landing page includes service imagery and astrology branding.",
+      "Visitors can review practitioner information before booking.",
+      "Pricing and session details are clearly visible.",
+      "Page is optimized for campaign conversion and direct booking."
+    ]
+  },
+  {
+    "name": "booking_date_time_selection_13",
+    "label": "Booking Date And Time Selection",
+    "description": "Customers select available session dates and time slots before continuing to booking confirmation.",
+    "group": "People",
+    "subModule": "Campaign Management",
+    "purpose": "Allows customers to schedule astrology sessions based on available practitioner times.",
+    "bullets": [
+      "Booking workflow begins with date and time selection.",
+      "Calendar component displays available appointment dates.",
+      "Available time slots are shown according to local timezone.",
+      "Selected service name and pricing are displayed.",
+      "Customer chooses preferred session timing.",
+      "Time slots automatically update based on practitioner availability.",
+      "Selected appointment duration is displayed.",
+      "Next button continues the booking process.",
+      "Back button returns customer to previous step.",
+      "Timezone conversion ensures accurate appointment scheduling."
+    ]
+  },
+  {
+    "name": "booking_contact_form_14",
+    "label": "Booking Contact Information",
+    "description": "Customers provide personal and astrology birth details required for the session.",
+    "group": "People",
+    "subModule": "Campaign Management",
+    "purpose": "Collects customer information needed for astrology analysis and appointment communication.",
+    "bullets": [
+      "Customer enters full name, email, and phone number.",
+      "Birth information section collects date and place of birth.",
+      "Place search helps customers select birth location accurately.",
+      "Notes field allows customers to provide additional context.",
+      "Phone number is required for session communication.",
+      "Astrology readings depend on accurate birth information.",
+      "Validation ensures required fields are completed.",
+      "Next button moves to payment confirmation.",
+      "Back button returns to scheduling step.",
+      "All information is securely stored with the booking."
+    ]
+  },
+  {
+    "name": "booking_payment_screen_16",
+    "label": "Booking Payment And Confirmation",
+    "description": "Customers review booking details and complete secure online payment.",
+    "group": "People",
+    "subModule": "Campaign Management",
+    "purpose": "Handles secure checkout and payment confirmation for astrology bookings.",
+    "bullets": [
+      "Booking summary displays service, duration, date, and timezone.",
+      "Customer details are shown before payment submission.",
+      "Payment section supports card, Cash App Pay, and Amazon Pay.",
+      "Stripe secure checkout integration processes payments safely.",
+      "Card information fields support major payment providers.",
+      "Country and billing information can be configured.",
+      "Pay Now button completes the booking transaction.",
+      "Booking total is displayed before payment confirmation.",
+      "Secure checkout indicators improve customer trust.",
+      "Payment data is processed securely through Stripe."
+    ]
+  },
+  {
+    "name": "booking_confirmation_success",
+    "label": "Booking Success Confirmation",
+    "description": "After successful payment, the customer receives booking confirmation and session access details.",
+    "group": "People",
+    "subModule": "Campaign Management",
+    "purpose": "Confirms successful booking creation and provides access to upcoming astrology sessions.",
+    "bullets": [
+      "Booking Confirmed message appears after successful payment.",
+      "Session details include date, time, timezone, and schedule.",
+      "Join Your Session button provides direct meeting access.",
+      "Add To Calendar option downloads calendar event file.",
+      "Confirmation email is automatically sent to the customer.",
+      "Booking information is stored in the scheduling system.",
+      "Customer can return later using session access link.",
+      "Session reminder workflows can trigger automatically.",
+      "Confirmation screen finalizes the booking journey.",
+      "Campaign conversion tracking is updated after booking success."
+    ]
+  },
   // ----------Affiliates-------------//
 
     
@@ -9718,6 +10635,95 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
       },
     ],
     screens: [
+
+      
+  {
+    "name": "perennial-mandalism-membership-dashboard",
+    "label": "Perennial Mandalism Membership Dashboard",
+    "description": "Main membership overview dashboard for Perennial Mandalism users.",
+    "group": "Community",
+    "subModule": "Perennial Mandalism",
+    "purpose": "This screen gives members a complete overview of their active Perennial Mandalism subscription, family members, renewal details, membership usage, and quick access to important spiritual and astrology features.",
+    "bullets": [
+      "Displays the active Perennial Mandalism membership plan.",
+      "Shows current membership status such as Active.",
+      "Displays remaining days until membership renewal.",
+      "Shows next billing or renewal date.",
+      "Member since section displays the original join date.",
+      "Journey progress bar tracks the user’s onboarding and astrology setup completion percentage.",
+      "Family member chips display all members connected to the subscription.",
+      "Relationship labels such as Self, Spouse, Child, and Friend identify family connections.",
+      "My Profile button opens the member profile management section.",
+      "Get a Reading button allows users to book astrology or spiritual readings.",
+      "Sacred Library button opens spiritual texts and learning resources.",
+      "Agreements button opens signed contracts and membership agreements.",
+      "Membership section shows current billing amount and subscription plan.",
+      "Member slot usage bar displays how many family-member slots are currently used.",
+      "Upgrade Plan button allows users to increase membership limits or features.",
+      "Manage Subscription button opens billing and subscription management.",
+      "This screen acts as the central dashboard for membership, billing, family management, and spiritual journey progress."
+    ]
+  },
+  {
+    "name": "add-perennial-mandalism-member-form",
+    "label": "Add Perennial Mandalism Member Form",
+    "description": "Detailed onboarding form used to add a new family or relationship member into the Perennial Mandalism system.",
+    "group": "Community",
+    "subModule": "Perennial Mandalism",
+    "purpose": "This screen allows users to enroll and manage additional family members inside the Perennial Mandalism astrology ecosystem so relationship charts, compatibility analysis, transits, and spiritual readings can be generated for the entire family structure.",
+    "bullets": [
+      "Contact Information section captures member identity and communication details.",
+      "Relation Type dropdown defines the connection between the user and the added member.",
+      "First Name and Last Name fields identify the new member profile.",
+      "Email and Phone fields are used for communication and account linking.",
+      "Demographics section stores gender and relationship status information.",
+      "Location section captures address, city, state, and ZIP information.",
+      "Intake Questionnaire section collects deep personal and emotional insights.",
+      "Personality field helps astrologers understand character and behavioral traits.",
+      "Strengths and improvement areas help generate personalized spiritual guidance.",
+      "Long-Term Goals section records life direction and future aspirations.",
+      "Major Life Events field captures important personal history.",
+      "Relationship with Family field explains family dynamics and emotional connections.",
+      "Biggest Current Challenges section identifies active struggles or stress areas.",
+      "Spiritual Practices field records meditation, rituals, or spiritual habits.",
+      "Guidance on a Specific Decision field helps users request focused astrology guidance.",
+      "Specific Questions section allows members to ask personalized astrology questions.",
+      "Additional Notes field stores extra contextual information for readings.",
+      "Membership Status section controls whether the member is active or inactive.",
+      "Submit button saves the member profile into the Perennial Mandalism system.",
+      "Reset button clears entered form data.",
+      "Cancel button exits the member onboarding workflow.",
+      "This form acts as the foundation for generating accurate astrology charts and relationship reports."
+    ]
+  },
+  {
+    "name": "perennial-mandalism-home-dashboard",
+    "label": "Perennial Mandalism Home Dashboard",
+    "description": "Main spiritual and astrology dashboard for Perennial Mandalism members.",
+    "group": "Community",
+    "subModule": "Perennial Mandalism",
+    "purpose": "This screen provides quick access to astrology tools, relationship charts, rituals, transits, readings, and family management while tracking the user’s overall spiritual journey progress.",
+    "bullets": [
+      "Add Member section allows users to enroll additional family or relationship members.",
+      "Add Member button opens the full family-member onboarding form.",
+      "Journey Setup progress bar tracks completion milestones inside the astrology platform.",
+      "Milestone status informs users about the next required astrology setup action.",
+      "Generate Relationship Chart shortcut opens compatibility chart generation workflows.",
+      "Quick Actions section provides fast access to commonly used spiritual tools.",
+      "View Chart action opens natal or personal astrology charts.",
+      "Transits action opens current planetary transit analysis.",
+      "Create Ritual action helps users create personalized spiritual rituals.",
+      "Sacred Texts action opens spiritual learning materials and wisdom resources.",
+      "Manage Family action opens family-member management and relationship setup.",
+      "Book a Reading action allows users to schedule astrology consultations.",
+      "Your Charts & Astrology section centralizes astrology tools and chart generation.",
+      "Quick Chart Generation allows one-click astrology reports using saved birth data.",
+      "Natal Chart shortcut opens the personal birth chart.",
+      "Monthly Transits shortcut opens forecast and planetary movement analysis.",
+      "Relationship Charts shortcut opens compatibility and synastry reports.",
+      "This dashboard acts as the main spiritual control center for astrology activities, rituals, family management, and relationship insights."
+    ]
+  },
       { 
         name: "hub", 
         label: "Community Hub", 
@@ -10013,7 +11019,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
     "name": "nativity_birth_chart",
     "label": "Nativity Birth Chart",
     "description": "A complete Western natal chart reading tool where users enter birth date, time, and place to generate charts, planetary placements, houses, aspects, and AI-based interpretations.",
-    "group": "Community & Worship",
+    "group": "Charts",
     "subModule": "Nativity Birth Chart",
     "purpose": "Helps users understand their personal birth chart by turning birth details into a structured astrological reading with charts, tables, and detailed written interpretations.",
     "bullets": [
@@ -10030,7 +11036,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
     "name": "nativity_chart_wheels",
     "label": "Natal Wheel Charts",
     "description": "Dual visual chart display showing the natal wheel in graphical form, including zodiac signs, houses, planets, and aspect lines.",
-    "group": "Community & Worship",
+    "group": "Charts",
     "subModule": "Nativity Birth Chart",
     "purpose": "Gives users a visual way to inspect their birth chart structure instead of only reading tables and text explanations.",
     "bullets": [
@@ -10047,7 +11053,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
     "name": "nativity_planet_information",
     "label": "Planet Information",
     "description": "A structured planet table listing each planet and point with sign, full degree, house, normalized degree, speed, and retrograde status.",
-    "group": "Community & Worship",
+    "group": "Charts",
     "subModule": "Nativity Birth Chart",
     "purpose": "Makes technical planetary placement data easy to review in one organized section before reading deeper interpretations.",
     "bullets": [
@@ -10064,7 +11070,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
     "name": "nativity_planet_interpretations",
     "label": "Planet Interpretations",
     "description": "Detailed written readings for each planetary placement, explaining how the planet behaves in its zodiac sign, house, degree, and motion.",
-    "group": "Community & Worship",
+    "group": "Charts",
     "subModule": "Nativity Birth Chart",
     "purpose": "Translates raw astrological data into clear meaning so users can understand the emotional, mental, and spiritual significance of each placement.",
     "bullets": [
@@ -10081,7 +11087,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
     "name": "nativity-horoscope-analysis",
     "label": "Deep Astrological Analysis",
     "description": "A detailed horoscope reading view inside the Nativity Birth Chart flow, where users can read extended AI-generated interpretations for planetary placements while still seeing supporting chart data and related interpretation cards in the background.",
-    "group": "Community & Worship",
+    "group": "Charts",
     "subModule": "Nativity Birth Chart",
     "purpose": "Gives users a focused space to read a deeper explanation of a planetary placement without losing the context of the overall birth chart reading.",
     "bullets": [
@@ -10099,7 +11105,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
     "name": "nativity-planet-reading-card",
     "label": "Planet Reading Card",
     "description": "An individual interpretation card for a planetary placement, such as the Sun, showing a readable summary of the placement in sign and house, with controls for expanding the text and opening related decan content.",
-    "group": "Community & Worship",
+    "group": "Charts",
     "subModule": "Nativity Birth Chart",
     "purpose": "Helps users read the meaning of one placement at a time in a simple, easy-to-follow format, while also linking that placement to deeper decan symbolism.",
     "bullets": [
@@ -10117,7 +11123,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
     "name": "nativity-planet-decan-modal",
     "label": "Planet Decan Modal",
     "description": "A modal window that opens from the triangle icon on a planet reading card, showing the decan connected to that planetary placement with symbolic text and image-based esoteric interpretation.",
-    "group": "Community & Worship",
+    "group": "Charts",
     "subModule": "Nativity Birth Chart",
     "purpose": "Lets users explore the decan behind a planetary placement and understand its tarot, symbolic, and mythic correspondences in a dedicated modal view.",
     "bullets": [
@@ -10137,7 +11143,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
     "name": "nativity_house_information",
     "label": "House Information",
     "description": "A house table showing each of the 12 houses with its zodiac sign and cusp degree.",
-    "group": "Community & Worship",
+    "group": "Charts",
     "subModule": "Nativity Birth Chart",
     "purpose": "Helps users understand how the chart is divided into life areas and which sign rules each house cusp.",
     "bullets": [
@@ -10154,7 +11160,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
     "name": "nativity_house_occupancy_map",
     "label": "House Occupancy Map",
     "description": "A visual house layout showing which planets and points fall into each house, alongside house signs and degrees.",
-    "group": "Community & Worship",
+    "group": "Charts",
     "subModule": "Nativity Birth Chart",
     "purpose": "Makes it easier to see planetary distribution across the houses without reading multiple separate tables.",
     "bullets": [
@@ -10171,7 +11177,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
     "name": "nativity_house_interpretations",
     "label": "House Interpretations",
     "description": "Written interpretation cards for each house, explaining what it means for a specific zodiac sign to rule that area of life.",
-    "group": "Community & Worship",
+    "group": "Charts",
     "subModule": "Nativity Birth Chart",
     "purpose": "Turns the house cusp data into practical meaning about identity, money, communication, and other life themes.",
     "bullets": [
@@ -10188,7 +11194,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
   "name": "nativity-dharma-karma",
   "label": "Dharma & Karma Reading",
   "description": "A dedicated section inside the Nativity Birth Chart reading that explains the user's higher purpose and core life lessons through long-form spiritual interpretation.",
-  "group": "Community & Worship",
+  "group": "Charts",
   "subModule": "Nativity Birth Chart",
   "purpose": "Helps users understand their soul direction, spiritual calling, and repeating karmic lessons by translating chart placements into clear personal guidance.",
   "bullets": [
@@ -10208,7 +11214,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
     "name": "nativity_aspect_information",
     "label": "Aspect Information",
     "description": "A full aspect table showing relationships between planets and points, including orb, degree difference, aspect type, and proximity indicator.",
-    "group": "Community & Worship",
+    "group": "Charts",
     "subModule": "Nativity Birth Chart",
     "purpose": "Helps users understand how chart placements interact with each other through supportive or challenging angular relationships.",
     "bullets": [
@@ -10225,7 +11231,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
     "name": "nativity_aspect_interpretations",
     "label": "Aspect Interpretations",
     "description": "Written meaning blocks for specific aspects, explaining emotional, psychological, and spiritual dynamics between two placements.",
-    "group": "Community & Worship",
+    "group": "Charts",
     "subModule": "Nativity Birth Chart",
     "purpose": "Explains how planetary relationships shape the user's personality, inner tension, gifts, and growth patterns.",
     "bullets": [
@@ -10242,7 +11248,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
   "name": "nativity-angles-reading",
   "label": "Ascendant, Midheaven & Vertex Reading",
   "description": "A focused interpretation section inside the Nativity Birth Chart reading that explains key chart angles such as the Ascendant, Midheaven, and Vertex, along with their degrees and deeper meaning.",
-  "group": "Community & Worship",
+  "group": "Charts",
   "subModule": "Nativity Birth Chart",
   "purpose": "Helps users understand the most important chart angles that shape identity, life direction, public path, and meaningful encounters.",
   "bullets": [
@@ -10262,7 +11268,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
     "name": "nativity_lilith_analysis",
     "label": "Lilith Analysis",
     "description": "A focused interpretation section for Lilith, showing sign, degree, house, speed, and a deep written reading about shadow, intensity, and inner emotional truth.",
-    "group": "Community & Worship",
+    "group": "Charts",
     "subModule": "Nativity Birth Chart",
     "purpose": "Gives users a deeper psychological and spiritual reading around hidden instincts, taboo patterns, personal power, and emotional depth.",
     "bullets": [
@@ -10277,6 +11283,344 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
   },
 
 
+  // --------------------relationship_charts screens--------------------//
+  {
+    "name": "relationship-charts-overview",
+    "label": "Relationship Charts Overview",
+    "description": "Main relationship chart dashboard showing all available family relationship combinations.",
+      "group": "Charts",
+    "subModule": "Relationship Charts",
+    "purpose": "This screen helps users explore synastry and relationship astrology between multiple family members, friends, romantic partners, or business connections. The system automatically generates every possible relationship combination based on the saved family members.",
+    "bullets": [
+      "Displays all generated relationship chart combinations between saved family members.",
+      "Family Chart Overview section summarizes the total number of members included in the relationship system.",
+      "Each relationship card shows two people connected in the chart comparison.",
+      "Select Type dropdown allows users to choose relationship analysis type.",
+      "Relationship types can include Romantic, Friendship, or Business analysis.",
+      "Refresh button reloads updated relationship chart data.",
+      "The system automatically creates pair combinations for every included member.",
+      "Users can quickly open detailed compatibility reports from this screen.",
+      "This screen acts as the main navigation page for all relationship astrology reports."
+    ]
+  },
+  {
+    "name": "family-chart-overview-expanded",
+    "label": "Family Chart Overview Expanded",
+    "description": "Expanded family relationship overview showing all included members and relationship categories.",
+    "group": "Charts",
+    "subModule": "Relationship Charts",
+    "purpose": "This screen gives users a complete overview of all people included in the relationship system before generating deeper astrology compatibility reports.",
+    "bullets": [
+      "Displays all family members included in the relationship analysis.",
+      "Each member card shows full name, relationship type, age, birth date, birth time, and birth location.",
+      "Family overview helps users confirm birth data before analysis generation.",
+      "Romantic section opens romantic compatibility reports.",
+      "Friendship section opens friendship compatibility reports.",
+      "Business section opens professional and business compatibility reports.",
+      "View buttons navigate to detailed relationship astrology pages.",
+      "The overview helps users understand how all family members are connected astrologically.",
+      "This screen acts as the entry point for advanced synastry analysis."
+    ]
+  },
+  {
+    "name": "romantic-relationship-data-entry",
+    "label": "Romantic Relationship Data Entry",
+    "description": "Birth-data confirmation screen for romantic relationship astrology generation.",
+    "group": "Charts",
+    "subModule": "Relationship Charts",
+    "purpose": "This screen allows users to review and update birth details for all included people before generating advanced romantic compatibility astrology reports.",
+    "bullets": [
+      "Displays all included members participating in the romantic relationship analysis.",
+      "Each person includes date of birth, birth time, and birthplace fields.",
+      "Birth locations include timezone and coordinate information.",
+      "Users can update incorrect birth details before report generation.",
+      "24-hour time selection improves astrology chart precision.",
+      "Area of Inquiry field allows users to enter optional relationship questions.",
+      "Regenerate button recalculates relationship charts using updated birth information.",
+      "Accurate birth data improves compatibility analysis and astrological interpretations.",
+      "This screen prepares the astrology engine for deeper synastry calculations."
+    ]
+  },
+  {
+    "name": "western-chart-relationship-visualization",
+    "label": "Western Chart Relationship Visualization",
+    "description": "Visual astrology wheel and synastry chart comparison screen.",
+    "group": "Charts",
+    "subModule": "Relationship Charts",
+    "purpose": "This screen visually displays natal and synastry astrology charts used to analyze relationship compatibility between individuals.",
+    "bullets": [
+      "Displays a western astrology natal chart wheel.",
+      "Shows zodiac signs, houses, planetary positions, and astrological aspects.",
+      "Synastry overlay chart visualizes relationship planetary interactions.",
+      "Colored aspect lines show harmony, tension, and energetic dynamics.",
+      "Planet placements help identify emotional, romantic, and communication patterns.",
+      "Users can visually inspect relationship compatibility through chart geometry.",
+      "Chart wheels help astrologers understand house overlays and planetary influence.",
+      "This visualization is used as the foundation for AI-generated relationship interpretations."
+    ]
+  },
+  {
+    "name": "synastry-horoscope-analysis",
+    "label": "Synastry Horoscope Analysis",
+    "description": "Detailed AI-generated synastry relationship interpretation report.",
+    "group": "Charts",
+    "subModule": "Relationship Charts",
+    "purpose": "This screen provides long-form astrology interpretation based on the combined synastry relationship chart data of all included family members.",
+    "bullets": [
+      "Displays deep astrology interpretations for relationship compatibility.",
+      "Family System Core Theme explains the overall relationship energy pattern.",
+      "Shared Family Identity analysis explains collective personality dynamics.",
+      "Emotional Field Moon Dynamics explains emotional bonding and emotional tension patterns.",
+      "Communication and Mercury Patterns explain communication styles between members.",
+      "Interpretations are generated using planetary positions, zodiac signs, and houses.",
+      "Show More button expands long astrology interpretations.",
+      "The report combines emotional, psychological, and karmic relationship analysis.",
+      "This screen acts as the primary AI astrology interpretation report."
+    ]
+  },
+  {
+    "name": "composite-horoscope-analysis",
+    "label": "Composite Horoscope Analysis",
+    "description": "Composite family astrology report generated from all included relationship charts.",
+    "group": "Charts",
+    "subModule": "Relationship Charts",
+    "purpose": "This screen explains how all included family members function together as one collective energetic system using composite astrology analysis.",
+    "bullets": [
+      "Composite Horoscope section combines all relationship energies into one chart interpretation.",
+      "Family Composite Core Identity explains the shared family personality.",
+      "Shows how each individual contributes to the overall relationship system.",
+      "Composite analysis focuses on collective emotional and social dynamics.",
+      "The report explains shared strengths, values, communication patterns, and emotional structure.",
+      "Astrology houses and planetary conjunctions are used to generate interpretations.",
+      "Show More button expands deeper astrology insights.",
+      "This report helps users understand long-term family and relationship structure."
+    ]
+  },
+  {
+    "name": "davison-relationship-analysis",
+    "label": "Davison Relationship Analysis",
+    "description": "Davison relationship astrology interpretation screen.",
+    "group": "Charts",
+    "subModule": "Relationship Charts",
+    "purpose": "This screen analyzes the shared midpoint relationship energy between all included people using Davison astrology methodology.",
+    "bullets": [
+      "Davison Relationship analysis creates a shared midpoint astrology chart.",
+      "Family Davison Core Identity explains the relationship's shared energetic center.",
+      "The report focuses on long-term shared destiny and collective evolution.",
+      "Planetary midpoint calculations are used for advanced compatibility analysis.",
+      "The report explains how the relationship system behaves as a living energetic structure.",
+      "Interpretations include emotional patterns, responsibilities, communication, and stability themes.",
+      "Show More button expands detailed astrology explanations.",
+      "This analysis is useful for understanding relationship purpose and group evolution."
+    ]
+  },
+  {
+    "name": "major-aspects-connections-analysis",
+    "label": "Major Aspects & Connections Analysis",
+    "description": "Detailed planetary aspect and connection interpretation report.",
+    "group": "Charts",
+    "subModule": "Relationship Charts",
+    "purpose": "This screen explains the strongest planetary connections and astrological aspect patterns influencing the family or relationship system.",
+    "bullets": [
+      "Displays major astrological aspect interpretations between members.",
+      "Planetary connections explain harmony, conflict, emotional attachment, and communication flow.",
+      "Family Davison Core Chart explains the strongest repeated energetic patterns.",
+      "The report analyzes zodiac sign repetition and shared planetary placements.",
+      "Astrological houses are used to explain emotional and social behavior.",
+      "Interpretations help users understand relationship strengths and challenges.",
+      "Show More button expands the detailed aspect report.",
+      "This screen helps users understand deeper energetic compatibility."
+    ]
+  },
+  {
+    "name": "family-compatibility-score",
+    "label": "Family Compatibility Score",
+    "description": "Compatibility scoring and relationship strength summary report.",
+    "group": "Charts",
+    "subModule": "Relationship Charts",
+    "purpose": "This screen summarizes the overall compatibility strength of the relationship or family system using astrology scoring logic.",
+    "bullets": [
+      "Displays an overall compatibility score for the family system.",
+      "Compatibility scoring is generated using planetary harmony and tension analysis.",
+      "Earth, Air, Fire, and Water balance affect compatibility strength.",
+      "The report explains emotional support, communication quality, and long-term stability.",
+      "Strong and challenging planetary aspects influence the final score.",
+      "Astrology interpretations explain why compatibility is high or low.",
+      "Show More button expands deeper compatibility explanations.",
+      "This report gives users a simplified understanding of overall relationship harmony."
+    ]
+  },
+  {
+    "name": "family-elemental-balance",
+    "label": "Family Elemental Balance",
+    "description": "Elemental astrology balance report across all family members.",
+    "group": "Charts",
+    "subModule": "Relationship Charts",
+    "purpose": "This screen explains the balance of Earth, Air, Fire, and Water energies inside the relationship system.",
+    "bullets": [
+      "Analyzes elemental balance across all included astrology charts.",
+      "Earth energy explains stability, routines, and practical behavior.",
+      "Air energy explains communication, ideas, and mental connection.",
+      "Water energy explains emotional bonding and sensitivity.",
+      "Fire energy explains motivation, leadership, and action.",
+      "The report identifies dominant and missing elemental patterns.",
+      "Astrology interpretations explain how elemental imbalance affects relationships.",
+      "Show More button expands deeper elemental analysis.",
+      "This screen helps users understand emotional and energetic balance inside the family."
+    ]
+  },
+  {
+    "name": "timing-transits-analysis",
+    "label": "Timing & Transits Analysis",
+    "description": "Transit and timing astrology interpretation report.",
+    "group": "Charts",
+    "subModule": "Relationship Charts",
+    "purpose": "This screen explains how timing cycles and planetary transits influence the relationship system over time.",
+    "bullets": [
+      "Displays timing and transit-based astrology interpretations.",
+      "Transit analysis explains evolving emotional and relationship phases.",
+      "Planetary movement affects communication, emotions, and family growth.",
+      "The report explains future energetic cycles and relationship timing.",
+      "Shared planetary themes help identify collective growth periods.",
+      "Astrological timing helps users understand periods of change or stability.",
+      "Show More button expands deeper transit interpretations.",
+      "This screen is useful for predictive relationship astrology."
+    ]
+  },
+  {
+    "name": "karmic-soulmate-indicators",
+    "label": "Karmic & Soulmate Indicators",
+    "description": "Karmic relationship and soulmate astrology interpretation screen.",
+    "group": "Charts",
+    "subModule": "Relationship Charts",
+    "purpose": "This screen explains karmic lessons, soulmate indicators, and spiritual relationship patterns using advanced astrology analysis.",
+    "bullets": [
+      "Analyzes karmic patterns between all included family members.",
+      "North Node, Chiron, and karmic house placements are used for interpretation.",
+      "The report explains emotional healing and soul-level lessons.",
+      "Karmic analysis identifies repeated emotional and energetic themes.",
+      "Spiritual growth patterns are explained using astrology placements.",
+      "The report helps users understand deeper relationship purpose.",
+      "Show More button expands the full karmic interpretation.",
+      "This screen focuses on spiritual evolution and long-term soul connections."
+    ]
+  },
+
+  // --------------------monthly_transits screens--------------------//
+  
+  {
+    "name": "monthly-transits-overview",
+    "label": "Monthly Transits Overview",
+    "description": "Overview dashboard showing monthly transit access and astrology report generation for all connected family members.",
+    "group": "Charts",
+    "subModule": "Monthly Transits",
+    "purpose": "This screen allows users to view, generate, and manage monthly transit astrology reports for themselves and connected family members using saved birth-chart data.",
+    "bullets": [
+      "Displays the Monthly Transits dashboard for the selected month and year.",
+      "Shows how current planetary movements affect the family system.",
+      "Professional reading banner encourages users to book astrology consultations.",
+      "Member discount notice informs users about reduced pricing for community members.",
+      "Book a Reading button opens astrology reading and consultation booking.",
+      "Displays all family members who currently have transit access.",
+      "Each member card shows the person’s name and transit status.",
+      "Supportive and challenging aspect counters summarize planetary influences.",
+      "View Natal Chart button opens the member’s birth chart.",
+      "View Transit Report button opens the generated monthly astrology report.",
+      "Generate Natal Chart button creates a natal chart if one does not exist.",
+      "Generate Transit Report button creates a new monthly transit analysis.",
+      "Dropdown action menu allows additional report-related actions.",
+      "The screen acts as a centralized monthly astrology report manager for all connected members."
+    ]
+  },
+  {
+    "name": "monthly-transits-report-generator",
+    "label": "Monthly Transits Report Generator",
+    "description": "Transit report setup screen used to generate monthly transit and lunar return astrology reports.",
+    "group": "Charts",
+    "subModule": "Monthly Transits",
+    "purpose": "This screen allows users to configure and regenerate a personalized monthly astrology report using birth details, lunar-return data, and current planetary transit positions.",
+    "bullets": [
+      "Displays the selected member’s monthly transit report workspace.",
+      "Saved report section shows the report month and generation date.",
+      "Regenerate button refreshes the astrology report using updated transit calculations.",
+      "Monthly Transits + Lunar Return tab combines transit analysis with lunar-return interpretation.",
+      "Birth-data section displays saved natal information.",
+      "Date of Birth field stores the member’s birth date.",
+      "Time of Birth fields capture precise birth-time calculations.",
+      "Place of Birth field is used for geographic astrology calculations.",
+      "Location coordinates and timezone improve transit accuracy.",
+      "Select Month option allows generation for different forecast months.",
+      "Area of Inquiry field lets users request guidance on specific life topics.",
+      "Examples include career, relationships, emotional clarity, and personal growth.",
+      "Regenerate button recreates the astrology report using the updated inputs.",
+      "This screen acts as the main configuration panel for personalized monthly transit forecasting."
+    ]
+  },
+  {
+    "name": "monthly-transits-chart-view",
+    "label": "Monthly Transits Chart View",
+    "description": "Visual astrology chart section showing natal and transit chart overlays for monthly interpretation.",
+    "group": "Charts",
+    "subModule": "Monthly Transits",
+    "purpose": "This screen visually compares natal astrology placements with current planetary transit activity to help users understand emotional, spiritual, and life-cycle influences for the selected month.",
+    "bullets": [
+      "Displays the Monthly Transits + Lunar Return chart workspace.",
+      "Left chart shows the natal birth-chart wheel.",
+      "Right chart displays transit overlays and current planetary movement interactions.",
+      "Planetary aspect lines visually represent supportive and challenging energies.",
+      "Zodiac signs and house placements help astrologers interpret timing and life themes.",
+      "Transit overlays show how current planets interact with natal placements.",
+      "Users can visually identify conjunctions, squares, trines, sextiles, and oppositions.",
+      "The chart supports emotional, relationship, career, and spiritual forecasting.",
+      "Regenerate button allows updated chart recalculation.",
+      "The screen provides a professional astrology-chart visualization for monthly analysis."
+    ]
+  },
+  {
+    "name": "western-chart-horoscope-view",
+    "label": "Western Chart Horoscope View",
+    "description": "Detailed western astrology chart visualization used for horoscope and planetary aspect interpretation.",
+    "group": "Charts",
+    "subModule": "Monthly Transits",
+    "purpose": "This screen displays a western astrology chart used for advanced horoscope interpretation, planetary aspects, transit overlays, and natal-chart analysis.",
+    "bullets": [
+      "Displays a complete western astrology horoscope wheel.",
+      "Zodiac signs are positioned around the outer ring of the chart.",
+      "Inner chart lines display planetary aspect relationships.",
+      "Colored aspect lines represent harmonious and challenging interactions.",
+      "Planetary glyphs identify celestial-body placements.",
+      "House divisions organize life themes such as relationships, career, and spirituality.",
+      "Ascendant and Descendant markers identify chart orientation.",
+      "Transit overlays help astrologers compare current planetary movement against natal placements.",
+      "The chart supports deep horoscope interpretation and predictive astrology analysis.",
+      "This screen acts as the main western astrology visualization interface."
+    ]
+  },
+  {
+    "name": "future-lunar-metrics-and-transits",
+    "label": "Future Lunar Metrics & Transit Relations",
+    "description": "Future transit and lunar-cycle analytics table used for predictive astrology forecasting.",
+    "group": "Charts",
+    "subModule": "Monthly Transits",
+    "purpose": "This screen provides detailed monthly lunar metrics and future planetary transit relationships to help users understand important astrological timings and upcoming energetic influences.",
+    "bullets": [
+      "Future Lunar Metrics section summarizes important moon-cycle information.",
+      "Month column identifies the selected astrology forecast month.",
+      "Moon Day field tracks the lunar calendar day.",
+      "Moon Illumination percentage displays moon visibility strength.",
+      "Moon Phase identifies stages such as New Moon or Full Moon.",
+      "Moon Sign displays the zodiac sign occupied by the Moon.",
+      "Future Tropical Transits Monthly Relation table lists upcoming transit events.",
+      "Date column shows when each planetary interaction occurs.",
+      "Natal Planet column identifies the user’s birth-chart planet involved in the transit.",
+      "Transit Type column explains the planetary aspect relationship.",
+      "Examples include Sextile, Square, Trine, Conjunction, and Opposition.",
+      "Transit Planet column identifies the active moving planet affecting the natal chart.",
+      "This table helps users prepare for emotionally important or energetically intense periods.",
+      "Astrologers can use the data for forecasting, guidance, ritual timing, and decision planning.",
+      "The screen acts as a predictive astrology analytics and transit-tracking system."
+    ]
+  },
 
       {
         name: "pm-notifications",
@@ -10494,6 +11838,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
       "Back button allows returning to the previous custom ritual sequence screen."
     ]
   },
+  // ---------------------Tarot_portal screens--------------------//
       {
         name: "tarot-spread-history",
         label: "Tarot Spread History",
@@ -10530,18 +11875,13 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Duration bar: when the transit entered orb, exact date, and when it leaves orb"
         ]
       },
-      {
-        name: "family-chart",
-        label: "Family Chart",
-        description: "Composite or synastry chart view for the member's family circle group. Displays overlapping natal placements between selected family members and highlights key compatibility aspects and tension points.",
-        group: "Charts",
-        purpose: "Deepens members' astrological practice by extending chart work to their closest relationships within a privacy-safe family circle.",
-        bullets: [
-          "Family member selector — choose 2 to 4 members to include in the composite",
-          "Overlay chart wheel showing combined placements with colour-coded glyphs per person",
-          "Aspect summary table: harmonious, challenging, and neutral aspects with plain-language labels"
-        ]
-      },
+  
+
+
+
+
+
+
       {
         name: "upgrade-to-ms",
         label: "Upgrade to Mystery School",
@@ -10590,6 +11930,62 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Aspect interpretation list sorted by significance — most impactful aspects described first"
         ]
       },
+
+
+      
+  {
+    "name": "profile-management-dashboard",
+    "label": "Profile Management Dashboard",
+    "description": "Main user-profile management screen used to manage personal information, birth details, and membership data.",
+    "group": "Account",
+
+    "purpose": "This screen allows users to manage their astrology profile, personal identity details, birth information, spiritual questionnaire data, and membership setup used throughout the astrology platform.",
+    "bullets": [
+      "Displays the user profile management workspace.",
+      "Profile completion tracker shows how many required fields are completed.",
+      "Progress percentage visually indicates setup completion status.",
+      "Completion progress affects chart generation and journey tracking.",
+      "Profile Photo section allows users to upload or replace their profile image.",
+      "Supported image formats include JPEG, PNG, WebP, and GIF.",
+      "Personal Information section stores the user's name, email, phone number, gender, occupation, and relationship status.",
+      "Birth Data section is used for natal-chart and horoscope calculations.",
+      "Date of Birth field captures birth-date information.",
+      "Birth Time field improves astrological accuracy for chart generation.",
+      "Birth City and Birth Country fields are used for geographic astrology calculations.",
+      "Address section stores location and mailing information.",
+      "Spiritual Journey Questionnaire section captures spiritual and personal-development information.",
+      "Membership section displays the active astrology program and member status.",
+      "Member Since information shows the user enrollment date.",
+      "Save Changes button updates the profile information across the astrology platform.",
+      "The screen acts as the primary identity and astrology-profile configuration center."
+    ]
+  },
+  {
+    "name": "account-and-security-management",
+    "label": "Account & Security Management",
+    "description": "Account settings screen used to manage user profile access, portals, password security, and account navigation.",
+    "group": "Account",
+  
+    "purpose": "This screen allows users to manage account-level settings, portal access, password security, and connected astrology communities from one centralized location.",
+    "bullets": [
+      "Displays the main My Account settings workspace.",
+      "Profile section shows the user’s registered name and email address.",
+      "Account-created date displays when the account was originally registered.",
+      "Edit Profile button opens the profile-management form.",
+      "My Portals section displays all accessible astrology communities and portals.",
+      "Users can switch between different portals such as Community and Mystery School.",
+      "Open button launches the selected portal experience.",
+      "Portal access depends on membership permissions and subscriptions.",
+      "Change Password section allows secure credential updates.",
+      "Current Password field is required before changing account credentials.",
+      "New Password field accepts updated secure passwords.",
+      "Confirm New Password field prevents password-entry mistakes.",
+      "Password visibility icons allow users to show or hide typed passwords.",
+      "Update Password button securely saves the new password.",
+      "Logout option securely signs the user out from the platform.",
+      "The screen acts as the main account-security and portal-access management center."
+    ]
+  },
       {
         name: "pm-legal",
         label: "PM Legal & Terms",

@@ -14,6 +14,23 @@ type StripeSubscriptionWithPeriod = Awaited<
   ReturnType<typeof stripe.subscriptions.retrieve>
 > & {
   current_period_end?: number | null;
+  latest_invoice?:
+    | {
+        created?: number | null;
+        status_transitions?: {
+          paid_at?: number | null;
+        } | null;
+      }
+    | string
+    | null;
+  items: Awaited<ReturnType<typeof stripe.subscriptions.retrieve>>["items"] & {
+    data: Array<
+      Awaited<ReturnType<typeof stripe.subscriptions.retrieve>>["items"]["data"][number] & {
+        current_period_start?: number | null;
+        current_period_end?: number | null;
+      }
+    >;
+  };
 };
 
 function getProductName(product: unknown): string | null {
@@ -33,6 +50,18 @@ function projectPeriodEnd(interval: string): Date {
     periodEnd.setMonth(periodEnd.getMonth() + 1);
   }
   return periodEnd;
+}
+
+function derivePeriodStart(periodEnd: Date, interval: string): Date {
+  const periodStart = new Date(periodEnd);
+  if (interval === "year") {
+    periodStart.setFullYear(periodStart.getFullYear() - 1);
+  } else if (interval === "week") {
+    periodStart.setDate(periodStart.getDate() - 7);
+  } else {
+    periodStart.setMonth(periodStart.getMonth() - 1);
+  }
+  return periodStart;
 }
 
 export async function GET() {
@@ -88,7 +117,7 @@ export async function GET() {
     const subscription = (await stripe.subscriptions.retrieve(
       member.stripe_subscription_id,
       {
-        expand: ["items.data.price.product"],
+        expand: ["items.data.price.product", "latest_invoice"],
       }
     )) as StripeSubscriptionWithPeriod;
 
@@ -103,21 +132,46 @@ export async function GET() {
       return total + unitAmount * (item.quantity ?? 1);
     }, 0);
 
+    const stripePeriodEndTimestamp =
+      primaryItem?.current_period_end ?? subscription.current_period_end ?? null;
     const stripePeriodEnd =
-      subscription.current_period_end != null
-        ? new Date(subscription.current_period_end * 1000)
+      stripePeriodEndTimestamp != null
+        ? new Date(stripePeriodEndTimestamp * 1000)
         : null;
     const storedPeriodEnd = member.current_period_end
       ? new Date(member.current_period_end)
       : null;
     const periodEnd =
       stripePeriodEnd ?? storedPeriodEnd ?? projectPeriodEnd(interval);
+    const latestInvoice =
+      subscription.latest_invoice &&
+      typeof subscription.latest_invoice !== "string"
+        ? subscription.latest_invoice
+        : null;
+    const lastPaymentTimestamp =
+      latestInvoice?.status_transitions?.paid_at ??
+      latestInvoice?.created ??
+      primaryItem?.current_period_start ??
+      null;
+    const lastPaymentDate = lastPaymentTimestamp
+      ? new Date(lastPaymentTimestamp * 1000)
+      : derivePeriodStart(periodEnd, interval);
+    console.log("[api/pm/subscription] period end source", {
+      subscription_id: subscription.id,
+      item_current_period_start: primaryItem?.current_period_start ?? null,
+      item_current_period_end: primaryItem?.current_period_end ?? null,
+      subscription_current_period_end: subscription.current_period_end ?? null,
+      stored_current_period_end: member.current_period_end ?? null,
+      chosen_current_period_end: periodEnd.toISOString(),
+      last_payment_date: lastPaymentDate.toISOString(),
+    });
 
     return NextResponse.json({
       subscription: {
         id: subscription.id,
         status: subscription.status,
         current_period_end: periodEnd.toISOString(),
+        last_payment_date: lastPaymentDate.toISOString(),
         cancel_at_period_end: subscription.cancel_at_period_end,
         amount,
         currency,

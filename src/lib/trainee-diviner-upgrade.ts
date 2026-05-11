@@ -1,6 +1,10 @@
 import Stripe from "stripe";
 import { ensureUserContractRequirements } from "@/lib/contract-orchestration";
 import {
+  inferProfessionalDivinationCourseTrack,
+  servicePackageForProfessionalDivinationCourseTrack,
+} from "@/lib/professional-divination-course";
+import {
   getDefaultRoleServicePackageCode,
   getRoleServicePackages,
 } from "@/lib/role-service-packages";
@@ -49,7 +53,11 @@ export async function provisionTraineeDivinerUpgradeFromSession(
     return null;
   }
 
-  if (session.metadata?.type !== "trainee_diviner_upgrade") {
+  if (
+    session.metadata?.type !== "trainee_diviner_upgrade" &&
+    session.metadata?.itemKey !== "professional_divination_course" &&
+    session.metadata?.itemKey !== "trainee_diviner_bundle"
+  ) {
     return null;
   }
 
@@ -93,7 +101,11 @@ export async function provisionTraineeDivinerUpgradeFromSession(
     (authUser?.user_metadata?.name as string | undefined) ??
     email.split("@")[0] ??
     "Diviner";
+  const selectedCourseTrack = inferProfessionalDivinationCourseTrack(
+    session.metadata?.planName ?? null,
+  );
   const servicePackageCode =
+    servicePackageForProfessionalDivinationCourseTrack(selectedCourseTrack) ??
     trainee?.service_package_code ??
     getDefaultRoleServicePackageCode(roleServicePackages, "diviner");
 
@@ -151,7 +163,23 @@ export async function provisionTraineeDivinerUpgradeFromSession(
     }
   }
 
-  if (options?.ensureContracts) {
+  // If this is a combo bundle, we MUST ensure the trainee record exists 
+  // in case the webhook hasn't fired yet, so they get both portals.
+  if (session.metadata?.itemKey === "trainee_diviner_bundle") {
+    await admin.from("trainees").upsert(
+      {
+        user_id: userId,
+        name: displayName,
+        email,
+        username,
+        training_status: "active",
+        onboarding_completed: false,
+      },
+      { onConflict: "user_id" }
+    );
+  }
+
+  if (options?.ensureContracts ?? true) {
     await ensureUserContractRequirements(userId, "post_login");
   }
 

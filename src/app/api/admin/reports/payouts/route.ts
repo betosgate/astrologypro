@@ -84,13 +84,13 @@ export async function GET(req: NextRequest) {
     // (Stripe auto-split) will add paid_at for true payout semantics.
     let affiliateQuery = db
       .from("campaign_conversions")
-      .select("affiliate_id, commission_amount_cents, reversed_at, created_at")
-      .order("created_at", { ascending: false });
+      .select("affiliate_id, commission_amount_cents, reversed_at, converted_at")
+      .order("converted_at", { ascending: false });
 
     if (since) {
       ledgerQuery = ledgerQuery.gte("recognized_at", since);
       refundsQuery = refundsQuery.gte("created_at", since);
-      affiliateQuery = affiliateQuery.gte("created_at", since);
+      affiliateQuery = affiliateQuery.gte("converted_at", since);
     }
 
     // v2: campaign_conversions.affiliate_id is a `diviner_affiliates.id`

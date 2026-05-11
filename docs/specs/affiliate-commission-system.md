@@ -158,14 +158,15 @@ fields actually change.
 ```
 affiliate_campaigns
   id
-  diviner_id                → diviners.id (the diviner whose product this promos)
-  owner_type                'diviner' | 'affiliate'
-  owner_affiliate_id        NULL if owner_type='diviner', else diviner_affiliates.id
-  owner_affiliate_type      always 'diviner_affiliate' in Phase 1
-  source_assignment_id      → diviner_service_affiliates.id (set when owner_type='affiliate')
+  diviner_id                  → diviners.id (NULL for general campaigns; the diviner whose product this promos)
+  owner_type                  'diviner' | 'affiliate'
+  owner_affiliate_id          junction id (diviner_affiliates.id) when owner_affiliate_type IN ('diviner_affiliate','social_advocate'); NULL for 'general'
+  owner_affiliate_type        'diviner_affiliate' | 'social_advocate' | 'general'
+  owner_affiliate_account_id  → affiliate_accounts.id — Phase 1.5: account-direct ownership for general campaigns; NULL for per-diviner campaigns
+  source_assignment_id        → diviner_service_affiliates.id (set when owner_affiliate_type='diviner_affiliate'); NULL for general
   destination_type / destination_service_template_id
-  campaign_code             UNIQUE short code (6-8 chars)
-  status                    'active' | 'paused' | 'archived' | 'expired'
+  campaign_code               UNIQUE short code (6-8 chars)
+  status                      'active' | 'paused' | 'archived' | 'expired'
   channel, utm_source, utm_medium, utm_campaign
   created_at / updated_at
 ```
@@ -175,33 +176,55 @@ affiliate_campaigns
   `commission_value_snapshot` / `commission_type_snapshot` columns are
   dropped (Phase 1 migration).
 - At conversion, the rate is resolved live from
-  `diviner_service_affiliates` via `source_assignment_id`.
+  `diviner_service_affiliates` (per-diviner) or `service_templates`
+  (general) via the appropriate stamp source on the booking row.
 - Diviner-owned campaigns (`owner_type='diviner'`) never credit commission.
   They exist only for the diviner's own analytics.
-- Affiliate-owned campaigns require a valid `source_assignment_id`;
-  enforced by CHECK constraint `affiliate_campaigns_owner_consistency`.
+- Per-diviner affiliate-owned campaigns require a valid
+  `source_assignment_id`. General affiliate-owned campaigns require a
+  valid `owner_affiliate_account_id` and `destination_service_template_id`,
+  and have NULL `source_assignment_id`/`owner_affiliate_id`. Both shapes
+  are enforced by CHECK constraint `affiliate_campaigns_owner_consistency`
+  (three branches: diviner-owned, per-diviner-affiliate, general).
 
 ### 3.5 Click & conversion layer
 
 ```
-campaign_clicks                   campaign_conversions
-  id                                id
-  campaign_id                       campaign_id        → affiliate_campaigns.id
-  tracking_link_id                  affiliate_id       → diviner_affiliates.id
-  campaign_code                     affiliate_type     = 'diviner_affiliate'
-  diviner_id                        booking_id         → bookings.id (UNIQUE — idempotency)
-  destination_type / destination_id ref_code_snapshot
-  resolved_url                      order_amount_cents
-  affiliate_id / affiliate_type     commission_amount_cents   (computed from live rate)
-  ref_code                          rate_type_used / rate_value_used  (for audit)
-  ip, user_agent, country           created_at
-  referrer, session_cookie          reversed_at / reversed_by / reversed_reason
-  is_bot, is_unique_click           paid_at / stripe_transfer_id    (Phase 2 only)
-  created_at
+campaign_clicks                       campaign_conversions
+  id                                    id
+  campaign_id                           campaign_id           → affiliate_campaigns.id
+  tracking_link_id                      affiliate_id          → diviner_affiliates.id (NULL for general)
+  campaign_code                         affiliate_type        'diviner_affiliate' | 'social_advocate' | 'general'
+  diviner_id (NULL for general)         affiliate_account_id  → affiliate_accounts.id  Phase 1.5: always populated
+  destination_type / destination_id     booking_id            → bookings.id (UNIQUE — idempotency)
+  resolved_url                          ref_code_snapshot
+  affiliate_id / affiliate_type         order_amount_cents
+  (NULL on both when general — see §10) commission_amount_cents   (computed from live rate)
+  ref_code                              rate_type_used / rate_value_used  (audit)
+  ip_hash, user_agent, country_code     converted_at
+  referrer_url, session_cookie          reversed_at / reversed_by / reversal_reason
+  is_bot, is_unique_click               paid_at / stripe_transfer_id    (Phase 2 only)
+  created_at, clicked_at
 ```
 
 Click logging is fire-and-forget. Conversion writes are transactional with
 a UNIQUE(booking_id) constraint to make webhook retries safe.
+
+`affiliate_account_id` on `campaign_conversions` is the cross-cutting
+identity field — populated for both per-diviner credits (resolved via
+junction → account) and general credits (set directly from the campaign's
+`owner_affiliate_account_id`). All account-level rollups should filter
+on this column rather than `affiliate_id IN junction_ids`, which would
+miss every general credit (those have `affiliate_id=NULL`).
+
+**Column-name pitfalls** (caught and fixed during the 2026-04-30 sprint):
+- The time column on `campaign_conversions` is `converted_at`, **not**
+  `created_at`. The reversal column is `reversal_reason`, **not**
+  `reversed_reason`.
+- On `campaign_clicks` the column names are `ip_hash`, `country_code`,
+  `referrer_url` — **not** `ip`, `country`, `referrer`. Several v2
+  reporting endpoints had the wrong names baked in and were silently
+  returning DB errors before the Phase 1.5 sprint corrected them.
 
 **Reversal:** refunds or disputes set `reversed_at` on the conversion row.
 This subtracts the commission from the affiliate's totals. No separate
@@ -228,7 +251,7 @@ In-app inbox + email delivery. See §7 for triggers.
 ```
 tracking_links
   id
-  diviner_id
+  diviner_id                NULLable post-Phase-1.5 (general campaigns have no diviner)
   campaign_id               → affiliate_campaigns.id
   destination_url
   destination_type / destination_entity_id
@@ -244,6 +267,23 @@ On the happy path it also sets a first-party `aff_ref` cookie (value =
 read it). The cookie is **not** set on the 410 / `/link-not-active`
 paths so revoked or inactive attribution can't leak past the gate.
 
+The handler enforces three pre-click gates, in order. Any one of them
+short-circuits to `/link-not-active` (307) and **no click is logged**:
+1. Campaign not active (`status != 'active'`).
+2. Per-diviner: `source_assignment_id` points at a revoked assignment
+   (`is_active=false`).
+3. Phase 1.5 general: `destination_service_template_id` points at a
+   template with `affiliate_program_enabled=false`. (Default-rate path —
+   `affiliate_program_enabled=true` with `commission_value=NULL` — passes
+   the gate; the 10% default is applied later at booking-stamp time.)
+
+**Click-row affiliate_type for general campaigns:** the existing
+`campaign_clicks.affiliate_type` CHECK only allows `'diviner_affiliate'`
+and `'social_advocate'`. To preserve compatibility, the click logger
+coerces general campaigns to `affiliate_id=NULL, affiliate_type=NULL`
+on the row. The campaign_id link is enough to attribute the click to
+the affiliate later via `affiliate_campaigns.owner_affiliate_account_id`.
+
 ### 3.8 Booking rate stamp (authoritative commission rate for a booking)
 
 The commission rate that pays out on a conversion is captured onto the
@@ -251,29 +291,48 @@ The commission rate that pays out on a conversion is captured onto the
 ensures a diviner's rate edit only affects NEW bookings — in-flight
 payments keep the rate the customer started their checkout under.
 
-Columns added to `bookings`:
+Columns on `bookings`:
 
 ```
 commission_source_assignment_id   UUID REFERENCES diviner_service_affiliates(id) ON DELETE SET NULL
+commission_source_template_id     UUID REFERENCES service_templates(id) ON DELETE SET NULL  -- Phase 1.5
 commission_rate_type_stamp        TEXT    ('percent' | 'flat')
 commission_rate_value_stamp       NUMERIC(10,4)
 ```
 
-All three are nullable. They are set only when:
+All four are nullable. Exactly one of `commission_source_assignment_id`
+(per-diviner path) or `commission_source_template_id` (Phase 1.5 general
+path) is set on a stamped booking; the other is NULL. The webhook
+disambiguates by checking `commission_source_assignment_id IS NULL` and
+falling through to the template branch. The schema doesn't enforce
+mutual exclusion via CHECK — the resolver returns one or the other.
+
+The stamp is set only when:
 1. The booking carries a valid `ref_code`. The booking client reads it
    from the URL `?ref=` query param first, falling back to the
    `aff_ref` cookie set at `/r/<code>` (see §3.7). URL wins when both
    are present so a fresh affiliate click always overrides a stale
    cookie. The 30-day cookie window is the attribution span.
 2. The resolved campaign has `status='active'` and `owner_type='affiliate'`.
-3. The campaign's `source_assignment_id` points at an assignment with
-   `is_active=true`.
-4. The campaign's destination matches the booking's service/profile.
-5. The affiliate's `affiliate_accounts.status` is `active` (not `blocked`
+3. **Per-diviner path** (`owner_affiliate_type='diviner_affiliate'`): the
+   campaign's `source_assignment_id` points at a `diviner_service_affiliates`
+   row with `is_active=true`, and the campaign's destination matches the
+   booking's service/profile. Stamp source =
+   `commission_source_assignment_id`; rate copied from the assignment.
+   **Phase 1.5 general path** (`owner_affiliate_type='general'`): the
+   campaign's `destination_service_template_id` resolves to a
+   `service_templates` row with `is_general=true` AND
+   `affiliate_program_enabled=true`. Stamp source =
+   `commission_source_template_id`; rate copied from the template, with
+   `commission_type ?? 'percent'` and `commission_value ?? 10` defaults
+   applied when admin enabled the program but didn't set explicit values
+   (decision #3 of §10).
+4. The affiliate's `affiliate_accounts.status` is `active` (not `blocked`
    or `unclaimed`).
 
-If any check fails, all three columns stay NULL and no commission will be
-credited when the webhook fires — the booking proceeds normally and the
+If any check fails, all four stamp columns stay NULL and no commission
+will be credited when the webhook fires — the booking proceeds normally
+and the
 diviner keeps the full payment.
 
 The webhook uses these stamped values to write `campaign_conversions`.
@@ -360,13 +419,25 @@ Steps:
 Steps:
 1. Rate-limit (100/min per IP).
 2. Look up `tracking_links` by code. 404 if missing.
-3. **If the linked campaign's source assignment is revoked
-   (`diviner_service_affiliates.is_active=false`), respond with a "This
-   link is no longer active" page (static, branded, HTTP 410).** No click
-   is logged.
-4. Otherwise: resolve the destination URL, log to `campaign_clicks` (fire-
-   and-forget, full analytics payload), 307-redirect to destination with
-   `?ref=<campaign_code>` appended **and** set the `aff_ref` cookie
+3. **Per-diviner gate.** If the linked campaign's source assignment is
+   revoked (`diviner_service_affiliates.is_active=false`), respond with
+   a "This link is no longer active" page (static, branded, 307→
+   `/link-not-active`). No click is logged.
+   **Phase 1.5 — general gate (step 3b).** When the campaign's
+   `owner_affiliate_type='general'` and the destination
+   `service_templates.affiliate_program_enabled=false`, the same
+   `/link-not-active` 307 fires. Default-rate path (program enabled +
+   NULL `commission_value`) passes the gate; the 10% default is applied
+   later at booking-stamp time.
+4. Otherwise: resolve the destination URL via
+   `resolveCampaignDestination` (general → `/services/<slug>`,
+   per-diviner SERVICE → `/<username>/services/<slug>`, per-diviner
+   PROFILE → `/<username>`), log to `campaign_clicks` (fire-and-forget,
+   full analytics payload — for general campaigns the click row's
+   `affiliate_id` and `affiliate_type` are coerced to NULL because the
+   pre-Phase-1.5 CHECK on `campaign_clicks.affiliate_type` only allows
+   `diviner_affiliate`/`social_advocate`), 307-redirect to destination
+   with `?ref=<campaign_code>` appended **and** set the `aff_ref` cookie
    (30-day attribution window — see §3.7 for the full attribute set).
    The cookie is the durable carrier when in-site navigation drops the
    URL param; URL still wins when both are present at booking time.
@@ -384,32 +455,72 @@ Steps:
    conflict (last-touch via fresh click); cookie covers organic
    navigation that drops the URL param. Field is POSTed as `refCode`
    on the booking-payment endpoint.
-2. If `ref_code` is present, resolve:
+2. If `ref_code` is present, resolve the campaign and fork:
    - Campaign with matching `campaign_code`, `status='active'`,
      `owner_type='affiliate'`.
-   - Assignment via `campaign.source_assignment_id` with `is_active=true`.
-   - Destination match between campaign and the booked service/profile.
-   - Affiliate's `affiliate_accounts.status = 'active'`.
-3. If ALL checks pass, stamp the booking:
+   - **Per-diviner branch** (`owner_affiliate_type='diviner_affiliate'`):
+     check `campaign.source_assignment_id` resolves to an
+     `diviner_service_affiliates` row with `is_active=true`; destination
+     match between campaign and the booked service/profile; affiliate's
+     `affiliate_accounts.status = 'active'`.
+   - **Phase 1.5 general branch** (`owner_affiliate_type='general'`):
+     check `campaign.destination_service_template_id` resolves to a
+     `service_templates` row with `affiliate_program_enabled=true`;
+     account `affiliate_accounts.status = 'active'`. Rate read from
+     the template (`commission_type ?? 'percent'`,
+     `commission_value ?? 10`).
+3. If ALL per-diviner checks pass, stamp the booking:
    - `commission_source_assignment_id = assignment.id`
-   - `commission_rate_type_stamp = assignment.commission_type`
-   - `commission_rate_value_stamp = assignment.commission_value`
+   - `commission_source_template_id   = NULL`
+   - `commission_rate_type_stamp      = assignment.commission_type`
+   - `commission_rate_value_stamp     = assignment.commission_value`
+   If ALL general-branch checks pass:
+   - `commission_source_assignment_id = NULL`
+   - `commission_source_template_id   = template.id`
+   - `commission_rate_type_stamp      = template.commission_type ?? 'percent'`
+   - `commission_rate_value_stamp     = template.commission_value ?? 10`
 4. If any check fails, leave the stamp columns NULL. The booking
    proceeds; no commission will be credited when it's paid.
 
 ### Flow F — Customer pays (conversion written from stamped rate)
 
-**Actor:** Stripe webhook, invoked after successful payment.
-**Handler:** [src/app/api/stripe/webhooks/route.ts](../../src/app/api/stripe/webhooks/route.ts)
+**Three independent trigger paths**, all calling the same idempotent
+`creditAffiliateConversion` library function. Race-safe via the
+`UNIQUE(booking_id)` index on `campaign_conversions`: first write wins,
+subsequent attempts surface PG `23505` and short-circuit as a no-op.
+Each callsite wraps the credit call in a `try/catch` that logs and
+continues — credit failures DO NOT propagate to Stripe (so no 5xx
+auto-retry) and DO NOT fail the customer-visible checkout flow.
 
-Steps:
-1. Booking row is marked `status='confirmed'`.
-2. If `booking.commission_source_assignment_id` is NULL → no conversion
+| Path | Trigger | Handler | Wins when |
+|---|---|---|---|
+| **A. Frontend fallback** | `BookingWizard` calls this fire-and-forget right after `stripe.confirmPayment()` succeeds client-side, before the browser navigates to `/booking/success` | [src/app/api/stripe/confirm-payment/route.ts](../../src/app/api/stripe/confirm-payment/route.ts) | Normal happy path — typically beats the webhook by hundreds of ms |
+| **B. Webhook** | Stripe delivers `payment_intent.succeeded` server-to-server | [src/app/api/stripe/webhooks/route.ts](../../src/app/api/stripe/webhooks/route.ts) (event dispatch at the `case "payment_intent.succeeded"` branch) | Customer's browser closed/crashed before reaching `/booking/success`, OR the fire-and-forget POST in BookingWizard didn't complete |
+| **C. Manual recovery** | Diviner clicks **"Sync payment"** on the booking detail sheet for a stuck `pending` booking | [src/app/api/stripe/sync-booking/route.ts](../../src/app/api/stripe/sync-booking/route.ts) | Both A and B failed silently |
+
+**Localhost note:** Stripe doesn't deliver webhooks to localhost, so dev
+bookings rely entirely on Path A. Stuck conversions on dev bookings
+(visible via `bookings.metadata.referrer LIKE 'http://localhost%'`) are
+typically Path A failures — usually a DB error swallowed by the try/catch
+because local code references columns/types the dev DB hasn't migrated yet.
+
+Steps each path runs (identical):
+1. Verify the `payment_intent` succeeded with Stripe (Path A and C
+   re-fetch via `stripe.paymentIntents.retrieve`; Path B trusts the
+   event payload).
+2. Update `bookings.status='confirmed'` and matching `orders.status='paid'` /
+   `paid_at`. Subsequent paths see `confirmed`/`completed` and short-
+   circuit.
+3. If BOTH `booking.commission_source_assignment_id` AND
+   `booking.commission_source_template_id` are NULL → no conversion
    row. Return. (Diviner keeps the full payment — see §1.)
-3. **Re-check affiliate account status at credit time.** Look up the
-   assignment's junction, resolve the affiliate account, check
-   `affiliate_accounts.status`. If it is not `'active'` (i.e. `blocked`
-   or `unclaimed`) → no conversion row written. Log reason
+4. **Re-check affiliate account status at credit time.** Resolve the
+   affiliate account differently per stamp source:
+   - Per-diviner: assignment → junction → account.
+   - Phase 1.5 general: `campaign.owner_affiliate_account_id` directly.
+
+   Check `affiliate_accounts.status`. If it is not `'active'` (i.e.
+   `blocked` or `unclaimed`) → no conversion row written. Log reason
    `account_not_active_at_credit`, return. The diviner keeps the full
    payment.
 
@@ -417,21 +528,38 @@ Steps:
    violation). Unlike rate edits, which are commercial and respect
    in-flight bookings, blocking must freeze payouts even for bookings
    already stamped. This is the only check that re-reads state at
-   webhook time — everything else comes from the stamp.
-4. Otherwise, call `creditAffiliateConversion`:
+   credit time — everything else comes from the stamp. **Notably the
+   general path does NOT re-check `service_templates.affiliate_program_enabled`:**
+   admin disabling the program after a booking is stamped does not
+   retroactively invalidate the stamp (rate-stamping invariant).
+5. Otherwise, call `creditAffiliateConversion`:
    - Compute `commission_amount_cents` from `commission_rate_type_stamp` +
      `commission_rate_value_stamp` + the order amount.
    - INSERT into `campaign_conversions`:
-     - `affiliate_id` = junction id from the assignment
+     - `affiliate_id` = junction id (per-diviner) OR NULL (general)
+     - `affiliate_type` = `'diviner_affiliate'` OR `'general'`
+     - `affiliate_account_id` = the resolved account.id (always populated)
      - `campaign_id` = resolved from booking's `ref_code`
      - `rate_type_used` = `booking.commission_rate_type_stamp`
      - `rate_value_used` = `booking.commission_rate_value_stamp`
-     - `booking_id` = booking.id (UNIQUE — guards webhook retries)
+     - `booking_id` = booking.id (UNIQUE — guards multi-path races and
+       webhook retries)
    - The stamped RATE is authoritative. Only `affiliate_accounts.status`
-     is re-read at webhook time.
-5. Commission row is IMMEDIATELY part of the affiliate's ledger. No
+     is re-read at credit time.
+6. Commission row is IMMEDIATELY part of the affiliate's ledger. No
    admin approval step.
-6. Affiliate notifications: in-app immediately, email digested daily.
+7. Affiliate notifications: in-app immediately, email digested daily.
+
+**Diagnostic log prefixes** when credit fails:
+- Path A: `[confirm-payment] Affiliate conversion credit failed`
+- Path B: `[affiliate_conversion] credit failed`
+- Path C: `[sync-booking] Affiliate conversion credit failed`
+
+Plus the inner `creditAffiliateConversion` always emits a structured
+`{event:"affiliate_conversion", matched:bool, reason:string, ...}` log
+line covering: `no_stamp` / `assignment_gone` / `junction_gone` /
+`account_not_active_at_credit` / `campaign_missing_at_credit` /
+`campaign_missing_account_id` / `insert_error` / `already_credited`.
 
 ### Flow G — Diviner edits an affiliate's commission rate
 
@@ -755,12 +883,22 @@ Carried-over invariants from Phase 1 (no change):
 
 ```sql
 -- 1. Per-template commission config + program flag
+-- IMPORTANT: enum is ('percent','flat') not ('percentage','flat').
+-- 'percentage' is a System A leftover; the v2 stamp pipeline rejects
+-- anything outside ('percent','flat') via the existing CHECK on
+-- bookings.commission_rate_type_stamp. Original Phase 1.5 design wrote
+-- 'percentage' which would break every general-product booking insert;
+-- corrected at implementation time (2026-04-30).
 ALTER TABLE service_templates
   ADD COLUMN commission_type TEXT
-    CHECK (commission_type IS NULL OR commission_type IN ('percentage','flat')),
+    CHECK (commission_type IS NULL OR commission_type IN ('percent','flat')),
   ADD COLUMN commission_value NUMERIC(10,4),
-  ADD COLUMN affiliate_program_enabled BOOLEAN NOT NULL DEFAULT FALSE;
--- Only meaningful when is_general = true. Diviner-specific rows leave
+  ADD COLUMN affiliate_program_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+  ADD COLUMN is_general BOOLEAN NOT NULL DEFAULT FALSE;
+-- is_general was added at implementation time (not in the original
+-- Phase 1.5 design) and backfilled from `slug LIKE 'general-%'` so
+-- the discriminator doesn't depend on slug parsing.
+-- Only meaningful on general templates. Diviner-specific rows leave
 -- these NULL/FALSE.
 
 -- 2. Campaign anchoring for non-junction owners
@@ -825,6 +963,37 @@ CREATE POLICY affiliate_sees_own_campaigns ON affiliate_campaigns
       AND owner_affiliate_account_id = public.current_affiliate_account_id())
   );
 -- Mirror the INSERT + UPDATE policies in the same shape.
+
+-- 6. Implementation-time follow-ups (not in original Phase 1.5 design;
+-- discovered + folded into the same migration on 2026-04-30):
+--   (a) tracking_links.diviner_id was NOT NULL — broken for general
+--       campaigns which have no specific diviner. Drop NOT NULL; FK to
+--       diviners(id) ON DELETE CASCADE preserved.
+ALTER TABLE tracking_links
+  ALTER COLUMN diviner_id DROP NOT NULL;
+
+--   (b) admin_action_log extensions for the new bulk-rate endpoint at
+--       /api/admin/service-templates/bulk-set-commission. Bulk actions
+--       affect many rows so single-target audit doesn't fit; payload
+--       JSONB carries structured action data (commission_type,
+--       commission_value, updated_count); CHECK on action_kind extended
+--       with the new value.
+ALTER TABLE admin_action_log
+  ALTER COLUMN target_resource_id DROP NOT NULL;
+
+ALTER TABLE admin_action_log
+  ADD COLUMN payload JSONB;
+
+ALTER TABLE admin_action_log
+  DROP CONSTRAINT admin_action_log_action_kind_check;
+ALTER TABLE admin_action_log
+  ADD CONSTRAINT admin_action_log_action_kind_check
+  CHECK (action_kind IN (
+    'affiliate_assignment_revoked',
+    'affiliate_campaign_archived',
+    'affiliate_conversion_reversed',
+    'service_templates_bulk_commission_update'
+  ));
 ```
 
 `service_templates` RLS: admin (service_role) FOR ALL; everyone else
@@ -843,7 +1012,8 @@ need new policies.
       `campaign.owner_affiliate_account_id`.
     - Stamp `bookings.commission_source_template_id` +
       `commission_rate_type_stamp` (from `service_templates.commission_type`,
-      defaulting to `'percentage'` if NULL) +
+      defaulting to `'percent'` if NULL — see deviation note in the
+      schema block above) +
       `commission_rate_value_stamp` (from `service_templates.commission_value`,
       **defaulting to 10 when NULL**).
   - If `campaign.owner_affiliate_type = 'diviner_affiliate'`: existing
@@ -931,6 +1101,28 @@ fix the Marketing Kit in isolation**; the underlying schema + stamp +
 endpoints must land first or the fix would just hide the absence of the
 feature.
 
+#### Phase 1.5 follow-up decisions (2026-05-05)
+
+- **`channel='marketing_kit'` is the canonical channel value for
+  Marketing-Kit-spawned general campaigns.** The lazy-create in
+  `fetchMarketingKitItems` (src/lib/affiliate-marketing-kit.ts) tags
+  every general campaign it creates with this channel so analytics can
+  attribute conversions to the Marketing Kit surface separately from
+  generic 'direct'/'other'. The original
+  `affiliate_campaigns_channel_check` allowlist (migration
+  20260417000010) predated Phase 1.5 and rejected this value, causing
+  silent insert failures and an empty Marketing Kit. Migration
+  20260505000001_affiliate_campaigns_channel_marketing_kit extends the
+  allowlist; deploy + run via /admin/db/migrations.
+
+- **Inline admin editor on `/admin/service-templates`.** General-template
+  rows have a new "Affiliate program" item in the row dropdown that
+  opens a dialog with the same Switch + commission type/value fields as
+  the per-template detail-page card. Backed by the existing
+  `PATCH /api/admin/service-templates/[id]` — no new endpoint, no audit
+  drift. Lets admins enable/disable affiliate programs across the
+  general catalog without leaving the list.
+
 ---
 
 ### Phase 2 — Stripe auto-split (future)
@@ -953,6 +1145,10 @@ This spec gets an update when Phase 2 starts scoping.
 ## 12 — Changelog
 
 Append-only. One line per concrete change. Newest first.
+
+- **2026-04-30 (Flow F clarification — three credit paths)** — Spec §5 Flow F was incomplete. It described only the Stripe webhook path (`/api/stripe/webhooks`) but production has had **three independent credit-trigger paths** since the v2 sprint: (A) frontend fallback at `/api/stripe/confirm-payment` (the BookingWizard fires this fire-and-forget right after `stripe.confirmPayment()` succeeds — typically beats the webhook); (B) the Stripe webhook itself; (C) manual recovery via `/api/stripe/sync-booking` (diviner-triggered "Sync payment" button on a stuck booking). All three call the same idempotent `creditAffiliateConversion`; the `UNIQUE(booking_id)` index on `campaign_conversions` makes them race-safe (first write wins; subsequent attempts log as `already_credited` and short-circuit). Each callsite wraps the credit call in a `try/catch` that logs+continues, so credit failures don't 5xx Stripe (no auto-retry) or break the customer's checkout. **Operational implication:** localhost dev bookings rely entirely on Path A because Stripe doesn't deliver webhooks to localhost — stuck dev conversions are typically Path-A failures (e.g., a column-mismatch swallowed by the try/catch). Path-specific log prefixes: `[confirm-payment]`, `[affiliate_conversion]`, `[sync-booking]`. Flow F now documents all three paths + the diagnostic reason codes emitted by the inner credit function.
+
+- **2026-04-30 (Phase 1.5 implementation, Tasks 01–07)** — General-product affiliate commissions implemented end-to-end across 7 commits (`ab47cb76`, `1c938875`, `87b4db7d`, `8927c670`, `e008fdf3`, `7ce83a45`, `7c7652b2`, `b67bd0a1`). Single migration `20260430000002_affiliate_phase_1_5_general` lands all schema additions; awaits admin-runner application. **Spec deviations recorded in the migration header and folded into §10 above:** (1) `service_templates.commission_type` CHECK uses `('percent','flat')` — original Phase 1.5 design wrote `'percentage'` which would have rejected every booking insert (the v2 stamp pipeline only accepts `('percent','flat')`); (2) `tracking_links.diviner_id` made NULLable — original Phase 1.5 design didn't anticipate that general campaigns have no specific diviner; (3) `admin_action_log` extended with `payload JSONB`, NULLable `target_resource_id`, and new `action_kind='service_templates_bulk_commission_update'` so the bulk-rate endpoint can audit multi-row actions without a single target; (4) `service_templates.is_general` added as the authoritative discriminator (backfilled from `slug LIKE 'general-%'`) — original design relied on slug parsing only. **Stamp + credit (`affiliate-stamp.ts`, `affiliate-attribution.ts`)** branched on `owner_affiliate_type='general'`: stamp resolves account directly from campaign, gates on `affiliate_program_enabled`, defaults to `(percent, 10)` when admin enabled the program but didn't set values; credit writes `affiliate_id=NULL`, `affiliate_type='general'`, `affiliate_account_id` from campaign. Per-diviner credits now also always populate `affiliate_account_id` (resolved via junction) so account-level rollups can skip the junction join. **`/r/[code]` handler** gained the disabled-template 410 gate (Flow D step 3b) and the campaign-destination resolver gained a general branch routing to `/services/<slug>` instead of the `/readings/<slug>` SEO-marketing tree (a Task 03 hotfix correcting an initial wrong path). **New endpoint** `POST /api/affiliate/general-campaigns` parallel to the per-diviner endpoint; archive PATCH at `/api/affiliate/campaigns/[id]` extended to accept general campaigns. **Affiliate UI**: `/affiliate/dashboard` + `/affiliate/products` + `/affiliate/campaigns` (list + detail) + `/affiliate/campaigns/new` (two-mode picker) + Marketing Kit fully rewritten — kit now sources templates from DB and lazy-creates one general campaign per `(account, template)` pair so every share URL is `/r/<real_code>` instead of the broken `?ref=<junctionUUID>` of the v2 era. **Admin UI**: `/admin/service-templates/[id]` AffiliateProgramCard for per-template config; bulk-rate card on the list with confirmation dialog; new "Affiliate program" + "Rate" columns. **Reporting display labels** added to admin conversions/clicks reports + affiliate earnings (`General: <template>` vs `Diviner: <name>`), and the existing reports were switched from junction-id filters to account-id filters so general credits roll up correctly. **Pre-existing v2 reporting bugs caught and fixed during the audit:** (a) `campaign_conversions.created_at`/`reversed_reason` referenced across five endpoints + two pages — real columns are `converted_at`/`reversal_reason`; (b) `campaign_clicks.ip`/`country`/`referrer` on the admin clicks endpoint — real columns are `ip_hash`/`country_code`/`referrer_url`; (c) `fmtRate` helper widened to accept both legacy `'percentage'/'fixed'` and v2 `'percent'/'flat'`. All five surfaces had been silently returning DB errors in production. **Tests (Task 08):** new `tests/integration/affiliate-phase-1-5-general-smoke.test.ts` (8 cases: schema sanity + 5 stamp-resolver paths + general credit insert + rate-stamp invariant + per-diviner `affiliate_account_id` backfill); `tests/integration/affiliate-rls.test.ts` extended with 6 cases for general-path isolation (own/foreign general campaign visibility + diviner anti-leakage + INSERT WITH-CHECK enforcement + own/foreign general conversion visibility); `package.json` aggregator `test:affiliate-commission` chains the new smoke alongside the v2 smoke + RLS + math suites; `scripts/cleanup-affiliate-test-data.ts` extended with the `phase15-` namespace prefix. Manual E2E walkthrough on preview pending. Implementation notes in `docs/tasks/2026-04-28/affiliate-phase-1-5-general-products/IMPLEMENTATION-NOTES.md`.
 
 - **2026-04-30** — Cookie-capture ref persistence shipped (commit `dd1b43c0`). `/r/[code]` now sets a first-party `aff_ref` cookie (30-day `Max-Age`, `SameSite=Lax`, `Secure` in prod, not `HttpOnly`) on the 307 happy campaign-link path; never on the 410 / `/link-not-active` paths so revoked attribution can't leak. `BookingWizard` reads `aff_ref` as a fallback when the URL has no `?ref=` and POSTs the value as `refCode` (renamed from the silent-bug field name `affiliateCode`, which the booking API was destructuring but never feeding into `resolveStampForBooking`). Three independent breaks closed in two file edits: (1) ref-loss when reading-page → diviner-card navigation drops the URL param; (2) ref-loss on organic returns within the 30-day window; (3) field-name mismatch that meant even direct `/r/<code>` → book flows never stamped. Spec §3.7, §3.8 condition 1, §5 Flow D step 4, §5 Flow E step 1 updated. Forward-compatible with Phase 1.5: cookie name and value are owner-type-agnostic, `resolveStampForBooking` remains the single decision point. Sprint plan: `tasks/28.04.2026/affiliate-ref-parameter-loss-fix/`.
 - **2026-04-28 (Phase 1.5 design)** — General-product affiliate commissions designed. New §10 Phase 1.5 section with locked decisions: (1) all active affiliate accounts auto-eligible (no opt-in); (2) admin-only writes on `service_templates.commission_*` (single global rate per template); (3) `commission_value IS NULL AND affiliate_program_enabled=true` defaults to 10%; (4) `affiliate_program_enabled=false` returns 410 from `/r/<code>`; (5) skip rate-edit notification + no `service_template_commission_history` table — affiliates see current rate on `/affiliate/products`; (6) new column `affiliate_campaigns.owner_affiliate_account_id` to anchor general-program campaigns directly on the account (avoids the misleading admin views from anchoring on an arbitrarily-picked junction); (7) scope is `diviner_affiliates` only — `social_advocates` are out per their distinct identity model. Schema migration adds `service_templates.{commission_type, commission_value, affiliate_program_enabled}`, `affiliate_campaigns.owner_affiliate_account_id`, extends `owner_affiliate_type` enum with `'general'`, tightens `owner_consistency` CHECK, adds `bookings.commission_source_template_id`, and `campaign_conversions.affiliate_account_id` (always populated). Stamp logic gets a general-path branch in `resolveStampForBooking`. New `POST /api/affiliate/general-campaigns` endpoint. Marketing Kit rewrites to use real campaign codes. Spec is the contract — implementation sprint to follow.

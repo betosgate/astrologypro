@@ -136,10 +136,10 @@ export default async function AffiliateCampaignDetailPage({
     admin
       .from("campaign_conversions")
       .select(
-        "id, booking_id, order_amount_cents, commission_amount_cents, rate_type_used, rate_value_used, reversed_at, created_at",
+        "id, booking_id, order_amount_cents, commission_amount_cents, rate_type_used, rate_value_used, reversed_at, converted_at",
       )
       .eq("campaign_id", id)
-      .order("created_at", { ascending: false })
+      .order("converted_at", { ascending: false })
       .limit(50),
   ]);
 
@@ -236,7 +236,7 @@ export default async function AffiliateCampaignDetailPage({
                 <TableBody>
                   {conversions.map((c) => (
                     <TableRow key={c.id}>
-                      <TableCell>{formatDate(c.created_at)}</TableCell>
+                      <TableCell>{formatDate(c.converted_at)}</TableCell>
                       <TableCell className="font-mono text-xs">
                         {(c.booking_id as string | null)?.slice(0, 8) ?? "—"}
                       </TableCell>

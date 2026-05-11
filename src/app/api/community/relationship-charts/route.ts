@@ -10,6 +10,14 @@ import {
   computeBirthDataReadiness,
   buildNatalChartFromBirthData,
 } from "@/lib/community/birth-data-readiness";
+import { ensureCanonicalSelfFamilyMember } from "@/lib/community/self-family-member";
+import {
+  findSavedReportMatch,
+  SAVED_REPORT_MATCH_SELECT,
+  type JsonRecord,
+  type PersonInput,
+} from "@/lib/horoscope/saved-report-match";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -22,10 +30,39 @@ async function getMember(supabase: Awaited<ReturnType<typeof createClient>>) {
   if (!user) return null;
   const { data: member } = await supabase
     .from("community_members")
-    .select("id, membership_status")
+    .select(
+      "id, user_id, full_name, membership_status, date_of_birth, birth_time, birth_city, birth_country"
+    )
     .eq("user_id", user.id)
     .single();
-  return member;
+  return member ? { ...member, user_id: user.id } : null;
+}
+
+const FAMILY_OVERVIEW_TOOLNAMES = {
+  romantic: "romantic_forecast_report_tropical_v2",
+  friendship: "friendship_report_tropical_v2",
+  business: "business_partner_v2",
+} as const;
+
+type FamilyOverviewMode = keyof typeof FAMILY_OVERVIEW_TOOLNAMES;
+
+function familyMemberToPersonInput(member: {
+  date_of_birth: string | null;
+  birth_time: string | null;
+  birth_lat: number | null;
+  birth_lng: number | null;
+}): PersonInput {
+  return {
+    dob: member.date_of_birth,
+    tob: member.birth_time,
+    city:
+      member.birth_lat != null && member.birth_lng != null
+        ? {
+            lat: member.birth_lat,
+            lng: member.birth_lng,
+          }
+        : null,
+  };
 }
 
 /**
@@ -45,10 +82,14 @@ export async function GET() {
   if (member.membership_status !== "active")
     return NextResponse.json({ error: "Inactive membership" }, { status: 403 });
 
+  await ensureCanonicalSelfFamilyMember(member, member.user_id);
+
   // Fetch family members with their natal charts
   const { data: familyMembers } = await supabase
     .from("community_family_members")
-    .select("id, full_name, natal_chart, age_group, date_of_birth")
+    .select(
+      "id, full_name, natal_chart, age_group, date_of_birth, birth_time, birth_city, birth_country, birth_lat, birth_lng, relationship, natal_status, natal_report_id, natal_report_status, natal_report_generated_at, natal_last_generated_at, chart_updated_at, updated_at, notes"
+    )
     .eq("member_id", member.id)
     .order("created_at", { ascending: true });
 
@@ -68,10 +109,71 @@ export async function GET() {
     )
     .eq("member_id", member.id);
 
+  const familyOverviewMembers = (familyMembers ?? []).map((familyMember) => ({
+    id: familyMember.id,
+    ...familyMemberToPersonInput(familyMember),
+  }));
+  const familyOverviewReports: Array<{
+    mode: FamilyOverviewMode;
+    astro_ai_response_id: string | null;
+    report_status: "generated" | null;
+    generated_at: string | null;
+  }> = [];
+
+  if (familyOverviewMembers.length >= 2) {
+    const admin = createAdminClient();
+    const toolnames = Object.values(FAMILY_OVERVIEW_TOOLNAMES);
+    const { data: familyOverviewCandidates, error: familyOverviewError } =
+      await admin
+        .from("astro_ai_responses")
+        .select(SAVED_REPORT_MATCH_SELECT)
+        .eq("user_id", member.user_id)
+        .in("toolname", toolnames)
+        .order("created_at", { ascending: false })
+        .limit(100);
+
+    if (familyOverviewError) {
+      console.error(
+        "[community/relationship-charts] family overview saved-report lookup failed:",
+        familyOverviewError,
+      );
+    }
+
+    for (const [mode, toolname] of Object.entries(
+      FAMILY_OVERVIEW_TOOLNAMES,
+    ) as Array<[FamilyOverviewMode, string]>) {
+      const candidates = ((familyOverviewCandidates ?? []) as unknown as JsonRecord[]).filter(
+        (candidate) => candidate.toolname === toolname,
+      );
+      const match = findSavedReportMatch(
+        {
+          toolname,
+          type: "two-person",
+          person1: familyOverviewMembers[0],
+          person2: familyOverviewMembers[1],
+          extras: {
+            familyMembers: familyOverviewMembers,
+          },
+        },
+        candidates,
+      );
+
+      familyOverviewReports.push({
+        mode,
+        astro_ai_response_id:
+          typeof match?.id === "string" ? match.id : null,
+        report_status: match ? "generated" : null,
+        generated_at:
+          typeof match?.created_at === "string" ? match.created_at : null,
+      });
+    }
+  }
+
   return NextResponse.json({
     familyMembers: familyMembers ?? [],
     charts: charts ?? [],
     relationshipReports: relationshipReports ?? [],
+    familyOverviewReports,
   });
 }
 

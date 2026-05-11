@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 import { ensureCurrentMonthTransitsForMember } from "@/lib/community/ensure-monthly-transits";
 import { isValidMonthlyTransit } from "@/lib/community/chart-validators";
@@ -7,7 +8,12 @@ import {
   deriveNatalReportState,
   ctaForState,
 } from "@/lib/community/chart-report-state";
-import { isBirthDataComplete } from "@/lib/community/birth-data-readiness";
+import {
+  isBirthDataComplete,
+  computeBirthDataReadiness,
+  type BirthDataField,
+} from "@/lib/community/birth-data-readiness";
+import { ensureCanonicalSelfFamilyMember } from "@/lib/community/self-family-member";
 import {
   Card,
   CardContent,
@@ -17,9 +23,62 @@ import { TrendingUp, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { BookReadingButton } from "./BookReadingButton";
 import { TransitCardExpander } from "./TransitCardExpander";
+import {
+  buildMonthlyTransitSummaryFromReport,
+  type MonthlyTransitReportSummaryItem,
+} from "@/lib/community/monthly-transit-report-summary";
 
 export const metadata = { title: "Monthly Transits - AstrologyPro Community" };
 export const dynamic = "force-dynamic";
+
+/**
+ * Build the user-facing missing-fields hint for the incomplete-family list.
+ *
+ * Coordinate-only-missing case is special-cased: when the only thing
+ * holding the row back is `birth_lat` / `birth_lng` (text fields like city
+ * and country are all present), the user already typed a place but never
+ * picked a city suggestion that resolves to coordinates — telling them to
+ * "add birth date, time and place" is misleading.
+ *
+ * Sprint: tasks/06.05.2026/community-transits-profile-and-display-fixes/01-fix-duplicate-self-profile-coordinate-readiness.md
+ */
+const FIELD_LABELS: Record<BirthDataField, string> = {
+  date_of_birth: "birth date",
+  birth_time: "birth time",
+  birth_city: "birth city",
+  birth_country: "birth country",
+  birth_lat: "birth coordinates",
+  birth_lng: "birth coordinates",
+};
+
+function buildIncompleteHint(missing: BirthDataField[]): string {
+  const onlyCoordsMissing =
+    missing.length > 0 &&
+    missing.every((f) => f === "birth_lat" || f === "birth_lng");
+  if (onlyCoordsMissing) {
+    return "Select the birth city from suggestions to save coordinates.";
+  }
+  if (missing.length === 0) {
+    // Defensive — caller filtered for incomplete, but readiness disagreed.
+    return "Add birth date, time and place to enable monthly transits.";
+  }
+  // Field-specific: dedupe (lat+lng both map to "birth coordinates"),
+  // preserve ordering, then build a friendly list.
+  const seen = new Set<string>();
+  const labels: string[] = [];
+  for (const f of missing) {
+    const lab = FIELD_LABELS[f];
+    if (!seen.has(lab)) {
+      seen.add(lab);
+      labels.push(lab);
+    }
+  }
+  if (labels.length === 1) return `Add ${labels[0]} to enable monthly transits.`;
+  if (labels.length === 2)
+    return `Add ${labels[0]} and ${labels[1]} to enable monthly transits.`;
+  const last = labels.pop();
+  return `Add ${labels.join(", ")}, and ${last} to enable monthly transits.`;
+}
 
 type TransitAspect = {
   transitPlanet: string;
@@ -55,8 +114,17 @@ type TransitRow = {
   community_family_members: { full_name: string };
 };
 
+type SavedMonthlyReportRow = {
+  id: string;
+  ai_response: unknown;
+  astro_api_data: unknown;
+  form_data: unknown;
+  created_at: string | null;
+};
+
 type FamilyTransitOwner = {
   id: string;
+  relationship: string | null;
   full_name: string;
   natal_chart: unknown;
   natal_status: string | null;
@@ -83,12 +151,16 @@ export default async function TransitsPage() {
 
   const { data: member } = await supabase
     .from("community_members")
-    .select("id, membership_status")
+    .select(
+      "id, user_id, full_name, membership_status, date_of_birth, birth_time, birth_city, birth_country"
+    )
     .eq("user_id", user.id)
     .single();
 
   if (!member) redirect("/get-started");
   if (member.membership_status !== "active") redirect("/join/community/resubscribe");
+
+  await ensureCanonicalSelfFamilyMember(member, user.id);
 
   const now = new Date();
   const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
@@ -102,7 +174,7 @@ export default async function TransitsPage() {
   const { data: familyRows } = await supabase
     .from("community_family_members")
     .select(
-      "id, full_name, natal_chart, natal_status, natal_report_id, natal_report_status, natal_report_generated_at, natal_last_generated_at, chart_updated_at, updated_at, date_of_birth, birth_time, birth_city, birth_country, birth_lat, birth_lng"
+      "id, full_name, relationship, natal_chart, natal_status, natal_report_id, natal_report_status, natal_report_generated_at, natal_last_generated_at, chart_updated_at, updated_at, date_of_birth, birth_time, birth_city, birth_country, birth_lat, birth_lng"
     )
     .eq("member_id", member.id);
 
@@ -158,6 +230,33 @@ export default async function TransitsPage() {
   const transitByFamilyId = new Map(
     familyTransits.map((row) => [row.family_member_id, row])
   );
+  const linkedFullReportIds = Array.from(
+    new Set(
+      familyTransits
+        .map((row) => row.full_report_id)
+        .filter((id): id is string => Boolean(id))
+    )
+  );
+  const savedReportById = new Map<string, SavedMonthlyReportRow>();
+
+  if (linkedFullReportIds.length > 0) {
+    const admin = createAdminClient();
+    const { data: savedReports, error: savedReportsError } = await admin
+      .from("astro_ai_responses")
+      .select("id, ai_response, astro_api_data, form_data, created_at")
+      .in("id", linkedFullReportIds);
+
+    if (savedReportsError) {
+      console.warn(
+        "[transits/page] failed to load linked saved monthly reports:",
+        savedReportsError.message
+      );
+    }
+
+    for (const report of (savedReports ?? []) as SavedMonthlyReportRow[]) {
+      savedReportById.set(report.id, report);
+    }
+  }
 
   // Pre-compute card data server-side for the client expander
   const cardData = eligibleFamily.map((familyMember) => {
@@ -173,6 +272,13 @@ export default async function TransitsPage() {
       (s, p) => s + p.aspects.filter((a) => !a.isHarmonious).length,
       0
     ) ?? 0;
+    // Aspect-count display gate. When no valid monthly summary payload
+    // exists, the zero counts above are NOT real — they're the
+    // `?? 0` fallback. The card subtitle and snapshot must hide those
+    // numbers and show a neutral status string instead.
+    //
+    // Spec: tasks/06.05.2026/community-transits-profile-and-display-fixes/02-hide-misleading-zero-aspect-counts.md
+    const hasValidTransitSummary = validTransitData !== null;
 
     const reportState = deriveMonthlyReportState(
       {
@@ -211,16 +317,10 @@ export default async function TransitsPage() {
     });
     const chartCta = ctaForState(chartState);
     const chartCtaLabel =
-      chartCta.kind === "view"
+      chartState === "generated"
         ? "View Natal Chart"
-        : chartCta.kind === "retry"
-        ? "Retry Natal Chart"
-        : chartCta.kind === "regenerate"
-        ? "Update Natal Chart"
-        : chartCta.kind === "generating"
+        : chartState === "generating"
         ? "Generating Natal Chart..."
-        : chartCta.kind === "locked"
-        ? "Review Natal Chart"
         : "Generate Natal Chart";
     const reportStatusLabel = (() => {
       if (row?.full_report_status === "failed") return "Full report needs attention";
@@ -229,6 +329,22 @@ export default async function TransitsPage() {
       if (!validTransitData) return "Summary not generated yet";
       return "Full report not generated yet";
     })();
+    // Neutral subtitle text shown in place of the aspect counts when
+    // `hasValidTransitSummary` is false. We mirror the report-status
+    // wording so the card explains *why* counts are missing rather than
+    // implying a calculation actually returned zero aspects.
+    const transitSummaryLabel: string | null = hasValidTransitSummary
+      ? null
+      : isPending
+        ? "Summary generating"
+        : "Summary not available yet";
+    const savedFullReport = row?.full_report_id
+      ? savedReportById.get(row.full_report_id)
+      : null;
+    const reportSummaryItems: MonthlyTransitReportSummaryItem[] =
+      savedFullReport && row?.full_report_status === "generated"
+        ? buildMonthlyTransitSummaryFromReport(savedFullReport, 3)
+        : [];
 
     return {
       id: row?.id ?? `${familyMember.id}-${currentMonth}`,
@@ -236,6 +352,8 @@ export default async function TransitsPage() {
       memberName: familyMember.full_name,
       harmoniousCount,
       challengingCount,
+      hasValidTransitSummary,
+      transitSummaryLabel,
       fullReportCta,
       detailedHref,
       chartHref,
@@ -246,6 +364,7 @@ export default async function TransitsPage() {
       hasSavedFullReport,
       month: row?.month ?? currentMonth,
       reportStatusLabel,
+      reportSummaryItems,
       highlights: validTransitData?.highlights.slice(0, 3) ?? [],
     };
   });
@@ -335,23 +454,31 @@ export default async function TransitsPage() {
             </span>
           </div>
           <div className="space-y-2">
-            {incompleteFamily.map((fm) => (
-              <Card key={fm.id} className="border-amber-500/40 bg-amber-500/5">
-                <CardContent className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <p className="text-sm font-medium">{fm.full_name}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Add birth date, time and place to enable monthly transits.
-                    </p>
-                  </div>
-                  <Button asChild size="sm" variant="outline">
-                    <Link href={`/community/family/${fm.id}`}>
-                      Complete Birth Details
-                    </Link>
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
+            {incompleteFamily.map((fm) => {
+              const readiness = computeBirthDataReadiness(fm);
+              const hint = buildIncompleteHint(readiness.missing);
+              const isSelf = (fm.relationship ?? "").toLowerCase() === "self";
+              const completeHref = isSelf
+                ? "/community/profile"
+                : `/community/family/${fm.id}/edit`;
+              return (
+                <Card key={fm.id} className="border-amber-500/40 bg-amber-500/5">
+                  <CardContent className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-sm font-medium">{fm.full_name}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {hint}
+                      </p>
+                    </div>
+                    <Button asChild size="sm" variant="outline">
+                      <Link href={completeHref}>
+                        Complete Birth Details
+                      </Link>
+                    </Button>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         </div>
       )}

@@ -1,0 +1,1098 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Mystery School Module System Guide</title>
+<style>
+  :root {
+    --bg: #0b1020;
+    --panel: #121937;
+    --panel-2: #0f1530;
+    --text: #f5f7ff;
+    --muted: #b9c2e5;
+    --line: rgba(217, 180, 67, 0.18);
+    --gold: #d9b443;
+    --gold-soft: rgba(217, 180, 67, 0.12);
+    --heading: #fff8de;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: radial-gradient(circle at top, rgba(217,180,67,0.08), transparent 28%), var(--bg);
+    color: var(--text);
+    font-family: Inter, Segoe UI, Arial, sans-serif;
+    line-height: 1.6;
+  }
+  .page {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 48px 40px 80px;
+  }
+  .hero {
+    padding: 28px 30px;
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    background: linear-gradient(135deg, rgba(217,180,67,0.12), rgba(18,25,55,0.92) 40%, rgba(15,21,48,0.98));
+    box-shadow: 0 20px 50px rgba(0,0,0,0.28);
+    margin-bottom: 28px;
+  }
+  .hero h1 { margin: 0 0 8px; font-size: 38px; line-height: 1.1; color: var(--heading); }
+  .hero p { margin: 6px 0; color: var(--muted); }
+  article {
+    background: rgba(18, 25, 55, 0.72);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 18px;
+    padding: 34px 34px 28px;
+  }
+  h1, h2, h3, h4 { color: var(--heading); margin-top: 1.45em; }
+  h1 { font-size: 34px; line-height: 1.15; }
+  h2 {
+    font-size: 24px;
+    line-height: 1.2;
+    padding-top: 14px;
+    border-top: 1px solid var(--line);
+  }
+  h3 { font-size: 18px; }
+  p, li { color: var(--muted); font-size: 15px; }
+  strong { color: var(--text); }
+  code {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 6px;
+    padding: 2px 6px;
+    color: #fff6cf;
+    font-family: Consolas, monospace;
+    font-size: 0.95em;
+  }
+  ul, ol { padding-left: 22px; }
+  li + li { margin-top: 4px; }
+  hr { border: none; border-top: 1px solid var(--line); margin: 28px 0; }
+  blockquote {
+    margin: 18px 0;
+    padding: 12px 16px;
+    background: var(--gold-soft);
+    border-left: 3px solid var(--gold);
+    border-radius: 8px;
+    color: var(--text);
+  }
+  a { color: #ffe08b; text-decoration: none; }
+  table { width: 100%; border-collapse: collapse; margin: 18px 0; }
+  th, td { border: 1px solid rgba(255,255,255,0.08); padding: 10px 12px; text-align: left; }
+  th { background: rgba(217,180,67,0.08); color: var(--heading); }
+  @page { size: A4; margin: 16mm; }
+  @media print {
+    body { background: #0b1020; }
+    .page { padding: 0; }
+    article, .hero { box-shadow: none; }
+    h2, h3 { break-after: avoid; }
+    ul, ol, p { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>Mystery School Module System Guide</h1>
+      <p><strong>Project:</strong> AstrologyPro</p>
+      <p><strong>Coverage:</strong> Foundation Training, Decans, Graduation, and all related Mystery School admin operations</p>
+      <p><strong>Analysis date:</strong> May 7, 2026</p>
+    </section>
+    <article><h1>Mystery School Module System Guide</h1>
+<p><strong>Project:</strong> AstrologyPro<br>
+<strong>Module:</strong> Mystery School<br>
+<strong>Coverage:</strong> Learner flow from Foundation Training to Decans to Graduation, plus all related Mystery School admin operations<br>
+<strong>Analysis date:</strong> May 7, 2026<br>
+<strong>Prepared from verified code paths in the current repository</strong></p>
+<h2>1. Purpose of This Document</h2>
+<p>This document is the current system guide for the Mystery School module in the codebase as analyzed on <strong>May 7, 2026</strong>.</p>
+<p>It is intended to be a reliable operational and technical reference for:</p>
+<ul>
+<li>product planning</li>
+<li>admin operations</li>
+<li>QA and regression checking</li>
+<li>onboarding developers</li>
+<li>future Mystery School upgrades</li>
+</ul>
+<p>This guide is deliberately detailed. The goal is that no important step in the current learner or admin flow is omitted.</p>
+<h2>2. Scope</h2>
+<p>This guide covers:</p>
+<ul>
+<li>learner access into Mystery School</li>
+<li>Foundation Q1 training flow</li>
+<li>Foundation completion and transition into Decans</li>
+<li>Decan dashboard, Decan detail, ritual, scrying journal, and mundane journal flows</li>
+<li>Decan completion behavior</li>
+<li>Graduation eligibility and graduation processing</li>
+<li>Mystery School admin pages and APIs</li>
+<li>scheduled cron behavior related to Decans and Graduation</li>
+<li>current source-of-truth tables and important implementation notes</li>
+</ul>
+<p>This guide does <strong>not</strong> attempt to redesign the system. It documents the current architecture and the currently enforced behavior.</p>
+<h2>3. Executive Summary</h2>
+<p>The Mystery School module currently operates as a <strong>two-phase learner journey</strong>:</p>
+<ol>
+<li>
+<p><strong>Foundation phase</strong></p>
+<ul>
+<li>learner completes the Admin Training-backed Foundation curriculum</li>
+<li>progression is sequential by week</li>
+<li>Foundation data is primarily sourced from:
+<ul>
+<li><code>training_programs</code></li>
+<li><code>training_categories</code></li>
+<li><code>training_lessons</code></li>
+<li><code>lesson_completions</code></li>
+<li><code>category_completions</code></li>
+</ul>
+</li>
+</ul>
+</li>
+<li>
+<p><strong>Decan phase</strong></p>
+<ul>
+<li>after Foundation is complete, the learner enters the Decan cycle</li>
+<li>Decans are <strong>time-based</strong>, not sequential like Foundation</li>
+<li>each Decan requires:
+<ul>
+<li>ritual completion</li>
+<li>scrying journal submission</li>
+<li>mundane journal submission</li>
+</ul>
+</li>
+</ul>
+</li>
+</ol>
+<p>Graduation requires:</p>
+<ul>
+<li>Foundation complete</li>
+<li>all 36 Decans completed</li>
+<li>zero unresolved missed Decans</li>
+</ul>
+<p>The admin side is split across two management areas:</p>
+<ul>
+<li><strong><code>/admin/training</code></strong> for Foundation curriculum content</li>
+<li><strong><code>/admin/mystery-school</code></strong> for Mystery School-specific oversight such as Decans, students, and journals</li>
+</ul>
+<h2>4. Verified Core Code Areas</h2>
+<p>The following major code paths were reviewed during this analysis:</p>
+<h3>Learner UI</h3>
+<ul>
+<li><code>src/app/mystery-school/layout.tsx</code></li>
+<li><code>src/app/mystery-school/page.tsx</code></li>
+<li><code>src/app/mystery-school/training/page.tsx</code></li>
+<li><code>src/app/mystery-school/training/graduation/page.tsx</code></li>
+<li><code>src/app/mystery-school/decans/[id]/page.tsx</code></li>
+<li><code>src/app/mystery-school/decans/[id]/ritual/page.tsx</code></li>
+</ul>
+<h3>Learner APIs and helpers</h3>
+<ul>
+<li><code>src/lib/mystery-school/access.ts</code></li>
+<li><code>src/lib/mystery-school/foundation-progress.ts</code></li>
+<li><code>src/lib/mystery-school/foundation-graduation.ts</code></li>
+<li><code>src/lib/mystery-school/decan-gate.ts</code></li>
+<li><code>src/lib/mystery-school/graduation.ts</code></li>
+<li><code>src/app/api/mystery-school/training/foundation/route.ts</code></li>
+<li><code>src/app/api/mystery-school/decans/route.ts</code></li>
+<li><code>src/app/api/mystery-school/decan/[id]/route.ts</code></li>
+<li><code>src/app/api/mystery-school/decan/[id]/ritual/route.ts</code></li>
+<li><code>src/app/api/mystery-school/decan/[id]/ritual/start/route.ts</code></li>
+<li><code>src/app/api/mystery-school/decan/[id]/ritual/step/route.ts</code></li>
+<li><code>src/app/api/mystery-school/decan/[id]/scry/route.ts</code></li>
+<li><code>src/app/api/mystery-school/decan/[id]/journal/route.ts</code></li>
+</ul>
+<h3>Admin UI and APIs</h3>
+<ul>
+<li><code>src/app/admin/mystery-school/page.tsx</code></li>
+<li><code>src/app/admin/mystery-school/decans/page.tsx</code></li>
+<li><code>src/app/admin/mystery-school/students/page.tsx</code></li>
+<li><code>src/app/admin/mystery-school/journals/page.tsx</code></li>
+<li><code>src/app/api/admin/mystery-school/training-status/route.ts</code></li>
+<li><code>src/app/api/admin/mystery-school/students/route.ts</code></li>
+<li><code>src/app/api/admin/mystery-school/students/[id]/route.ts</code></li>
+<li><code>src/app/api/admin/mystery-school/decans/route.ts</code></li>
+<li><code>src/app/api/admin/mystery-school/decans/[id]/route.ts</code></li>
+<li><code>src/app/api/admin/mystery-school/journals/route.ts</code></li>
+<li><code>src/app/api/admin/mystery-school/journals/[id]/review/route.ts</code></li>
+</ul>
+<h3>Scheduled jobs</h3>
+<ul>
+<li><code>src/app/api/cron/decan-unlock/route.ts</code></li>
+<li><code>src/app/api/cron/graduation-check/route.ts</code></li>
+</ul>
+<h2>5. High-Level Learner Lifecycle</h2>
+<h3>Step 1: User becomes a Mystery School member</h3>
+<p>Mystery School entitlement is enforced through <code>requireMysterySchoolAccess()</code> in <code>src/lib/mystery-school/access.ts</code>.</p>
+<p>The authoritative entitlement table is:</p>
+<ul>
+<li><code>mystery_school_students</code></li>
+</ul>
+<p>Access is granted when the student row has valid billing fields and:</p>
+<ul>
+<li><code>status = 'active'</code>, or</li>
+<li><code>status = 'cancelled'</code> with future <code>access_expires_at</code></li>
+</ul>
+<p>There is also a <strong>legacy fallback provisioning path</strong>:</p>
+<ul>
+<li>if a user exists only in legacy <code>community_members</code> with <code>membership_type = 'mystery_school'</code></li>
+<li>the system can provision a missing <code>mystery_school_students</code> row automatically</li>
+</ul>
+<h3>Step 2: Learner enters the Mystery School layout</h3>
+<p>The authenticated learner enters the Mystery School shell via:</p>
+<ul>
+<li><code>src/app/mystery-school/layout.tsx</code></li>
+</ul>
+<p>This layout:</p>
+<ul>
+<li>re-checks server-side access</li>
+<li>blocks expired subscriptions</li>
+<li>shows the Mystery School sidebar</li>
+<li>currently places navigation in this order:
+<ul>
+<li>Training</li>
+<li>Decans</li>
+<li>Graduation</li>
+</ul>
+</li>
+</ul>
+<h3>Step 3: Learner starts in Foundation</h3>
+<p>The intended initial phase is:</p>
+<ul>
+<li><code>mystery_school_students.training_status = 'foundation'</code></li>
+</ul>
+<p>In this phase:</p>
+<ul>
+<li><code>/mystery-school/training</code> is the active curriculum path</li>
+<li>Decan work is supposed to remain unavailable until Foundation is complete</li>
+</ul>
+<h2>6. Foundation Q1: Current System Behavior</h2>
+<h3>6.1 Foundation source of truth</h3>
+<p>Foundation is no longer controlled by the old per-week Mystery School content tables for current learner progression.</p>
+<p>The current Foundation source of truth is the Admin Training system:</p>
+<ul>
+<li><code>training_programs</code></li>
+<li><code>training_categories</code></li>
+<li><code>training_lessons</code></li>
+<li><code>lesson_completions</code></li>
+<li><code>category_completions</code></li>
+</ul>
+<p>The Foundation program is identified by exact program name:</p>
+<ul>
+<li><code>Mystery School Foundation</code></li>
+</ul>
+<p>This is centrally enforced in:</p>
+<ul>
+<li><code>src/lib/mystery-school/foundation-progress.ts</code></li>
+</ul>
+<h3>6.2 Foundation learner API</h3>
+<p>The main learner adapter is:</p>
+<ul>
+<li><code>GET /api/mystery-school/training/foundation</code></li>
+</ul>
+<p>File:</p>
+<ul>
+<li><code>src/app/api/mystery-school/training/foundation/route.ts</code></li>
+</ul>
+<p>What it does:</p>
+<ol>
+<li>confirms Mystery School access</li>
+<li>loads the active <code>Mystery School Foundation</code> training program</li>
+<li>treats active <code>training_categories</code> as Foundation weeks</li>
+<li>treats active <code>training_lessons</code> as lessons inside each week</li>
+<li>loads user completion state from:
+<ul>
+<li><code>lesson_completions</code></li>
+<li><code>category_completions</code></li>
+</ul>
+</li>
+<li>returns a Mystery School-specific week-card response shape for the learner UI</li>
+</ol>
+<h3>6.3 Foundation unlock rule</h3>
+<p>Foundation week progression is sequential.</p>
+<p>The current enforced rule is:</p>
+<ul>
+<li>Week 1 is always unlocked</li>
+<li>Week N is unlocked only when Week N-1 is complete</li>
+</ul>
+<p>A week is complete when either:</p>
+<ul>
+<li>there is a <code>category_completions</code> row for that week and user</li>
+<li>or every active lesson in that week has a <code>lesson_completions</code> row</li>
+</ul>
+<h3>6.4 Foundation page behavior</h3>
+<p>Foundation learner UI lives at:</p>
+<ul>
+<li><code>src/app/mystery-school/training/page.tsx</code></li>
+</ul>
+<p>Current behavior:</p>
+<ul>
+<li>renders hero progress header</li>
+<li>shows completed weeks count</li>
+<li>shows sequential week cards</li>
+<li>shows lessons within each week</li>
+<li>uses lesson media and content from Admin Training lesson records</li>
+<li>can show empty/setup state if the Foundation program is not present</li>
+</ul>
+<h3>6.5 Foundation completion helper</h3>
+<p>The canonical Foundation completion helper is:</p>
+<ul>
+<li><code>getFoundationCompletionForUser()</code></li>
+</ul>
+<p>File:</p>
+<ul>
+<li><code>src/lib/mystery-school/foundation-progress.ts</code></li>
+</ul>
+<p>This helper returns:</p>
+<ul>
+<li><code>isComplete</code></li>
+<li><code>totalWeeks</code></li>
+<li><code>completedWeeks</code></li>
+<li><code>totalLessons</code></li>
+<li><code>completedLessons</code></li>
+<li><code>emptyWeeks</code></li>
+<li><code>missingWeeks</code></li>
+</ul>
+<p>Important rule:</p>
+<ul>
+<li>a week with zero active lessons is treated as <strong>incomplete for gating</strong>, unless it has an explicit <code>category_completions</code> row</li>
+</ul>
+<h2>7. Foundation to Decan Transition</h2>
+<h3>7.1 Transition helper</h3>
+<p>The transition helper is:</p>
+<ul>
+<li><code>maybeAdvanceMysterySchoolToDecans()</code></li>
+</ul>
+<p>File:</p>
+<ul>
+<li><code>src/lib/mystery-school/foundation-graduation.ts</code></li>
+</ul>
+<p>Its job:</p>
+<ol>
+<li>optionally confirm the completed lesson belongs to the Mystery School Foundation program</li>
+<li>verify the learner is currently a Mystery School student in <code>training_status = 'foundation'</code></li>
+<li>verify Foundation is fully complete using the shared Foundation helper</li>
+<li>update the student row to:
+<ul>
+<li><code>training_status = 'decans'</code></li>
+<li><code>foundation_completed_at = now</code></li>
+</ul>
+</li>
+</ol>
+<h3>7.2 Transition characteristics</h3>
+<p>The transition is designed to be:</p>
+<ul>
+<li>idempotent</li>
+<li>safe to call repeatedly</li>
+<li>non-throwing</li>
+</ul>
+<p>It intentionally short-circuits if:</p>
+<ul>
+<li>the lesson is unrelated</li>
+<li>the user is not enrolled</li>
+<li>the user is not in Foundation</li>
+<li>not all Foundation weeks are complete</li>
+</ul>
+<h2>8. Decan Access Gating</h2>
+<h3>8.1 Gate logic</h3>
+<p>All Decan work is intended to be protected by:</p>
+<ul>
+<li><code>assertMysterySchoolDecanEligible()</code></li>
+<li><code>requireDecanEligibilityOr403()</code></li>
+</ul>
+<p>Files:</p>
+<ul>
+<li><code>src/lib/mystery-school/foundation-progress.ts</code></li>
+<li><code>src/lib/mystery-school/decan-gate.ts</code></li>
+</ul>
+<p>Eligibility is considered valid when:</p>
+<ul>
+<li><code>training_status = 'decans'</code>, or</li>
+<li><code>training_status = 'graduated'</code>, or</li>
+<li>Foundation is complete according to the shared Training-backed helper</li>
+</ul>
+<p>If Foundation is complete but the student row is still <code>foundation</code>, the code attempts an idempotent background advance.</p>
+<h3>8.2 Locked response behavior</h3>
+<p>If the learner is not Decan-eligible, the Decan gate returns:</p>
+<ul>
+<li>HTTP <code>403</code></li>
+<li>code: <code>foundation_required</code></li>
+</ul>
+<p>and includes Foundation progress metrics so the UI can explain what is still incomplete.</p>
+<h2>9. Decan Dashboard</h2>
+<h3>9.1 Main API</h3>
+<p>The Decan dashboard is powered by:</p>
+<ul>
+<li><code>GET /api/mystery-school/decans</code></li>
+</ul>
+<p>File:</p>
+<ul>
+<li><code>src/app/api/mystery-school/decans/route.ts</code></li>
+</ul>
+<h3>9.2 What the Decan dashboard API returns</h3>
+<p>It returns:</p>
+<ul>
+<li>current student phase</li>
+<li>all 36 Decans</li>
+<li>per-Decan lifecycle status</li>
+<li>completed count</li>
+<li>current active Decan number</li>
+<li>graduation eligibility summary</li>
+<li>subscription summary</li>
+</ul>
+<h3>9.3 Decan lifecycle statuses</h3>
+<p>Current status vocabulary:</p>
+<ul>
+<li><code>locked</code></li>
+<li><code>upcoming</code></li>
+<li><code>preview</code></li>
+<li><code>active</code></li>
+<li><code>grace</code></li>
+<li><code>completed</code></li>
+<li><code>missed</code></li>
+</ul>
+<h3>9.4 Lifecycle meaning</h3>
+<ul>
+<li><code>locked</code>: no current access</li>
+<li><code>upcoming</code>: exists in future timeline but not in preview</li>
+<li><code>preview</code>: within 7 days before window opens</li>
+<li><code>active</code>: inside action window</li>
+<li><code>grace</code>: after window close, before grace close</li>
+<li><code>completed</code>: ritual + scry + journal all complete</li>
+<li><code>missed</code>: grace passed without full completion</li>
+</ul>
+<h3>9.5 Important current exception</h3>
+<p>There is a <strong>hardcoded test override</strong> in the Decan API for:</p>
+<ul>
+<li><code>perennial1@test.astrologypro.com</code></li>
+</ul>
+<p>Observed behavior in code:</p>
+<ul>
+<li>Foundation lock can be bypassed for this user</li>
+<li><code>locked</code> and <code>upcoming</code> Decans can be forced into <code>active</code></li>
+</ul>
+<p>This is a real implementation note and should be treated as a temporary test bypass, not normal business behavior.</p>
+<h2>10. Decan Detail Page</h2>
+<h3>10.1 Detail API</h3>
+<p>The single Decan detail page is powered by:</p>
+<ul>
+<li><code>GET /api/mystery-school/decan/[id]</code></li>
+</ul>
+<p>File:</p>
+<ul>
+<li><code>src/app/api/mystery-school/decan/[id]/route.ts</code></li>
+</ul>
+<h3>10.2 What it loads</h3>
+<p>This route loads:</p>
+<ul>
+<li>the Decan record from <code>decans</code></li>
+<li>ritual steps from <code>decan_rituals</code></li>
+<li>learner progress from <code>student_decan_progress</code></li>
+<li>scry journal from <code>scry_journals</code></li>
+<li>mundane journal from <code>mundane_journals</code></li>
+<li>ritual execution state from <code>ritual_executions</code></li>
+</ul>
+<h3>10.3 Live status derivation</h3>
+<p>The route derives a live status from:</p>
+<ul>
+<li>persisted progress row status</li>
+<li>current time</li>
+<li>canonical action window</li>
+<li>grace window</li>
+<li>preview window</li>
+</ul>
+<p>This means the page can show an accurate live state even if the stored row is not the final display state by itself.</p>
+<h3>10.4 Current test override</h3>
+<p>The same test email override exists here:</p>
+<ul>
+<li><code>perennial1@test.astrologypro.com</code></li>
+</ul>
+<p>This can bypass the normal Foundation lock on Decan detail access.</p>
+<h2>11. Decan Ritual Flow</h2>
+<h3>11.1 Ritual content source</h3>
+<p>Decan ritual content comes from:</p>
+<ul>
+<li><code>decan_rituals</code></li>
+</ul>
+<p>It is <strong>not</strong> sourced from Admin Training.</p>
+<h3>11.2 Ritual read endpoint</h3>
+<ul>
+<li><code>GET /api/mystery-school/decan/[id]/ritual</code></li>
+</ul>
+<p>Loads:</p>
+<ul>
+<li>published ritual steps</li>
+<li>current ritual execution row, if present</li>
+</ul>
+<h3>11.3 Ritual start endpoint</h3>
+<ul>
+<li><code>POST /api/mystery-school/decan/[id]/ritual/start</code></li>
+</ul>
+<p>Behavior:</p>
+<ol>
+<li>confirms Decan eligibility</li>
+<li>counts published ritual steps</li>
+<li>creates or reuses a <code>ritual_executions</code> row</li>
+</ol>
+<h3>11.4 Ritual step advancement endpoint</h3>
+<ul>
+<li><code>POST /api/mystery-school/decan/[id]/ritual/step</code></li>
+</ul>
+<p>Behavior:</p>
+<ol>
+<li>confirms Decan eligibility</li>
+<li>requires an existing ritual execution row</li>
+<li>enforces sequential ritual step advancement</li>
+<li>rejects out-of-order step submissions</li>
+<li>when the final step is completed:
+<ul>
+<li>marks <code>ritual_executions.is_complete = true</code></li>
+<li>sets <code>student_decan_progress.ritual_done = true</code></li>
+<li>checks if all three Decan requirements are now complete</li>
+<li>if yes, marks the Decan <code>completed</code></li>
+<li>calls graduation processing helper</li>
+</ul>
+</li>
+</ol>
+<h3>11.5 Ritual UI</h3>
+<p>The ritual runner UI is in:</p>
+<ul>
+<li><code>src/app/mystery-school/decans/[id]/ritual/page.tsx</code></li>
+</ul>
+<p>Current presentation:</p>
+<ul>
+<li>ceremonial step-by-step progression</li>
+<li>progress bar</li>
+<li>step chips by type</li>
+<li>begin ritual state</li>
+<li>completion state</li>
+</ul>
+<h2>12. Scrying Journal Flow</h2>
+<h3>12.1 Scry journal table</h3>
+<p>Scry journal submissions are stored in:</p>
+<ul>
+<li><code>scry_journals</code></li>
+</ul>
+<h3>12.2 Read endpoint</h3>
+<ul>
+<li><code>GET /api/mystery-school/decan/[id]/scry</code></li>
+</ul>
+<p>Returns existing scry journal entry for the learner and Decan.</p>
+<h3>12.3 Write endpoint</h3>
+<ul>
+<li><code>POST /api/mystery-school/decan/[id]/scry</code></li>
+</ul>
+<p>Validation rules:</p>
+<ul>
+<li><code>assigned_card</code> required</li>
+<li><code>experience_text</code> required</li>
+<li><code>experience_text</code> minimum 50 characters</li>
+</ul>
+<p>Write behavior:</p>
+<ul>
+<li>upserts the learner’s scry journal for that Decan</li>
+<li>keeps <code>content</code> synchronized for backward compatibility</li>
+<li>increments <code>submission_count</code> on updates</li>
+<li>marks <code>student_decan_progress.scry_done = true</code></li>
+<li>checks whether the full Decan is now complete</li>
+</ul>
+<h2>13. Mundane Journal Flow</h2>
+<h3>13.1 Mundane journal table</h3>
+<p>Mundane journal submissions are stored in:</p>
+<ul>
+<li><code>mundane_journals</code></li>
+</ul>
+<h3>13.2 Read endpoint</h3>
+<ul>
+<li><code>GET /api/mystery-school/decan/[id]/journal</code></li>
+</ul>
+<p>Returns existing mundane journal entry for the learner and Decan.</p>
+<h3>13.3 Write endpoint</h3>
+<ul>
+<li><code>POST /api/mystery-school/decan/[id]/journal</code></li>
+</ul>
+<p>Validation rules:</p>
+<ul>
+<li><code>relationships_section</code> required, minimum 100 characters</li>
+<li><code>business_work_section</code> required, minimum 100 characters</li>
+<li><code>shifts_perception_section</code> required, minimum 100 characters</li>
+</ul>
+<p>Write behavior:</p>
+<ul>
+<li>inserts a single mundane journal entry for the learner and Decan</li>
+<li>rejects duplicates with conflict handling</li>
+<li>writes a combined <code>content</code> field for backward compatibility</li>
+<li>marks <code>student_decan_progress.journal_done = true</code></li>
+<li>checks whether the full Decan is now complete</li>
+</ul>
+<h2>14. What Happens When a Decan Becomes Complete</h2>
+<p>When all three are true:</p>
+<ul>
+<li><code>ritual_done = true</code></li>
+<li><code>scry_done = true</code></li>
+<li><code>journal_done = true</code></li>
+</ul>
+<p>the system marks:</p>
+<ul>
+<li><code>student_decan_progress.status = 'completed'</code></li>
+<li><code>student_decan_progress.completed_at = now</code></li>
+</ul>
+<p>What changes after that:</p>
+<ol>
+<li>the Decan counts toward the learner’s completed Decan total</li>
+<li>the dashboard reflects increased Decan progress</li>
+<li>the learner moves closer to graduation</li>
+<li>the next Decan is <strong>not</strong> sequence-unlocked by completion</li>
+<li>Decan availability remains primarily time-based</li>
+</ol>
+<h2>15. Decan Lifecycle Automation</h2>
+<h3>15.1 Daily Decan cron</h3>
+<p>File:</p>
+<ul>
+<li><code>src/app/api/cron/decan-unlock/route.ts</code></li>
+</ul>
+<p>This job currently processes only students in:</p>
+<ul>
+<li><code>training_status = 'decans'</code></li>
+</ul>
+<p>This is important because Foundation students should not receive actionable Decan lifecycle rows.</p>
+<h3>15.2 What the cron does</h3>
+<p>For eligible Decan-phase students it handles:</p>
+<ol>
+<li>preview opening</li>
+<li>active window opening</li>
+<li>grace period transition</li>
+<li>missed transition</li>
+<li>retry window reopening</li>
+</ol>
+<h3>15.3 Retry behavior</h3>
+<p>The cron computes retry windows when a Decan is missed:</p>
+<ul>
+<li>most missed Decans retry in the following year</li>
+<li>later-quarter Decans can use a longer retry cycle</li>
+</ul>
+<p>The cron persists:</p>
+<ul>
+<li><code>retry_year</code></li>
+<li><code>retry_window_open</code></li>
+<li><code>retry_window_close</code></li>
+</ul>
+<h2>16. Graduation Flow</h2>
+<h3>16.1 Graduation rule</h3>
+<p>The authoritative graduation logic lives in:</p>
+<ul>
+<li><code>src/lib/mystery-school/graduation.ts</code></li>
+</ul>
+<p>Graduation requires all three:</p>
+<ol>
+<li>Foundation complete</li>
+<li>all 36 Decans completed</li>
+<li>zero unexcused missed Decans</li>
+</ol>
+<h3>16.2 Graduation eligibility helper</h3>
+<ul>
+<li><code>checkGraduationEligibility(studentId)</code></li>
+</ul>
+<p>This function:</p>
+<ul>
+<li>loads the student’s <code>user_id</code></li>
+<li>checks Foundation completion using the Training-backed helper</li>
+<li>counts completed Decans</li>
+<li>counts unresolved missed Decans</li>
+<li>returns eligibility plus blocking reasons</li>
+</ul>
+<h3>16.3 Graduation processing</h3>
+<ul>
+<li><code>processGraduation(studentId, adminClient)</code></li>
+</ul>
+<p>When eligible, it:</p>
+<ul>
+<li>sets <code>training_status = 'graduated'</code></li>
+<li>sets <code>graduated_at</code></li>
+<li>sets <code>graduation_verified_at</code></li>
+<li>clears <code>graduation_blocked_reason</code></li>
+<li>attempts to send a graduation congratulations email</li>
+</ul>
+<h3>16.4 Graduation cron</h3>
+<p>File:</p>
+<ul>
+<li><code>src/app/api/cron/graduation-check/route.ts</code></li>
+</ul>
+<p>This job:</p>
+<ol>
+<li>loads non-graduated Mystery School students</li>
+<li>pre-filters by completed Decan count</li>
+<li>checks graduation eligibility</li>
+<li>either graduates the student or writes a blocked reason for admins</li>
+</ol>
+<h3>16.5 Graduation page</h3>
+<p>Learner graduation page:</p>
+<ul>
+<li><code>src/app/mystery-school/training/graduation/page.tsx</code></li>
+</ul>
+<p>Current behavior:</p>
+<ul>
+<li>not graduated: shows journey progress, Foundation progress, Decan progress, unresolved missed count, roadmap, and next-step guidance</li>
+<li>graduated: shows certificate-style completion view</li>
+</ul>
+<h2>17. Admin Architecture Overview</h2>
+<p>The admin side is intentionally split between:</p>
+<h3>17.1 Admin Training</h3>
+<p>Used for Foundation curriculum content:</p>
+<ul>
+<li>programs</li>
+<li>categories</li>
+<li>lessons</li>
+<li>quizzes</li>
+</ul>
+<p>Primary admin entry:</p>
+<ul>
+<li><code>/admin/training</code></li>
+</ul>
+<h3>17.2 Admin Mystery School</h3>
+<p>Used for Mystery School-specific oversight:</p>
+<ul>
+<li>Foundation coverage summary</li>
+<li>Decan content</li>
+<li>student progress</li>
+<li>journal review</li>
+</ul>
+<p>Primary admin entry:</p>
+<ul>
+<li><code>/admin/mystery-school</code></li>
+</ul>
+<h2>18. Admin Mystery School Home</h2>
+<h3>Page</h3>
+<ul>
+<li><code>src/app/admin/mystery-school/page.tsx</code></li>
+</ul>
+<h3>Purpose</h3>
+<p>This page is a bridge between Mystery School administration and Admin Training.</p>
+<p>It currently:</p>
+<ul>
+<li>explains that Foundation curriculum is managed in Admin Training</li>
+<li>provides shortcut cards into programs, weeks, lessons, and quizzes</li>
+<li>shows whether each Foundation week has active lesson coverage</li>
+</ul>
+<h3>Supporting API</h3>
+<ul>
+<li><code>GET /api/admin/mystery-school/training-status</code></li>
+</ul>
+<p>This API reports:</p>
+<ul>
+<li>whether the Foundation program exists</li>
+<li>how many active week categories exist</li>
+<li>how many weeks are missing lessons</li>
+<li>shortcut links into Admin Training sections</li>
+</ul>
+<h2>19. Admin Decan Content Management</h2>
+<h3>Page</h3>
+<ul>
+<li><code>src/app/admin/mystery-school/decans/page.tsx</code></li>
+</ul>
+<h3>Purpose</h3>
+<p>This is the core Decan content management workspace.</p>
+<p>It currently manages:</p>
+<ul>
+<li>thematic description</li>
+<li>tarot mapping</li>
+<li>ritual steps</li>
+<li>decan metadata completeness</li>
+<li>decan resources</li>
+<li>instructor journal references</li>
+</ul>
+<h3>Main APIs</h3>
+<ul>
+<li><code>GET /api/admin/mystery-school/decans</code></li>
+<li><code>GET /api/admin/mystery-school/decans/[id]</code></li>
+<li><code>PUT /api/admin/mystery-school/decans/[id]</code></li>
+</ul>
+<h3>Decan list API behavior</h3>
+<p>The admin list API returns:</p>
+<ul>
+<li>Decan metadata</li>
+<li>ritual step counts</li>
+<li>resource counts</li>
+<li>instructor journal counts</li>
+<li>completeness flags including:
+<ul>
+<li><code>metadata_complete</code></li>
+<li><code>media_complete</code></li>
+<li><code>ritual_complete</code></li>
+<li><code>resources_complete</code></li>
+</ul>
+</li>
+</ul>
+<h3>Single Decan admin API behavior</h3>
+<p>The single Decan admin API returns:</p>
+<ul>
+<li>Decan row</li>
+<li>all ritual steps</li>
+<li>all Decan resources</li>
+<li>all instructor journals</li>
+</ul>
+<p>This gives the admin the full editorial picture for a single Decan.</p>
+<h2>20. Admin Student Oversight</h2>
+<h3>List page</h3>
+<ul>
+<li><code>src/app/admin/mystery-school/students/page.tsx</code></li>
+</ul>
+<h3>List API</h3>
+<ul>
+<li><code>GET /api/admin/mystery-school/students</code></li>
+</ul>
+<h3>What this admin view is doing</h3>
+<p>This page is not just showing raw <code>training_status</code>.</p>
+<p>It now derives a more trustworthy phase badge using Training-backed Foundation completion:</p>
+<ul>
+<li><code>foundation</code></li>
+<li><code>decans</code></li>
+<li><code>graduated</code></li>
+</ul>
+<p>This is important because a student row can say <code>training_status = 'decans'</code> while Foundation data still looks incomplete.</p>
+<p>The API therefore returns:</p>
+<ul>
+<li><code>derived_phase</code></li>
+<li><code>foundation_complete_derived</code></li>
+<li><code>phase_mismatch</code></li>
+</ul>
+<p>This protects the admin UI from showing a learner as being in Decans before Foundation is really done.</p>
+<h3>Detail page API</h3>
+<ul>
+<li><code>GET /api/admin/mystery-school/students/[id]</code></li>
+</ul>
+<p>This returns:</p>
+<ul>
+<li>student identity</li>
+<li>membership status</li>
+<li>full Decan progress rows</li>
+<li>Foundation summary</li>
+<li>Training-backed Foundation week timeline</li>
+<li>legacy Foundation rows for fallback/history</li>
+<li>graduation eligibility snapshot</li>
+</ul>
+<h2>21. Admin Journal Review</h2>
+<h3>Page</h3>
+<ul>
+<li><code>src/app/admin/mystery-school/journals/page.tsx</code></li>
+</ul>
+<h3>Main API</h3>
+<ul>
+<li><code>GET /api/admin/mystery-school/journals</code></li>
+</ul>
+<h3>What it shows</h3>
+<p>This page aggregates learner submissions from:</p>
+<ul>
+<li><code>scry_journals</code></li>
+<li><code>mundane_journals</code></li>
+</ul>
+<p>and enriches them with:</p>
+<ul>
+<li>student name</li>
+<li>student email</li>
+<li>Decan number</li>
+<li>Decan title</li>
+<li>submission preview</li>
+</ul>
+<p>Supported filters:</p>
+<ul>
+<li>journal type</li>
+<li>Decan number</li>
+<li>submitted-from date</li>
+<li>submitted-to date</li>
+</ul>
+<h3>Current implementation note</h3>
+<p>This admin journals feed now uses <strong>direct table reads plus enrichment</strong>, not fragile nested joins.</p>
+<p>That was important because learner submissions were being saved correctly while the admin page was failing to display them due to broken join assumptions.</p>
+<h3>Journal review endpoint</h3>
+<ul>
+<li><code>PUT /api/admin/mystery-school/journals/[id]/review</code></li>
+</ul>
+<p>Current behavior:</p>
+<ul>
+<li>updates review state on <code>decan_student_journal_entries</code></li>
+<li>allows:
+<ul>
+<li><code>reviewed</code></li>
+<li><code>revision_requested</code></li>
+</ul>
+</li>
+<li>stores:
+<ul>
+<li>feedback text</li>
+<li>rating</li>
+<li>reviewer info</li>
+</ul>
+</li>
+<li>fires a learner feedback notification</li>
+</ul>
+<h3>Important implementation note</h3>
+<p>There is currently a distinction between:</p>
+<ul>
+<li>learner Decan journal submission tables:
+<ul>
+<li><code>scry_journals</code></li>
+<li><code>mundane_journals</code></li>
+</ul>
+</li>
+<li>admin review endpoint table:
+<ul>
+<li><code>decan_student_journal_entries</code></li>
+</ul>
+</li>
+</ul>
+<p>This means the review workflow and the learner submission workflow are not fully unified in one table model.</p>
+<p>That should be treated as an architectural note for future consolidation work.</p>
+<h2>22. Core Mystery School Tables by Responsibility</h2>
+<h3>Entitlement and student lifecycle</h3>
+<ul>
+<li><code>mystery_school_students</code></li>
+<li><code>community_members</code> (legacy / parallel membership context)</li>
+</ul>
+<h3>Foundation curriculum and progress</h3>
+<ul>
+<li><code>training_programs</code></li>
+<li><code>training_categories</code></li>
+<li><code>training_lessons</code></li>
+<li><code>lesson_completions</code></li>
+<li><code>category_completions</code></li>
+<li><code>student_foundation_progress</code> (legacy fallback only)</li>
+</ul>
+<h3>Decan content</h3>
+<ul>
+<li><code>decans</code></li>
+<li><code>decan_rituals</code></li>
+<li><code>decan_resources</code></li>
+<li><code>decan_instructor_journals</code></li>
+</ul>
+<h3>Decan learner progress</h3>
+<ul>
+<li><code>student_decan_progress</code></li>
+<li><code>ritual_executions</code></li>
+<li><code>scry_journals</code></li>
+<li><code>mundane_journals</code></li>
+</ul>
+<h3>Graduation and lifecycle metadata</h3>
+<ul>
+<li><code>mystery_school_students.foundation_completed_at</code></li>
+<li><code>mystery_school_students.graduated_at</code></li>
+<li><code>mystery_school_students.graduation_verified_at</code></li>
+<li><code>mystery_school_students.graduation_blocked_reason</code></li>
+</ul>
+<h2>23. Current Business Rules Confirmed in Code</h2>
+<h3>Foundation rules</h3>
+<ul>
+<li>Foundation is Training-backed</li>
+<li>Foundation is sequential by week</li>
+<li>Week 1 always unlocked</li>
+<li>next week unlocks only after previous week is complete</li>
+</ul>
+<h3>Decan rules</h3>
+<ul>
+<li>Decans are time-based</li>
+<li>Decan work should be locked until Foundation is complete</li>
+<li>Decan completion requires ritual + scry + mundane</li>
+<li>completed Decans count toward 36-Decan graduation requirement</li>
+</ul>
+<h3>Graduation rules</h3>
+<ul>
+<li>Foundation complete required</li>
+<li>all 36 Decans required</li>
+<li>no unresolved missed Decans allowed</li>
+</ul>
+<h2>24. Current Exceptions, Risks, and Notes</h2>
+<h3>24.1 Hardcoded learner bypass exists</h3>
+<p>The email:</p>
+<ul>
+<li><code>perennial1@test.astrologypro.com</code></li>
+</ul>
+<p>has special-case bypass logic in current Decan APIs.</p>
+<p>This can override normal gating and make some Decans appear active even when they otherwise would not be.</p>
+<h3>24.2 Legacy tables still exist</h3>
+<p>The codebase still carries legacy structures for compatibility and fallback, especially:</p>
+<ul>
+<li><code>student_foundation_progress</code></li>
+</ul>
+<p>It is no longer the preferred source of truth for current Foundation progression.</p>
+<h3>24.3 Admin journal review model is not fully unified with learner journal tables</h3>
+<p>Learner journals and admin-reviewed journal entries are not currently a single unified data model.</p>
+<p>This matters if you want a full instructor feedback loop inside the same Decan journal workflow.</p>
+<h3>24.4 Decan content is not managed through Admin Training</h3>
+<p>Foundation is managed through Admin Training.<br>
+Decan content is managed separately through Mystery School-specific tables and admin screens.</p>
+<p>At present:</p>
+<ul>
+<li>Foundation is Admin Training-backed</li>
+<li>Decans are Mystery School CMS-backed</li>
+</ul>
+<h2>25. Recommended Operational Reading Order for Teams</h2>
+<p>If a developer or operator needs to understand the module quickly, use this order:</p>
+<ol>
+<li><code>src/lib/mystery-school/access.ts</code></li>
+<li><code>src/lib/mystery-school/foundation-progress.ts</code></li>
+<li><code>src/lib/mystery-school/foundation-graduation.ts</code></li>
+<li><code>src/app/api/mystery-school/training/foundation/route.ts</code></li>
+<li><code>src/app/api/mystery-school/decans/route.ts</code></li>
+<li><code>src/app/api/mystery-school/decan/[id]/route.ts</code></li>
+<li>ritual and journal action routes</li>
+<li><code>src/lib/mystery-school/graduation.ts</code></li>
+<li>admin student and journal APIs</li>
+<li>cron routes</li>
+</ol>
+<h2>26. QA Checklist for the Current Module</h2>
+<h3>Access and Foundation</h3>
+<ul>
+<li>learner without Mystery School access cannot enter Mystery School pages</li>
+<li>newly enrolled student lands in Foundation phase</li>
+<li>Foundation weeks unlock sequentially</li>
+<li>Foundation progress reflects Admin Training completions</li>
+</ul>
+<h3>Foundation to Decans</h3>
+<ul>
+<li>learner cannot perform normal Decan work before Foundation completion</li>
+<li>final Foundation completion advances <code>training_status</code> to <code>decans</code></li>
+<li><code>foundation_completed_at</code> is recorded</li>
+</ul>
+<h3>Decans</h3>
+<ul>
+<li>Decan dashboard shows correct lifecycle state</li>
+<li>Decan detail loads correct ritual/journal data</li>
+<li>ritual steps must be sequential</li>
+<li>scry submission validates minimum content</li>
+<li>mundane journal validates all three sections</li>
+<li>Decan becomes completed only when all three requirements are done</li>
+</ul>
+<h3>Graduation</h3>
+<ul>
+<li>graduation page reflects Foundation + Decan progress correctly</li>
+<li>graduation does not trigger when unresolved missed Decans remain</li>
+<li>eligible learner becomes graduated</li>
+<li>certificate-style graduation view appears only after graduation</li>
+</ul>
+<h3>Admin</h3>
+<ul>
+<li><code>/admin/mystery-school</code> reflects Foundation coverage status</li>
+<li><code>/admin/mystery-school/decans</code> shows full Decan content state</li>
+<li><code>/admin/mystery-school/students</code> shows derived phase correctly</li>
+<li><code>/admin/mystery-school/journals</code> displays learner journal submissions</li>
+</ul>
+<h2>27. Final Architecture Statement</h2>
+<p>As of this analysis date, the Mystery School system is best understood as:</p>
+<ul>
+<li>a <strong>hybrid module</strong></li>
+<li>with <strong>Foundation managed through Admin Training</strong></li>
+<li>and <strong>Decans managed through Mystery School-specific tables and admin tools</strong></li>
+</ul>
+<p>The learner journey is:</p>
+<ol>
+<li>gain active Mystery School entitlement</li>
+<li>complete Foundation Q1 in sequential Admin Training-backed weeks</li>
+<li>transition into Decan phase</li>
+<li>complete time-based Decan ritual and journal work</li>
+<li>satisfy all graduation requirements</li>
+<li>receive graduation status and certificate-style completion view</li>
+</ol>
+<p>That is the current verified operating model of the module in this repository.</p>
+</article>
+  </main>
+</body>
+</html>

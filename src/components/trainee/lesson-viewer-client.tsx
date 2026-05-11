@@ -13,7 +13,6 @@ import {
 } from "@/components/ui/dialog";
 import {
   CheckCircle2,
-  Download,
   Eye,
   FileText,
   Link2,
@@ -63,6 +62,7 @@ export type SidebarLesson = {
   completed: boolean;
   current: boolean;
   locked: boolean;
+  href?: string;
 };
 
 // ---------------------------------------------------------------------------
@@ -103,6 +103,7 @@ export type LessonViewerProps = {
   content: string | null;
   videoUrl: string | null; // legacy single video
   pdfUrl: string | null;   // legacy single PDF
+  audioUrl?: string | null; // optional first-class lesson audio (Mystery School Foundation)
   durationMins: number | null;
   videos: LessonVideo[];
   assets: LessonAsset[];
@@ -183,20 +184,48 @@ function AssetTypeIcon({ type }: { type: LessonAsset["asset_type"] }) {
 function VideoPlayer({
   video,
   onEnded,
+  allowForwardSeek = false,
 }: {
   video: { title: string | null; video_url: string; duration_mins: number | null };
   onEnded?: () => void;
+  allowForwardSeek?: boolean;
 }) {
   const embedUrl = getVideoEmbed(video.video_url);
   const isDirect = isHtml5Video(video.video_url);
+  const maxWatchedPositionRef = useRef(0);
+
+  const preventForwardSeek = useCallback(
+    (event: React.SyntheticEvent<HTMLVideoElement>) => {
+      const media = event.currentTarget;
+      if (allowForwardSeek) return;
+      const maxAllowed = maxWatchedPositionRef.current + 1;
+      if (media.currentTime > maxAllowed) {
+        media.currentTime = maxWatchedPositionRef.current;
+      }
+    },
+    [allowForwardSeek]
+  );
+
+  const rememberWatchedPosition = useCallback(
+    (event: React.SyntheticEvent<HTMLVideoElement>) => {
+      const media = event.currentTarget;
+      if (!media.seeking) {
+        maxWatchedPositionRef.current = Math.max(
+          maxWatchedPositionRef.current,
+          media.currentTime
+        );
+      }
+    },
+    []
+  );
 
   return (
-    <div className="w-full overflow-hidden rounded-xl border bg-black">
+    <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-black ring-1 ring-amber-500/20">
       {embedUrl ? (
-        <div className="relative aspect-video w-full">
+        <div className="absolute inset-0">
           <iframe
             src={embedUrl}
-            className="absolute inset-0 h-full w-full"
+            className="size-full"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
             allowFullScreen
             title={video.title ?? "Lesson video"}
@@ -209,11 +238,13 @@ function VideoPlayer({
           autoPlay
           muted
           playsInline
-          className="aspect-video w-full bg-black object-contain"
+          className="size-full bg-black object-contain"
+          onTimeUpdate={rememberWatchedPosition}
+          onSeeking={preventForwardSeek}
           onEnded={onEnded}
         />
       ) : (
-        <div className="flex h-24 items-center justify-center p-4 text-sm text-muted-foreground">
+        <div className="flex size-full items-center justify-center p-4 text-sm text-muted-foreground">
           <a
             href={video.video_url}
             target="_blank"
@@ -242,6 +273,7 @@ type TriggerVideoPlayerProps = {
   onEnded?: () => void;
   onPassedIdsChange?: (passedIds: string[]) => void;
   onLessonCompleted?: () => void;
+  allowForwardSeek?: boolean;
   /**
    * Module 05: when the stepwise lesson quiz fires a wrong answer with
    * remediation metadata, the parent passes the seek/replay window here.
@@ -267,6 +299,7 @@ function TriggerVideoPlayer({
   onEnded,
   onPassedIdsChange,
   onLessonCompleted,
+  allowForwardSeek = false,
   remediationRequest,
   onRemediationComplete,
 }: TriggerVideoPlayerProps) {
@@ -274,6 +307,7 @@ function TriggerVideoPlayer({
   const isDirect = isHtml5Video(video.video_url);
 
   const videoRef = useRef<HTMLVideoElement>(null);
+  const maxWatchedPositionRef = useRef(Math.max(0, initialPosition));
 
   // Track which triggers have been passed locally (optimistic after API confirms)
   const [localPassedIds, setLocalPassedIds] = useState<Set<string>>(() => {
@@ -471,6 +505,12 @@ function TriggerVideoPlayer({
     if (!vid || activeTrigger || rewindCountdown !== null) return;
 
     const current = vid.currentTime;
+    if (!vid.seeking) {
+      maxWatchedPositionRef.current = Math.max(
+        maxWatchedPositionRef.current,
+        current
+      );
+    }
     for (const trigger of unpassedTriggers) {
       const ts = trigger.trigger_timestamp_seconds;
       // Fire when within 1s window of the trigger timestamp
@@ -488,12 +528,16 @@ function TriggerVideoPlayer({
   const handleSeeking = useCallback(() => {
     const vid = videoRef.current;
     if (!vid) return;
+    if (allowForwardSeek) return;
     const seekTarget = vid.currentTime;
-    const boundary = getPlaybackBoundary();
+    const boundary = Math.min(
+      getPlaybackBoundary(),
+      maxWatchedPositionRef.current + 1
+    );
     if (seekTarget > boundary) {
       vid.currentTime = boundary;
     }
-  }, [getPlaybackBoundary]);
+  }, [allowForwardSeek, getPlaybackBoundary]);
 
   async function handleAnswerSubmit() {
     if (selectedOption === null || !activeTrigger || submitting) return;
@@ -552,7 +596,13 @@ function TriggerVideoPlayer({
 
   // For non-HTML5 or embed videos, fall back to standard VideoPlayer (no trigger support)
   if (embedUrl || !isDirect) {
-    return <VideoPlayer video={video} onEnded={onEnded} />;
+    return (
+      <VideoPlayer
+        video={video}
+        onEnded={onEnded}
+        allowForwardSeek={allowForwardSeek}
+      />
+    );
   }
 
   const q = activeTrigger?.question;
@@ -560,7 +610,7 @@ function TriggerVideoPlayer({
   const showCountdown = rewindCountdown !== null;
 
   return (
-    <div className="relative w-full overflow-hidden rounded-xl border bg-black">
+    <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-black ring-1 ring-amber-500/20">
       <video
         ref={videoRef}
         src={video.video_url}
@@ -568,10 +618,10 @@ function TriggerVideoPlayer({
         autoPlay
         muted
         playsInline
-        className="aspect-video w-full bg-black object-contain"
         onEnded={onEnded}
         onTimeUpdate={handleTimeUpdate}
         onSeeking={handleSeeking}
+        className="size-full bg-black object-contain"
       />
 
       {/* Rewind countdown notification */}
@@ -671,6 +721,7 @@ export function LessonViewerClient(props: LessonViewerProps) {
     content,
     videoUrl,
     pdfUrl,
+    audioUrl,
     durationMins,
     videos,
     assets,
@@ -708,6 +759,7 @@ export function LessonViewerClient(props: LessonViewerProps) {
 
   const [activeVideoIdx, setActiveVideoIdx] = useState(0);
   const [isCompleted, setIsCompleted] = useState(initialCompleted);
+  const [mediaCompleted, setMediaCompleted] = useState(initialCompleted);
   const [isQuizPassed, setIsQuizPassed] = useState(quizPassed);
   const [passedTriggerIds, setPassedTriggerIds] = useState<string[]>(
     triggers
@@ -718,7 +770,7 @@ export function LessonViewerClient(props: LessonViewerProps) {
     url: string;
     title: string;
   } | null>(null);
-  const [assetsExpanded, setAssetsExpanded] = useState(false);
+  const [pdfOpened, setPdfOpened] = useState(initialCompleted);
 
   // Module 05 — quiz remediation: when the stepwise quiz fires onWrongAnswer
   // with remediation metadata, we set this state to drive the video player
@@ -744,31 +796,35 @@ export function LessonViewerClient(props: LessonViewerProps) {
   const remediationPlaybackActiveRef = useRef(false);
   const videoSectionRef = useRef<HTMLDivElement>(null);
   const quizSectionRef = useRef<HTMLDivElement>(null);
+  const audioMaxWatchedPositionRef = useRef(0);
 
-  const hasQuiz = quizQuestions.length > 0;
-  const hasSidebarRail = sidebarLessons.length > 0;
+  const rememberAudioWatchedPosition = useCallback(
+    (event: React.SyntheticEvent<HTMLAudioElement>) => {
+      const media = event.currentTarget;
+      if (!media.seeking) {
+        audioMaxWatchedPositionRef.current = Math.max(
+          audioMaxWatchedPositionRef.current,
+          media.currentTime
+        );
+      }
+    },
+    []
+  );
 
-  // All in-video trigger questions must be answered correctly before completing.
-  // A trigger counts as requiring a pass if it has a question attached.
-  const hasTriggers = triggers.length > 0;
-  const passedTriggerIdSet = new Set(passedTriggerIds);
-  const allTriggersPassed =
-    !hasTriggers ||
-    triggers.every((t) => {
-      // Only gate on triggers that have a question
-      if (!t.question) return true;
-      return passedTriggerIdSet.has(t.id);
-    });
-
-  // Completion gating: both trigger pass AND quiz pass must be satisfied
-  // when the lesson has both. Previously trigger-only lessons skipped the
-  // quiz check, which let learners complete a lesson without passing the
-  // standard quiz if in-video triggers also existed.
-  const triggersSatisfied = !hasTriggers || allTriggersPassed;
-  const quizSatisfied = !hasQuiz || isQuizPassed;
-  const canComplete = triggersSatisfied && quizSatisfied;
+  const preventAudioForwardSeek = useCallback(
+    (event: React.SyntheticEvent<HTMLAudioElement>) => {
+      const media = event.currentTarget;
+      if (isCompleted) return;
+      const maxAllowed = audioMaxWatchedPositionRef.current + 1;
+      if (media.currentTime > maxAllowed) {
+        media.currentTime = audioMaxWatchedPositionRef.current;
+      }
+    },
+    [isCompleted]
+  );
 
   const handleVideoEnded = () => {
+    setMediaCompleted(true);
     // Auto-advance to next video if available
     if (activeVideoIdx < allVideos.length - 1) {
       setActiveVideoIdx((i) => i + 1);
@@ -913,6 +969,35 @@ export function LessonViewerClient(props: LessonViewerProps) {
     ...extraAssets.filter((extra) => !assets.some((a) => a.url === extra.url)),
   ].sort((a, b) => a.priority - b.priority);
 
+  const hasQuiz = quizQuestions.length > 0;
+  const hasSidebarRail = sidebarLessons.length > 0;
+  const hasTrackableMedia =
+    !!audioUrl || allVideos.some((video) => isHtml5Video(video.video_url));
+  const hasPdfRequirement = allAssets.some((asset) => asset.asset_type === "pdf");
+
+  // All in-video trigger questions must be answered correctly before completing.
+  // A trigger counts as requiring a pass if it has a question attached.
+  const hasTriggers = triggers.length > 0;
+  const passedTriggerIdSet = new Set(passedTriggerIds);
+  const allTriggersPassed =
+    !hasTriggers ||
+    triggers.every((t) => {
+      // Only gate on triggers that have a question
+      if (!t.question) return true;
+      return passedTriggerIdSet.has(t.id);
+    });
+
+  // Completion gating: both trigger pass AND quiz pass must be satisfied
+  // when the lesson has both. Previously trigger-only lessons skipped the
+  // quiz check, which let learners complete a lesson without passing the
+  // standard quiz if in-video triggers also existed.
+  const triggersSatisfied = !hasTriggers || allTriggersPassed;
+  const quizSatisfied = !hasQuiz || isQuizPassed;
+  const mediaSatisfied = !hasTrackableMedia || mediaCompleted;
+  const pdfSatisfied = !hasPdfRequirement || pdfOpened;
+  const canComplete =
+    triggersSatisfied && quizSatisfied && mediaSatisfied && pdfSatisfied;
+
   return (
     <>
       {/* PDF preview modal */}
@@ -983,7 +1068,7 @@ export function LessonViewerClient(props: LessonViewerProps) {
             )}
           </div>
 
-          <div className="w-full max-h-[72vh] overflow-y-auto overscroll-contain rounded-xl border bg-card p-4 pr-3 space-y-5">
+          <div className="w-full rounded-xl border bg-card p-4 space-y-5">
             {allVideos.length > 0 && (
               <div
                 ref={videoSectionRef}
@@ -1017,6 +1102,7 @@ export function LessonViewerClient(props: LessonViewerProps) {
                   onEnded={handleVideoEnded}
                   onPassedIdsChange={setPassedTriggerIds}
                   onLessonCompleted={() => { /* completion is manual via button */ }}
+                  allowForwardSeek={isCompleted}
                   remediationRequest={remediationRequest}
                   onRemediationComplete={() => {
                     remediationPlaybackActiveRef.current = false;
@@ -1024,6 +1110,25 @@ export function LessonViewerClient(props: LessonViewerProps) {
                     setPendingRemediationChoice(activeRemediationChoiceRef.current);
                   }}
                 />
+              </div>
+            )}
+
+            {audioUrl && (
+              <div className="rounded-xl border bg-background/40 p-4 space-y-2">
+                <p className="text-sm font-medium">Audio</p>
+                <audio
+                  src={audioUrl}
+                  controls
+                  controlsList="nodownload"
+                  preload="metadata"
+                  aria-label={`Audio for ${title}`}
+                  className="w-full"
+                  onTimeUpdate={rememberAudioWatchedPosition}
+                  onSeeking={preventAudioForwardSeek}
+                  onEnded={() => setMediaCompleted(true)}
+                >
+                  Your browser does not support the audio element.
+                </audio>
               </div>
             )}
 
@@ -1037,86 +1142,50 @@ export function LessonViewerClient(props: LessonViewerProps) {
 
             {allAssets.length > 0 && (
               <div className="rounded-xl border bg-background/40 overflow-hidden">
-                <button
-                  onClick={() => setAssetsExpanded((e) => !e)}
-                  className="flex w-full items-center justify-between px-5 py-3 text-sm font-medium hover:bg-muted/40 transition-colors"
-                  aria-expanded={assetsExpanded}
-                >
-                  <span>Downloads & Resources ({allAssets.length})</span>
-                  <ChevronRight
-                    className={cn(
-                      "size-4 text-muted-foreground transition-transform",
-                      assetsExpanded && "rotate-90"
-                    )}
-                  />
-                </button>
-
-                <div
-                  className={cn(
-                    "overflow-hidden transition-all duration-200",
-                    assetsExpanded ? "max-h-[600px] opacity-100" : "max-h-0 opacity-0"
-                  )}
-                >
-                  <div className="border-t divide-y">
-                    {allAssets.map((asset) => (
-                      <div
-                        key={asset.id}
-                        className="flex items-center gap-3 px-5 py-3"
-                      >
-                        <AssetTypeIcon type={asset.asset_type} />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">
-                            {asset.title}
+                <div className="px-5 py-3 border-b">
+                  <p className="text-sm font-semibold">
+                    PDF & Resources ({allAssets.length})
+                  </p>
+                </div>
+                <div className="divide-y">
+                  {allAssets.map((asset) => (
+                    <div
+                      key={asset.id}
+                      className="flex items-center gap-3 px-5 py-3"
+                    >
+                      <AssetTypeIcon type={asset.asset_type} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">
+                          {asset.title}
+                        </p>
+                        {asset.file_size_bytes != null && (
+                          <p className="text-xs text-muted-foreground">
+                            {formatBytes(asset.file_size_bytes)}
                           </p>
-                          {asset.file_size_bytes != null && (
-                            <p className="text-xs text-muted-foreground">
-                              {formatBytes(asset.file_size_bytes)}
-                            </p>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="gap-1.5 text-xs h-7"
-                            onClick={() => {
-                              if (asset.asset_type === "pdf") {
-                                setPdfPreview({
-                                  url: asset.url,
-                                  title: asset.title,
-                                });
-                              } else {
-                                window.open(asset.url, "_blank", "noopener");
-                              }
-                            }}
-                            aria-label={`Preview ${asset.title}`}
-                          >
-                            <Eye className="size-3.5" />
-                            Preview
-                          </Button>
-                          {asset.is_downloadable && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="gap-1.5 text-xs h-7"
-                              asChild
-                            >
-                              <a
-                                href={asset.url}
-                                download
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                aria-label={`Download ${asset.title}`}
-                              >
-                                <Download className="size-3.5" />
-                                Download
-                              </a>
-                            </Button>
-                          )}
-                        </div>
+                        )}
                       </div>
-                    ))}
-                  </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5 text-xs h-7 shrink-0"
+                        onClick={() => {
+                          if (asset.asset_type === "pdf") {
+                            setPdfOpened(true);
+                            setPdfPreview({
+                              url: asset.url,
+                              title: asset.title,
+                            });
+                          } else {
+                            window.open(asset.url, "_blank", "noopener");
+                          }
+                        }}
+                        aria-label={`Open ${asset.title}`}
+                      >
+                        <Eye className="size-3.5" />
+                        {asset.asset_type === "pdf" ? "Open PDF" : "Open"}
+                      </Button>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
@@ -1185,7 +1254,11 @@ export function LessonViewerClient(props: LessonViewerProps) {
             disabled={!canComplete}
             disabledReason={
               !canComplete
-                ? !triggersSatisfied && !quizSatisfied
+                ? !mediaSatisfied
+                  ? "Play the lesson audio or video completely before continuing."
+                  : !pdfSatisfied
+                  ? "Open the lesson PDF before continuing."
+                  : !triggersSatisfied && !quizSatisfied
                   ? "Answer all in-video questions and pass the lesson quiz to complete this lesson."
                   : !triggersSatisfied
                     ? "Answer all in-video quiz questions correctly to complete this lesson."
@@ -1261,7 +1334,10 @@ export function LessonViewerClient(props: LessonViewerProps) {
                         </span>
                       ) : (
                         <Link
-                          href={`/trainee/training/${programId}/${categoryId}/${l.id}`}
+                          href={
+                            l.href ??
+                            `/trainee/training/${programId}/${categoryId}/${l.id}`
+                          }
                           className="flex-1 text-xs truncate hover:text-primary transition-colors"
                         >
                           {l.title}

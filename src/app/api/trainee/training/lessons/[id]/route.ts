@@ -45,7 +45,7 @@ export async function GET(
       admin
         .from("training_lessons")
         .select(
-          "id, category_id, title, description, video_url, pdf_url, content, duration_mins, priority, previous_lesson_id, is_active, created_at"
+          "id, category_id, title, description, video_url, pdf_url, audio_url, content, duration_mins, priority, previous_lesson_id, is_active, created_at"
         )
         .eq("id", id)
         .eq("is_active", true)
