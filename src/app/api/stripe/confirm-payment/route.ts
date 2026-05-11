@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
   // Fetch the booking
   const { data: booking } = await admin
     .from("bookings")
-    .select("id, status, stripe_payment_intent_id, diviner_id, base_price, total_amount, ref_code, commission_source_assignment_id, commission_source_template_id, commission_rate_type_stamp, commission_rate_value_stamp, affiliate_commission_amount_cents, scheduled_at, duration_minutes")
+    .select("id, status, stripe_payment_intent_id, diviner_id, base_price, total_amount, ref_code, commission_source_assignment_id, commission_source_template_id, commission_source_campaign_id, commission_rate_type_stamp, commission_rate_value_stamp, affiliate_commission_amount_cents, scheduled_at, duration_minutes")
     .eq("id", body.bookingId)
     .maybeSingle();
 
@@ -121,9 +121,11 @@ export async function POST(req: NextRequest) {
   // ── Affiliate Attribution Fallback ──
   // Idempotent: safe to run even if webhook beats this to it.
   try {
+    const sourceCampaignId = (booking.commission_source_campaign_id as string | null) ?? null;
     if (
       booking.commission_source_assignment_id ||
-      booking.commission_source_template_id
+      booking.commission_source_template_id ||
+      sourceCampaignId
     ) {
       const { creditAffiliateConversion } = await import("@/lib/affiliate-attribution");
       const amountCents = Number(booking.total_amount ?? booking.base_price ?? 0) * 100;
@@ -134,6 +136,7 @@ export async function POST(req: NextRequest) {
         refCode: (booking.ref_code as string | null) ?? null,
         stampedAssignmentId: (booking.commission_source_assignment_id as string | null) ?? null,
         stampedTemplateId: (booking.commission_source_template_id as string | null) ?? null,
+        stampedCampaignId: sourceCampaignId,
         stampedRateType: (booking.commission_rate_type_stamp as "percent" | "flat" | null) ?? null,
         stampedRateValue: booking.commission_rate_value_stamp != null ? Number(booking.commission_rate_value_stamp) : null,
         stampedCommissionCents:
