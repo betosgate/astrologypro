@@ -11,6 +11,8 @@ import Link from "next/link";
 import { useState } from "react";
 import { UpdatePaymentModal } from "@/components/community/update-payment-modal";
 import { UnsubscribeModal } from "@/components/community/unsubscribe-modal";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { ShieldAlert, ShieldCheck, ShieldX } from "lucide-react";
 
 export interface MembershipSubscription {
   membership_type: string;
@@ -69,6 +71,12 @@ function formatStatus(status: string): string {
   return status.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+function isWithinDays(iso: string | null, days: number): boolean {
+  if (!iso) return false;
+  const diff = new Date(iso).getTime() - Date.now();
+  return diff > 0 && diff <= days * 24 * 60 * 60 * 1000;
+}
+
 export function MembershipCard({ subscription, userEmail }: MembershipCardProps) {
   const [portalLoading, setPortalLoading] = useState(false);
   const [portalError, setPortalError] = useState<string | null>(null);
@@ -85,6 +93,26 @@ export function MembershipCard({ subscription, userEmail }: MembershipCardProps)
       : subscription.status === "cancelling"
         ? "Access Until"
         : "Next Billing";
+
+  const normalizedStatus = subscription.status.toLowerCase();
+  const isEnded = ["canceled", "cancelled", "incomplete_expired", "unpaid", "expired"].includes(normalizedStatus);
+  const needsAttention =
+    !isEnded &&
+    (["cancelling", "past_due", "requires_payment_method", "incomplete"].includes(normalizedStatus) ||
+      isWithinDays(subscription.renewal_date, 7));
+  const MembershipStatusIcon = isEnded ? ShieldX : needsAttention ? ShieldAlert : ShieldCheck;
+  const membershipStatusTooltip = isEnded
+    ? "Subscription ended"
+    : needsAttention
+      ? normalizedStatus === "cancelling"
+        ? "Subscription about to end"
+        : "Subscription needs attention"
+      : "Subscription active";
+  const membershipStatusIconClass = isEnded
+    ? "text-red-500"
+    : needsAttention
+      ? "text-amber-500"
+      : "text-emerald-500";
 
   const isFamily = subscription.plan_type === "family";
   const canUpgrade =
@@ -119,6 +147,17 @@ export function MembershipCard({ subscription, userEmail }: MembershipCardProps)
           <div className="flex items-center gap-2">
             <span className="text-base" aria-hidden="true">🔮</span>
             <h2 className="text-base font-semibold leading-tight">Your Membership</h2>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span
+                  className="inline-flex size-4 items-center justify-center"
+                  aria-label={membershipStatusTooltip}
+                >
+                  <MembershipStatusIcon className={`size-4 ${membershipStatusIconClass}`} aria-hidden="true" />
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="top">{membershipStatusTooltip}</TooltipContent>
+            </Tooltip>
           </div>
 
 

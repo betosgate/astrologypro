@@ -13,10 +13,11 @@ import { OnboardingGuard } from "@/components/community/onboarding-guard";
 import { SectionContainer } from "@/components/shared/section-container";
 import { SubscriptionExpiredView } from "@/components/shared/subscription-expired-view";
 import { getPendingContractDestination } from "@/lib/contract-orchestration";
-import { 
-  User, LayoutDashboard, Video, Radio, Calendar, BookOpen, 
+import {
+  LayoutDashboard, Video, Radio, Calendar, BookOpen,
   ClipboardList, Users, Star, TrendingUp, Flame, Sparkles, 
-  Globe, Compass, Telescope, HeartHandshake, BookMarked 
+  Globe, Compass, Telescope, HeartHandshake, BookMarked,
+  Package, IdCard, UserCog
 } from "lucide-react";
 
 export const metadata = { title: "Community - AstrologyPro" };
@@ -122,7 +123,7 @@ export default async function CommunityLayout({ children }: { children: React.Re
     { label: "Horoscope", href: "/community/horoscope", iconNode: <Telescope className="size-4" /> },
     { label: "Service", href: "/community/sunday-service", iconNode: <HeartHandshake className="size-4" /> },
     { label: "Library", href: "/community/library", iconNode: <BookMarked className="size-4" /> },
-    { label: "Profile", href: "/community/profile", iconNode: <User className="size-4" /> },
+    { label: "Profile", href: "/community/profile", iconNode: <IdCard className="size-4" /> },
   ];
 
   return (
@@ -156,7 +157,11 @@ export default async function CommunityLayout({ children }: { children: React.Re
               </li>
             ))}
             <li>
-              <NavDropdown label="Product" items={productSubItems} />
+              <NavDropdown
+                label="Product"
+                items={productSubItems}
+                icon={<Package className="size-4" />}
+              />
             </li>
           </ul>
         </nav>
@@ -166,7 +171,7 @@ export default async function CommunityLayout({ children }: { children: React.Re
             href="/account"
             className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
-            <User className="size-4" />
+            <UserCog className="size-4" />
             My Account
           </Link>
           <PortalLogoutButton />

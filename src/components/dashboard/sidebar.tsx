@@ -42,6 +42,8 @@ import {
   Trophy,
   Share2,
   Bell,
+  ChevronUp,
+  ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -62,7 +64,6 @@ import { createClient } from "@/lib/supabase/client";
 import { getDivinerAvatarUrl } from "@/lib/diviner-images";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
-import { ChevronDown } from "lucide-react";
 
 type NavItem = {
   label: string;
@@ -221,12 +222,11 @@ function NavLink({
         >
           <Icon className="size-5" />
           {item.label}
-          <ChevronDown
-            className={cn(
-              "ml-auto size-4 transition-transform duration-200",
-              isExpanded ? "rotate-0" : "-rotate-90"
-            )}
-          />
+          {isExpanded ? (
+            <ChevronUp className="ml-auto size-4 shrink-0" />
+          ) : (
+            <ChevronRight className="ml-auto size-4 shrink-0" />
+          )}
         </button>
         {isExpanded && (
           <div className="ml-4 mt-0.5 flex flex-col gap-0.5 border-l pl-3">

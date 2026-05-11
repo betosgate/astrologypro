@@ -172,7 +172,7 @@ export default function AdminLivePlatformsPage() {
                   onChange={(event) =>
                     updateLocal(platform.platform_key, "integration_tier", event.target.value as LiveIntegrationTier)
                   }
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  className="flex h-9 w-full rounded-md border border-input px-3 py-2 text-sm"
                 >
                   <option value="first_class">First class</option>
                   <option value="managed">Managed</option>
@@ -187,7 +187,7 @@ export default function AdminLivePlatformsPage() {
                   onChange={(event) =>
                     updateLocal(platform.platform_key, "playback_mode", event.target.value as LivePlaybackMode)
                   }
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  className="flex h-9 w-full rounded-md border border-input px-3 py-2 text-sm"
                 >
                   <option value="embedded_player">Embedded player</option>
                   <option value="external_link">External link</option>
