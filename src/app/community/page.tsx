@@ -1001,7 +1001,7 @@ export default async function CommunityDashboardPage() {
     {
       icon: Users,
       label: "Manage Family",
-      href: "/community/family",
+      href: "/community/plan?tab=members",
       highlight: familyMembers.length === 0,
     },
     {
@@ -1623,6 +1623,7 @@ export default async function CommunityDashboardPage() {
             missingDetailsCount={householdMissingDetailsCount}
             chartsReadyCount={householdNatalChartsReadyCount}
             chartsEligibleCount={householdNatalChartsEligibleCount}
+            completeDetailsHref="/community/plan?tab=members"
           />
 
           {/* Astro Charts polling/display */}
@@ -1891,7 +1892,7 @@ export default async function CommunityDashboardPage() {
                 )}
               </div>
               <Button asChild variant="ghost" size="sm">
-                <Link href="/community/family">Manage Family →</Link>
+                <Link href="/community/plan?tab=members">Manage Family →</Link>
               </Button>
             </div>
 
