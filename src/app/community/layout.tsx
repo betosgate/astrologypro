@@ -17,7 +17,7 @@ import {
   LayoutDashboard, Video, Radio, Calendar, BookOpen,
   ClipboardList, Users, Star, TrendingUp, Flame, Sparkles, 
   Globe, Compass, Telescope, HeartHandshake, BookMarked,
-  Package, IdCard, UserCog, Tags, Settings2
+  Package, IdCard, UserCog, Tags, Settings2, LifeBuoy
 } from "lucide-react";
 
 export const metadata = { title: "Community - AstrologyPro" };
@@ -102,27 +102,28 @@ export default async function CommunityLayout({ children }: { children: React.Re
   const membershipLabel = "Perennial Mandalism";
 
   const productSubItems = [
-    { label: "Product Category", href: "/admin/perennial-content/categories", icon: <Tags className="size-4" /> },
-    { label: "Product Management", href: "/admin/perennial-content/products", icon: <Settings2 className="size-4" /> },
+    // { label: "Product Category", href: "/admin/perennial-content/categories", icon: <Tags className="size-4" /> },
+    // { label: "Product Management", href: "/admin/perennial-content/products", icon: <Settings2 className="size-4" /> },
   ];
 
   const navLinks = [
     { label: "Home", href: "/community", iconNode: <LayoutDashboard className="size-4" /> },
     { label: "Sessions", href: "/community/sessions", iconNode: <Video className="size-4" /> },
-    { label: "Broadcasts", href: "/community/broadcasts", iconNode: <Radio className="size-4" /> },
+    // { label: "Broadcasts", href: "/community/broadcasts", iconNode: <Radio className="size-4" /> },
     { label: "Events", href: "/community/events", iconNode: <Calendar className="size-4" /> },
     { label: "Resources", href: "/community/resources", iconNode: <BookOpen className="size-4" /> },
     { label: "My Plan", href: "/community/plan", iconNode: <ClipboardList className="size-4" /> },
-    { label: "Family", href: "/community/family", iconNode: <Users className="size-4" /> },
-    { label: "Charts", href: "/community/charts", iconNode: <Star className="size-4" /> },
-    { label: "Transits", href: "/community/transits", iconNode: <TrendingUp className="size-4" /> },
+    { label: "Nativity Charts", href: "/community/family", iconNode: <Users className="size-4" /> },
+    { label: "Relationship Charts", href: "/community/charts", iconNode: <Star className="size-4" /> },
+    { label: "Monthly Transits", href: "/community/transits", iconNode: <TrendingUp className="size-4" /> },
     { label: "Rituals", href: "/community/rituals", iconNode: <Flame className="size-4" /> },
-    { label: "Tarot", href: "/community/tarot", iconNode: <Sparkles className="size-4" /> },
+    // { label: "Tarot", href: "/community/tarot", iconNode: <Sparkles className="size-4" /> },
     { label: "Mundane", href: "/community/mundane", iconNode: <Globe className="size-4" /> },
     { label: "Ingress Charts", href: "/community/ingress-charts", iconNode: <Compass className="size-4" /> },
-    { label: "Horoscope", href: "/community/horoscope", iconNode: <Telescope className="size-4" /> },
+    // { label: "Horoscope", href: "/community/horoscope", iconNode: <Telescope className="size-4" /> },
     { label: "Service", href: "/community/sunday-service", iconNode: <HeartHandshake className="size-4" /> },
     { label: "Library", href: "/community/library", iconNode: <BookMarked className="size-4" /> },
+    { label: "Support", href: "/community/support", iconNode: <LifeBuoy className="size-4" /> },
     { label: "Profile", href: "/community/profile", iconNode: <IdCard className="size-4" /> },
   ];
 
@@ -156,13 +157,13 @@ export default async function CommunityLayout({ children }: { children: React.Re
                 </NavLink>
               </li>
             ))}
-            <li>
+            {/* <li>
               <NavDropdown
                 label="Product"
                 items={productSubItems}
                 icon={<Package className="size-4" />}
               />
-            </li>
+            </li> */}
           </ul>
         </nav>
         {/* Account and Logout pinned to sidebar bottom */}

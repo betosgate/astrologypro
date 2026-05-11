@@ -151,7 +151,7 @@ export default function ScoringPage() {
   const selectedEntity = entities.find((e) => e.id === selectedEntityId);
 
   return (
-    <div className="space-y-6 max-w-5xl">
+    <div className="space-y-6">
       {/* Header */}
       <div>
         <div className="flex items-center gap-2">
@@ -178,7 +178,7 @@ export default function ScoringPage() {
                 onValueChange={setSelectedEntityId}
                 onOpenChange={(open) => { if (open) loadEntities(); }}
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder={loadingEntities ? "Loading…" : "Select entity"} />
                 </SelectTrigger>
                 <SelectContent>

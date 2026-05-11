@@ -95,6 +95,7 @@ import { MIGRATION_SQL as MIG_20260506000001_CSCR } from "@/data/migrations/2026
 import { MIGRATION_SQL as MIG_20260506000002_MSFC } from "@/data/migrations/20260506000002_mystery_school_foundation_completed_at";
 import { MIGRATION_SQL as MIG_20260506000003_MSDA } from "@/data/migrations/20260506000003_mystery_school_decan_admin_content";
 import { MIGRATION_SQL as MIG_20260507000001_SFMC } from "@/data/migrations/20260507000001_self_family_member_contract";
+import { MIGRATION_SQL as MIG_20260511000001_PM3 } from "@/data/migrations/20260511000001_pm_plan_tiers_three_plan_alignment";
 
 /**
  * Allowlisted migrations that the admin migration runner can execute.
@@ -895,6 +896,14 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Makes community_family_members.date_of_birth nullable so the canonical primary-account self row can exist before profile completion. Normalizes existing owner-linked rows to relationship='self' and backfills missing active Perennial Mandalism self rows from community_members. This keeps /community/family, /community/charts, and /community/transits on one household identity contract.",
     sortKey: "20260507000001",
     sql: MIG_20260507000001_SFMC,
+  },
+  "20260511000001_pm_plan_tiers_three_plan_alignment": {
+    id: "20260511000001_pm_plan_tiers_three_plan_alignment",
+    title: "Community: PM three-plan tier alignment",
+    description:
+      "Syncs pm_plan_tiers with the Perennial Mandalism pricing_plans catalog so /api/community/plan.available_tiers includes Individual, Couple, and Family. Updates existing named tiers, inserts any missing tier, carries Stripe price IDs from pricing_plans, and maps Couple/Family tiers to the legacy plan_type='family' compatibility flag.",
+    sortKey: "20260511000001",
+    sql: MIG_20260511000001_PM3,
   },
 };
 
