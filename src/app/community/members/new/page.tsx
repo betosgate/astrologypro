@@ -282,7 +282,7 @@ export default function AddMemberPage() {
               <div className="space-y-1.5">
                 <Label htmlFor="relation_type">Relation Type</Label>
                 <Select value={form.relation_type} onValueChange={(v) => set("relation_type", v)}>
-                  <SelectTrigger id="relation_type">
+                  <SelectTrigger id="relation_type" className="w-full">
                     <SelectValue placeholder="Select relation" />
                   </SelectTrigger>
                   <SelectContent>
@@ -375,7 +375,7 @@ export default function AddMemberPage() {
               <div className="space-y-1.5">
                 <Label htmlFor="gender">Gender</Label>
                 <Select value={form.gender} onValueChange={(v) => set("gender", v)}>
-                  <SelectTrigger id="gender">
+                  <SelectTrigger id="gender" className="w-full">
                     <SelectValue placeholder="Select gender" />
                   </SelectTrigger>
                   <SelectContent>
@@ -391,7 +391,7 @@ export default function AddMemberPage() {
                   value={form.relationship_status}
                   onValueChange={(v) => set("relationship_status", v)}
                 >
-                  <SelectTrigger id="relationship_status">
+                  <SelectTrigger id="relationship_status" className="w-full">
                     <SelectValue placeholder="Select status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -517,7 +517,7 @@ export default function AddMemberPage() {
               <div className="space-y-1.5">
                 <Label htmlFor="state">State</Label>
                 <Select value={form.state} onValueChange={(v) => set("state", v)}>
-                  <SelectTrigger id="state">
+                  <SelectTrigger id="state" className="w-full">
                     <SelectValue placeholder="State" />
                   </SelectTrigger>
                   <SelectContent>
@@ -587,7 +587,7 @@ export default function AddMemberPage() {
             <div className="space-y-1.5">
               <Label htmlFor="status">Status</Label>
               <Select value={form.status} onValueChange={(v) => set("status", v)}>
-                <SelectTrigger id="status">
+                <SelectTrigger id="status" className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
