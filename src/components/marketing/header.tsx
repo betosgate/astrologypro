@@ -47,6 +47,12 @@ export function MarketingHeader({ hideNavigation = false }: MarketingHeaderProps
               Learn
             </Link>
             <Link
+              href="/services"
+              className="text-[15px] font-medium uppercase tracking-wide text-white/90 transition-colors hover:text-[#ecd396]"
+            >
+              Services
+            </Link>
+            <Link
               href="/demo"
               className="text-[15px] font-medium uppercase tracking-wide text-white/90 transition-colors hover:text-[#ecd396]"
             >
