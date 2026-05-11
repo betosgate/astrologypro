@@ -62,16 +62,42 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate target tier has a recurring stripe_price_id
-    const { data: targetTier, error: tierErr } = await admin
-      .from("pm_plan_tiers")
-      .select("id, name, stripe_price_id, is_active")
-      .eq("id", targetTierId)
-      .single();
-    if (tierErr || !targetTier) {
-      return NextResponse.json(
-        { error: "Target tier not found" },
-        { status: 404 }
-      );
+    let targetTier;
+    if (targetTierId === "plan_pm_individual") {
+      targetTier = {
+        id: "plan_pm_individual",
+        name: "Individual Plan",
+        stripe_price_id: "price_1RtmCrBcRXKECv5fhg6KUun3",
+        is_active: true,
+      };
+    } else if (targetTierId === "plan_pm_couple") {
+      targetTier = {
+        id: "plan_pm_couple",
+        name: "Couple Plan",
+        stripe_price_id: "price_1RtmCKBcRXKECv5fCP1Radka",
+        is_active: true,
+      };
+    } else if (targetTierId === "plan_pm_family") {
+      targetTier = {
+        id: "plan_pm_family",
+        name: "Family Plan",
+        stripe_price_id: "price_1RtmBbBcRXKECv5fun9Xjjwi",
+        is_active: true,
+      };
+    } else {
+      const { data, error: tierErr } = await admin
+        .from("pm_plan_tiers")
+        .select("id, name, stripe_price_id, is_active")
+        .eq("id", targetTierId)
+        .single();
+
+      if (tierErr || !data) {
+        return NextResponse.json(
+          { error: "Target tier not found" },
+          { status: 404 }
+        );
+      }
+      targetTier = data;
     }
     if (!targetTier.is_active) {
       return NextResponse.json(

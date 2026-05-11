@@ -84,18 +84,54 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { data: targetTier, error: tierErr } = await admin
-      .from("pm_plan_tiers")
-      .select(
-        "id, name, base_price_usd, base_member_limit, extra_per_member_usd, max_total_members, stripe_price_id, stripe_extra_price_id, is_active"
-      )
-      .eq("id", targetTierId)
-      .single();
-    if (tierErr || !targetTier) {
-      return NextResponse.json(
-        { error: "Target tier not found" },
-        { status: 404 }
-      );
+    // Validate target tier
+    let targetTier;
+    if (targetTierId === "plan_pm_individual") {
+      targetTier = {
+        id: "plan_pm_individual",
+        name: "Individual Plan",
+        base_price_usd: 19.95,
+        base_member_limit: 1,
+        stripe_price_id: "price_1RtmCrBcRXKECv5fhg6KUun3",
+        is_active: true,
+        max_total_members: 1,
+      };
+    } else if (targetTierId === "plan_pm_couple") {
+      targetTier = {
+        id: "plan_pm_couple",
+        name: "Couple Plan",
+        base_price_usd: 29.95,
+        base_member_limit: 2,
+        stripe_price_id: "price_1RtmCKBcRXKECv5fCP1Radka",
+        is_active: true,
+        max_total_members: 2,
+      };
+    } else if (targetTierId === "plan_pm_family") {
+      targetTier = {
+        id: "plan_pm_family",
+        name: "Family Plan",
+        base_price_usd: 39.95,
+        base_member_limit: 5,
+        stripe_price_id: "price_1RtmBbBcRXKECv5fun9Xjjwi",
+        is_active: true,
+        max_total_members: 5,
+      };
+    } else {
+      const { data, error: tierErr } = await admin
+        .from("pm_plan_tiers")
+        .select(
+          "id, name, base_price_usd, base_member_limit, extra_per_member_usd, max_total_members, stripe_price_id, stripe_extra_price_id, is_active"
+        )
+        .eq("id", targetTierId)
+        .single();
+
+      if (tierErr || !data) {
+        return NextResponse.json(
+          { error: "Target tier not found" },
+          { status: 404 }
+        );
+      }
+      targetTier = data;
     }
     if (!targetTier.is_active) {
       return NextResponse.json(

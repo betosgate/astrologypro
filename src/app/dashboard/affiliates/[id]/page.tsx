@@ -61,6 +61,9 @@ import {
   History,
   Pencil,
   Target,
+  Bot,
+  Globe,
+  MousePointerClick,
 } from "lucide-react";
 import {
   resendInviteByJunction,
@@ -97,10 +100,19 @@ interface ReportPayload {
   period: "30d" | "90d" | "1y" | "all";
   kpis: {
     clicks: number;
+    human_clicks: number;
+    unique_clicks: number;
+    bot_clicks: number;
+    unique_rate: number;
     conversions: number;
+    conversion_rate: number;
     earned_cents: number;
     reversed_cents: number;
   };
+  by_device: Array<{ device_type: string; clicks: number; percentage: number }>;
+  by_country: Array<{ country_code: string; country_name: string; clicks: number; percentage: number }>;
+  by_source: Array<{ source: string; clicks: number; percentage: number }>;
+  channel_performance: Array<{ channel: string; campaigns: number; clicks: number; conversions: number }>;
   assignments: Array<{
     id: string;
     destination_type: string;
@@ -201,6 +213,26 @@ function avatarInitials(name: string | null) {
     .slice(0, 2)
     .map((p) => p[0]?.toUpperCase() ?? "")
     .join("");
+}
+
+function fmt(n: number) {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+  return String(n);
+}
+
+function HBarRow({ label, clicks, percentage, color = "bg-primary/50" }: { label: string; clicks: number; percentage: number; color?: string }) {
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center justify-between text-sm">
+        <span className="truncate max-w-[60%]">{label}</span>
+        <span className="text-muted-foreground text-xs">{fmt(clicks)} · {percentage}%</span>
+      </div>
+      <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+        <div className={`h-full rounded-full ${color} transition-all`} style={{ width: `${percentage}%` }} />
+      </div>
+    </div>
+  );
 }
 
 export default function DashboardAffiliateDetailPage({
@@ -315,10 +347,19 @@ export default function DashboardAffiliateDetailPage({
 
   const kpis = report?.kpis ?? {
     clicks: 0,
+    human_clicks: 0,
+    unique_clicks: 0,
+    bot_clicks: 0,
+    unique_rate: 0,
     conversions: 0,
+    conversion_rate: 0,
     earned_cents: 0,
     reversed_cents: 0,
   };
+  const by_device = report?.by_device ?? [];
+  const by_country = report?.by_country ?? [];
+  const by_source = report?.by_source ?? [];
+  const channel_performance = report?.channel_performance ?? [];
   const assignments = report?.assignments ?? [];
   const rateHistory = report?.rate_history ?? [];
 
@@ -477,45 +518,121 @@ export default function DashboardAffiliateDetailPage({
       )}
 
       {/* KPI tiles */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Clicks</CardTitle>
-            <TrendingUp className="size-4 text-muted-foreground" aria-hidden />
+            <CardTitle className="text-xs font-medium text-muted-foreground">Human Clicks</CardTitle>
+            <MousePointerClick className="size-4 text-muted-foreground" aria-hidden />
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold">
-              {kpis.clicks.toLocaleString()}
-            </p>
+            <p className="text-2xl font-bold">{fmt(kpis.human_clicks)}</p>
+            <p className="text-xs text-muted-foreground mt-1">{kpis.unique_rate}% unique</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Conversions</CardTitle>
-            <TrendingUp className="size-4 text-muted-foreground" aria-hidden />
+            <CardTitle className="text-xs font-medium text-muted-foreground">Unique Clicks</CardTitle>
+            <UsersIcon className="size-4 text-muted-foreground" aria-hidden />
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold">{kpis.conversions}</p>
+            <p className="text-2xl font-bold">{fmt(kpis.unique_clicks)}</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Earned</CardTitle>
+            <CardTitle className="text-xs font-medium text-muted-foreground">Conversions</CardTitle>
+            <TrendingUp className="size-4 text-muted-foreground" aria-hidden />
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold">{fmt(kpis.conversions)}</p>
+            <p className="text-xs text-muted-foreground mt-1">{kpis.conversion_rate}% rate</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-xs font-medium text-muted-foreground">Bot Clicks</CardTitle>
+            <Bot className="size-4 text-muted-foreground" aria-hidden />
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold">{fmt(kpis.bot_clicks)}</p>
+            <p className="text-xs text-muted-foreground mt-1">filtered out</p>
+          </CardContent>
+        </Card>
+        <Card className="sm:col-span-2 lg:col-span-1">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-xs font-medium text-muted-foreground">Total Earned</CardTitle>
             <DollarSign className="size-4 text-muted-foreground" aria-hidden />
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold">{fmtCents(kpis.earned_cents)}</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Reversed: {fmtCents(kpis.reversed_cents)}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Breakdowns */}
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card>
+          <CardHeader className="pb-3"><CardTitle className="text-sm">By Device</CardTitle></CardHeader>
+          <CardContent className="space-y-3">
+            {by_device.length === 0 ? (
+              <p className="text-xs text-muted-foreground py-4 text-center">No device data</p>
+            ) : by_device.map((row) => (
+              <HBarRow key={row.device_type} label={row.device_type} clicks={row.clicks} percentage={row.percentage} />
+            ))}
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Reversed</CardTitle>
-            <DollarSign className="size-4 text-muted-foreground" aria-hidden />
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Globe className="size-4 text-muted-foreground" aria-hidden />By Country
+            </CardTitle>
           </CardHeader>
+          <CardContent className="space-y-3">
+            {by_country.length === 0 ? (
+              <p className="text-xs text-muted-foreground py-4 text-center">No country data</p>
+            ) : by_country.map((row) => (
+              <HBarRow key={row.country_code} label={row.country_name} clicks={row.clicks} percentage={row.percentage} color="bg-blue-500/50" />
+            ))}
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card>
+          <CardHeader className="pb-3"><CardTitle className="text-sm">By Source</CardTitle></CardHeader>
+          <CardContent className="space-y-3">
+            {by_source.length === 0 ? (
+              <p className="text-xs text-muted-foreground py-4 text-center">No source data</p>
+            ) : by_source.map((row) => (
+              <HBarRow key={row.source} label={row.source} clicks={row.clicks} percentage={row.percentage} color="bg-emerald-500/50" />
+            ))}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-3"><CardTitle className="text-sm">Channel Performance</CardTitle></CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold text-muted-foreground">
-              {fmtCents(kpis.reversed_cents)}
-            </p>
+            {channel_performance.length === 0 ? (
+              <p className="text-xs text-muted-foreground py-4 text-center">No channel data</p>
+            ) : (
+              <div className="space-y-2">
+                {channel_performance.map((row) => (
+                  <div key={row.channel} className="flex items-center justify-between text-sm py-1 border-b last:border-0">
+                    <div>
+                      <span className="font-medium capitalize">{row.channel}</span>
+                      <span className="ml-2 text-xs text-muted-foreground">{row.campaigns} campaign{row.campaigns !== 1 ? "s" : ""}</span>
+                    </div>
+                    <div className="text-right text-xs text-muted-foreground">
+                      <span>{fmt(row.clicks)} clicks</span>
+                      <span className="mx-1">·</span>
+                      <span>{row.conversions} conv</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
