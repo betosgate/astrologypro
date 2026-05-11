@@ -219,9 +219,11 @@ export function TemplateIntakeForm({
   const [postSubmitChoices, setPostSubmitChoices] = useState<{
     chooseDivinerUrl: string;
     bookingUrl: string;
+    compatibleDivinerCount: number;
+    hasCompatibleDiviners: boolean;
   } | null>(null);
   const [postSubmitAction, setPostSubmitAction] = useState<
-    "choose-diviner" | "direct-booking" | null
+    "choose-diviner" | "direct-booking" | "browse-services" | null
   >(null);
   const requiresPartner = config.mode === "couple";
   const isGeneralTemplate = !embedded && isGeneralServiceTemplateSlug(templateSlug);
@@ -292,8 +294,18 @@ export function TemplateIntakeForm({
         setPostSubmitChoices({
           chooseDivinerUrl: `/discover${search.size > 0 ? `?${search.toString()}` : ""}`,
           bookingUrl,
+          compatibleDivinerCount:
+            typeof json.booking_options?.compatible_diviner_count === "number"
+              ? json.booking_options.compatible_diviner_count
+              : 0,
+          hasCompatibleDiviners:
+            json.booking_options?.has_compatible_diviners === true,
         });
-        toast.success("Intake saved. Choose how you want to continue.");
+        if (json.booking_options?.has_compatible_diviners === true) {
+          toast.success("Intake saved. Choose how you want to continue.");
+        } else {
+          toast.success("Intake saved. This session is not currently available.");
+        }
         return;
       }
 
@@ -470,58 +482,104 @@ export function TemplateIntakeForm({
                 Intake saved successfully
               </DialogTitle>
               <DialogDescription className="max-w-2xl text-sm leading-6 text-silver/75">
-                Choose how you want to continue this booking. You can browse and pick a diviner first, or continue directly without selecting one now.
+                {postSubmitChoices?.hasCompatibleDiviners
+                  ? "Choose how you want to continue this booking. You can browse and pick a diviner first, or continue directly without selecting one now."
+                  : "Your intake is saved, but no readers are currently offering this session. You can browse other services or stay on this page."}
               </DialogDescription>
             </DialogHeader>
           </div>
 
           <div className="space-y-3 bg-[#0b1020] px-6 py-5">
-            <Button
-              type="button"
-              className="h-auto w-full justify-between bg-gold px-5 py-4 text-left text-cosmos-900 hover:bg-gold-light"
-              onClick={() => {
-                if (!postSubmitChoices) return;
-                setPostSubmitAction("choose-diviner");
-                router.push(postSubmitChoices.chooseDivinerUrl);
-              }}
-              disabled={postSubmitAction !== null}
-            >
-              <span className="flex flex-col items-start">
-                <span className="font-semibold">Choose a Diviner and Book</span>
-                <span className="text-xs text-cosmos-900/75">
-                  Browse matching readers before you continue.
-                </span>
-              </span>
-              {postSubmitAction === "choose-diviner" ? (
-                <Loader2 className="size-4 shrink-0 animate-spin" />
-              ) : (
-                <ArrowRight className="size-4 shrink-0" />
-              )}
-            </Button>
+            {postSubmitChoices?.hasCompatibleDiviners ? (
+              <>
+                <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-xs text-silver/65">
+                  {postSubmitChoices.compatibleDivinerCount} reader
+                  {postSubmitChoices.compatibleDivinerCount === 1 ? "" : "s"} currently
+                  offer this session.
+                </div>
 
-            <Button
-              type="button"
-              variant="outline"
-              className="h-auto w-full justify-between border-white/10 bg-[#141b2d] px-5 py-4 text-left text-cream hover:bg-[#1a2337]"
-              onClick={() => {
-                if (!postSubmitChoices) return;
-                setPostSubmitAction("direct-booking");
-                router.push(postSubmitChoices.bookingUrl);
-              }}
-              disabled={postSubmitAction !== null}
-            >
-              <span className="flex flex-col items-start">
-                <span className="font-semibold">Book Without Choosing a Diviner</span>
-                <span className="text-xs text-silver/60">
-                  Continue straight into the direct booking route.
-                </span>
-              </span>
-              {postSubmitAction === "direct-booking" ? (
-                <Loader2 className="size-4 shrink-0 animate-spin" />
-              ) : (
-                <ArrowRight className="size-4 shrink-0" />
-              )}
-            </Button>
+                <Button
+                  type="button"
+                  className="h-auto w-full justify-between bg-gold px-5 py-4 text-left text-cosmos-900 hover:bg-gold-light"
+                  onClick={() => {
+                    if (!postSubmitChoices) return;
+                    setPostSubmitAction("choose-diviner");
+                    router.push(postSubmitChoices.chooseDivinerUrl);
+                  }}
+                  disabled={postSubmitAction !== null}
+                >
+                  <span className="flex flex-col items-start">
+                    <span className="font-semibold">Choose a Diviner and Book</span>
+                    <span className="text-xs text-cosmos-900/75">
+                      Browse matching readers before you continue.
+                    </span>
+                  </span>
+                  {postSubmitAction === "choose-diviner" ? (
+                    <Loader2 className="size-4 shrink-0 animate-spin" />
+                  ) : (
+                    <ArrowRight className="size-4 shrink-0" />
+                  )}
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-auto w-full justify-between border-white/10 bg-[#141b2d] px-5 py-4 text-left text-cream hover:bg-[#1a2337]"
+                  onClick={() => {
+                    if (!postSubmitChoices) return;
+                    setPostSubmitAction("direct-booking");
+                    router.push(postSubmitChoices.bookingUrl);
+                  }}
+                  disabled={postSubmitAction !== null}
+                >
+                  <span className="flex flex-col items-start">
+                    <span className="font-semibold">Book Without Choosing a Diviner</span>
+                    <span className="text-xs text-silver/60">
+                      Continue straight into the direct booking route.
+                    </span>
+                  </span>
+                  {postSubmitAction === "direct-booking" ? (
+                    <Loader2 className="size-4 shrink-0 animate-spin" />
+                  ) : (
+                    <ArrowRight className="size-4 shrink-0" />
+                  )}
+                </Button>
+              </>
+            ) : (
+              <>
+                <div className="rounded-2xl border border-amber-400/20 bg-amber-400/10 px-5 py-4">
+                  <p className="font-semibold text-amber-100">
+                    No readers are currently offering this session
+                  </p>
+                  <p className="mt-1 text-sm leading-6 text-amber-50/70">
+                    We saved your intake, but this reading is not bookable right now.
+                    Browse another service to continue with an available session.
+                  </p>
+                </div>
+
+                <Button
+                  type="button"
+                  className="h-auto w-full justify-between bg-gold px-5 py-4 text-left text-cosmos-900 hover:bg-gold-light"
+                  onClick={() => {
+                    setPostSubmitAction("browse-services");
+                    router.push("/services");
+                  }}
+                  disabled={postSubmitAction !== null}
+                >
+                  <span className="flex flex-col items-start">
+                    <span className="font-semibold">Browse Other Services</span>
+                    <span className="text-xs text-cosmos-900/75">
+                      Find a reading that is currently available.
+                    </span>
+                  </span>
+                  {postSubmitAction === "browse-services" ? (
+                    <Loader2 className="size-4 shrink-0 animate-spin" />
+                  ) : (
+                    <ArrowRight className="size-4 shrink-0" />
+                  )}
+                </Button>
+              </>
+            )}
           </div>
 
           <DialogFooter className="border-t border-white/8 bg-[#0f1526] px-6 py-4">
