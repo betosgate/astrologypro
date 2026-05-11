@@ -77,7 +77,7 @@ export async function GET(
   // affiliate's activity through OTHER diviners).
   const { data: campaigns } = await admin
     .from("affiliate_campaigns")
-    .select("id, campaign_code, name, status, created_at")
+    .select("id, campaign_code, name, status, created_at, channel")
     .eq("diviner_id", diviner.id)
     .eq("owner_affiliate_id", junctionId)
     .order("created_at", { ascending: false });
@@ -98,36 +98,121 @@ export async function GET(
   let reversedCents = 0;
   let conversionsCount = 0;
   let clicksCount = 0;
+  let humanClicksCount = 0;
+  let uniqueClicksCount = 0;
+  let botClicksCount = 0;
   let rateHistory: Array<Record<string, unknown>> = [];
+
+  const deviceMap: Record<string, number> = {};
+  const countryMap: Record<string, number> = {};
+  const sourceMap: Record<string, number> = {};
+  const channelMap: Record<string, { campaigns: number; clicks: number; conversions: number }> = {};
+
+  const COUNTRY_NAMES: Record<string, string> = {
+    US: "United States", GB: "United Kingdom", CA: "Canada", AU: "Australia",
+    IN: "India", DE: "Germany", FR: "France", BR: "Brazil", MX: "Mexico",
+    NL: "Netherlands", SG: "Singapore", JP: "Japan", NG: "Nigeria", ZA: "South Africa",
+  };
 
   if (campaignIds.length > 0) {
     let convQuery = admin
       .from("campaign_conversions")
-      .select("commission_amount_cents, reversed_at, converted_at")
+      .select("campaign_id, commission_amount_cents, reversed_at, converted_at")
       .in("campaign_id", campaignIds);
     if (since) convQuery = convQuery.gte("converted_at", since);
 
     let clicksQuery = admin
       .from("campaign_clicks")
-      .select("id", { count: "exact", head: true })
+      .select("campaign_id, is_bot, is_unique_click, device_type, country_code, source")
       .eq("diviner_id", diviner.id)
       .eq("affiliate_id", junctionId);
-    if (since) clicksQuery = clicksQuery.gte("created_at", since);
+    if (since) clicksQuery = clicksQuery.gte("clicked_at", since);
 
-    const [{ data: conversions }, { count: clickCount }] = await Promise.all([
+    const [{ data: conversions }, { data: clicks }] = await Promise.all([
       convQuery,
       clicksQuery,
     ]);
+
+    const campConvMap: Record<string, number> = {};
     for (const c of conversions ?? []) {
       const cents = Number(c.commission_amount_cents ?? 0);
       if (c.reversed_at) reversedCents += cents;
       else {
         conversionsCount += 1;
         earnedCents += cents;
+        campConvMap[c.campaign_id] = (campConvMap[c.campaign_id] ?? 0) + 1;
       }
     }
-    clicksCount = clickCount ?? 0;
+
+    const humanClicks: any[] = [];
+    const campClickMap: Record<string, number> = {};
+
+    for (const c of clicks ?? []) {
+      clicksCount++;
+      if (c.is_bot) {
+        botClicksCount++;
+      } else {
+        humanClicksCount++;
+        humanClicks.push(c);
+        if (c.is_unique_click) uniqueClicksCount++;
+        campClickMap[c.campaign_id] = (campClickMap[c.campaign_id] ?? 0) + 1;
+
+        const dt = (c.device_type as string) ?? "unknown";
+        deviceMap[dt] = (deviceMap[dt] ?? 0) + 1;
+
+        const cc = (c.country_code as string | null) ?? "Unknown";
+        countryMap[cc] = (countryMap[cc] ?? 0) + 1;
+
+        const src = (c.source as string | null) ?? "direct";
+        sourceMap[src] = (sourceMap[src] ?? 0) + 1;
+      }
+    }
+
+    // Channel performance
+    for (const camp of campaigns ?? []) {
+      const ch = (camp.channel as string | null) ?? "unset";
+      if (!channelMap[ch]) channelMap[ch] = { campaigns: 0, clicks: 0, conversions: 0 };
+      channelMap[ch].campaigns++;
+      channelMap[ch].clicks += campClickMap[camp.id] ?? 0;
+      channelMap[ch].conversions += campConvMap[camp.id] ?? 0;
+    }
   }
+
+  const by_device = Object.entries(deviceMap)
+    .sort(([, a], [, b]) => b - a)
+    .map(([device_type, count]) => ({
+      device_type,
+      clicks: count,
+      percentage: humanClicksCount > 0
+        ? parseFloat(((count / humanClicksCount) * 100).toFixed(1))
+        : 0,
+    }));
+
+  const by_country = Object.entries(countryMap)
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 10)
+    .map(([country_code, count]) => ({
+      country_code,
+      country_name: COUNTRY_NAMES[country_code] ?? country_code,
+      clicks: count,
+      percentage: humanClicksCount > 0
+        ? parseFloat(((count / humanClicksCount) * 100).toFixed(1))
+        : 0,
+    }));
+
+  const by_source = Object.entries(sourceMap)
+    .sort(([, a], [, b]) => b - a)
+    .map(([source, count]) => ({
+      source,
+      clicks: count,
+      percentage: humanClicksCount > 0
+        ? parseFloat(((count / humanClicksCount) * 100).toFixed(1))
+        : 0,
+    }));
+
+  const channel_performance = Object.entries(channelMap)
+    .sort(([, a], [, b]) => b.clicks - a.clicks)
+    .map(([channel, data]) => ({ channel, ...data }));
 
   if (assignmentIds.length > 0) {
     const { data: history } = await admin
@@ -161,10 +246,23 @@ export async function GET(
         : null,
       kpis: {
         clicks: clicksCount,
+        human_clicks: humanClicksCount,
+        unique_clicks: uniqueClicksCount,
+        bot_clicks: botClicksCount,
+        unique_rate: humanClicksCount > 0
+          ? parseFloat(((uniqueClicksCount / humanClicksCount) * 100).toFixed(1))
+          : 0,
         conversions: conversionsCount,
+        conversion_rate: uniqueClicksCount > 0
+          ? parseFloat(((conversionsCount / uniqueClicksCount) * 100).toFixed(1))
+          : 0,
         earned_cents: earnedCents,
         reversed_cents: reversedCents,
       },
+      by_device,
+      by_country,
+      by_source,
+      channel_performance,
       assignments: assignments ?? [],
       campaigns: campaigns ?? [],
       rate_history: rateHistory,

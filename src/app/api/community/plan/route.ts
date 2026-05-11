@@ -46,7 +46,8 @@ export async function GET() {
          current_period_end,
          stripe_subscription_id,
          extra_member_count,
-         pm_tier_id`
+         pm_tier_id,
+         plan_type`
       )
       .eq("user_id", user.id)
       .single();
@@ -109,23 +110,141 @@ export async function GET() {
       max_total_members: t.max_total_members,
     });
 
-    const availableTiers: MappedTier[] = (rawTiers ?? []).map(
-      (t) => mapTier(t as RawTier)
-    );
+    const { data: plans, error: plansErr } = await admin
+      .from("pricing_plans")
+      .select("plan_id, display_name, amount, description, custom_fields")
+      .in("plan_id", ["plan_pm_individual", "plan_pm_couple", "plan_pm_family"])
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true });
 
-    // Resolve the member's current tier from pm_tier_id. Fall back to the
-    // lowest-order active tier only when pm_tier_id is NULL or invalid.
+    if (plansErr) {
+      console.error("[community/plan] failed to fetch pricing plans:", plansErr);
+    }
+
+    const availableTiers: MappedTier[] = (plans ?? []).map((p) => {
+      const customFields = p.custom_fields as Array<{ slug: string; value: string }> | null;
+      const membersField = customFields?.find((f) => f.slug === "members");
+      let includedMembers = 1;
+      if (membersField) {
+        const val = membersField.value;
+        if (val.includes("Up to")) {
+          includedMembers = parseInt(val.replace("Up to ", ""), 10);
+        } else {
+          includedMembers = parseInt(val, 10);
+        }
+      }
+
+      return {
+        id: p.plan_id,
+        name: p.display_name,
+        description: p.description,
+        base_price: Number(p.amount),
+        included_members: includedMembers,
+        extra_member_price: 5, // Keep as requested previously
+        max_total_members: includedMembers,
+      };
+    });
+
+    // If query returned nothing, use fallback to prevent empty response
+    if (availableTiers.length === 0) {
+      availableTiers.push(
+        {
+          id: "plan_pm_individual",
+          name: "Individual Plan",
+          description: "Single member access to the Perennial Mandalism community.",
+          base_price: 19.95,
+          included_members: 1,
+          extra_member_price: 5,
+          max_total_members: 1,
+        },
+        {
+          id: "plan_pm_couple",
+          name: "Couple Plan",
+          description: "Two members sharing one household — joint access to the community.",
+          base_price: 29.95,
+          included_members: 2,
+          extra_member_price: 5,
+          max_total_members: 2,
+        },
+        {
+          id: "plan_pm_family",
+          name: "Family Plan",
+          description: "Up to 5 family members — full household access to the community.",
+          base_price: 39.95,
+          included_members: 5,
+          extra_member_price: 5,
+          max_total_members: 5,
+        }
+      );
+    }
+
     const savedTierId = (member as { pm_tier_id?: string | null }).pm_tier_id ?? null;
+    const planType = (member as { plan_type?: string | null }).plan_type ?? null;
     let tier: MappedTier | null = null;
+    
+    const hardcodedPlans: Record<string, MappedTier> = {
+      plan_pm_individual: {
+        id: "plan_pm_individual",
+        name: "Individual Plan",
+        description: "Single member access to the Perennial Mandalism community.",
+        base_price: 19.95,
+        included_members: 1,
+        extra_member_price: 5,
+        max_total_members: 1,
+      },
+      plan_pm_couple: {
+        id: "plan_pm_couple",
+        name: "Couple Plan",
+        description: "Two members sharing one household — joint access to the community.",
+        base_price: 29.95,
+        included_members: 2,
+        extra_member_price: 5,
+        max_total_members: 2,
+      },
+      plan_pm_family: {
+        id: "plan_pm_family",
+        name: "Family Plan",
+        description: "Up to 5 family members — full household access to the community.",
+        base_price: 39.95,
+        included_members: 5,
+        extra_member_price: 5,
+        max_total_members: 5,
+      },
+    };
+
     if (savedTierId) {
       tier = availableTiers.find((t) => t.id === savedTierId) ?? null;
       if (!tier) {
-        console.warn(
-          `[community/plan] pm_tier_id=${savedTierId} for member ${member.id} does not match any active tier — falling back to lowest-order tier`
-        );
+        // 1. Check if it's one of our known hardcoded IDs
+        if (savedTierId in hardcodedPlans) {
+          tier = hardcodedPlans[savedTierId];
+        } else {
+          // 2. Fallback: check if the saved tier ID belongs to pm_plan_tiers and map by name
+          const { data: dbTier } = await admin
+            .from("pm_plan_tiers")
+            .select("name")
+            .eq("id", savedTierId)
+            .single();
+            
+          if (dbTier) {
+            const name = dbTier.name.toLowerCase();
+            if (name.includes("individual")) tier = availableTiers.find(t => t.id === "plan_pm_individual") || hardcodedPlans.plan_pm_individual;
+            else if (name.includes("couple")) tier = availableTiers.find(t => t.id === "plan_pm_couple") || hardcodedPlans.plan_pm_couple;
+            else if (name.includes("family")) tier = availableTiers.find(t => t.id === "plan_pm_family") || hardcodedPlans.plan_pm_family;
+          }
+        }
       }
     }
-    if (!tier) tier = availableTiers[0] ?? null;
+
+    // 3. Fallback to plan_type if tier is still null
+    if (!tier && planType) {
+      const type = planType.toLowerCase();
+      if (type.includes("individual")) tier = availableTiers.find(t => t.id === "plan_pm_individual") || hardcodedPlans.plan_pm_individual;
+      else if (type.includes("couple")) tier = availableTiers.find(t => t.id === "plan_pm_couple") || hardcodedPlans.plan_pm_couple;
+      else if (type.includes("family")) tier = availableTiers.find(t => t.id === "plan_pm_family") || hardcodedPlans.plan_pm_family;
+    }
+
+    if (!tier) tier = availableTiers[0] ?? hardcodedPlans.plan_pm_individual;
 
     const memberCount = (familyMembers ?? []).length;
     const extraMemberCount = tier

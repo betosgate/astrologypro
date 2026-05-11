@@ -165,7 +165,12 @@ export async function finalizePerennialCommunityCheckoutSession(
       .maybeSingle();
     resolvedTierName = cleanString(tierRow?.name);
   } else {
-    const desiredTierName = planType === "family" ? "Family" : "Individual";
+    const desiredTierName =
+      planType === "family"
+        ? "Family"
+        : planType === "couple"
+          ? "Couple"
+          : "Individual";
     const { data: tierRow } = await admin
       .from("pm_plan_tiers")
       .select("id, name")
@@ -184,7 +189,7 @@ export async function finalizePerennialCommunityCheckoutSession(
 
   const canonicalPlanType = resolvedTierName
     ? tierToPlanType({ name: resolvedTierName })
-    : planType === "family"
+    : planType === "family" || planType === "couple"
       ? "family"
       : "individual";
 

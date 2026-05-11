@@ -4,8 +4,8 @@
  * Per `tasks/23.04.2026/community-pm-entitlement-state-sync/00-audit-note.md`:
  *   - Canonical source: `community_members.pm_tier_id` → `pm_plan_tiers` row.
  *   - Legacy compat:    `community_members.plan_type` ∈ {"individual","family"}.
- *   - Mapping rule:     tier.name ILIKE 'Family' → plan_type = 'family',
- *                       everything else          → plan_type = 'individual'.
+ *   - Mapping rule:     household-capable tiers (Couple / Family) → plan_type = 'family',
+ *                       everything else                           → plan_type = 'individual'.
  *
  * Every surface that needs to decide "is this user Family-entitled?" /
  * "how many household members are allowed?" MUST go through this helper
@@ -16,7 +16,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 /** A shape compatible with both service-role and auth-scoped Supabase clients. */
-type AnySupabase = SupabaseClient<any, any, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
+type AnySupabase = SupabaseClient<any, any, any>;
 
 export type LegacyPlanType = "individual" | "family";
 
@@ -38,8 +38,8 @@ export interface PmEntitlement {
   tier: PmPlanTierRow | null;
   /**
    * True when the user is entitled to manage a household (add family members).
-   * Currently: tier.name ILIKE 'Family'. Falls back to legacy plan_type='family'
-   * only when no tier is resolved.
+   * Currently: tier.name is Couple or Family. Falls back to legacy
+   * plan_type='family' only when no tier is resolved.
    */
   isFamilyEntitled: boolean;
   /**
@@ -71,7 +71,8 @@ export function tierToPlanType(
   tier: Pick<PmPlanTierRow, "name"> | null,
 ): LegacyPlanType {
   if (!tier) return "individual";
-  return tier.name.trim().toLowerCase() === "family" ? "family" : "individual";
+  const tierName = tier.name.trim().toLowerCase();
+  return tierName === "family" || tierName === "couple" ? "family" : "individual";
 }
 
 /**
