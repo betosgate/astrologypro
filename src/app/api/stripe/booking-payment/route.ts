@@ -91,9 +91,9 @@ export async function POST(request: NextRequest) {
     // poison the metadata blob.
     const submissionId =
       typeof rawSubmissionId === "string" &&
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
-        rawSubmissionId.trim(),
-      )
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+          rawSubmissionId.trim(),
+        )
         ? rawSubmissionId.trim()
         : null;
     const questionnaireData = questionnaire ?? {};
@@ -579,10 +579,10 @@ export async function POST(request: NextRequest) {
     const affiliateCommissionCents =
       stamp.reason === "stamped"
         ? computeCommissionCents(
-            grossAmountCentsForCarveOut,
-            stamp.rate_type_stamp,
-            stamp.rate_value_stamp,
-          )
+          grossAmountCentsForCarveOut,
+          stamp.rate_type_stamp,
+          stamp.rate_value_stamp,
+        )
         : 0;
 
     const grossAmountCents = Math.round(finalPrice * 100);
@@ -610,14 +610,14 @@ export async function POST(request: NextRequest) {
     const bestTemplateServiceId =
       allTemplates && allTemplates.length > 0
         ? ((allTemplates as Record<string, unknown>[]).find(
-            (t) => t.service_id === serviceId
+          (t) => t.service_id === serviceId
+        ) ??
+          (allTemplates as Record<string, unknown>[]).find(
+            (t) =>
+              String(t.start_date ?? "") <= bookingDateStr &&
+              String(t.end_date ?? "") >= bookingDateStr
           ) ??
-            (allTemplates as Record<string, unknown>[]).find(
-              (t) =>
-                String(t.start_date ?? "") <= bookingDateStr &&
-                String(t.end_date ?? "") >= bookingDateStr
-            ) ??
-            allTemplates[0]) as Record<string, unknown> | undefined
+          allTemplates[0]) as Record<string, unknown> | undefined
         : undefined;
     const slotIsVerifiedFree =
       freeSlot === true && (bestTemplateServiceId?.service_id == null);
@@ -691,19 +691,19 @@ export async function POST(request: NextRequest) {
         ...(refCode ? { ref_code: refCode } : {}),
         ...(stamp.reason === "stamped"
           ? {
-              commission_source_assignment_id: stamp.source_assignment_id,
-              commission_source_template_id: stamp.source_template_id,
-              commission_source_campaign_id: stamp.source_campaign_id,
-              commission_rate_type_stamp: stamp.rate_type_stamp,
-              commission_rate_value_stamp: stamp.rate_value_stamp,
-              affiliate_commission_amount_cents: affiliateCommissionCents,
-            }
+            commission_source_assignment_id: stamp.source_assignment_id,
+            commission_source_template_id: stamp.source_template_id,
+            commission_source_campaign_id: stamp.source_campaign_id,
+            commission_rate_type_stamp: stamp.rate_type_stamp,
+            commission_rate_value_stamp: stamp.rate_value_stamp,
+            affiliate_commission_amount_cents: affiliateCommissionCents,
+          }
           : {}),
         ...(callPin
           ? {
-              call_pin: callPin.pin,
-              call_pin_generated_at: callPin.generatedAt,
-            }
+            call_pin: callPin.pin,
+            call_pin_generated_at: callPin.generatedAt,
+          }
           : {}),
       })
       .select("id, booking_token")
@@ -1006,9 +1006,9 @@ export async function POST(request: NextRequest) {
             dashboardUrl: `${appUrl}/dashboard/bookings`,
             questionnaire: questionnaire
               ? {
-                  focusQuestion: questionnaireData.focusQuestion as string | undefined,
-                  lifeArea: questionnaireData.lifeArea as string | undefined,
-                }
+                focusQuestion: questionnaireData.focusQuestion as string | undefined,
+                lifeArea: questionnaireData.lifeArea as string | undefined,
+              }
               : undefined,
             sessionUrl: toolkitPath ? `${appUrl}${toolkitPath}` : null,
           });
@@ -1153,12 +1153,12 @@ export async function POST(request: NextRequest) {
       finalPrice,
       ...(loyaltyDiscountPercent > 0
         ? {
-            loyaltyDiscount: {
-              name: loyaltyRuleName,
-              percent: loyaltyDiscountPercent,
-              saved: Math.round((service.base_price - finalPrice + giftDeduction) * 100) / 100,
-            },
-          }
+          loyaltyDiscount: {
+            name: loyaltyRuleName,
+            percent: loyaltyDiscountPercent,
+            saved: Math.round((service.base_price - finalPrice + giftDeduction) * 100) / 100,
+          },
+        }
         : {}),
       ...(giftDeduction > 0
         ? { giftDeduction: Math.round(giftDeduction * 100) / 100 }

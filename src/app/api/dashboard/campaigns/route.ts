@@ -72,6 +72,7 @@ export async function GET(request: Request) {
     .from("affiliate_campaigns")
     .select("*")
     .eq("diviner_id", diviner.id)
+    .eq("owner_type", "diviner")
     .order("created_at", { ascending: false })
     .order("id", { ascending: false })
     .limit(limit + 1);
