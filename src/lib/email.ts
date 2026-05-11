@@ -69,11 +69,13 @@ export async function sendPlatformInvitationEmail({
   roleSlug,
   acceptUrl,
   resent = false,
+  invitationId,
 }: {
   to: string;
   roleSlug: string;
   acceptUrl: string;
   resent?: boolean;
+  invitationId?: string;
 }) {
   const roleLabelMap: Record<string, string> = {
     admin: "Admin",
@@ -123,7 +125,7 @@ export async function sendPlatformInvitationEmail({
     </p>
   `;
 
-  return sendEmail({
+  const result = await sendEmail({
     to,
     subject,
     html: buildEmailHtml({
@@ -138,6 +140,21 @@ export async function sendPlatformInvitationEmail({
       footer: "AstrologyPro &mdash; Run Your Divination Business",
     }),
   });
+
+  await logEmail({
+    emailTo: to,
+    templateName: resent ? "platform_invitation_resent" : "platform_invitation",
+    subject,
+    metadata: {
+      invitation_id: invitationId ?? null,
+      role_slug: roleSlug,
+      accept_url: acceptUrl,
+      resent,
+      message_id: result.id,
+    },
+  });
+
+  return result;
 }
 
 

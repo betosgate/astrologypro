@@ -797,7 +797,7 @@ export default function CommunityPlanPage() {
                         onChange={(e) =>
                           setCalcMembers(Number(e.target.value))
                         }
-                        className="w-full accent-primary"
+                        className="w-full cursor-pointer accent-primary"
                         aria-label="Member count slider"
                       />
                     </div>

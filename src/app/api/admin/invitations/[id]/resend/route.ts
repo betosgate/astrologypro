@@ -59,11 +59,12 @@ export async function POST(_req: NextRequest, { params }: Params) {
       ? `${APP_URL}/join/diviner?email=${encodeURIComponent(invitation.email)}&inviteToken=${encodeURIComponent(token)}`
       : `${APP_URL}/invitations/${token}/accept`;
 
-  await sendPlatformInvitationEmail({
+  const emailResult = await sendPlatformInvitationEmail({
     to: invitation.email,
     roleSlug: invitation.role_slug,
     acceptUrl,
     resent: true,
+    invitationId: invitation.id,
   });
 
   // Log to admin_activity_log
@@ -73,9 +74,14 @@ export async function POST(_req: NextRequest, { params }: Params) {
       admin_user_id: adminUser.email,
       target_user_id: null,
       action_type: "resend_invitation",
-      details: { invitation_id: id, email: invitation.email },
+      details: {
+        invitation_id: id,
+        email: invitation.email,
+        role_slug: invitation.role_slug,
+        message_id: emailResult.id,
+      },
     })
     .maybeSingle();
 
-  return NextResponse.json({ success: true });
+  return NextResponse.json({ success: true, messageId: emailResult.id });
 }
