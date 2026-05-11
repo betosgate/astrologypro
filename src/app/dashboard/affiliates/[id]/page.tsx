@@ -60,6 +60,7 @@ import {
   TrendingUp,
   History,
   Pencil,
+  Target,
 } from "lucide-react";
 import {
   resendInviteByJunction,
@@ -578,6 +579,74 @@ export default function DashboardAffiliateDetailPage({
                         >
                           {a.is_active ? "active" : "revoked"}
                         </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Campaigns */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Target className="size-4" aria-hidden />
+                Campaigns
+              </CardTitle>
+              <CardDescription>
+                {report?.campaigns?.length ?? 0} campaign
+                {(report?.campaigns?.length ?? 0) !== 1 ? "s" : ""} — specific tracking links used by this affiliate.
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {!report?.campaigns || report.campaigns.length === 0 ? (
+            <p className="py-4 text-center text-sm text-muted-foreground">
+              No specific campaigns created for this affiliate yet.
+            </p>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Campaign Name</TableHead>
+                    <TableHead>Code</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Created</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {report.campaigns.map((camp) => (
+                    <TableRow key={camp.id}>
+                      <TableCell className="font-medium">
+                        {camp.name || "Untitled Campaign"}
+                      </TableCell>
+                      <TableCell>
+                        <code className="rounded bg-muted px-1.5 py-0.5 text-xs font-mono">
+                          {camp.campaign_code}
+                        </code>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={camp.status === "active" ? "default" : "outline"}>
+                          {camp.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {fmtDate(camp.created_at)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button asChild variant="ghost" size="sm">
+                          <Link href={`/dashboard/campaigns/${camp.id}`}>
+                            View Details
+                          </Link>
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}

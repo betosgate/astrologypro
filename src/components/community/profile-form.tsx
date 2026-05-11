@@ -428,7 +428,7 @@ export function CommunityProfileForm({
             <div className="space-y-2">
               <Label>Gender</Label>
               <Select value={gender} onValueChange={setGender}>
-                <SelectTrigger id="community-gender"><SelectValue placeholder="Select" /></SelectTrigger>
+                <SelectTrigger id="community-gender" className="w-full"><SelectValue placeholder="Select" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Male">Male</SelectItem>
                   <SelectItem value="Female">Female</SelectItem>
@@ -448,7 +448,7 @@ export function CommunityProfileForm({
             <div className="space-y-2">
               <Label>Relationship Status</Label>
               <Select value={relationshipStatus} onValueChange={setRelationshipStatus}>
-                <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                <SelectTrigger className="w-full"><SelectValue placeholder="Select" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Single">Single</SelectItem>
                   <SelectItem value="In a relationship">In a relationship</SelectItem>

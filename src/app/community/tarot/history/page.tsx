@@ -108,7 +108,7 @@ export default async function ReadingHistoryPage({
         <select
           name="spread_id"
           defaultValue={spread_id ?? ""}
-          className="rounded-md border border-input bg-background px-3 py-1.5 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          className="rounded-md h-8 border border-input bg-background px-3 py-1.5 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           aria-label="Filter by spread"
         >
           <option value="">All Spreads</option>
