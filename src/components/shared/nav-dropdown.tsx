@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 export interface NavDropdownItem {
   label: string;
   href: string;
+  icon?: React.ReactNode;
 }
 
 interface NavDropdownProps {
@@ -65,12 +66,13 @@ export function NavDropdown({ label, items, icon }: NavDropdownProps) {
                 <Link
                   href={item.href}
                   className={cn(
-                    "block rounded-md px-3 py-1.5 text-sm transition-colors",
+                    "flex items-center gap-2 rounded-md px-3 py-1.5 text-sm transition-colors",
                     isActive
                       ? "bg-primary/10 text-primary font-medium"
                       : "text-muted-foreground hover:bg-muted hover:text-foreground",
                   )}
                 >
+                  {item.icon}
                   {item.label}
                 </Link>
               </li>

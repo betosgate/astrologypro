@@ -96,7 +96,7 @@ export function TransitCardExpander({
             <div className="flex w-full items-center justify-between gap-4 px-5 py-4">
               <button
                 type="button"
-                className="flex min-w-0 flex-1 items-center gap-3 text-left transition-colors hover:text-foreground"
+                className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 text-left transition-colors hover:text-foreground"
                 onClick={() => setExpandedId(isOpen ? null : card.id)}
               >
                 <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
