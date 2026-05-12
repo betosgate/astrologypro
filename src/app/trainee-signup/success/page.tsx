@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { stripe } from "@/lib/stripe/client";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { ensureUserContractRequirements } from "@/lib/contract-orchestration";
 import { finalizeTraineeDivinerUpgradeFromSessionId } from "@/lib/trainee-diviner-upgrade";
 
 export const dynamic = "force-dynamic";
@@ -49,6 +51,10 @@ async function getCheckoutData(sessionId: string) {
 
   return {
     itemKey: session.metadata?.itemKey,
+    paymentIntentId:
+      typeof session.payment_intent === "string"
+        ? session.payment_intent
+        : session.payment_intent?.id ?? null,
     details: [
       ["Amount paid", formatCheckoutAmount(session.amount_total, session.currency)],
       ["Recent plan", planName],
@@ -79,7 +85,8 @@ export default async function TraineeSignupSuccessPage({
     redirect(`/login?redirect=${encodeURIComponent(loginRedirect)}`);
   }
 
-  const { itemKey, details: checkoutDetails } = await getCheckoutData(sessionId);
+  const { itemKey, paymentIntentId, details: checkoutDetails } =
+    await getCheckoutData(sessionId);
 
   let nextStepText = "Complete your profile and setup your training preferences before entering the dashboard.";
   let nextHref = `/join/trainee/profile?session_id=${encodeURIComponent(sessionId)}`;
@@ -101,6 +108,22 @@ export default async function TraineeSignupSuccessPage({
     nextHref = `/join/trainee/profile?session_id=${encodeURIComponent(sessionId)}&next=${encodeURIComponent("/contracts/pending?source=trainee-bundle&session_id=" + encodeURIComponent(sessionId))}`;
 
     accountActivatedText = "Stripe returned a successful checkout and your trainee & diviner access has been provisioned.";
+  } else if (itemKey === "trainee_program") {
+    const admin = createAdminClient();
+    await admin
+      .from("trainees")
+      .update({
+        paid_at: new Date().toISOString(),
+        ...(paymentIntentId ? { payment_intent_id: paymentIntentId } : {}),
+      })
+      .eq("user_id", user.id);
+
+    await ensureUserContractRequirements(user.id, "post_login").catch((error) => {
+      console.error(
+        "[trainee-signup/success] failed to ensure contract requirements:",
+        error
+      );
+    });
   }
 
   return (

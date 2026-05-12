@@ -40,8 +40,9 @@ export default async function RoleWalkthroughPage({
   const nextSection = roleIndex < WALKTHROUGH_SECTIONS.length - 1 ? WALKTHROUGH_SECTIONS[roleIndex + 1] : null;
 
   // Group counts for stats
-  const totalScreens = section.screens.length;
-  const totalGroups = new Set(section.screens.map(s => s.group)).size;
+  const validScreens = section.screens.filter((screen) => Boolean(screen?.name));
+  const totalScreens = validScreens.length;
+  const totalGroups = new Set(validScreens.map((screen) => screen.group ?? "Features")).size;
 
   return (
     <div className="cosmic-bg min-h-screen">
@@ -114,7 +115,7 @@ export default async function RoleWalkthroughPage({
         </div>
 
         <ScreenshotLightbox 
-          screens={section.screens} 
+          screens={validScreens} 
           roleSlug={section.slug} 
           roleTitle={section.role} 
         />

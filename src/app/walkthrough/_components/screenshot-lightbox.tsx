@@ -138,8 +138,13 @@ function groupSlug(name: string): string {
 }
 
 export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Props) {
+  const validScreens = useMemo(
+    () => screens.filter((screen): screen is Screen => Boolean(screen && screen.name)),
+    [screens],
+  );
+
   const [openIndex, setOpenIndex] = useState<number | null>(null);
-  const [activeGroup, setActiveGroup] = useState(screens[0]?.group || "Features");
+  const [activeGroup, setActiveGroup] = useState(validScreens[0]?.group || "Features");
   const [scale, setScale] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
@@ -147,7 +152,7 @@ export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Pro
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [copiedGroup, setCopiedGroup] = useState<string | null>(null);
 
-  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set([screens[0]?.group || "Features"]));
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set([validScreens[0]?.group || "Features"]));
   const [expandedSubModules, setExpandedSubModules] = useState<Set<string>>(new Set());
   const [activeScreen, setActiveScreen] = useState<string | null>(null);
   const [activeSubModule, setActiveSubModule] = useState<string | null>(null);
@@ -168,7 +173,7 @@ export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Pro
       totalScreens: number;
     }> = [];
 
-    for (const screen of screens) {
+    for (const screen of validScreens) {
       const groupName = screen.group || "Features";
       const subModuleName = screen.subModule || "General";
 
@@ -188,8 +193,16 @@ export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Pro
       group.totalScreens++;
     }
 
+    if (roleSlug === "public") {
+      grouped.sort((a, b) => {
+        if (a.name === "Onboarding") return -1;
+        if (b.name === "Onboarding") return 1;
+        return 0;
+      });
+    }
+
     return grouped;
-  }, [screens]);
+  }, [roleSlug, validScreens]);
 
   const orderedScreens = useMemo(
     () => groups.flatMap((group) => group.subModules.flatMap((subModule) => subModule.screens)),
@@ -199,8 +212,8 @@ export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Pro
   const open = openIndex !== null;
   const current = openIndex !== null ? orderedScreens[openIndex] : null;
   const getScreenId = useCallback(
-    (screen: Screen) => `${screen.name}-${screens.indexOf(screen)}`,
-    [screens],
+    (screen: Screen) => `${screen.name}-${validScreens.indexOf(screen)}`,
+    [validScreens],
   );
 
   const close = useCallback(() => {
@@ -318,7 +331,7 @@ export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Pro
     return () => {
       observer.disconnect();
     };
-  }, [screens]);
+  }, [validScreens]);
 
   // Scroll to Top visibility listener
   useEffect(() => {
@@ -339,7 +352,7 @@ export default function ScreenshotLightbox({ screens, roleSlug, roleTitle }: Pro
 
     const match = rawHash.match(/^section-(.+)$/);
     const slug = match ? match[1] : rawHash;
-    const targetGroupName = screens
+    const targetGroupName = validScreens
       .map((s) => s.group || "Features")
       .find((name) => groupSlug(name) === slug);
     if (!targetGroupName) return;
