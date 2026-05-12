@@ -997,14 +997,15 @@ export default function CommunityPlanPage() {
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
                 <CreditCard className="size-4 text-muted-foreground" />
-                Payment Method
+                Manage Your Subscription
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-sm text-muted-foreground">
-                Manage your payment method, cancel, or update billing info via
-                the Stripe customer portal.
+                Keep your payment info up to date and view your past statements in one secure place.
               </p>
+
+
               <Button
                 variant="outline"
                 onClick={handleBillingPortal}
