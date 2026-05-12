@@ -13905,6 +13905,12 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
     keyPages: ["Homepage", "Discover", "Practitioner Profile", "Blog", "Join Hub"],
     groups: [
       {
+        groupLabel: "Onboarding",
+        cards: [
+          { title: "Get Started", description: "Platform signup and plan selection", href: "/get-started", icon: Sparkles, status: "live" },
+        ],
+      },
+      {
         groupLabel: "Marketing",
         cards: [
           { title: "Homepage", description: "Main landing page", href: "/", icon: Home, status: "live" },
@@ -13978,19 +13984,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Newsletter signup and engagement CTAs"
         ]
       },
-      { 
-        name: "join", 
-        label: "Registration Hub", 
-        description: "Membership tier selection.", 
-        group: "Onboarding",
-        purpose: "A purpose-built page for selecting membership tiers and initiating the spiritual onboarding process.",
-        bullets: [
-          "Clear plan comparison and feature matrix",
-          "One-click enrollment in Perennial Mandalism",
-          "Specialized Family and Couple plan options",
-          "Integrated student-to-school conversion paths"
-        ]
-      },
+  
       {
         name: "homepage-hero",
         label: "Homepage Hero",
@@ -14071,38 +14065,901 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "End CTA — a contextual call to action at the article's conclusion (e.g. 'Book a reading' or 'Join the community')"
         ]
       },
-      {
-        name: "login-page",
-        label: "Login Page",
-        description: "The sign-in page for returning AstrologyPro members and practitioners. Supports email and password login with a clear 'Forgot password' link and options to register if the visitor is new.",
-        group: "Onboarding",
-        purpose: "Every returning member passes through the login page. It needs to be fast, clear, and friction-free. Diviners, PM members, customers, trainees, and admins all log in through this single page — the platform then routes them to the correct portal based on their role. A clear layout and minimal fields keep the experience simple for all user types.",
-        bullets: [
-          "Email and password fields — the standard credentials used for all account types on the platform",
-          "Sign In button — submits the form and routes the user to their role-appropriate dashboard",
-          "Forgot password link — visible without requiring any action first; leads directly to the password reset flow",
-          "Remember me option — keeps the user logged in on their personal device for faster future access",
-          "Register prompt — a visible link for first-time visitors who do not have an account yet",
-          "Error handling — clear messaging for incorrect credentials with guidance on next steps",
-          "Role-based routing — after login, the platform automatically sends each user to their correct portal"
-        ]
-      },
-      {
-        name: "forgot-password",
-        label: "Forgot Password Flow",
-        description: "A two-step process for recovering account access — enter your registered email to receive a reset link, then set a new password. Includes clear confirmation messaging and security best-practice guidance.",
-        group: "Onboarding",
-        purpose: "Password recovery is a critical trust moment — if a member cannot get back into their account easily, they may give up and lose access to their readings, session history, and community connection. This flow needs to be reassuringly simple: one field, one button, clear confirmation that the email was sent, and a secure link that works reliably.",
-        bullets: [
-          "Email entry field — enter the address associated with your account to receive a reset link",
-          "Send Reset Link button — triggers the password reset email with a one-time secure link",
-          "Confirmation screen — a clear message confirming the email was sent, with guidance to check spam if not received",
-          "Secure reset link — the emailed link expires after 24 hours for security; expired links show a clear re-request option",
-          "New password form — the page the reset link leads to, with password and confirm-password fields",
-          "Password strength indicator — visual feedback on the strength of the new password being entered",
-          "Return to login — a visible link back to the login page for users who remember their password or are in the wrong flow"
-        ]
-      },
+
+      // --------------Onboarding--------------------//
+
+
+      
+      
+  {
+    "name": "public_landing_homepage",
+    "label": "Public Landing Homepage",
+    "description": "Main public homepage introducing the AstrologyPro platform for astrologers, tarot readers, and diviners.",
+    "group": "Onboarding",
+    "purpose": "Explains the platform features, business tools, and online practice system for new visitors.",
+    "bullets": [
+      "Visitors first land on the AstrologyPro public homepage.",
+      "Homepage explains how diviners can run their practice online.",
+      "Navigation menu includes Features, Learn, Demo, Pricing, Blog, and Affiliate sections.",
+      "Start Your Practice button begins the onboarding process.",
+      "Feature shortcuts highlight video sessions, booking tools, chart calculations, tarot spreads, and marketing tools.",
+      "Platform statistics display total sessions, diviners, ratings, and customer satisfaction.",
+      "Hero section explains branding, client management, and marketing capabilities.",
+      "Get Started button redirects users to signup or onboarding.",
+      "Homepage is designed for customer conversion and practitioner onboarding.",
+      "Visitors can explore platform tools before creating an account."
+    ]
+  },
+  {
+    "name": "practice_platform_overview",
+    "label": "Practice Platform Overview",
+    "description": "Overview section explaining why diviners need a professional business platform.",
+    "group": "Onboarding",
+    "purpose": "Educates visitors about replacing manual tools with an all-in-one divination business platform.",
+    "bullets": [
+      "Section explains the problems faced by independent diviners.",
+      "Platform combines booking, video sessions, payments, CRM, and marketing tools.",
+      "Visitors can compare traditional workflows versus automated platform tools.",
+      "See Plans & Pricing button opens subscription plans.",
+      "See a Demo button helps visitors explore the platform visually.",
+      "Money-back guarantee and included features are highlighted.",
+      "Problem cards explain issues like manual Zoom links and payment chasing.",
+      "Professional branded page support is promoted.",
+      "Section builds trust before visitors purchase a subscription.",
+      "Platform messaging focuses on simplifying divination business operations."
+    ]
+  },
+  {
+    "name": "professional_divination_plans",
+    "label": "Professional Divination Plans",
+    "description": "Subscription plans for professional astrologers and tarot readers.",
+    "group": "Onboarding",
+    "purpose": "Allows practitioners to choose business plans based on their divination specialty.",
+    "bullets": [
+      "Users can compare multiple professional divination plans.",
+      "Tarot Reader plan focuses on tarot spread services.",
+      "Astrologer plan focuses on astrology chart reading services.",
+      "Oracle plan combines astrology and tarot services together.",
+      "Each plan includes monthly pricing and setup costs.",
+      "Plan cards explain included services and session types.",
+      "Feature lists explain astrology, tarot, synastry, transit, and relationship readings.",
+      "Users can select plans according to their practice style.",
+      "Highlighted plan card promotes the recommended package.",
+      "Choose buttons begin the subscription signup process."
+    ]
+  },
+  {
+    "name": "trainee_program_plans",
+    "label": "Trainee Program Plans",
+    "description": "Training program options for users who want to become certified diviners.",
+    "group": "Onboarding",
+    "purpose": "Provides professional training and certification programs for astrology and tarot learners.",
+    "bullets": [
+      "Users can enroll in astrology or tarot certification programs.",
+      "Astrology Only plan teaches natal charts, transits, and horary readings.",
+      "Tarot Only plan teaches professional tarot spread techniques.",
+      "Combined Astrology & Tarot plan provides full divination training.",
+      "Training plans include mentor support and certification.",
+      "Lesson access and quizzes are included in advanced packages.",
+      "Community access and practice sessions support trainee growth.",
+      "Choose buttons start the enrollment process.",
+      "Most Complete plan highlights the full training package.",
+      "Training system prepares users for professional divination careers."
+    ]
+  },
+  {
+    "name": "trainee_diviner_bundle_plans",
+    "label": "Trainee And Diviner Bundle Plans",
+    "description": "Combined training and practice launch bundles for future diviners.",
+    "group": "Onboarding",
+    "purpose": "Allows trainees to learn divination and immediately launch their online practice.",
+    "bullets": [
+      "Bundle plans combine training with professional practice tools.",
+      "Users receive both education and business platform access.",
+      "Bundles include branded profile pages and booking systems.",
+      "HD video session support is included in all bundles.",
+      "CRM and payment management tools are provided.",
+      "Tarot and astrology service combinations are available.",
+      "Users can launch their practice immediately after training.",
+      "Bundle plans simplify the transition from trainee to professional.",
+      "Each package explains included services and practice tools.",
+      "Choose buttons activate the selected bundle package."
+    ]
+  },
+
+  {
+    "name": "trainee_diviner_bundle_plans_part_two",
+    "label": "Advanced Trainee And Oracle Bundle Plans",
+    "description": "Advanced bundle plans that combine full divination training with premium Oracle practice packages.",
+    "group": "Onboarding",
+    "purpose": "Allows trainees to launch advanced astrology and tarot businesses with premium tools and service access.",
+    "bullets": [
+      "Bundle plans combine Oracle practice tools with astrology and tarot training.",
+      "Tarot Only + The Oracle package provides tarot training with full service access.",
+      "Astrology & Tarot (Full) + The Oracle package includes complete divination training and all professional services.",
+      "Astrology Only + Tarot Reader package combines astrology learning with tarot service tools.",
+      "Each bundle includes branded profile pages and booking systems.",
+      "Dedicated phone line support is included in premium Oracle packages.",
+      "HD video sessions with recording are available in all bundles.",
+      "Packages support astrology readings, tarot spreads, and combined services.",
+      "Users can launch professional divination businesses immediately after training.",
+      "Choose buttons activate the selected premium bundle plan."
+    ]
+  },
+  {
+    "name": "trainee_diviner_bundle_plans_part_three",
+    "label": "Focused Practice Launch Bundle Plans",
+    "description": "Focused launch bundles designed for users who want to specialize in astrology or tarot after training.",
+    "group": "Onboarding",
+    "purpose": "Helps trainees launch focused astrology or tarot practices with professional business tools.",
+    "bullets": [
+      "Astrology Only + The Oracle plan combines astrology certification with full Oracle business tools.",
+      "Astrology & Tarot (Full) + Tarot Reader plan supports tarot-focused practice launches.",
+      "Astrology & Tarot (Full) + Astrologer plan supports astrology-focused business launches.",
+      "Bundle plans include professional booking and CRM systems.",
+      "Users receive branded public profile pages for client bookings.",
+      "HD video session recording support is included.",
+      "Training and practice tools are combined in a single package.",
+      "Plans provide astrology chart services, tarot spreads, and freelance session support.",
+      "Focused launch packages help users specialize in a preferred divination category.",
+      "Choose buttons begin the onboarding and subscription process for the selected bundle."
+    ]
+  },
+  {
+    "name": "community_membership_plans",
+    "label": "Perennial Mandalism Community Plans",
+    "description": "Membership subscription plans for accessing the Perennial Mandalism spiritual community.",
+    "group": "Onboarding",
+    "purpose": "Provides community access, ceremonies, sacred teachings, and member discussions.",
+    "bullets": [
+      "Users can subscribe to community membership plans.",
+      "Individual, Couple, and Family membership plans are available.",
+      "Monthly subscription pricing varies by member count.",
+      "Community plans include live ceremonies and sacred teachings.",
+      "Forum access allows members to participate in discussions.",
+      "Family plans support multiple household members.",
+      "Savings information is displayed for bundled memberships.",
+      "Choose Plan buttons activate membership subscriptions.",
+      "Community membership focuses on spiritual learning and engagement.",
+      "Best Value label highlights the recommended family package."
+    ]
+  },
+
+
+  
+  // -------------Professional Divination Plans-----------//
+
+    {
+    "name": "professional_divination_plan_selection",
+    "label": "Professional Divination Plan Selection",
+    "description": "Users choose a professional astrology or tarot business plan before account registration.",
+    "group": "Onboarding",
+    "subModule": "Professional Divination Plans",
+    "purpose": "Helps users select the best divination business package based on their services and practice goals.",
+    "bullets": [
+      "Users can compare multiple professional divination plans.",
+      "The Tarot Reader plan focuses on tarot spread services and freelance sessions.",
+      "The Oracle plan combines all astrology and tarot services in one package.",
+      "The Astrologer plan focuses on astrology chart readings and transit analysis.",
+      "Each plan displays monthly subscription pricing and one-time setup fees.",
+      "Service labels explain the included readings and professional services.",
+      "Plan cards highlight the major features included in the package.",
+      "Users can review astrology, tarot, and combined practice options.",
+      "Best value plans are visually highlighted for easier selection.",
+      "Choose buttons allow users to continue with the selected practice package."
+    ]
+  },
+  {
+    "name": "professional_divination_account_registration_v1",
+    "label": "Professional Divination Account Registration",
+    "description": "Account setup screen where users create their divination business account after selecting a plan.",
+    "group": "Onboarding",
+    "subModule": "Professional Divination Plans",
+    "purpose": "Allows users to create their diviner account and reserve a branded profile URL.",
+    "bullets": [
+      "Selected plan details are displayed at the top of the page.",
+      "Users can switch between available divination plans before registration.",
+      "Email address field is required for account creation.",
+      "Full name field is used for the diviner profile and contracts.",
+      "Password fields include secure password validation requirements.",
+      "Password strength indicators guide users to create secure passwords.",
+      "Confirm password validation ensures both passwords match.",
+      "Users can create a custom branded public profile URL.",
+      "The final continue button displays the selected package pricing.",
+      "Registration continues the user into the payment and subscription process."
+    ]
+  },
+  {
+    "name": "professional_divination_payment_checkout_v1",
+    "label": "Professional Divination Payment Checkout",
+    "description": "Stripe-based payment checkout used to activate divination subscriptions and setup fees.",
+    "group": "Onboarding",
+    "subModule": "Professional Divination Plans",
+    "purpose": "Allows users to securely complete subscription payments for selected divination plans.",
+    "bullets": [
+      "Checkout screen displays the selected divination course and pricing.",
+      "One-time setup fees and recurring monthly charges are shown separately.",
+      "Users can switch between supported currencies such as INR and USD.",
+      "Secure payment methods are supported through Stripe checkout.",
+      "Contact email information is displayed for payment confirmation.",
+      "Card details, expiry date, and security code fields are required.",
+      "Cardholder information and country selection are included.",
+      "Payment processing states are displayed while transactions are submitted.",
+      "Subscription activation begins after successful payment completion.",
+      "Stripe securely handles all payment processing and billing."
+    ]
+  },
+  {
+    "name": "professional_divination_payment_success_v1",
+    "label": "Professional Divination Payment Success",
+    "description": "Confirmation screen displayed after successful subscription payment.",
+    "group": "Onboarding",
+    "subModule": "Professional Divination Plans",
+    "purpose": "Confirms successful payment activation and guides users to the next onboarding step.",
+    "bullets": [
+      "Payment success status is clearly displayed to the user.",
+      "The activated divination course and subscription details are summarized.",
+      "Amount paid and recurring billing amounts are shown.",
+      "Payment status and checkout completion states are displayed.",
+      "Customer email information is included for confirmation purposes.",
+      "Account activation status confirms the diviner profile has been provisioned.",
+      "The next onboarding step explains contract acceptance requirements.",
+      "Users can review payment details before continuing.",
+      "Recurring monthly subscription charges are displayed.",
+      "Continue to Contract button moves users into agreement signing."
+    ]
+  },
+  {
+    "name": "diviner_service_agreement_review",
+    "label": "Diviner Service Agreement Review",
+    "description": "Contract review screen where users read platform agreements before accessing the dashboard.",
+    "group": "Onboarding",
+    "subModule": "Professional Divination Plans",
+    "purpose": "Ensures users review and accept legal agreements required for professional divination services.",
+    "bullets": [
+      "Pending contracts are displayed before dashboard access is granted.",
+      "The Diviner Service Agreement contains platform participation rules.",
+      "Agreement sections explain contractor responsibilities and payout terms.",
+      "Service expectations and compliance requirements are included.",
+      "Confidentiality and dispute resolution policies are explained.",
+      "Users must scroll through the agreement before acceptance.",
+      "Electronic signature fields allow users to sign using their full name.",
+      "Agreement acceptance confirms understanding of platform rules.",
+      "Acceptance buttons finalize the contract signing process.",
+      "Users continue into their professional portal after agreement approval."
+    ]
+  },
+  {
+    "name": "diviner_dashboard_onboarding",
+    "label": "Diviner Dashboard Overview",
+    "description": "Initial dashboard shown after onboarding completion and account activation.",
+    "group": "Onboarding",
+    "subModule": "Professional Divination Plans",
+    "purpose": "Introduces users to the diviner business dashboard and setup progress tools.",
+    "bullets": [
+      "Dashboard overview introduces the main diviner workspace.",
+      "Navigation menu provides access to sessions, clients, services, and marketing tools.",
+      "Certification and community promotion banners are displayed at the top.",
+      "Today's sessions section displays upcoming scheduled readings.",
+      "Planetary return widgets show astrology-related upcoming events.",
+      "Profile completion tasks help users finish account setup.",
+      "Users can upload profile photos and write biographies.",
+      "Service setup tasks guide users to create offerings and specialties.",
+      "Stripe payment connection setup is included in onboarding tasks.",
+      "Dashboard links provide access to public branded profile pages."
+    ]
+  },
+      
+       
+// -------------Trainee Program Plans-----------//
+
+  {
+    "name": "trainee_program_plan_selection",
+    "label": "Trainee Program Plan Selection",
+    "description": "Users select a divination training package before starting the trainee onboarding process.",
+    "group": "Onboarding",
+    "subModule": "Trainee Program",
+    "purpose": "Allows future diviners to choose astrology, tarot, or full certification training programs.",
+    "bullets": [
+      "Users can compare multiple trainee learning programs.",
+      "Astrology Only focuses on professional astrology education and chart interpretation.",
+      "Tarot Only focuses on tarot spreads, card meanings, and reading practice.",
+      "Astrology & Tarot (Full) combines both complete training paths.",
+      "Training packages display one-time pricing information.",
+      "Training cards explain lessons, certifications, and mentor support.",
+      "Professional practice preparation is included in advanced plans.",
+      "Users can review all included learning features before enrolling.",
+      "Highlighted plans display the most complete training package.",
+      "Choose buttons allow users to continue with the selected training program."
+    ]
+  },
+  {
+    "name": "trainee_program_account_registration",
+    "label": "Trainee Program Account Registration",
+    "description": "Registration screen where trainees create their learning platform account after selecting a training package.",
+    "group": "Onboarding",
+    "subModule": "Trainee Program",
+    "purpose": "Allows trainees to create accounts and continue into payment and profile onboarding.",
+    "bullets": [
+      "Selected trainee program information is displayed at the top.",
+      "Users can switch between available training programs before continuing.",
+      "Email address field is required for account setup.",
+      "Full name field is used for certificates and platform identity.",
+      "Secure password creation includes password strength validation.",
+      "Password requirement indicators help users create strong passwords.",
+      "Confirm password validation ensures passwords match correctly.",
+      "Users can create a custom public trainee profile URL.",
+      "Continue buttons display the selected program pricing.",
+      "Account registration continues the onboarding and payment process."
+    ]
+  },
+  {
+    "name": "trainee_program_payment_checkout",
+    "label": "Trainee Program Payment Checkout",
+    "description": "Stripe payment checkout used for trainee program enrollment and certification access.",
+    "group": "Onboarding",
+    "subModule": "Trainee Program",
+    "purpose": "Allows trainees to securely complete payments for training enrollment.",
+    "bullets": [
+      "Checkout screens display selected training program pricing.",
+      "Users can switch between supported currencies such as INR and USD.",
+      "Stripe securely handles all payment processing activities.",
+      "Training package descriptions are shown during checkout.",
+      "Contact email information is displayed for billing confirmation.",
+      "Card details and payment information fields are required.",
+      "Country and cardholder information are collected securely.",
+      "Processing states appear while transactions are being completed.",
+      "Successful payment activates trainee learning access.",
+      "Payment screens support subscription and one-time purchase workflows."
+    ]
+  },
+  {
+    "name": "trainee_program_payment_success",
+    "label": "Trainee Program Payment Success",
+    "description": "Confirmation page displayed after successful trainee program payment completion.",
+    "group": "Onboarding",
+    "subModule": "Trainee Program",
+    "purpose": "Confirms enrollment activation and guides trainees to the next onboarding step.",
+    "bullets": [
+      "Payment success messages confirm completed enrollment.",
+      "Training program activation status is displayed clearly.",
+      "Account provisioning status confirms trainee access creation.",
+      "Payment amount and selected plan information are summarized.",
+      "Payment status and transaction completion details are shown.",
+      "Next step guidance explains profile setup requirements.",
+      "Users can review payment details before continuing.",
+      "Continue buttons move trainees into profile onboarding.",
+      "Training access becomes available immediately after payment.",
+      "The success page acts as the transition into trainee setup."
+    ]
+  },
+  {
+    "name": "trainee_profile_setup_basic_information",
+    "label": "Trainee Profile Setup - Basic Information",
+    "description": "Initial trainee profile onboarding step used to collect public profile and account information.",
+    "group": "Onboarding",
+    "subModule": "Trainee Program",
+    "purpose": "Allows trainees to personalize their learning profile before accessing the dashboard.",
+    "bullets": [
+      "Users can set a public display name for their profile.",
+      "Biography fields allow trainees to describe themselves.",
+      "Avatar URL fields support profile image customization.",
+      "Optional phone number fields are available for account setup.",
+      "Timezone selection ensures correct scheduling and session timing.",
+      "Profile forms help personalize the trainee experience.",
+      "Step indicators guide users through the onboarding flow.",
+      "Continue buttons move users into the next onboarding step.",
+      "Public profile information helps prepare future professional pages.",
+      "Basic onboarding information is saved to the trainee account."
+    ]
+  },
+  {
+    "name": "trainee_profile_setup_specialties",
+    "label": "Trainee Profile Setup - Specialties And Interests",
+    "description": "Profile onboarding step where trainees select learning interests and training goals.",
+    "group": "Onboarding",
+    "subModule": "Trainee Program",
+    "purpose": "Helps personalize training recommendations based on trainee interests and specialties.",
+    "bullets": [
+      "Users can select astrology, tarot, and spiritual interests.",
+      "Interest categories include numerology, runes, oracle cards, and healing topics.",
+      "Specialty tags help customize future learning recommendations.",
+      "Goal input fields allow trainees to describe learning aspirations.",
+      "Interest selection personalizes the trainee dashboard experience.",
+      "Multi-step onboarding indicators show overall setup progress.",
+      "Back and continue buttons support step navigation.",
+      "Selected interests help organize future educational content.",
+      "Training objectives can be recorded during onboarding.",
+      "Interest preferences are connected to the trainee learning profile."
+    ]
+  },
+  {
+    "name": "trainee_profile_setup_birth_data",
+    "label": "Trainee Profile Setup - Birth Data",
+    "description": "Optional onboarding step where trainees provide birth information for astrology-related learning experiences.",
+    "group": "Onboarding",
+    "subModule": "Trainee Program",
+    "purpose": "Collects optional birth details used for astrology chart calculations and personalized training examples.",
+    "bullets": [
+      "Birth date fields support astrology chart personalization.",
+      "Optional birth time improves chart calculation accuracy.",
+      "Birth city fields help determine astrology chart positioning.",
+      "Birth data is used during astrology training exercises.",
+      "All birth information fields are optional for trainees.",
+      "Step indicators display onboarding completion progress.",
+      "Back buttons allow users to return to previous steps.",
+      "Completion buttons finalize the onboarding setup process.",
+      "Birth data helps personalize astrology lesson experiences.",
+      "Profile setup completion unlocks trainee dashboard access."
+    ]
+  },
+  {
+    "name": "trainee_terms_and_agreements",
+    "label": "Trainee Terms And Agreements",
+    "description": "Agreement review screens where trainees accept platform policies before entering the portal.",
+    "group": "Onboarding",
+    "subModule": "Trainee Program",
+    "purpose": "Ensures trainees review and accept legal terms before accessing learning resources.",
+    "bullets": [
+      "Pending agreements must be completed before portal access.",
+      "Customer Terms of Service are displayed within scrollable containers.",
+      "Platform rules and content policies are explained clearly.",
+      "Entertainment and guidance disclaimers are included in the agreement.",
+      "Booking, cancellation, and conduct rules are described.",
+      "Users must scroll through agreements before accepting.",
+      "Electronic signature fields capture typed full names.",
+      "Acceptance buttons finalize agreement approval.",
+      "Terms explain limitations, responsibilities, and platform rules.",
+      "Agreement completion unlocks access to the trainee dashboard."
+    ]
+  },
+  {
+    "name": "trainee_dashboard_overview",
+    "label": "Trainee Dashboard Overview",
+    "description": "Main trainee dashboard displayed after onboarding and agreement completion.",
+    "group": "Onboarding",
+    "subModule": "Trainee Program",
+    "purpose": "Introduces trainees to their learning portal, lessons, and certification progress tools.",
+    "bullets": [
+      "Dashboard overview welcomes trainees into the learning portal.",
+      "Sidebar navigation provides access to training lessons and progress tracking.",
+      "Training progress widgets display lesson and program completion percentages.",
+      "Appointment sections display scheduled mentor or training sessions.",
+      "Launch practice banners promote professional diviner opportunities.",
+      "Community promotion banners encourage trainee community participation.",
+      "Training resources and library sections are available from the dashboard.",
+      "Profile settings and trainee account controls are accessible.",
+      "Lesson progress tracking helps users monitor certification completion.",
+      "Dashboard widgets guide trainees into beginning their training journey."
+    ]
+  },
+
+
+  // ------------Trainee + Diviner Bundle Plans-----------//
+
+   {
+    "name": "trainee_diviner_bundle_plan_selection",
+    "label": "Trainee + Diviner Bundle Plan Selection",
+    "description": "Users can select combined trainee and diviner launch bundles that include training, professional services, and business tools.",
+    "group": "Onboarding",
+    "subModule": "Trainee + Diviner Bundle",
+    "purpose": "Allows users to enroll in bundled training and diviner business launch programs.",
+    "bullets": [
+      "Bundle plans combine training programs with professional diviner business tools.",
+      "Users can compare tarot, astrology, and full practice launch bundles.",
+      "Monthly subscription pricing and one-time setup fees are displayed.",
+      "Service labels explain included astrology and tarot services.",
+      "Training value summaries are shown for each selected bundle.",
+      "Professional branded page creation is included in bundle plans.",
+      "HD video session support with recording capabilities is available.",
+      "Booking management, CRM tools, and payment processing are included.",
+      "Some bundles include dedicated phone line support for readings.",
+      "Best bundle highlights display premium combined training packages.",
+      "Users can select the preferred trainee and diviner combination.",
+      "Bundle plans help users launch a professional divination practice immediately after training."
+    ]
+  },
+  {
+    "name": "trainee_diviner_bundle_registration",
+    "label": "Trainee + Diviner Bundle Registration",
+    "description": "Registration screen where users create an account after selecting a trainee and diviner bundle.",
+    "group": "Onboarding",
+    "subModule": "Trainee + Diviner Bundle",
+    "purpose": "Allows users to create accounts and continue into subscription payment onboarding.",
+    "bullets": [
+      "Selected trainee and diviner bundle information is displayed at the top.",
+      "Bundle pricing includes monthly subscription and setup fee details.",
+      "Service label summaries explain included business launch services.",
+      "Users can review all available training and diviner packages before continuing.",
+      "Email address is required for account creation.",
+      "Full name is collected for platform identity and certification records.",
+      "Password setup includes live password strength validation.",
+      "Password requirements display uppercase, lowercase, number, and special character checks.",
+      "Confirm password validation ensures matching credentials.",
+      "Users can create a custom branded public profile URL.",
+      "The continue button displays the selected bundle pricing summary.",
+      "Registration acts as the entry point into the subscription onboarding workflow."
+    ]
+  },
+  {
+    "name": "trainee_diviner_bundle_subscription_checkout",
+    "label": "Trainee + Diviner Bundle Subscription Checkout",
+    "description": "Stripe subscription checkout screen used for trainee and diviner bundle enrollment.",
+    "group": "Onboarding",
+    "subModule": "Trainee + Diviner Bundle",
+    "purpose": "Allows users to subscribe to bundled training and diviner business launch services.",
+    "bullets": [
+      "Checkout displays total bundle pricing including setup fees and monthly subscriptions.",
+      "Users can switch between supported currencies such as INR and USD.",
+      "Stripe securely processes recurring subscription payments.",
+      "Bundle subscription summaries display monthly recurring billing information.",
+      "Setup fees and monthly charges are separated clearly in checkout.",
+      "Contact email information is displayed for billing verification.",
+      "Secure card payment forms collect payment details safely.",
+      "Country and cardholder information are required for billing validation.",
+      "Processing states appear while subscription payments are being completed.",
+      "Subscription authorization messaging explains recurring payment consent.",
+      "Payment checkout activates trainee and diviner access after successful billing.",
+      "The checkout flow supports automated subscription onboarding."
+    ]
+  },
+  {
+    "name": "trainee_diviner_bundle_payment_processing",
+    "label": "Trainee + Diviner Bundle Payment Processing",
+    "description": "Intermediate processing state displayed while Stripe confirms trainee and diviner subscription payments.",
+    "group": "Onboarding",
+    "subModule": "Trainee + Diviner Bundle",
+    "purpose": "Provides payment confirmation feedback while subscription processing is in progress.",
+    "bullets": [
+      "Processing indicators appear during subscription payment verification.",
+      "Payment forms become temporarily disabled while transactions are processed.",
+      "Stripe handles secure payment authorization in the background.",
+      "Users remain on the checkout screen during payment confirmation.",
+      "Processing states prevent duplicate subscription submissions.",
+      "Card fields remain visible while the transaction completes.",
+      "Subscription checkout maintains the selected currency and billing summary.",
+      "Loading indicators communicate active transaction processing.",
+      "Payment confirmation workflows prepare account activation.",
+      "Successful processing redirects users into the onboarding success flow."
+    ]
+  },
+  {
+    "name": "trainee_diviner_bundle_payment_success",
+    "label": "Trainee + Diviner Bundle Payment Success",
+    "description": "Success confirmation screen shown after completing trainee and diviner bundle subscription payment.",
+    "group": "Onboarding",
+    "subModule": "Trainee + Diviner Bundle",
+    "purpose": "Confirms successful subscription activation and guides users into profile onboarding.",
+    "bullets": [
+      "Payment success messages confirm subscription activation.",
+      "Account activation summaries explain trainee and diviner provisioning.",
+      "Next step instructions guide users into contract agreements and profile setup.",
+      "Payment detail sections display the amount paid and selected bundle.",
+      "Subscription status is displayed as paid after successful checkout.",
+      "Users can review selected training and business launch plans.",
+      "Success screens summarize the activated trainee and diviner package.",
+      "Go to Next Step buttons continue the onboarding process.",
+      "Training and diviner access are provisioned immediately after payment.",
+      "The success screen acts as the transition into profile completion."
+    ]
+  },
+  {
+    "name": "trainee_diviner_profile_setup_about",
+    "label": "Trainee + Diviner Profile Setup - About You",
+    "description": "First onboarding step where users configure their trainee and diviner profile information.",
+    "group": "Onboarding",
+    "subModule": "Trainee + Diviner Bundle",
+    "purpose": "Collects personal profile information used across the trainee and diviner platform.",
+    "bullets": [
+      "Display name fields define the public trainee and diviner identity.",
+      "Biography sections allow users to describe themselves professionally.",
+      "Optional avatar URL fields support profile image customization.",
+      "Phone number fields allow communication setup for future client interactions.",
+      "Timezone selection helps schedule readings and mentorship sessions correctly.",
+      "Step indicators display overall onboarding progress.",
+      "Profile information supports public branded diviner pages.",
+      "Continue buttons move users into specialty and training preference setup.",
+      "About profile information is saved to the user account.",
+      "This step personalizes the trainee and diviner experience."
+    ]
+  },
+  {
+    "name": "trainee_diviner_profile_setup_specialties",
+    "label": "Trainee + Diviner Profile Setup - Specialties And Interests",
+    "description": "Onboarding step where users select spiritual specialties and training interests.",
+    "group": "Onboarding",
+    "subModule": "Trainee + Diviner Bundle",
+    "purpose": "Customizes training recommendations and professional diviner specialization areas.",
+    "bullets": [
+      "Users can select astrology, tarot, numerology, and oracle specialties.",
+      "Interest tags personalize the learning and practice experience.",
+      "Additional categories include palmistry, runes, and crystal healing.",
+      "Training goal input fields allow users to describe aspirations.",
+      "Selected interests help configure the trainee dashboard.",
+      "Specialties define future professional reading service categories.",
+      "Back and continue buttons support multi-step onboarding navigation.",
+      "Interest selections personalize recommended educational content.",
+      "The onboarding flow stores selected specialties for the account.",
+      "This step helps align training and professional practice goals."
+    ]
+  },
+  {
+    "name": "trainee_diviner_profile_setup_birth_data",
+    "label": "Trainee + Diviner Profile Setup - Birth Data",
+    "description": "Optional onboarding step used to collect birth details for astrology training and chart calculations.",
+    "group": "Onboarding",
+    "subModule": "Trainee + Diviner Bundle",
+    "purpose": "Provides astrology-related personalization for training exercises and chart examples.",
+    "bullets": [
+      "Birth date fields are used for astrology chart calculations.",
+      "Optional birth time improves natal chart accuracy.",
+      "Birth city fields determine astrology chart positioning information.",
+      "Birth data is optional during onboarding.",
+      "Astrology lessons can use personal chart examples during training.",
+      "Step indicators show onboarding completion progress.",
+      "Back buttons allow navigation to previous onboarding sections.",
+      "Completion buttons finalize profile onboarding.",
+      "Birth information helps personalize astrology learning experiences.",
+      "Completed onboarding unlocks dashboard and training access."
+    ]
+  },
+  {
+    "name": "trainee_diviner_service_agreement",
+    "label": "Trainee + Diviner Service Agreement",
+    "description": "Agreement review screen where users accept professional diviner platform terms before accessing the portal.",
+    "group": "Onboarding",
+    "subModule": "Trainee + Diviner Bundle",
+    "purpose": "Ensures users accept professional diviner responsibilities and platform policies.",
+    "bullets": [
+      "Diviner service agreements explain platform responsibilities and policies.",
+      "Content delivery standards require truthful and professional behavior.",
+      "Confidentiality sections protect customer and platform information.",
+      "Account termination policies explain prohibited activities and violations.",
+      "Dispute resolution terms define platform legal procedures.",
+      "Contact sections provide support and agreement communication details.",
+      "Scrollable agreement containers require full review before signing.",
+      "Electronic signature fields collect typed legal names.",
+      "Accept and continue buttons finalize agreement approval.",
+      "Agreement acceptance is required before portal access is granted."
+    ]
+  },
+  {
+    "name": "trainee_diviner_dashboard_overview",
+    "label": "Trainee + Diviner Dashboard Overview",
+    "description": "Primary dashboard displayed after completing onboarding for trainee and diviner bundle users.",
+    "group": "Onboarding",
+    "subModule": "Trainee + Diviner Bundle",
+    "purpose": "Introduces users to training, mentorship, and professional practice management tools.",
+    "bullets": [
+      "Dashboard welcomes users into the trainee portal environment.",
+      "Sidebar navigation provides access to training, progress, quizzes, and resources.",
+      "Community promotion banners encourage spiritual community participation.",
+      "Training progress sections display lesson and program completion percentages.",
+      "Begin training widgets guide users into starting educational programs.",
+      "Mentor assignment sections display mentor availability and onboarding status.",
+      "Practice session areas prepare users for professional client readings.",
+      "Progress tracking widgets summarize educational advancement.",
+      "Role status indicators display active trainee portal access.",
+      "Users can access profile settings and account management tools.",
+      "Dashboard widgets organize the learning and practice workflow.",
+      "The dashboard acts as the main operational hub for trainee and diviner activities."
+    ]
+  },
+
+  // -------------Perennial Mandalism Community Plans-----------//
+  {
+    "name": "perennial_mandalism_community_plan_selection",
+    "label": "Perennial Mandalism Community Plan Selection",
+    "description": "Membership selection screen for users joining the Perennial Mandalism spiritual community platform.",
+    "group": "Onboarding",
+    "subModule": "Perennial Mandalism Community",
+    "purpose": "Allows users to choose individual, couple, or family community membership plans.",
+    "bullets": [
+      "Users can select from Individual, Couple, and Family membership plans.",
+      "Community membership provides access to sacred teachings and live ceremonies.",
+      "Monthly subscription pricing is displayed for each membership option.",
+      "Member limits are shown for each plan type.",
+      "Individual plans support single-member access.",
+      "Couple plans allow shared household community access for two members.",
+      "Family plans support up to five family members.",
+      "Billing is configured as recurring monthly subscriptions.",
+      "Community forum full access is included with all plans.",
+      "Sacred teachings and learning modules are included in every membership.",
+      "Savings comparisons are shown for couple and family plans.",
+      "Best value highlighting is applied to the Family Plan package.",
+      "Users can continue onboarding by selecting their preferred plan."
+    ]
+  },
+  {
+    "name": "perennial_mandalism_community_registration",
+    "label": "Perennial Mandalism Community Registration",
+    "description": "Registration screen used after selecting a Perennial Mandalism membership plan.",
+    "group": "Onboarding",
+    "subModule": "Perennial Mandalism Community",
+    "purpose": "Allows users to create an account and continue into subscription onboarding.",
+    "bullets": [
+      "Selected membership plan information is displayed at the top.",
+      "Membership pricing summaries show monthly recurring costs.",
+      "Member capacity information is shown for the selected plan.",
+      "Users can review available platform programs and bundles before continuing.",
+      "Email address fields are required for account registration.",
+      "Full name fields identify the community member profile.",
+      "Password creation includes live strength validation indicators.",
+      "Password requirement validation checks minimum character rules.",
+      "Confirm password fields validate matching credentials.",
+      "Custom branded profile URLs can be created during registration.",
+      "Users can review the generated public community profile link.",
+      "Continue buttons advance users into payment onboarding.",
+      "Membership registration acts as the entry point into the Perennial Mandalism platform."
+    ]
+  },
+  {
+    "name": "perennial_mandalism_community_subscription_checkout",
+    "label": "Perennial Mandalism Community Subscription Checkout",
+    "description": "Stripe checkout screen for Perennial Mandalism membership subscriptions.",
+    "group": "Onboarding",
+    "subModule": "Perennial Mandalism Community",
+    "purpose": "Allows users to securely subscribe to community membership plans.",
+    "bullets": [
+      "Stripe checkout securely processes recurring membership subscriptions.",
+      "Monthly membership pricing is displayed during checkout.",
+      "Users can switch between supported currencies such as INR and USD.",
+      "Membership product summaries explain included community features.",
+      "Billing frequency is displayed as monthly recurring subscriptions.",
+      "Contact email information is shown for payment verification.",
+      "Card payment forms securely collect billing information.",
+      "Country and region fields support payment validation.",
+      "Cash App Pay and other supported methods may appear during checkout.",
+      "Subscription authorization messaging explains recurring billing consent.",
+      "Membership checkout activates community access after successful payment.",
+      "Stripe handles secure payment tokenization and processing."
+    ]
+  },
+  {
+    "name": "perennial_mandalism_community_payment_processing",
+    "label": "Perennial Mandalism Community Payment Processing",
+    "description": "Intermediate processing state displayed while Stripe confirms community membership payments.",
+    "group": "Onboarding",
+    "subModule": "Perennial Mandalism Community",
+    "purpose": "Provides users with payment processing feedback during subscription activation.",
+    "bullets": [
+      "Processing indicators appear while membership transactions are verified.",
+      "Payment forms become temporarily disabled during processing.",
+      "Stripe validates subscription billing authorization in the background.",
+      "Processing states help prevent duplicate payment submissions.",
+      "Membership pricing and subscription details remain visible.",
+      "Card and billing information stay locked during processing.",
+      "Users remain on the secure checkout page while transactions complete.",
+      "Loading indicators communicate active payment processing.",
+      "Successful transactions prepare membership activation workflows.",
+      "Payment confirmation transitions users into the onboarding success experience."
+    ]
+  },
+  {
+    "name": "perennial_mandalism_community_payment_success",
+    "label": "Perennial Mandalism Community Payment Success",
+    "description": "Success confirmation screen displayed after completing community membership subscription payments.",
+    "group": "Onboarding",
+    "subModule": "Perennial Mandalism Community",
+    "purpose": "Confirms successful membership activation and guides users into the next onboarding steps.",
+    "bullets": [
+      "Payment success screens confirm active Perennial Mandalism membership access.",
+      "Membership activation messages explain successful account provisioning.",
+      "Next step sections guide users into agreement acceptance workflows.",
+      "Payment detail sections display paid amounts and selected plans.",
+      "Recent plan information confirms the activated membership package.",
+      "Payment status is displayed as paid after successful checkout.",
+      "Users can continue into community onboarding using the next step button.",
+      "Membership provisioning occurs immediately after successful payment.",
+      "Success screens summarize completed subscription onboarding.",
+      "The success page transitions users into community agreement acceptance."
+    ]
+  },
+  {
+    "name": "perennial_mandalism_customer_terms_agreement",
+    "label": "Perennial Mandalism Customer Terms Agreement",
+    "description": "Agreement review screen requiring users to accept customer terms before entering the community platform.",
+    "group": "Onboarding",
+    "subModule": "Perennial Mandalism Community",
+    "purpose": "Ensures users review and accept legal terms and platform responsibilities.",
+    "bullets": [
+      "Customer Terms of Service documents are displayed before community access.",
+      "Terms explain prohibited behavior and platform usage rules.",
+      "Users are informed about session recording and consent policies.",
+      "Intellectual property sections protect platform content and recordings.",
+      "Liability limitation policies explain platform legal boundaries.",
+      "Governing law sections define jurisdiction and legal governance.",
+      "Contact sections provide legal and support communication details.",
+      "Scrollable agreement containers require user review.",
+      "Electronic signature fields collect typed full names.",
+      "Accept and Continue buttons finalize agreement approval.",
+      "Agreement acceptance is mandatory before entering the community portal."
+    ]
+  },
+  {
+    "name": "perennial_mandalism_profile_setup_personal",
+    "label": "Perennial Mandalism Profile Setup - Personal Details",
+    "description": "First onboarding step where community members complete personal profile information.",
+    "group": "Onboarding",
+    "subModule": "Perennial Mandalism Community",
+    "purpose": "Collects member identity and spiritual profile details for community personalization.",
+    "bullets": [
+      "Personal details forms collect required member identity information.",
+      "Users enter first name, last name, email, and phone details.",
+      "Gender and occupation fields personalize community experiences.",
+      "Date of birth and birth time support astrology-related personalization.",
+      "Birth location fields help configure spiritual and chart-based content.",
+      "Step indicators display onboarding progress across multiple profile sections.",
+      "Detected location helpers improve birth location accuracy.",
+      "Required fields are marked clearly during onboarding.",
+      "Next buttons continue users into address setup.",
+      "Personal profile data is stored for community personalization."
+    ]
+  },
+  {
+    "name": "perennial_mandalism_profile_setup_address",
+    "label": "Perennial Mandalism Profile Setup - Address",
+    "description": "Second onboarding step where community members configure address information.",
+    "group": "Onboarding",
+    "subModule": "Perennial Mandalism Community",
+    "purpose": "Collects geographic information to personalize community content and events.",
+    "bullets": [
+      "Address forms collect geographic and household location information.",
+      "Users can enter address, city, state, and postal code details.",
+      "Location data helps personalize community and ceremony recommendations.",
+      "Step indicators display current onboarding progress.",
+      "Back buttons allow navigation to previous onboarding sections.",
+      "Next buttons continue users into journey and lifestyle onboarding.",
+      "Required fields are validated before proceeding.",
+      "Address data supports regional content customization.",
+      "Location information can be used for local community event recommendations.",
+      "The onboarding workflow stores member address information securely."
+    ]
+  },
+  {
+    "name": "perennial_mandalism_profile_setup_journey",
+    "label": "Perennial Mandalism Profile Setup - Journey",
+    "description": "Final onboarding step where members share optional lifestyle and spiritual journey information.",
+    "group": "Onboarding",
+    "subModule": "Perennial Mandalism Community",
+    "purpose": "Customizes community experiences and spiritual recommendations based on member journeys.",
+    "bullets": [
+      "Journey onboarding collects optional spiritual and lifestyle preferences.",
+      "Relationship status fields personalize member experiences.",
+      "Optional questionnaires allow deeper community customization.",
+      "Users can expand additional spiritual journey forms if desired.",
+      "Step indicators show final onboarding completion status.",
+      "Back buttons support navigation to earlier onboarding steps.",
+      "Completion buttons finalize profile setup and community entry.",
+      "Journey information helps tailor spiritual guidance and recommendations.",
+      "Optional onboarding reduces friction while supporting personalization.",
+      "Completed onboarding unlocks access to the community dashboard."
+    ]
+  },
+  {
+    "name": "perennial_mandalism_community_dashboard",
+    "label": "Perennial Mandalism Community Dashboard",
+    "description": "Primary dashboard displayed after completing Perennial Mandalism community onboarding.",
+    "group": "Onboarding",
+    "subModule": "Perennial Mandalism Community",
+    "purpose": "Provides members with access to subscriptions, spiritual tools, ceremonies, and family management.",
+    "bullets": [
+      "Dashboard welcomes members into the Perennial Mandalism community portal.",
+      "Sidebar navigation provides access to sessions, broadcasts, events, rituals, and charts.",
+      "Membership status banners display active subscription details.",
+      "Renewal dates, billing cycles, and payment history are shown.",
+      "Family plans include household member management tools.",
+      "Add Family Member actions allow enrollment of additional household accounts.",
+      "Journey progress indicators track spiritual onboarding completion.",
+      "Quick access buttons link to readings, sacred libraries, and agreements.",
+      "Membership sections display plan names, pricing, and next billing dates.",
+      "Usage indicators show remaining member slots for family plans.",
+      "Upgrade Plan and Manage Subscription buttons support billing management.",
+      "Community dashboards centralize spiritual content, membership tools, and family access management."
+    ]
+  },
+
+      // ------------------Marketing--------------------//
       {
         name: "platform-walkthrough-preview",
         label: "Platform Walkthrough Preview",
@@ -14119,22 +14976,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "No sign-up required — all preview content is accessible without creating an account or providing an email"
         ]
       },
-      {
-        name: "join-pricing-page",
-        label: "Join / Pricing Page",
-        description: "The membership selection and pricing transparency page where new visitors choose how to join AstrologyPro. Presents each available membership path with pricing, features, and enrollment buttons in one clear comparison view.",
-        group: "Onboarding",
-        purpose: "Price transparency and role clarity are the two biggest conversion factors for a spiritual platform. Visitors who cannot quickly find the price or understand the difference between membership options leave without joining. This page makes both immediately clear — what each path costs, what it includes, and how to get started in one scroll.",
-        bullets: [
-          "Membership path cards — Client, Perennial Mandalism (Individual and Family), Mystery School, and Diviner displayed side by side",
-          "Pricing displayed prominently — PM Individual at $19.95/mo, Family at $34.95/mo, Mystery School enrollment fee shown clearly",
-          "What is included per plan — bullet list of features for each membership type so visitors can compare",
-          "Get Started button per plan — each card leads directly to that role's registration and onboarding flow",
-          "FAQ section — answers to the most common pricing questions (Can I cancel? Is there a free trial? What is the Mystery School?)",
-          "Diviner application path — a separate card explaining that diviners apply and are vetted before receiving dashboard access",
-          "PM member discount note — a callout explaining that PM members get a discounted rate on Mystery School enrollment"
-        ]
-      },
+     
       {
         name: "signup-step-1",
         label: "Sign Up — Create Account",
