@@ -196,8 +196,11 @@ function TraineeProfileContent() {
         return;
       }
 
+      const nextParam = searchParams.get("next");
       toast.success("Profile complete! Welcome to your training journey.");
-      router.push("/trainee");
+      router.push(nextParam || "/trainee");
+
+
     } catch {
       toast.error("Something went wrong. Please try again.");
     } finally {
