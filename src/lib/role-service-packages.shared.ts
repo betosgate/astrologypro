@@ -29,6 +29,42 @@ export interface ResolvedRoleServicePackage {
   allowedCategories: ServiceCategoryCapability[];
 }
 
+export const FALLBACK_ROLE_SERVICE_PACKAGES: RoleServicePackageRow[] = [
+  {
+    package_code: "both",
+    display_name: "Astrology + Tarot",
+    description: "Allows both astrology and tarot service categories.",
+    allows_astrology: true,
+    allows_tarot: true,
+    applies_to_roles: ["diviner", "trainee"],
+    default_for_roles: ["diviner", "trainee"],
+    is_active: true,
+    sort_order: 10,
+  },
+  {
+    package_code: "astrology_only",
+    display_name: "Astrology Only",
+    description: "Allows astrology services only.",
+    allows_astrology: true,
+    allows_tarot: false,
+    applies_to_roles: ["diviner", "trainee"],
+    default_for_roles: [],
+    is_active: true,
+    sort_order: 20,
+  },
+  {
+    package_code: "tarot_only",
+    display_name: "Tarot Only",
+    description: "Allows tarot services only.",
+    allows_astrology: false,
+    allows_tarot: true,
+    applies_to_roles: ["diviner", "trainee"],
+    default_for_roles: [],
+    is_active: true,
+    sort_order: 30,
+  },
+];
+
 const FALLBACK_PACKAGE: ResolvedRoleServicePackage = {
   packageCode: "both",
   displayName: "Astrology + Tarot",

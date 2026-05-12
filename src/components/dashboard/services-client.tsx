@@ -377,7 +377,13 @@ export function ServicesClient({ services: initialServices, resolvedPackage }: S
   }, []);
 
   useEffect(() => {
-    loadAvailability();
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (!cancelled) void loadAvailability();
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [loadAvailability]);
 
   const addedNames = new Set(services.map((s) => s.name.toLowerCase()));
