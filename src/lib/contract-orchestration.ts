@@ -105,6 +105,19 @@ function buildContentHash(input: string) {
   return crypto.createHash("sha256").update(input).digest("hex");
 }
 
+function isTransientContractLookupError(error: unknown) {
+  const message =
+    error instanceof Error
+      ? error.message
+      : typeof error === "string"
+        ? error
+        : "";
+
+  return /fetch failed|network|econnreset|etimedout|enotfound|und_err/i.test(
+    message,
+  );
+}
+
 async function fetchRoleProfileValue(userId: string, roleKey: string, key: string) {
   const admin = createAdminClient();
   switch (roleKey) {
@@ -597,7 +610,21 @@ export async function getPendingUserContractRequirements(
 }
 
 export async function getPendingContractDestination(userId: string, nextPath?: string) {
-  const pending = await getPendingUserContractRequirements(userId, "post_login");
+  let pending: UserContractRequirement[];
+  try {
+    pending = await getPendingUserContractRequirements(userId, "post_login");
+  } catch (error) {
+    if (!isTransientContractLookupError(error)) {
+      throw error;
+    }
+
+    console.error(
+      "[contract-orchestration] Contract lookup failed during portal routing; continuing without redirect.",
+      error,
+    );
+    return null;
+  }
+
   if (pending.length === 0) return null;
   return nextPath
     ? `/contracts/pending?next=${encodeURIComponent(nextPath)}`
