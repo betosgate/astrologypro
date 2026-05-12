@@ -54,10 +54,7 @@ export async function POST(_req: NextRequest, { params }: Params) {
 
   if (updateErr) return NextResponse.json({ error: updateErr.message }, { status: 500 });
 
-  const acceptUrl =
-    invitation.role_slug === "diviner"
-      ? `${APP_URL}/join/diviner?email=${encodeURIComponent(invitation.email)}&inviteToken=${encodeURIComponent(token)}`
-      : `${APP_URL}/invitations/${token}/accept`;
+  const acceptUrl = `${APP_URL}/invitations/${encodeURIComponent(token)}/accept`;
 
   const emailResult = await sendPlatformInvitationEmail({
     to: invitation.email,

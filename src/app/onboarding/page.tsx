@@ -54,7 +54,7 @@ import { DAYS_OF_WEEK } from "@/lib/constants";
 import {
   type ResolvedRoleServicePackage,
   filterCategoriesByPackage,
-} from "@/lib/role-service-packages";
+} from "@/lib/role-service-packages.shared";
 
 // ─── Timezone data ────────────────────────────────────────────────────────────
 const TIMEZONES: { zone: string; label: string }[] = [

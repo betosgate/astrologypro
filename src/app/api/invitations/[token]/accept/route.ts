@@ -1,10 +1,62 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createHash } from "crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getInvitedRoleDestination } from "@/lib/invite-destinations";
 
 export const dynamic = "force-dynamic";
 
 type Params = { params: Promise<{ token: string }> };
+
+const PASSWORD_REGEX = /^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{8,}$/;
+const PASSWORD_ERROR =
+  "Password must be at least 8 characters and include uppercase, lowercase, a number, and a special character.";
+
+function slugify(value: string): string {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 32);
+}
+
+function buildUsername(fullName: string, userId: string, fallbackPrefix: string) {
+  const base = slugify(fullName) || fallbackPrefix;
+  return `${base}-${userId.slice(0, 6)}`;
+}
+
+function buildReferralCode(fullName: string, userId: string) {
+  const prefix = slugify(fullName).replace(/-/g, "").toUpperCase().slice(0, 8);
+  return `${prefix || "ADVOCATE"}${userId.replace(/-/g, "").slice(0, 4).toUpperCase()}`;
+}
+
+function normalizeInvitationRole(roleSlug: string) {
+  if (roleSlug === "advocate") return "social_advo";
+  if (roleSlug === "community_perennial_mandalism") return "perennial_mandalism";
+  if (roleSlug === "community_mystery_school") return "mystery_school";
+  return roleSlug;
+}
+
+function getAcceptedInvitationDestination(roleSlug: string) {
+  const normalizedRole = normalizeInvitationRole(roleSlug);
+  if (normalizedRole === "admin") return "/admin";
+  if (normalizedRole === "social_advo") return "/advocate";
+  if (normalizedRole === "mystery_school") return "/join/mystery-school?invited=true";
+  return getInvitedRoleDestination(normalizedRole);
+}
+
+function normalizeOptionalPhone(value: string | undefined) {
+  const trimmed = value?.trim() ?? "";
+  if (!trimmed) return null;
+
+  const compact = trimmed.replace(/[\s().-]/g, "");
+  if (/^\+[1-9]\d{7,14}$/.test(compact)) return compact;
+
+  const digits = trimmed.replace(/\D/g, "");
+  if (digits.length === 10) return digits;
+
+  return undefined;
+}
 
 // ─── POST /api/invitations/:token/accept ──────────────────────────────────────
 // Public (unauthenticated) endpoint.
@@ -35,9 +87,17 @@ export async function POST(req: NextRequest, { params }: Params) {
     );
   }
 
-  if (password.length < 8) {
+  if (!PASSWORD_REGEX.test(password)) {
     return NextResponse.json(
-      { error: "Password must be at least 8 characters" },
+      { error: PASSWORD_ERROR },
+      { status: 422 }
+    );
+  }
+
+  const normalizedPhone = normalizeOptionalPhone(phone);
+  if (normalizedPhone === undefined) {
+    return NextResponse.json(
+      { error: "Phone must be a valid E.164 number or a 10-digit number." },
       { status: 422 }
     );
   }
@@ -48,7 +108,7 @@ export async function POST(req: NextRequest, { params }: Params) {
   // 1. Look up invitation by token_hash
   const { data: invitation, error: invErr } = await admin
     .from("invitations")
-    .select("id, email, role_slug, status, expires_at, metadata")
+    .select("id, email, role_slug, status, expires_at, metadata, invited_by")
     .eq("token_hash", tokenHash)
     .maybeSingle();
 
@@ -117,11 +177,20 @@ export async function POST(req: NextRequest, { params }: Params) {
   let profileInsertError: string | null = null;
 
   switch (invitation.role_slug) {
+    case "admin": {
+      const { error } = await admin.from("admin_users").insert({
+        user_id: userId,
+        email: emailLower,
+        granted_by: invitation.invited_by ? `invitation:${invitation.invited_by}` : "invitation",
+      });
+      if (error) profileInsertError = error.message;
+      break;
+    }
     case "diviner": {
       const { error } = await admin.from("diviners").insert({
         user_id: userId,
         display_name: fullName,
-        phone: phone?.trim() || null,
+        phone: normalizedPhone,
         is_active: true,
       });
       if (error) profileInsertError = error.message;
@@ -132,36 +201,63 @@ export async function POST(req: NextRequest, { params }: Params) {
         user_id: userId,
         full_name: fullName,
         email: emailLower,
-        phone: phone?.trim() || null,
+        phone: normalizedPhone,
       });
       if (error) profileInsertError = error.message;
       break;
     }
     case "social_advo":
     case "advocate": {
+      const username = buildUsername(fullName, userId, "advocate");
       const { error } = await admin.from("social_advocates").insert({
         user_id: userId,
         name: fullName,
         email: emailLower,
-        phone: phone?.trim() || null,
+        phone: normalizedPhone,
+        username,
+        referral_code: buildReferralCode(fullName, userId),
+        onboarding_completed: true,
         is_active: true,
       });
       if (error) profileInsertError = error.message;
       break;
     }
     case "trainee": {
+      const username = buildUsername(fullName, userId, "trainee");
       const { error } = await admin.from("trainees").insert({
         user_id: userId,
         name: fullName,
         email: emailLower,
-        phone: phone?.trim() || null,
-        training_status: "in_progress",
+        username,
+        phone: normalizedPhone,
+        training_status: "active",
+        onboarding_completed: false,
       });
       if (error) profileInsertError = error.message;
       break;
     }
+    case "community_perennial_mandalism": {
+      const { error } = await admin.from("community_members").insert({
+        user_id: userId,
+        full_name: fullName,
+        email: emailLower,
+        phone: normalizedPhone,
+        membership_type: "perennial_mandalism",
+        membership_status: "active",
+        plan_type: "individual",
+        joined_at: new Date().toISOString(),
+        onboarding_completed: false,
+      });
+      if (error) profileInsertError = error.message;
+      break;
+    }
+    case "community_mystery_school": {
+      // Mystery School access is payment-backed by mystery_school_students.
+      // Account creation succeeds here; enrollment continues on the MS join flow.
+      break;
+    }
     default:
-      // Unknown role — we still created the auth user; profile insertion is best-effort
+      profileInsertError = `Unsupported invitation role '${invitation.role_slug}'`;
       break;
   }
 
@@ -214,5 +310,9 @@ export async function POST(req: NextRequest, { params }: Params) {
   return NextResponse.json({
     success: true,
     message: "Account created. Please log in.",
+    userId,
+    email: emailLower,
+    roleSlug: invitation.role_slug,
+    next: getAcceptedInvitationDestination(invitation.role_slug),
   });
 }

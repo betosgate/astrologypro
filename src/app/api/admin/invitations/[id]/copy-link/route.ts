@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 type Params = { params: Promise<{ id: string }> };
 
 // ─── POST /api/admin/invitations/:id/copy-link ──────────────────────────────
-// Generates a fresh public invite URL for a pending diviner invitation and
+// Generates a fresh public invite URL for a pending invitation and
 // returns it to the admin for manual sharing. We rotate the token so the
 // copied link is a valid, current invite URL instead of a fabricated client
 // route such as /invite/:id.
@@ -41,13 +41,6 @@ export async function POST(_req: NextRequest, { params }: Params) {
       { status: 422 }
     );
   }
-  if (invitation.role_slug !== "diviner") {
-    return NextResponse.json(
-      { error: "Copy Link is only supported for diviner invitations." },
-      { status: 422 }
-    );
-  }
-
   const token = randomBytes(32).toString("hex");
   const tokenHash = createHash("sha256").update(token).digest("hex");
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
@@ -65,7 +58,7 @@ export async function POST(_req: NextRequest, { params }: Params) {
     return NextResponse.json({ error: updateErr.message }, { status: 500 });
   }
 
-  const acceptUrl = `${APP_URL}/join/diviner?email=${encodeURIComponent(invitation.email)}&inviteToken=${encodeURIComponent(token)}`;
+  const acceptUrl = `${APP_URL}/invitations/${encodeURIComponent(token)}/accept`;
 
   await admin
     .from("admin_activity_log")

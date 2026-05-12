@@ -9,7 +9,7 @@ import {
   TAROT_TEMPLATES,
   type ServiceTemplate,
 } from "@/lib/service-templates";
-import type { ResolvedRoleServicePackage } from "@/lib/role-service-packages";
+import type { ResolvedRoleServicePackage } from "@/lib/role-service-packages.shared";
 import {
   Card,
   CardContent,
