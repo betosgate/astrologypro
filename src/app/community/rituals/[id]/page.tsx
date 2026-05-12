@@ -440,7 +440,7 @@ export default function RitualDetailPage() {
         size="lg"
         onClick={handleBegin}
         disabled={saving}
-        className="bg-gradient-to-r from-amber-600 to-orange-600 px-8 text-base font-semibold text-white shadow-xl shadow-amber-500/15 hover:from-amber-500 hover:to-orange-500"
+        className="bg-primary px-8 text-base font-semibold text-black shadow-xl shadow-amber-500/15 hover:from-amber-500 hover:to-orange-500"
       >
         {saving ? (
           <Loader2 className="mr-2 size-5 animate-spin" />

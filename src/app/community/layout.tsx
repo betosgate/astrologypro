@@ -17,7 +17,7 @@ import {
   LayoutDashboard, Video, Radio, Calendar, BookOpen,
   ClipboardList, Users, Star, TrendingUp, Flame, Sparkles, 
   Globe, Compass, Telescope, HeartHandshake, BookMarked,
-  Package, IdCard, UserCog, Tags, Settings2
+  Package, IdCard, UserCog, Tags, Settings2, LifeBuoy
 } from "lucide-react";
 
 export const metadata = { title: "Community - AstrologyPro" };
@@ -123,6 +123,7 @@ export default async function CommunityLayout({ children }: { children: React.Re
     // { label: "Horoscope", href: "/community/horoscope", iconNode: <Telescope className="size-4" /> },
     { label: "Service", href: "/community/sunday-service", iconNode: <HeartHandshake className="size-4" /> },
     { label: "Library", href: "/community/library", iconNode: <BookMarked className="size-4" /> },
+    { label: "Support", href: "/community/support", iconNode: <LifeBuoy className="size-4" /> },
     { label: "Profile", href: "/community/profile", iconNode: <IdCard className="size-4" /> },
   ];
 

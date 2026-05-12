@@ -52,8 +52,11 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const status = searchParams.get("status");
   const q = searchParams.get("q");
-  const limit = Math.min(parseInt(searchParams.get("limit") ?? "50", 10), 200);
-  const cursor = searchParams.get("cursor");
+  const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
+  const limit = Math.min(parseInt(searchParams.get("limit") ?? "10", 10), 100);
+  const offset = (page - 1) * limit;
+  const from = searchParams.get("from");
+  const to = searchParams.get("to");
 
   const admin = createAdminClient();
 
@@ -72,17 +75,18 @@ export async function GET(request: Request) {
 
   let query = admin
     .from("diviner_affiliates")
-    .select(DIVINER_AFFILIATE_WITH_ACCOUNT_SELECT + ", name, email, phone, user_id")
+    .select(DIVINER_AFFILIATE_WITH_ACCOUNT_SELECT + ", name, email, phone, user_id", { count: "exact" })
     .eq("diviner_id", diviner.id)
     .order("created_at", { ascending: false })
     .order("id", { ascending: false })
-    .limit(limit + 1);
+    .range(offset, offset + limit - 1);
 
-  if (status) query = query.eq("status", status);
+  if (status && status !== "all") query = query.eq("status", status);
   if (q) query = query.or(`name.ilike.%${q}%,email.ilike.%${q}%`);
-  if (cursor) query = query.lt("id", cursor);
+  if (from) query = query.gte("created_at", from);
+  if (to) query = query.lte("created_at", to + "T23:59:59Z");
 
-  const { data: rawRows, error } = await query;
+  const { data: rawRows, error, count } = await query;
   if (error) {
     return NextResponse.json(
       {
@@ -103,11 +107,8 @@ export async function GET(request: Request) {
     }
   >;
 
-  const hasMore = rows.length > limit;
-  const page = hasMore ? rows.slice(0, limit) : rows;
-
   // Attach latest non-consumed invite to each pending row (batched lookup)
-  const pendingIds = page
+  const pendingIds = rows
     .filter((r) => r.status === "pending")
     .map((r) => r.id);
 
@@ -133,17 +134,14 @@ export async function GET(request: Request) {
     }
   }
 
-  const items: FlatWithInvite[] = page.map((row) => ({
+  const items: FlatWithInvite[] = rows.map((row) => ({
     ...flattenDivinerAffiliate(row),
     latest_invite: invitesByJunction.get(row.id) ?? null,
   }));
 
-  const nextCursor = hasMore ? items[items.length - 1]?.id : null;
-
   return NextResponse.json({
     data: items,
-    nextCursor,
-    hasMore,
+    total: count ?? 0,
     meta: {
       affiliate_agreement_signed: Boolean(diviner.affiliate_agreement_signed),
     },

@@ -42,6 +42,7 @@ interface CreateTicketBody {
   priority?: string;
   related_entity_type?: string;
   related_entity_id?: string;
+  source_portal?: string;
   // Chart escalation fields — pre-populated when created from the PM portal
   // after the user exhausts their self-service correction retries.
   chart_family_member_id?: string;
@@ -137,6 +138,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     priority,
     related_entity_type,
     related_entity_id,
+    source_portal,
     chart_family_member_id,
     chart_member_id,
   } = body;
@@ -180,6 +182,29 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   // Resolve user metadata
   const admin = createAdminClient();
+  const isCommunityTicket = source_portal === "community";
+  if (source_portal && !["community"].includes(source_portal)) {
+    return problem(422, "Validation Error", "source_portal must be 'community' when provided.");
+  }
+  if (isCommunityTicket) {
+    const { data: member, error: memberError } = await admin
+      .from("community_members")
+      .select("id, membership_type, membership_status")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (memberError) {
+      return problem(500, "Database Error", memberError.message);
+    }
+    if (
+      !member ||
+      member.membership_type !== "perennial_mandalism" ||
+      member.membership_status !== "active"
+    ) {
+      return problem(403, "Forbidden", "An active Community membership is required to create Community support tickets.");
+    }
+  }
+
   const { data: authUser } = await admin.auth.admin.getUserById(user.id);
   const requesterEmail = authUser?.user?.email ?? user.email ?? null;
   const metadata = authUser?.user?.user_metadata ?? {};
@@ -200,6 +225,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   // For chart escalation tickets, embed the linked entity in tags for easy filtering
   const tags: string[] = [];
+  if (isCommunityTicket) tags.push("portal:community");
   if (chart_family_member_id) tags.push(`family_member:${chart_family_member_id}`);
   if (chart_member_id) tags.push(`community_member:${chart_member_id}`);
 
@@ -216,7 +242,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       requester_user_id: user.id,
       requester_email: requesterEmail,
       requester_name: requesterName,
-      requester_role: "customer",
+      requester_role: isCommunityTicket ? "community" : "customer",
       related_entity_type: related_entity_type?.trim() ?? null,
       related_entity_id: related_entity_id?.trim() ?? null,
       tags: tags.length > 0 ? tags : [],

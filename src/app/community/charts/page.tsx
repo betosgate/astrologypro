@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Card,
@@ -25,6 +25,7 @@ import {
   type ChartReportState,
 } from "@/lib/community/chart-report-state";
 import { formatBirthPlace } from "@/lib/community/birth-location";
+import { usePageReturnRefresh } from "@/hooks/use-page-return-refresh";
 
 type FamilyMember = {
   id: string;
@@ -232,7 +233,9 @@ async function fetchChartsPagePayload(): Promise<ChartsPagePayload> {
     familyOverviewReports: [],
   };
 
-  const result = await fetch("/api/community/relationship-charts");
+  const result = await fetch("/api/community/relationship-charts", {
+    cache: "no-store",
+  });
   if (result.ok) {
     const data = await result.json();
     payload.familyMembers = data.familyMembers ?? [];
@@ -258,15 +261,17 @@ export default function ChartsPage() {
   const [overviewOpen, setOverviewOpen] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  async function load() {
-    setLoading(true);
+  const load = useCallback(async (options?: { showLoading?: boolean }) => {
+    if (options?.showLoading !== false) {
+      setLoading(true);
+    }
     const data = await fetchChartsPagePayload();
     setFamilyMembers(data.familyMembers);
     setCharts(data.charts);
     setRelationshipReports(data.relationshipReports);
     setFamilyOverviewReports(data.familyOverviewReports);
     setLoading(false);
-  }
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -288,6 +293,13 @@ export default function ChartsPage() {
       cancelled = true;
     };
   }, []);
+
+  usePageReturnRefresh(
+    () => {
+      void load({ showLoading: false });
+    },
+    { minIntervalMs: 1500 }
+  );
 
   /**
    * Resolve the canonical lifecycle state for a given pair + UI mode.
@@ -374,7 +386,7 @@ export default function ChartsPage() {
             Synastry charts for every pair in your family.
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={load} disabled={loading}>
+        <Button variant="outline" size="sm" onClick={() => void load()} disabled={loading}>
           <RefreshCw className={`mr-2 size-4 ${loading ? "animate-spin" : ""}`} />
           Refresh
         </Button>

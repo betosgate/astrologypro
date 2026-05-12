@@ -194,7 +194,7 @@ export default function NewReportPage() {
             <div className="space-y-1.5">
               <label className="text-xs font-medium">Report Type</label>
               <Select value={reportType} onValueChange={setReportType}>
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -319,7 +319,7 @@ export default function NewReportPage() {
                   <div className="space-y-1">
                     <label className="text-xs font-medium">Block Type</label>
                     <Select value={block.type} onValueChange={(v) => updateBlock(block.id, "type", v)}>
-                      <SelectTrigger>
+                      <SelectTrigger className="w-full">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>

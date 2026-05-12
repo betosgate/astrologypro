@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { resolveTemplateMatches } from "@/lib/booking/template-matched-services";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   getServiceTemplateToolkitTabSlug,
@@ -94,8 +95,16 @@ export async function POST(
   // as a placeholder — it now points at the real shared-calendar flow
   // (`/book/template/[slug]?submission=...`) per
   // tasks/23.04.2026/book-without-diviner-flow.
+  const match = await resolveTemplateMatches(admin, template.slug);
+  const compatibleDivinerCount = match?.diviners.length ?? 0;
+
   return NextResponse.json({
     submission,
     next_url: `/book/template/${encodeURIComponent(template.slug)}?submission=${submission.id}`,
+    booking_options: {
+      base_template_slug: match?.baseSlug ?? template.slug,
+      compatible_diviner_count: compatibleDivinerCount,
+      has_compatible_diviners: compatibleDivinerCount > 0,
+    },
   });
 }

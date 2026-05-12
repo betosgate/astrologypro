@@ -1,12 +1,8 @@
 "use client";
 
-// Task 04 (2026-04-23): invite-only flow. Add-affiliate sheet removed. Row
-// dropdown with Resend / Revoke / View. Agreement-gate banner disables
-// Invite until the diviner signs the affiliate partnership terms.
-// Sprint: docs/tasks/2026-04-23/affiliate-identity-refactor/04-diviner-ui-updates.md
-
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useTransition } from "react";
 import Link from "next/link";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import {
   Card,
@@ -44,6 +40,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Loader2,
@@ -59,12 +62,17 @@ import {
   AlertTriangle,
   Lock,
   Plus,
+  Search,
+  ChevronLeft,
+  ChevronRight,
+  FilterX,
 } from "lucide-react";
 import {
   createInvite,
   resendInviteByJunction,
   revokeInvite,
 } from "@/lib/api/affiliates-client";
+import { cn } from "@/lib/utils";
 
 interface LatestInvite {
   id: string;
@@ -128,6 +136,14 @@ const STATUS_LABEL: Record<DerivedStatus, string> = {
   account_blocked: "Blocked (account)",
 };
 
+const STATUS_OPTIONS = [
+  { value: "all", label: "All Statuses" },
+  { value: "active", label: "Active" },
+  { value: "pending", label: "Pending" },
+  { value: "suspended", label: "Suspended" },
+  { value: "blocked", label: "Blocked" },
+];
+
 function deriveStatus(aff: Affiliate): DerivedStatus {
   if (aff.account_status === "blocked") return "account_blocked";
   if (aff.status === "pending") {
@@ -155,10 +171,25 @@ function fmtDate(iso: string) {
 }
 
 export default function DashboardAffiliatesPage() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
   const [affiliates, setAffiliates] = useState<Affiliate[]>([]);
+  const [total, setTotal] = useState(0);
   const [summary, setSummary] = useState<Summary | null>(null);
-  const [agreementSigned, setAgreementSigned] = useState<boolean>(true); // optimistic — corrected on load
+  const [agreementSigned, setAgreementSigned] = useState<boolean>(true);
   const [loading, setLoading] = useState(true);
+  const [isRefreshing, startRefreshing] = useTransition();
+
+  // URL State
+  const q = searchParams.get("q") ?? "";
+  const status = searchParams.get("status") ?? "all";
+  const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
+  const from = searchParams.get("from") ?? "";
+  const to = searchParams.get("to") ?? "";
+  const limit = 10;
+  const totalPages = Math.ceil(total / limit);
 
   // Invite dialog state
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -184,13 +215,17 @@ export default function DashboardAffiliatesPage() {
 
   const loadAffiliates = useCallback(async () => {
     setLoading(true);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("limit", String(limit));
+    
     const [affRes, sumRes] = await Promise.all([
-      fetch("/api/dashboard/affiliates"),
+      fetch(`/api/dashboard/affiliates?${params.toString()}`),
       fetch("/api/dashboard/affiliates/summary"),
     ]);
     if (affRes.ok) {
       const j = await affRes.json();
       setAffiliates(j.data ?? []);
+      setTotal(j.total ?? 0);
       if (typeof j?.meta?.affiliate_agreement_signed === "boolean") {
         setAgreementSigned(j.meta.affiliate_agreement_signed);
       }
@@ -200,11 +235,38 @@ export default function DashboardAffiliatesPage() {
       setSummary(j.data ?? null);
     }
     setLoading(false);
-  }, []);
+  }, [searchParams, limit]);
 
   useEffect(() => {
     loadAffiliates();
   }, [loadAffiliates]);
+
+  const pushParams = useCallback(
+    (updates: Record<string, string>) => {
+      const next = new URLSearchParams(searchParams.toString());
+      for (const [k, v] of Object.entries(updates)) {
+        if (!v || v === "all") {
+          next.delete(k);
+        } else {
+          next.set(k, v);
+        }
+      }
+      if (!("page" in updates)) next.delete("page");
+      router.push(`${pathname}?${next.toString()}`);
+    },
+    [router, pathname, searchParams]
+  );
+
+  const handleRefresh = () => {
+    startRefreshing(async () => {
+      await loadAffiliates();
+      toast.success("Data refreshed");
+    });
+  };
+
+  const handleReset = () => {
+    router.push(pathname);
+  };
 
   async function handleInvite() {
     if (!inviteName.trim() || !inviteEmail.trim()) {
@@ -289,7 +351,7 @@ export default function DashboardAffiliatesPage() {
 
   const canInvite = agreementSigned;
 
-  if (loading) {
+  if (loading && affiliates.length === 0) {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
@@ -314,6 +376,8 @@ export default function DashboardAffiliatesPage() {
     );
   }
 
+  const hasActiveFilters = !!q || status !== "all" || !!from || !!to;
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -324,6 +388,27 @@ export default function DashboardAffiliatesPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {hasActiveFilters && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleReset}
+              className="gap-1.5"
+            >
+              <FilterX className="size-4" />
+              Reset
+            </Button>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="gap-1.5"
+          >
+            <RefreshCw className={cn("size-4", isRefreshing && "animate-spin")} />
+            Refresh
+          </Button>
           <Button asChild variant="outline">
             <Link href="/dashboard/affiliates/new">
               <Plus className="mr-2 size-4" aria-hidden />
@@ -528,150 +613,264 @@ export default function DashboardAffiliatesPage() {
         </div>
       )}
 
+      {/* Filters Bar */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
+        <div className="flex-1 space-y-2">
+          <Label htmlFor="search">Search</Label>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+            <Input
+              id="search"
+              placeholder="Search by name or email…"
+              value={q}
+              onChange={(e) => pushParams({ q: e.target.value })}
+              className="pl-9"
+            />
+          </div>
+        </div>
+        <div className="w-full sm:w-48 space-y-2">
+          <Label>Status</Label>
+          <Select
+            value={status}
+            onValueChange={(val) => pushParams({ status: val })}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select status" />
+            </SelectTrigger>
+            <SelectContent>
+              {STATUS_OPTIONS.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="w-full sm:w-40 space-y-2">
+          <Label htmlFor="from">From Date</Label>
+          <Input
+            id="from"
+            type="date"
+            value={from}
+            onChange={(e) => pushParams({ from: e.target.value })}
+          />
+        </div>
+        <div className="w-full sm:w-40 space-y-2">
+          <Label htmlFor="to">To Date</Label>
+          <Input
+            id="to"
+            type="date"
+            value={to}
+            onChange={(e) => pushParams({ to: e.target.value })}
+          />
+        </div>
+      </div>
+
       {/* Affiliates Table */}
       <Card>
-        <CardHeader>
-          <CardTitle>All Affiliates</CardTitle>
-          <CardDescription>
-            {affiliates.length} affiliate{affiliates.length !== 1 ? "s" : ""}
-          </CardDescription>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+          <div>
+            <CardTitle>All Affiliates</CardTitle>
+            <CardDescription>
+              Showing {affiliates.length} of {total} affiliate{total !== 1 ? "s" : ""}
+            </CardDescription>
+          </div>
         </CardHeader>
         <CardContent>
-          {affiliates.length === 0 ? (
+          {loading && affiliates.length === 0 ? (
+            <div className="flex justify-center py-12">
+              <Loader2 className="size-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : affiliates.length === 0 ? (
             <div className="flex flex-col items-center gap-4 py-16 text-center">
               <div className="flex size-14 items-center justify-center rounded-full bg-muted">
                 <UserPlus className="size-7 text-muted-foreground" aria-hidden />
               </div>
               <div>
-                <h3 className="text-lg font-medium">No affiliates yet</h3>
+                <h3 className="text-lg font-medium">No affiliates found</h3>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Send an invitation to start tracking referrals.
+                  {hasActiveFilters
+                    ? "Try adjusting your search or filters."
+                    : "Send an invitation to start tracking referrals."}
                 </p>
               </div>
-              <Button
-                onClick={() => {
-                  resetInviteForm();
-                  setInviteOpen(true);
-                }}
-                disabled={!canInvite}
-              >
-                <Send className="mr-2 size-4" aria-hidden />
-                Invite Your First Affiliate
-              </Button>
+              {!hasActiveFilters && (
+                <Button
+                  onClick={() => {
+                    resetInviteForm();
+                    setInviteOpen(true);
+                  }}
+                  disabled={!canInvite}
+                >
+                  <Send className="mr-2 size-4" aria-hidden />
+                  Invite Your First Affiliate
+                </Button>
+              )}
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Commission</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Created</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {affiliates.map((aff) => {
-                    const derived = deriveStatus(aff);
-                    const isBusy = busyRowId === aff.id;
-                    const isAccountBlocked = aff.account_status === "blocked";
-                    const isPending = aff.status === "pending";
-                    return (
-                      <TableRow key={aff.id}>
-                        <TableCell className="font-medium">{aff.name}</TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {aff.email}
-                        </TableCell>
-                        <TableCell>
-                          {aff.default_commission_type === "percentage"
-                            ? `${aff.default_commission_value}%`
-                            : `$${(aff.default_commission_value / 100).toFixed(2)}`}
-                        </TableCell>
-                        <TableCell>
-                          <span className="inline-flex items-center gap-1.5">
-                            {isAccountBlocked && (
-                              <Lock className="size-3 text-destructive" aria-hidden />
-                            )}
-                            <Badge variant={STATUS_COLORS[derived]}>
-                              {STATUS_LABEL[derived]}
-                            </Badge>
-                          </span>
-                        </TableCell>
-                        <TableCell>{fmtDate(aff.created_at)}</TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="size-8"
-                              asChild
-                              title="View details"
-                            >
-                              <Link
-                                href={`/dashboard/affiliates/${aff.id}`}
-                                aria-label={`View details for ${aff.name}`}
+            <>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Commission</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Created</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {affiliates.map((aff) => {
+                      const derived = deriveStatus(aff);
+                      const isBusy = busyRowId === aff.id;
+                      const isAccountBlocked = aff.account_status === "blocked";
+                      const isPending = aff.status === "pending";
+                      return (
+                        <TableRow key={aff.id}>
+                          <TableCell className="font-medium">{aff.name}</TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {aff.email}
+                          </TableCell>
+                          <TableCell>
+                            {aff.default_commission_type === "percentage"
+                              ? `${aff.default_commission_value}%`
+                              : `$${(aff.default_commission_value / 100).toFixed(2)}`}
+                          </TableCell>
+                          <TableCell>
+                            <span className="inline-flex items-center gap-1.5">
+                              {isAccountBlocked && (
+                                <Lock className="size-3 text-destructive" aria-hidden />
+                              )}
+                              <Badge variant={STATUS_COLORS[derived]}>
+                                {STATUS_LABEL[derived]}
+                              </Badge>
+                            </span>
+                          </TableCell>
+                          <TableCell>{fmtDate(aff.created_at)}</TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="size-8"
+                                asChild
+                                title="View details"
                               >
-                                <Eye className="size-3.5" aria-hidden />
-                              </Link>
-                            </Button>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="size-8"
-                                  disabled={isBusy || isAccountBlocked}
-                                  aria-label="More actions"
+                                <Link
+                                  href={`/dashboard/affiliates/${aff.id}`}
+                                  aria-label={`View details for ${aff.name}`}
                                 >
-                                  {isBusy ? (
-                                    <Loader2 className="size-3.5 animate-spin" aria-hidden />
-                                  ) : (
-                                    <MoreHorizontal className="size-3.5" aria-hidden />
+                                  <Eye className="size-3.5" aria-hidden />
+                                </Link>
+                              </Button>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="size-8"
+                                    disabled={isBusy || isAccountBlocked}
+                                    aria-label="More actions"
+                                  >
+                                    {isBusy ? (
+                                      <Loader2 className="size-3.5 animate-spin" aria-hidden />
+                                    ) : (
+                                      <MoreHorizontal className="size-3.5" aria-hidden />
+                                    )}
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuLabel>Row actions</DropdownMenuLabel>
+                                  <DropdownMenuSeparator />
+                                  {isPending && (
+                                    <>
+                                      <DropdownMenuItem onClick={() => handleResend(aff)}>
+                                        <RefreshCw className="mr-2 size-4" aria-hidden />
+                                        {derived === "pending_expired"
+                                          ? "Resend (fresh token)"
+                                          : "Resend invitation"}
+                                      </DropdownMenuItem>
+                                      <DropdownMenuSeparator />
+                                      <DropdownMenuItem
+                                        className="text-destructive focus:text-destructive"
+                                        onClick={() => handleRevoke(aff)}
+                                        disabled={!aff.latest_invite?.id}
+                                      >
+                                        <XCircle className="mr-2 size-4" aria-hidden />
+                                        Revoke invitation
+                                      </DropdownMenuItem>
+                                    </>
                                   )}
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuLabel>Row actions</DropdownMenuLabel>
-                                <DropdownMenuSeparator />
-                                {isPending && (
-                                  <>
-                                    <DropdownMenuItem onClick={() => handleResend(aff)}>
-                                      <RefreshCw className="mr-2 size-4" aria-hidden />
-                                      {derived === "pending_expired"
-                                        ? "Resend (fresh token)"
-                                        : "Resend invitation"}
+                                  {!isPending && (
+                                    <DropdownMenuItem asChild>
+                                      <Link href={`/dashboard/affiliates/${aff.id}`}>
+                                        <Eye className="mr-2 size-4" aria-hidden />
+                                        Open detail page
+                                      </Link>
                                     </DropdownMenuItem>
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuItem
-                                      className="text-destructive focus:text-destructive"
-                                      onClick={() => handleRevoke(aff)}
-                                      disabled={!aff.latest_invite?.id}
-                                    >
-                                      <XCircle className="mr-2 size-4" aria-hidden />
-                                      Revoke invitation
-                                    </DropdownMenuItem>
-                                  </>
-                                )}
-                                {!isPending && (
-                                  <DropdownMenuItem asChild>
-                                    <Link href={`/dashboard/affiliates/${aff.id}`}>
-                                      <Eye className="mr-2 size-4" aria-hidden />
-                                      Open detail page
-                                    </Link>
-                                  </DropdownMenuItem>
-                                )}
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
+                                  )}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Pagination Controls */}
+              {totalPages > 1 && (
+                <div className="mt-6 flex items-center justify-between border-t pt-6">
+                  <div className="text-sm text-muted-foreground">
+                    Page {page} of {totalPages}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => pushParams({ page: String(page - 1) })}
+                      disabled={page <= 1}
+                    >
+                      <ChevronLeft className="mr-1 size-4" />
+                      Previous
+                    </Button>
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                        let pageNum = i + 1;
+                        if (totalPages > 5 && page > 3) {
+                          pageNum = page - 3 + i;
+                        }
+                        if (pageNum > totalPages) return null;
+                        return (
+                          <Button
+                            key={pageNum}
+                            variant={page === pageNum ? "default" : "outline"}
+                            size="sm"
+                            className="size-8 p-0"
+                            onClick={() => pushParams({ page: String(pageNum) })}
+                          >
+                            {pageNum}
+                          </Button>
+                        );
+                      })}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => pushParams({ page: String(page + 1) })}
+                      disabled={page >= totalPages}
+                    >
+                      Next
+                      <ChevronRight className="ml-1 size-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>

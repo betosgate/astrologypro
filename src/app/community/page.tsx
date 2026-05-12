@@ -1448,23 +1448,10 @@ export default async function CommunityDashboardPage() {
         {/* Rich membership card */}
         <MembershipCard subscription={membershipSubscription} userEmail={user.email} />
 
-        {/* Dedicated Add Perennial Mandalism Member entry point */}
-        {membershipSubscription.plan_type === "family" &&
-          membershipSubscription.member_count < membershipSubscription.max_members && (
-            <Card className="border-primary/30 bg-primary/5">
-              <CardContent className="py-4 px-5 flex items-center justify-between gap-3 flex-wrap">
-                <div>
-                  <p className="text-sm font-semibold">Add Perennial Mandalism Member</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    Open the full add-member form to enroll a new family member.
-                  </p>
-                </div>
-                <Button asChild size="sm">
-                  <Link href="/community/members/new">+ Add Member</Link>
-                </Button>
-              </CardContent>
-            </Card>
-          )}
+        {/* Dedicated Add Perennial Mandalism Member entry point.
+            Client update 2026-05-11:
+            Keep this entry point hidden as a standalone block. The same
+            add-member action now appears in the membership card CTA row. */}
 
         {/* Journey setup progress — horizontal progress bar when not complete; badge when complete.
             This is the WEIGHTED journey metric (photo, birth data, natal chart, family, relationship chart).

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Card,
   CardContent,
@@ -33,6 +33,7 @@ import { SectionContainer } from "@/components/shared/section-container";
 import {
   deriveNatalReportState,
 } from "@/lib/community/chart-report-state";
+import { usePageReturnRefresh } from "@/hooks/use-page-return-refresh";
 
 type FamilyMember = {
   id: string;
@@ -131,24 +132,24 @@ export default function CommunityFamilyPage() {
     window.history.replaceState(window.history.state, "", nextUrl);
   }
 
-  async function load(options?: { skipLoadingState?: boolean }) {
+  const load = useCallback(async (options?: { skipLoadingState?: boolean }) => {
     if (!options?.skipLoadingState) {
       setLoading(true);
     }
-    const res = await fetch("/api/community/family");
+    const res = await fetch("/api/community/family", { cache: "no-store" });
     if (res.ok) {
       const data = await res.json();
       setMembers(data.members ?? []);
       setEntitlement((data.entitlement as FamilyEntitlement | null) ?? null);
     }
     setLoading(false);
-  }
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
 
     async function initialLoad() {
-      const res = await fetch("/api/community/family");
+      const res = await fetch("/api/community/family", { cache: "no-store" });
       if (cancelled) return;
 
       if (res.ok) {
@@ -169,6 +170,13 @@ export default function CommunityFamilyPage() {
       cancelled = true;
     };
   }, []);
+
+  usePageReturnRefresh(
+    () => {
+      void load({ skipLoadingState: true });
+    },
+    { minIntervalMs: 1500 }
+  );
 
   useEffect(() => {
     if (typeof window === "undefined") return;
