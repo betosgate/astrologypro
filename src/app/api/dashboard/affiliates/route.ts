@@ -78,13 +78,27 @@ export async function GET(request: Request) {
     .select(DIVINER_AFFILIATE_WITH_ACCOUNT_SELECT + ", name, email, phone, user_id", { count: "exact" })
     .eq("diviner_id", diviner.id)
     .order("created_at", { ascending: false })
-    .order("id", { ascending: false })
-    .range(offset, offset + limit - 1);
+    .order("id", { ascending: false });
 
-  if (status && status !== "all") query = query.eq("status", status);
+  // If page/limit are provided, we apply them AFTER potentially filtering for 'expired' 
+  // if we were doing it in-memory, but since we want pagination to work, 
+  // we'll handle 'expired' by querying pending first and then filtering.
+  // HOWEVER, for a true database-level filter for 'expired', we'd need a join.
+  // For now, let's handle the standard statuses normally.
+  if (status && status !== "all" && status !== "expired") {
+    query = query.eq("status", status);
+  } else if (status === "expired") {
+    query = query.eq("status", "pending");
+  }
+
   if (q) query = query.or(`name.ilike.%${q}%,email.ilike.%${q}%`);
   if (from) query = query.gte("created_at", from);
   if (to) query = query.lte("created_at", to + "T23:59:59Z");
+
+  // Apply range for all except 'expired' which we might need to filter further
+  if (status !== "expired") {
+    query = query.range(offset, offset + limit - 1);
+  }
 
   const { data: rawRows, error, count } = await query;
   if (error) {
@@ -134,14 +148,33 @@ export async function GET(request: Request) {
     }
   }
 
-  const items: FlatWithInvite[] = rows.map((row) => ({
+  let items: FlatWithInvite[] = rows.map((row) => ({
     ...flattenDivinerAffiliate(row),
     latest_invite: invitesByJunction.get(row.id) ?? null,
   }));
 
+  let finalCount = count ?? 0;
+
+  if (status === "expired" || status === "pending") {
+    // Filter to separate active pending from expired/revoked
+    items = items.filter((item) => {
+      if (item.status !== "pending") return false;
+      const exp = item.latest_invite?.expires_at;
+      const isExpired = exp && new Date(exp).getTime() < Date.now();
+      const isRevoked = !!item.latest_invite?.revoked_at;
+      const expiredOrRevoked = isExpired || isRevoked;
+
+      return status === "expired" ? expiredOrRevoked : !expiredOrRevoked;
+    });
+    
+    // Since we filtered in-memory, we need to adjust the count and manual pagination
+    finalCount = items.length;
+    items = items.slice(offset, offset + limit);
+  }
+
   return NextResponse.json({
     data: items,
-    total: count ?? 0,
+    total: finalCount,
     meta: {
       affiliate_agreement_signed: Boolean(diviner.affiliate_agreement_signed),
     },
