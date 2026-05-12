@@ -81,32 +81,48 @@ export async function GET(
   const results = await Promise.all(
     match.diviners.map(async (d) => {
       const duration = d.service.durationMinutes || 30;
-      const url = new URL(
-        `/api/availability/${encodeURIComponent(d.divinerId)}/month`,
-        origin,
-      );
-      url.searchParams.set("month", month);
-      url.searchParams.set("duration", String(duration));
-      url.searchParams.set("serviceId", d.service.id);
-      try {
-        const res = await fetch(url.toString(), {
-          headers: { accept: "application/json" },
-          // Server-to-server — no cache.
-          cache: "no-store",
-        });
-        if (!res.ok) return [] as string[];
-        const json = (await res.json().catch(() => ({}))) as {
-          availableDates?: unknown;
-        };
-        return Array.isArray(json.availableDates)
-          ? (json.availableDates as unknown[]).filter(
-              (x): x is string =>
-                typeof x === "string" && /^\d{4}-\d{2}-\d{2}$/.test(x),
-            )
-          : [];
-      } catch {
-        return [];
+
+      async function fetchMonthDates(allSlots: boolean) {
+        const url = new URL(
+          `/api/availability/${encodeURIComponent(d.divinerId)}/month`,
+          origin,
+        );
+        url.searchParams.set("month", month);
+        url.searchParams.set("duration", String(duration));
+        if (allSlots) {
+          url.searchParams.set("allSlots", "1");
+        } else {
+          url.searchParams.set("serviceId", d.service.id);
+        }
+
+        try {
+          const res = await fetch(url.toString(), {
+            headers: { accept: "application/json" },
+            // Server-to-server — no cache.
+            cache: "no-store",
+          });
+          if (!res.ok) return [] as string[];
+          const json = (await res.json().catch(() => ({}))) as {
+            availableDates?: unknown;
+          };
+          return Array.isArray(json.availableDates)
+            ? (json.availableDates as unknown[]).filter(
+                (x): x is string =>
+                  typeof x === "string" && /^\d{4}-\d{2}-\d{2}$/.test(x),
+              )
+            : [];
+        } catch {
+          return [];
+        }
       }
+
+      const scoped = await fetchMonthDates(false);
+      if (scoped.length > 0) return scoped;
+
+      // Match the day-level shared availability route: if the diviner has
+      // generic availability (`service_id = NULL`) instead of a schedule
+      // scoped to this specific service row, still surface those dates.
+      return fetchMonthDates(true);
     }),
   );
 
