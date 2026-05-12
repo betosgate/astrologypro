@@ -40,6 +40,7 @@ function normalizeInvitationRole(roleSlug: string) {
 function getAcceptedInvitationDestination(roleSlug: string) {
   const normalizedRole = normalizeInvitationRole(roleSlug);
   if (normalizedRole === "admin") return "/admin";
+  if (normalizedRole === "trainee") return "/join/trainee/plan?invited=true";
   if (normalizedRole === "social_advo") return "/advocate";
   if (normalizedRole === "mystery_school") return "/join/mystery-school?invited=true";
   return getInvitedRoleDestination(normalizedRole);
@@ -159,6 +160,8 @@ export async function POST(req: NextRequest, { params }: Params) {
       last_name: last_name.trim(),
       full_name: fullName,
       role: invitation.role_slug,
+      invited_by_admin: true,
+      invitation_id: invitation.id,
     },
   });
 
