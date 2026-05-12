@@ -634,7 +634,7 @@ export default function DashboardAffiliatesPage() {
             value={status}
             onValueChange={(val) => pushParams({ status: val })}
           >
-            <SelectTrigger>
+            <SelectTrigger className="w-full">
               <SelectValue placeholder="Select status" />
             </SelectTrigger>
             <SelectContent>
