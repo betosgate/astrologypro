@@ -183,7 +183,10 @@ export async function GET() {
         one_time_fee_currency: currency,
         membership_status: member.membership_status ?? null,
         membership_type: "perennial_mandalism",
-        plan_type: member.plan_type ?? null,
+        plan_type:
+          getProductName(primaryPrice?.product)?.toLowerCase().includes("couple")
+            ? "couple"
+            : (member.plan_type ?? null),
         stripe_customer_id: member.stripe_customer_id ?? null,
         tier_id: tier?.id ?? member.pm_tier_id ?? null,
         tier_name: tier?.name ?? null,

@@ -51,11 +51,22 @@ export async function POST(request: NextRequest) {
 
     const admin = createAdminClient();
 
-    const [{ data: trainee }, { data: existingDiviner }] = await Promise.all([
+    const [
+      { data: trainee },
+      { data: pmMember },
+      { data: existingDiviner },
+    ] = await Promise.all([
       admin
         .from("trainees")
         .select("id, name, email, username")
         .eq("user_id", user.id)
+        .maybeSingle(),
+      admin
+        .from("community_members")
+        .select("id, full_name, email")
+        .eq("user_id", user.id)
+        .eq("membership_type", "perennial_mandalism")
+        .eq("membership_status", "active")
         .maybeSingle(),
       admin
         .from("diviners")
@@ -64,9 +75,12 @@ export async function POST(request: NextRequest) {
         .maybeSingle(),
     ]);
 
-    if (!trainee) {
+    if (!trainee && !pmMember) {
       return NextResponse.json(
-        { error: "Only trainees can start this upgrade checkout." },
+        {
+          error:
+            "Only trainees or active Perennial Mandalism members can start this upgrade checkout.",
+        },
         { status: 403 },
       );
     }
@@ -139,10 +153,12 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const email = (trainee.email ?? user.email ?? "").trim().toLowerCase();
+    const email = (trainee?.email ?? pmMember?.email ?? user.email ?? "")
+      .trim()
+      .toLowerCase();
     if (!email) {
       return NextResponse.json(
-        { error: "No email address is available for this trainee account." },
+        { error: "No email address is available for this account." },
         { status: 422 },
       );
     }
@@ -156,23 +172,36 @@ export async function POST(request: NextRequest) {
     if (!customerId) {
       const customer = await stripe.customers.create({
         email,
-        metadata: { userId: user.id, role: "trainee" },
+        metadata: {
+          userId: user.id,
+          role: trainee ? "trainee" : "perennial_mandalism",
+        },
       });
       customerId = customer.id;
+    }
+
+    const metadata: Stripe.MetadataParam = {
+      userId: user.id,
+      planId,
+      itemKey: COURSE_ITEM_KEY,
+      planName: dbPlan.display_name,
+      type: "trainee_diviner_upgrade",
+      sourceRole: trainee ? "trainee" : "perennial_mandalism",
+    };
+
+    if (trainee?.id) {
+      metadata.traineeId = trainee.id;
+    }
+
+    if (pmMember?.id) {
+      metadata.pmMemberId = pmMember.id;
     }
 
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       mode: hasRecurring ? "subscription" : "payment",
       line_items: lineItems,
-      metadata: {
-        userId: user.id,
-        planId,
-        itemKey: COURSE_ITEM_KEY,
-        planName: dbPlan.display_name,
-        type: "trainee_diviner_upgrade",
-        traineeId: trainee.id,
-      },
+      metadata,
       success_url: `${origin}/trainee/diviner-upgrade/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/join/diviner/error?source=trainee-upgrade&reason=cancelled`,
     });

@@ -19,6 +19,8 @@ interface RoleUpgradeBannersProps {
   isDiviner: boolean;
   isTrainee: boolean;
   isPerennialMandalism: boolean;
+  showTraineeUpgrade?: boolean;
+  showDivinerUpgrade?: boolean;
 }
 
 // ── Trainee Modal ─────────────────────────────────────────────────────────────
@@ -136,13 +138,6 @@ function PmUpgradeModal({ open, onClose }: { open: boolean; onClose: () => void 
   const [loadingCheckout, setLoadingCheckout] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch plans on open
-  useEffect(() => {
-    if (open) {
-      fetchPlans();
-    }
-  }, [open]);
-
   async function fetchPlans() {
     setLoadingPlans(true);
     setError(null);
@@ -170,6 +165,18 @@ function PmUpgradeModal({ open, onClose }: { open: boolean; onClose: () => void 
       setLoadingPlans(false);
     }
   }
+
+  // Fetch plans on open
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (!cancelled) void fetchPlans();
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [open]);
 
   async function handleCheckout() {
     if (!selectedPlanId) return;
@@ -404,6 +411,8 @@ export function RoleUpgradeBanners({
   isDiviner,
   isTrainee,
   isPerennialMandalism,
+  showTraineeUpgrade = true,
+  showDivinerUpgrade = false,
 }: RoleUpgradeBannersProps) {
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
   const [openModal, setOpenModal] = useState<string | null>(null);
@@ -415,7 +424,7 @@ export function RoleUpgradeBanners({
   const visibleBanners = [
     {
       key: "trainee",
-      show: isDiviner && !isTrainee,
+      show: showTraineeUpgrade && isDiviner && !isTrainee,
       variant: "emerald" as const,
       badge: "CERTIFICATION PROGRAM",
       title: "Become a Certified Diviner",
@@ -424,7 +433,7 @@ export function RoleUpgradeBanners({
     },
     {
       key: "diviner",
-      show: isTrainee && !isDiviner,
+      show: (isTrainee || showDivinerUpgrade) && !isDiviner,
       variant: "gold" as const,
       badge: "PROFESSIONAL PRACTICE",
       title: "Launch Your Divination Practice",

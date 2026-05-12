@@ -80,6 +80,7 @@ export async function provisionTraineeDivinerUpgradeFromSession(
       data: { user: authUser },
     },
     { data: trainee },
+    { data: pmMember },
     roleServicePackages,
   ] = await Promise.all([
     admin.auth.admin.getUserById(userId),
@@ -88,16 +89,23 @@ export async function provisionTraineeDivinerUpgradeFromSession(
       .select("id, name, email, username, service_package_code")
       .eq("user_id", userId)
       .maybeSingle(),
+    admin
+      .from("community_members")
+      .select("id, full_name, email")
+      .eq("user_id", userId)
+      .eq("membership_type", "perennial_mandalism")
+      .maybeSingle(),
     getRoleServicePackages(),
   ]);
 
-  const email = trainee?.email ?? authUser?.email ?? "";
+  const email = trainee?.email ?? pmMember?.email ?? authUser?.email ?? "";
   const username =
     trainee?.username ??
     (authUser?.user_metadata?.username as string | undefined) ??
     buildFallbackUsername(authUser?.email, userId);
   const displayName =
     trainee?.name ??
+    pmMember?.full_name ??
     (authUser?.user_metadata?.name as string | undefined) ??
     email.split("@")[0] ??
     "Diviner";

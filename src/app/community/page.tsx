@@ -46,6 +46,7 @@ import { MembershipCard, type MembershipSubscription } from "@/components/commun
 import { ManageSubscriptionButton } from "@/components/mystery-school/manage-subscription-button";
 import { ProfileCompletionCard, type ProfileCompletionData } from "@/components/community/profile-completion-card";
 import { DashboardFeedPreview } from "@/components/community/dashboard-feed-preview";
+import { RoleUpgradeBanners } from "@/components/dashboard/role-upgrade-banners";
 import { getCommunityDashboardFeed } from "@/lib/dashboard-content";
 import { calcFamilyProfileCompletion } from "@/lib/community/family-profile-completion";
 import { formatBirthPlace } from "@/lib/community/birth-location";
@@ -268,6 +269,13 @@ function isWithinDays(iso: string | null, days: number): boolean {
   return target > now && target - now <= days * 24 * 60 * 60 * 1000;
 }
 
+function daysUntil(iso: string | null): number | null {
+  if (!iso) return null;
+  const diff = new Date(iso).getTime() - Date.now();
+  if (diff <= 0) return 0;
+  return Math.ceil(diff / (24 * 60 * 60 * 1000));
+}
+
 // ── Section heading component ──────────────────────────────────────────────
 function SectionHeading({
   icon: Icon,
@@ -338,6 +346,7 @@ export default async function CommunityDashboardPage() {
   const isMysterySchool = member.membership_type === "mystery_school";
   const isPerennial = !isMysterySchool;
   const programName = isMysterySchool ? "Mystery School" : "Perennial Mandalism";
+  const admin = createAdminClient();
 
   // ── Parallel data fetches ──────────────────────────────────────────────────
   const [
@@ -352,6 +361,7 @@ export default async function CommunityDashboardPage() {
     pmTierResult,
     platformSettingsResult,
     mysterySchoolStudentResult,
+    divinerCheckResult,
     pmApiSubscription,
     communityApiSubscription,
   ] = await Promise.all([
@@ -435,19 +445,21 @@ export default async function CommunityDashboardPage() {
       : Promise.resolve({ data: null }),
 
     // Admin discount toggle — read via admin client (RLS bypass)
-    createAdminClient()
+    admin
       .from("platform_settings")
       .select("ms_pm_discount_enabled")
       .limit(1)
       .maybeSingle(),
 
-    createAdminClient()
+    admin
       .from("mystery_school_students")
       .select(
         "id, enrolled_at, enrollment_date, entry_quarter, entry_year, stripe_subscription_id, one_time_fee_amount, status, paused_at, cancelled_at, access_expires_at"
       )
       .eq("user_id", user.id)
       .maybeSingle(),
+
+    admin.from("diviners").select("id").eq("user_id", user.id).maybeSingle(),
 
     isPerennial ? fetchPmSubscription() : Promise.resolve(null),
     fetchCommunitySubscription(),
@@ -473,6 +485,7 @@ export default async function CommunityDashboardPage() {
   const recentWisdom = recentWisdomResult.data ?? [];
   const recentBlog = recentBlogResult.data ?? [];
   const rituals = ritualsResult.data ?? [];
+  const isDiviner = !!divinerCheckResult.data;
   const pcFamilyMembers = profileCompletionFamilyResult.data ?? [];
   const pcRelCharts = profileCompletionRelChartResult.data ?? [];
   const pmTier = pmTierResult.data ?? null;
@@ -676,12 +689,6 @@ export default async function CommunityDashboardPage() {
   const renewingSoon = !isCancelling && isWithinDays(renewalDate, 7);
 
   // ── Days remaining until renewal/cancellation ─────────────────────────────
-  function daysUntil(iso: string | null): number | null {
-    if (!iso) return null;
-    const diff = new Date(iso).getTime() - Date.now();
-    if (diff <= 0) return 0;
-    return Math.ceil(diff / (24 * 60 * 60 * 1000));
-  }
   const daysRemaining = daysUntil(renewalDate);
 
   // ── Dashboard birth-data readiness ring ──────────────────────────────────
@@ -1123,6 +1130,15 @@ export default async function CommunityDashboardPage() {
           </p>
         </div>
       </div>
+
+      {/* ── Diviner access prompt ─────────────────────────────────────────── */}
+      <RoleUpgradeBanners
+        isDiviner={isDiviner}
+        isTrainee={false}
+        isPerennialMandalism={isPerennial}
+        showTraineeUpgrade={false}
+        showDivinerUpgrade
+      />
 
       {/* ═══════════════════════════════════════════════════════════════════
           TOP SUMMARY BAR

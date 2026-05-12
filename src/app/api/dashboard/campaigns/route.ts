@@ -50,8 +50,12 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url);
   const status = searchParams.get("status");
-  const limit = Math.min(parseInt(searchParams.get("limit") ?? "50", 10), 200);
-  const cursor = searchParams.get("cursor");
+  const q = searchParams.get("q");
+  const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
+  const limit = Math.min(parseInt(searchParams.get("limit") ?? "10", 10), 100);
+  const offset = (page - 1) * limit;
+  const from = searchParams.get("from");
+  const to = searchParams.get("to");
 
   const admin = createAdminClient();
 
@@ -70,17 +74,19 @@ export async function GET(request: Request) {
 
   let query = admin
     .from("affiliate_campaigns")
-    .select("*")
+    .select("*", { count: "exact" })
     .eq("diviner_id", diviner.id)
     .eq("owner_type", "diviner")
     .order("created_at", { ascending: false })
     .order("id", { ascending: false })
-    .limit(limit + 1);
+    .range(offset, offset + limit - 1);
 
-  if (status) query = query.eq("status", status);
-  if (cursor) query = query.lt("id", cursor);
+  if (status && status !== "all") query = query.eq("status", status);
+  if (q) query = query.ilike("name", `%${q}%`);
+  if (from) query = query.gte("created_at", from);
+  if (to) query = query.lte("created_at", to + "T23:59:59Z");
 
-  const { data, error } = await query;
+  const { data, error, count } = await query;
   if (error) {
     return NextResponse.json(
       { type: "https://httpstatuses.io/500", title: "Database error", detail: error.message },
@@ -88,9 +94,7 @@ export async function GET(request: Request) {
     );
   }
 
-  const hasMore = (data ?? []).length > limit;
-  const items = hasMore ? (data ?? []).slice(0, limit) : (data ?? []);
-  const nextCursor = hasMore ? items[items.length - 1]?.id : null;
+  const items = data ?? [];
 
   // Enrich each campaign with summary stats
   const campaignIds = items.map((c: { id: string }) => c.id);
@@ -154,7 +158,7 @@ export async function GET(request: Request) {
       .then(() => { }, () => { });
   }
 
-  return NextResponse.json({ data: enriched, nextCursor, hasMore });
+  return NextResponse.json({ data: enriched, total: count ?? 0 });
 }
 
 // ── POST /api/dashboard/campaigns ────────────────────────────────────────────
