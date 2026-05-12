@@ -27,6 +27,7 @@ import {
   buildMonthlyTransitSummaryFromReport,
   type MonthlyTransitReportSummaryItem,
 } from "@/lib/community/monthly-transit-report-summary";
+import { TransitsReturnRefresh } from "./transits-return-refresh";
 
 export const metadata = { title: "Monthly Transits - AstrologyPro Community" };
 export const dynamic = "force-dynamic";
@@ -371,6 +372,7 @@ export default async function TransitsPage() {
 
   return (
     <div className="space-y-6">
+      <TransitsReturnRefresh />
       <div>
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { toast } from "sonner";
 import {
   Card,
   CardContent,
@@ -481,7 +482,9 @@ export default function CreateRitualPage() {
     }
 
     const { ritual } = await response.json();
-    router.push(`/community/rituals/${ritual.id}`);
+    toast.success("Ritual created successfully");
+    // Previous destination: `/community/rituals/${ritual.id}`
+    router.push(`/community/rituals/${ritual.id}/playback`);
   }
 
   if (step === "choose") {

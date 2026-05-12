@@ -3,10 +3,7 @@ import { notFound } from "next/navigation";
 import { APP_URL } from "@/lib/constants";
 import { getServiceImageUrl } from "@/lib/service-images";
 import { ServiceTemplatePublicPage } from "@/components/services/service-template-public-page";
-import {
-  getServiceLandingDiviners,
-  getServiceLandingTemplate,
-} from "@/lib/service-landings";
+import { getServiceLandingTemplate } from "@/lib/service-landings";
 
 export const revalidate = 3600;
 
@@ -60,14 +57,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function ServiceOnlyLandingPage({ params }: PageProps) {
   const { slug } = await params;
-  const [template, diviners] = await Promise.all([
-    getServiceLandingTemplate(slug),
-    getServiceLandingDiviners(slug),
-  ]);
+  const template = await getServiceLandingTemplate(slug);
 
   if (!template) notFound();
 
-  return (
-    <ServiceTemplatePublicPage template={template} diviners={diviners} />
-  );
+  return <ServiceTemplatePublicPage template={template} />;
 }

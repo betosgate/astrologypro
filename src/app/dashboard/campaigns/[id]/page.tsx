@@ -39,6 +39,10 @@ import {
   Users,
   Calendar,
   BarChart3,
+  MousePointerClick,
+  Bot,
+  Globe,
+  DollarSign,
 } from "lucide-react";
 import { CampaignUrlDisplay } from "@/components/dashboard/campaign-url-display";
 import { CampaignAutoPauseBanner } from "@/components/dashboard/campaign-auto-pause-banner";
@@ -80,6 +84,21 @@ interface CampaignDetail {
   auto_pause_reason: string | null;
   can_reactivate: boolean;
   channel: string | null;
+  analytics?: {
+    summary: {
+      total_clicks: number;
+      human_clicks: number;
+      unique_clicks: number;
+      bot_clicks: number;
+      unique_rate: number;
+      conversions: number;
+      conversion_rate: number;
+      total_commission_cents: number;
+    };
+    by_device: Array<{ device_type: string; clicks: number; percentage: number }>;
+    by_country: Array<{ country_code: string; country_name: string; clicks: number; percentage: number }>;
+    by_source: Array<{ source: string; clicks: number; percentage: number }>;
+  };
 }
 
 const STATUS_BADGE: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
@@ -96,6 +115,41 @@ function fmtCents(cents: number) {
 
 function fmtDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+function fmt(n: number) {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+  return String(n);
+}
+
+function StatCard({ icon: Icon, label, value, sub }: { icon: React.ComponentType<{ className?: string }>; label: string; value: string; sub?: string }) {
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <CardTitle className="text-xs font-medium text-muted-foreground">{label}</CardTitle>
+        <Icon className="size-4 text-muted-foreground" />
+      </CardHeader>
+      <CardContent>
+        <p className="text-2xl font-bold">{value}</p>
+        {sub && <p className="text-xs text-muted-foreground mt-1">{sub}</p>}
+      </CardContent>
+    </Card>
+  );
+}
+
+function HBarRow({ label, clicks, percentage, color = "bg-primary/50" }: { label: string; clicks: number; percentage: number; color?: string }) {
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center justify-between text-sm">
+        <span className="truncate max-w-[60%]">{label}</span>
+        <span className="text-muted-foreground text-xs">{fmt(clicks)} · {percentage}%</span>
+      </div>
+      <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+        <div className={`h-full rounded-full ${color} transition-all`} style={{ width: `${percentage}%` }} />
+      </div>
+    </div>
+  );
 }
 
 export default function CampaignDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -259,6 +313,52 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
         </Card>
       )}
 
+      {/* Analytics Summary */}
+      {campaign.analytics && (
+        <>
+          <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
+            <StatCard icon={MousePointerClick} label="Human Clicks" value={fmt(campaign.analytics.summary.human_clicks)} sub={`${campaign.analytics.summary.unique_rate}% unique`} />
+            <StatCard icon={Users} label="Unique Clicks" value={fmt(campaign.analytics.summary.unique_clicks)} />
+            <StatCard icon={Target} label="Conversions" value={fmt(campaign.analytics.summary.conversions)} sub={`${campaign.analytics.summary.conversion_rate}% rate`} />
+            <StatCard icon={DollarSign} label="Commission" value={fmtCents(campaign.analytics.summary.total_commission_cents)} />
+            <StatCard icon={Bot} label="Bot Clicks" value={fmt(campaign.analytics.summary.bot_clicks)} sub="filtered out" />
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-3">
+            <Card>
+              <CardHeader className="pb-3"><CardTitle className="text-sm">By Device</CardTitle></CardHeader>
+              <CardContent className="space-y-3">
+                {campaign.analytics.by_device.length === 0 ? (
+                  <p className="text-xs text-muted-foreground py-4 text-center">No device data</p>
+                ) : campaign.analytics.by_device.map((row) => (
+                  <HBarRow key={row.device_type} label={row.device_type} clicks={row.clicks} percentage={row.percentage} />
+                ))}
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-3"><CardTitle className="text-sm flex items-center gap-2"><Globe className="size-4 text-muted-foreground" />By Country</CardTitle></CardHeader>
+              <CardContent className="space-y-3">
+                {campaign.analytics.by_country.length === 0 ? (
+                  <p className="text-xs text-muted-foreground py-4 text-center">No country data</p>
+                ) : campaign.analytics.by_country.map((row) => (
+                  <HBarRow key={row.country_code} label={row.country_name} clicks={row.clicks} percentage={row.percentage} color="bg-blue-500/50" />
+                ))}
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-3"><CardTitle className="text-sm">By Source</CardTitle></CardHeader>
+              <CardContent className="space-y-3">
+                {campaign.analytics.by_source.length === 0 ? (
+                  <p className="text-xs text-muted-foreground py-4 text-center">No source data</p>
+                ) : campaign.analytics.by_source.map((row) => (
+                  <HBarRow key={row.source} label={row.source} clicks={row.clicks} percentage={row.percentage} color="bg-emerald-500/50" />
+                ))}
+              </CardContent>
+            </Card>
+          </div>
+        </>
+      )}
+
       {/* Campaign Info Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-2">
         <Card>
@@ -273,13 +373,13 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
             </p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="hidden sm:block"> {/* Only show if conversions list is empty or similar, otherwise redundant with analytics */}
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Conversions</CardTitle>
+            <CardTitle className="text-sm font-medium">History Cap</CardTitle>
             <Target className="size-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold">{campaign.conversions.length}</p>
+            <p className="text-sm text-muted-foreground">Showing last 100 conversions below.</p>
           </CardContent>
         </Card>
       </div>
