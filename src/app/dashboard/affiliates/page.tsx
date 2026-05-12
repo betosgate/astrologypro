@@ -188,7 +188,7 @@ export default function DashboardAffiliatesPage() {
   const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
   const from = searchParams.get("from") ?? "";
   const to = searchParams.get("to") ?? "";
-  const limit = 10;
+  const limit = Math.min(parseInt(searchParams.get("limit") ?? "10", 10), 100);
   const totalPages = Math.ceil(total / limit);
 
   // Invite dialog state
@@ -216,7 +216,7 @@ export default function DashboardAffiliatesPage() {
   const loadAffiliates = useCallback(async () => {
     setLoading(true);
     const params = new URLSearchParams(searchParams.toString());
-    params.set("limit", String(limit));
+    if (!params.has("limit")) params.set("limit", String(limit));
     
     const [affRes, sumRes] = await Promise.all([
       fetch(`/api/dashboard/affiliates?${params.toString()}`),
@@ -634,7 +634,7 @@ export default function DashboardAffiliatesPage() {
             value={status}
             onValueChange={(val) => pushParams({ status: val })}
           >
-            <SelectTrigger>
+            <SelectTrigger className="w-full">
               <SelectValue placeholder="Select status" />
             </SelectTrigger>
             <SelectContent>
@@ -671,9 +671,6 @@ export default function DashboardAffiliatesPage() {
         <CardHeader className="flex flex-row items-center justify-between space-y-0">
           <div>
             <CardTitle>All Affiliates</CardTitle>
-            <CardDescription>
-              Showing {affiliates.length} of {total} affiliate{total !== 1 ? "s" : ""}
-            </CardDescription>
           </div>
         </CardHeader>
         <CardContent>
@@ -823,15 +820,34 @@ export default function DashboardAffiliatesPage() {
               </div>
 
               {/* Pagination Controls */}
-              {totalPages > 1 && (
-                <div className="mt-6 flex items-center justify-between border-t pt-6">
+              <div className="mt-6 flex flex-col sm:flex-row items-center justify-between border-t pt-6 gap-4">
+                <div className="flex items-center gap-3">
                   <div className="text-sm text-muted-foreground">
-                    Page {page} of {totalPages}
+                    Showing {total === 0 ? 0 : (page - 1) * limit + 1}–{Math.min(page * limit, total)} of {total}
                   </div>
+                  <Select
+                    value={String(limit)}
+                    onValueChange={(val) => pushParams({ limit: val, page: "1" })}
+                  >
+                    <SelectTrigger className="h-8 w-24">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[10, 25, 50, 100].map((n) => (
+                        <SelectItem key={n} value={String(n)}>
+                          {n} / page
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {totalPages > 1 && (
                   <div className="flex items-center gap-2">
                     <Button
                       variant="outline"
                       size="sm"
+                      className="h-8"
                       onClick={() => pushParams({ page: String(page - 1) })}
                       disabled={page <= 1}
                     >
@@ -861,6 +877,7 @@ export default function DashboardAffiliatesPage() {
                     <Button
                       variant="outline"
                       size="sm"
+                      className="h-8"
                       onClick={() => pushParams({ page: String(page + 1) })}
                       disabled={page >= totalPages}
                     >
@@ -868,8 +885,8 @@ export default function DashboardAffiliatesPage() {
                       <ChevronRight className="ml-1 size-4" />
                     </Button>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </>
           )}
         </CardContent>

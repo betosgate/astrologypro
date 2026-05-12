@@ -861,7 +861,7 @@ export default function CreateRitualPage() {
         <Button
           onClick={submitCustom}
           disabled={saving}
-          className="bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow-md hover:from-amber-500 hover:to-orange-500"
+          className="bg-primary text-black shadow-md hover:from-amber-500 hover:to-orange-500"
         >
           {saving && <Loader2 className="mr-2 size-4 animate-spin" />}
           <Flame className="mr-2 size-4" />
