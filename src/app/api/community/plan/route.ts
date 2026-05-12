@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { stripe } from "@/lib/stripe/client";
 
 export const dynamic = "force-dynamic";
 
@@ -57,6 +58,24 @@ export async function GET() {
         { error: "No community membership found" },
         { status: 404 }
       );
+    }
+
+    let resolvedPlanType = member.plan_type;
+    if (member.stripe_subscription_id) {
+      try {
+        const subscription = await stripe.subscriptions.retrieve(
+          member.stripe_subscription_id,
+          { expand: ["items.data.price.product"] }
+        );
+        const primaryItem = subscription.items.data[0];
+        const product = primaryItem?.price?.product;
+        const productName = product && typeof product === "object" && "name" in product ? (product as { name?: string }).name : null;
+        if (productName?.toLowerCase().includes("couple")) {
+          resolvedPlanType = "couple";
+        }
+      } catch (err) {
+        console.error("[community/plan] failed to fetch stripe subscription:", err);
+      }
     }
 
     // Fetch family members + available tiers in parallel
@@ -179,7 +198,7 @@ export async function GET() {
     }
 
     const savedTierId = (member as { pm_tier_id?: string | null }).pm_tier_id ?? null;
-    const planType = (member as { plan_type?: string | null }).plan_type ?? null;
+    const planType = resolvedPlanType ?? null;
     let tier: MappedTier | null = null;
     
     const hardcodedPlans: Record<string, MappedTier> = {
