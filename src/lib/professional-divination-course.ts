@@ -1,4 +1,4 @@
-import type { RoleServicePackageCode } from "@/lib/role-service-packages";
+import type { RoleServicePackageCode } from "@/lib/role-service-packages.shared";
 
 export type ProfessionalDivinationCourseTrack =
   | "tarot_reader"

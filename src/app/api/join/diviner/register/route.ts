@@ -43,12 +43,24 @@ interface RegisterBody {
   inviteToken?: string;
 }
 
+const PASSWORD_REGEX = /^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{8,}$/;
+const PASSWORD_ERROR =
+  "Password must be at least 8 characters and include uppercase, lowercase, a number, and a special character.";
+
 function slugify(value: string): string {
   return value
     .toLowerCase()
     .trim()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-{2,}/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 30);
+}
+
+function isValidUsername(username: string) {
+  if (username.length < 3 || username.length > 30) return false;
+  return /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/.test(username);
 }
 
 export async function POST(req: NextRequest) {
@@ -65,15 +77,18 @@ export async function POST(req: NextRequest) {
       { status: 422 }
     );
   }
-  if (password.length < 8) {
+  if (!PASSWORD_REGEX.test(password)) {
     return NextResponse.json(
-      { error: "Password must be at least 8 characters." },
+      { error: PASSWORD_ERROR },
       { status: 422 }
     );
   }
-  if (profileUrl.length < 3 || profileUrl.length > 50) {
+  if (!isValidUsername(profileUrl)) {
     return NextResponse.json(
-      { error: "Profile URL must be 3–50 characters." },
+      {
+        error:
+          "Profile URL must be 3-30 characters, use lowercase letters, numbers, and hyphens, and start/end with a letter or number.",
+      },
       { status: 422 }
     );
   }

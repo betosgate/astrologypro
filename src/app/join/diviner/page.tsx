@@ -13,12 +13,19 @@ import { ArrowRight, Loader2, ShieldCheck, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 
+const PASSWORD_REGEX = /^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{8,}$/;
+const PASSWORD_ERROR =
+  "Password must be at least 8 characters and include uppercase, lowercase, a number, and a special character.";
+
 function slugify(value: string) {
   return value
     .toLowerCase()
     .trim()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-{2,}/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 30);
 }
 
 export default function JoinDivinerPage() {
@@ -26,6 +33,7 @@ export default function JoinDivinerPage() {
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
   const [password, setPassword] = useState("");
+  const [passwordError, setPasswordError] = useState<string | null>(null);
   const [confirmPassword, setConfirmPassword] = useState("");
   const [profileUrl, setProfileUrl] = useState("");
   const [inviteToken, setInviteToken] = useState("");
@@ -56,10 +64,12 @@ export default function JoinDivinerPage() {
       return;
     }
 
-    if (password.length < 8) {
-      toast.error("Password must be at least 8 characters.");
+    if (!PASSWORD_REGEX.test(password)) {
+      setPasswordError(PASSWORD_ERROR);
+      toast.error(PASSWORD_ERROR);
       return;
     }
+    setPasswordError(null);
 
     if (password !== confirmPassword) {
       toast.error("Passwords do not match.");
@@ -188,10 +198,27 @@ export default function JoinDivinerPage() {
                       id="diviner-password"
                       placeholder="At least 8 characters"
                       value={password}
-                      onChange={(event) => setPassword(event.target.value)}
+                      onChange={(event) => {
+                        setPassword(event.target.value);
+                        setPasswordError(null);
+                      }}
                       className="h-12 border-white/10 bg-white/[0.03] text-base text-white placeholder:text-[#626a88]"
                       autoComplete="new-password"
+                      minLength={8}
+                      aria-invalid={passwordError ? "true" : "false"}
+                      aria-describedby={
+                        passwordError ? "diviner-password-error" : "diviner-password-help"
+                      }
                     />
+                    {passwordError ? (
+                      <p id="diviner-password-error" className="text-sm font-medium text-red-300">
+                        {passwordError}
+                      </p>
+                    ) : (
+                      <p id="diviner-password-help" className="text-sm text-[#8d96b8]">
+                        Use uppercase, lowercase, a number, and a special character.
+                      </p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
