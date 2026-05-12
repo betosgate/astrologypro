@@ -31,7 +31,7 @@ import {
   getAllowedSpecialtiesForPackage,
   resolveRoleServicePackage,
   type RoleServicePackageRow,
-} from "@/lib/role-service-packages";
+} from "@/lib/role-service-packages.shared";
 
 const SPECIALTIES = [
   "Astrology",
