@@ -425,7 +425,7 @@ export function RitualPlaylistPlayer({
               {Math.min(currentStepIndex + 1, totalSteps)} / {totalSteps}
             </p>
           </div>
-          <div className="mt-4 min-h-0 flex-1 overflow-y-auto pr-1">
+          <div className="mt-4 min-h-0 flex-1 overflow-y-auto pr-1 max-h-[470px]">
             <ol className="space-y-1.5">
               {playlist.map((item, idx) => {
               const isActive = idx === currentStepIndex;
