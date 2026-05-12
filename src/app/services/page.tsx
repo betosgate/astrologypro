@@ -19,7 +19,26 @@ export const metadata: Metadata = {
   alternates: { canonical: `${APP_URL}/services` },
 };
 
-export default async function ServicesHubPage() {
+interface ServicesHubPageProps {
+  searchParams: Promise<{ discount_token?: string }>;
+}
+
+function getDiscountTokenParam(value: string | undefined) {
+  const token = value?.trim();
+  return token ? token : null;
+}
+
+function withDiscountToken(href: string, discountToken: string | null) {
+  if (!discountToken) return href;
+  const search = new URLSearchParams({ discount_token: discountToken });
+  return `${href}?${search.toString()}`;
+}
+
+export default async function ServicesHubPage({
+  searchParams,
+}: ServicesHubPageProps) {
+  const { discount_token } = await searchParams;
+  const discountToken = getDiscountTokenParam(discount_token);
   const templates = await getServiceLandingTemplates();
   const grouped = templates.reduce<Record<string, typeof templates>>((acc, template) => {
     const key = template.category ?? "other";
@@ -83,7 +102,7 @@ export default async function ServicesHubPage() {
                     </div>
                     <div className="mt-6">
                       <Link
-                        href={`/services/${service.slug}`}
+                        href={withDiscountToken(`/services/${service.slug}`, discountToken)}
                         className="inline-flex items-center gap-2 rounded-xl bg-amber-400/15 px-4 py-2.5 text-sm font-medium text-amber-200 transition-colors hover:bg-amber-400/20"
                       >
                         Compare Diviners

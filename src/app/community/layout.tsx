@@ -121,7 +121,7 @@ export default async function CommunityLayout({ children }: { children: React.Re
     { label: "Mundane", href: "/community/mundane", iconNode: <Globe className="size-4" /> },
     { label: "Ingress Charts", href: "/community/ingress-charts", iconNode: <Compass className="size-4" /> },
     // { label: "Horoscope", href: "/community/horoscope", iconNode: <Telescope className="size-4" /> },
-    { label: "Service", href: "/community/sunday-service", iconNode: <HeartHandshake className="size-4" /> },
+    // { label: "Service", href: "/community/sunday-service", iconNode: <HeartHandshake className="size-4" /> },
     { label: "Library", href: "/community/library", iconNode: <BookMarked className="size-4" /> },
     { label: "Support", href: "/community/support", iconNode: <LifeBuoy className="size-4" /> },
     { label: "Profile", href: "/community/profile", iconNode: <IdCard className="size-4" /> },
