@@ -18,6 +18,7 @@ export {
 } from "@/lib/role-service-packages.shared";
 
 export async function getRoleServicePackages(): Promise<RoleServicePackageRow[]> {
+  const { createAdminClient } = await import("@/lib/supabase/admin");
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("role_service_packages")

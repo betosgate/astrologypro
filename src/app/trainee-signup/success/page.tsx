@@ -104,8 +104,9 @@ export default async function TraineeSignupSuccessPage({
       redirect("/get-started?error=provision-failed");
     }
 
-    nextStepText = "Review your required contract agreement and set up your profile before entering the dashboards.";
-    nextHref = `/contracts/pending?source=trainee-bundle&session_id=${encodeURIComponent(sessionId)}&next=${encodeURIComponent("/join/trainee/profile?session_id=" + encodeURIComponent(sessionId))}`;
+    nextStepText = "Set up your profile and review your required contract agreement before entering the dashboards.";
+    nextHref = `/join/trainee/profile?session_id=${encodeURIComponent(sessionId)}&next=${encodeURIComponent("/contracts/pending?source=trainee-bundle&session_id=" + encodeURIComponent(sessionId))}`;
+
     accountActivatedText = "Stripe returned a successful checkout and your trainee & diviner access has been provisioned.";
   } else if (itemKey === "trainee_program") {
     const admin = createAdminClient();
