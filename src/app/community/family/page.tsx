@@ -182,7 +182,12 @@ export default function CommunityFamilyPage() {
     if (typeof window === "undefined") return;
 
     const frame = window.requestAnimationFrame(() => {
-      const editId = new URLSearchParams(window.location.search).get("edit");
+      const params = new URLSearchParams(window.location.search);
+      const focusMemberId = params.get("focusMember");
+      if (focusMemberId) {
+        setExpandedId(focusMemberId);
+      }
+      const editId = params.get("edit");
       if (editId) {
         setPendingEditId(editId);
       }
@@ -291,10 +296,12 @@ export default function CommunityFamilyPage() {
         <div>
           <div className="flex items-center gap-2">
             <Users className="size-5 text-muted-foreground" />
-            <h1 className="text-2xl font-bold tracking-tight">My Family</h1>
+            <h1 className="text-2xl font-bold tracking-tight">
+              Household Nativity Charts
+            </h1>
           </div>
           <p className="text-muted-foreground">
-            Add family members to generate natal charts for everyone.
+            Add family birth details and generate each member&apos;s natal chart.
           </p>
         </div>
         {isFamily && !atLimit && !showForm && (

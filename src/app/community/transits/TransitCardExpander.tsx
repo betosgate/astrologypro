@@ -61,10 +61,17 @@ export type TransitCardData = {
 
 export function TransitCardExpander({
   cards,
+  initialExpandedFamilyMemberId,
 }: {
   cards: TransitCardData[];
+  initialExpandedFamilyMemberId?: string | null;
 }) {
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const initialExpandedCard = initialExpandedFamilyMemberId
+    ? cards.find((card) => card.familyMemberId === initialExpandedFamilyMemberId)
+    : null;
+  const [expandedId, setExpandedId] = useState<string | null>(
+    initialExpandedCard?.id ?? null
+  );
 
   return (
     <>
