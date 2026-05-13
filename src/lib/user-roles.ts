@@ -36,21 +36,26 @@ export async function getUserPortals(
   userId: string,
   options: GetUserPortalsOptions = {}
 ): Promise<UserPortal[]> {
-  // Resolve admin status: explicit override or auto-check via service-role client
-  let resolvedIsAdmin = options.isAdmin ?? false;
-  if (options.isAdmin === undefined) {
+  let resolvedRole: "admin" | "support_staff" | null = null;
+  if (options.isAdmin !== false) {
     try {
       const adminDb = createAdminClient();
       const { data: adminRow } = await adminDb
         .from("admin_users")
-        .select("id")
+        .select("role")
         .eq("user_id", userId)
         .maybeSingle();
-      resolvedIsAdmin = !!adminRow;
+      
+      if (adminRow) {
+        resolvedRole = adminRow.role as "admin" | "support_staff";
+      }
     } catch {
-      resolvedIsAdmin = false;
+      resolvedRole = null;
     }
   }
+
+  const resolvedIsAdmin = resolvedRole === "admin";
+  const resolvedIsSupportStaff = resolvedRole === "support_staff";
 
   const [diviner, client, advocate, community, mysteryStudent, trainee, affiliate] = await Promise.all([
     supabase.from("diviners").select("id").eq("user_id", userId).maybeSingle(),
@@ -81,9 +86,12 @@ export async function getUserPortals(
 
   const portals: UserPortal[] = [];
 
-  // Admin portal
+  // Admin/Staff portals
   if (resolvedIsAdmin)
     portals.push({ role: "admin", label: "Admin", href: "/admin" });
+  
+  if (resolvedIsSupportStaff || resolvedIsAdmin)
+    portals.push({ role: "support_staff", label: "Support Admin", href: "/dashboard/support/admin" });
 
   if (diviner.data)
     portals.push({ role: "diviner", label: "Diviner", href: "/dashboard" });

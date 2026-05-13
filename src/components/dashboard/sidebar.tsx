@@ -151,6 +151,8 @@ interface SidebarProps {
     username: string;
     avatar_url: string | null;
   };
+  isAdmin?: boolean;
+  isSupportStaff?: boolean;
 }
 
 function NavLink({
@@ -277,9 +279,21 @@ function isParentActive(item: NavItem, pathname: string): boolean {
   return item.children.some((child) => pathname.startsWith(child.href));
 }
 
-export function Sidebar({ diviner }: SidebarProps) {
+export function Sidebar({ diviner, isAdmin, isSupportStaff }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
+  
+  // Conditionally add admin items
+  const dynamicNavItems = [...navItems];
+  if (isAdmin || isSupportStaff) {
+    // Insert after "Settings" or at the end
+    dynamicNavItems.push({ 
+      label: "Support Admin", 
+      href: "/dashboard/support/admin", 
+      icon: LifeBuoy 
+    });
+  }
+
   const [mobileOpen, setMobileOpen] = useState(false);
 
   // Track which parent menus are expanded (by label)
@@ -351,7 +365,7 @@ export function Sidebar({ diviner }: SidebarProps) {
               </SheetTitle>
             </SheetHeader>
             <nav className="flex flex-col gap-1 p-4">
-              {navItems.map((item) => (
+              {dynamicNavItems.map((item) => (
                 <div key={item.label} onClick={() => { if (!item.children) setMobileOpen(false); }}>
                   <NavLink
                     item={item}
@@ -415,7 +429,7 @@ export function Sidebar({ diviner }: SidebarProps) {
           </Link>
         </div>
         <nav className="flex-1 flex flex-col gap-1 p-4 overflow-y-auto">
-          {navItems.map((item) => (
+          {dynamicNavItems.map((item) => (
             <NavLink
               key={item.label}
               item={item}

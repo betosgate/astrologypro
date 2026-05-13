@@ -4,7 +4,10 @@ import {
   isValidNatalChart,
   isValidMonthlyTransit,
 } from "@/lib/community/chart-validators";
-import { deriveNatalReportState } from "@/lib/community/chart-report-state";
+import {
+  deriveMonthlyReportState,
+  deriveNatalReportState,
+} from "@/lib/community/chart-report-state";
 import { isBirthDataComplete } from "@/lib/community/birth-data-readiness";
 import { ensureCurrentMonthTransitsForMember } from "@/lib/community/ensure-monthly-transits";
 
@@ -118,6 +121,9 @@ export async function GET() {
     full_name: string;
     date_of_birth: string;
     natal_chart: Record<string, unknown>;
+    natal_report_id: string | null;
+    natal_report_status: string | null;
+    chart_state: string;
   };
 
   type MonthlyTransitItem = {
@@ -133,6 +139,7 @@ export async function GET() {
     full_report_status: string | null;
     full_report_generated_at: string | null;
     generated_at: string | null;
+    report_state: string;
   };
 
   let natalChart: NatalChartItem | null = null;
@@ -165,9 +172,15 @@ export async function GET() {
         full_name: row.full_name,
         date_of_birth: row.date_of_birth,
         natal_chart: isValidNatalChart(row.natal_chart) ? row.natal_chart : {},
+        natal_report_id: row.natal_report_id,
+        natal_report_status: row.natal_report_status,
+        chart_state: deriveNatalReportState(row),
       }));
 
-    natalChart = natalCharts.find((c) => Object.keys(c.natal_chart).length > 0) ?? natalCharts[0] ?? null;
+    natalChart =
+      natalCharts.find((c) => c.chart_state === "generated") ??
+      natalCharts[0] ??
+      null;
     natalStatus = natalCharts.length === 0 ? "empty" : "ready";
 
     // ── Monthly transit list: gated on complete birth data, NOT on
@@ -281,6 +294,16 @@ export async function GET() {
 
           const memberName =
             familyNameById.get(row.family_member_id) ?? "Member";
+          const reportState = deriveMonthlyReportState(
+            {
+              transit_data: row.transit_data,
+              generation_status: row.generation_status,
+              full_report_id: row.full_report_id,
+              full_report_status: row.full_report_status,
+              full_report_generated_at: row.full_report_generated_at,
+            },
+            currentMonth
+          );
           monthlyTransits.push({
             id: row.id,
             family_member_id: row.family_member_id,
@@ -294,6 +317,7 @@ export async function GET() {
             full_report_generated_at:
               row.full_report_generated_at as string | null,
             generated_at: row.generated_at as string | null,
+            report_state: reportState,
           });
         }
 
@@ -315,6 +339,7 @@ export async function GET() {
               full_report_status: null,
               full_report_generated_at: null,
               generated_at: null,
+              report_state: "missing",
             });
           }
         }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Card,
   CardContent,
@@ -225,6 +225,42 @@ function RelationshipChartsSkeleton() {
   );
 }
 
+function getSelfFocusPairKey(familyMembers: FamilyMember[]) {
+  if (familyMembers.length < 2) return null;
+
+  const selfMember =
+    familyMembers.find(
+      (member) => (member.relationship ?? "").toLowerCase() === "self"
+    ) ?? null;
+  if (!selfMember) return null;
+
+  const pairedMember = familyMembers.find(
+    (member) => member.id !== selfMember.id
+  );
+  if (!pairedMember) return null;
+
+  return [selfMember.id, pairedMember.id].sort().join("-");
+}
+
+function getMemberFocusPairKey(
+  familyMembers: FamilyMember[],
+  focusMemberId: string | null
+) {
+  if (!focusMemberId || familyMembers.length < 2) return null;
+
+  const focusedMember = familyMembers.find(
+    (member) => member.id === focusMemberId
+  );
+  if (!focusedMember) return null;
+
+  const pairedMember = familyMembers.find(
+    (member) => member.id !== focusedMember.id
+  );
+  if (!pairedMember) return null;
+
+  return [focusedMember.id, pairedMember.id].sort().join("-");
+}
+
 async function fetchChartsPagePayload(): Promise<ChartsPagePayload> {
   const payload: ChartsPagePayload = {
     familyMembers: [],
@@ -249,6 +285,9 @@ async function fetchChartsPagePayload(): Promise<ChartsPagePayload> {
 
 export default function ChartsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const shouldFocusSelf = searchParams.get("focus") === "self";
+  const focusMemberId = searchParams.get("focusMember");
   const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
   const [charts, setCharts] = useState<RelationshipChart[]>([]);
   const [relationshipReports, setRelationshipReports] = useState<
@@ -270,8 +309,18 @@ export default function ChartsPage() {
     setCharts(data.charts);
     setRelationshipReports(data.relationshipReports);
     setFamilyOverviewReports(data.familyOverviewReports);
+    if (shouldFocusSelf) {
+      setOverviewOpen(true);
+      setExpandedId(null);
+    } else if (focusMemberId) {
+      const pairKey = getMemberFocusPairKey(data.familyMembers, focusMemberId);
+      if (pairKey) {
+        setExpandedId(pairKey);
+        setOverviewOpen(false);
+      }
+    }
     setLoading(false);
-  }, []);
+  }, [focusMemberId, shouldFocusSelf]);
 
   useEffect(() => {
     let cancelled = false;
@@ -284,6 +333,16 @@ export default function ChartsPage() {
       setCharts(data.charts);
       setRelationshipReports(data.relationshipReports);
       setFamilyOverviewReports(data.familyOverviewReports);
+      if (shouldFocusSelf) {
+        setOverviewOpen(true);
+        setExpandedId(null);
+      } else if (focusMemberId) {
+        const pairKey = getMemberFocusPairKey(data.familyMembers, focusMemberId);
+        if (pairKey) {
+          setExpandedId(pairKey);
+          setOverviewOpen(false);
+        }
+      }
       setLoading(false);
     }
 
@@ -292,7 +351,7 @@ export default function ChartsPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [focusMemberId, shouldFocusSelf]);
 
   usePageReturnRefresh(
     () => {

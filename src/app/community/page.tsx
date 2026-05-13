@@ -54,7 +54,11 @@ import {
 import { getCommunityDashboardFeed } from "@/lib/dashboard-content";
 import { calcFamilyProfileCompletion } from "@/lib/community/family-profile-completion";
 import { formatBirthPlace } from "@/lib/community/birth-location";
-import { deriveNatalReportState } from "@/lib/community/chart-report-state";
+import {
+  deriveMonthlyReportState,
+  deriveNatalReportState,
+  deriveRelationshipReportState,
+} from "@/lib/community/chart-report-state";
 import {
   computeBirthDataReadiness,
   isBirthDataComplete,
@@ -123,6 +127,11 @@ function formatCurrency(amount: number, currency = "usd"): string {
     currency: currency.toUpperCase(),
     minimumFractionDigits: 2,
   }).format(amount);
+}
+
+function getCurrentMonthKey() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 }
 
 type PmApiSubscription = {
@@ -477,6 +486,46 @@ export default async function CommunityDashboardPage() {
     );
   }
   const familyMembers = familyMembersResult.data ?? [];
+  const familyMemberIds = familyMembers.map((fm) => fm.id);
+  const currentMonthKey = getCurrentMonthKey();
+  const [
+    circleMonthlyTransitsResult,
+    circleRelationshipChartsResult,
+    circleRelationshipReportsResult,
+  ] = familyMemberIds.length > 0
+    ? await Promise.all([
+        supabase
+          .from("monthly_transits")
+          .select(
+            "family_member_id, month, transit_data, generation_status, full_report_id, full_report_status"
+          )
+          .in("family_member_id", familyMemberIds)
+          .eq("month", currentMonthKey),
+        supabase
+          .from("relationship_charts")
+          .select(
+            "person_a_id, person_b_id, chart_data, invalidated_at, report_id, report_status"
+          )
+          .or(
+            `person_a_id.in.(${familyMemberIds.join(",")}),person_b_id.in.(${familyMemberIds.join(",")})`
+          ),
+        supabase
+          .from("community_relationship_reports")
+          .select(
+            "person_a_id, person_b_id, astro_ai_response_id, report_status, invalidated_at"
+          )
+          .or(
+            `person_a_id.in.(${familyMemberIds.join(",")}),person_b_id.in.(${familyMemberIds.join(",")})`
+          ),
+      ])
+    : [
+        { data: [] },
+        { data: [] },
+        { data: [] },
+      ];
+  const circleMonthlyTransits = circleMonthlyTransitsResult.data ?? [];
+  const circleRelationshipCharts = circleRelationshipChartsResult.data ?? [];
+  const circleRelationshipReports = circleRelationshipReportsResult.data ?? [];
   const selfFamilyMember = familyMembers.find(
     (fm) =>
       fm.user_id === user.id ||
@@ -1871,7 +1920,7 @@ export default async function CommunityDashboardPage() {
           </div>
 
           {/* Sunday Service entry point */}
-          <Card className="border-amber-500/20 bg-amber-500/5">
+          {/* <Card className="border-amber-500/20 bg-amber-500/5">
             <CardContent className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-3 min-w-0">
                 <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-amber-500/20">
@@ -1888,7 +1937,7 @@ export default async function CommunityDashboardPage() {
                 <Link href="/community/sessions">View Schedule</Link>
               </Button>
             </CardContent>
-          </Card>
+          </Card> */}
         </section>
       )}
 
@@ -1902,14 +1951,19 @@ export default async function CommunityDashboardPage() {
           {/* Family Members */}
           <div className="space-y-3">
             <div className="flex items-center justify-between flex-wrap gap-2">
-              <div className="flex items-center gap-2">
-                <Heart className="size-4 text-rose-500" />
-                <h3 className="text-sm font-semibold">Family & Relationships</h3>
-                {familyMembers.length > 0 && (
-                  <Badge variant="secondary" className="text-xs">
-                    {familyMembers.length} household profile{familyMembers.length !== 1 ? "s" : ""}
-                  </Badge>
-                )}
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <Heart className="size-4 text-rose-500" />
+                  <h3 className="text-sm font-semibold">Family & Relationships</h3>
+                  {familyMembers.length > 0 && (
+                    <Badge variant="secondary" className="text-xs">
+                      {familyMembers.length} household profile{familyMembers.length !== 1 ? "s" : ""}
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Each card tracks Profile, Natal, Monthly, and Relationship progress.
+                </p>
               </div>
               <Button asChild variant="ghost" size="sm">
                 <Link href="/community/plan?tab=members">Manage Family →</Link>
@@ -1955,6 +2009,69 @@ export default async function CommunityDashboardPage() {
                   const hasNatalChart =
                     deriveNatalReportState(m) === "generated";
                   const profileComplete = completionPct >= 100;
+                  const hasMonthlyReport = circleMonthlyTransits.some(
+                    (row) =>
+                      row.family_member_id === m.id &&
+                      deriveMonthlyReportState(row, currentMonthKey) ===
+                        "generated"
+                  );
+                  const hasRelationshipReport =
+                    circleRelationshipCharts.some(
+                      (row) =>
+                        (row.person_a_id === m.id || row.person_b_id === m.id) &&
+                        deriveRelationshipReportState({
+                          chart_data: row.chart_data,
+                          invalidated_at: row.invalidated_at,
+                          report_id: row.report_id,
+                          report_status: row.report_status,
+                        }) === "generated"
+                    ) ||
+                    circleRelationshipReports.some(
+                      (row) =>
+                        (row.person_a_id === m.id || row.person_b_id === m.id) &&
+                        deriveRelationshipReportState({
+                          chart_data: undefined,
+                          invalidated_at: row.invalidated_at,
+                          report_id: row.astro_ai_response_id,
+                          report_status: row.report_status,
+                        }) === "generated"
+                    );
+                  const journeySteps = [
+                    profileComplete,
+                    hasNatalChart,
+                    hasMonthlyReport,
+                    hasRelationshipReport,
+                  ];
+                  const journeyPct =
+                    journeySteps.filter(Boolean).length * 25;
+                  const journeyStatusItems = [
+                    {
+                      label: profileComplete
+                        ? "Profile Complete"
+                        : "Profile Pending",
+                      complete: profileComplete,
+                      href: `/community/family?focusMember=${encodeURIComponent(m.id)}`,
+                    },
+                    {
+                      label: hasNatalChart ? "Natal Ready" : "Natal Pending",
+                      complete: hasNatalChart,
+                      href: `/community/family?focusMember=${encodeURIComponent(m.id)}`,
+                    },
+                    {
+                      label: hasMonthlyReport
+                        ? "Monthly Ready"
+                        : "Monthly Pending",
+                      complete: hasMonthlyReport,
+                      href: `/community/transits?focusMember=${encodeURIComponent(m.id)}`,
+                    },
+                    {
+                      label: hasRelationshipReport
+                        ? "Relationship Ready"
+                        : "Relationship Pending",
+                      complete: hasRelationshipReport,
+                      href: `/community/charts?focusMember=${encodeURIComponent(m.id)}`,
+                    },
+                  ];
                   const avatarColor = AVATAR_COLORS[idx % AVATAR_COLORS.length];
 
                   // Community Family UX Task 02 (2026-04-24):
@@ -1977,42 +2094,72 @@ export default async function CommunityDashboardPage() {
                     return `${head} +${missingDisplay.length - 2} more`;
                   })();
 
-                  // Community Family UX Task 04 (2026-04-24):
-                  // Deep-link incomplete-member corrective CTAs to the family
-                  // index with an edit query param so `/community/family`
-                  // opens the inline edit state for the exact member.
-                  const completeProfileHref = `/community/family?edit=${encodeURIComponent(m.id)}`;
-
                   return (
                     <Card key={m.id} className="transition-colors hover:border-primary/30">
                       <CardContent className="py-4 px-4 space-y-3">
-                        {/* Top row: avatar + name + chart badge */}
-                        <div className="flex items-center gap-3">
-                          <div
-                            className={`flex size-10 shrink-0 items-center justify-center rounded-full text-sm font-bold ${avatarColor}`}
-                          >
-                            {m.full_name.charAt(0).toUpperCase()}
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="text-sm font-semibold truncate uppercase">
-                              {m.full_name}
-                            </p>
-                            {m.relationship && (
-                              <p className="text-xs text-muted-foreground capitalize">
-                                {m.relationship}
+                        {/* Top row: identity + individual journey progress */}
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex min-w-0 items-center gap-3">
+                            <div
+                              className={`flex size-10 shrink-0 items-center justify-center rounded-full text-sm font-bold ${avatarColor}`}
+                            >
+                              {m.full_name.charAt(0).toUpperCase()}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-semibold uppercase">
+                                {m.full_name}
                               </p>
-                            )}
+                              {m.relationship && (
+                                <p className="text-xs text-muted-foreground capitalize">
+                                  {m.relationship}
+                                </p>
+                              )}
+                            </div>
                           </div>
-                          <Badge
-                            variant="outline"
-                            className={`shrink-0 text-[10px] px-1.5 py-0 ${
-                              hasNatalChart
-                                ? "border-emerald-500/40 text-emerald-700"
-                                : "border-amber-500/40 text-amber-700"
-                            }`}
+                          <div
+                            className="group relative flex shrink-0 flex-col items-center gap-1"
+                            tabIndex={0}
+                            aria-label="Journey progress: Profile, Natal, Monthly, and Relationship each count 25 percent."
                           >
-                            {hasNatalChart ? "Chart Ready" : "Chart Pending"}
-                          </Badge>
+                            <div className="relative size-14">
+                              <svg className="size-14 -rotate-90" viewBox="0 0 44 44" aria-hidden="true">
+                                <circle
+                                  cx="22"
+                                  cy="22"
+                                  r="18"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="4"
+                                  className="text-muted/70"
+                                />
+                                <circle
+                                  cx="22"
+                                  cy="22"
+                                  r="18"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="4"
+                                  strokeLinecap="round"
+                                  strokeDasharray={`${2 * Math.PI * 18}`}
+                                  strokeDashoffset={`${2 * Math.PI * 18 * (1 - journeyPct / 100)}`}
+                                  className={
+                                    journeyPct === 100
+                                      ? "text-emerald-500"
+                                      : "text-primary"
+                                  }
+                                />
+                              </svg>
+                              <span className="absolute inset-0 flex items-center justify-center text-[11px] font-bold tabular-nums">
+                                {journeyPct}%
+                              </span>
+                            </div>
+                            <span className="text-[10px] text-muted-foreground">
+                              Journey
+                            </span>
+                            <div className="pointer-events-none absolute right-0 top-full z-20 mt-2 w-56 rounded-md border bg-popover px-3 py-2 text-left text-xs text-popover-foreground opacity-0 shadow-md transition-opacity group-hover:opacity-100 group-focus:opacity-100">
+                              Profile, Natal, Monthly, and Relationship each add 25%.
+                            </div>
+                          </div>
                         </div>
 
                         {/* Profile details chips */}
@@ -2041,29 +2188,22 @@ export default async function CommunityDashboardPage() {
                           )}
                         </div>
 
-                        {/* Compact status rows — Household Readiness owns the large rings. */}
+                        {/* Compact journey status rows */}
                         <div className="space-y-2">
                           <div className="flex flex-wrap items-center gap-2">
-                            <Badge
-                              variant="outline"
-                              className={`text-[10px] px-1.5 py-0 ${
-                                profileComplete
-                                  ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-700"
-                                  : "border-amber-500/40 bg-amber-500/10 text-amber-700"
-                              }`}
-                            >
-                              {profileComplete ? "Profile complete" : `${completionPct}% profile`}
-                            </Badge>
-                            <Badge
-                              variant="outline"
-                              className={`text-[10px] px-1.5 py-0 ${
-                                hasNatalChart
-                                  ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-700"
-                                  : "border-amber-500/40 bg-amber-500/10 text-amber-700"
-                              }`}
-                            >
-                              {hasNatalChart ? "Chart Ready" : "Chart Pending"}
-                            </Badge>
+                            {journeyStatusItems.map((item) => (
+                              <Link
+                                key={item.label}
+                                href={item.href}
+                                className={`inline-flex min-h-6 items-center rounded-full border px-2.5 py-1 text-[11px] font-medium leading-none transition-colors hover:bg-muted ${
+                                  item.complete
+                                    ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-700"
+                                    : "border-amber-500/40 bg-amber-500/10 text-amber-700"
+                                }`}
+                              >
+                                {item.label}
+                              </Link>
+                            ))}
                           </div>
 
                           {!profileComplete && missingSummary && (
@@ -2073,23 +2213,6 @@ export default async function CommunityDashboardPage() {
                             >
                               Missing: {missingSummary}
                             </p>
-                          )}
-
-                          {!profileComplete && (
-                            <Link
-                              href={completeProfileHref}
-                              className="inline-flex text-xs font-medium text-primary hover:underline"
-                            >
-                              Complete profile →
-                            </Link>
-                          )}
-                          {profileComplete && !hasNatalChart && (
-                            <Link
-                              href={`/community/family/${m.id}`}
-                              className="inline-flex text-xs font-medium text-primary hover:underline"
-                            >
-                              Generate chart →
-                            </Link>
                           )}
                         </div>
                       </CardContent>
