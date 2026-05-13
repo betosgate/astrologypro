@@ -186,7 +186,7 @@ export async function POST(request: NextRequest) {
         itemKey: COURSE_ITEM_KEY,
         type: "invited_diviner",
       },
-      success_url: `${origin}/join/diviner/success?session_id={CHECKOUT_SESSION_ID}`,
+      success_url: `${origin}/get-started/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/join/diviner/plan?cancelled=1`,
     });
 
