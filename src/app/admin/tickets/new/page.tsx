@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -24,6 +24,133 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ArrowLeft, Loader2, Send } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+type RequesterSuggestion = {
+  id: string;
+  name: string;
+  email: string;
+};
+
+function RequesterAutocomplete({
+  id,
+  type = "text",
+  placeholder,
+  value,
+  displayField,
+  onChange,
+  onSelect,
+}: {
+  id: string;
+  type?: "text" | "email";
+  placeholder: string;
+  value: string;
+  displayField: "name" | "email";
+  onChange: (value: string) => void;
+  onSelect: (user: RequesterSuggestion) => void;
+}) {
+  const [suggestions, setSuggestions] = useState<RequesterSuggestion[]>([]);
+  const [open, setOpen] = useState(false);
+  const [activeSuggestion, setActiveSuggestion] = useState(-1);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function fetchSuggestions(q: string) {
+    const params = new URLSearchParams({ limit: "5" });
+    if (q.trim()) params.set("q", q.trim());
+
+    fetch(`/api/admin/tickets/requesters?${params.toString()}`)
+      .then((res) => (res.ok ? res.json() : { users: [] }))
+      .then((data) => {
+        const users = Array.isArray(data.users) ? data.users : [];
+        setSuggestions(users);
+        setOpen(users.length > 0);
+        setActiveSuggestion(-1);
+      })
+      .catch(() => {
+        setSuggestions([]);
+        setOpen(false);
+      });
+  }
+
+  function handleChange(nextValue: string) {
+    onChange(nextValue);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => fetchSuggestions(nextValue), 250);
+  }
+
+  function handleSelect(user: RequesterSuggestion) {
+    setSuggestions([]);
+    setOpen(false);
+    onSelect(user);
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (!open) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setActiveSuggestion((i) => Math.min(i + 1, suggestions.length - 1));
+    }
+    if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setActiveSuggestion((i) => Math.max(i - 1, 0));
+    }
+    if (e.key === "Enter" && activeSuggestion >= 0) {
+      e.preventDefault();
+      handleSelect(suggestions[activeSuggestion]);
+    }
+    if (e.key === "Escape") setOpen(false);
+  }
+
+  useEffect(() => {
+    function onClickOutside(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, []);
+
+  return (
+    <div ref={containerRef} className="relative">
+      <Input
+        id={id}
+        type={type}
+        placeholder={placeholder}
+        value={value}
+        onChange={(e) => handleChange(e.target.value)}
+        onFocus={() => fetchSuggestions(value)}
+        onKeyDown={handleKeyDown}
+        autoComplete="off"
+      />
+      {open && suggestions.length > 0 && (
+        <div className="absolute top-full left-0 right-0 z-50 mt-1 max-h-64 overflow-y-auto rounded-md border bg-popover shadow-md">
+          {suggestions.map((user, idx) => (
+            <button
+              key={user.id}
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => handleSelect(user)}
+              className={cn(
+                "flex w-full flex-col px-3 py-2 text-left text-sm transition-colors",
+                idx === activeSuggestion
+                  ? "bg-accent text-accent-foreground"
+                  : "hover:bg-accent/50"
+              )}
+            >
+              <span className="truncate font-medium">{user[displayField]}</span>
+              <span className="truncate text-xs text-muted-foreground">
+                {displayField === "name" ? user.email : user.name}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function CreateTicketPage() {
   const router = useRouter();
@@ -126,21 +253,37 @@ export default function CreateTicketPage() {
               <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="req_name">Name</Label>
-                  <Input
+                  <RequesterAutocomplete
                     id="req_name"
                     placeholder="Internal Staff or Customer Name"
                     value={formData.requester_name}
-                    onChange={(e) => setFormData({ ...formData, requester_name: e.target.value })}
+                    displayField="name"
+                    onChange={(value) => setFormData((prev) => ({ ...prev, requester_name: value }))}
+                    onSelect={(user) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        requester_name: user.name,
+                        requester_email: user.email,
+                      }))
+                    }
                   />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="req_email">Email</Label>
-                  <Input
+                  <RequesterAutocomplete
                     id="req_email"
                     type="email"
                     placeholder="contact@example.com"
                     value={formData.requester_email}
-                    onChange={(e) => setFormData({ ...formData, requester_email: e.target.value })}
+                    displayField="email"
+                    onChange={(value) => setFormData((prev) => ({ ...prev, requester_email: value }))}
+                    onSelect={(user) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        requester_name: user.name,
+                        requester_email: user.email,
+                      }))
+                    }
                   />
                 </div>
               </CardContent>
