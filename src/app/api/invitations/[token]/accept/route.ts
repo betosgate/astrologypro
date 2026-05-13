@@ -15,9 +15,11 @@ function slugify(value: string): string {
   return value
     .toLowerCase()
     .trim()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 32);
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-{2,}/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 30);
 }
 
 function buildUsername(fullName: string, userId: string, fallbackPrefix: string) {
@@ -28,6 +30,35 @@ function buildUsername(fullName: string, userId: string, fallbackPrefix: string)
 function buildReferralCode(fullName: string, userId: string) {
   const prefix = slugify(fullName).replace(/-/g, "").toUpperCase().slice(0, 8);
   return `${prefix || "ADVOCATE"}${userId.replace(/-/g, "").slice(0, 4).toUpperCase()}`;
+}
+
+function roleNeedsUsername(roleSlug: string) {
+  return ["trainee", "advocate", "social_advo"].includes(roleSlug);
+}
+
+function validateUsername(username: string) {
+  if (username.length < 3 || username.length > 30) return false;
+  return /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/.test(username);
+}
+
+async function usernameExists(
+  admin: ReturnType<typeof createAdminClient>,
+  username: string
+) {
+  const [diviners, trainees, advocates] = await Promise.all([
+    admin.from("diviners").select("id", { head: true, count: "exact" }).eq("username", username),
+    admin.from("trainees").select("id", { head: true, count: "exact" }).eq("username", username),
+    admin
+      .from("social_advocates")
+      .select("id", { head: true, count: "exact" })
+      .eq("username", username),
+  ]);
+
+  return Boolean(
+    (diviners.count ?? 0) > 0 ||
+      (trainees.count ?? 0) > 0 ||
+      (advocates.count ?? 0) > 0
+  );
 }
 
 function normalizeInvitationRole(roleSlug: string) {
@@ -74,11 +105,12 @@ export async function POST(req: NextRequest, { params }: Params) {
   const { token } = await params;
 
   const body = await req.json();
-  const { password, first_name, last_name, phone } = body as {
+  const { password, first_name, last_name, phone, username } = body as {
     password?: string;
     first_name?: string;
     last_name?: string;
     phone?: string;
+    username?: string;
   };
 
   if (!password || !first_name || !last_name) {
@@ -150,6 +182,24 @@ export async function POST(req: NextRequest, { params }: Params) {
 
   // 4. Create Supabase auth user
   const fullName = `${first_name.trim()} ${last_name.trim()}`;
+  const requestedUsername = slugify(username ?? "");
+  if (roleNeedsUsername(invitation.role_slug)) {
+    if (!validateUsername(requestedUsername)) {
+      return NextResponse.json(
+        {
+          error:
+            "Username must be 3-30 characters, use lowercase letters, numbers, and hyphens, and start/end with a letter or number.",
+        },
+        { status: 422 }
+      );
+    }
+    if (await usernameExists(admin, requestedUsername)) {
+      return NextResponse.json(
+        { error: "That public URL is already taken. Please choose another one." },
+        { status: 409 }
+      );
+    }
+  }
 
   const { data: newAuthUser, error: createErr } = await admin.auth.admin.createUser({
     email: emailLower,
@@ -159,6 +209,8 @@ export async function POST(req: NextRequest, { params }: Params) {
       first_name: first_name.trim(),
       last_name: last_name.trim(),
       full_name: fullName,
+      name: fullName,
+      ...(requestedUsername ? { username: requestedUsername } : {}),
       role: invitation.role_slug,
       invited_by_admin: true,
       invitation_id: invitation.id,
@@ -211,7 +263,7 @@ export async function POST(req: NextRequest, { params }: Params) {
     }
     case "social_advo":
     case "advocate": {
-      const username = buildUsername(fullName, userId, "advocate");
+      const username = requestedUsername || buildUsername(fullName, userId, "advocate");
       const { error } = await admin.from("social_advocates").insert({
         user_id: userId,
         name: fullName,
@@ -226,7 +278,7 @@ export async function POST(req: NextRequest, { params }: Params) {
       break;
     }
     case "trainee": {
-      const username = buildUsername(fullName, userId, "trainee");
+      const username = requestedUsername || buildUsername(fullName, userId, "trainee");
       const { error } = await admin.from("trainees").insert({
         user_id: userId,
         name: fullName,

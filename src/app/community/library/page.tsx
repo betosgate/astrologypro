@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { BookOpen, FileText, ExternalLink, Star, BookMarked } from "lucide-react";
 import Link from "next/link";
 import type { MandalismContent } from "@/components/community/mandalism-content-preview";
+import { PerennialReadingButton } from "@/components/community/perennial-reading-cta";
 
 // ── Mandalism content card sub-components are rendered server-side here.
 // We import the type only — the full client component is used in the dashboard.
@@ -534,9 +535,9 @@ export default async function LibraryPage({ searchParams }: LibraryPageProps) {
                 apply to your chart and current transits.
               </p>
             </div>
-            <Button asChild className="shrink-0">
-              <Link href="/diviner">Book a Reading</Link>
-            </Button>
+            <PerennialReadingButton className="shrink-0">
+              Book a Reading
+            </PerennialReadingButton>
           </CardContent>
         </Card>
       </section>
