@@ -11,7 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { X, Search } from "lucide-react";
-import { useRef, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 
 interface Queue {
   id: string;
@@ -42,7 +42,11 @@ export function TicketsFilter({
   const router = useRouter();
   const pathname = usePathname();
   const [, startTransition] = useTransition();
-  const searchRef = useRef<HTMLInputElement>(null);
+  const [searchValue, setSearchValue] = useState(currentSearch);
+
+  useEffect(() => {
+    setSearchValue(currentSearch);
+  }, [currentSearch]);
 
   function buildUrl(overrides: Record<string, string>) {
     const current: Record<string, string> = {
@@ -63,11 +67,10 @@ export function TicketsFilter({
     return qs ? `${pathname}?${qs}` : pathname;
   }
 
-  function handleSearchSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const val = searchRef.current?.value.trim() ?? "";
+  function handleSearchChange(value: string) {
+    setSearchValue(value);
     startTransition(() => {
-      router.push(buildUrl({ search: val }));
+      router.replace(buildUrl({ search: value.trim() }), { scroll: false });
     });
   }
 
@@ -83,20 +86,17 @@ export function TicketsFilter({
   return (
     <div className="space-y-3">
       {/* Search bar */}
-      <form onSubmit={handleSearchSubmit} className="flex items-center gap-2 max-w-md">
+      <div className="flex items-center gap-2 max-w-md">
         <div className="relative flex-1">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
           <Input
-            ref={searchRef}
-            defaultValue={currentSearch}
+            value={searchValue}
+            onChange={(e) => handleSearchChange(e.target.value)}
             placeholder="Search tickets by subject, requester, ticket #…"
             className="pl-8 h-9 text-sm"
           />
         </div>
-        <Button type="submit" size="sm" variant="outline" className="h-9 px-3">
-          Search
-        </Button>
-      </form>
+      </div>
 
       {/* Filter dropdowns */}
       <div className="flex flex-wrap items-center gap-3">
