@@ -6,6 +6,7 @@ import { NotificationBell } from "@/components/notifications/notification-bell";
 import Link from "next/link";
 import { RouteTracker } from "@/components/shared/route-tracker";
 import { MobileNav } from "@/components/community/mobile-nav";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { NavLink } from "@/components/shared/nav-link";
 import { NavDropdown } from "@/components/shared/nav-dropdown";
 import { PortalLogoutButton } from "@/components/portal/logout-button";
@@ -23,6 +24,31 @@ import {
 export const metadata = { title: "Community - AstrologyPro" };
 export const dynamic = "force-dynamic";
 
+function slugifyHandlePart(value: string) {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function getCommunityHandle(name: string, memberId: string) {
+  const base = slugifyHandlePart(name) || "community-member";
+  const suffix = memberId.replace(/-/g, "").slice(0, 6).toLowerCase();
+
+  return suffix ? `${base}-${suffix}` : base;
+}
+
+function getInitials(name: string) {
+  return (
+    name
+      .split(" ")
+      .map((namePart) => namePart[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2) || "?"
+  );
+}
 
 export default async function CommunityLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
@@ -100,6 +126,19 @@ export default async function CommunityLayout({ children }: { children: React.Re
 
   const portals = await getUserPortals(supabase, user.id);
   const membershipLabel = "Perennial Mandalism";
+  const displayName =
+    member.full_name?.trim() ||
+    member.first_name?.trim() ||
+    user.email?.split("@")[0] ||
+    "Community Member";
+  const rawAvatarUrl = user.user_metadata?.avatar_url;
+  const avatarUrl =
+    typeof rawAvatarUrl === "string" && rawAvatarUrl.trim() !== ""
+      ? rawAvatarUrl
+      : null;
+  const statusLabel = "Active Member";
+  const memberHandle = getCommunityHandle(displayName, member.id);
+  const initials = getInitials(displayName);
 
   const productSubItems = [
     // { label: "Product Category", href: "/admin/perennial-content/categories", icon: <Tags className="size-4" /> },
@@ -167,10 +206,29 @@ export default async function CommunityLayout({ children }: { children: React.Re
           </ul>
         </nav>
         {/* Account and Logout pinned to sidebar bottom */}
-        <div className="border-t px-3 py-3 space-y-1">
+        <div className="border-t p-4">
+          <div className="flex items-center gap-3">
+            <Avatar className="size-8">
+              {avatarUrl ? <AvatarImage src={avatarUrl} alt={displayName} /> : null}
+              <AvatarFallback className="text-xs">
+                {initials}
+              </AvatarFallback>
+            </Avatar>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-medium">
+                {displayName}
+              </p>
+              <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
+                {statusLabel}
+              </p>
+              <p className="truncate text-xs text-muted-foreground">
+                @{memberHandle}
+              </p>
+            </div>
+          </div>
           <Link
             href="/account"
-            className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            className="mt-2 flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
             <UserCog className="size-4" />
             My Account
@@ -187,7 +245,10 @@ export default async function CommunityLayout({ children }: { children: React.Re
               <MobileNav
                 membershipType={member.membership_type}
                 navItems={navLinks}
-                displayName={member.full_name ?? ""}
+                displayName={displayName}
+                avatarUrl={avatarUrl}
+                memberHandle={memberHandle}
+                statusLabel={statusLabel}
                 membershipLabel={membershipLabel}
               />
               <Link href="/community" className="text-lg font-bold">
