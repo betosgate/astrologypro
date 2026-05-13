@@ -23,13 +23,47 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Loader2, Send } from "lucide-react";
+import { ArrowLeft, FileText, Loader2, Send, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+const ALLOWED_ATTACHMENT_TYPES = [
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "text/csv",
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+];
+const ALLOWED_ATTACHMENT_EXTENSIONS = [
+  "pdf",
+  "doc",
+  "docx",
+  "xls",
+  "xlsx",
+  "csv",
+  "jpg",
+  "jpeg",
+  "png",
+  "webp",
+  "gif",
+];
 
 type RequesterSuggestion = {
   id: string;
   name: string;
   email: string;
+};
+
+type TicketAttachment = {
+  url: string;
+  name: string;
+  type: string;
+  size: number;
 };
 
 function RequesterAutocomplete({
@@ -154,7 +188,10 @@ function RequesterAutocomplete({
 
 export default function CreateTicketPage() {
   const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [attachments, setAttachments] = useState<TicketAttachment[]>([]);
 
   const [formData, setFormData] = useState({
     type: "support",
@@ -166,6 +203,59 @@ export default function CreateTicketPage() {
     requester_name: "",
     requester_role: "staff",
   });
+
+  async function handleAttachmentChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+
+    if (
+      !ALLOWED_ATTACHMENT_TYPES.includes(file.type) &&
+      !ALLOWED_ATTACHMENT_EXTENSIONS.includes(ext)
+    ) {
+      toast.error("Invalid file type. Allowed: PDF, DOC, Excel, JPEG, PNG, WebP, GIF.");
+      e.target.value = "";
+      return;
+    }
+    if (file.size > MAX_FILE_SIZE) {
+      toast.error("File too large. Maximum size is 10 MB.");
+      e.target.value = "";
+      return;
+    }
+
+    setUploading(true);
+
+    const body = new FormData();
+    body.append("file", file);
+    body.append("kind", "ticket");
+
+    try {
+      const res = await fetch("/api/admin/tickets/upload", { method: "POST", body });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error ?? "Upload failed");
+        return;
+      }
+      setAttachments((prev) => [
+        ...prev,
+        {
+          url: data.url,
+          name: data.name ?? file.name,
+          type: data.type ?? file.type,
+          size: data.size ?? file.size,
+        },
+      ]);
+    } catch {
+      toast.error("Upload failed");
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
+  }
+
+  function removeAttachment(url: string) {
+    setAttachments((prev) => prev.filter((attachment) => attachment.url !== url));
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -179,7 +269,10 @@ export default function CreateTicketPage() {
       const res = await fetch("/api/admin/tickets", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          attachments,
+        }),
       });
 
       if (!res.ok) {
@@ -288,6 +381,68 @@ export default function CreateTicketPage() {
                 </div>
               </CardContent>
             </Card>
+
+            <Card className="border-primary/10 shadow-sm">
+              <CardHeader>
+                <CardTitle>Attachments</CardTitle>
+                <CardDescription>
+                  Attach supporting documents, spreadsheets, PDFs, or images.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {attachments.length > 0 && (
+                  <div className="space-y-2">
+                    {attachments.map((attachment) => (
+                      <div
+                        key={attachment.url}
+                        className="flex items-center gap-3 rounded-md border bg-muted/20 px-3 py-2"
+                      >
+                        <FileText className="size-4 shrink-0 text-muted-foreground" />
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium">{attachment.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {(attachment.size / (1024 * 1024)).toFixed(2)} MB
+                          </p>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="size-8 text-muted-foreground hover:text-destructive"
+                          onClick={() => removeAttachment(attachment.url)}
+                        >
+                          <X className="size-4" />
+                          <span className="sr-only">Remove attachment</span>
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className="flex items-center gap-3">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    disabled={uploading}
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    {uploading && <Loader2 className="mr-2 size-3.5 animate-spin" />}
+                    Select file
+                  </Button>
+                  <span className="text-xs text-muted-foreground">
+                    PDF, DOC, Excel, or images up to 10MB
+                  </span>
+                </div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv,image/jpeg,image/png,image/webp,image/gif"
+                  className="hidden"
+                  onChange={handleAttachmentChange}
+                />
+              </CardContent>
+            </Card>
           </div>
 
           <div className="space-y-6">
@@ -344,7 +499,7 @@ export default function CreateTicketPage() {
                 </div>
               </CardContent>
               <CardFooter className="pt-0">
-                <Button type="submit" className="w-full" disabled={loading}>
+                <Button type="submit" className="w-full" disabled={loading || uploading}>
                   {loading ? (
                     <Loader2 className="size-4 animate-spin mr-2" />
                   ) : (

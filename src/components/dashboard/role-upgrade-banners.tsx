@@ -74,13 +74,13 @@ function TraineeUpgradeModal({ open, onClose }: { open: boolean; onClose: () => 
 
         {/* CTA */}
         <div className="border-t border-emerald-500/15 bg-emerald-950/30 px-6 py-4 flex items-center justify-between gap-3">
-          <p className="text-xs text-white/40">Enrollment is by application — reviewed within 24 hours.</p>
+          <p className="text-xs text-white/40">Choose a training plan, complete checkout, then set up your trainee profile.</p>
           <Button
             asChild
             className="shrink-0 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white font-bold shadow-lg shadow-emerald-500/30"
           >
-            <Link href="/join/trainee">
-              Apply Now
+            <Link href="/join/trainee/plan">
+              Choose Plan
               <ArrowRight className="ml-1.5 size-3.5" />
             </Link>
           </Button>
