@@ -5,8 +5,10 @@
 - Current storage: Supabase PostgreSQL table
 - Collection-equivalent name: `ingress_charts`
 - Source migration: `supabase/migrations/20260404000011_ingress_charts.sql`
+- Legacy Mongo import migration: `supabase/migrations/20260513000003_ingress_charts_legacy_mongo_import.sql`
 - Admin create API: `POST /api/admin/ingress-charts`
 - Admin edit API: `PATCH /api/admin/ingress-charts/:id`
+- Legacy Mongo import API: `POST /api/admin/ingress-charts/import-mongo`
 - Community read API: `GET /api/community/ingress-charts` and `GET /api/community/ingress-charts/:id`
 
 Note: this project currently stores Ingress Charts in PostgreSQL via Supabase, not in a MongoDB collection. The migration says it was ported from the legacy NestJS `IngressChart` MongoDB schema.
@@ -38,6 +40,10 @@ Note: this project currently stores Ingress Charts in PostgreSQL via Supabase, n
 | `is_published` | `boolean` | `DEFAULT false` | Published charts are visible to active community members |
 | `author_name` | `text` | nullable | Author/admin display name |
 | `author_email` | `text` | nullable | Author/admin email |
+| `mongo_id` | `text` | unique index via import migration | Legacy MongoDB `_id`; used as the import idempotency key |
+| `legacy_user_id` | `text` | nullable | Legacy MongoDB `userId` |
+| `legacy_year` | `integer` | nullable | Legacy MongoDB `year` |
+| `legacy_mongo_document` | `jsonb` | nullable | Full legacy MongoDB document serialized as relaxed Extended JSON |
 | `created_at` | `timestamptz` | `DEFAULT now()` | Creation timestamp |
 | `updated_at` | `timestamptz` | `DEFAULT now()` | Update timestamp |
 
@@ -155,6 +161,35 @@ Flexible JSON object for sector-specific interpretation. No strict runtime shape
 - Row Level Security is enabled on `ingress_charts`.
 - Published charts can be selected by community users through the policy condition `is_published = true`.
 - Admin CRUD uses the Supabase service role through `createAdminClient()`.
+
+## Legacy Mongo Import
+
+The new import endpoint is:
+
+```http
+POST /api/admin/ingress-charts/import-mongo
+```
+
+It fetches these config values through `POST /api/astro/fetch-config`:
+
+- `INGRESS_CHARTS_MONGO_COLLECTION`
+- `OLD_DIVINE_DB_NAME`
+- `old_divine_mongo_url`
+
+The import reads every document from the configured MongoDB collection, checks `ingress_charts.mongo_id` against each Mongo `_id`, and inserts only missing records. It maps known Mongo fields into first-class Postgres columns and stores the complete original Mongo document in `legacy_mongo_document`.
+
+Useful request options:
+
+```json
+{
+  "dry_run": true,
+  "limit": 10,
+  "batch_size": 100,
+  "publish_imported": false
+}
+```
+
+Default behavior imports all source documents, skips existing `mongo_id` values, and leaves imported charts unpublished unless `publish_imported` is explicitly `true`.
 
 ## Save Flow Summary
 

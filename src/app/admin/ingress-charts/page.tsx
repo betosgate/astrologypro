@@ -27,6 +27,7 @@ import {
   ChevronDown,
   Loader2,
 } from "lucide-react";
+import { toast } from "sonner";
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
 
@@ -188,6 +189,31 @@ export default function AdminIngressChartsPage() {
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [importing, setImporting] = useState(false);
+
+  async function handleImportMongo() {
+    setImporting(true);
+    try {
+      const res = await fetch("/api/admin/ingress-charts/import-mongo", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dry_run: false }),
+      });
+      
+      const json = await res.json();
+      if (res.ok) {
+        toast.success(`Import completed! Processed: ${json.processed}, Inserted: ${json.inserted}`);
+        fetchCharts(1, true); // Refresh the list
+      } else {
+        toast.error(`Import failed: ${json.detail || json.error || "Unknown error"}`);
+      }
+    } catch (error) {
+      toast.error("An error occurred during import.");
+      console.error(error);
+    } finally {
+      setImporting(false);
+    }
+  }
 
   // Filters
   const [search, setSearch] = useState("");
@@ -294,11 +320,40 @@ export default function AdminIngressChartsPage() {
           <h1 className="text-2xl font-bold">Mundane Astrology</h1>
           <p className="text-muted-foreground">Manage planetary ingress chart publications.</p>
         </div>
-        <Button asChild size="sm">
-          <Link href="/admin/ingress-charts/new">
-            <Plus className="mr-1.5 size-4" /> New Chart
-          </Link>
-        </Button>
+        <div className="flex gap-2">
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button size="sm" variant="outline" disabled={importing}>
+                {importing ? <Loader2 className="mr-1.5 size-4 animate-spin" /> : <Globe className="mr-1.5 size-4" />}
+                Import Mongo
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Import from MongoDB?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will connect to the legacy MongoDB and import ingress charts.
+                  Existing charts with the same Mongo ID will be skipped.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => handleImportMongo()}
+                  className="bg-primary text-primary-foreground hover:bg-primary/90"
+                >
+                  Import
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+
+          <Button asChild size="sm">
+            <Link href="/admin/ingress-charts/new">
+              <Plus className="mr-1.5 size-4" /> New Chart
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {/* Stats bar */}
