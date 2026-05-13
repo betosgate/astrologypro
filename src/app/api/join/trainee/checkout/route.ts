@@ -24,6 +24,43 @@ type PricingPlanRow = {
     | null;
 };
 
+type AdminClient = ReturnType<typeof createAdminClient>;
+
+function slugify(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 40);
+}
+
+async function buildAvailableTraineeUsername(
+  admin: AdminClient,
+  preferredValue: string,
+  userId: string,
+) {
+  const base = slugify(preferredValue) || `trainee-${userId.slice(0, 8)}`;
+
+  for (let index = 0; index < 20; index += 1) {
+    const suffix = index === 0 ? "" : `-${index + 1}`;
+    const username = `${base}${suffix}`.slice(0, 50);
+    const { count, error } = await admin
+      .from("trainees")
+      .select("id", { head: true, count: "exact" })
+      .eq("username", username);
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    if ((count ?? 0) === 0) {
+      return username;
+    }
+  }
+
+  return `${base.slice(0, 41)}-${userId.slice(0, 8)}`;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const origin = request.nextUrl.origin;
@@ -47,18 +84,60 @@ export async function POST(request: NextRequest) {
     const admin = createAdminClient();
     const { data: trainee } = await admin
       .from("trainees")
-      .select("id, user_id, name, email, username, paid_at")
+      .select("id, user_id, name, email, username, paid_at, service_package_code")
       .eq("user_id", user.id)
       .maybeSingle();
+    let pendingTraineeProfile: {
+      name: string;
+      email: string;
+      username: string;
+      servicePackageCode: string | null;
+      source: string;
+    } | null = null;
 
     if (!trainee) {
-      return NextResponse.json(
-        { error: "No trainee invitation registration found for this account." },
-        { status: 404 }
+      const { data: diviner } = await admin
+        .from("diviners")
+        .select("id, display_name, username, service_package_code")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (!diviner) {
+        return NextResponse.json(
+          { error: "No trainee registration found for this account." },
+          { status: 404 }
+        );
+      }
+
+      const email = (user.email ?? "").trim().toLowerCase();
+      if (!email) {
+        return NextResponse.json(
+          { error: "No email address available for this account." },
+          { status: 422 }
+        );
+      }
+
+      const displayName =
+        diviner.display_name ??
+        (user.user_metadata?.name as string | undefined) ??
+        email.split("@")[0] ??
+        "Trainee";
+      const username = await buildAvailableTraineeUsername(
+        admin,
+        diviner.username ?? displayName,
+        user.id,
       );
+
+      pendingTraineeProfile = {
+        name: displayName,
+        email,
+        username,
+        servicePackageCode: diviner.service_package_code ?? "both",
+        source: "diviner_trainee_upgrade",
+      };
     }
 
-    if (trainee.paid_at) {
+    if (trainee?.paid_at) {
       return NextResponse.json(
         { error: "Your trainee program payment is already complete." },
         { status: 409 }
@@ -137,7 +216,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const email = (user.email ?? trainee.email ?? "").trim().toLowerCase();
+    const email = (user.email ?? trainee?.email ?? pendingTraineeProfile?.email ?? "").trim().toLowerCase();
     if (!email) {
       return NextResponse.json(
         { error: "No email address available for this account." },
@@ -161,12 +240,23 @@ export async function POST(request: NextRequest) {
       line_items: lineItems,
       metadata: {
         userId: user.id,
-        traineeId: trainee.id,
         planId,
         itemKey: TRAINEE_ITEM_KEY,
         planName: dbPlan.display_name,
         type: "trainee_signup",
-        source: "invited_trainee",
+        source:
+          pendingTraineeProfile?.source ??
+          (user.user_metadata?.invited_by_admin === true
+            ? "invited_trainee"
+            : "existing_trainee"),
+        ...(trainee?.id ? { traineeId: trainee.id } : {}),
+        traineeName: trainee?.name ?? pendingTraineeProfile?.name ?? "",
+        traineeEmail: trainee?.email ?? pendingTraineeProfile?.email ?? email,
+        traineeUsername: trainee?.username ?? pendingTraineeProfile?.username ?? "",
+        servicePackageCode:
+          trainee?.service_package_code ??
+          pendingTraineeProfile?.servicePackageCode ??
+          "both",
       },
       success_url: `${origin}/trainee-signup/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/join/trainee/plan?cancelled=1`,
