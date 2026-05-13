@@ -111,18 +111,24 @@ const statusColors: Record<string, string> = {
   cancelled: "bg-gray-400/10 text-gray-400 border-gray-400/20",
 };
 
-function formatStatus(s: string) {
+function formatStatus(s: string | null | undefined) {
+  if (!s) return "Unknown";
   return s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-function formatDateTime(d: string) {
-  return new Date(d).toLocaleString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
+function formatDateTime(d: string | null | undefined) {
+  if (!d) return "—";
+  try {
+    return new Date(d).toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  } catch {
+    return "Invalid Date";
+  }
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -159,22 +165,29 @@ export default function AdminTicketDetailPage() {
   const [isInternal, setIsInternal] = useState(true);
 
   const loadTicket = useCallback(async () => {
+    if (!ticketId) return;
     try {
       const res = await fetch(`/api/admin/tickets/${ticketId}`);
       if (!res.ok) {
-        const err = await res.json();
+        const err = await res.json().catch(() => ({ detail: "Unknown error" }));
         toast.error(err.detail ?? "Failed to load ticket.");
         router.push("/admin/tickets");
         return;
       }
       const json: TicketData = await res.json();
+      
+      // Safety: Ensure messages and history are arrays
+      json.messages = json.messages || [];
+      json.history = json.history || [];
+      
       setData(json);
-      setStatus(json.ticket.status);
-      setPriority(json.ticket.priority);
-      setAssignedTeam(json.ticket.assigned_team ?? "");
-      setQueueId(json.ticket.queue_id ?? "");
-      setResolution(json.ticket.resolution ?? "");
-    } catch {
+      setStatus(json.ticket?.status || "open");
+      setPriority(json.ticket?.priority || "normal");
+      setAssignedTeam(json.ticket?.assigned_team ?? "");
+      setQueueId(json.ticket?.queue_id ?? "");
+      setResolution(json.ticket?.resolution ?? "");
+    } catch (error) {
+      console.error("Ticket Load Error:", error);
       toast.error("Failed to load ticket.");
     } finally {
       setLoading(false);
@@ -320,11 +333,20 @@ export default function AdminTicketDetailPage() {
     );
   }
 
-  if (!data) return null;
+  if (!data || !data.ticket) {
+    console.log("Ticket Detail: Data is missing or incomplete", data);
+    return null;
+  }
 
-  const { ticket, messages, history } = data;
-  const publicMessages = messages.filter((m) => !m.is_internal);
-  const internalNotes = messages.filter((m) => m.is_internal);
+  // Safety first: log the data to help debug in F12 console
+  console.log("Ticket Detail Data:", data);
+
+  const { ticket, messages = [], history = [] } = data;
+  
+  // Safe filtering
+  const publicMessages = Array.isArray(messages) ? messages.filter((m) => m && !m.is_internal) : [];
+  const internalNotes = Array.isArray(messages) ? messages.filter((m) => m && m.is_internal) : [];
+  const safeHistory = Array.isArray(history) ? history : [];
 
   return (
     <div className="space-y-6">
@@ -561,7 +583,7 @@ export default function AdminTicketDetailPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                {history.map((entry) => (
+                {safeHistory.map((entry) => (
                   <div key={entry.id} className="flex gap-3 text-sm">
                     <span className="text-muted-foreground shrink-0 text-xs mt-0.5">
                       {formatDateTime(entry.created_at)}
@@ -721,12 +743,12 @@ export default function AdminTicketDetailPage() {
 
               <div className="space-y-1.5">
                 <Label className="text-xs">Assigned Team</Label>
-                <Select value={assignedTeam} onValueChange={setAssignedTeam}>
+                <Select value={assignedTeam || "_none"} onValueChange={(v) => setAssignedTeam(v === "_none" ? "" : v)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Unassigned" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Unassigned</SelectItem>
+                    <SelectItem value="_none">Unassigned</SelectItem>
                     {["support", "finance", "tech", "ops", "content", "moderation"].map((t) => (
                       <SelectItem key={t} value={t}>
                         {formatStatus(t)}

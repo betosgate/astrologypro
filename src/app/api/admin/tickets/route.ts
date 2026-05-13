@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminUser } from "@/lib/admin-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { notifyStaffOfTicket } from "@/lib/notifications/tickets";
 
 export const dynamic = "force-dynamic";
 
@@ -138,9 +139,20 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return problem(500, "Database Error", error.message);
   }
 
+  const typedTicket = ticket as { id: string; subject: string; priority: string; category: string };
+
+  // Trigger notifications
+  await notifyStaffOfTicket({
+    ticketId: typedTicket.id,
+    subject: typedTicket.subject,
+    priority: typedTicket.priority,
+    category: typedTicket.category,
+    creatorEmail: body.requester_email
+  });
+
   // Audit log
   await admin.from("ticket_history").insert({
-    ticket_id: (ticket as { id: string }).id,
+    ticket_id: typedTicket.id,
     actor_user_id: admin_user.id,
     event_type: "created",
     new_value: "open",
