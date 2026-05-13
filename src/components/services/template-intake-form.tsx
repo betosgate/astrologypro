@@ -32,6 +32,7 @@ interface TemplateIntakeFormProps {
   templateName: string;
   templateSlug: string;
   embedded?: boolean;
+  discountToken?: string | null;
 }
 
 interface TemplateCityAutocompleteProps {
@@ -206,12 +207,20 @@ function BirthDetailsCard({
   );
 }
 
+function appendDiscountToken(href: string, discountToken: string | null | undefined) {
+  if (!discountToken || typeof window === "undefined") return href;
+  const url = new URL(href, window.location.origin);
+  url.searchParams.set("discount_token", discountToken);
+  return `${url.pathname}${url.search}${url.hash}`;
+}
+
 export function TemplateIntakeForm({
   config,
   category,
   templateName,
   templateSlug,
   embedded = false,
+  discountToken = null,
 }: TemplateIntakeFormProps) {
   const router = useRouter();
   const [state, setState] = useState<ServiceTemplateIntakeState>(createEmptyIntakeState);
@@ -271,13 +280,16 @@ export function TemplateIntakeForm({
       const fallbackSubmissionId =
         typeof json.submission?.id === "string" ? json.submission.id : "";
       const bookingUrl =
-        typeof json.next_url === "string"
-          ? json.next_url
-          : `/book/template/${encodeURIComponent(templateSlug)}${
-              fallbackSubmissionId
-                ? `?submission=${encodeURIComponent(fallbackSubmissionId)}`
-                : ""
-            }`;
+        appendDiscountToken(
+          typeof json.next_url === "string"
+            ? json.next_url
+            : `/book/template/${encodeURIComponent(templateSlug)}${
+                fallbackSubmissionId
+                  ? `?submission=${encodeURIComponent(fallbackSubmissionId)}`
+                  : ""
+              }`,
+          discountToken,
+        );
 
       if (isGeneralTemplate) {
         const search = new URLSearchParams();
@@ -289,6 +301,9 @@ export function TemplateIntakeForm({
         search.set("template", templateSlug);
         if (json.submission?.id) {
           search.set("submission", String(json.submission.id));
+        }
+        if (discountToken) {
+          search.set("discount_token", discountToken);
         }
 
         setPostSubmitChoices({

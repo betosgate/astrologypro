@@ -47,6 +47,10 @@ import { ManageSubscriptionButton } from "@/components/mystery-school/manage-sub
 import { ProfileCompletionCard, type ProfileCompletionData } from "@/components/community/profile-completion-card";
 import { DashboardFeedPreview } from "@/components/community/dashboard-feed-preview";
 import { RoleUpgradeBanners } from "@/components/dashboard/role-upgrade-banners";
+import {
+  PerennialReadingButton,
+  PerennialReadingCta,
+} from "@/components/community/perennial-reading-cta";
 import { getCommunityDashboardFeed } from "@/lib/dashboard-content";
 import { calcFamilyProfileCompletion } from "@/lib/community/family-profile-completion";
 import { formatBirthPlace } from "@/lib/community/birth-location";
@@ -1014,7 +1018,7 @@ export default async function CommunityDashboardPage() {
     {
       icon: BookText,
       label: "Book a Reading",
-      href: "/astrologers",
+      href: "/services",
       highlight: false,
     },
   ];
@@ -1375,12 +1379,14 @@ export default async function CommunityDashboardPage() {
               Manage Subscription
             </Link>
           </Button> */}
-          <Button asChild variant="outline" size="sm" className="w-full sm:w-auto">
-            <Link href="/astrologers">
-              <Compass className="mr-1.5 size-3.5" />
-              Get a Reading
-            </Link>
-          </Button>
+          <PerennialReadingButton
+            variant="outline"
+            size="sm"
+            className="w-full sm:w-auto"
+          >
+            <Compass className="mr-1.5 size-3.5" />
+            Get a Reading
+          </PerennialReadingButton>
           <Button asChild variant="outline" size="sm" className="w-full sm:w-auto">
             <Link href="/community/library">
               <BookMarked className="mr-1.5 size-3.5" />
@@ -1570,16 +1576,13 @@ export default async function CommunityDashboardPage() {
         <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
           {quickActions.map((action) => {
             const Icon = action.icon;
-            return (
-              <Link
-                key={action.label}
-                href={action.href}
-                className={`group relative flex flex-col items-center gap-2 rounded-xl border p-3 text-center transition-all hover:border-primary/40 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
-                  action.highlight
-                    ? "border-primary/30 bg-card shadow-[0_2px_8px_-2px_rgba(0,0,0,0.05)]"
-                    : "border-border bg-card"
-                }`}
-              >
+            const className = `group relative flex flex-col items-center gap-2 rounded-xl border p-3 text-center transition-all hover:border-primary/40 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+              action.highlight
+                ? "border-primary/30 bg-card shadow-[0_2px_8px_-2px_rgba(0,0,0,0.05)]"
+                : "border-border bg-card"
+            }`;
+            const content = (
+              <>
                 {/* Pending action indicator dot */}
                 {action.highlight && (
                   <span className="absolute -top-0.5 -right-0.5 flex h-2 w-2">
@@ -1594,6 +1597,20 @@ export default async function CommunityDashboardPage() {
                 <span className="text-[11px] font-medium leading-tight text-foreground">
                   {action.label}
                 </span>
+              </>
+            );
+
+            if (action.label === "Book a Reading") {
+              return (
+                <PerennialReadingCta key={action.label} className={className}>
+                  {content}
+                </PerennialReadingCta>
+              );
+            }
+
+            return (
+              <Link key={action.label} href={action.href} className={className}>
+                {content}
               </Link>
             );
           })}
