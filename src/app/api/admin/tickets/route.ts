@@ -20,6 +20,12 @@ interface CreateJobTicketBody {
   requester_name?: string;
   requester_role?: string;
   tags?: string[];
+  attachments?: Array<{
+    url: string;
+    name: string;
+    type: string;
+    size: number;
+  }>;
 }
 
 // ─── Problem Details helper ───────────────────────────────────────────────────
@@ -130,6 +136,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       requester_name: body.requester_name ?? null,
       requester_role: body.requester_role ?? "staff",
       tags: body.tags ?? [],
+      metadata: {
+        attachments: Array.isArray(body.attachments) ? body.attachments : [],
+      },
       created_by: admin_user.id,
     })
     .select()

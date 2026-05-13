@@ -97,6 +97,7 @@ import { MIGRATION_SQL as MIG_20260506000003_MSDA } from "@/data/migrations/2026
 import { MIGRATION_SQL as MIG_20260507000001_SFMC } from "@/data/migrations/20260507000001_self_family_member_contract";
 import { MIGRATION_SQL as MIG_20260511000001_PM3 } from "@/data/migrations/20260511000001_pm_plan_tiers_three_plan_alignment";
 import { MIGRATION_SQL as MIG_20260513000001_TCTC } from "@/data/migrations/20260513000001_trainee_customer_terms_contract";
+import { MIGRATION_SQL as MIG_20260513000003 } from "@/data/migrations/20260513000003_ingress_charts_legacy_mongo_import";
 
 /**
  * Allowlisted migrations that the admin migration runner can execute.
@@ -913,6 +914,14 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Normalizes post-login trainee contract requirements from Diviner Service Agreement to Customer Terms of Service. Pending trainee diviner-service requirements are superseded so the next contract orchestration pass creates the correct Customer Terms requirement.",
     sortKey: "20260513000001",
     sql: MIG_20260513000001_TCTC,
+  },
+  "20260513000003_ingress_charts_legacy_mongo_import": {
+    id: "20260513000003_ingress_charts_legacy_mongo_import",
+    title: "Ingress Charts: legacy MongoDB import support",
+    description:
+      "Adds mongo_id, legacy_user_id, legacy_year, and legacy_mongo_document columns to ingress_charts table for idempotent MongoDB imports. Additive only.",
+    sortKey: "20260513000003",
+    sql: MIG_20260513000003,
   },
 };
 
