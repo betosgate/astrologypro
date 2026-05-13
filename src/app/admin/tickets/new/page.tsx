@@ -159,7 +159,7 @@ export default function CreateTicketPage() {
                     value={formData.type} 
                     onValueChange={(v) => setFormData({ ...formData, type: v })}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="w-full">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -178,7 +178,7 @@ export default function CreateTicketPage() {
                     value={formData.priority} 
                     onValueChange={(v) => setFormData({ ...formData, priority: v })}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="w-full">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
