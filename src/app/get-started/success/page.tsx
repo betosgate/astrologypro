@@ -16,6 +16,7 @@ import {
   formatProfessionalDivinationCourseTrack,
   inferProfessionalDivinationCourseTrack,
 } from "@/lib/professional-divination-course";
+import { finalizeInvitedDivinerFromSessionId } from "@/lib/invited-diviner-upgrade";
 import { createClient } from "@/lib/supabase/server";
 import { stripe } from "@/lib/stripe/client";
 import { finalizeTraineeDivinerUpgradeFromSessionId } from "@/lib/trainee-diviner-upgrade";
@@ -66,6 +67,7 @@ async function getCheckoutDetails(sessionId: string) {
   const recurringCurrency = subscriptionItem?.price.currency ?? session.currency;
 
   return {
+    flowType: session.metadata?.type ?? null,
     headingPlan: planName,
     rows: [
       ["Amount paid", formatCheckoutAmount(session.amount_total, session.currency)],
@@ -106,19 +108,25 @@ export default async function GetStartedSuccessPage({
     redirect("/get-started?error=missing-session");
   }
 
-  const result = await finalizeTraineeDivinerUpgradeFromSessionId({
-    sessionId,
-    userId: user.id,
-    markTraineePaid: false,
-    ensureContracts: true,
-  });
+  const checkoutDetails = await getCheckoutDetails(sessionId);
+  const isInvitedDiviner = checkoutDetails.flowType === "invited_diviner";
+  const result = isInvitedDiviner
+    ? await finalizeInvitedDivinerFromSessionId({
+        sessionId,
+        userId: user.id,
+      })
+    : await finalizeTraineeDivinerUpgradeFromSessionId({
+        sessionId,
+        userId: user.id,
+        markTraineePaid: false,
+        ensureContracts: true,
+      });
 
   if (!result?.divinerSaved) {
     redirect("/get-started?error=provision-failed");
   }
 
-  const checkoutDetails = await getCheckoutDetails(sessionId);
-  const contractsHref = `/contracts/pending?source=get-started&session_id=${encodeURIComponent(sessionId)}&next=${encodeURIComponent("/dashboard")}`;
+  const contractsHref = `/contracts/pending?source=${isInvitedDiviner ? "invited-diviner" : "get-started"}&session_id=${encodeURIComponent(sessionId)}&next=${encodeURIComponent("/dashboard")}`;
 
   return (
     <div className="fixed inset-0 z-[1000] flex items-center justify-center overflow-y-auto bg-slate-950 p-6 text-white">

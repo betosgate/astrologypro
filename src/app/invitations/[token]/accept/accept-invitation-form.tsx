@@ -35,6 +35,30 @@ type ReadyStateProps = {
 
 type AcceptInvitationFormProps = InvalidStateProps | ReadyStateProps;
 
+function nameToUsername(fullName: string): string {
+  return fullName
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-{2,}/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 30);
+}
+
+function roleNeedsUsername(roleSlug: string) {
+  return ["trainee", "advocate", "social_advo"].includes(roleSlug);
+}
+
+function validateUsername(username: string) {
+  if (username.length < 3) return "Username must be at least 3 characters.";
+  if (username.length > 30) return "Username must be 30 characters or fewer.";
+  if (!/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/.test(username)) {
+    return "Username must start and end with a letter or number, and can only contain lowercase letters, numbers, and hyphens.";
+  }
+  return null;
+}
+
 function splitName(fullName: string) {
   const parts = fullName.trim().split(/\s+/);
   const firstName = parts.shift() ?? "";
@@ -58,34 +82,52 @@ function normalizeOptionalPhone(value: string) {
 export function AcceptInvitationForm(props: AcceptInvitationFormProps) {
   const router = useRouter();
   const [fullName, setFullName] = useState("");
+  const [username, setUsername] = useState("");
+  const [usernameEdited, setUsernameEdited] = useState(false);
   const [phone, setPhone] = useState("");
   const [phoneError, setPhoneError] = useState<string | null>(null);
   const [password, setPassword] = useState("");
-  const [passwordError, setPasswordError] = useState<string | null>(null);
   const [confirmPassword, setConfirmPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
   const showPhoneField = props.state === "ready" && props.roleSlug !== "admin";
+  const showUsernameField = props.state === "ready" && roleNeedsUsername(props.roleSlug);
+
+  function handleNameChange(value: string) {
+    setFullName(value);
+    if (!usernameEdited) {
+      setUsername(nameToUsername(value));
+    }
+  }
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     if (props.state !== "ready") return;
+    setFormError(null);
 
     const { firstName, lastName } = splitName(fullName);
     if (!firstName || !lastName) {
-      toast.error("Enter your first and last name.");
+      setFormError("Enter your first and last name.");
       return;
     }
     if (!PASSWORD_REGEX.test(password)) {
-      setPasswordError(PASSWORD_ERROR);
-      toast.error(PASSWORD_ERROR);
+      setFormError(PASSWORD_ERROR);
       return;
     }
-    setPasswordError(null);
 
     if (password !== confirmPassword) {
-      toast.error("Passwords do not match.");
+      setFormError("Passwords do not match.");
       return;
     }
+    const normalizedUsername = username.trim().toLowerCase();
+    if (showUsernameField) {
+      const usernameError = validateUsername(normalizedUsername);
+      if (usernameError) {
+        setFormError(usernameError);
+        return;
+      }
+    }
+
     const normalizedPhone = showPhoneField ? normalizeOptionalPhone(phone) : null;
     if (normalizedPhone === undefined) {
       setPhoneError(PHONE_ERROR);
@@ -103,6 +145,7 @@ export function AcceptInvitationForm(props: AcceptInvitationFormProps) {
           first_name: firstName,
           last_name: lastName,
           phone: normalizedPhone ?? undefined,
+          username: showUsernameField ? normalizedUsername : undefined,
           password,
         }),
       });
@@ -179,12 +222,38 @@ export function AcceptInvitationForm(props: AcceptInvitationFormProps) {
                 <Input
                   id="invite-full-name"
                   value={fullName}
-                  onChange={(event) => setFullName(event.target.value)}
+                  onChange={(event) => handleNameChange(event.target.value)}
                   placeholder="First and last name"
                   autoComplete="name"
                   required
                 />
               </div>
+
+              {showUsernameField && (
+                <div className="space-y-2">
+                  <Label htmlFor="invite-username">Your URL</Label>
+                  <Input
+                    id="invite-username"
+                    type="text"
+                    value={username}
+                    onChange={(event) => {
+                      setUsernameEdited(true);
+                      setUsername(
+                        event.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "").slice(0, 30)
+                      );
+                    }}
+                    placeholder="maya-starweaver"
+                    autoComplete="username"
+                    required
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    Your page:{" "}
+                    <span className="font-medium text-foreground">
+                      astrologypro.com/{username || "your-name"}
+                    </span>
+                  </p>
+                </div>
+              )}
 
               {showPhoneField && (
                 <div className="space-y-2">
@@ -220,28 +289,13 @@ export function AcceptInvitationForm(props: AcceptInvitationFormProps) {
                 <PasswordInput
                   id="invite-password"
                   value={password}
-                  onChange={(event) => {
-                    setPassword(event.target.value);
-                    setPasswordError(null);
-                  }}
+                  onChange={(event) => setPassword(event.target.value)}
                   placeholder="At least 8 characters"
                   autoComplete="new-password"
                   required
                   minLength={8}
-                  aria-invalid={passwordError ? "true" : "false"}
-                  aria-describedby={
-                    passwordError ? "invite-password-error" : "invite-password-help"
-                  }
+                  showStrength
                 />
-                {passwordError ? (
-                  <p id="invite-password-error" className="text-xs font-medium text-destructive">
-                    {passwordError}
-                  </p>
-                ) : (
-                  <p id="invite-password-help" className="text-xs text-muted-foreground">
-                    Use uppercase, lowercase, a number, and a special character.
-                  </p>
-                )}
               </div>
 
               <div className="space-y-2">
@@ -253,8 +307,16 @@ export function AcceptInvitationForm(props: AcceptInvitationFormProps) {
                   placeholder="Confirm your password"
                   autoComplete="new-password"
                   required
+                  minLength={8}
+                  confirmValue={password}
                 />
               </div>
+
+              {formError && (
+                <div className="rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-3">
+                  <p className="text-sm text-destructive">{formError}</p>
+                </div>
+              )}
 
               <Button type="submit" className="w-full" disabled={submitting}>
                 {submitting ? (
