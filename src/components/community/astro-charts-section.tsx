@@ -37,6 +37,9 @@ type NatalChartItem = {
   natal_chart: Record<string, unknown>;
   full_name: string;
   date_of_birth: string;
+  natal_report_id?: string | null;
+  natal_report_status?: string | null;
+  chart_state?: string | null;
 };
 
 /**
@@ -55,6 +58,7 @@ type MonthlyTransitItem = {
   full_report_id: string | null;
   full_report_status: string | null;
   full_report_generated_at: string | null;
+  report_state?: string | null;
 };
 
 type ApiResponse = {
@@ -194,6 +198,7 @@ export function AstroChartsSection() {
                 full_report_id: null,
                 full_report_status: null,
                 full_report_generated_at: null,
+                report_state: null,
               },
             ]
           : [];
@@ -303,7 +308,11 @@ export function AstroChartsSection() {
               const total = natalCharts.length;
               const isMulti = total > 1;
               const isGenerated =
-                active.natal_chart && Object.keys(active.natal_chart).length > 0;
+                active.chart_state === "generated" ||
+                Boolean(active.natal_report_id) ||
+                Boolean(
+                  active.natal_chart && Object.keys(active.natal_chart).length > 0
+                );
               const ctaLabel = isGenerated
                 ? "View Full Chart"
                 : "Generate Natal Chart";
@@ -464,14 +473,19 @@ export function AstroChartsSection() {
                 if (isPending) return "Generating…";
                 if (active.full_report_status === "failed")
                   return "Retry Transit Report";
-                if (active.full_report_id) return "View Transit Report";
+                if (
+                  active.report_state === "generated" ||
+                  active.full_report_id
+                )
+                  return "View Transit Report";
                 return "Generate Transit Report";
               })();
               const ctaDisabled = isPending;
-              const ctaHref = active.full_report_id
-                ? detailedHref
-                : "/community/transits";
-              const statusLabel = active.full_report_id
+              const hasGeneratedReport =
+                active.report_state === "generated" || Boolean(active.full_report_id);
+              const ctaHref =
+                hasGeneratedReport ? detailedHref : "/community/transits";
+              const statusLabel = hasGeneratedReport
                 ? "Report Ready"
                 : "Ready to Generate";
               return (
@@ -481,7 +495,7 @@ export function AstroChartsSection() {
                       <Badge
                         variant="default"
                         className={`text-xs shrink-0 ${
-                          active.full_report_id ? "bg-blue-500" : "bg-amber-500"
+                          hasGeneratedReport ? "bg-blue-500" : "bg-amber-500"
                         }`}
                       >
                         {statusLabel}
