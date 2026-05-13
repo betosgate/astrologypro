@@ -1,13 +1,13 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { requireAdmin } from "@/lib/admin-auth";
 import { getUserPortals } from "@/lib/user-roles";
 import { Sidebar } from "@/components/dashboard/sidebar";
 import { MobileNav } from "@/components/dashboard/mobile-nav";
 import { PhoneWidgetLoader } from "@/components/dashboard/phone-widget-loader";
 import { PortalSwitcher } from "@/components/shared/portal-switcher";
 import { RouteTracker } from "@/components/shared/route-tracker";
+import { SupportWidget } from "@/components/dashboard/support-widget";
 
 export const metadata = {
   title: "Dashboard",
@@ -27,13 +27,17 @@ export default async function DashboardLayout({
 
   // Admins are never gated by diviner onboarding.
   // They may or may not have a diviners row — let them through regardless.
-  const adminUser = await requireAdmin();
-  const isAdmin = !!adminUser;
-
-  // Use admin client for the data fetch — auth is already verified above.
-  // This bypasses any RLS/session-cookie timing issue that could cause
-  // a false-negative and loop the user back to /onboarding.
   const admin = createAdminClient();
+  const { data: adminRow } = await admin
+    .from("admin_users")
+    .select("role")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  const isAdmin = adminRow?.role === "admin";
+  const isSupportStaff = adminRow?.role === "support_staff";
+  const isAnyAdmin = !!adminRow;
+
   const { data: diviner, error: divinerError } = await admin
     .from("diviners")
     .select(
@@ -47,22 +51,7 @@ export default async function DashboardLayout({
   }
 
   // Gate non-admin users.
-  //
-  // The invited-diviner flow (docs/tasks/2026-04-30/diviner-invite-
-  // registration-plan-gating.md) requires the dashboard to stay locked
-  // for invited diviners who haven't paid yet, while NOT regressing
-  // existing diviners whose onboarding wizard already set
-  // onboarding_completed=true regardless of Stripe subscription state.
-  //
-  // The discriminator is the combination:
-  //   onboarding_completed=false  ⇢  account is fresh
-  //   subscription_status!='active' ⇢  payment has not landed yet
-  // …because /api/join/diviner/register inserts the diviner row with
-  // onboarding_completed=false and the column default
-  // subscription_status='trialing'. The Stripe webhook + success-page
-  // finalize flips both fields together, so post-payment users skip
-  // both gates cleanly.
-  if (!isAdmin) {
+  if (!isAnyAdmin) {
     if (!diviner) redirect("/onboarding");
     if (
       !diviner.onboarding_completed &&
@@ -79,6 +68,8 @@ export default async function DashboardLayout({
     <div className="min-h-screen bg-background">
       <RouteTracker href="/dashboard" />
       <Sidebar
+        isAdmin={isAdmin}
+        isSupportStaff={isSupportStaff}
         diviner={{
           display_name: diviner?.display_name ?? user.email?.split("@")[0] ?? "Admin",
           username: diviner?.username ?? "",
@@ -98,6 +89,7 @@ export default async function DashboardLayout({
       </main>
       <MobileNav />
       <PhoneWidgetLoader />
+      <SupportWidget />
     </div>
   );
 }
