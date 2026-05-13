@@ -3,7 +3,7 @@ export function getInvitedRoleDestination(role: string | undefined): string {
     case "diviner":
       return "/onboarding?invited=true";
     case "trainee":
-      return "/join/trainee/profile?invited=true";
+      return "/join/trainee/plan?invited=true";
     case "perennial_mandalism":
     case "community_perennial_mandalism":
       return "/community/onboarding?invited=true";

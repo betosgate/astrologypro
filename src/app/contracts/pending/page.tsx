@@ -25,6 +25,18 @@ export default async function PendingContractsPage({
     redirect("/login");
   }
 
+  if (user.user_metadata?.invited_by_admin === true) {
+    const { data: trainee } = await supabase
+      .from("trainees")
+      .select("id, paid_at")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (trainee && !trainee.paid_at) {
+      redirect("/join/trainee/plan?invited=true");
+    }
+  }
+
   const resolvedSearchParams = searchParams ? await searchParams : {};
   const sourceParam = resolvedSearchParams.source;
   const source = Array.isArray(sourceParam) ? sourceParam[0] : sourceParam;

@@ -143,7 +143,13 @@ type FamilyTransitOwner = {
   birth_lng: number | string | null;
 };
 
-export default async function TransitsPage() {
+export default async function TransitsPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ focusMember?: string }>;
+}) {
+  const params = await searchParams;
+  const focusMemberId = params?.focusMember ?? null;
   const supabase = await createClient();
   const {
     data: { user },
@@ -440,7 +446,10 @@ export default async function TransitsPage() {
           <div className="flex items-center justify-between text-sm text-muted-foreground">
             <span>{cardData.length} member{cardData.length !== 1 ? "s" : ""} with transit access</span>
           </div>
-          <TransitCardExpander cards={cardData} />
+          <TransitCardExpander
+            cards={cardData}
+            initialExpandedFamilyMemberId={focusMemberId}
+          />
         </div>
       )}
 

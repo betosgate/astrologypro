@@ -99,7 +99,10 @@ const ROLE_HIERARCHY: Array<{
     check: (d) => !!d.trainee,
     destination: (d, isInvited) => {
       if (!d.trainee?.onboarding_completed) {
-        return isInvited ? getInvitedRoleDestination("trainee") : "/join/trainee/profile";
+        if (isInvited && !d.trainee.paid_at) {
+          return getInvitedRoleDestination("trainee");
+        }
+        return "/join/trainee/profile";
       }
       return "/trainee";
     },
@@ -178,7 +181,7 @@ interface PortalCheckData {
     onboarding_completed: boolean | null;
     subscription_status: string | null;
   } | null;
-  trainee: { id: string; onboarding_completed: boolean | null } | null;
+  trainee: { id: string; onboarding_completed: boolean | null; paid_at: string | null } | null;
   advocate: { id: string; onboarding_completed: boolean | null } | null;
   mysteryStudent: {
     id: string;
@@ -213,10 +216,15 @@ export async function resolveLoginDestination({
   isInvited,
   adminClient,
 }: ResolveOptions): Promise<string> {
-  // 1. Pending contract gate (legal — must sign before entering any portal)
+  // 1. Hard payment gate for invited trainees/diviners before legal or portal routing.
   const { data: earlyDiviner } = await adminClient
     .from("diviners")
     .select("id, onboarding_completed, subscription_status")
+    .eq("user_id", userId)
+    .maybeSingle();
+  const { data: earlyTrainee } = await adminClient
+    .from("trainees")
+    .select("id, onboarding_completed, paid_at")
     .eq("user_id", userId)
     .maybeSingle();
 
@@ -224,13 +232,18 @@ export async function resolveLoginDestination({
     return "/join/diviner/plan";
   }
 
+  if (isInvited && earlyTrainee && !earlyTrainee.paid_at) {
+    return getInvitedRoleDestination("trainee");
+  }
+
+  // 2. Pending contract gate (legal — must sign before entering any portal)
   const pendingContract = await getPendingContractDestination(userId).catch(() => null);
   if (pendingContract && !isAdmin) return pendingContract;
 
-  // 2. Admin shortcut — admin always goes to /admin unless they have a saved portal
+  // 3. Admin shortcut — admin always goes to /admin unless they have a saved portal
   //    (admins can also be diviners, so we still check saved portal below)
 
-  // 3. Check saved last portal
+  // 4. Check saved last portal
   const { data: prefs } = await adminClient
     .from("user_portal_preferences")
     .select("last_portal_url")
@@ -241,19 +254,14 @@ export async function resolveLoginDestination({
     return prefs.last_portal_url;
   }
 
-  // 4. Admin with no saved portal → /admin
+  // 5. Admin with no saved portal → /admin
   if (isAdmin) return "/admin";
 
-  // 5. First visit — fetch all role rows in parallel, pick by hierarchy
+  // 6. First visit — fetch all role rows in parallel, pick by hierarchy
   const [diviner, trainee, advocate, mysteryStudent, community, client, affiliate] =
     await Promise.all([
       Promise.resolve(earlyDiviner),
-      adminClient
-        .from("trainees")
-        .select("id, onboarding_completed")
-        .eq("user_id", userId)
-        .maybeSingle()
-        .then((r) => r.data),
+      Promise.resolve(earlyTrainee),
       adminClient
         .from("social_advocates")
         .select("id, onboarding_completed")

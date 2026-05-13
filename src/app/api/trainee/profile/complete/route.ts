@@ -97,7 +97,7 @@ export async function POST(req: NextRequest) {
     // ── Look up trainee ──
     let { data: trainee, error: lookupError } = await admin
       .from("trainees")
-      .select("id, service_package_code")
+      .select("id, service_package_code, paid_at")
       .eq("user_id", user.id)
       .maybeSingle();
 
@@ -121,7 +121,7 @@ export async function POST(req: NextRequest) {
           training_status: "active",
           onboarding_completed: false,
         })
-        .select("id, service_package_code")
+        .select("id, service_package_code, paid_at")
         .single();
 
       if (insertError) {
@@ -132,6 +132,13 @@ export async function POST(req: NextRequest) {
         );
       }
       trainee = newTrainee;
+    }
+
+    if (user.user_metadata?.invited_by_admin === true && !trainee.paid_at) {
+      return NextResponse.json(
+        { error: "Please complete your trainee program payment before profile setup." },
+        { status: 402 }
+      );
     }
 
     const allowedSpecialtiesForPackage = new Set(

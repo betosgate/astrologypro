@@ -16,6 +16,7 @@ import {
   Telescope,
 } from "lucide-react";
 import Link from "next/link";
+import { PerennialReadingButton } from "@/components/community/perennial-reading-cta";
 import type { MonthlyTransitReportSummaryItem } from "@/lib/community/monthly-transit-report-summary";
 
 export type TransitCardData = {
@@ -60,10 +61,17 @@ export type TransitCardData = {
 
 export function TransitCardExpander({
   cards,
+  initialExpandedFamilyMemberId,
 }: {
   cards: TransitCardData[];
+  initialExpandedFamilyMemberId?: string | null;
 }) {
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const initialExpandedCard = initialExpandedFamilyMemberId
+    ? cards.find((card) => card.familyMemberId === initialExpandedFamilyMemberId)
+    : null;
+  const [expandedId, setExpandedId] = useState<string | null>(
+    initialExpandedCard?.id ?? null
+  );
 
   return (
     <>
@@ -250,12 +258,10 @@ export function TransitCardExpander({
                       </Link>
                     </Button>
                   )} */}
-                  <Button size="sm" variant="ghost" asChild>
-                    <Link href="/diviner">
-                      <BookOpen className="mr-1.5 size-4" />
-                      Book Reading
-                    </Link>
-                  </Button>
+                  <PerennialReadingButton size="sm" variant="ghost">
+                    <BookOpen className="mr-1.5 size-4" />
+                    Book Reading
+                  </PerennialReadingButton>
                 </div>
               </CardContent>
             )}

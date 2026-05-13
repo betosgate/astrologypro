@@ -105,6 +105,66 @@ function buildContentHash(input: string) {
   return crypto.createHash("sha256").update(input).digest("hex");
 }
 
+function contractRequirementSortKey(params: {
+  requirement: UserContractRequirement;
+  templateById: Map<string, ContractTemplate>;
+  roleRequirementPriorityByKey: Map<string, number>;
+}) {
+  const template = params.templateById.get(params.requirement.contract_template_id);
+  const familyKey = template?.family_key ?? params.requirement.contract_template_id;
+  const priority =
+    params.roleRequirementPriorityByKey.get(
+      `${params.requirement.role_key}:${familyKey}:${params.requirement.trigger_event}`,
+    ) ?? Number.MAX_SAFE_INTEGER;
+
+  return {
+    priority,
+    roleKey: params.requirement.role_key,
+    title: params.requirement.rendered_title,
+    createdAt: params.requirement.created_at,
+  };
+}
+
+function sortContractRequirements(
+  requirements: UserContractRequirement[],
+  templates: ContractTemplate[],
+  roleRequirements: RoleContractRequirement[],
+) {
+  const templateById = new Map(templates.map((template) => [template.id, template]));
+  const roleRequirementPriorityByKey = new Map<string, number>();
+
+  for (const requirement of roleRequirements) {
+    const template = templateById.get(requirement.contract_template_id);
+    if (!template) continue;
+
+    const key = `${requirement.role_key}:${template.family_key}:${requirement.trigger_event}`;
+    const current = roleRequirementPriorityByKey.get(key);
+    if (current == null || requirement.priority < current) {
+      roleRequirementPriorityByKey.set(key, requirement.priority);
+    }
+  }
+
+  return [...requirements].sort((left, right) => {
+    const leftKey = contractRequirementSortKey({
+      requirement: left,
+      templateById,
+      roleRequirementPriorityByKey,
+    });
+    const rightKey = contractRequirementSortKey({
+      requirement: right,
+      templateById,
+      roleRequirementPriorityByKey,
+    });
+
+    return (
+      leftKey.priority - rightKey.priority ||
+      leftKey.roleKey.localeCompare(rightKey.roleKey) ||
+      leftKey.title.localeCompare(rightKey.title) ||
+      leftKey.createdAt.localeCompare(rightKey.createdAt)
+    );
+  });
+}
+
 function isTransientContractLookupError(error: unknown) {
   const message =
     error instanceof Error
@@ -534,6 +594,16 @@ export async function ensureUserContractRequirements(
       (req) => `${req.role_key}:${req.contract_template_id}:${req.trigger_event}`,
     ),
   );
+  const existingOpenFamilySet = new Set(
+    existingRequirements
+      .filter((req) => req.status === "pending" || req.status === "accepted")
+      .map((req) => {
+        const template = templateById.get(req.contract_template_id);
+        if (!template) return null;
+        return `${template.family_key}:${req.trigger_event}`;
+      })
+      .filter((value): value is string => Boolean(value)),
+  );
 
   const inserts: Array<Record<string, unknown>> = [];
   for (const requirement of requirements.filter(
@@ -557,6 +627,11 @@ export async function ensureUserContractRequirements(
       continue;
     }
 
+    const familyKey = `${template.family_key}:${requirement.trigger_event}`;
+    if (existingOpenFamilySet.has(familyKey)) {
+      continue;
+    }
+
     const rendered = await renderContractTemplateForUser({
       userId,
       roleKey: requirement.role_key,
@@ -577,6 +652,7 @@ export async function ensureUserContractRequirements(
       blocking: true,
       trigger_event: requirement.trigger_event,
     });
+    existingOpenFamilySet.add(familyKey);
   }
 
   if (inserts.length > 0) {
@@ -593,7 +669,11 @@ export async function ensureUserContractRequirements(
     .order("created_at", { ascending: true });
 
   if (error) throw new Error(error.message);
-  return (data ?? []) as UserContractRequirement[];
+  return sortContractRequirements(
+    (data ?? []) as UserContractRequirement[],
+    templates,
+    requirements,
+  );
 }
 
 export async function getPendingUserContractRequirements(

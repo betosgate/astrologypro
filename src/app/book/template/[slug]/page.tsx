@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ submission?: string }>;
+  searchParams: Promise<{ submission?: string; discount_token?: string }>;
 }
 
 /**
@@ -56,8 +56,9 @@ export default async function SharedBookingPage({
   searchParams,
 }: PageProps) {
   const { slug } = await params;
-  const { submission } = await searchParams;
+  const { submission, discount_token } = await searchParams;
   const submissionId = submission?.trim() ?? "";
+  const discountToken = discount_token?.trim() || null;
 
   const admin = createAdminClient();
   const [requestedTemplateRes, match, submissionRes] = await Promise.all([
@@ -103,7 +104,12 @@ export default async function SharedBookingPage({
       }
     : null;
 
-  const templateHomePath = `/services/${encodeURIComponent(requestedTemplate.slug as string)}`;
+  const templateHomePath = `/services/${encodeURIComponent(requestedTemplate.slug as string)}${
+    discountToken ? `?discount_token=${encodeURIComponent(discountToken)}` : ""
+  }`;
+  const servicesPath = discountToken
+    ? `/services?discount_token=${encodeURIComponent(discountToken)}`
+    : "/services";
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-purple-950">
@@ -137,7 +143,7 @@ export default async function SharedBookingPage({
             </p>
             <div className="mt-6">
               <Button asChild variant="outline">
-                <Link href="/services">Browse services</Link>
+                <Link href={servicesPath}>Browse services</Link>
               </Button>
             </div>
           </div>
@@ -155,6 +161,7 @@ export default async function SharedBookingPage({
             submissionSummary={submissionSummary}
             submissionError={null}
             compatibleDivinerCount={match.diviners.length}
+            discountToken={discountToken}
           />
         )}
       </div>
