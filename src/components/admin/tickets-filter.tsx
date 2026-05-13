@@ -11,7 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { X, Search } from "lucide-react";
-import { useRef, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 
 interface Queue {
   id: string;
@@ -42,7 +42,21 @@ export function TicketsFilter({
   const router = useRouter();
   const pathname = usePathname();
   const [, startTransition] = useTransition();
-  const searchRef = useRef<HTMLInputElement>(null);
+  const [searchValue, setSearchValue] = useState(currentSearch);
+  const [dateFromValue, setDateFromValue] = useState(currentDateFrom);
+  const [dateToValue, setDateToValue] = useState(currentDateTo);
+
+  useEffect(() => {
+    setSearchValue(currentSearch);
+  }, [currentSearch]);
+
+  useEffect(() => {
+    setDateFromValue(currentDateFrom);
+  }, [currentDateFrom]);
+
+  useEffect(() => {
+    setDateToValue(currentDateTo);
+  }, [currentDateTo]);
 
   function buildUrl(overrides: Record<string, string>) {
     const current: Record<string, string> = {
@@ -63,12 +77,21 @@ export function TicketsFilter({
     return qs ? `${pathname}?${qs}` : pathname;
   }
 
-  function handleSearchSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const val = searchRef.current?.value.trim() ?? "";
+  function handleSearchChange(value: string) {
+    setSearchValue(value);
     startTransition(() => {
-      router.push(buildUrl({ search: val }));
+      router.replace(buildUrl({ search: value.trim() }), { scroll: false });
     });
+  }
+
+  function handleDateFromChange(value: string) {
+    setDateFromValue(value);
+    router.push(buildUrl({ date_from: value, date_to: dateToValue }));
+  }
+
+  function handleDateToChange(value: string) {
+    setDateToValue(value);
+    router.push(buildUrl({ date_from: dateFromValue, date_to: value }));
   }
 
   const hasFilters =
@@ -83,20 +106,17 @@ export function TicketsFilter({
   return (
     <div className="space-y-3">
       {/* Search bar */}
-      <form onSubmit={handleSearchSubmit} className="flex items-center gap-2 max-w-md">
+      <div className="flex items-center gap-2 max-w-md">
         <div className="relative flex-1">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
           <Input
-            ref={searchRef}
-            defaultValue={currentSearch}
+            value={searchValue}
+            onChange={(e) => handleSearchChange(e.target.value)}
             placeholder="Search tickets by subject, requester, ticket #…"
             className="pl-8 h-9 text-sm"
           />
         </div>
-        <Button type="submit" size="sm" variant="outline" className="h-9 px-3">
-          Search
-        </Button>
-      </form>
+      </div>
 
       {/* Filter dropdowns */}
       <div className="flex flex-wrap items-center gap-3">
@@ -201,16 +221,16 @@ export function TicketsFilter({
         <div className="flex items-center gap-1.5">
           <Input
             type="date"
-            value={currentDateFrom}
-            onChange={(e) => router.push(buildUrl({ date_from: e.target.value }))}
+            value={dateFromValue}
+            onChange={(e) => handleDateFromChange(e.target.value)}
             className="h-9 w-36 text-sm"
             aria-label="From date"
           />
           <span className="text-xs text-muted-foreground">–</span>
           <Input
             type="date"
-            value={currentDateTo}
-            onChange={(e) => router.push(buildUrl({ date_to: e.target.value }))}
+            value={dateToValue}
+            onChange={(e) => handleDateToChange(e.target.value)}
             className="h-9 w-36 text-sm"
             aria-label="To date"
           />

@@ -2,6 +2,10 @@
 @import "tw-animate-css";
 @plugin "@tailwindcss/typography";
 
+/* Task notes are not UI source files; keep Tailwind/Turbopack from watching them. */
+@source not "../../tasks";
+@source not "../../docs/tasks";
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
