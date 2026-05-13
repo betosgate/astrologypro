@@ -98,10 +98,18 @@ function TraineeProfileContent() {
       }
       supabase
         .from("trainees")
-        .select("name, service_package_code")
+        .select("name, service_package_code, paid_at")
         .eq("user_id", data.user.id)
         .single()
         .then(({ data: trainee }) => {
+          if (
+            data.user?.user_metadata?.invited_by_admin === true &&
+            trainee &&
+            !trainee.paid_at
+          ) {
+            router.replace("/join/trainee/plan?invited=true");
+            return;
+          }
           if (trainee?.name) setDisplayName(trainee.name);
           const pkgCode =
             typeof trainee?.service_package_code === "string"
@@ -211,7 +219,7 @@ function TraineeProfileContent() {
   if (initialLoading) {
     return (
       <div className="flex min-h-screen flex-col">
-        <MarketingHeader />
+        <MarketingHeader hideDashboardReturnButton />
         <main className="flex flex-1 items-center justify-center">
           <Loader2 className="size-8 animate-spin text-primary" />
         </main>
@@ -222,7 +230,7 @@ function TraineeProfileContent() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <MarketingHeader />
+      <MarketingHeader hideDashboardReturnButton />
       <main className="flex flex-1 items-center justify-center px-4 py-12">
         <div className="w-full max-w-xl">
           {/* Progress indicator */}
@@ -499,7 +507,7 @@ export default function TraineeProfilePage() {
     <Suspense
       fallback={
         <div className="flex min-h-screen flex-col bg-[#070b14]">
-          <MarketingHeader />
+          <MarketingHeader hideDashboardReturnButton />
           <main className="flex flex-1 items-center justify-center">
             <Loader2 className="size-8 animate-spin text-primary" />
           </main>
