@@ -219,7 +219,7 @@ function TraineeProfileContent() {
   if (initialLoading) {
     return (
       <div className="flex min-h-screen flex-col">
-        <MarketingHeader hideDashboardReturnButton />
+        <MarketingHeader />
         <main className="flex flex-1 items-center justify-center">
           <Loader2 className="size-8 animate-spin text-primary" />
         </main>
@@ -230,7 +230,7 @@ function TraineeProfileContent() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <MarketingHeader hideDashboardReturnButton />
+      <MarketingHeader />
       <main className="flex flex-1 items-center justify-center px-4 py-12">
         <div className="w-full max-w-xl">
           {/* Progress indicator */}
@@ -507,7 +507,7 @@ export default function TraineeProfilePage() {
     <Suspense
       fallback={
         <div className="flex min-h-screen flex-col bg-[#070b14]">
-          <MarketingHeader hideDashboardReturnButton />
+          <MarketingHeader />
           <main className="flex flex-1 items-center justify-center">
             <Loader2 className="size-8 animate-spin text-primary" />
           </main>
