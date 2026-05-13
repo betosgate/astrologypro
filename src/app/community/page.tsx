@@ -1112,24 +1112,84 @@ export default async function CommunityDashboardPage() {
     name: string;
     relationship: string;
     missingRelationship: boolean;
+    priorityRank: number;
     sortKey: number;
+    orderKey: number;
     isMock?: boolean;
   };
 
   const primarySelfName = (member.full_name ?? "").trim().toLowerCase();
+  const getFamilyMemberMonthlyReady = (familyMemberId: string): boolean =>
+    circleMonthlyTransits.some(
+      (row) =>
+        row.family_member_id === familyMemberId &&
+        deriveMonthlyReportState(row, currentMonthKey) === "generated"
+    );
+  const getFamilyMemberRelationshipReady = (familyMemberId: string): boolean =>
+    circleRelationshipCharts.some(
+      (row) =>
+        (row.person_a_id === familyMemberId || row.person_b_id === familyMemberId) &&
+        deriveRelationshipReportState({
+          chart_data: row.chart_data,
+          invalidated_at: row.invalidated_at,
+          report_id: row.report_id,
+          report_status: row.report_status,
+        }) === "generated"
+    ) ||
+    circleRelationshipReports.some(
+      (row) =>
+        (row.person_a_id === familyMemberId || row.person_b_id === familyMemberId) &&
+        deriveRelationshipReportState({
+          chart_data: undefined,
+          invalidated_at: row.invalidated_at,
+          report_id: row.astro_ai_response_id,
+          report_status: row.report_status,
+        }) === "generated"
+    );
+
+  const getChipPriorityRank = ({
+    missingProfileFields,
+    profileReadyForCharts,
+    natalReady,
+    monthlyReady,
+    relationshipReady,
+  }: {
+    missingProfileFields: string[];
+    profileReadyForCharts: boolean;
+    natalReady: boolean;
+    monthlyReady: boolean;
+    relationshipReady: boolean;
+  }): number => {
+    if (missingProfileFields.length > 0) return 0;
+    if (profileReadyForCharts && (!natalReady || !monthlyReady || !relationshipReady)) {
+      return 1;
+    }
+    return 2;
+  };
 
   const buildRealChips = (): FamilyChip[] => {
+    const selfPriorityRank = getChipPriorityRank({
+      missingProfileFields: selfBirthReadiness.missing,
+      profileReadyForCharts: selfBirthReadiness.complete,
+      natalReady: selfChartReady,
+      monthlyReady: selfFamilyMember ? getFamilyMemberMonthlyReady(selfFamilyMember.id) : false,
+      relationshipReady: selfFamilyMember
+        ? getFamilyMemberRelationshipReady(selfFamilyMember.id)
+        : false,
+    });
     const chips: FamilyChip[] = [
       {
         id: member.id,
         name: member.full_name || "Self",
         relationship: "Self",
         missingRelationship: false,
+        priorityRank: selfPriorityRank,
         sortKey: 0,
+        orderKey: 0,
       },
     ];
 
-    for (const fm of familyMembers) {
+    for (const [index, fm] of familyMembers.entries()) {
       const rel = (fm.relationship ?? "").trim();
       const normalizedRel = normalizeRel(rel);
       const isSelfRelationship =
@@ -1145,21 +1205,48 @@ export default async function CommunityDashboardPage() {
       if (isSameAsPrimaryByUser || isSameAsPrimaryByName) continue;
 
       const missing = rel === "";
+      const birthReadiness = computeBirthDataReadiness({
+        date_of_birth: fm.date_of_birth ?? null,
+        birth_time: fm.birth_time ?? null,
+        birth_city: fm.birth_city ?? null,
+        birth_country: (fm as { birth_country?: string | null }).birth_country ?? null,
+        birth_lat: (fm as { birth_lat?: number | string | null }).birth_lat ?? null,
+        birth_lng: (fm as { birth_lng?: number | string | null }).birth_lng ?? null,
+      });
+      const missingProfileFields = [
+        ...birthReadiness.missing,
+        ...(missing ? ["relationship"] : []),
+      ];
+      const profileReadyForCharts = missingProfileFields.length === 0;
+      const priorityRank = getChipPriorityRank({
+        missingProfileFields,
+        profileReadyForCharts,
+        natalReady: deriveNatalReportState(fm) === "generated",
+        monthlyReady: getFamilyMemberMonthlyReady(fm.id),
+        relationshipReady: getFamilyMemberRelationshipReady(fm.id),
+      });
       chips.push({
         id: fm.id,
         name: fm.full_name || "Unknown",
         relationship: missing ? "" : capitalize(rel),
         missingRelationship: missing,
+        priorityRank,
         sortKey: relationshipPriority(rel),
+        orderKey: index + 1,
       });
     }
 
-    return chips.sort((a, b) => a.sortKey - b.sortKey);
+    return chips.sort(
+      (a, b) =>
+        a.priorityRank - b.priorityRank ||
+        a.sortKey - b.sortKey ||
+        a.orderKey - b.orderKey
+    );
   };
 
   const familyChipData: FamilyChip[] =
     planType === "family" && familyMembers.length > 0 ? buildRealChips() : [];
-  const maxVisibleFamilyChips = 5;
+  const maxVisibleFamilyChips = 3;
   const visibleFamilyChips = familyChipData.slice(0, maxVisibleFamilyChips);
   const hiddenFamilyChipCount = Math.max(
     familyChipData.length - visibleFamilyChips.length,
@@ -1324,13 +1411,6 @@ export default async function CommunityDashboardPage() {
                   <>
                     <User className="size-3.5 text-muted-foreground" aria-hidden="true" />
                     <span className="text-sm font-medium text-foreground">{chip.name}</span>
-                    {/*
-                      Task 04 — missing-role chip is visually distinct from
-                      the grey fallback. The amber dashed border + italic
-                      label + hover/focus title tells the user the row is
-                      real but the relationship field hasn't been filled
-                      in yet, without looking like a hard error.
-                    */}
                     {chip.missingRelationship ? (
                       <Badge
                         variant="outline"
@@ -2050,49 +2130,35 @@ export default async function CommunityDashboardPage() {
                         ? "Profile Complete"
                         : "Profile Pending",
                       complete: profileComplete,
-                      href: `/community/family?focusMember=${encodeURIComponent(m.id)}`,
+                      href: profileComplete
+                        ? `/community/family?focusMember=${encodeURIComponent(m.id)}`
+                        : `/community/family?edit=${encodeURIComponent(m.id)}`,
                     },
-                    {
-                      label: hasNatalChart ? "Natal Ready" : "Natal Pending",
-                      complete: hasNatalChart,
-                      href: `/community/family?focusMember=${encodeURIComponent(m.id)}`,
-                    },
-                    {
-                      label: hasMonthlyReport
-                        ? "Monthly Ready"
-                        : "Monthly Pending",
-                      complete: hasMonthlyReport,
-                      href: `/community/transits?focusMember=${encodeURIComponent(m.id)}`,
-                    },
-                    {
-                      label: hasRelationshipReport
-                        ? "Relationship Ready"
-                        : "Relationship Pending",
-                      complete: hasRelationshipReport,
-                      href: `/community/charts?focusMember=${encodeURIComponent(m.id)}`,
-                    },
+                    ...(profileComplete
+                      ? [
+                          {
+                            label: hasNatalChart ? "Natal Ready" : "Natal Pending",
+                            complete: hasNatalChart,
+                            href: `/community/family?focusMember=${encodeURIComponent(m.id)}`,
+                          },
+                          {
+                            label: hasMonthlyReport
+                              ? "Monthly Ready"
+                              : "Monthly Pending",
+                            complete: hasMonthlyReport,
+                            href: `/community/transits?focusMember=${encodeURIComponent(m.id)}`,
+                          },
+                          {
+                            label: hasRelationshipReport
+                              ? "Relationship Ready"
+                              : "Relationship Pending",
+                            complete: hasRelationshipReport,
+                            href: `/community/charts?focusMember=${encodeURIComponent(m.id)}`,
+                          },
+                        ]
+                      : []),
                   ];
                   const avatarColor = AVATAR_COLORS[idx % AVATAR_COLORS.length];
-
-                  // Community Family UX Task 02 (2026-04-24):
-                  // Build a compact missing-field summary for incomplete
-                  // cards. `completion.missing` is the source of truth
-                  // (from calcFamilyProfileCompletion) — we only format
-                  // labels for card layout (lowercase, strip the parenthetical
-                  // hint on "Birth time (or mark unknown)"). The card line
-                  // shows up to two fields inline and "+N more" when the
-                  // list is longer, so it never overflows the grid layout.
-                  const missingDisplay = completion.missing.map((label) =>
-                    label.replace(/\s*\(.*?\)\s*$/, "").toLowerCase()
-                  );
-                  const missingSummary = (() => {
-                    if (missingDisplay.length === 0) return null;
-                    if (missingDisplay.length <= 2) {
-                      return missingDisplay.join(", ");
-                    }
-                    const head = missingDisplay.slice(0, 2).join(", ");
-                    return `${head} +${missingDisplay.length - 2} more`;
-                  })();
 
                   return (
                     <Card key={m.id} className="transition-colors hover:border-primary/30">
@@ -2206,14 +2272,6 @@ export default async function CommunityDashboardPage() {
                             ))}
                           </div>
 
-                          {!profileComplete && missingSummary && (
-                            <p
-                              className="text-[11px] text-amber-600/90 leading-snug truncate"
-                              title={`Missing: ${missingDisplay.join(", ")}`}
-                            >
-                              Missing: {missingSummary}
-                            </p>
-                          )}
                         </div>
                       </CardContent>
                     </Card>
