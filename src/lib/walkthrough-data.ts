@@ -10636,7 +10636,189 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
     ],
     screens: [
 
-      
+      // ------------------ Onboarding ------------------//
+     {
+    "name": "perennial-community-plan-selection",
+    "label": "Community Onboarding - Plan Selection",
+    "description": "First step of the Perennial Mandalism onboarding flow where new members choose the membership plan that best fits their household and spiritual journey.",
+    "group": "Onboarding",
+    "purpose": "Helps users select the correct community membership tier before registration and payment.",
+    "bullets": [
+      "Displays available membership plans including Individual, Couple, and Family options",
+      "Each plan clearly explains member limits, monthly pricing, and included benefits",
+      "Community features such as live ceremonies, sacred teachings, and forum access are highlighted",
+      "Best value recommendation is visually highlighted for higher-tier plans",
+      "Users can compare pricing and savings between plans before continuing",
+      "Selected plan is stored and used throughout the remaining onboarding flow",
+      "Primary call-to-action button allows users to continue into account registration"
+    ]
+  },
+  {
+    "name": "perennial-community-account-registration",
+    "label": "Community Onboarding - Account Registration",
+    "description": "Second step of onboarding where the user creates their community account and confirms the selected membership plan.",
+    "group": "Onboarding",
+    "purpose": "Collects secure account information required for community access and subscription setup.",
+    "bullets": [
+      "Selected membership plan summary remains visible during signup",
+      "Displays plan pricing, included member count, and selected package name",
+      "Email field is used as the primary login credential",
+      "Full name field creates the member identity within the platform",
+      "Password setup includes live validation indicators for security requirements",
+      "Confirm password field validates matching credentials before continuing",
+      "Custom public profile URL can be configured during signup",
+      "Program and bundle tags help users review available community offerings",
+      "Continue button advances the user into secure subscription checkout"
+    ]
+  },
+  {
+    "name": "perennial-community-payment-checkout",
+    "label": "Community Onboarding - Payment Checkout",
+    "description": "Secure Stripe subscription checkout used to activate the Perennial Mandalism membership.",
+    "group": "Onboarding",
+    "purpose": "Processes recurring membership payments securely before community access is granted.",
+    "bullets": [
+      "Stripe-hosted checkout securely handles payment processing",
+      "Monthly membership pricing and selected plan details are displayed clearly",
+      "Users can choose supported currencies such as INR or USD",
+      "Contact email is prefilled using the registered account information",
+      "Secure card fields collect card number, expiration date, and security code",
+      "Country and billing information help validate payment processing",
+      "Alternative payment methods may appear depending on region availability",
+      "Subscription authorization message explains recurring billing terms",
+      "Subscribe button activates the membership after successful payment"
+    ]
+  },
+  {
+    "name": "perennial-community-payment-processing",
+    "label": "Community Onboarding - Payment Processing",
+    "description": "Intermediate loading state shown while Stripe validates and confirms the subscription payment.",
+    "group": "Onboarding",
+    "purpose": "Prevents duplicate submissions while the payment transaction is being verified.",
+    "bullets": [
+      "Payment form becomes temporarily disabled during processing",
+      "Loading indicators communicate active transaction validation",
+      "Stripe securely verifies billing authorization in the background",
+      "Subscription details remain visible while processing occurs",
+      "Users are prevented from submitting duplicate payments",
+      "Successful processing automatically transitions into the confirmation experience"
+    ]
+  },
+  {
+    "name": "perennial-community-payment-success",
+    "label": "Community Onboarding - Payment Success",
+    "description": "Confirmation screen displayed after the membership payment is successfully completed.",
+    "group": "Onboarding",
+    "purpose": "Confirms membership activation and guides users into agreement completion.",
+    "bullets": [
+      "Success message confirms the Perennial Mandalism membership is active",
+      "Membership activation status explains that community access has been provisioned",
+      "Payment details section shows amount paid and payment status",
+      "Recent plan section confirms the activated membership package",
+      "Next step panel explains that agreements must be completed before entry",
+      "Primary action button continues the onboarding flow into agreement signing"
+    ]
+  },
+  {
+    "name": "perennial-community-agreement-signing",
+    "label": "Community Onboarding - Agreement Signing",
+    "description": "Legal agreement acceptance step where users review and electronically sign the community terms of service.",
+    "group": "Onboarding",
+    "purpose": "Ensures members accept platform rules, legal policies, and community participation requirements.",
+    "bullets": [
+      "Customer Terms of Service document is displayed inside a scrollable agreement container",
+      "Agreement sections explain prohibited behavior and acceptable platform usage",
+      "Recording, privacy, and consent policies are clearly communicated",
+      "Intellectual property and content ownership rules are included",
+      "Limitation of liability and governing law sections explain legal boundaries",
+      "Contact details are provided for legal or support inquiries",
+      "Users type their full legal name as an electronic signature",
+      "Acceptance button records agreement consent before continuing",
+      "Agreement completion is required before profile setup can begin"
+    ]
+  },
+  {
+    "name": "perennial-community-profile-personal-details",
+    "label": "Community Onboarding - Personal Details",
+    "description": "Profile setup step where members provide personal and birth-related information for personalised spiritual experiences.",
+    "group": "Onboarding",
+    "purpose": "Captures core identity and birth information used throughout astrology and community features.",
+    "bullets": [
+      "Step progress indicator shows the onboarding sequence stages",
+      "Users enter first name, last name, email, and phone number",
+      "Gender and occupation fields support community personalization",
+      "Date of birth and birth time are collected for astrology features",
+      "Birth location is required for accurate chart calculations",
+      "Detected location helpers assist with geographic accuracy",
+      "Required fields are clearly marked within the form",
+      "Next button advances the user into address setup"
+    ]
+  },
+  {
+    "name": "perennial-community-profile-address",
+    "label": "Community Onboarding - Address Details",
+    "description": "Address setup step where users provide their location information for regional personalization and household configuration.",
+    "group": "Onboarding",
+    "purpose": "Collects geographic details used for local recommendations and member profile setup.",
+    "bullets": [
+      "Address form captures street address, city, state, and postal code",
+      "Location data helps personalize events and community recommendations",
+      "Progress tracker highlights the current onboarding step",
+      "Back button allows navigation to the previous profile stage",
+      "Next button advances users into household member setup",
+      "Required fields ensure complete address information before continuing"
+    ]
+  },
+  {
+    "name": "perennial-community-household-members",
+    "label": "Community Onboarding - Household Members",
+    "description": "Family membership setup step where users can add additional household members included in the selected plan.",
+    "group": "Onboarding",
+    "purpose": "Allows family-plan subscribers to manage and reserve member slots during onboarding.",
+    "bullets": [
+      "Household member section displays how many member slots are available",
+      "Add Member button allows users to include additional family participants",
+      "Member count updates dynamically as household profiles are added",
+      "Users can skip this step temporarily and manage members later",
+      "Progress indicator shows onboarding completion progress",
+      "Back and Next buttons support navigation between onboarding stages"
+    ]
+  },
+  {
+    "name": "perennial-community-journey-setup",
+    "label": "Community Onboarding - Journey Details",
+    "description": "Final onboarding step where members optionally share relationship and lifestyle information to personalise their experience.",
+    "group": "Onboarding",
+    "purpose": "Customises recommendations, readings, and spiritual guidance based on the member journey.",
+    "bullets": [
+      "Relationship status field helps personalise member experiences",
+      "Optional questionnaire section supports deeper spiritual profiling",
+      "Users may complete or skip optional onboarding questions",
+      "Progress tracker indicates final onboarding completion stage",
+      "Back button allows returning to previous setup steps",
+      "Completion button finalises profile setup and opens the community dashboard"
+    ]
+  },
+  {
+    "name": "perennial-community-dashboard-home",
+    "label": "Community Dashboard - Home",
+    "description": "Primary dashboard displayed after onboarding is completed successfully.",
+    "group": "Onboarding",
+    "purpose": "Provides members with access to subscriptions, spiritual tools, sessions, charts, and community resources.",
+    "bullets": [
+      "Dashboard welcomes members into the Perennial Mandalism community portal",
+      "Sidebar navigation provides access to sessions, events, charts, rituals, and library resources",
+      "Membership status card displays active subscription information",
+      "Journey progress indicators show onboarding and engagement completion",
+      "Members can access profile settings, agreements, and sacred library content",
+      "Family plans display used and remaining household member slots",
+      "Billing information includes renewal dates and monthly subscription details",
+      "Add Member and Manage Subscription actions support membership administration",
+      "Community dashboard centralises spiritual resources and account management"
+    ]
+  },
+
+      //--------------Community------------------//
   {
     "name": "perennial-mandalism-membership-dashboard",
     "label": "Perennial Mandalism Membership Dashboard",
@@ -11893,32 +12075,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Price and billing frequency display with dynamic pricing from the admin pricing config",
           "Enrol Now button — leads directly to the Mystery School checkout with PM discount applied if applicable"
         ]
-      },
-      {
-        name: "onboarding-step-1",
-        label: "Community Onboarding Step 1",
-        description: "First step of the Perennial Mandalism onboarding flow. Welcomes the new member, explains the community pillars, and prompts them to enter or confirm their birth data for personalised chart features.",
-        group: "Onboarding",
-        purpose: "Captures essential birth data at the earliest opportunity so the member's first chart experience is personalised rather than generic.",
-        bullets: [
-          "Welcome message with community overview and what to expect from the portal",
-          "Birth data form: date, time (with 'unknown' option), and birthplace with geocoding",
-          "Progress indicator showing this is step 1 of the onboarding sequence"
-        ]
-      },
-      {
-        name: "onboarding-step-2",
-        label: "Community Onboarding Step 2",
-        description: "Second onboarding step where the member selects their areas of astrological interest and sets notification preferences. This configures the home hub to surface the most relevant content for their practice.",
-        group: "Onboarding",
-        purpose: "Personalises the member's content feed from day one so they immediately encounter relevant material rather than a generic default layout.",
-        bullets: [
-          "Interest picker: Natal Chart, Transits, Mundane, Rituals, Tarot, Mystery School — multi-select",
-          "Notification preference toggles: weekly transit digest, event reminders, broadcast alerts",
-          "Finish and enter community button — redirects to the personalised hub"
-        ]
-      },
-      {
+      },     {
         name: "chart-synastry",
         label: "Synastry Chart",
         description: "Bi-wheel synastry chart comparing the member's natal chart with another person (partner, friend, or family member). Highlights conjunctions, oppositions, trines, and squares between the two charts with relationship interpretations.",
@@ -15271,3 +15428,4 @@ export function getTotalFeatureCount(): number {
     0,
   );
 }
+
