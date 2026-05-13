@@ -54,6 +54,20 @@ const TABS = [
 
 type TabKey = (typeof TABS)[number]["key"];
 
+function utcDateStart(date: string) {
+  const [year, month, day] = date.split("-").map(Number);
+  if (!year || !month || !day) return null;
+
+  return new Date(Date.UTC(year, month - 1, day)).toISOString();
+}
+
+function utcNextDateStart(date: string) {
+  const [year, month, day] = date.split("-").map(Number);
+  if (!year || !month || !day) return null;
+
+  return new Date(Date.UTC(year, month - 1, day + 1)).toISOString();
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default async function AdminTicketsPage({
@@ -137,11 +151,13 @@ export default async function AdminTicketsPage({
   if (type && type !== "all") query = query.eq("type", type);
   if (priority && priority !== "all") query = query.eq("priority", priority);
   if (queue && queue !== "all") query = query.eq("queue_id", queue);
-  if (date_from) query = query.gte("created_at", date_from);
+  if (date_from) {
+    const fromStart = utcDateStart(date_from);
+    if (fromStart) query = query.gte("created_at", fromStart);
+  }
   if (date_to) {
-    // Include the full "to" day
-    const toEnd = `${date_to}T23:59:59.999Z`;
-    query = query.lte("created_at", toEnd);
+    const toExclusive = utcNextDateStart(date_to);
+    if (toExclusive) query = query.lt("created_at", toExclusive);
   }
 
   // Text search: subject, requester name, ticket_number

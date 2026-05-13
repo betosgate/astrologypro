@@ -43,10 +43,20 @@ export function TicketsFilter({
   const pathname = usePathname();
   const [, startTransition] = useTransition();
   const [searchValue, setSearchValue] = useState(currentSearch);
+  const [dateFromValue, setDateFromValue] = useState(currentDateFrom);
+  const [dateToValue, setDateToValue] = useState(currentDateTo);
 
   useEffect(() => {
     setSearchValue(currentSearch);
   }, [currentSearch]);
+
+  useEffect(() => {
+    setDateFromValue(currentDateFrom);
+  }, [currentDateFrom]);
+
+  useEffect(() => {
+    setDateToValue(currentDateTo);
+  }, [currentDateTo]);
 
   function buildUrl(overrides: Record<string, string>) {
     const current: Record<string, string> = {
@@ -72,6 +82,16 @@ export function TicketsFilter({
     startTransition(() => {
       router.replace(buildUrl({ search: value.trim() }), { scroll: false });
     });
+  }
+
+  function handleDateFromChange(value: string) {
+    setDateFromValue(value);
+    router.push(buildUrl({ date_from: value, date_to: dateToValue }));
+  }
+
+  function handleDateToChange(value: string) {
+    setDateToValue(value);
+    router.push(buildUrl({ date_from: dateFromValue, date_to: value }));
   }
 
   const hasFilters =
@@ -201,16 +221,16 @@ export function TicketsFilter({
         <div className="flex items-center gap-1.5">
           <Input
             type="date"
-            value={currentDateFrom}
-            onChange={(e) => router.push(buildUrl({ date_from: e.target.value }))}
+            value={dateFromValue}
+            onChange={(e) => handleDateFromChange(e.target.value)}
             className="h-9 w-36 text-sm"
             aria-label="From date"
           />
           <span className="text-xs text-muted-foreground">–</span>
           <Input
             type="date"
-            value={currentDateTo}
-            onChange={(e) => router.push(buildUrl({ date_to: e.target.value }))}
+            value={dateToValue}
+            onChange={(e) => handleDateToChange(e.target.value)}
             className="h-9 w-36 text-sm"
             aria-label="To date"
           />
