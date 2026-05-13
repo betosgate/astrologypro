@@ -202,7 +202,7 @@ export default function TraineePlanSelectionPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-[#070716] text-white">
-      <MarketingHeader hideDashboardReturnButton />
+      <MarketingHeader />
       <main className="flex flex-1 items-start justify-center bg-[radial-gradient(circle_at_top,rgba(139,92,246,0.24),transparent_35%),radial-gradient(circle_at_bottom,rgba(236,72,153,0.10),transparent_30%),linear-gradient(180deg,#100f24_0%,#070716_100%)] px-4 py-10 sm:px-6">
         <div className="w-full max-w-7xl overflow-hidden rounded-[28px] border border-violet-500/20 bg-gradient-to-b from-violet-950/95 to-slate-950/95 shadow-[0_24px_80px_rgba(0,0,0,0.45)]">
           <div className="border-b border-violet-500/15 bg-gradient-to-r from-violet-900/95 to-fuchsia-900/70 px-6 py-8 sm:px-10">

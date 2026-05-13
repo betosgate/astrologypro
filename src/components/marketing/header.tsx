@@ -5,13 +5,9 @@ import { DashboardReturnButton } from "@/components/marketing/dashboard-return-b
 
 interface MarketingHeaderProps {
   hideNavigation?: boolean;
-  hideDashboardReturnButton?: boolean;
 }
 
-export function MarketingHeader({
-  hideNavigation = false,
-  hideDashboardReturnButton = false,
-}: MarketingHeaderProps) {
+export function MarketingHeader({ hideNavigation = false }: MarketingHeaderProps) {
   return (
     <header className="sticky top-0 z-50 w-full">
       {/* Nav bar with semi-transparent dark background */}
@@ -93,7 +89,7 @@ export function MarketingHeader({
         {!hideNavigation && (
           <div className="hidden items-center gap-5 md:flex">
             {/* Shows only when user has an active session — resolves correct dashboard */}
-            {!hideDashboardReturnButton && <DashboardReturnButton />}
+            <DashboardReturnButton />
             <Link
               href="/login"
               className="text-[14px] font-bold uppercase text-white transition-colors hover:text-[#ecd396]"
