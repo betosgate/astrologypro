@@ -8,9 +8,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { X, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import { useEffect, useState, useTransition } from "react";
 
 interface Queue {
@@ -93,15 +92,6 @@ export function TicketsFilter({
     setDateToValue(value);
     router.push(buildUrl({ date_from: dateFromValue, date_to: value }));
   }
-
-  const hasFilters =
-    currentStatus ||
-    currentType ||
-    currentPriority ||
-    currentQueue ||
-    currentSearch ||
-    currentDateFrom ||
-    currentDateTo;
 
   return (
     <div className="space-y-3">
@@ -236,17 +226,6 @@ export function TicketsFilter({
           />
         </div>
 
-        {hasFilters && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => router.push(pathname)}
-            className="text-muted-foreground h-9"
-          >
-            <X className="size-4 mr-1.5" />
-            Clear filters
-          </Button>
-        )}
       </div>
     </div>
   );

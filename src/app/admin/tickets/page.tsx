@@ -10,9 +10,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
 import { TicketsFilter } from "@/components/admin/tickets-filter";
 import { TicketsBulkTable } from "@/components/admin/tickets-bulk-actions";
+import { TicketsPageActions } from "@/components/admin/tickets-page-actions";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Tickets | Admin" };
@@ -244,12 +244,7 @@ export default async function AdminTicketsPage({
             {openCount > 0 && ` · ${openCount} open`}
           </p>
         </div>
-        <Button asChild size="sm">
-          <Link href="/admin/tickets/new">
-            <Plus className="size-4 mr-2" />
-            Create Job Ticket
-          </Link>
-        </Button>
+        <TicketsPageActions />
       </div>
 
       {/* Tabs */}
