@@ -107,13 +107,74 @@ export async function GET(
     }
   }
 
-  // Fetch conversions
   const { data: conversions } = await admin
     .from("campaign_conversions")
     .select("*")
     .eq("campaign_id", id)
     .order("converted_at", { ascending: false })
     .limit(100);
+
+  // Detailed Analytics
+  const { data: clicks } = await admin
+    .from("campaign_clicks")
+    .select("is_bot, is_unique_click, device_type, country_code, source")
+    .eq("campaign_id", id);
+
+  const rows = clicks ?? [];
+  const humanRows = rows.filter((r) => !r.is_bot);
+  const humanClicks = humanRows.length;
+  const uniqueClicks = humanRows.filter((r) => r.is_unique_click).length;
+  const botClicks = rows.filter((r) => r.is_bot).length;
+  const uniqueRate = humanClicks > 0 ? parseFloat(((uniqueClicks / humanClicks) * 100).toFixed(1)) : 0;
+
+  const totalCommissionCents = (conversions ?? []).reduce((s, r) => s + (r.commission_amount_cents ?? 0), 0);
+  const conversionRate = uniqueClicks > 0 ? parseFloat(((conversions?.length ?? 0) / uniqueClicks * 100).toFixed(1)) : 0;
+
+  const deviceMap: Record<string, number> = {};
+  for (const row of humanRows) {
+    const dt = (row.device_type as string) ?? "unknown";
+    deviceMap[dt] = (deviceMap[dt] ?? 0) + 1;
+  }
+  const by_device = Object.entries(deviceMap)
+    .sort(([, a], [, b]) => b - a)
+    .map(([device_type, count]) => ({
+      device_type,
+      clicks: count,
+      percentage: humanClicks > 0 ? parseFloat(((count / humanClicks) * 100).toFixed(1)) : 0,
+    }));
+
+  const COUNTRY_NAMES: Record<string, string> = {
+    US: "United States", GB: "United Kingdom", CA: "Canada", AU: "Australia",
+    IN: "India", DE: "Germany", FR: "France", BR: "Brazil", MX: "Mexico",
+    NL: "Netherlands", SG: "Singapore", JP: "Japan", NG: "Nigeria", ZA: "South Africa",
+  };
+  const countryMap: Record<string, number> = {};
+  for (const row of humanRows) {
+    const cc = (row.country_code as string | null) ?? "Unknown";
+    countryMap[cc] = (countryMap[cc] ?? 0) + 1;
+  }
+  const by_country = Object.entries(countryMap)
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 10)
+    .map(([country_code, count]) => ({
+      country_code,
+      country_name: COUNTRY_NAMES[country_code] ?? country_code,
+      clicks: count,
+      percentage: humanClicks > 0 ? parseFloat(((count / humanClicks) * 100).toFixed(1)) : 0,
+    }));
+
+  const sourceMap: Record<string, number> = {};
+  for (const row of humanRows) {
+    const src = (row.source as string | null) ?? "direct";
+    sourceMap[src] = (sourceMap[src] ?? 0) + 1;
+  }
+  const by_source = Object.entries(sourceMap)
+    .sort(([, a], [, b]) => b - a)
+    .map(([source, count]) => ({
+      source,
+      clicks: count,
+      percentage: humanClicks > 0 ? parseFloat(((count / humanClicks) * 100).toFixed(1)) : 0,
+    }));
 
   const affiliateStats: Record<string, { conversions: number; commission_cents: number }> = {};
   for (const conv of conversions ?? []) {
@@ -140,6 +201,21 @@ export async function GET(
         campaign.auto_paused_at !== null && isDestinationStillValid,
       affiliates: enrichedAffiliates,
       conversions: conversions ?? [],
+      analytics: {
+        summary: {
+          total_clicks: rows.length,
+          human_clicks: humanClicks,
+          unique_clicks: uniqueClicks,
+          bot_clicks: botClicks,
+          unique_rate: uniqueRate,
+          conversions: conversions?.length ?? 0,
+          conversion_rate: conversionRate,
+          total_commission_cents: totalCommissionCents,
+        },
+        by_device,
+        by_country,
+        by_source,
+      }
     },
   });
 }

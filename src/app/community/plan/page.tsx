@@ -406,28 +406,31 @@ export default function CommunityPlanPage() {
 
   // ── Price calculator ──
   const [calcMembers, setCalcMembers] = useState(1);
-  const [preview, setPreview] = useState<PreviewResult | null>(null);
-  const [previewLoading, setPreviewLoading] = useState(false);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => {
-    if (!plan) return;
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(async () => {
-      setPreviewLoading(true);
-      try {
-        const res = await fetch(
-          `/api/community/plan/preview?members=${calcMembers}`
-        );
-        if (res.ok) setPreview(await res.json());
-      } finally {
-        setPreviewLoading(false);
-      }
-    }, 300);
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
-  }, [calcMembers, plan]);
+  // Calculate simulated pricing based on suggestions
+  let simulatedBasePrice = 19.95;
+  let simulatedIncludedMembers = 1;
+  let simulatedExtraCount = 0;
+  let simulatedExtraTotal = 0;
+  let simulatedTotal = 19.95;
+
+  if (calcMembers === 1) {
+    simulatedBasePrice = 19.95;
+    simulatedIncludedMembers = 1;
+    simulatedExtraCount = 0;
+    simulatedTotal = 19.95;
+  } else if (calcMembers === 2) {
+    simulatedBasePrice = 29.95;
+    simulatedIncludedMembers = 2;
+    simulatedExtraCount = 0;
+    simulatedTotal = 29.95;
+  } else if (calcMembers > 2) {
+    simulatedBasePrice = 39.95;
+    simulatedIncludedMembers = 5;
+    simulatedExtraCount = Math.max(0, calcMembers - 5);
+    simulatedExtraTotal = simulatedExtraCount * 5;
+    simulatedTotal = simulatedBasePrice + simulatedExtraTotal;
+  }
 
   // ── Add member ──
   const [showAddMember, setShowAddMember] = useState(false);
@@ -792,7 +795,7 @@ export default function CommunityPlanPage() {
                       <input
                         type="range"
                         min={1}
-                        max={maxMembers}
+                        max={10}
                         value={calcMembers}
                         onChange={(e) =>
                           setCalcMembers(Number(e.target.value))
@@ -805,9 +808,9 @@ export default function CommunityPlanPage() {
                       size="icon"
                       variant="outline"
                       className="size-8 shrink-0"
-                      disabled={calcMembers >= maxMembers}
+                      disabled={calcMembers >= 10}
                       onClick={() =>
-                        setCalcMembers((n) => Math.min(maxMembers, n + 1))
+                        setCalcMembers((n) => Math.min(10, n + 1))
                       }
                       aria-label="Increase members"
                     >
@@ -819,35 +822,34 @@ export default function CommunityPlanPage() {
                   </div>
                 </div>
 
-                {previewLoading ? (
-                  <div className="space-y-2">
-                    <Skeleton className="h-4 w-full" />
-                    <Skeleton className="h-4 w-3/4" />
-                    <Skeleton className="h-5 w-32" />
+                <div className="text-sm font-medium text-primary/80 mt-1">
+                  {calcMembers === 1 && "💡 Suggestion: Individual Plan"}
+                  {calcMembers === 2 && "💡 Suggestion: Couple Plan"}
+                  {calcMembers > 2 && calcMembers <= 5 && "💡 Suggestion: Family Plan"}
+                  {calcMembers > 5 && "💡 Suggestion: Family Plan + Add extra members"}
+                </div>
+
+                <div className="rounded-md border bg-muted/30 p-4 space-y-1.5 text-sm mt-3">
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>
+                      Base (covers {simulatedIncludedMembers} member
+                      {simulatedIncludedMembers !== 1 ? "s" : ""})
+                    </span>
+                    <span>{formatMoney(simulatedBasePrice)}</span>
                   </div>
-                ) : preview ? (
-                  <div className="rounded-md border bg-muted/30 p-4 space-y-1.5 text-sm">
-                    <div className="flex justify-between text-muted-foreground">
-                      <span>
-                        Base (covers {preview.included_members} member
-                        {preview.included_members !== 1 ? "s" : ""})
-                      </span>
-                      <span>{formatMoney(preview.base_price)}</span>
-                    </div>
-                    <div className="flex justify-between text-muted-foreground">
-                      <span>
-                        Extra ({preview.extra_count} ×{" "}
-                        {formatMoney(preview.extra_price_per)})
-                      </span>
-                      <span>{formatMoney(preview.extra_total)}</span>
-                    </div>
-                    <Separator className="my-1" />
-                    <div className="flex justify-between font-semibold">
-                      <span>Total</span>
-                      <span>{formatMoney(preview.total)}/month</span>
-                    </div>
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>
+                      Extra ({simulatedExtraCount} ×{" "}
+                      {formatMoney(5)})
+                    </span>
+                    <span>{formatMoney(simulatedExtraTotal)}</span>
                   </div>
-                ) : null}
+                  <Separator className="my-1" />
+                  <div className="flex justify-between font-semibold">
+                    <span>Total</span>
+                    <span>{formatMoney(simulatedTotal)}/month</span>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           )}
@@ -995,14 +997,15 @@ export default function CommunityPlanPage() {
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
                 <CreditCard className="size-4 text-muted-foreground" />
-                Payment Method
+                Manage Your Subscription
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-sm text-muted-foreground">
-                Manage your payment method, cancel, or update billing info via
-                the Stripe customer portal.
+                Keep your payment info up to date and view your past statements in one secure place.
               </p>
+
+
               <Button
                 variant="outline"
                 onClick={handleBillingPortal}

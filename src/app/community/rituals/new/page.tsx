@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { toast } from "sonner";
 import {
   Card,
   CardContent,
@@ -481,7 +482,9 @@ export default function CreateRitualPage() {
     }
 
     const { ritual } = await response.json();
-    router.push(`/community/rituals/${ritual.id}`);
+    toast.success("Ritual created successfully");
+    // Previous destination: `/community/rituals/${ritual.id}`
+    router.push(`/community/rituals/${ritual.id}/playback`);
   }
 
   if (step === "choose") {
@@ -858,7 +861,7 @@ export default function CreateRitualPage() {
         <Button
           onClick={submitCustom}
           disabled={saving}
-          className="bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow-md hover:from-amber-500 hover:to-orange-500"
+          className="bg-primary text-black shadow-md hover:from-amber-500 hover:to-orange-500"
         >
           {saving && <Loader2 className="mr-2 size-4 animate-spin" />}
           <Flame className="mr-2 size-4" />

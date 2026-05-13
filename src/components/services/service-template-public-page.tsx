@@ -67,6 +67,7 @@ interface ServiceTemplatePublicPageProps {
   diviners?: ServiceTemplatePublicPageDiviner[];
   embedded?: boolean;
   disableLinks?: boolean;
+  discountToken?: string | null;
 }
 
 interface CtaButtonProps {
@@ -143,6 +144,16 @@ function CtaButton({ hasIntakeForm, href, label, className, disabled }: CtaButto
       {content}
     </button>
   );
+}
+
+function appendDiscountToken(href: string, discountToken: string | null | undefined) {
+  if (!discountToken) return href;
+  if (href.startsWith("#")) return href;
+  const [path, hash = ""] = href.split("#");
+  const [pathname, query = ""] = path.split("?");
+  const search = new URLSearchParams(query);
+  search.set("discount_token", discountToken);
+  return `${pathname}?${search.toString()}${hash ? `#${hash}` : ""}`;
 }
 
 function getIncludedBullets(template: ServiceTemplatePublicPageTemplate) {
@@ -234,7 +245,7 @@ function getFaqItems(template: ServiceTemplatePublicPageTemplate, hasIntakeForm:
 }
 
 export function ServiceTemplatePublicPage(props: ServiceTemplatePublicPageProps) {
-  const { template, embedded = false, disableLinks = false } = props;
+  const { template, embedded = false, disableLinks = false, discountToken = null } = props;
   const serviceImageUrl = template.image_url ?? getServiceImageUrl(template.slug);
   const requiresBirthData =
     template.category === "astrology" || template.requires_birth_data === true;
@@ -259,7 +270,11 @@ export function ServiceTemplatePublicPage(props: ServiceTemplatePublicPageProps)
   // book-without-diviner-flow bundle, 23.04.2026).
   const ctaHref = hasIntakeForm
     ? "#template-intake-form"
-    : `/book/template/${encodeURIComponent(template.slug)}`;
+    : appendDiscountToken(
+        `/book/template/${encodeURIComponent(template.slug)}`,
+        discountToken,
+      );
+  const servicesHref = appendDiscountToken("/services", discountToken);
   const ctaLabel = hasIntakeForm ? "Start Intake" : "Continue to Booking";
   const faqItems = getFaqItems(template, hasIntakeForm);
   const proofBullets = hasIntakeForm
@@ -293,7 +308,7 @@ export function ServiceTemplatePublicPage(props: ServiceTemplatePublicPageProps)
           <div className="mx-auto flex h-12 max-w-6xl items-center justify-between px-4">
             <div className="flex items-center gap-2 text-sm">
               <MaybeLink
-                href="/services"
+                href={servicesHref}
                 disabled={disableLinks}
                 className="font-display font-semibold text-cream transition-colors hover:text-gold"
               >
@@ -372,7 +387,7 @@ export function ServiceTemplatePublicPage(props: ServiceTemplatePublicPageProps)
                     className="inline-flex h-12 items-center gap-2 rounded-lg bg-gold px-8 text-sm font-semibold text-cosmos-900 shadow-[0_0_20px_rgba(201,168,76,0.3)] transition-all hover:bg-gold-light hover:shadow-[0_0_30px_rgba(201,168,76,0.4)]"
                   />
                   <MaybeLink
-                    href="/services"
+                    href={servicesHref}
                     disabled={disableLinks}
                     className="inline-flex h-12 items-center gap-2 rounded-lg border border-white/10 px-8 text-sm font-semibold text-cream transition-colors hover:border-gold/30 hover:text-gold"
                   >
@@ -487,7 +502,7 @@ export function ServiceTemplatePublicPage(props: ServiceTemplatePublicPageProps)
                     className="inline-flex h-11 items-center justify-center rounded-lg bg-gold px-6 text-sm font-semibold text-cosmos-900 transition-all hover:bg-gold-light"
                   />
                   <MaybeLink
-                    href="/services"
+                    href={servicesHref}
                     disabled={disableLinks}
                     className="inline-flex h-11 items-center justify-center rounded-lg border border-white/10 px-6 text-sm font-semibold text-cream transition-colors hover:border-gold/30 hover:text-gold"
                   >
@@ -556,6 +571,7 @@ export function ServiceTemplatePublicPage(props: ServiceTemplatePublicPageProps)
                   templateName={template.name}
                   templateSlug={template.slug}
                   embedded={embedded}
+                  discountToken={discountToken}
                 />
               </div>
             </section>

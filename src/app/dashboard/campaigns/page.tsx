@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useTransition } from "react";
 import Link from "next/link";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import {
   Card,
@@ -38,6 +39,13 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Loader2,
   Plus,
   Eye,
@@ -51,10 +59,16 @@ import {
   AlertTriangle,
   CheckCircle,
   Link2,
+  Search,
+  ChevronLeft,
+  ChevronRight,
+  FilterX,
+  RefreshCw,
 } from "lucide-react";
 import { CampaignDestinationPicker, type DestinationValue } from "@/components/dashboard/campaign-destination-picker";
 import { CampaignUrlDisplay } from "@/components/dashboard/campaign-url-display";
 import { CampaignDestinationBadge } from "@/components/dashboard/campaign-destination-badge";
+import { cn } from "@/lib/utils";
 
 /* ─────────────── Campaign list types ─────────────── */
 
@@ -101,6 +115,14 @@ const STATUS_BADGE: Record<string, "default" | "secondary" | "destructive" | "ou
   expired: "destructive",
   archived: "outline",
 };
+
+const STATUS_OPTIONS = [
+  { value: "all", label: "All Statuses" },
+  { value: "active", label: "Active" },
+  { value: "paused", label: "Paused" },
+  { value: "expired", label: "Expired" },
+  { value: "archived", label: "Archived" },
+];
 
 function fmtCents(cents: number) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(cents / 100);
@@ -509,12 +531,26 @@ function AnalyticsTabContent() {
 /* ─────────────── Main page ─────────────── */
 
 export default function DashboardCampaignsPage() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [isRefreshing, startRefreshing] = useTransition();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [filterStatus, setFilterStatus] = useState("");
   const [createdCampaign, setCreatedCampaign] = useState<CreatedCampaignResult | null>(null);
+
+  // URL State
+  const q = searchParams.get("q") ?? "";
+  const status = searchParams.get("status") ?? "all";
+  const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
+  const from = searchParams.get("from") ?? "";
+  const to = searchParams.get("to") ?? "";
+  const limit = Math.min(parseInt(searchParams.get("limit") ?? "10", 10), 100);
+  const totalPages = Math.ceil(total / limit);
 
   // Form state
   const [formName, setFormName] = useState("");
@@ -545,19 +581,48 @@ export default function DashboardCampaignsPage() {
 
   const loadCampaigns = useCallback(async () => {
     setLoading(true);
-    const params = new URLSearchParams();
-    if (filterStatus) params.set("status", filterStatus);
+    const params = new URLSearchParams(searchParams.toString());
+    if (!params.has("limit")) params.set("limit", String(limit));
+
     const res = await fetch(`/api/dashboard/campaigns?${params}`);
     if (res.ok) {
       const json = await res.json();
       setCampaigns(json.data ?? []);
+      setTotal(json.total ?? 0);
     }
     setLoading(false);
-  }, [filterStatus]);
+  }, [searchParams, limit]);
 
   useEffect(() => {
     loadCampaigns();
   }, [loadCampaigns]);
+
+  const pushParams = useCallback(
+    (updates: Record<string, string>) => {
+      const next = new URLSearchParams(searchParams.toString());
+      for (const [k, v] of Object.entries(updates)) {
+        if (!v || v === "all") {
+          next.delete(k);
+        } else {
+          next.set(k, v);
+        }
+      }
+      if (!("page" in updates)) next.delete("page");
+      router.push(`${pathname}?${next.toString()}`);
+    },
+    [router, pathname, searchParams]
+  );
+
+  const handleRefresh = () => {
+    startRefreshing(async () => {
+      await loadCampaigns();
+      toast.success("Data refreshed");
+    });
+  };
+
+  const handleReset = () => {
+    router.push(pathname);
+  };
 
   async function handleCreate() {
     if (!formName.trim() || !formStartDate) {
@@ -597,11 +662,14 @@ export default function DashboardCampaignsPage() {
     setSaving(false);
   }
 
-  // Summary stats
-  const totalCampaigns = campaigns.length;
-  const activeCampaigns = campaigns.filter((c) => c.status === "active").length;
+  // Summary stats (derived from current view or global? usually global is better for cards)
+  const totalCampaigns = total;
+  const activeCampaigns = campaigns.filter((c) => c.status === "active").length; // This is only on page, maybe fetch global stats? 
+  // For now we'll stick to the current data or just show what we have.
   const totalConversions = campaigns.reduce((sum, c) => sum + c.conversions_count, 0);
   const totalSpent = campaigns.reduce((sum, c) => sum + (c.total_commission_cents || 0), 0);
+
+  const hasActiveFilters = !!q || status !== "all" || !!from || !!to;
 
   return (
     <div className="space-y-6">
@@ -611,148 +679,171 @@ export default function DashboardCampaignsPage() {
           <h1 className="text-2xl font-bold tracking-tight">Campaigns</h1>
           <p className="text-muted-foreground">Manage and analyze your affiliate marketing campaigns.</p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={resetForm}>
-              <Plus className="mr-2 size-4" />
-              Create Campaign
+        <div className="flex items-center gap-2">
+          {hasActiveFilters && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleReset}
+              className="gap-1.5"
+            >
+              <FilterX className="size-4" />
+              Reset
             </Button>
-          </DialogTrigger>
-          <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
-            <DialogHeader>
-              <DialogTitle>{createdCampaign ? "Campaign Created!" : "Create Campaign"}</DialogTitle>
-              <DialogDescription>
-                {createdCampaign
-                  ? "Your campaign is ready. Copy the URL to share with affiliates."
-                  : "Set up a new promotional campaign for your affiliates."}
-              </DialogDescription>
-            </DialogHeader>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="gap-1.5"
+          >
+            <RefreshCw className={cn("size-4", isRefreshing && "animate-spin")} />
+            Refresh
+          </Button>
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={resetForm}>
+                <Plus className="mr-2 size-4" />
+                Create Campaign
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+              <DialogHeader>
+                <DialogTitle>{createdCampaign ? "Campaign Created!" : "Create Campaign"}</DialogTitle>
+                <DialogDescription>
+                  {createdCampaign
+                    ? "Your campaign is ready. Copy the URL to share with affiliates."
+                    : "Set up a new promotional campaign for your affiliates."}
+                </DialogDescription>
+              </DialogHeader>
 
-            {createdCampaign ? (
-              /* ── Success screen ── */
-              <div className="mt-4 space-y-5">
-                <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-800 dark:bg-emerald-950/30">
-                  <CheckCircle className="size-5 shrink-0 text-emerald-600" />
-                  <div>
-                    <p className="text-sm font-medium text-emerald-800 dark:text-emerald-300">{createdCampaign.name}</p>
-                    <p className="text-xs text-emerald-700 dark:text-emerald-400">
-                      {createdCampaign.destination_type === "PROFILE" ? "Profile destination" : "Service destination"}
-                    </p>
+              {createdCampaign ? (
+                /* ── Success screen ── */
+                <div className="mt-4 space-y-5">
+                  <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-800 dark:bg-emerald-950/30">
+                    <CheckCircle className="size-5 shrink-0 text-emerald-600" />
+                    <div>
+                      <p className="text-sm font-medium text-emerald-800 dark:text-emerald-300">{createdCampaign.name}</p>
+                      <p className="text-xs text-emerald-700 dark:text-emerald-400">
+                        {createdCampaign.destination_type === "PROFILE" ? "Profile destination" : "Service destination"}
+                      </p>
+                    </div>
                   </div>
-                </div>
 
-                {createdCampaign.share_url ? (
-                  <CampaignUrlDisplay
-                    url={createdCampaign.share_url}
-                    code={createdCampaign.campaign_code ?? undefined}
-                    label={
-                      createdCampaign.status && createdCampaign.status !== "active"
-                        ? "Campaign URL — inactive until activated"
-                        : "Campaign URL — share this with affiliates"
-                    }
-                    showOpenButton
-                    isInactive={!!createdCampaign.status && createdCampaign.status !== "active"}
-                    inactiveReason={createdCampaign.status ?? "Draft"}
-                  />
-                ) : (
-                  <p className="text-xs text-muted-foreground">
-                    No campaign URL generated (campaign created without destination).
-                  </p>
-                )}
-
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    className="flex-1"
-                    onClick={() => {
-                      setDialogOpen(false);
-                      resetForm();
-                    }}
-                  >
-                    Done
-                  </Button>
-                  <Button
-                    className="flex-1"
-                    onClick={resetForm}
-                  >
-                    <Plus className="mr-1.5 size-4" />
-                    Create Another
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              /* ── Creation form ── */
-              <div className="mt-4 space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="c-name">Campaign Name</Label>
-                  <Input id="c-name" value={formName} onChange={(e) => setFormName(e.target.value)} placeholder="Spring Promotion 2026" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="c-desc">Description (optional)</Label>
-                  <Textarea id="c-desc" value={formDesc} onChange={(e) => setFormDesc(e.target.value)} placeholder="Details about this campaign..." rows={2} />
-                </div>
-
-                {/* Destination picker */}
-                <div className="rounded-lg border p-3 space-y-1">
-                  <CampaignDestinationPicker
-                    value={formDestination}
-                    onChange={(dest) => setFormDestination(dest)}
-                    disabled={saving}
-                  />
-                </div>
-
-                {/* Channel */}
-                <div className="space-y-2">
-                  <Label>Channel (optional)</Label>
-                  <select
-                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
-                    value={formChannel}
-                    onChange={(e) => setFormChannel(e.target.value)}
-                    disabled={saving}
-                  >
-                    <option value="">Select channel…</option>
-                    <option value="facebook">Facebook</option>
-                    <option value="instagram">Instagram</option>
-                    <option value="whatsapp">WhatsApp</option>
-                    <option value="youtube">YouTube</option>
-                    <option value="email">Email</option>
-                    <option value="twitter">Twitter / X</option>
-                    <option value="tiktok">TikTok</option>
-                    <option value="linkedin">LinkedIn</option>
-                    <option value="direct">Direct</option>
-                    <option value="other">Other</option>
-                  </select>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="c-start">Start Date</Label>
-                    <Input id="c-start" type="date" value={formStartDate} onChange={(e) => setFormStartDate(e.target.value)} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="c-end">End Date (optional)</Label>
-                    <Input id="c-end" type="date" value={formEndDate} onChange={(e) => setFormEndDate(e.target.value)} />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">UTM Parameters</Label>
-                  <div className="grid grid-cols-3 gap-2">
-                    <Input placeholder="utm_source" value={formUtmSource} onChange={(e) => setFormUtmSource(e.target.value)} />
-                    <Input placeholder="utm_medium" value={formUtmMedium} onChange={(e) => setFormUtmMedium(e.target.value)} />
-                    <Input placeholder="utm_campaign" value={formUtmCampaign} onChange={(e) => setFormUtmCampaign(e.target.value)} />
-                  </div>
-                </div>
-                <Button onClick={handleCreate} disabled={saving} className="w-full">
-                  {saving ? (
-                    <><Loader2 className="mr-2 size-4 animate-spin" />Creating…</>
+                  {createdCampaign.share_url ? (
+                    <CampaignUrlDisplay
+                      url={createdCampaign.share_url}
+                      code={createdCampaign.campaign_code ?? undefined}
+                      label={
+                        createdCampaign.status && createdCampaign.status !== "active"
+                          ? "Campaign URL — inactive until activated"
+                          : "Campaign URL — share this with affiliates"
+                      }
+                      showOpenButton
+                      isInactive={!!createdCampaign.status && createdCampaign.status !== "active"}
+                      inactiveReason={createdCampaign.status ?? "Draft"}
+                    />
                   ) : (
-                    "Create Campaign"
+                    <p className="text-xs text-muted-foreground">
+                      No campaign URL generated (campaign created without destination).
+                    </p>
                   )}
-                </Button>
-              </div>
-            )}
-          </DialogContent>
-        </Dialog>
+
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => {
+                        setDialogOpen(false);
+                        resetForm();
+                      }}
+                    >
+                      Done
+                    </Button>
+                    <Button
+                      className="flex-1"
+                      onClick={resetForm}
+                    >
+                      <Plus className="mr-1.5 size-4" />
+                      Create Another
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                /* ── Creation form ── */
+                <div className="mt-4 space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="c-name">Campaign Name</Label>
+                    <Input id="c-name" value={formName} onChange={(e) => setFormName(e.target.value)} placeholder="Spring Promotion 2026" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="c-desc">Description (optional)</Label>
+                    <Textarea id="c-desc" value={formDesc} onChange={(e) => setFormDesc(e.target.value)} placeholder="Details about this campaign..." rows={2} />
+                  </div>
+
+                  {/* Destination picker */}
+                  <div className="rounded-lg border p-3 space-y-1">
+                    <CampaignDestinationPicker
+                      value={formDestination}
+                      onChange={(dest) => setFormDestination(dest)}
+                      disabled={saving}
+                    />
+                  </div>
+
+                  {/* Channel */}
+                  <div className="space-y-2">
+                    <Label>Channel (optional)</Label>
+                    <select
+                      className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
+                      value={formChannel}
+                      onChange={(e) => setFormChannel(e.target.value)}
+                      disabled={saving}
+                    >
+                      <option value="">Select channel…</option>
+                      <option value="facebook">Facebook</option>
+                      <option value="instagram">Instagram</option>
+                      <option value="whatsapp">WhatsApp</option>
+                      <option value="youtube">YouTube</option>
+                      <option value="email">Email</option>
+                      <option value="twitter">Twitter / X</option>
+                      <option value="tiktok">TikTok</option>
+                      <option value="linkedin">LinkedIn</option>
+                      <option value="direct">Direct</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="c-start">Start Date</Label>
+                      <Input id="c-start" type="date" value={formStartDate} onChange={(e) => setFormStartDate(e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="c-end">End Date (optional)</Label>
+                      <Input id="c-end" type="date" value={formEndDate} onChange={(e) => setFormEndDate(e.target.value)} />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">UTM Parameters</Label>
+                    <div className="grid grid-cols-3 gap-2">
+                      <Input placeholder="utm_source" value={formUtmSource} onChange={(e) => setFormUtmSource(e.target.value)} />
+                      <Input placeholder="utm_medium" value={formUtmMedium} onChange={(e) => setFormUtmMedium(e.target.value)} />
+                      <Input placeholder="utm_campaign" value={formUtmCampaign} onChange={(e) => setFormUtmCampaign(e.target.value)} />
+                    </div>
+                  </div>
+                  <Button onClick={handleCreate} disabled={saving} className="w-full">
+                    {saving ? (
+                      <><Loader2 className="mr-2 size-4 animate-spin" />Creating…</>
+                    ) : (
+                      "Create Campaign"
+                    )}
+                  </Button>
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       {/* Tabs: Campaigns | Analytics */}
@@ -772,7 +863,7 @@ export default function DashboardCampaignsPage() {
         <TabsContent value="campaigns" className="mt-6">
           <div className="space-y-6">
             {/* Summary Stats */}
-            {loading ? (
+            {loading && campaigns.length === 0 ? (
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 {[1, 2, 3, 4].map((i) => (
                   <div key={i} className="h-24 rounded-lg bg-muted animate-pulse" />
@@ -786,8 +877,8 @@ export default function DashboardCampaignsPage() {
                     <Megaphone className="size-4 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
-                    <p className="text-2xl font-bold">{totalCampaigns}</p>
-                    <p className="text-xs text-muted-foreground">{activeCampaigns} active</p>
+                    <p className="text-2xl font-bold">{total}</p>
+                    <p className="text-xs text-muted-foreground">{activeCampaigns} active on page</p>
                   </CardContent>
                 </Card>
                 <Card>
@@ -799,7 +890,7 @@ export default function DashboardCampaignsPage() {
                     <p className="text-2xl font-bold">
                       {campaigns.reduce((s, c) => s + c.affiliates_count, 0)}
                     </p>
-                    <p className="text-xs text-muted-foreground">Across all campaigns</p>
+                    <p className="text-xs text-muted-foreground">On this page</p>
                   </CardContent>
                 </Card>
                 <Card>
@@ -809,6 +900,7 @@ export default function DashboardCampaignsPage() {
                   </CardHeader>
                   <CardContent>
                     <p className="text-2xl font-bold">{totalConversions}</p>
+                    <p className="text-xs text-muted-foreground">On this page</p>
                   </CardContent>
                 </Card>
                 <Card>
@@ -818,40 +910,76 @@ export default function DashboardCampaignsPage() {
                   </CardHeader>
                   <CardContent>
                     <p className="text-2xl font-bold">{fmtCents(totalSpent)}</p>
+                    <p className="text-xs text-muted-foreground">On this page</p>
                   </CardContent>
                 </Card>
               </div>
             )}
 
-            {/* Filter */}
-            <div className="flex flex-wrap gap-3">
-              <select
-                className="flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm"
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-              >
-                <option value="">All statuses</option>
-                <option value="active">Active</option>
-                <option value="paused">Paused</option>
-                <option value="archived">Archived</option>
-                <option value="expired">Expired</option>
-              </select>
+            {/* Filters Bar */}
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
+              <div className="flex-1 space-y-2">
+                <Label htmlFor="search">Search</Label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                  <Input
+                    id="search"
+                    placeholder="Search by name…"
+                    value={q}
+                    onChange={(e) => pushParams({ q: e.target.value })}
+                    className="pl-9"
+                  />
+                </div>
+              </div>
+              <div className="w-full sm:w-48 space-y-2">
+                <Label>Status</Label>
+                <Select
+                  value={status}
+                  onValueChange={(val) => pushParams({ status: val })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {STATUS_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="w-full sm:w-40 space-y-2">
+                <Label htmlFor="from">From Date</Label>
+                <Input
+                  id="from"
+                  type="date"
+                  value={from}
+                  onChange={(e) => pushParams({ from: e.target.value })}
+                />
+              </div>
+              <div className="w-full sm:w-40 space-y-2">
+                <Label htmlFor="to">To Date</Label>
+                <Input
+                  id="to"
+                  type="date"
+                  value={to}
+                  onChange={(e) => pushParams({ to: e.target.value })}
+                />
+              </div>
             </div>
 
             {/* Campaigns Table */}
             <Card>
-              <CardHeader>
-                <CardTitle>All Campaigns</CardTitle>
-                <CardDescription>
-                  {campaigns.length} campaign{campaigns.length !== 1 ? "s" : ""}
-                </CardDescription>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                <div>
+                  <CardTitle>All Campaigns</CardTitle>
+                </div>
               </CardHeader>
               <CardContent>
-                {loading ? (
-                  <div className="space-y-3">
-                    {[1, 2, 3].map((i) => (
-                      <div key={i} className="h-12 rounded-lg bg-muted animate-pulse" />
-                    ))}
+                {loading && campaigns.length === 0 ? (
+                  <div className="flex justify-center py-12">
+                    <Loader2 className="size-8 animate-spin text-muted-foreground" />
                   </div>
                 ) : campaigns.length === 0 ? (
                   <div className="flex flex-col items-center gap-4 py-16 text-center">
@@ -859,100 +987,175 @@ export default function DashboardCampaignsPage() {
                       <Megaphone className="size-7 text-muted-foreground" />
                     </div>
                     <div>
-                      <h3 className="text-lg font-medium">No campaigns yet</h3>
+                      <h3 className="text-lg font-medium">No campaigns found</h3>
                       <p className="mt-1 text-sm text-muted-foreground">
-                        Create your first campaign to start tracking affiliate promotions.
+                        {hasActiveFilters
+                          ? "Try adjusting your search or filters."
+                          : "Create your first campaign to start tracking affiliate promotions."}
                       </p>
                     </div>
-                    <Button onClick={() => { setDialogOpen(true); resetForm(); }}>
-                      <Plus className="mr-2 size-4" />
-                      Create Your First Campaign
-                    </Button>
+                    {!hasActiveFilters && (
+                      <Button onClick={() => { setDialogOpen(true); resetForm(); }}>
+                        <Plus className="mr-2 size-4" />
+                        Create Your First Campaign
+                      </Button>
+                    )}
                   </div>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Name</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Destination</TableHead>
-                          <TableHead>Campaign URL</TableHead>
-                          <TableHead>Dates</TableHead>
-                          <TableHead>Affiliates</TableHead>
-                          <TableHead>Conversions</TableHead>
-                          <TableHead className="text-right">Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {campaigns.map((c) => (
-                          <TableRow key={c.id}>
-                            <TableCell className="font-medium">
-                              <div>
-                                {c.name}
-                                {c.auto_paused_at && (
-                                  <div className="flex items-center gap-1 mt-0.5 text-[11px] text-amber-600 dark:text-amber-400">
-                                    <AlertTriangle className="size-3" />
-                                    Auto-paused
-                                  </div>
-                                )}
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              {c.auto_paused_at ? (
-                                <Badge variant="destructive" className="gap-1">
-                                  <AlertTriangle className="size-2.5" />
-                                  Auto-Paused
-                                </Badge>
-                              ) : (
-                                <Badge variant={STATUS_BADGE[c.status] ?? "outline"}>{c.status}</Badge>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              <CampaignDestinationBadge
-                                destinationType={c.destination_type}
-                              />
-                            </TableCell>
-                            <TableCell>
-                              {c.share_url ? (
-                                <div className="flex items-center gap-1.5">
-                                  <code className="font-mono text-[11px] text-muted-foreground">
-                                    {c.campaign_code}
-                                  </code>
-                                  <button
-                                    type="button"
-                                    title="Copy URL"
-                                    onClick={async () => {
-                                      await navigator.clipboard.writeText(c.share_url!);
-                                      toast.success("URL copied");
-                                    }}
-                                    className="p-0.5 rounded hover:bg-muted"
-                                  >
-                                    <Link2 className="size-3 text-muted-foreground" />
-                                  </button>
-                                </div>
-                              ) : (
-                                <span className="text-xs text-muted-foreground">—</span>
-                              )}
-                            </TableCell>
-                            <TableCell className="text-sm">
-                              {fmtDate(c.start_date)}
-                              {c.end_date ? ` - ${fmtDate(c.end_date)}` : ""}
-                            </TableCell>
-                            <TableCell>{c.affiliates_count}</TableCell>
-                            <TableCell>{c.conversions_count}</TableCell>
-                            <TableCell className="text-right">
-                              <Button variant="ghost" size="icon" className="size-8" asChild title="View details">
-                                <Link href={`/dashboard/campaigns/${c.id}`}>
-                                  <Eye className="size-3.5" />
-                                </Link>
-                              </Button>
-                            </TableCell>
+                  <>
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Name</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Destination</TableHead>
+                            <TableHead>Campaign URL</TableHead>
+                            <TableHead>Dates</TableHead>
+                            <TableHead>Affiliates</TableHead>
+                            <TableHead>Conversions</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
+                        </TableHeader>
+                        <TableBody>
+                          {campaigns.map((c) => (
+                            <TableRow key={c.id}>
+                              <TableCell className="font-medium">
+                                <div>
+                                  {c.name}
+                                  {c.auto_paused_at && (
+                                    <div className="flex items-center gap-1 mt-0.5 text-[11px] text-amber-600 dark:text-amber-400">
+                                      <AlertTriangle className="size-3" />
+                                      Auto-paused
+                                    </div>
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                {c.auto_paused_at ? (
+                                  <Badge variant="destructive" className="gap-1">
+                                    <AlertTriangle className="size-2.5" />
+                                    Auto-Paused
+                                  </Badge>
+                                ) : (
+                                  <Badge variant={STATUS_BADGE[c.status] ?? "outline"}>{c.status}</Badge>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                <CampaignDestinationBadge
+                                  destinationType={c.destination_type}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                {c.share_url ? (
+                                  <div className="flex items-center gap-1.5">
+                                    <code className="font-mono text-[11px] text-muted-foreground">
+                                      {c.campaign_code}
+                                    </code>
+                                    <button
+                                      type="button"
+                                      title="Copy URL"
+                                      onClick={async () => {
+                                        await navigator.clipboard.writeText(c.share_url!);
+                                        toast.success("URL copied");
+                                      }}
+                                      className="p-0.5 rounded hover:bg-muted"
+                                    >
+                                      <Link2 className="size-3 text-muted-foreground" />
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <span className="text-xs text-muted-foreground">—</span>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-sm">
+                                {fmtDate(c.start_date)}
+                                {c.end_date ? ` - ${fmtDate(c.end_date)}` : ""}
+                              </TableCell>
+                              <TableCell>{c.affiliates_count}</TableCell>
+                              <TableCell>{c.conversions_count}</TableCell>
+                              <TableCell className="text-right">
+                                <Button variant="ghost" size="icon" className="size-8" asChild title="View details">
+                                  <Link href={`/dashboard/campaigns/${c.id}`}>
+                                    <Eye className="size-3.5" />
+                                  </Link>
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+
+                    {/* Pagination Controls */}
+                    <div className="mt-6 flex flex-col sm:flex-row items-center justify-between border-t pt-6 gap-4">
+                      <div className="flex items-center gap-3">
+                        <div className="text-sm text-muted-foreground">
+                          Showing {total === 0 ? 0 : (page - 1) * limit + 1}–{Math.min(page * limit, total)} of {total}
+                        </div>
+                        <Select
+                          value={String(limit)}
+                          onValueChange={(val) => pushParams({ limit: val, page: "1" })}
+                        >
+                          <SelectTrigger className="h-8 w-24">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {[10, 25, 50, 100].map((n) => (
+                              <SelectItem key={n} value={String(n)}>
+                                {n} / page
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {totalPages > 1 && (
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8"
+                            onClick={() => pushParams({ page: String(page - 1) })}
+                            disabled={page <= 1}
+                          >
+                            <ChevronLeft className="mr-1 size-4" />
+                            Previous
+                          </Button>
+                          <div className="flex items-center gap-1">
+                            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                              let pageNum = i + 1;
+                              if (totalPages > 5 && page > 3) {
+                                pageNum = page - 3 + i;
+                              }
+                              if (pageNum > totalPages) return null;
+                              return (
+                                <Button
+                                  key={pageNum}
+                                  variant={page === pageNum ? "default" : "outline"}
+                                  size="sm"
+                                  className="size-8 p-0"
+                                  onClick={() => pushParams({ page: String(pageNum) })}
+                                >
+                                  {pageNum}
+                                </Button>
+                              );
+                            })}
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8"
+                            onClick={() => pushParams({ page: String(page + 1) })}
+                            disabled={page >= totalPages}
+                          >
+                            Next
+                            <ChevronRight className="ml-1 size-4" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </>
                 )}
               </CardContent>
             </Card>

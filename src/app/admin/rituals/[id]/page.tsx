@@ -916,7 +916,7 @@ function PerRitualMappingForm({
         <div className="space-y-1">
           <Label>Asset</Label>
           <Select value={assetId} onValueChange={setAssetId}>
-            <SelectTrigger>
+            <SelectTrigger className="w-full">
               <SelectValue placeholder="Pick an asset…" />
             </SelectTrigger>
             <SelectContent>

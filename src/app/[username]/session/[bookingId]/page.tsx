@@ -6,12 +6,15 @@ import { SessionRoom } from "@/components/session/session-room";
 import { ChimeSessionRoom } from "@/components/session/chime-session-room";
 import { formatDateTime } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
-import { CalendarDays, Clock, User } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { CalendarDays, Clock, Download, User } from "lucide-react";
 import { createChimeMeeting, createChimeAttendee } from "@/lib/chime-meetings";
 import { getSessionLinkForBooking } from "@/lib/service-toolkit-mapping";
 
 const BOOKING_SELECT =
-  "id, scheduled_at, status, duration_minutes, daily_room_url, daily_room_name, video_provider, chime_meeting_id, chime_external_meeting_id, diviner_id, client_id, base_price, questionnaire_responses, services(name, duration_minutes, overage_rate, service_templates(slug, category)), clients(id, full_name, email, birth_date, birth_time, birth_city), diviners(display_name, username)";
+  "id, scheduled_at, status, duration_minutes, daily_room_url, daily_room_name, video_provider, chime_meeting_id, chime_external_meeting_id, diviner_id, client_id, base_price, questionnaire_responses, services(slug, name, duration_minutes, overage_rate, service_templates(slug, category)), clients(id, full_name, email, birth_date, birth_time, birth_city), diviners(display_name, username)";
+
+const SESSION_JOIN_EARLY_WINDOW_MINUTES = 15;
 
 interface PageProps {
   params: Promise<{ username: string; bookingId: string }>;
@@ -48,6 +51,126 @@ async function ensureChimeMeeting(booking: any, bookingId: string, adminDb: Retu
     .single();
 
   if (refreshed) Object.assign(booking, refreshed);
+}
+
+function escapeIcsText(value: string): string {
+  return value
+    .replace(/\\/g, "\\\\")
+    .replace(/;/g, "\\;")
+    .replace(/,/g, "\\,")
+    .replace(/\r?\n/g, "\\n");
+}
+
+function formatIcsDate(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getUTCFullYear()}${pad(date.getUTCMonth() + 1)}${pad(date.getUTCDate())}T${pad(date.getUTCHours())}${pad(date.getUTCMinutes())}00Z`;
+}
+
+function buildCalendarDataUrl({
+  serviceName,
+  divinerName,
+  scheduledAt,
+  durationMinutes,
+}: {
+  serviceName: string;
+  divinerName: string;
+  scheduledAt: string;
+  durationMinutes: number;
+}) {
+  const start = new Date(scheduledAt);
+  const end = new Date(start.getTime() + durationMinutes * 60_000);
+  if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime())) {
+    return null;
+  }
+
+  const title = `${serviceName} with ${divinerName}`;
+  const icsContent = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//AstrologyPro//Session//EN",
+    "BEGIN:VEVENT",
+    `UID:${crypto.randomUUID()}@astrologypro.com`,
+    `DTSTAMP:${formatIcsDate(new Date())}`,
+    `DTSTART:${formatIcsDate(start)}`,
+    `DTEND:${formatIcsDate(end)}`,
+    `SUMMARY:${escapeIcsText(title)}`,
+    `DESCRIPTION:${escapeIcsText("Your AstrologyPro video session")}`,
+    "END:VEVENT",
+    "END:VCALENDAR",
+  ].join("\r\n");
+
+  return `data:text/calendar;charset=utf-8,${encodeURIComponent(icsContent)}`;
+}
+
+function SessionUnavailableState({
+  title,
+  description,
+  serviceName,
+  clientName,
+  scheduledAt,
+  durationMinutes,
+  actionLabel,
+  actionHref,
+  bookingHref,
+  calendarHref,
+}: {
+  title: string;
+  description: string;
+  serviceName: string;
+  clientName: string;
+  scheduledAt: string;
+  durationMinutes: number;
+  actionLabel?: string;
+  actionHref?: string;
+  bookingHref: string;
+  calendarHref: string | null;
+}) {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+      <div className="w-full max-w-lg rounded-xl border border-border bg-card p-6 text-center shadow-sm">
+        <h1 className="text-2xl font-semibold">{title}</h1>
+        <p className="mt-3 text-sm text-muted-foreground">{description}</p>
+
+        <div className="mt-6 rounded-lg border border-border/70 bg-muted/30 p-4 text-left text-sm">
+          <p className="font-medium text-foreground">{serviceName}</p>
+          <div className="mt-3 space-y-2 text-muted-foreground">
+            <p className="flex items-center gap-2">
+              <User className="size-4 text-primary" />
+              Client: {clientName}
+            </p>
+            <p className="flex items-center gap-2">
+              <CalendarDays className="size-4 text-primary" />
+              {formatDateTime(scheduledAt)}
+            </p>
+            <p className="flex items-center gap-2">
+              <Clock className="size-4 text-primary" />
+              {durationMinutes} min
+            </p>
+          </div>
+        </div>
+
+        {actionHref && actionLabel ? (
+          <Button asChild className="mt-6 w-full">
+            <a href={actionHref}>{actionLabel}</a>
+          </Button>
+        ) : null}
+
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <Button asChild variant={actionHref ? "outline" : "default"}>
+            <a href={bookingHref}>Back to Booking</a>
+          </Button>
+          {calendarHref ? (
+            <Button asChild variant="outline" className="gap-2">
+              <a href={calendarHref} download="astrologypro-session.ics">
+                <Download className="size-4" />
+                Add to Calendar
+              </a>
+            </Button>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default async function SessionPage({ params, searchParams }: PageProps) {
@@ -111,6 +234,44 @@ export default async function SessionPage({ params, searchParams }: PageProps) {
     if (!role) notFound();
   }
 
+  // ── Extract display data ───────────────────────────────────────────────────
+  const service = Array.isArray(booking.services) ? booking.services[0] : booking.services;
+  const client  = Array.isArray(booking.clients)  ? booking.clients[0]  : booking.clients;
+
+  const serviceName      = service?.name ?? "Reading Session";
+  const serviceSlug      = typeof service?.slug === "string" ? service.slug : null;
+  const clientName       = client?.full_name ?? client?.email ?? "Client";
+  const scheduledDuration = service?.duration_minutes ?? booking.duration_minutes ?? 60;
+  const serviceOverageRate = Number(service?.overage_rate ?? 0.50);
+  const bookingHref = serviceSlug
+    ? `/services/${encodeURIComponent(serviceSlug)}`
+    : "/services";
+  const calendarHref = buildCalendarDataUrl({
+    serviceName,
+    divinerName: divinerDisplayName,
+    scheduledAt: booking.scheduled_at,
+    durationMinutes: scheduledDuration,
+  });
+  const scheduledAtMs = new Date(booking.scheduled_at).getTime();
+  const joinOpenAtMs =
+    scheduledAtMs - SESSION_JOIN_EARLY_WINDOW_MINUTES * 60_000;
+
+  // eslint-disable-next-line react-hooks/purity -- Server-side access gate must compare against request time.
+  if (Number.isFinite(scheduledAtMs) && Date.now() < joinOpenAtMs) {
+    return (
+      <SessionUnavailableState
+        title="Session not open yet"
+        description={`This room opens ${SESSION_JOIN_EARLY_WINDOW_MINUTES} minutes before the scheduled start time.`}
+        serviceName={serviceName}
+        clientName={clientName}
+        scheduledAt={booking.scheduled_at}
+        durationMinutes={scheduledDuration}
+        bookingHref={bookingHref}
+        calendarHref={calendarHref}
+      />
+    );
+  }
+
   // ── Provision Chime on-demand if needed ───────────────────────────────────
   let videoProvider = booking.video_provider ?? "chime";
 
@@ -120,20 +281,45 @@ export default async function SessionPage({ params, searchParams }: PageProps) {
       videoProvider = "chime";
     } catch (err) {
       console.error("Session page: on-demand Chime provisioning failed:", err);
-      notFound();
+      const retryPath = `/${encodeURIComponent(username)}/session/${encodeURIComponent(bookingId)}${
+        token ? `?token=${encodeURIComponent(token)}` : ""
+      }`;
+      return (
+        <SessionUnavailableState
+          title="Session room not ready"
+          description="We found the booking, but the video room could not be prepared. Please try again in a moment."
+          serviceName={serviceName}
+          clientName={clientName}
+          scheduledAt={booking.scheduled_at}
+          durationMinutes={scheduledDuration}
+          actionLabel="Try again"
+          actionHref={retryPath}
+          bookingHref={bookingHref}
+          calendarHref={calendarHref}
+        />
+      );
     }
   }
 
-  if (videoProvider === "daily" && !booking.daily_room_url) notFound();
-
-  // ── Extract display data ───────────────────────────────────────────────────
-  const service = Array.isArray(booking.services) ? booking.services[0] : booking.services;
-  const client  = Array.isArray(booking.clients)  ? booking.clients[0]  : booking.clients;
-
-  const serviceName      = service?.name ?? "Reading Session";
-  const clientName       = client?.full_name ?? client?.email ?? "Client";
-  const scheduledDuration = service?.duration_minutes ?? booking.duration_minutes ?? 60;
-  const serviceOverageRate = Number(service?.overage_rate ?? 0.50);
+  if (videoProvider === "daily" && !booking.daily_room_url) {
+    const retryPath = `/${encodeURIComponent(username)}/session/${encodeURIComponent(bookingId)}${
+      token ? `?token=${encodeURIComponent(token)}` : ""
+    }`;
+    return (
+      <SessionUnavailableState
+        title="Session room not ready"
+        description="We found the booking, but the video room is not available yet. Please try again in a moment."
+        serviceName={serviceName}
+        clientName={clientName}
+        scheduledAt={booking.scheduled_at}
+        durationMinutes={scheduledDuration}
+        actionLabel="Try again"
+        actionHref={retryPath}
+        bookingHref={bookingHref}
+        calendarHref={calendarHref}
+      />
+    );
+  }
 
   // Diviner-only toolkit session link — null for clients, null for unmapped
   // services (hides the button). Server-computed so UI decisions are made

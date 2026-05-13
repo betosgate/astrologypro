@@ -99,7 +99,10 @@ const ROLE_HIERARCHY: Array<{
     check: (d) => !!d.trainee,
     destination: (d, isInvited) => {
       if (!d.trainee?.onboarding_completed) {
-        return isInvited ? getInvitedRoleDestination("trainee") : "/join/trainee/profile";
+        if (isInvited && !d.trainee.paid_at) {
+          return getInvitedRoleDestination("trainee");
+        }
+        return "/join/trainee/profile";
       }
       return "/trainee";
     },
@@ -178,7 +181,7 @@ interface PortalCheckData {
     onboarding_completed: boolean | null;
     subscription_status: string | null;
   } | null;
-  trainee: { id: string; onboarding_completed: boolean | null } | null;
+  trainee: { id: string; onboarding_completed: boolean | null; paid_at: string | null } | null;
   advocate: { id: string; onboarding_completed: boolean | null } | null;
   mysteryStudent: {
     id: string;
@@ -250,7 +253,7 @@ export async function resolveLoginDestination({
       Promise.resolve(earlyDiviner),
       adminClient
         .from("trainees")
-        .select("id, onboarding_completed")
+        .select("id, onboarding_completed, paid_at")
         .eq("user_id", userId)
         .maybeSingle()
         .then((r) => r.data),

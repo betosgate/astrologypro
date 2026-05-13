@@ -831,6 +831,10 @@ async function handleTraineeSignupCheckoutCompleted(
   const username = (authUser?.user_metadata?.username as string) ?? "";
   const displayName =
     (authUser?.user_metadata?.name as string) ?? email.split("@")[0] ?? "Trainee";
+  const paymentIntentId =
+    typeof session.payment_intent === "string"
+      ? session.payment_intent
+      : session.payment_intent?.id ?? null;
 
   if (!username) {
     console.error("[Webhook] trainee_signup: missing username", session.metadata);
@@ -845,6 +849,8 @@ async function handleTraineeSignupCheckoutCompleted(
       username,
       training_status: "active",
       onboarding_completed: false,
+      paid_at: new Date().toISOString(),
+      ...(paymentIntentId ? { payment_intent_id: paymentIntentId } : {}),
     },
     { onConflict: "user_id" }
   );

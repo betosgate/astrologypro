@@ -74,16 +74,7 @@ export async function GET(request: NextRequest) {
     // Fetch member row with tier
     const { data: member, error: memberError } = await admin
       .from("community_members")
-      .select(
-        `id,
-         pm_plan_tiers (
-           name,
-           base_price_usd,
-           base_member_limit,
-           extra_per_member_usd,
-           max_total_members
-         )`
-      )
+      .select("id, pm_tier_id, plan_type")
       .eq("user_id", user.id)
       .single();
 
@@ -101,16 +92,68 @@ export async function GET(request: NextRequest) {
       extra_per_member_usd: number;
       max_total_members: number;
     };
-    const rawTier = member.pm_plan_tiers;
-    const tier: TierShape | null = Array.isArray(rawTier)
-      ? (rawTier[0] as TierShape) ?? null
-      : (rawTier as unknown as TierShape | null);
+
+    const savedTierId = member.pm_tier_id ?? null;
+    const planType = member.plan_type ?? null;
+    let tier: TierShape | null = null;
+
+    const hardcodedPlans: Record<string, TierShape> = {
+      plan_pm_individual: {
+        name: "Individual Plan",
+        base_price_usd: 19.95,
+        base_member_limit: 1,
+        extra_per_member_usd: 5,
+        max_total_members: 1,
+      },
+      plan_pm_couple: {
+        name: "Couple Plan",
+        base_price_usd: 29.95,
+        base_member_limit: 2,
+        extra_per_member_usd: 5,
+        max_total_members: 2,
+      },
+      plan_pm_family: {
+        name: "Family Plan",
+        base_price_usd: 39.95,
+        base_member_limit: 5,
+        extra_per_member_usd: 5,
+        max_total_members: 5,
+      },
+    };
+
+    if (savedTierId) {
+      if (savedTierId in hardcodedPlans) {
+        tier = hardcodedPlans[savedTierId];
+      } else {
+        // Fallback: check if the saved tier ID belongs to pm_plan_tiers and map by name
+        const { data: dbTier } = await admin
+          .from("pm_plan_tiers")
+          .select("name, base_price_usd, base_member_limit, extra_per_member_usd, max_total_members")
+          .eq("id", savedTierId)
+          .single();
+          
+        if (dbTier) {
+          tier = {
+            name: dbTier.name,
+            base_price_usd: Number(dbTier.base_price_usd),
+            base_member_limit: dbTier.base_member_limit,
+            extra_per_member_usd: Number(dbTier.extra_per_member_usd),
+            max_total_members: dbTier.max_total_members,
+          };
+        }
+      }
+    }
+
+    // Fallback to plan_type if tier is still null
+    if (!tier && planType) {
+      const type = planType.toLowerCase();
+      if (type.includes("individual")) tier = hardcodedPlans.plan_pm_individual;
+      else if (type.includes("couple")) tier = hardcodedPlans.plan_pm_couple;
+      else if (type.includes("family")) tier = hardcodedPlans.plan_pm_family;
+    }
 
     if (!tier) {
-      return NextResponse.json(
-        { error: "No plan tier configured for this membership" },
-        { status: 404 }
-      );
+      tier = hardcodedPlans.plan_pm_individual;
     }
 
     // All numeric fields coerced with Number() and guarded against NaN

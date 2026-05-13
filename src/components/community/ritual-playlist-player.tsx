@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { SyntheticEvent } from "react";
 import Link from "next/link";
 import {
   AlertTriangle,
@@ -84,6 +85,9 @@ export function RitualPlaylistPlayer({
 
   const [duration, setDuration] = useState(0);
   const [position, setPosition] = useState(0);
+  const [stepDurations, setStepDurations] = useState<Record<number, number>>(
+    {}
+  );
   const [settings, setSettings] = useState({
     video_loop: false,
     video_autoplay: true,
@@ -167,8 +171,28 @@ export function RitualPlaylistPlayer({
 
   const handleLoadedMetadata = useCallback(() => {
     const el = videoRef.current;
-    if (el) setDuration(el.duration);
-  }, []);
+    if (!el) return;
+
+    setDuration(el.duration);
+    setStepDurations((prev) => {
+      if (!Number.isFinite(el.duration) || el.duration <= 0) return prev;
+      if (prev[currentStepIndex] === el.duration) return prev;
+      return { ...prev, [currentStepIndex]: el.duration };
+    });
+  }, [currentStepIndex]);
+
+  const handleStepMetadataLoaded = useCallback(
+    (idx: number, event: SyntheticEvent<HTMLVideoElement>) => {
+      const loadedDuration = event.currentTarget.duration;
+      if (!Number.isFinite(loadedDuration) || loadedDuration <= 0) return;
+
+      setStepDurations((prev) => {
+        if (prev[idx] === loadedDuration) return prev;
+        return { ...prev, [idx]: loadedDuration };
+      });
+    },
+    []
+  );
 
   const handleTimeUpdate = useCallback(() => {
     const el = videoRef.current;
@@ -202,10 +226,60 @@ export function RitualPlaylistPlayer({
   }
 
   const overallElapsed = Math.floor(position);
-  const remaining = Math.max(duration - position, 0);
+  const ritualTiming = (() => {
+    const hasUnplayableStep = playlist.some((item) => !item.videoUrl);
+    const allDurationsKnown =
+      !hasUnplayableStep &&
+      playlist.every((_, idx) => Number.isFinite(stepDurations[idx]));
+
+    if (!allDurationsKnown) {
+      return {
+        elapsed: null,
+        left: null,
+        total: null,
+      };
+    }
+
+    const total = playlist.reduce(
+      (sum, _, idx) => sum + (stepDurations[idx] ?? 0),
+      0
+    );
+    const completedDuration = playlist
+      .slice(0, currentStepIndex)
+      .reduce((sum, _, idx) => sum + (stepDurations[idx] ?? 0), 0);
+    const currentDuration = stepDurations[currentStepIndex] ?? 0;
+    const currentElapsed = completedAll
+      ? currentDuration
+      : Math.min(Math.max(position, 0), currentDuration);
+    const elapsed = completedAll
+      ? total
+      : Math.min(completedDuration + currentElapsed, total);
+
+    return {
+      elapsed,
+      left: Math.max(total - elapsed, 0),
+      total,
+    };
+  })();
 
   return (
     <div className="space-y-5">
+      <div
+        className="pointer-events-none fixed bottom-0 right-0 h-px w-px overflow-hidden opacity-0"
+        aria-hidden="true"
+      >
+        {playlist.map((item, idx) =>
+          item.videoUrl ? (
+            <video
+              key={`${item.tag}-${idx}-metadata`}
+              src={item.videoUrl}
+              preload="metadata"
+              muted
+              onLoadedMetadata={(event) => handleStepMetadataLoaded(idx, event)}
+            />
+          ) : null
+        )}
+      </div>
       <div className="space-y-2 flex items-start gap-3">
         <Link
             href={`/community/rituals/${ritualId}`}
@@ -320,15 +394,19 @@ export function RitualPlaylistPlayer({
                 Elapsed
               </p>
               <p className="mt-2 text-md font-semibold text-foreground">
-                {fmtSeconds(overallElapsed)}
+                {ritualTiming.elapsed === null
+                  ? "--:--"
+                  : fmtSeconds(ritualTiming.elapsed)}
               </p>
             </div>
             <div className="rounded-xl border border-border/50 bg-slate-950/70 px-3 py-4 text-center">
               <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                Remaining
+                Left
               </p>
               <p className="mt-2 text-md font-semibold text-foreground">
-                {fmtSeconds(remaining)}
+                {ritualTiming.left === null
+                  ? "--:--"
+                  : fmtSeconds(ritualTiming.left)}
               </p>
             </div>
             <div className="rounded-xl border border-border/50 bg-slate-950/70 px-3 py-4 text-center">
@@ -336,7 +414,9 @@ export function RitualPlaylistPlayer({
                 Total
               </p>
               <p className="mt-2 text-md font-semibold text-foreground">
-                {fmtSeconds(duration)}
+                {ritualTiming.total === null
+                  ? "--:--"
+                  : fmtSeconds(ritualTiming.total)}
               </p>
             </div>
           </div>
@@ -345,7 +425,7 @@ export function RitualPlaylistPlayer({
               {Math.min(currentStepIndex + 1, totalSteps)} / {totalSteps}
             </p>
           </div>
-          <div className="mt-4 min-h-0 flex-1 overflow-y-auto pr-1">
+          <div className="mt-4 min-h-0 flex-1 overflow-y-auto pr-1 max-h-[470px]">
             <ol className="space-y-1.5">
               {playlist.map((item, idx) => {
               const isActive = idx === currentStepIndex;

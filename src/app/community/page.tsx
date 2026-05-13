@@ -46,6 +46,11 @@ import { MembershipCard, type MembershipSubscription } from "@/components/commun
 import { ManageSubscriptionButton } from "@/components/mystery-school/manage-subscription-button";
 import { ProfileCompletionCard, type ProfileCompletionData } from "@/components/community/profile-completion-card";
 import { DashboardFeedPreview } from "@/components/community/dashboard-feed-preview";
+import { RoleUpgradeBanners } from "@/components/dashboard/role-upgrade-banners";
+import {
+  PerennialReadingButton,
+  PerennialReadingCta,
+} from "@/components/community/perennial-reading-cta";
 import { getCommunityDashboardFeed } from "@/lib/dashboard-content";
 import { calcFamilyProfileCompletion } from "@/lib/community/family-profile-completion";
 import { formatBirthPlace } from "@/lib/community/birth-location";
@@ -268,6 +273,13 @@ function isWithinDays(iso: string | null, days: number): boolean {
   return target > now && target - now <= days * 24 * 60 * 60 * 1000;
 }
 
+function daysUntil(iso: string | null): number | null {
+  if (!iso) return null;
+  const diff = new Date(iso).getTime() - Date.now();
+  if (diff <= 0) return 0;
+  return Math.ceil(diff / (24 * 60 * 60 * 1000));
+}
+
 // ── Section heading component ──────────────────────────────────────────────
 function SectionHeading({
   icon: Icon,
@@ -338,6 +350,7 @@ export default async function CommunityDashboardPage() {
   const isMysterySchool = member.membership_type === "mystery_school";
   const isPerennial = !isMysterySchool;
   const programName = isMysterySchool ? "Mystery School" : "Perennial Mandalism";
+  const admin = createAdminClient();
 
   // ── Parallel data fetches ──────────────────────────────────────────────────
   const [
@@ -352,6 +365,7 @@ export default async function CommunityDashboardPage() {
     pmTierResult,
     platformSettingsResult,
     mysterySchoolStudentResult,
+    divinerCheckResult,
     pmApiSubscription,
     communityApiSubscription,
   ] = await Promise.all([
@@ -435,19 +449,21 @@ export default async function CommunityDashboardPage() {
       : Promise.resolve({ data: null }),
 
     // Admin discount toggle — read via admin client (RLS bypass)
-    createAdminClient()
+    admin
       .from("platform_settings")
       .select("ms_pm_discount_enabled")
       .limit(1)
       .maybeSingle(),
 
-    createAdminClient()
+    admin
       .from("mystery_school_students")
       .select(
         "id, enrolled_at, enrollment_date, entry_quarter, entry_year, stripe_subscription_id, one_time_fee_amount, status, paused_at, cancelled_at, access_expires_at"
       )
       .eq("user_id", user.id)
       .maybeSingle(),
+
+    admin.from("diviners").select("id").eq("user_id", user.id).maybeSingle(),
 
     isPerennial ? fetchPmSubscription() : Promise.resolve(null),
     fetchCommunitySubscription(),
@@ -473,6 +489,7 @@ export default async function CommunityDashboardPage() {
   const recentWisdom = recentWisdomResult.data ?? [];
   const recentBlog = recentBlogResult.data ?? [];
   const rituals = ritualsResult.data ?? [];
+  const isDiviner = !!divinerCheckResult.data;
   const pcFamilyMembers = profileCompletionFamilyResult.data ?? [];
   const pcRelCharts = profileCompletionRelChartResult.data ?? [];
   const pmTier = pmTierResult.data ?? null;
@@ -676,12 +693,6 @@ export default async function CommunityDashboardPage() {
   const renewingSoon = !isCancelling && isWithinDays(renewalDate, 7);
 
   // ── Days remaining until renewal/cancellation ─────────────────────────────
-  function daysUntil(iso: string | null): number | null {
-    if (!iso) return null;
-    const diff = new Date(iso).getTime() - Date.now();
-    if (diff <= 0) return 0;
-    return Math.ceil(diff / (24 * 60 * 60 * 1000));
-  }
   const daysRemaining = daysUntil(renewalDate);
 
   // ── Dashboard birth-data readiness ring ──────────────────────────────────
@@ -1007,7 +1018,7 @@ export default async function CommunityDashboardPage() {
     {
       icon: BookText,
       label: "Book a Reading",
-      href: "/astrologers",
+      href: "/services",
       highlight: false,
     },
   ];
@@ -1123,6 +1134,15 @@ export default async function CommunityDashboardPage() {
           </p>
         </div>
       </div>
+
+      {/* ── Diviner access prompt ─────────────────────────────────────────── */}
+      <RoleUpgradeBanners
+        isDiviner={isDiviner}
+        isTrainee={false}
+        isPerennialMandalism={isPerennial}
+        showTraineeUpgrade={false}
+        showDivinerUpgrade
+      />
 
       {/* ═══════════════════════════════════════════════════════════════════
           TOP SUMMARY BAR
@@ -1359,12 +1379,14 @@ export default async function CommunityDashboardPage() {
               Manage Subscription
             </Link>
           </Button> */}
-          <Button asChild variant="outline" size="sm" className="w-full sm:w-auto">
-            <Link href="/astrologers">
-              <Compass className="mr-1.5 size-3.5" />
-              Get a Reading
-            </Link>
-          </Button>
+          <PerennialReadingButton
+            variant="outline"
+            size="sm"
+            className="w-full sm:w-auto"
+          >
+            <Compass className="mr-1.5 size-3.5" />
+            Get a Reading
+          </PerennialReadingButton>
           <Button asChild variant="outline" size="sm" className="w-full sm:w-auto">
             <Link href="/community/library">
               <BookMarked className="mr-1.5 size-3.5" />
@@ -1432,23 +1454,10 @@ export default async function CommunityDashboardPage() {
         {/* Rich membership card */}
         <MembershipCard subscription={membershipSubscription} userEmail={user.email} />
 
-        {/* Dedicated Add Perennial Mandalism Member entry point */}
-        {membershipSubscription.plan_type === "family" &&
-          membershipSubscription.member_count < membershipSubscription.max_members && (
-            <Card className="border-primary/30 bg-primary/5">
-              <CardContent className="py-4 px-5 flex items-center justify-between gap-3 flex-wrap">
-                <div>
-                  <p className="text-sm font-semibold">Add Perennial Mandalism Member</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    Open the full add-member form to enroll a new family member.
-                  </p>
-                </div>
-                <Button asChild size="sm">
-                  <Link href="/community/members/new">+ Add Member</Link>
-                </Button>
-              </CardContent>
-            </Card>
-          )}
+        {/* Dedicated Add Perennial Mandalism Member entry point.
+            Client update 2026-05-11:
+            Keep this entry point hidden as a standalone block. The same
+            add-member action now appears in the membership card CTA row. */}
 
         {/* Journey setup progress — horizontal progress bar when not complete; badge when complete.
             This is the WEIGHTED journey metric (photo, birth data, natal chart, family, relationship chart).
@@ -1567,16 +1576,13 @@ export default async function CommunityDashboardPage() {
         <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
           {quickActions.map((action) => {
             const Icon = action.icon;
-            return (
-              <Link
-                key={action.label}
-                href={action.href}
-                className={`group relative flex flex-col items-center gap-2 rounded-xl border p-3 text-center transition-all hover:border-primary/40 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
-                  action.highlight
-                    ? "border-primary/30 bg-card shadow-[0_2px_8px_-2px_rgba(0,0,0,0.05)]"
-                    : "border-border bg-card"
-                }`}
-              >
+            const className = `group relative flex flex-col items-center gap-2 rounded-xl border p-3 text-center transition-all hover:border-primary/40 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+              action.highlight
+                ? "border-primary/30 bg-card shadow-[0_2px_8px_-2px_rgba(0,0,0,0.05)]"
+                : "border-border bg-card"
+            }`;
+            const content = (
+              <>
                 {/* Pending action indicator dot */}
                 {action.highlight && (
                   <span className="absolute -top-0.5 -right-0.5 flex h-2 w-2">
@@ -1591,6 +1597,20 @@ export default async function CommunityDashboardPage() {
                 <span className="text-[11px] font-medium leading-tight text-foreground">
                   {action.label}
                 </span>
+              </>
+            );
+
+            if (action.label === "Book a Reading") {
+              return (
+                <PerennialReadingCta key={action.label} className={className}>
+                  {content}
+                </PerennialReadingCta>
+              );
+            }
+
+            return (
+              <Link key={action.label} href={action.href} className={className}>
+                {content}
               </Link>
             );
           })}
