@@ -10,9 +10,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
 import { TicketsFilter } from "@/components/admin/tickets-filter";
 import { TicketsBulkTable } from "@/components/admin/tickets-bulk-actions";
+import { TicketsPageActions } from "@/components/admin/tickets-page-actions";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Tickets | Admin" };
@@ -54,6 +54,30 @@ const TABS = [
 
 type TabKey = (typeof TABS)[number]["key"];
 
+function paginationItems(currentPage: number, totalPages: number) {
+  return Array.from({ length: totalPages }, (_, i) => i + 1)
+    .filter((p) => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 2)
+    .reduce<(number | "…")[]>((acc, p, idx, arr) => {
+      if (idx > 0 && p - arr[idx - 1] > 1) acc.push("…");
+      acc.push(p);
+      return acc;
+    }, []);
+}
+
+function utcDateStart(date: string) {
+  const [year, month, day] = date.split("-").map(Number);
+  if (!year || !month || !day) return null;
+
+  return new Date(Date.UTC(year, month - 1, day)).toISOString();
+}
+
+function utcNextDateStart(date: string) {
+  const [year, month, day] = date.split("-").map(Number);
+  if (!year || !month || !day) return null;
+
+  return new Date(Date.UTC(year, month - 1, day + 1)).toISOString();
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default async function AdminTicketsPage({
@@ -91,9 +115,9 @@ export default async function AdminTicketsPage({
       ? tabParam
       : "all";
 
-  const page = Math.max(1, parseInt(pageParam ?? "1", 10));
+  const parsedPage = parseInt(pageParam ?? "1", 10);
+  const page = Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage : 1;
   const limit = 50;
-  const offset = (page - 1) * limit;
 
   const admin = createAdminClient();
 
@@ -106,57 +130,88 @@ export default async function AdminTicketsPage({
   const queues: TicketQueue[] = (queuesData as TicketQueue[]) ?? [];
   const queueMap = Object.fromEntries(queues.map((q) => [q.id, q.name]));
 
-  // Build query
-  let query = admin
-    .from("support_tickets")
-    .select(
-      "id, ticket_number, type, category, subject, status, priority, requester_name, requester_email, requester_role, assigned_to, assigned_team, queue_id, sla_due_at, sla_breached, created_at, updated_at",
-      { count: "exact" }
-    )
-    .order("priority", { ascending: true })
-    .order("created_at", { ascending: false })
-    .order("id", { ascending: false })
-    .range(offset, offset + limit - 1);
+  function buildTicketsQuery(pageNumber: number) {
+    const offset = (pageNumber - 1) * limit;
+    let query = admin
+      .from("support_tickets")
+      .select(
+        "id, ticket_number, type, category, subject, status, priority, requester_name, requester_email, requester_role, assigned_to, assigned_team, queue_id, sla_due_at, sla_breached, created_at, updated_at",
+        { count: "exact" }
+      )
+      .order("priority", { ascending: true })
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: false })
+      .range(offset, offset + limit - 1);
 
-  // Tab filters
-  if (activeTab === "unassigned") {
-    query = query.is("assigned_to", null);
-    // Exclude terminal statuses for unassigned view
-    query = query.not("status", "in", '("resolved","closed","cancelled")');
-  } else if (activeTab === "sla_at_risk") {
-    const twoHoursFromNow = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString();
-    // Tickets that are at-risk: sla_due_at exists, not yet breached, and due within 2h — or already breached
-    query = query
-      .not("status", "in", '("resolved","closed","cancelled")')
-      .not("sla_due_at", "is", null)
-      .lte("sla_due_at", twoHoursFromNow);
+    // Tab filters
+    if (activeTab === "unassigned") {
+      query = query.is("assigned_to", null);
+      // Exclude terminal statuses for unassigned view
+      query = query.not("status", "in", '("resolved","closed","cancelled")');
+    } else if (activeTab === "sla_at_risk") {
+      const twoHoursFromNow = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString();
+      // Tickets that are at-risk: sla_due_at exists, not yet breached, and due within 2h — or already breached
+      query = query
+        .not("status", "in", '("resolved","closed","cancelled")')
+        .not("sla_due_at", "is", null)
+        .lte("sla_due_at", twoHoursFromNow);
+    }
+
+    // User-chosen filters
+    if (status && status !== "all") query = query.eq("status", status);
+    if (type && type !== "all") query = query.eq("type", type);
+    if (priority && priority !== "all") query = query.eq("priority", priority);
+    if (queue && queue !== "all") query = query.eq("queue_id", queue);
+    if (date_from) {
+      const fromStart = utcDateStart(date_from);
+      if (fromStart) query = query.gte("created_at", fromStart);
+    }
+    if (date_to) {
+      const toExclusive = utcNextDateStart(date_to);
+      if (toExclusive) query = query.lt("created_at", toExclusive);
+    }
+
+    // Text search: subject, requester name, ticket_number
+    if (search && search.trim()) {
+      const q = search.trim();
+      query = query.or(
+        `subject.ilike.%${q}%,requester_name.ilike.%${q}%,requester_email.ilike.%${q}%,ticket_number.ilike.%${q}%`
+      );
+    }
+
+    return query;
   }
 
-  // User-chosen filters
-  if (status && status !== "all") query = query.eq("status", status);
-  if (type && type !== "all") query = query.eq("type", type);
-  if (priority && priority !== "all") query = query.eq("priority", priority);
-  if (queue && queue !== "all") query = query.eq("queue_id", queue);
-  if (date_from) query = query.gte("created_at", date_from);
-  if (date_to) {
-    // Include the full "to" day
-    const toEnd = `${date_to}T23:59:59.999Z`;
-    query = query.lte("created_at", toEnd);
-  }
+  const { data, count } = await buildTicketsQuery(page);
 
-  // Text search: subject, requester name, ticket_number
-  if (search && search.trim()) {
-    const q = search.trim();
-    query = query.or(
-      `subject.ilike.%${q}%,requester_name.ilike.%${q}%,requester_email.ilike.%${q}%,ticket_number.ilike.%${q}%`
-    );
-  }
-
-  const { data, count } = await query;
-
-  const tickets = (data as SupportTicket[]) ?? [];
+  let tickets = (data as SupportTicket[]) ?? [];
   const total = count ?? 0;
-  const totalPages = Math.ceil(total / limit);
+  const totalPages = Math.max(1, Math.ceil(total / limit));
+  const currentPage = totalPages > 0 ? Math.min(page, totalPages) : 1;
+
+  if (currentPage !== page) {
+    const { data: currentPageData } = await buildTicketsQuery(currentPage);
+    tickets = (currentPageData as SupportTicket[]) ?? [];
+  }
+
+  function ticketsUrl(targetPage: number) {
+    const params = new URLSearchParams();
+    if (targetPage > 1) params.set("page", String(targetPage));
+    if (activeTab !== "all") params.set("tab", activeTab);
+    if (status && status !== "all") params.set("status", status);
+    if (type && type !== "all") params.set("type", type);
+    if (priority && priority !== "all") params.set("priority", priority);
+    if (queue && queue !== "all") params.set("queue", queue);
+    if (search) params.set("search", search);
+    if (date_from) params.set("date_from", date_from);
+    if (date_to) params.set("date_to", date_to);
+    const qs = params.toString();
+    return qs ? `/admin/tickets?${qs}` : "/admin/tickets";
+  }
+
+  const pages = paginationItems(currentPage, totalPages);
+  const firstVisibleTicket = (currentPage - 1) * limit + 1;
+  const lastVisibleTicket = Math.min(currentPage * limit, total);
 
   // Summary counts for header
   const openCount = tickets.filter((t) =>
@@ -189,12 +244,7 @@ export default async function AdminTicketsPage({
             {openCount > 0 && ` · ${openCount} open`}
           </p>
         </div>
-        <Button asChild size="sm">
-          <Link href="/admin/tickets/new">
-            <Plus className="size-4 mr-2" />
-            Create Job Ticket
-          </Link>
-        </Button>
+        <TicketsPageActions />
       </div>
 
       {/* Tabs */}
@@ -243,30 +293,57 @@ export default async function AdminTicketsPage({
           <TicketsBulkTable tickets={tickets} queueMap={queueMap} queues={queues} />
 
           {/* Pagination */}
-          {totalPages > 1 && (
+          {total > 0 && (
             <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
               <span>
-                Page {page} of {totalPages}
+                Showing {firstVisibleTicket}-{lastVisibleTicket} of {total} ticket{total !== 1 ? "s" : ""} · Page {currentPage} of {totalPages}
               </span>
-              <div className="flex gap-2">
-                {page > 1 && (
-                  <Button variant="outline" size="sm" asChild>
-                    <Link
-                      href={`/admin/tickets?page=${page - 1}${activeTab !== "all" ? `&tab=${activeTab}` : ""}${status ? `&status=${status}` : ""}${type ? `&type=${type}` : ""}${priority ? `&priority=${priority}` : ""}${queue ? `&queue=${queue}` : ""}${search ? `&search=${encodeURIComponent(search)}` : ""}${date_from ? `&date_from=${date_from}` : ""}${date_to ? `&date_to=${date_to}` : ""}`}
-                    >
-                      Previous
-                    </Link>
-                  </Button>
-                )}
-                {page < totalPages && (
-                  <Button variant="outline" size="sm" asChild>
-                    <Link
-                      href={`/admin/tickets?page=${page + 1}${activeTab !== "all" ? `&tab=${activeTab}` : ""}${status ? `&status=${status}` : ""}${type ? `&type=${type}` : ""}${priority ? `&priority=${priority}` : ""}${queue ? `&queue=${queue}` : ""}${search ? `&search=${encodeURIComponent(search)}` : ""}${date_from ? `&date_from=${date_from}` : ""}${date_to ? `&date_to=${date_to}` : ""}`}
-                    >
-                      Next
-                    </Link>
-                  </Button>
-                )}
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={currentPage <= 1}
+                  asChild={currentPage > 1}
+                >
+                  {currentPage > 1 ? (
+                    <Link href={ticketsUrl(currentPage - 1)}>Previous</Link>
+                  ) : (
+                    <span>Previous</span>
+                  )}
+                </Button>
+
+                <div className="hidden items-center gap-1 sm:flex">
+                  {pages.map((p, idx) =>
+                    p === "…" ? (
+                      <span key={`ellipsis-${idx}`} className="px-2 text-muted-foreground">
+                        ...
+                      </span>
+                    ) : (
+                      <Button
+                        key={p}
+                        variant={p === currentPage ? "default" : "outline"}
+                        size="sm"
+                        className="h-8 w-8 p-0"
+                        asChild={p !== currentPage}
+                      >
+                        {p === currentPage ? <span>{p}</span> : <Link href={ticketsUrl(p)}>{p}</Link>}
+                      </Button>
+                    )
+                  )}
+                </div>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={currentPage >= totalPages}
+                  asChild={currentPage < totalPages}
+                >
+                  {currentPage < totalPages ? (
+                    <Link href={ticketsUrl(currentPage + 1)}>Next</Link>
+                  ) : (
+                    <span>Next</span>
+                  )}
+                </Button>
               </div>
             </div>
           )}

@@ -36,7 +36,9 @@ export async function POST(request: NextRequest) {
     // Only the explicitly allowlisted keys are read — unknown fields are ignored.
     const pickString = (snake: string, camel: string): string | undefined => {
       const v = (body[snake] ?? body[camel]) as unknown;
-      return typeof v === "string" ? v : undefined;
+      if (typeof v !== "string") return undefined;
+      const trimmed = v.trim();
+      return trimmed === "" ? undefined : trimmed;
     };
     const pickNumber = (snake: string, camel: string): number | null => {
       const v = body[snake] ?? body[camel];
