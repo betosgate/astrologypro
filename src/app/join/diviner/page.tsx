@@ -170,8 +170,8 @@ export default function JoinDivinerPage() {
                       type="email"
                       placeholder="you@example.com"
                       value={email}
-                      onChange={(event) => setEmail(event.target.value)}
-                      className="h-12 border-white/10 bg-white/[0.03] text-base text-white placeholder:text-[#626a88]"
+                      readOnly
+                      className="h-12 border-white/10 bg-white/[0.03] text-base text-white placeholder:text-[#626a88] read-only:cursor-not-allowed read-only:opacity-75"
                       autoComplete="email"
                     />
                   </div>
