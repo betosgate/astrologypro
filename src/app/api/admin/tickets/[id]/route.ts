@@ -35,6 +35,12 @@ export async function GET(
 ): Promise<NextResponse> {
   const { id } = await params;
 
+  // Basic UUID validation to prevent DB errors when hit with "new" or other strings
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!uuidRegex.test(id)) {
+    return problem(404, "Not Found", "Invalid ticket ID format.");
+  }
+
   const admin_user = await getAdminUser();
   if (!admin_user) {
     return problem(401, "Unauthorized", "Admin access required.");
@@ -86,6 +92,12 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> {
   const { id } = await params;
+
+  // Basic UUID validation to prevent DB errors when hit with "new" or other strings
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!uuidRegex.test(id)) {
+    return problem(404, "Not Found", "Invalid ticket ID format.");
+  }
 
   const admin_user = await getAdminUser();
   if (!admin_user) {

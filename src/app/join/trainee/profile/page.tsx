@@ -98,10 +98,18 @@ function TraineeProfileContent() {
       }
       supabase
         .from("trainees")
-        .select("name, service_package_code")
+        .select("name, service_package_code, paid_at")
         .eq("user_id", data.user.id)
         .single()
         .then(({ data: trainee }) => {
+          if (
+            data.user?.user_metadata?.invited_by_admin === true &&
+            trainee &&
+            !trainee.paid_at
+          ) {
+            router.replace("/join/trainee/plan?invited=true");
+            return;
+          }
           if (trainee?.name) setDisplayName(trainee.name);
           const pkgCode =
             typeof trainee?.service_package_code === "string"
