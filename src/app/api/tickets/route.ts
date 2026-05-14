@@ -104,12 +104,25 @@ export async function POST(req: NextRequest) {
     priority = "normal",
     related_entity_id,
     related_entity_type,
-    metadata = {}
+    metadata = {},
+    attachments = []
   } = body;
 
   if (!subject || !description || !category) {
     return problem(422, "Validation Error", "subject, description, and category are required.");
   }
+
+  // Capture technical info for metadata
+  const userAgent = req.headers.get("user-agent") || "unknown";
+  const ip = req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || "unknown";
+  const enrichedMetadata = {
+    ...metadata,
+    system_info: {
+      user_agent: userAgent,
+      ip_address: ip,
+      created_via: "api"
+    }
+  };
 
   const admin = createAdminClient();
 
@@ -126,7 +139,7 @@ export async function POST(req: NextRequest) {
       priority,
       related_entity_id: related_entity_id || null,
       related_entity_type: related_entity_type || null,
-      metadata,
+      metadata: enrichedMetadata,
       status: "open"
     })
     .select()
@@ -137,6 +150,23 @@ export async function POST(req: NextRequest) {
   }
 
   const typedTicket = ticket as { id: string; subject: string; priority: string; category: string };
+
+  const finalAttachments = Array.isArray(attachments) ? attachments : (metadata.attachments || []);
+  
+  // Insert initial description and attachments as the first message
+  const authUserResp = await admin.auth.admin.getUserById(user.id);
+  const authMetadata = authUserResp.data.user?.user_metadata ?? {};
+  const authorName = (authMetadata.full_name as string | null) ?? (authMetadata.display_name as string | null) ?? user.email ?? "Requester";
+
+  await admin.from("ticket_messages").insert({
+    ticket_id: typedTicket.id,
+    author_user_id: user.id,
+    author_name: authorName,
+    author_role: "staff", // matches requester_role above
+    body: description.trim(),
+    is_internal: false,
+    attachments: finalAttachments
+  });
 
   // Trigger notifications
   await notifyStaffOfTicket({

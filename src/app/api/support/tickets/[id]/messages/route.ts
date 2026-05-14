@@ -9,6 +9,12 @@ export const dynamic = "force-dynamic";
 interface MessageBody {
   body: string;
   is_internal?: boolean;
+  attachments?: Array<{
+    url: string;
+    name: string;
+    type: string;
+    size: number;
+  }>;
 }
 
 // ─── Problem Details helper ───────────────────────────────────────────────────
@@ -90,6 +96,7 @@ export async function POST(
       author_role: "customer",
       body: body.body.trim(),
       is_internal: isInternal,
+      attachments: body.attachments ?? [],
     })
     .select()
     .single();
