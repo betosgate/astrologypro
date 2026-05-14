@@ -278,7 +278,7 @@ export function ChartQuickActions() {
               variant="outline"
               className="h-auto flex-col gap-2 py-4 cursor-pointer"
             >
-              <Link href="/community/charts">
+              <Link href="/community/charts?focus=self">
                 <Heart className="size-6 text-primary" />
                 <div className="text-center">
                   <p className="font-semibold text-sm">Relationship Charts</p>

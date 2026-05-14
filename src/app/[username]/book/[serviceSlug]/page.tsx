@@ -30,6 +30,8 @@ interface PageProps {
    * `template` — optional original public template slug. For general
    *   templates, this lets the final booking page preserve the product label
    *   while still booking the canonical diviner service.
+   * `discount_token` — optional Perennial member discount token carried from
+   *   /services through the shared calendar into payment setup.
    */
   searchParams: Promise<{
     ref?: string;
@@ -37,6 +39,7 @@ interface PageProps {
     date?: string;
     time?: string;
     template?: string;
+    discount_token?: string;
   }>;
 }
 
@@ -133,10 +136,11 @@ export async function generateMetadata({
 
 export default async function BookingPage({ params, searchParams }: PageProps) {
   const { username, serviceSlug } = await params;
-  const { ref, submission, date, time, template } = await searchParams;
+  const { ref, submission, date, time, template, discount_token } = await searchParams;
   const refParam = ref ? `?ref=${encodeURIComponent(ref)}` : "";
   const submissionId = submission?.trim() || null;
   const templateParam = template?.trim() || null;
+  const discountToken = discount_token?.trim() || null;
   const preselectedDate =
     date && /^\d{4}-\d{2}-\d{2}$/.test(date.trim()) ? date.trim() : null;
   const preselectedTime =
@@ -248,6 +252,7 @@ export default async function BookingPage({ params, searchParams }: PageProps) {
             intakePrefill={intakePrefill}
             preselectedDate={preselectedDate}
             startOnContact={startOnContact}
+            discountToken={discountToken}
           />
         ) : (
           <div className="mx-auto max-w-xl rounded-2xl border border-amber-500/20 bg-amber-500/8 px-6 py-8 text-center">

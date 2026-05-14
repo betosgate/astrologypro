@@ -31,7 +31,7 @@ import {
   getAllowedSpecialtiesForPackage,
   resolveRoleServicePackage,
   type RoleServicePackageRow,
-} from "@/lib/role-service-packages";
+} from "@/lib/role-service-packages.shared";
 
 const SPECIALTIES = [
   "Astrology",
@@ -98,10 +98,18 @@ function TraineeProfileContent() {
       }
       supabase
         .from("trainees")
-        .select("name, service_package_code")
+        .select("name, service_package_code, paid_at")
         .eq("user_id", data.user.id)
         .single()
         .then(({ data: trainee }) => {
+          if (
+            data.user?.user_metadata?.invited_by_admin === true &&
+            trainee &&
+            !trainee.paid_at
+          ) {
+            router.replace("/join/trainee/plan?invited=true");
+            return;
+          }
           if (trainee?.name) setDisplayName(trainee.name);
           const pkgCode =
             typeof trainee?.service_package_code === "string"
@@ -196,8 +204,11 @@ function TraineeProfileContent() {
         return;
       }
 
+      const nextParam = searchParams.get("next");
       toast.success("Profile complete! Welcome to your training journey.");
-      router.push("/trainee");
+      router.push(nextParam || "/trainee");
+
+
     } catch {
       toast.error("Something went wrong. Please try again.");
     } finally {

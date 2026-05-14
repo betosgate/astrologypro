@@ -140,6 +140,7 @@ const STATUS_OPTIONS = [
   { value: "all", label: "All Statuses" },
   { value: "active", label: "Active" },
   { value: "pending", label: "Pending" },
+  { value: "expired", label: "Expired" },
   { value: "suspended", label: "Suspended" },
   { value: "blocked", label: "Blocked" },
 ];

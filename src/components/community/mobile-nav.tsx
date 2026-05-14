@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Menu, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { PortalLogoutButton } from "@/components/portal/logout-button";
 import {
   Sheet,
@@ -24,15 +24,27 @@ interface MobileNavProps {
   membershipType: string;
   navItems: NavItem[];
   displayName: string;
+  avatarUrl?: string | null;
+  memberHandle: string;
+  statusLabel: string;
   membershipLabel: string;
 }
 
 export function MobileNav({
   navItems,
   displayName,
+  avatarUrl,
+  memberHandle,
+  statusLabel,
   membershipLabel,
 }: MobileNavProps) {
   const [open, setOpen] = useState(false);
+  const initials = displayName
+    .split(" ")
+    .map((namePart) => namePart[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2) || "?";
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -45,19 +57,9 @@ export function MobileNav({
       <SheetContent side="left" className="w-[280px] p-0">
         <SheetHeader className="px-4 py-4 border-b">
           <SheetTitle className="sr-only">Navigation</SheetTitle>
-          <div className="flex items-center gap-3">
-            <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-              <span className="text-sm font-semibold text-primary">
-                {displayName?.[0]?.toUpperCase() ?? "?"}
-              </span>
-            </div>
-            <div className="min-w-0">
-              <p className="text-sm font-semibold truncate">{displayName}</p>
-              <Badge variant="outline" className="text-[10px] h-4 mt-0.5">
-                {membershipLabel}
-              </Badge>
-            </div>
-          </div>
+          <p className="text-left text-[10px] font-semibold uppercase tracking-widest text-primary">
+            {membershipLabel}
+          </p>
         </SheetHeader>
         <nav className="flex flex-col py-2 overflow-y-auto">
           {navItems.map((item) => (
@@ -74,7 +76,22 @@ export function MobileNav({
             </Link>
           ))}
         </nav>
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t bg-background space-y-2">
+        <div className="absolute bottom-0 left-0 right-0 space-y-2 border-t bg-background p-4">
+          <div className="flex items-center gap-3">
+            <Avatar className="size-8">
+              {avatarUrl ? <AvatarImage src={avatarUrl} alt={displayName} /> : null}
+              <AvatarFallback className="text-xs">{initials}</AvatarFallback>
+            </Avatar>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-medium">{displayName}</p>
+              <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
+                {statusLabel}
+              </p>
+              <p className="truncate text-xs text-muted-foreground">
+                @{memberHandle}
+              </p>
+            </div>
+          </div>
           <Link
             href="/account"
             className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-muted-foreground rounded-lg transition-colors hover:bg-muted hover:text-foreground"

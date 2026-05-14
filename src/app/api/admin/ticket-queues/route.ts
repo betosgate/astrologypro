@@ -9,7 +9,6 @@ export const dynamic = "force-dynamic";
 interface CreateQueueBody {
   name: string;
   team_type?: string;
-  description?: string;
 }
 
 // ─── Problem Details helper ───────────────────────────────────────────────────
@@ -36,7 +35,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 
   let query = admin
     .from("ticket_queues")
-    .select("id, name, team_type, description, is_active, created_at")
+    .select("id, name, team_type, is_active, created_at")
     .order("name", { ascending: true });
 
   if (activeOnly) {
@@ -89,7 +88,6 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     .insert({
       name: body.name.trim(),
       team_type: body.team_type?.trim() ?? null,
-      description: body.description?.trim() ?? null,
       is_active: true,
     })
     .select()

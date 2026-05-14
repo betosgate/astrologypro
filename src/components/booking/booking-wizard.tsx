@@ -125,6 +125,11 @@ interface BookingWizardProps {
    * sync when the URL already includes a selected date + time.
    */
   startOnContact?: boolean;
+  /**
+   * Optional Perennial community member discount token. Forwarded to
+   * booking-payment, which validates and consumes it server-side.
+   */
+  discountToken?: string | null;
 }
 
 const STEPS = [
@@ -311,6 +316,7 @@ export function BookingWizard({
   intakePrefill = null,
   preselectedDate = null,
   startOnContact = false,
+  discountToken = null,
 }: BookingWizardProps) {
   // Start on the Contact step when the URL already carries a chosen date + time
   // (deep-link from the profile's "Next Available" picker) so users don't see a
@@ -592,6 +598,7 @@ export function BookingWizard({
             ...(bookingDetails.birthTimezone ? { birthTimezone: bookingDetails.birthTimezone } : {}),
           },
           refCode,
+          discount_token: discountToken ?? undefined,
           policyAcknowledgedAt: policyAcknowledged ? new Date().toISOString() : undefined,
           // Signal that this slot is not linked to any service — the API will skip charging.
           freeSlot: slotIsUnscoped ? true : undefined,

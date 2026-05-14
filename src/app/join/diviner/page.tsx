@@ -13,12 +13,19 @@ import { ArrowRight, Loader2, ShieldCheck, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 
+const PASSWORD_REGEX = /^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{8,}$/;
+const PASSWORD_ERROR =
+  "Password must be at least 8 characters and include uppercase, lowercase, a number, and a special character.";
+
 function slugify(value: string) {
   return value
     .toLowerCase()
     .trim()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-{2,}/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 30);
 }
 
 export default function JoinDivinerPage() {
@@ -26,8 +33,10 @@ export default function JoinDivinerPage() {
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
   const [password, setPassword] = useState("");
+  const [passwordError, setPasswordError] = useState<string | null>(null);
   const [confirmPassword, setConfirmPassword] = useState("");
   const [profileUrl, setProfileUrl] = useState("");
+  const [profileUrlEdited, setProfileUrlEdited] = useState(false);
   const [inviteToken, setInviteToken] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -45,7 +54,9 @@ export default function JoinDivinerPage() {
 
   function handleNameChange(value: string) {
     setFullName(value);
-    setProfileUrl((current) => current || slugify(value));
+    if (!profileUrlEdited) {
+      setProfileUrl(slugify(value));
+    }
   }
 
   async function handleSubmit(event: React.FormEvent) {
@@ -56,10 +67,12 @@ export default function JoinDivinerPage() {
       return;
     }
 
-    if (password.length < 8) {
-      toast.error("Password must be at least 8 characters.");
+    if (!PASSWORD_REGEX.test(password)) {
+      setPasswordError(PASSWORD_ERROR);
+      toast.error(PASSWORD_ERROR);
       return;
     }
+    setPasswordError(null);
 
     if (password !== confirmPassword) {
       toast.error("Passwords do not match.");
@@ -160,8 +173,8 @@ export default function JoinDivinerPage() {
                       type="email"
                       placeholder="you@example.com"
                       value={email}
-                      onChange={(event) => setEmail(event.target.value)}
-                      className="h-12 border-white/10 bg-white/[0.03] text-base text-white placeholder:text-[#626a88]"
+                      readOnly
+                      className="h-12 border-white/10 bg-white/[0.03] text-base text-white placeholder:text-[#626a88] read-only:cursor-not-allowed read-only:opacity-75"
                       autoComplete="email"
                     />
                   </div>
@@ -188,10 +201,24 @@ export default function JoinDivinerPage() {
                       id="diviner-password"
                       placeholder="At least 8 characters"
                       value={password}
-                      onChange={(event) => setPassword(event.target.value)}
+                      onChange={(event) => {
+                        setPassword(event.target.value);
+                        setPasswordError(null);
+                      }}
                       className="h-12 border-white/10 bg-white/[0.03] text-base text-white placeholder:text-[#626a88]"
                       autoComplete="new-password"
+                      minLength={8}
+                      showStrength
+                      aria-invalid={passwordError ? "true" : "false"}
+                      aria-describedby={
+                        passwordError ? "diviner-password-error" : undefined
+                      }
                     />
+                    {passwordError ? (
+                      <p id="diviner-password-error" className="text-sm font-medium text-red-300">
+                        {passwordError}
+                      </p>
+                    ) : null}
                   </div>
 
                   <div className="space-y-2">
@@ -205,6 +232,8 @@ export default function JoinDivinerPage() {
                       onChange={(event) => setConfirmPassword(event.target.value)}
                       className="h-12 border-white/10 bg-white/[0.03] text-base text-white placeholder:text-[#626a88]"
                       autoComplete="new-password"
+                      minLength={8}
+                      confirmValue={password}
                     />
                   </div>
 
@@ -216,8 +245,12 @@ export default function JoinDivinerPage() {
                       id="diviner-url"
                       placeholder="maya-starweaver"
                       value={profileUrl}
-                      onChange={(event) => setProfileUrl(slugify(event.target.value))}
+                      onChange={(event) => {
+                        setProfileUrlEdited(true);
+                        setProfileUrl(slugify(event.target.value));
+                      }}
                       className="h-12 border-white/10 bg-white/[0.03] text-base text-white placeholder:text-[#626a88]"
+                      autoComplete="username"
                     />
                     <p className="text-sm text-[#8d96b8]">
                       Your page:{" "}

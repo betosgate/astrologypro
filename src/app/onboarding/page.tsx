@@ -54,7 +54,7 @@ import { DAYS_OF_WEEK } from "@/lib/constants";
 import {
   type ResolvedRoleServicePackage,
   filterCategoriesByPackage,
-} from "@/lib/role-service-packages";
+} from "@/lib/role-service-packages.shared";
 
 // ─── Timezone data ────────────────────────────────────────────────────────────
 const TIMEZONES: { zone: string; label: string }[] = [
@@ -612,23 +612,28 @@ function OnboardingContent() {
       bioSpecialty !== "both" &&
       !servicePackage.allowedCategories.includes(bioSpecialty as "astrology" | "tarot")
     ) {
-      setBioSpecialty(servicePackage.allowedCategories[0] ?? "astrology");
+      const nextSpecialty = servicePackage.allowedCategories[0] ?? "astrology";
+      queueMicrotask(() => setBioSpecialty(nextSpecialty));
     }
   }, [bioSpecialty, servicePackage]);
 
   // Check for connect_complete in URL params
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get("connect_complete") === "true") {
-      setConnectComplete(true);
-    }
+    const connectComplete = params.get("connect_complete") === "true";
     const stepParam = params.get("step");
+    let nextStep: number | null = null;
     if (stepParam) {
       const parsed = parseInt(stepParam, 10);
       if (parsed >= 1 && parsed <= 5) {
-        setCurrentStep(parsed);
+        nextStep = parsed;
       }
     }
+
+    queueMicrotask(() => {
+      if (connectComplete) setConnectComplete(true);
+      if (nextStep) setCurrentStep(nextStep);
+    });
   }, []);
 
   // Keep URL in sync with current step so each step has a unique, shareable URL

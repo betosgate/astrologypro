@@ -77,9 +77,11 @@ function DivinerCardGrid({ diviner }: { diviner: DivinerCard }) {
   const searchParams = useSearchParams();
   const submissionId = searchParams.get("submission")?.trim() || "";
   const templateSlug = searchParams.get("template")?.trim() || "";
+  const discountToken = searchParams.get("discount_token")?.trim() || "";
   const bookingParams = new URLSearchParams();
   if (submissionId) bookingParams.set("submission", submissionId);
   if (templateSlug) bookingParams.set("template", templateSlug);
+  if (discountToken) bookingParams.set("discount_token", discountToken);
   const bookingQuery = bookingParams.toString();
   const bookingHref =
     diviner.matchedServiceSlug && templateSlug

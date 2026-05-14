@@ -25,11 +25,14 @@ export default async function TraineeLayout({ children }: { children: React.Reac
 
   const { data: trainee } = await supabase
     .from("trainees")
-    .select("id, name, username, avatar_url, training_status, onboarding_completed, mentor_diviner_id, graduated_at")
+    .select("id, name, username, avatar_url, training_status, onboarding_completed, mentor_diviner_id, graduated_at, paid_at")
     .eq("user_id", user.id)
     .single();
 
   if (!trainee) redirect("/join/trainee");
+  if (user.user_metadata?.invited_by_admin === true && !trainee.paid_at) {
+    redirect("/join/trainee/plan?invited=true");
+  }
   if (!trainee.onboarding_completed) redirect("/join/trainee/profile");
 
   // Contract check

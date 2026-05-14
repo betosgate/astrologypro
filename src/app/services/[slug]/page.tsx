@@ -9,6 +9,7 @@ export const revalidate = 3600;
 
 interface PageProps {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ discount_token?: string }>;
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
@@ -55,11 +56,25 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   };
 }
 
-export default async function ServiceOnlyLandingPage({ params }: PageProps) {
+function getDiscountTokenParam(value: string | undefined) {
+  const token = value?.trim();
+  return token ? token : null;
+}
+
+export default async function ServiceOnlyLandingPage({
+  params,
+  searchParams,
+}: PageProps) {
   const { slug } = await params;
+  const { discount_token } = await searchParams;
   const template = await getServiceLandingTemplate(slug);
 
   if (!template) notFound();
 
-  return <ServiceTemplatePublicPage template={template} />;
+  return (
+    <ServiceTemplatePublicPage
+      template={template}
+      discountToken={getDiscountTokenParam(discount_token)}
+    />
+  );
 }
