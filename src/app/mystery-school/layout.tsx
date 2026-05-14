@@ -116,6 +116,11 @@ export default async function MysterySchoolLayout({ children }: { children: Reac
                 <NavLink
                   href={link.href}
                   exact={link.href === "/mystery-school"}
+                  activeExclusions={
+                    link.href === "/mystery-school/training"
+                      ? ["/mystery-school/training/graduation"]
+                      : undefined
+                  }
                   className="block w-full"
                 >
                   {link.label}
