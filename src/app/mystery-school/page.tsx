@@ -193,8 +193,8 @@ function GridIcon({ status }: { status: DecanStatus }) {
       );
     default:
       return (
-        <span className="flex size-6 items-center justify-center rounded-full bg-muted">
-          <Lock className="size-3 text-muted-foreground/40" />
+        <span className="flex size-7 items-center justify-center rounded-full border border-slate-500/40 bg-slate-800/80 text-slate-300 shadow-sm">
+          <Lock className="size-3.5" />
         </span>
       );
   }
@@ -378,6 +378,7 @@ function DecanCell({ decan }: { decan: DecanItem }) {
   const canClick =
     decan.status !== "locked" && decan.status !== "upcoming";
   const colorClass = SIGN_COLORS[decan.sign] ?? "text-muted-foreground";
+  const isLocked = decan.status === "locked";
 
   return (
     <Link
@@ -386,7 +387,7 @@ function DecanCell({ decan }: { decan: DecanItem }) {
       title={`${decan.title} — ${decan.status}`}
     >
       <div
-        className={`flex flex-col items-center justify-center rounded-md border py-2 px-1 text-center transition-colors ${
+        className={`flex min-h-[86px] flex-col items-center justify-center rounded-lg border px-3 py-3 text-center transition-colors ${
           decan.status === "active"
             ? "border-amber-400/60 bg-amber-50/30"
             : decan.status === "completed"
@@ -397,15 +398,18 @@ function DecanCell({ decan }: { decan: DecanItem }) {
             ? "border-orange-400/30 bg-orange-50/20"
             : decan.status === "preview"
             ? "border-primary/30 group-hover:bg-primary/5"
-            : "opacity-50"
+            : "border-slate-500/25 bg-slate-900/45"
         }`}
       >
         <GridIcon status={decan.status} />
-        <span className={`mt-1 text-[9px] font-medium ${colorClass} leading-none`}>
-          {decan.decan_number}
+        <span className={`mt-2 text-xs font-bold ${colorClass} leading-none`}>
+          Decan {decan.decan_number}
         </span>
-        <span className="text-[8px] text-muted-foreground leading-none truncate w-full px-0.5">
-          {decan.sign.slice(0, 3)}
+        <span className="mt-1 w-full truncate px-0.5 text-[11px] font-medium leading-none text-slate-300">
+          {decan.title}
+        </span>
+        <span className="mt-1 w-full truncate px-0.5 text-[10px] leading-none text-muted-foreground">
+          {isLocked ? "Locked until Foundation is complete" : decan.planet}
         </span>
       </div>
     </Link>
@@ -526,91 +530,13 @@ export default function DecansProgressPage() {
     );
   }
 
-  if (data.decan_access_locked) {
-    const foundation = data.foundation;
-    const totalWeeks = foundation?.totalWeeks ?? 12;
-    const completedWeeks = foundation?.completedWeeks ?? 0;
-    const foundationPct =
-      totalWeeks > 0 ? Math.round((completedWeeks / totalWeeks) * 100) : 0;
-
-    return (
-      <div className="space-y-8">
-        <div className="relative overflow-hidden rounded-xl border border-yellow-500/20 bg-gradient-to-br from-yellow-950/30 via-background to-background px-6 py-8 shadow-sm">
-          <div className="relative space-y-5">
-            <div className="flex items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-yellow-500/30 bg-yellow-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-yellow-500">
-                <Sparkles className="size-3" />
-                Mystery School
-              </span>
-              <span className="inline-flex items-center gap-1 rounded-full border border-blue-500/30 bg-blue-500/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-blue-400">
-                <Lock className="size-3" />
-                Foundation In Progress
-              </span>
-            </div>
-
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight">
-                Complete Foundation Training First
-              </h1>
-              <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-                Your Decan year unlocks after all Foundation Q1 weeks are complete.
-                Continue your Foundation lessons, then return here for the
-                time-based Decan curriculum.
-              </p>
-            </div>
-
-            <Separator className="opacity-20" />
-
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>
-                  {completedWeeks} of {totalWeeks} Foundation weeks completed
-                </span>
-                <span className="font-semibold text-yellow-500/80">
-                  {foundationPct}%
-                </span>
-              </div>
-              <div className="h-1.5 overflow-hidden rounded-full bg-yellow-500/10">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-yellow-600 to-yellow-400 transition-all duration-700"
-                  style={{ width: `${foundationPct}%` }}
-                />
-              </div>
-              {foundation && (
-                <p className="text-xs text-muted-foreground">
-                  {foundation.completedLessons} of {foundation.totalLessons} Foundation lessons completed
-                </p>
-              )}
-            </div>
-
-            <Link
-              href="/mystery-school/training"
-              className="inline-flex items-center gap-2 rounded-md bg-yellow-500 px-4 py-2 text-sm font-semibold text-black transition-colors hover:bg-yellow-400"
-            >
-              Continue Foundation Training
-              <ArrowRight className="size-4" />
-            </Link>
-          </div>
-        </div>
-
-        <Card className="border-blue-500/20 bg-blue-500/5">
-          <CardContent className="flex items-start gap-3 py-5 text-sm text-muted-foreground">
-            <Lock className="mt-0.5 size-4 shrink-0 text-blue-400" />
-            <div>
-              <p className="font-medium text-foreground">Decans are locked for now.</p>
-              <p className="mt-1">
-                This prevents calendar-based Decan windows from opening before
-                your Foundation preparation is complete.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
   const progressPct = Math.round((data.completedCount / data.totalDecans) * 100);
   const weekNumber = data.current_decan_number ?? data.completedCount + 1;
+  const foundation = data.foundation;
+  const totalWeeks = foundation?.totalWeeks ?? 12;
+  const completedWeeks = foundation?.completedWeeks ?? 0;
+  const foundationPct =
+    totalWeeks > 0 ? Math.round((completedWeeks / totalWeeks) * 100) : 0;
 
   const currentDecan = data.decans.find((d) => d.is_current) ?? null;
   const upcoming = data.decans
@@ -635,6 +561,56 @@ export default function DecansProgressPage() {
 
   return (
     <div className="space-y-8">
+      {data.decan_access_locked && (
+        <div className="relative overflow-hidden rounded-xl border border-yellow-500/20 bg-gradient-to-br from-yellow-950/25 via-background to-background px-6 py-5 shadow-sm">
+          <div
+            className="pointer-events-none absolute inset-0"
+            style={{
+              background:
+                "radial-gradient(ellipse 55% 55% at 0% 0%, rgba(234,179,8,0.08) 0%, transparent 70%)",
+            }}
+          />
+          <div className="relative grid gap-5 lg:grid-cols-[1fr_auto] lg:items-center">
+            <div className="space-y-3">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-yellow-500/30 bg-yellow-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-yellow-500">
+                <Lock className="size-3" />
+                Foundation In Progress
+              </span>
+              <div>
+                <h2 className="text-xl font-bold tracking-tight">
+                  Complete Foundation Training First
+                </h2>
+                <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+                  Your Decan year is visible below, but each Decan remains locked until the Foundation quarter is complete.
+                </p>
+              </div>
+              <div className="max-w-xl space-y-1.5">
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>
+                    {completedWeeks} of {totalWeeks} foundation weeks completed
+                  </span>
+                  <span className="font-semibold text-yellow-500/80">
+                    {foundationPct}%
+                  </span>
+                </div>
+                <div className="h-1.5 overflow-hidden rounded-full bg-yellow-500/10">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-yellow-600 to-yellow-400 transition-all duration-700"
+                    style={{ width: `${foundationPct}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+            <Link
+              href="/mystery-school/training"
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-yellow-500/30 bg-yellow-500/10 px-4 py-2 text-sm font-semibold text-yellow-100 transition hover:bg-yellow-500/20"
+            >
+              Continue Training
+              <ArrowRight className="size-4" />
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* ── Gold-on-dark hero header ──────────────────────────────── */}
       <div className="relative rounded-xl overflow-hidden border border-yellow-500/20 bg-gradient-to-br from-yellow-950/30 via-background to-background px-6 py-8 shadow-sm">
