@@ -9570,45 +9570,392 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Birth data gap — entries without birth time show '—' in the Birth Time column; follow up to complete the chart"
         ]
       },
-      {
-        name: "campaigns",
-        label: "Campaigns",
-        description: "Design and run trackable marketing campaigns at /dashboard/campaigns. Every campaign targets exactly one destination — the diviner's profile page OR one of their enabled service landing pages — and gets a unique short URL in the format /r/cmp_XXXXXXXX that logs rich click data for every visitor. The page opens on a Campaigns tab (table of all campaigns) with a sibling Analytics tab for aggregate performance across every campaign. Each row shows name, status (Draft / Active / Paused / Completed), destination badge (Profile or a specific service), the campaign URL with a Copy button, start/end dates, commission rate, and live counts for affiliates, clicks, unique clicks, and conversions. Creating a campaign prompts the diviner for a name, a destination picker populated only with their admin-enabled services, an optional date window, and commission terms for affiliates.",
-        group: "Campaigns",
-        purpose: "Lets diviners promote a specific page (profile or single service) and measure exactly which channels, devices, and geographies drive real bookings — tied to the landing-page access-control system so disabled services can never be selected as a destination.",
-        bullets: [
-          "Destination Picker — shows 'My Profile Page' as the default and a dropdown of enabled service landing pages only; admin-disabled services never appear, even via dev-tools tampering (server validates)",
-          "Campaign URL format — /r/cmp_ + 8 alphanumeric chars (e.g. cmp_8FK29XQ) generated server-side, copied with one click from the row",
-          "/r/[code] tracking redirect — entity-based resolution: the redirect reads campaign.destination_type and looks up the current profile/service URL at click time, so username/slug renames don't break old campaign links",
-          "Click logging — every hit records device, geo (country), referrer, session cookie, and is_bot flag into campaign_clicks before redirecting via 307",
-          "Unique click window — the same visitor within 24h counts as total but not unique, giving clean 'visitors vs. hits' separation",
-          "Status lifecycle — Draft (URL is dormant, no clicks logged) → Active (live tracking) → Paused / Completed / Archived; only Active campaigns log clicks",
-          "Auto-pause trigger — if the admin disables the linked service via diviner_services.is_enabled, a DB trigger flips active campaigns pointing to that service into paused with a banner explaining why",
-          "Campaigns tab — sortable columns for Name, Status, Destination, Campaign URL, Dates, Affiliates, Clicks, Unique, Conversions, Revenue, Commission",
-          "Analytics tab — aggregate KPI cards (Total Campaigns, Active, Conversions, Revenue, Avg ROI) plus a Campaign Performance table with per-row Clicks and Unique columns so drill-down is not required for basic review",
-          "Row actions — eye icon opens the campaign detail page, edit dialog lets the diviner change status, dates, and commission without losing history",
-          "Create Campaign dialog — name, description, destination picker, commission type (% or flat), rate, budget cap, start/end dates; validates that the chosen destination is still enabled before saving"
-        ]
-      },
-      {
-        name: "campaign_analytics_detail",
-        label: "Per-Campaign Analytics",
-        description: "Deep-dive analytics for a single campaign at /dashboard/campaigns/[id]/analytics. The page is structured around the question 'where is this campaign's traffic coming from, and how is it converting?' — KPI cards at the top (Total Clicks, Unique Clicks, Bookings, Revenue, Conversion Rate, Bounce indicator), a clicks-over-time chart below them, and three side-by-side breakdowns: Devices (mobile / desktop / tablet), Geo (top countries), and Referrers (direct, social platforms, search engines, other tracking links). A clicks table at the bottom lists individual click events with timestamp, device summary, country, referrer, and unique/repeat flag, so the diviner can audit exactly how a spike or dip happened.",
-        group: "Campaigns",
-        purpose: "Answers the practical question of whether this specific campaign is worth continuing — is traffic coming from the audience the diviner expected, and is it actually converting into bookings?",
-        bullets: [
-          "KPI strip — Total Clicks, Unique Clicks, Bookings, Revenue, Conversion Rate in prominent cards",
-          "Clicks over time — line chart showing hourly or daily click volume, useful for spotting campaign spikes aligned to posts or ads",
-          "Device breakdown — mobile / desktop / tablet shares so the diviner knows where to focus their copy and imagery",
-          "Geo breakdown — top countries by unique visitors, based on Vercel edge geo headers",
-          "Referrer breakdown — direct typed, social (Instagram, Facebook, X), search (Google, Bing), and other /r/ codes or affiliate links",
-          "Clicks table — individual event list with timestamp, device, country, referrer, is_unique_click flag, and is_bot flag",
-          "Period selector — 7 / 30 / 90 days or All time to match the aggregate analytics tab",
-          "Attribution chain — if a click came from an affiliate link that then routed to this campaign, the chain is shown in the click detail",
-          "Back to campaign — quick link to the campaign detail page to tweak settings without losing scroll position",
-          "Export CSV — download the clicks table for manual analysis or feeding into another BI tool"
-        ]
-      },
+      
+
+    // -----------------------Campaigns-----------------//
+  {
+    "name": "campaigns-dashboard",
+    "label": "Campaigns Dashboard",
+    "description": "Main campaigns page where the diviner can manage and analyze affiliate marketing campaigns.",
+    "group": "Campaigns",
+    "purpose": "Shows all campaign activity in one place so the diviner can review performance and create new campaigns.",
+    "bullets": [
+      "Shows KPI cards for total campaigns, total affiliates, conversions, and commission spent.",
+      "Campaigns and Analytics tabs are available at the top.",
+      "Search, status filter, from date, and to date filters help find campaigns.",
+      "All Campaigns table shows campaign name, status, destination, campaign URL, dates, affiliates, conversions, and actions.",
+      "Create Campaign button starts a new campaign setup."
+    ]
+  },
+  {
+    "name": "create-campaign-basic-modal",
+    "label": "Create Campaign Modal",
+    "description": "Popup form used to create a new promotional campaign for affiliates.",
+    "group": "Campaigns",
+    "purpose": "Collects campaign details before generating a trackable campaign link.",
+    "bullets": [
+      "User enters campaign name and optional description.",
+      "User chooses where campaign visitors should go.",
+      "Destination options include My Profile Page and One of My Services.",
+      "Channel, start date, end date, and UTM parameters can be added.",
+      "Create Campaign button saves the campaign."
+    ]
+  },
+  {
+    "name": "create-campaign-service-selection",
+    "label": "Campaign Service Selection",
+    "description": "Service destination selection area inside the campaign creation modal.",
+    "group": "Campaigns",
+    "purpose": "Allows the diviner to send campaign traffic to a specific service landing page.",
+    "bullets": [
+      "One of My Services option is selected.",
+      "Available services are listed with name, category, duration, price, and publish status.",
+      "Published services can be used as direct campaign destinations.",
+      "Unpublished services show warning text that visitors will redirect to the profile until published.",
+      "The modal supports scrolling when many services are available."
+    ]
+  },
+  {
+    "name": "campaign-created-confirmation",
+    "label": "Campaign Created Confirmation",
+    "description": "Success modal shown after a campaign is created.",
+    "group": "Campaigns",
+    "purpose": "Confirms that the campaign is ready and gives the diviner a shareable tracking URL.",
+    "bullets": [
+      "Shows Campaign Created success message.",
+      "Displays selected campaign name and destination.",
+      "Shows generated campaign URL.",
+      "Copy button allows the URL to be copied for affiliate sharing.",
+      "Done closes the modal and Create Another starts a new campaign."
+    ]
+  },
+  {
+    "name": "campaign-service-landing-page",
+    "label": "Campaign Service Landing Page",
+    "description": "Customer-facing service page opened from a campaign link.",
+    "group": "Campaigns",
+    "purpose": "Lets visitors review the selected service and begin booking.",
+    "bullets": [
+      "Shows service title, category, description, image, diviner name, price, and session length.",
+      "Book This Reading button begins the booking process.",
+      "Page includes what is included in the service.",
+      "Campaign traffic lands directly on the chosen service when published."
+    ]
+  },
+  {
+    "name": "booking-date-time-selection",
+    "label": "Booking Date And Time Selection",
+    "description": "First booking step where the customer chooses a session date and available time.",
+    "group": "Campaigns",
+    "purpose": "Allows the customer to select an available appointment slot.",
+    "bullets": [
+      "Booking flow shows Date & Time, Contact, and Confirm & Pay steps.",
+      "Calendar displays available dates.",
+      "Available time slots are shown for the selected date.",
+      "Timezone is shown based on the customer location.",
+      "Next button moves to the contact step."
+    ]
+  },
+  {
+    "name": "booking-selected-time-details",
+    "label": "Selected Booking Time Details",
+    "description": "Expanded detail view after the customer selects a session time.",
+    "group": "Campaigns",
+    "purpose": "Confirms the selected service, time, description, and price before continuing.",
+    "bullets": [
+      "Selected time slot is highlighted.",
+      "Session detail card shows service name, time range, description, and price.",
+      "Customer can review the appointment details before clicking Next.",
+      "Back button allows returning to the previous page."
+    ]
+  },
+  {
+    "name": "booking-contact-form",
+    "label": "Booking Contact Form",
+    "description": "Second booking step where the customer provides contact and birth information.",
+    "group": "Campaigns",
+    "purpose": "Collects required customer details needed for the reading session.",
+    "bullets": [
+      "Collects full name, email, and phone number.",
+      "Collects birth date and place of birth.",
+      "Shows detected birth location coordinates.",
+      "Notes field allows the customer to add extra context.",
+      "Next button moves to payment confirmation."
+    ]
+  },
+  {
+    "name": "booking-confirm-and-pay",
+    "label": "Booking Confirm And Pay",
+    "description": "Final booking payment step where the customer reviews the booking and pays.",
+    "group": "Campaigns",
+    "purpose": "Completes the paid booking for the selected reading.",
+    "bullets": [
+      "Shows booking summary with service, duration, date, time, schedule type, timezone, client, and total.",
+      "Payment options include Card, Cash App Pay, and Amazon Pay.",
+      "Card payment form collects card number, expiry, security code, country, email, phone, and full name.",
+      "Pay Now button submits payment.",
+      "Back button allows returning to previous booking step."
+    ]
+  },
+  {
+    "name": "booking-confirmation",
+    "label": "Booking Confirmation",
+    "description": "Success page shown after payment and booking completion.",
+    "group": "Campaigns",
+    "purpose": "Confirms that the customer successfully booked the session.",
+    "bullets": [
+      "Shows Booking Confirmed success message.",
+      "Displays service name, date, time, timezone, and schedule type.",
+      "Join Your Session button is available.",
+      "Add to Calendar button lets the customer download an ICS calendar file.",
+      "Message confirms that booking details will also be sent by email."
+    ]
+  },
+
+  //  -------------affiliate-list----------//
+
+
+  
+  {
+    "name": "affiliate-list",
+    "label": "Affiliate List",
+    "description": "Main affiliate management screen available at /dashboard/affiliates where diviners can manage all affiliate partners connected to their account. The page displays overall affiliate statistics, earnings, payouts, pending commissions, search tools, filters, and a complete affiliate table showing every affiliate invited or assigned by the logged-in diviner only.",
+    "group": "Diviner - Affiliate",
+    "purpose": "Allows diviners to monitor affiliate partners, track commissions, review affiliate activity, invite new affiliates, and open detailed affiliate analytics pages.",
+    "bullets": [
+      "Only the logged-in diviner’s affiliates are visible on this page.",
+      "Top KPI cards display Total Affiliates, Commissions Earned, Total Paid, and Pending Balance.",
+      "Search bar allows filtering affiliates by name or email address.",
+      "Status dropdown filters affiliates by Active, Expired, Pending, or other lifecycle states.",
+      "Date range filters narrow affiliate creation history.",
+      "Affiliate table shows Name, Email, Commission Rate, Status, Created Date, and Actions.",
+      "Invite Affiliate button opens the affiliate invitation modal.",
+      "Assign Affiliate button is used to connect affiliates with campaigns, services, or profile promotions.",
+      "Eye icon inside Actions opens the detailed affiliate analytics page.",
+      "Each affiliate row belongs only to the current diviner account and cannot access other diviners’ partnerships."
+    ]
+  },
+  {
+    "name": "invite-affiliate-modal",
+    "label": "Invite Affiliate Modal",
+    "description": "Modal dialog opened from the Invite Affiliate button where diviners can invite new affiliate partners by entering their basic information and optional commission settings.",
+    "group": "Diviner - Affiliate",
+    "purpose": "Lets diviners send secure affiliate invitations directly through email with optional personal notes and customized commission settings.",
+    "bullets": [
+      "Modal collects affiliate Name and Email address.",
+      "Personal Message field allows diviners to send custom onboarding notes.",
+      "Commission section supports optional customized commission rates.",
+      "Invitation links automatically expire after a configured validity window.",
+      "Send Invitation button triggers email delivery to the affiliate.",
+      "Affiliate invitations are connected to the current diviner account.",
+      "System validates email format before sending.",
+      "Duplicate invitations can be restricted by server validation.",
+      "Invitation creation automatically stores invite tracking records.",
+      "Commission setup can later be updated from affiliate assignments."
+    ]
+  },
+  {
+    "name": "affiliate-email-invitation",
+    "label": "Affiliate Invitation Email",
+    "description": "Automated invitation email sent to affiliates after a diviner sends an affiliate invite. The email contains onboarding details, affiliate program explanation, personal notes, and the secure invitation acceptance button.",
+    "group": "Diviner - Affiliate",
+    "purpose": "Provides affiliates with secure onboarding access and explains how the AstrologyPro affiliate partnership system works.",
+    "bullets": [
+      "Email clearly identifies the inviting diviner.",
+      "Affiliate invitation explains commission-based referral earnings.",
+      "Personal Note section displays the diviner’s custom message.",
+      "How It Works section explains the affiliate workflow step-by-step.",
+      "Invitation expiration date is clearly displayed.",
+      "Accept Invitation button opens the secure affiliate registration page.",
+      "Footer includes unsubscribe and privacy policy links.",
+      "Invitation links are unique per affiliate and securely tokenized.",
+      "Email branding matches AstrologyPro affiliate identity.",
+      "Invitation can safely be ignored if received unexpectedly."
+    ]
+  },
+  {
+    "name": "affiliate-accept-invitation",
+    "label": "Accept Affiliate Invitation",
+    "description": "Affiliate onboarding page opened after clicking the Accept Invitation button from the invitation email. The affiliate completes account setup and creates login credentials.",
+    "group": "Diviner - Affiliate",
+    "purpose": "Allows invited affiliates to create their AstrologyPro affiliate account and officially join the diviner partnership program.",
+    "bullets": [
+      "Invitation banner shows the inviting diviner and affiliate email.",
+      "Commission percentage and invitation expiration are displayed.",
+      "Personal message from the diviner is visible during onboarding.",
+      "Affiliate enters Name, Phone Number, and Password.",
+      "Email field is prefilled from the invitation.",
+      "Create account & accept button finalizes onboarding.",
+      "Affiliate account is linked automatically with the inviting diviner.",
+      "Password is securely stored using authentication encryption.",
+      "Terms acceptance is required before activation.",
+      "Successful onboarding redirects affiliates to the Affiliate Dashboard."
+    ]
+  },
+  {
+    "name": "affiliate-dashboard",
+    "label": "Affiliate Dashboard",
+    "description": "Main affiliate portal dashboard shown after affiliate account creation and login. The dashboard provides campaign links, payout setup, marketing tools, and earnings analytics for the affiliate.",
+    "group": "Diviner - Affiliate",
+    "purpose": "Allows affiliates to copy referral campaign links, monitor conversions, track commissions, and manage payout setup.",
+    "bullets": [
+      "Dashboard displays Total Clicks, Conversions, and Total Earned.",
+      "Stripe connection banner allows payout account onboarding.",
+      "Marketing Kit section displays available campaign cards.",
+      "Each campaign card includes a referral tracking URL.",
+      "Copy Link button copies affiliate campaign URLs instantly.",
+      "Preview button opens the public landing page.",
+      "Recent Campaigns table displays active campaigns assigned to the affiliate.",
+      "Campaign links are tied to real campaign tracking codes.",
+      "Affiliate statistics update based on referral activity.",
+      "Dashboard only shows campaigns assigned to the logged-in affiliate."
+    ]
+  },
+    {
+  "name": "affiliate-list-details-navigation",
+  "label": "Affiliate List & Details Navigation",
+  "description": "Affiliate management screen where the logged-in diviner can view and manage only their own affiliate partners. Every affiliate displayed in the table belongs exclusively to the currently authenticated diviner account. The page includes affiliate statistics, commission tracking, filters, and navigation into detailed affiliate analytics.",
+  "group": "Diviner - Affiliate",
+  "purpose": "Allows diviners to review their affiliate partners, monitor commissions, and open detailed affiliate performance pages directly from the affiliate list.",
+  "bullets": [
+    "The affiliate list is scoped only to the currently logged-in diviner account.",
+    "Diviners cannot view affiliates belonging to other diviners.",
+    "Top summary cards display Total Affiliates, Commissions Earned, Total Paid, and Pending Balance.",
+    "Search field filters affiliates by name or email address.",
+    "Status dropdown filters affiliate lifecycle states such as Active or Expired.",
+    "Affiliate table displays Name, Email, Commission Rate, Status, Created Date, and Actions.",
+    "Each affiliate row represents a single affiliate partner connected to the logged-in diviner.",
+    "The Details button (eye icon highlighted with the red arrow) opens the full affiliate analytics page.",
+    "Affiliate detail pages include campaign performance, clicks, conversions, commissions, assignments, and payout history.",
+    "Navigation into the detail page keeps the context tied to the selected affiliate only.",
+    "Affiliate analytics help diviners understand traffic quality and campaign effectiveness.",
+    "All affiliate tracking data remains isolated per diviner account for security and ownership separation."
+  ]
+},
+  {
+    "name": "affiliate-details-page",
+    "label": "Affiliate Details Page",
+    "description": "Detailed affiliate analytics page opened when a diviner clicks the Details icon from the affiliate list. This screen shows complete performance tracking for a single affiliate partner.",
+    "group": "Diviner - Affiliate",
+    "purpose": "Provides deep analytics about affiliate traffic, conversions, campaign performance, commissions, assignments, and payout history.",
+    "bullets": [
+      "Header displays affiliate profile information and status.",
+      "KPI cards show Human Clicks, Unique Clicks, Conversions, Bot Clicks, and Total Earned.",
+      "Device analytics visualize desktop and mobile traffic distribution.",
+      "Country analytics display geographic click distribution.",
+      "Source analytics show traffic origins such as direct or referral.",
+      "Channel Performance summarizes campaign performance metrics.",
+      "Assignments section lists linked profile or service commission mappings.",
+      "Campaigns section lists every campaign connected to the affiliate.",
+      "Rate History tracks historical commission percentage changes.",
+      "Recent Conversions table displays booking-level affiliate earnings.",
+      "All analytics belong only to the currently selected affiliate."
+    ]
+  },
+
+
+  {
+    "name": "affiliate-traffic-analytics",
+    "label": "Affiliate Traffic Analytics",
+    "description": "Traffic analytics section inside the affiliate details page showing detailed click, source, device, and geographic performance insights.",
+    "group": "Diviner - Affiliate",
+    "purpose": "Helps diviners understand how affiliate traffic performs across devices, countries, and acquisition channels.",
+    "bullets": [
+      "Human Clicks separate valid visitors from filtered bots.",
+      "Unique Click tracking prevents duplicate visitor inflation.",
+      "Conversions card displays successful booking totals.",
+      "Bot Click card shows automatically filtered suspicious traffic.",
+      "Device analytics compare desktop versus mobile traffic.",
+      "Country analytics display visitor distribution by geography.",
+      "Source analytics identify direct, referral, or campaign traffic.",
+      "Channel Performance groups campaign performance metrics together.",
+      "Analytics refresh dynamically based on selected date range.",
+      "Traffic data supports affiliate optimization and fraud monitoring."
+    ]
+  },
+  {
+    "name": "affiliate-assignments",
+    "label": "Affiliate Assignments",
+    "description": "Assignments section inside the affiliate detail page where diviners manage affiliate commission mappings to profile destinations or individual services.",
+    "group": "Diviner - Affiliate",
+    "purpose": "Allows diviners to define which destinations an affiliate can promote and what commission percentage applies.",
+    "bullets": [
+      "Assignments can target Profile pages or specific Services.",
+      "Each assignment displays Current Rate, Assigned Date, and Status.",
+      "Manage Assignments button opens assignment management tools.",
+      "Different services may use different commission percentages.",
+      "Assignments control which campaigns affiliates can access.",
+      "Inactive assignments automatically stop future commission calculations.",
+      "Commission rates apply only to new bookings after assignment.",
+      "Historical bookings preserve previous commission values.",
+      "Assignments are scoped only to the selected affiliate.",
+      "Assignment records support future auditing and reporting."
+    ]
+  },
+  {
+    "name": "affiliate-campaign-list",
+    "label": "Affiliate Campaign List",
+    "description": "Campaign section inside the affiliate detail page listing every campaign connected to the selected affiliate partner.",
+    "group": "Diviner - Affiliate",
+    "purpose": "Allows diviners to review campaign-specific affiliate tracking codes and open detailed campaign analytics pages.",
+    "bullets": [
+      "Campaign table displays Campaign Name, Tracking Code, Status, and Created Date.",
+      "Tracking codes use cmp_ prefixed identifiers.",
+      "View Details button opens the detailed campaign analytics page.",
+      "Campaign statuses include Active and inactive lifecycle states.",
+      "Campaign rows belong only to the selected affiliate.",
+      "Campaign tracking links are tied to booking attribution logic.",
+      "Multiple campaigns can be connected to one affiliate.",
+      "Campaign codes remain stable even if landing pages change.",
+      "Campaign activity contributes to affiliate conversion totals.",
+      "Campaign visibility respects diviner ownership permissions."
+    ]
+  },
+ 
+  {
+    "name": "affiliate-campaign-details",
+    "label": "Affiliate Campaign Details",
+    "description": "Detailed campaign analytics page opened after clicking View Details from the affiliate campaign list. This page focuses on a single affiliate-linked campaign.",
+    "group": "Diviner - Affiliate",
+    "purpose": "Provides detailed campaign-level performance tracking including clicks, conversions, commissions, traffic analytics, and conversion history.",
+    "bullets": [
+      "Header displays campaign title, purpose, and active status.",
+      "Campaign URL section provides direct tracking link copy functionality.",
+      "Analytics cards display Human Clicks, Unique Clicks, Conversions, Commission Revenue, and Bot Clicks.",
+      "Device analytics visualize desktop and mobile visitor breakdowns.",
+      "Country analytics show campaign geographic performance.",
+      "Source analytics identify traffic acquisition sources.",
+      "Date Range section displays campaign activity duration.",
+      "History Cap explains conversion history retention limits.",
+      "Affiliate Management notice explains assignment ownership behavior.",
+      "Conversion History table displays affiliate booking attribution records.",
+      "Analytics and Edit buttons allow campaign management actions.",
+      "All campaign data is isolated to the selected affiliate-linked campaign."
+    ]
+  },
+
+   {
+    "name": "affiliate-conversion-history",
+    "label": "Affiliate Conversion History",
+    "description": "Conversion and commission history section inside the affiliate detail page showing every booking conversion generated by the affiliate.",
+    "group": "Diviner - Affiliate",
+    "purpose": "Provides booking-level commission tracking and payout transparency for affiliate-generated conversions.",
+    "bullets": [
+      "Table displays Date, Order Amount, Commission Rate, Commission Value, and Status.",
+      "Earned status indicates valid completed commission payouts.",
+      "Reversed status indicates refunds or canceled bookings.",
+      "Refund explanations are displayed directly inside the status field.",
+      "Conversion records are ordered newest first.",
+      "Historical conversion values remain immutable for auditing.",
+      "Commission totals contribute to affiliate payout balances.",
+      "Conversion visibility is scoped to the selected affiliate only.",
+      "Refund reversals automatically adjust affiliate earnings.",
+      "Conversion history supports financial reconciliation and reporting."
+    ]
+  },
+
+
+// --------------------//
       {
         name: "affiliates",
         label: "Affiliate Partners",
