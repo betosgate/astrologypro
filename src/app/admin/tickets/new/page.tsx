@@ -188,12 +188,15 @@ function RequesterAutocomplete({
         type={type}
         placeholder={placeholder}
         value={value}
+        className={fetching ? "pr-9" : undefined}
         onChange={(e) => handleChange(e.target.value)}
         onFocus={() => fetchSuggestions(value)}
         onKeyDown={handleKeyDown}
         autoComplete="off"
       />
-      {fetching && <Progress value={65} className="mt-2 h-1 animate-pulse" />}
+      {fetching && (
+        <Loader2 className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 animate-spin rounded-full text-muted-foreground" />
+      )}
       {open && suggestions.length > 0 && (
         <div className="absolute top-full left-0 right-0 z-50 mt-1 max-h-64 overflow-y-auto rounded-md border bg-popover shadow-md">
           {suggestions.map((user, idx) => (

@@ -286,7 +286,7 @@ export default function AstroSystemSettingsPage() {
                     value={newType}
                     onValueChange={(v) => setNewType(v as SettingType)}
                   >
-                    <SelectTrigger id="new-type">
+                    <SelectTrigger id="new-type" className="w-full">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
