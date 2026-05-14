@@ -17,13 +17,20 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, FileText, Loader2, Send, X } from "lucide-react";
+import { ArrowLeft, ExternalLink, FileText, Loader2, Send, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
@@ -65,6 +72,21 @@ type TicketAttachment = {
   type: string;
   size: number;
 };
+
+function getAttachmentExtension(attachment: TicketAttachment) {
+  const cleanName = attachment.name.split("?")[0] ?? "";
+  const cleanUrl = attachment.url.split("?")[0] ?? "";
+  return (cleanName.split(".").pop() || cleanUrl.split(".").pop() || "").toLowerCase();
+}
+
+function isPreviewableImage(attachment: TicketAttachment) {
+  const ext = getAttachmentExtension(attachment);
+  return attachment.type.startsWith("image/") || ["jpg", "jpeg", "png", "webp", "gif"].includes(ext);
+}
+
+function isPreviewablePdf(attachment: TicketAttachment) {
+  return attachment.type === "application/pdf" || getAttachmentExtension(attachment) === "pdf";
+}
 
 function RequesterAutocomplete({
   id,
@@ -192,6 +214,7 @@ export default function CreateTicketPage() {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [attachments, setAttachments] = useState<TicketAttachment[]>([]);
+  const [selectedAttachment, setSelectedAttachment] = useState<TicketAttachment | null>(null);
 
   const [formData, setFormData] = useState({
     type: "support",
@@ -255,6 +278,7 @@ export default function CreateTicketPage() {
 
   function removeAttachment(url: string) {
     setAttachments((prev) => prev.filter((attachment) => attachment.url !== url));
+    setSelectedAttachment((current) => (current?.url === url ? null : current));
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -395,7 +419,16 @@ export default function CreateTicketPage() {
                     {attachments.map((attachment) => (
                       <div
                         key={attachment.url}
-                        className="flex items-center gap-3 rounded-md border bg-muted/20 px-3 py-2"
+                        role="button"
+                        tabIndex={0}
+                        className="flex cursor-pointer items-center gap-3 rounded-md border bg-muted/20 px-3 py-2 text-left transition-colors hover:border-primary/30 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                        onClick={() => setSelectedAttachment(attachment)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            setSelectedAttachment(attachment);
+                          }
+                        }}
                       >
                         <FileText className="size-4 shrink-0 text-muted-foreground" />
                         <div className="min-w-0 flex-1">
@@ -409,7 +442,10 @@ export default function CreateTicketPage() {
                           variant="ghost"
                           size="icon"
                           className="size-8 text-muted-foreground hover:text-destructive"
-                          onClick={() => removeAttachment(attachment.url)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeAttachment(attachment.url);
+                          }}
                         >
                           <X className="size-4" />
                           <span className="sr-only">Remove attachment</span>
@@ -512,6 +548,62 @@ export default function CreateTicketPage() {
           </div>
         </div>
       </form>
+
+      <Dialog
+        open={selectedAttachment !== null}
+        onOpenChange={(open) => {
+          if (!open) setSelectedAttachment(null);
+        }}
+      >
+        <DialogContent className="max-h-[90vh] overflow-hidden p-0 sm:max-w-4xl">
+          {selectedAttachment && (
+            <div className="flex max-h-[90vh] flex-col">
+              <DialogHeader className="border-b px-6 py-4 pr-12">
+                <DialogTitle className="truncate text-base">
+                  {selectedAttachment.name}
+                </DialogTitle>
+                <DialogDescription>
+                  {(selectedAttachment.size / (1024 * 1024)).toFixed(2)} MB
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="min-h-0 flex-1 bg-muted/20 p-4">
+                {isPreviewableImage(selectedAttachment) ? (
+                  <div className="flex max-h-[70vh] items-center justify-center overflow-auto rounded-md border bg-background p-2">
+                    <img
+                      src={selectedAttachment.url}
+                      alt={selectedAttachment.name}
+                      className="max-h-[66vh] max-w-full rounded object-contain"
+                    />
+                  </div>
+                ) : isPreviewablePdf(selectedAttachment) ? (
+                  <div className="h-[70vh] overflow-hidden rounded-md border bg-background">
+                    <iframe
+                      src={selectedAttachment.url}
+                      title={selectedAttachment.name}
+                      className="h-full w-full"
+                    />
+                  </div>
+                ) : (
+                  <div className="flex min-h-[320px] flex-col items-center justify-center rounded-md border bg-background px-6 text-center">
+                    <FileText className="mb-3 size-10 text-muted-foreground" />
+                    <p className="text-sm font-medium">Preview is not available for this file type.</p>
+                    <p className="mt-1 max-w-md text-sm text-muted-foreground">
+                      Open the attachment in a new tab to view it with your browser or download it.
+                    </p>
+                    <Button className="mt-4" variant="secondary" asChild>
+                      <a href={selectedAttachment.url} target="_blank" rel="noreferrer">
+                        <ExternalLink className="mr-2 size-4" />
+                        Open attachment
+                      </a>
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
