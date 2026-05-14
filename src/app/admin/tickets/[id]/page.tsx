@@ -488,7 +488,7 @@ export default function AdminTicketDetailPage() {
                         {formatDateTime(msg.created_at)}
                       </span>
                     </div>
-                    <p className="text-sm whitespace-pre-wrap">{msg.body}</p>
+                    <p className="text-xs whitespace-pre-wrap">{msg.body}</p>
                     {renderAttachments(msg.attachments)}
                   </div>
                 ))
