@@ -113,7 +113,7 @@ const CATEGORY_MAP: Record<string, { label: string; subcategories: { value: stri
 
 // Related entity types that can be attached
 const ENTITY_TYPES = [
-  { value: "", label: "None" },
+  { value: "none", label: "None" },
   { value: "order", label: "Order" },
   { value: "booking", label: "Booking" },
   { value: "session", label: "Session / Live stream" },
@@ -142,7 +142,7 @@ export default function NewTicketPage() {
   const [subject, setSubject] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState<PriorityValue>("normal");
-  const [entityType, setEntityType] = useState("");
+  const [entityType, setEntityType] = useState("none");
   const [entityId, setEntityId] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -181,8 +181,8 @@ export default function NewTicketPage() {
           subject: subject.trim(),
           description: description.trim(),
           priority,
-          related_entity_type: entityType || undefined,
-          related_entity_id: entityId.trim() || undefined,
+          related_entity_type: entityType !== "none" ? entityType : undefined,
+          related_entity_id: (entityType !== "none" && entityId.trim()) ? entityId.trim() : undefined,
         }),
       });
 
@@ -342,7 +342,7 @@ export default function NewTicketPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                {entityType && (
+                {entityType !== "none" && (
                   <div className="space-y-1.5">
                     <Label htmlFor="entity-id" className="text-xs">
                       {entityType.charAt(0).toUpperCase() + entityType.slice(1)} ID / reference
