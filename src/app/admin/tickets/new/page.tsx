@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
@@ -213,6 +214,7 @@ export default function CreateTicketPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [attachments, setAttachments] = useState<TicketAttachment[]>([]);
   const [selectedAttachment, setSelectedAttachment] = useState<TicketAttachment | null>(null);
 
@@ -247,15 +249,60 @@ export default function CreateTicketPage() {
     }
 
     setUploading(true);
+    setUploadProgress(0);
 
     const body = new FormData();
     body.append("file", file);
     body.append("kind", "ticket");
 
     try {
-      const res = await fetch("/api/admin/tickets/upload", { method: "POST", body });
-      const data = await res.json();
-      if (!res.ok) {
+      const data = await new Promise<{
+        url: string;
+        name?: string;
+        type?: string;
+        size?: number;
+        error?: string;
+      }>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", "/api/admin/tickets/upload");
+
+        xhr.upload.onprogress = (event) => {
+          if (event.lengthComputable) {
+            setUploadProgress(Math.round((event.loaded / event.total) * 100));
+          }
+        };
+
+        xhr.onload = () => {
+          let data: {
+            url: string;
+            name?: string;
+            type?: string;
+            size?: number;
+            error?: string;
+          };
+
+          try {
+            data = JSON.parse(xhr.responseText);
+          } catch {
+            reject(new Error("Upload failed"));
+            return;
+          }
+
+          if (xhr.status < 200 || xhr.status >= 300) {
+            reject(new Error(data.error ?? "Upload failed"));
+            return;
+          }
+
+          setUploadProgress(100);
+          resolve(data);
+        };
+
+        xhr.onerror = () => reject(new Error("Upload failed"));
+        xhr.onabort = () => reject(new Error("Upload cancelled"));
+        xhr.send(body);
+      });
+
+      if (!data.url) {
         toast.error(data.error ?? "Upload failed");
         return;
       }
@@ -268,10 +315,11 @@ export default function CreateTicketPage() {
           size: data.size ?? file.size,
         },
       ]);
-    } catch {
-      toast.error("Upload failed");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Upload failed");
     } finally {
       setUploading(false);
+      setUploadProgress(0);
       e.target.value = "";
     }
   }
@@ -463,13 +511,21 @@ export default function CreateTicketPage() {
                     disabled={uploading}
                     onClick={() => fileInputRef.current?.click()}
                   >
-                    {uploading && <Loader2 className="mr-2 size-3.5 animate-spin" />}
                     Select file
                   </Button>
                   <span className="text-xs text-muted-foreground">
                     PDF, DOC, Excel, or images up to 10MB
                   </span>
                 </div>
+                {uploading && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>Uploading attachment</span>
+                      <span>{uploadProgress}%</span>
+                    </div>
+                    <Progress value={uploadProgress} />
+                  </div>
+                )}
                 <input
                   ref={fileInputRef}
                   type="file"
