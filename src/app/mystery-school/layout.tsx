@@ -11,6 +11,7 @@ import { PortalLogoutButton } from "@/components/portal/logout-button";
 import { requireMysterySchoolAccess } from "@/lib/mystery-school/access";
 import { SectionContainer } from "@/components/shared/section-container";
 import { SubscriptionExpiredView } from "@/components/shared/subscription-expired-view";
+import { getPendingContractDestination } from "@/lib/contract-orchestration";
 
 export const metadata = { title: "Mystery School - AstrologyPro" };
 
@@ -73,6 +74,12 @@ export default async function MysterySchoolLayout({ children }: { children: Reac
     // Never enrolled — first-time enrollment flow.
     redirect("/join/mystery-school");
   }
+
+  const contractDest = await getPendingContractDestination(
+    user.id,
+    "/mystery-school/training",
+  );
+  if (contractDest) redirect(contractDest);
 
   const { data: member } = await supabase
     .from("community_members")
