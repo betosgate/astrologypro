@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -24,7 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { ArrowLeft, Loader2, SendHorizonal, Lock, CheckSquare, Square, Plus } from "lucide-react";
+import { ArrowLeft, Loader2, SendHorizonal, Lock, CheckSquare, Square, Plus, Paperclip, FileText, X, Download } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -55,6 +55,13 @@ interface Ticket {
   updated_at: string;
 }
 
+interface TicketAttachment {
+  url: string;
+  name: string;
+  type: string;
+  size: number;
+}
+
 interface TicketQueue {
   id: string;
   name: string;
@@ -66,6 +73,7 @@ interface TicketMessage {
   author_role: string;
   body: string;
   is_internal: boolean;
+  attachments?: TicketAttachment[];
   created_at: string;
 }
 
@@ -163,6 +171,9 @@ export default function AdminTicketDetailPage() {
   // Message compose
   const [messageBody, setMessageBody] = useState("");
   const [isInternal, setIsInternal] = useState(true);
+  const [messageAttachments, setMessageAttachments] = useState<TicketAttachment[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadTicket = useCallback(async () => {
     if (!ticketId) return;
@@ -299,7 +310,7 @@ export default function AdminTicketDetailPage() {
 
   async function handleSendMessage(e: React.FormEvent) {
     e.preventDefault();
-    if (!messageBody.trim()) return;
+    if (!messageBody.trim() && messageAttachments.length === 0) return;
 
     setSending(true);
     try {
@@ -309,6 +320,7 @@ export default function AdminTicketDetailPage() {
         body: JSON.stringify({
           message: messageBody.trim(),
           is_internal: isInternal,
+          attachments: messageAttachments,
         }),
       });
       if (!res.ok) {
@@ -316,12 +328,49 @@ export default function AdminTicketDetailPage() {
         throw new Error(err.detail ?? "Failed to send message.");
       }
       setMessageBody("");
+      setMessageAttachments([]);
       toast.success(isInternal ? "Internal note added." : "Reply sent.");
       await loadTicket();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to send.");
     } finally {
       setSending(false);
+    }
+  }
+
+  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("File too large (max 10MB)");
+      return;
+    }
+
+    setUploading(true);
+    const body = new FormData();
+    body.append("file", file);
+    body.append("kind", "ticket");
+
+    try {
+      const res = await fetch("/api/admin/tickets/upload", { method: "POST", body });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Upload failed");
+
+      setMessageAttachments((prev) => [
+        ...prev,
+        {
+          url: data.url,
+          name: data.name ?? file.name,
+          type: data.type ?? file.type,
+          size: data.size ?? file.size,
+        },
+      ]);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   }
 
@@ -338,7 +387,27 @@ export default function AdminTicketDetailPage() {
     return null;
   }
 
-  // Safety first: log the data to help debug in F12 console
+  // Helper to render attachments
+  const renderAttachments = (attachments?: TicketAttachment[]) => {
+    if (!attachments || attachments.length === 0) return null;
+    return (
+      <div className="mt-3 flex flex-wrap gap-2">
+        {attachments.map((att, i) => (
+          <a
+            key={i}
+            href={att.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 rounded-md border bg-muted/30 px-2.5 py-1.5 text-xs hover:bg-muted/50 transition-colors"
+          >
+            <FileText className="size-3.5 text-muted-foreground" />
+            <span className="max-w-[150px] truncate">{att.name}</span>
+            <Download className="size-3 text-muted-foreground ml-1" />
+          </a>
+        ))}
+      </div>
+    );
+  };
   console.log("Ticket Detail Data:", data);
 
   const { ticket, messages = [], history = [] } = data;
@@ -417,6 +486,7 @@ export default function AdminTicketDetailPage() {
                       </span>
                     </div>
                     <p className="text-sm whitespace-pre-wrap">{msg.body}</p>
+                    {renderAttachments(msg.attachments)}
                   </div>
                 ))
               )}
@@ -447,6 +517,7 @@ export default function AdminTicketDetailPage() {
                       </span>
                     </div>
                     <p className="text-sm whitespace-pre-wrap">{msg.body}</p>
+                    {renderAttachments(msg.attachments)}
                   </div>
                 ))
               )}
@@ -564,14 +635,65 @@ export default function AdminTicketDetailPage() {
                   rows={4}
                   disabled={sending}
                 />
-                <Button type="submit" size="sm" disabled={sending || !messageBody.trim()}>
-                  {sending ? (
-                    <Loader2 className="size-4 mr-2 animate-spin" />
-                  ) : (
-                    <SendHorizonal className="size-4 mr-2" />
-                  )}
-                  {isInternal ? "Add Note" : "Send Reply"}
-                </Button>
+
+                {/* Attachments list */}
+                {messageAttachments.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {messageAttachments.map((att) => (
+                      <div key={att.url} className="flex items-center gap-2 rounded-md border bg-muted/50 px-2 py-1 text-xs">
+                        <FileText className="size-3" />
+                        <span className="max-w-[100px] truncate">{att.name}</span>
+                        <button
+                          type="button"
+                          onClick={() => setMessageAttachments(prev => prev.filter(a => a.url !== att.url))}
+                          className="text-muted-foreground hover:text-destructive"
+                        >
+                          <X className="size-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="submit"
+                      size="sm"
+                      disabled={sending || (!messageBody.trim() && messageAttachments.length === 0)}
+                    >
+                      {sending ? (
+                        <Loader2 className="size-4 mr-2 animate-spin" />
+                      ) : (
+                        <SendHorizonal className="size-4 mr-2" />
+                      )}
+                      {isInternal ? "Add Note" : "Send Reply"}
+                    </Button>
+
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      className="hidden"
+                      onChange={handleFileUpload}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={sending || uploading}
+                    >
+                      {uploading ? (
+                        <Loader2 className="size-4 animate-spin" />
+                      ) : (
+                        <Paperclip className="size-4" />
+                      )}
+                      <span className="ml-2 hidden sm:inline">Attach File</span>
+                    </Button>
+                  </div>
+                  
+                  {uploading && <span className="text-xs text-muted-foreground animate-pulse">Uploading...</span>}
+                </div>
               </form>
             </CardContent>
           </Card>
