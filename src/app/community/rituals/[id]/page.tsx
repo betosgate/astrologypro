@@ -35,7 +35,7 @@ type RitualConfig = {
 };
 
 function getDisplayTags(ritualName: string, tags: string[]): string[] {
-  if (ritualName === "Planetary Zodiacal Invocation Ritual of the Pentagramm") {
+  if (ritualName === "Planetary Zodiacal Invocation Ritual of the Pentagram") {
     return tags;
   }
 
@@ -163,7 +163,7 @@ export default function RitualDetailPage() {
     const completionCount = ritual.execution_count;
 
     return (
-      <div className="mx-auto max-w-5xl space-y-6">
+      <div className="mx-auto space-y-6">
         {/* <Link
           href="/community/rituals"
           className="text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
