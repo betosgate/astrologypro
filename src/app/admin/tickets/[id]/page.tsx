@@ -479,12 +479,12 @@ export default function AdminTicketDetailPage() {
               ) : (
                 publicMessages.map((msg) => (
                   <div key={msg.id} className={msg.author_user_id === user?.id ? "w-[60%] ml-auto" : "w-[60%] ml-0"}>
-                    <div className="flex items-center gap-2 mb-1">
+                    <div className="flex items-center gap-2 mb-1.5">
                       <span className="text-sm font-medium">{msg.author_name}</span>
-                      <Badge variant="outline" className="text-xs py-0 px-1.5">
+                      <Badge variant="outline" className="text-[10px] !py-[1px] !px-[10px]">
                         {formatStatus(msg.author_role)}
                       </Badge>
-                      <span className="text-xs text-muted-foreground ml-auto">
+                      <span className="text-[10px] text-muted-foreground ml-auto">
                         {formatDateTime(msg.created_at)}
                       </span>
                     </div>
