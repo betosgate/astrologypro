@@ -53,6 +53,7 @@ import {
 } from "@/components/community/perennial-reading-cta";
 import { getCommunityDashboardFeed } from "@/lib/dashboard-content";
 import { calcFamilyProfileCompletion } from "@/lib/community/family-profile-completion";
+import { includedMemberLimitForTier } from "@/lib/community/pm-entitlement";
 import { formatBirthPlace } from "@/lib/community/birth-location";
 import {
   deriveMonthlyReportState,
@@ -400,7 +401,7 @@ export default async function CommunityDashboardPage() {
         "id, user_id, full_name, relationship, date_of_birth, birth_time, birth_city, birth_country, birth_lat, birth_lng, natal_chart, natal_status, natal_report_id, natal_report_status"
       )
       .eq("member_id", member.id)
-      .limit(10),
+      .limit(20),
 
     // Other community members for members connected count
     supabase
@@ -649,15 +650,19 @@ export default async function CommunityDashboardPage() {
       ? pmApiSubscription.plan_type
       : planType;
 
-  // Max members: from tier table if available, else derive from plan_type
-  const maxMembers: number =
-    (pmTier as { max_total_members?: number } | null)?.max_total_members ??
-    (membershipPlanType === "family" ? 5 : 1);
+  // Current plan slots: use included seats, not the tier expansion ceiling.
+  // A fresh Family tier is 5 total members; the 15-member number belongs to
+  // upgrade/expansion flows.
+  const maxMembers = includedMemberLimitForTier(
+    pmTier as { name: string; base_member_limit: number } | null,
+    membershipPlanType === "family" ? "family" : "individual",
+  );
 
-  // family count: family members + the primary member
+  // Household rows include the canonical "self" row after onboarding, so count
+  // only non-self family rows plus the primary member to avoid 2-of-N on day one.
   const memberCount =
     membershipPlanType === "family"
-      ? Math.min((familyMembers?.length ?? 0) + 1, maxMembers)
+      ? Math.min(nonSelfFamilyMembers.length + 1, maxMembers)
       : 1;
 
   // Tier display name: prefer the PM subscription API, then pm_plan_tiers.

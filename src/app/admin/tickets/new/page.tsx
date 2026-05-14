@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
@@ -107,25 +108,36 @@ function RequesterAutocomplete({
 }) {
   const [suggestions, setSuggestions] = useState<RequesterSuggestion[]>([]);
   const [open, setOpen] = useState(false);
+  const [fetching, setFetching] = useState(false);
   const [activeSuggestion, setActiveSuggestion] = useState(-1);
   const containerRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const requestRef = useRef(0);
 
   function fetchSuggestions(q: string) {
+    const requestId = requestRef.current + 1;
+    requestRef.current = requestId;
+    setFetching(true);
+
     const params = new URLSearchParams({ limit: "5" });
     if (q.trim()) params.set("q", q.trim());
 
     fetch(`/api/admin/tickets/requesters?${params.toString()}`)
       .then((res) => (res.ok ? res.json() : { users: [] }))
       .then((data) => {
+        if (requestRef.current !== requestId) return;
         const users = Array.isArray(data.users) ? data.users : [];
         setSuggestions(users);
         setOpen(users.length > 0);
         setActiveSuggestion(-1);
       })
       .catch(() => {
+        if (requestRef.current !== requestId) return;
         setSuggestions([]);
         setOpen(false);
+      })
+      .finally(() => {
+        if (requestRef.current === requestId) setFetching(false);
       });
   }
 
@@ -176,11 +188,15 @@ function RequesterAutocomplete({
         type={type}
         placeholder={placeholder}
         value={value}
+        className={fetching ? "pr-9" : undefined}
         onChange={(e) => handleChange(e.target.value)}
         onFocus={() => fetchSuggestions(value)}
         onKeyDown={handleKeyDown}
         autoComplete="off"
       />
+      {fetching && (
+        <Loader2 className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 animate-spin rounded-full text-muted-foreground" />
+      )}
       {open && suggestions.length > 0 && (
         <div className="absolute top-full left-0 right-0 z-50 mt-1 max-h-64 overflow-y-auto rounded-md border bg-popover shadow-md">
           {suggestions.map((user, idx) => (
@@ -213,6 +229,7 @@ export default function CreateTicketPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [attachments, setAttachments] = useState<TicketAttachment[]>([]);
   const [selectedAttachment, setSelectedAttachment] = useState<TicketAttachment | null>(null);
 
@@ -247,15 +264,60 @@ export default function CreateTicketPage() {
     }
 
     setUploading(true);
+    setUploadProgress(0);
 
     const body = new FormData();
     body.append("file", file);
     body.append("kind", "ticket");
 
     try {
-      const res = await fetch("/api/admin/tickets/upload", { method: "POST", body });
-      const data = await res.json();
-      if (!res.ok) {
+      const data = await new Promise<{
+        url: string;
+        name?: string;
+        type?: string;
+        size?: number;
+        error?: string;
+      }>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", "/api/admin/tickets/upload");
+
+        xhr.upload.onprogress = (event) => {
+          if (event.lengthComputable) {
+            setUploadProgress(Math.round((event.loaded / event.total) * 100));
+          }
+        };
+
+        xhr.onload = () => {
+          let data: {
+            url: string;
+            name?: string;
+            type?: string;
+            size?: number;
+            error?: string;
+          };
+
+          try {
+            data = JSON.parse(xhr.responseText);
+          } catch {
+            reject(new Error("Upload failed"));
+            return;
+          }
+
+          if (xhr.status < 200 || xhr.status >= 300) {
+            reject(new Error(data.error ?? "Upload failed"));
+            return;
+          }
+
+          setUploadProgress(100);
+          resolve(data);
+        };
+
+        xhr.onerror = () => reject(new Error("Upload failed"));
+        xhr.onabort = () => reject(new Error("Upload cancelled"));
+        xhr.send(body);
+      });
+
+      if (!data.url) {
         toast.error(data.error ?? "Upload failed");
         return;
       }
@@ -268,10 +330,11 @@ export default function CreateTicketPage() {
           size: data.size ?? file.size,
         },
       ]);
-    } catch {
-      toast.error("Upload failed");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Upload failed");
     } finally {
       setUploading(false);
+      setUploadProgress(0);
       e.target.value = "";
     }
   }
@@ -315,7 +378,7 @@ export default function CreateTicketPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="space-y-6">
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" asChild>
           <Link href="/admin/tickets">
@@ -463,13 +526,21 @@ export default function CreateTicketPage() {
                     disabled={uploading}
                     onClick={() => fileInputRef.current?.click()}
                   >
-                    {uploading && <Loader2 className="mr-2 size-3.5 animate-spin" />}
                     Select file
                   </Button>
                   <span className="text-xs text-muted-foreground">
                     PDF, DOC, Excel, or images up to 10MB
                   </span>
                 </div>
+                {uploading && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>Uploading attachment</span>
+                      <span>{uploadProgress}%</span>
+                    </div>
+                    <Progress value={uploadProgress} />
+                  </div>
+                )}
                 <input
                   ref={fileInputRef}
                   type="file"

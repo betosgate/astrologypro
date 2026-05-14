@@ -98,6 +98,7 @@ import { MIGRATION_SQL as MIG_20260507000001_SFMC } from "@/data/migrations/2026
 import { MIGRATION_SQL as MIG_20260511000001_PM3 } from "@/data/migrations/20260511000001_pm_plan_tiers_three_plan_alignment";
 import { MIGRATION_SQL as MIG_20260513000001_TCTC } from "@/data/migrations/20260513000001_trainee_customer_terms_contract";
 import { MIGRATION_SQL as MIG_20260513000003 } from "@/data/migrations/20260513000003_ingress_charts_legacy_mongo_import";
+import { MIGRATION_SQL as MIG_20260514000001 } from "@/data/migrations/20260514000001_ingress_chart_related_insights_rpc";
 
 /**
  * Allowlisted migrations that the admin migration runner can execute.
@@ -922,6 +923,14 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Adds mongo_id, legacy_user_id, legacy_year, and legacy_mongo_document columns to ingress_charts table for idempotent MongoDB imports. Additive only.",
     sortKey: "20260513000003",
     sql: MIG_20260513000003,
+  },
+  "20260514000001_ingress_chart_related_insights_rpc": {
+    id: "20260514000001_ingress_chart_related_insights_rpc",
+    title: "Ingress Charts: related insights scoring RPC",
+    description:
+      "Adds a PostgreSQL RPC that mirrors legacy MongoDB related insight scoring for ingress charts: exact location match gets 100 points, each overlapping tag gets 1 point, results require score > 1.",
+    sortKey: "20260514000001",
+    sql: MIG_20260514000001,
   },
 };
 

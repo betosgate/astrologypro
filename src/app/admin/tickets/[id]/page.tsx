@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -24,7 +24,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { ArrowLeft, Loader2, SendHorizonal, Lock, CheckSquare, Square, Plus } from "lucide-react";
+import { useAuth } from "@/components/providers/auth-provider";
+import { ArrowLeft, Loader2, SendHorizonal, Lock, CheckSquare, Square, Plus, Paperclip, FileText, X, Download } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -55,6 +56,13 @@ interface Ticket {
   updated_at: string;
 }
 
+interface TicketAttachment {
+  url: string;
+  name: string;
+  type: string;
+  size: number;
+}
+
 interface TicketQueue {
   id: string;
   name: string;
@@ -62,10 +70,12 @@ interface TicketQueue {
 
 interface TicketMessage {
   id: string;
+  author_user_id: string | null;
   author_name: string;
   author_role: string;
   body: string;
   is_internal: boolean;
+  attachments?: TicketAttachment[];
   created_at: string;
 }
 
@@ -136,6 +146,7 @@ function formatDateTime(d: string | null | undefined) {
 export default function AdminTicketDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
+  const { user } = useAuth();
   const ticketId = params.id;
 
   const [data, setData] = useState<TicketData | null>(null);
@@ -163,6 +174,9 @@ export default function AdminTicketDetailPage() {
   // Message compose
   const [messageBody, setMessageBody] = useState("");
   const [isInternal, setIsInternal] = useState(true);
+  const [messageAttachments, setMessageAttachments] = useState<TicketAttachment[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadTicket = useCallback(async () => {
     if (!ticketId) return;
@@ -299,7 +313,7 @@ export default function AdminTicketDetailPage() {
 
   async function handleSendMessage(e: React.FormEvent) {
     e.preventDefault();
-    if (!messageBody.trim()) return;
+    if (!messageBody.trim() && messageAttachments.length === 0) return;
 
     setSending(true);
     try {
@@ -309,6 +323,7 @@ export default function AdminTicketDetailPage() {
         body: JSON.stringify({
           message: messageBody.trim(),
           is_internal: isInternal,
+          attachments: messageAttachments,
         }),
       });
       if (!res.ok) {
@@ -316,12 +331,49 @@ export default function AdminTicketDetailPage() {
         throw new Error(err.detail ?? "Failed to send message.");
       }
       setMessageBody("");
+      setMessageAttachments([]);
       toast.success(isInternal ? "Internal note added." : "Reply sent.");
       await loadTicket();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to send.");
     } finally {
       setSending(false);
+    }
+  }
+
+  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("File too large (max 10MB)");
+      return;
+    }
+
+    setUploading(true);
+    const body = new FormData();
+    body.append("file", file);
+    body.append("kind", "ticket");
+
+    try {
+      const res = await fetch("/api/admin/tickets/upload", { method: "POST", body });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Upload failed");
+
+      setMessageAttachments((prev) => [
+        ...prev,
+        {
+          url: data.url,
+          name: data.name ?? file.name,
+          type: data.type ?? file.type,
+          size: data.size ?? file.size,
+        },
+      ]);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   }
 
@@ -338,7 +390,27 @@ export default function AdminTicketDetailPage() {
     return null;
   }
 
-  // Safety first: log the data to help debug in F12 console
+  // Helper to render attachments
+  const renderAttachments = (attachments?: TicketAttachment[]) => {
+    if (!attachments || attachments.length === 0) return null;
+    return (
+      <div className="mt-3 flex flex-wrap gap-2">
+        {attachments.map((att, i) => (
+          <a
+            key={i}
+            href={att.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 rounded-md border bg-muted/30 px-2.5 py-1.5 text-xs hover:bg-muted/50 transition-colors"
+          >
+            <FileText className="size-3.5 text-muted-foreground" />
+            <span className="max-w-[150px] truncate">{att.name}</span>
+            <Download className="size-3 text-muted-foreground ml-1" />
+          </a>
+        ))}
+      </div>
+    );
+  };
   console.log("Ticket Detail Data:", data);
 
   const { ticket, messages = [], history = [] } = data;
@@ -401,12 +473,12 @@ export default function AdminTicketDetailPage() {
             <CardHeader className="pb-3">
               <CardTitle className="text-base">Public Conversation</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 p-3 ml-4 mr-4 border border-[#282c46] h-[400px] rounded-lg overflow-x-auto ">
               {publicMessages.length === 0 ? (
                 <p className="text-sm text-muted-foreground">No public messages yet.</p>
               ) : (
                 publicMessages.map((msg) => (
-                  <div key={msg.id} className={msg.author_role === "staff" ? "pl-4 border-l-2 border-primary/30" : ""}>
+                  <div key={msg.id} className={msg.author_user_id === user?.id ? "w-[60%] ml-auto" : "w-[60%] ml-0"}>
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-sm font-medium">{msg.author_name}</span>
                       <Badge variant="outline" className="text-xs py-0 px-1.5">
@@ -416,7 +488,8 @@ export default function AdminTicketDetailPage() {
                         {formatDateTime(msg.created_at)}
                       </span>
                     </div>
-                    <p className="text-sm whitespace-pre-wrap">{msg.body}</p>
+                    <p className="text-xs whitespace-pre-wrap">{msg.body}</p>
+                    {renderAttachments(msg.attachments)}
                   </div>
                 ))
               )}
@@ -447,6 +520,7 @@ export default function AdminTicketDetailPage() {
                       </span>
                     </div>
                     <p className="text-sm whitespace-pre-wrap">{msg.body}</p>
+                    {renderAttachments(msg.attachments)}
                   </div>
                 ))
               )}
@@ -564,14 +638,65 @@ export default function AdminTicketDetailPage() {
                   rows={4}
                   disabled={sending}
                 />
-                <Button type="submit" size="sm" disabled={sending || !messageBody.trim()}>
-                  {sending ? (
-                    <Loader2 className="size-4 mr-2 animate-spin" />
-                  ) : (
-                    <SendHorizonal className="size-4 mr-2" />
-                  )}
-                  {isInternal ? "Add Note" : "Send Reply"}
-                </Button>
+
+                {/* Attachments list */}
+                {messageAttachments.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {messageAttachments.map((att) => (
+                      <div key={att.url} className="flex items-center gap-2 rounded-md border bg-muted/50 px-2 py-1 text-xs">
+                        <FileText className="size-3" />
+                        <span className="max-w-[100px] truncate">{att.name}</span>
+                        <button
+                          type="button"
+                          onClick={() => setMessageAttachments(prev => prev.filter(a => a.url !== att.url))}
+                          className="text-muted-foreground hover:text-destructive"
+                        >
+                          <X className="size-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="submit"
+                      size="sm"
+                      disabled={sending || (!messageBody.trim() && messageAttachments.length === 0)}
+                    >
+                      {sending ? (
+                        <Loader2 className="size-4 mr-2 animate-spin" />
+                      ) : (
+                        <SendHorizonal className="size-4 mr-2" />
+                      )}
+                      {isInternal ? "Add Note" : "Send Reply"}
+                    </Button>
+
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      className="hidden"
+                      onChange={handleFileUpload}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={sending || uploading}
+                    >
+                      {uploading ? (
+                        <Loader2 className="size-4 animate-spin" />
+                      ) : (
+                        <Paperclip className="size-4" />
+                      )}
+                      <span className="ml-2 hidden sm:inline">Attach File</span>
+                    </Button>
+                  </div>
+                  
+                  {uploading && <span className="text-xs text-muted-foreground animate-pulse">Uploading...</span>}
+                </div>
               </form>
             </CardContent>
           </Card>
@@ -610,10 +735,10 @@ export default function AdminTicketDetailPage() {
         </div>
 
         {/* Sidebar */}
-        <div className="space-y-4">
+        <div className="space-y-4 sticky top-5 overflow-hidden max-h-screen overflow-y-auto scrollbar-none">
           {/* Requester info */}
           <Card>
-            <CardHeader className="pb-3">
+            <CardHeader className="pb-0">
               <CardTitle className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                 Requester
               </CardTitle>
@@ -629,7 +754,7 @@ export default function AdminTicketDetailPage() {
 
           {/* Ticket metadata */}
           <Card>
-            <CardHeader className="pb-3">
+            <CardHeader className="pb-0">
               <CardTitle className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                 Details
               </CardTitle>
@@ -676,7 +801,7 @@ export default function AdminTicketDetailPage() {
               {ticket.sla_breached && !ticket.sla_breached_at && (
                 <Badge
                   variant="outline"
-                  className="w-full justify-center bg-red-500/10 text-red-600 border-red-500/20"
+                  className="w-full justify-center bg-red-500/10 text-red-600 border-red-500/20 "
                 >
                   SLA Breached
                 </Badge>
@@ -686,7 +811,7 @@ export default function AdminTicketDetailPage() {
 
           {/* Admin actions */}
           <Card>
-            <CardHeader className="pb-3">
+            <CardHeader className="pb-0">
               <CardTitle className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                 Actions
               </CardTitle>
@@ -695,7 +820,7 @@ export default function AdminTicketDetailPage() {
               <div className="space-y-1.5">
                 <Label className="text-xs">Status</Label>
                 <Select value={status} onValueChange={setStatus}>
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -711,7 +836,7 @@ export default function AdminTicketDetailPage() {
               <div className="space-y-1.5">
                 <Label className="text-xs">Priority</Label>
                 <Select value={priority} onValueChange={setPriority}>
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -727,7 +852,7 @@ export default function AdminTicketDetailPage() {
               <div className="space-y-1.5">
                 <Label className="text-xs">Queue</Label>
                 <Select value={queueId || "_none"} onValueChange={(v) => setQueueId(v === "_none" ? "" : v)}>
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue placeholder="No queue" />
                   </SelectTrigger>
                   <SelectContent>
@@ -744,7 +869,7 @@ export default function AdminTicketDetailPage() {
               <div className="space-y-1.5">
                 <Label className="text-xs">Assigned Team</Label>
                 <Select value={assignedTeam || "_none"} onValueChange={(v) => setAssignedTeam(v === "_none" ? "" : v)}>
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue placeholder="Unassigned" />
                   </SelectTrigger>
                   <SelectContent>
