@@ -828,29 +828,33 @@ async function handleTraineeSignupCheckoutCompleted(
   } = await supabase.auth.admin.getUserById(userId);
 
   const email = authUser?.email ?? "";
-  const username = (authUser?.user_metadata?.username as string) ?? "";
+  const username =
+    (authUser?.user_metadata?.username as string | undefined) ??
+    session.metadata?.traineeUsername ??
+    `trainee-${userId.slice(0, 8)}`;
   const displayName =
-    (authUser?.user_metadata?.name as string) ?? email.split("@")[0] ?? "Trainee";
+    (authUser?.user_metadata?.name as string | undefined) ??
+    session.metadata?.traineeName ??
+    email.split("@")[0] ??
+    "Trainee";
   const paymentIntentId =
     typeof session.payment_intent === "string"
       ? session.payment_intent
       : session.payment_intent?.id ?? null;
 
-  if (!username) {
-    console.error("[Webhook] trainee_signup: missing username", session.metadata);
-    return;
-  }
-
   const { error } = await supabase.from("trainees").upsert(
     {
       user_id: userId,
       name: displayName,
-      email,
+      email: session.metadata?.traineeEmail ?? email,
       username,
       training_status: "active",
       onboarding_completed: false,
       paid_at: new Date().toISOString(),
       ...(paymentIntentId ? { payment_intent_id: paymentIntentId } : {}),
+      ...(session.metadata?.servicePackageCode
+        ? { service_package_code: session.metadata.servicePackageCode }
+        : {}),
     },
     { onConflict: "user_id" }
   );

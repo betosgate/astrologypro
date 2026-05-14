@@ -51,6 +51,10 @@ async function getCheckoutData(sessionId: string) {
 
   return {
     itemKey: session.metadata?.itemKey,
+    traineeName: session.metadata?.traineeName ?? null,
+    traineeEmail: session.metadata?.traineeEmail ?? null,
+    traineeUsername: session.metadata?.traineeUsername ?? null,
+    servicePackageCode: session.metadata?.servicePackageCode ?? null,
     paymentIntentId:
       typeof session.payment_intent === "string"
         ? session.payment_intent
@@ -85,7 +89,15 @@ export default async function TraineeSignupSuccessPage({
     redirect(`/login?redirect=${encodeURIComponent(loginRedirect)}`);
   }
 
-  const { itemKey, paymentIntentId, details: checkoutDetails } =
+  const {
+    itemKey,
+    paymentIntentId,
+    traineeName,
+    traineeEmail,
+    traineeUsername,
+    servicePackageCode,
+    details: checkoutDetails,
+  } =
     await getCheckoutData(sessionId);
 
   let nextStepText = "Complete your profile and setup your training preferences before entering the dashboard.";
@@ -110,13 +122,45 @@ export default async function TraineeSignupSuccessPage({
     accountActivatedText = "Stripe returned a successful checkout and your trainee & diviner access has been provisioned.";
   } else if (itemKey === "trainee_program") {
     const admin = createAdminClient();
-    await admin
+
+    const { data: trainee } = await admin
       .from("trainees")
-      .update({
+      .select("id")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (trainee) {
+      await admin
+        .from("trainees")
+        .update({
+          paid_at: new Date().toISOString(),
+          ...(paymentIntentId ? { payment_intent_id: paymentIntentId } : {}),
+        })
+        .eq("user_id", user.id);
+    } else {
+      const email = (traineeEmail ?? user.email ?? "").trim().toLowerCase();
+      const username =
+        traineeUsername ??
+        (user.user_metadata?.username as string | undefined) ??
+        `trainee-${user.id.slice(0, 8)}`;
+      const name =
+        traineeName ??
+        (user.user_metadata?.name as string | undefined) ??
+        email.split("@")[0] ??
+        "Trainee";
+
+      await admin.from("trainees").insert({
+        user_id: user.id,
+        name,
+        email,
+        username,
+        training_status: "active",
+        onboarding_completed: false,
         paid_at: new Date().toISOString(),
         ...(paymentIntentId ? { payment_intent_id: paymentIntentId } : {}),
-      })
-      .eq("user_id", user.id);
+        ...(servicePackageCode ? { service_package_code: servicePackageCode } : {}),
+      });
+    }
 
     await ensureUserContractRequirements(user.id, "post_login").catch((error) => {
       console.error(
