@@ -24,6 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { useAuth } from "@/components/providers/auth-provider";
 import { ArrowLeft, Loader2, SendHorizonal, Lock, CheckSquare, Square, Plus, Paperclip, FileText, X, Download } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -69,6 +70,7 @@ interface TicketQueue {
 
 interface TicketMessage {
   id: string;
+  author_user_id: string | null;
   author_name: string;
   author_role: string;
   body: string;
@@ -144,6 +146,7 @@ function formatDateTime(d: string | null | undefined) {
 export default function AdminTicketDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
+  const { user } = useAuth();
   const ticketId = params.id;
 
   const [data, setData] = useState<TicketData | null>(null);
@@ -475,7 +478,7 @@ export default function AdminTicketDetailPage() {
                 <p className="text-sm text-muted-foreground">No public messages yet.</p>
               ) : (
                 publicMessages.map((msg) => (
-                  <div key={msg.id} className={msg.author_role === "staff" ? "w-[60%] ml-auto" : "w-[60%] ml-0"}>
+                  <div key={msg.id} className={msg.author_user_id === user?.id ? "w-[60%] ml-auto" : "w-[60%] ml-0"}>
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-sm font-medium">{msg.author_name}</span>
                       <Badge variant="outline" className="text-xs py-0 px-1.5">
