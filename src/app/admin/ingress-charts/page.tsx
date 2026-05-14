@@ -534,7 +534,7 @@ export default function AdminIngressChartsPage() {
                         {visibleSectors.map((s) => (
                           <span
                             key={s}
-                            className="rounded-full bg-orange-500 px-2.5 py-1 text-[11px] font-semibold text-white"
+                            className="rounded-full bg-primary px-2.5 py-1 text-[11px] font-semibold text-primary-foreground"
                           >
                             {getSectorKey(s)}
                           </span>
