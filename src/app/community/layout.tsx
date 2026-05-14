@@ -72,7 +72,17 @@ export default async function CommunityLayout({ children }: { children: React.Re
 
 
 
-  if (!member) redirect("/get-started");
+  if (!member) {
+    const invitedRole = user.user_metadata?.role;
+    if (
+      user.user_metadata?.invited_by_admin === true &&
+      (invitedRole === "community_perennial_mandalism" ||
+        invitedRole === "perennial_mandalism")
+    ) {
+      redirect("/join/community/plan?invited=true");
+    }
+    redirect("/get-started");
+  }
   // PM-only gate: legacy Mystery School-only users must use /mystery-school
   if (member.membership_type !== "perennial_mandalism") redirect("/mystery-school");
 

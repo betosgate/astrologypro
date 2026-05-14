@@ -283,11 +283,15 @@ export async function POST(request: NextRequest) {
       ? `${baseUrl}/mystery-school/checkout/success?session_id={CHECKOUT_SESSION_ID}`
       : sourcePortal === "trainee"
         ? `${baseUrl}/join/community/checkout/success?session_id={CHECKOUT_SESSION_ID}&source=trainee`
+        : sourcePortal === "invite"
+          ? `${baseUrl}/join/community/checkout/success?session_id={CHECKOUT_SESSION_ID}&source=invite`
         : `${baseUrl}/join/community/checkout/success?session_id={CHECKOUT_SESSION_ID}`;
     const cancelUrl = isMysterySchool
       ? `${baseUrl}/mystery-school/checkout/cancel`
       : sourcePortal === "trainee"
         ? `${baseUrl}/join/community/checkout/error?source=trainee&reason=cancelled`
+        : sourcePortal === "invite"
+          ? `${baseUrl}/join/community/plan?invited=true&cancelled=true`
         : sourcePortal === "diviner"
           ? `${baseUrl}/dashboard?pm=cancelled`
           : `${baseUrl}/switch?pm=cancelled`;
