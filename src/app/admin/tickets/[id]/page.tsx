@@ -695,7 +695,7 @@ export default function AdminTicketDetailPage() {
               <div className="space-y-1.5">
                 <Label className="text-xs">Status</Label>
                 <Select value={status} onValueChange={setStatus}>
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -711,7 +711,7 @@ export default function AdminTicketDetailPage() {
               <div className="space-y-1.5">
                 <Label className="text-xs">Priority</Label>
                 <Select value={priority} onValueChange={setPriority}>
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -727,7 +727,7 @@ export default function AdminTicketDetailPage() {
               <div className="space-y-1.5">
                 <Label className="text-xs">Queue</Label>
                 <Select value={queueId || "_none"} onValueChange={(v) => setQueueId(v === "_none" ? "" : v)}>
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue placeholder="No queue" />
                   </SelectTrigger>
                   <SelectContent>
@@ -744,7 +744,7 @@ export default function AdminTicketDetailPage() {
               <div className="space-y-1.5">
                 <Label className="text-xs">Assigned Team</Label>
                 <Select value={assignedTeam || "_none"} onValueChange={(v) => setAssignedTeam(v === "_none" ? "" : v)}>
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue placeholder="Unassigned" />
                   </SelectTrigger>
                   <SelectContent>
