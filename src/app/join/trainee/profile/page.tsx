@@ -60,6 +60,57 @@ const TIMEZONES = [
 
 const STEP_ICONS = [User, Sparkles, Star] as const;
 const STEP_LABELS = ["About You", "Specialties & Interests", "Birth Data"] as const;
+const TIMEZONE_VALUES = new Set(TIMEZONES.map((timezone) => timezone.value));
+
+function normalizePhone(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  const compact = trimmed.replace(/[\s().-]/g, "");
+  if (/^\+[1-9]\d{7,14}$/.test(compact)) return compact;
+
+  const digits = trimmed.replace(/\D/g, "");
+  if (digits.length === 10) return digits;
+
+  return undefined;
+}
+
+function isValidUrl(value: string) {
+  if (!value.trim()) return true;
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+function isValidBirthDate(value: string) {
+  if (!value) return true;
+  const date = new Date(`${value}T12:00:00`);
+  return !Number.isNaN(date.getTime()) && date <= new Date();
+}
+
+type FieldErrors = Partial<
+  Record<
+    | "displayName"
+    | "bio"
+    | "avatarUrl"
+    | "phone"
+    | "timezone"
+    | "specialties"
+    | "goals"
+    | "birthDate"
+    | "birthTime"
+    | "birthCity",
+    string
+  >
+>;
+
+function FieldError({ message }: { message?: string }) {
+  if (!message) return null;
+  return <p className="text-xs font-medium text-destructive">{message}</p>;
+}
 
 function TraineeProfileContent() {
   const router = useRouter();
@@ -68,6 +119,7 @@ function TraineeProfileContent() {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
+  const [errors, setErrors] = useState<FieldErrors>({});
 
   // Step 1
   const [displayName, setDisplayName] = useState("");
@@ -163,22 +215,97 @@ function TraineeProfileContent() {
   }, [router]);
 
   function toggleSpecialty(s: string) {
+    setErrors((prev) => ({ ...prev, specialties: undefined }));
     setSpecialties((prev) =>
       prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]
     );
   }
 
-  function canProceed(): boolean {
-    if (step === 1) return displayName.trim().length > 0;
-    if (step === 2) return true; // optional
-    return true; // step 3 is optional
+  function validateStep(currentStep: number): FieldErrors {
+    const nextErrors: FieldErrors = {};
+
+    if (currentStep === 1) {
+      if (!displayName.trim()) {
+        nextErrors.displayName = "Display name is required.";
+      } else if (displayName.trim().length < 2) {
+        nextErrors.displayName = "Display name must be at least 2 characters.";
+      }
+
+      if (bio.trim().length > 500) {
+        nextErrors.bio = "Bio must be 500 characters or fewer.";
+      }
+
+      if (!isValidUrl(avatarUrl)) {
+        nextErrors.avatarUrl = "Avatar URL must be a valid http or https URL.";
+      }
+
+      const normalizedPhone = normalizePhone(phone);
+      if (!normalizedPhone) {
+        nextErrors.phone = "Phone number is required.";
+      } else if (normalizedPhone === undefined) {
+        nextErrors.phone = "Enter a valid E.164 number or a 10-digit phone number.";
+      }
+
+      if (!timezone) {
+        nextErrors.timezone = "Timezone is required.";
+      } else if (!TIMEZONE_VALUES.has(timezone)) {
+        nextErrors.timezone = "Select a supported timezone.";
+      }
+    }
+
+    if (currentStep === 2) {
+      if (specialties.length === 0) {
+        nextErrors.specialties = "Select at least one specialty or area of interest.";
+      }
+      if (goals.trim().length > 1000) {
+        nextErrors.goals = "Goals must be 1000 characters or fewer.";
+      }
+    }
+
+    if (currentStep === 3) {
+      if (!isValidBirthDate(birthDate)) {
+        nextErrors.birthDate = "Birth date must be a valid past date.";
+      }
+      if (birthTime && !/^\d{2}:\d{2}$/.test(birthTime)) {
+        nextErrors.birthTime = "Birth time must use HH:MM format.";
+      }
+      if (birthCity.trim().length > 120) {
+        nextErrors.birthCity = "Birth city must be 120 characters or fewer.";
+      }
+    }
+
+    return nextErrors;
+  }
+
+  function validateAndSetStep(currentStep: number) {
+    const nextErrors = validateStep(currentStep);
+    setErrors((prev) => ({ ...prev, ...nextErrors }));
+    return Object.keys(nextErrors).length === 0;
   }
 
   async function handleSubmit() {
-    if (!displayName.trim()) {
-      toast.error("Display name is required.");
+    const allErrors = {
+      ...validateStep(1),
+      ...validateStep(2),
+      ...validateStep(3),
+    };
+    setErrors(allErrors);
+    if (Object.keys(allErrors).length > 0) {
+      const firstErrorStep =
+        allErrors.displayName ||
+        allErrors.bio ||
+        allErrors.avatarUrl ||
+        allErrors.phone ||
+        allErrors.timezone
+          ? 1
+          : allErrors.specialties || allErrors.goals
+            ? 2
+            : 3;
+      setStep(firstErrorStep);
+      toast.error("Please fix the highlighted fields.");
       return;
     }
+
     setLoading(true);
     try {
       const res = await fetch("/api/trainee/profile/complete", {
@@ -188,7 +315,7 @@ function TraineeProfileContent() {
           display_name: displayName.trim(),
           bio: bio.trim() || null,
           avatar_url: avatarUrl.trim() || null,
-          phone: phone.trim() || null,
+          phone: normalizePhone(phone),
           timezone: timezone || null,
           specialties,
           goals: goals.trim() || null,
@@ -292,9 +419,14 @@ function TraineeProfileContent() {
                       id="displayName"
                       placeholder="Your display name"
                       value={displayName}
-                      onChange={(e) => setDisplayName(e.target.value)}
+                      onChange={(e) => {
+                        setDisplayName(e.target.value);
+                        setErrors((prev) => ({ ...prev, displayName: undefined }));
+                      }}
+                      aria-invalid={!!errors.displayName}
                       required
                     />
+                    <FieldError message={errors.displayName} />
                   </div>
 
                   <div className="space-y-2">
@@ -309,9 +441,14 @@ function TraineeProfileContent() {
                       placeholder="A short introduction about yourself..."
                       value={bio}
                       maxLength={500}
-                      onChange={(e) => setBio(e.target.value)}
+                      onChange={(e) => {
+                        setBio(e.target.value);
+                        setErrors((prev) => ({ ...prev, bio: undefined }));
+                      }}
+                      aria-invalid={!!errors.bio}
                       rows={3}
                     />
+                    <FieldError message={errors.bio} />
                   </div>
 
                   <div className="space-y-2">
@@ -324,27 +461,41 @@ function TraineeProfileContent() {
                       type="url"
                       placeholder="https://example.com/avatar.jpg"
                       value={avatarUrl}
-                      onChange={(e) => setAvatarUrl(e.target.value)}
+                      onChange={(e) => {
+                        setAvatarUrl(e.target.value);
+                        setErrors((prev) => ({ ...prev, avatarUrl: undefined }));
+                      }}
+                      aria-invalid={!!errors.avatarUrl}
                     />
+                    <FieldError message={errors.avatarUrl} />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="phone">
-                      Phone Number{" "}
-                      <span className="text-muted-foreground">(optional)</span>
-                    </Label>
+                    <Label htmlFor="phone">Phone Number *</Label>
                     <Input
                       id="phone"
                       type="tel"
                       placeholder="+1 (555) 123-4567"
                       value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
+                      onChange={(e) => {
+                        setPhone(e.target.value);
+                        setErrors((prev) => ({ ...prev, phone: undefined }));
+                      }}
+                      aria-invalid={!!errors.phone}
+                      required
                     />
+                    <FieldError message={errors.phone} />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="timezone">Timezone</Label>
-                    <Select value={timezone} onValueChange={setTimezone}>
+                    <Label htmlFor="timezone">Timezone *</Label>
+                    <Select
+                      value={timezone}
+                      onValueChange={(value) => {
+                        setTimezone(value);
+                        setErrors((prev) => ({ ...prev, timezone: undefined }));
+                      }}
+                    >
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder="Select your timezone" />
                       </SelectTrigger>
@@ -356,6 +507,7 @@ function TraineeProfileContent() {
                         ))}
                       </SelectContent>
                     </Select>
+                    <FieldError message={errors.timezone} />
                   </div>
                 </div>
               )}
@@ -365,7 +517,7 @@ function TraineeProfileContent() {
                 <div className="space-y-6">
 
                   <div className="space-y-3">
-                    <Label>Specialties / Areas of Interest</Label>
+                    <Label>Specialties / Areas of Interest *</Label>
                     <div className="flex flex-wrap gap-2">
                       {allowedSpecialties.map((s) => {
                         const selected = specialties.includes(s);
@@ -391,6 +543,7 @@ function TraineeProfileContent() {
                         );
                       })}
                     </div>
+                    <FieldError message={errors.specialties} />
                   </div>
 
                   <div className="space-y-2">
@@ -401,9 +554,14 @@ function TraineeProfileContent() {
                       id="goals"
                       placeholder="Share your aspirations and what you'd like to learn..."
                       value={goals}
-                      onChange={(e) => setGoals(e.target.value)}
+                      onChange={(e) => {
+                        setGoals(e.target.value);
+                        setErrors((prev) => ({ ...prev, goals: undefined }));
+                      }}
+                      aria-invalid={!!errors.goals}
                       rows={4}
                     />
+                    <FieldError message={errors.goals} />
                   </div>
                 </div>
               )}
@@ -422,8 +580,13 @@ function TraineeProfileContent() {
                       id="birthDate"
                       type="date"
                       value={birthDate}
-                      onChange={(e) => setBirthDate(e.target.value)}
+                      onChange={(e) => {
+                        setBirthDate(e.target.value);
+                        setErrors((prev) => ({ ...prev, birthDate: undefined }));
+                      }}
+                      aria-invalid={!!errors.birthDate}
                     />
+                    <FieldError message={errors.birthDate} />
                   </div>
 
                   <div className="space-y-2">
@@ -435,8 +598,13 @@ function TraineeProfileContent() {
                       id="birthTime"
                       type="time"
                       value={birthTime}
-                      onChange={(e) => setBirthTime(e.target.value)}
+                      onChange={(e) => {
+                        setBirthTime(e.target.value);
+                        setErrors((prev) => ({ ...prev, birthTime: undefined }));
+                      }}
+                      aria-invalid={!!errors.birthTime}
                     />
+                    <FieldError message={errors.birthTime} />
                   </div>
 
                   <div className="space-y-2">
@@ -448,8 +616,13 @@ function TraineeProfileContent() {
                       id="birthCity"
                       placeholder="e.g. New York, NY"
                       value={birthCity}
-                      onChange={(e) => setBirthCity(e.target.value)}
+                      onChange={(e) => {
+                        setBirthCity(e.target.value);
+                        setErrors((prev) => ({ ...prev, birthCity: undefined }));
+                      }}
+                      aria-invalid={!!errors.birthCity}
                     />
+                    <FieldError message={errors.birthCity} />
                   </div>
                 </div>
               )}
@@ -471,15 +644,16 @@ function TraineeProfileContent() {
                 {step < 3 ? (
                   <Button
                     type="button"
-                    disabled={!canProceed()}
-                    onClick={() => setStep(step + 1)}
+                    onClick={() => {
+                      if (validateAndSetStep(step)) setStep(step + 1);
+                    }}
                   >
                     Continue
                   </Button>
                 ) : (
                   <Button
                     type="button"
-                    disabled={loading || !canProceed()}
+                    disabled={loading}
                     onClick={handleSubmit}
                   >
                     {loading ? (
