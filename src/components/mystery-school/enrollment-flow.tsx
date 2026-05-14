@@ -189,8 +189,9 @@ function Step1Info({
         </div>
         <h1 className="text-3xl font-bold tracking-tight">Enter the Mystery School</h1>
         <p className="mx-auto max-w-lg text-base text-muted-foreground">
-          A five-quarter initiatory journey through the hidden teachings — the foundation,
-          the 36 decans, and the path to Priest or Priestess.
+          A seasonal initiatory journey through the hidden teachings — a
+          foundation quarter, the 4-quarter Decan year, and the path to Priest
+          or Priestess.
         </p>
       </div>
 
@@ -218,7 +219,9 @@ function Step1Info({
             </span>.
           </p>
         )}
-        <p className="text-xs text-muted-foreground">5-quarter commitment · cancel after any quarter</p>
+        <p className="text-xs text-muted-foreground">
+          Foundation quarter + 4-quarter Decan year · cancel after any completed quarter
+        </p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
@@ -449,8 +452,10 @@ function Step3Review({
           <Circle className="mt-0.5 size-5 shrink-0 text-muted-foreground" />
         )}
         <span className="text-sm text-muted-foreground">
-          By continuing I agree to the{" "}
-          <span className="font-medium text-foreground">5-quarter commitment</span>
+          By continuing I agree to begin the{" "}
+          <span className="font-medium text-foreground">
+            foundation quarter + 4-quarter Decan year
+          </span>
           {" "}and understand that access to the curriculum begins in{" "}
           <span className="font-medium capitalize text-foreground">
             {selected.quarter} {selected.year}
@@ -572,7 +577,7 @@ function Step4Payment({
             )}
           </Button>
           <p className="text-xs text-muted-foreground">
-            Secure checkout via Stripe · Cancel anytime after the first quarter
+            Secure checkout via Stripe · Cancel after any completed quarter
           </p>
         </CardContent>
       </Card>
