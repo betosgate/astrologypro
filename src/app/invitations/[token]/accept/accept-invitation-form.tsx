@@ -47,7 +47,13 @@ function nameToUsername(fullName: string): string {
 }
 
 function roleNeedsUsername(roleSlug: string) {
-  return ["trainee", "advocate", "social_advo", "community_perennial_mandalism"].includes(roleSlug);
+  return [
+    "trainee",
+    "advocate",
+    "social_advo",
+    "community_perennial_mandalism",
+    "community_mystery_school",
+  ].includes(roleSlug);
 }
 
 function validateUsername(username: string) {
