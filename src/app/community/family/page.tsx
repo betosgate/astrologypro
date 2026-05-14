@@ -37,6 +37,7 @@ import { usePageReturnRefresh } from "@/hooks/use-page-return-refresh";
 
 type FamilyMember = {
   id: string;
+  user_id?: string | null;
   full_name: string;
   date_of_birth: string;
   birth_time: string | null;
@@ -287,7 +288,10 @@ export default function CommunityFamilyPage() {
     entitlement?.maxMembers != null
       ? Math.max(0, entitlement.maxMembers - 1)
       : LEGACY_FALLBACK_LIMIT;
-  const atLimit = members.length >= familyLimit;
+  const familyMembers = members.filter(
+    (member) => (member.relationship ?? "").toLowerCase() !== "self"
+  );
+  const atLimit = familyMembers.length >= familyLimit;
 
   return (
     <SectionContainer verticalPadding="none" className="px-0 sm:px-0 lg:px-0">
@@ -506,7 +510,7 @@ export default function CommunityFamilyPage() {
       {/* Member list */}
       {loading ? (
         <FamilyMembersSkeleton />
-      ) : members.length === 0 ? (
+      ) : familyMembers.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center gap-4 py-12 text-center">
             <div className="flex size-14 items-center justify-center rounded-full bg-primary/10">
@@ -531,10 +535,10 @@ export default function CommunityFamilyPage() {
       ) : (
         <div className="space-y-3">
           <div className="flex items-center justify-between text-sm text-muted-foreground">
-            <span>{members.length}/{familyLimit} family members</span>
+            <span>{familyMembers.length}/{familyLimit} family members</span>
 
           </div>
-          {members.map((m) => {
+          {familyMembers.map((m) => {
             const isOpen = expandedId === m.id;
             const dob = new Date(m.date_of_birth + "T12:00:00");
             const ageYears = Math.floor(
