@@ -169,7 +169,7 @@ export default async function CommunityCheckoutSuccessPage({
   }
 
   const contractsSource = source === "trainee" ? "trainee-pm-upgrade" : "community-checkout";
-  const contractsHref = `/contracts/pending?source=${contractsSource}&session_id=${encodeURIComponent(sessionId)}&next=${encodeURIComponent("/community")}`;
+  const contractsHref = `/contracts/pending?source=${contractsSource}&session_id=${encodeURIComponent(sessionId)}&next=${encodeURIComponent("/community/onboarding")}`;
   const checkoutDetails = await getCheckoutDetails(
     sessionId,
     result.planId ?? titleCase(result.planType),
