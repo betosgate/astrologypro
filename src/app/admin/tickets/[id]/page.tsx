@@ -436,7 +436,7 @@ export default function AdminTicketDetailPage() {
         <div className="lg:col-span-2 space-y-6">
           {/* Ticket header */}
           <Card>
-            <CardHeader className="pb-3">
+            <CardHeader className="pb-0">
               <div className="flex items-start gap-3">
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-mono text-muted-foreground mb-1">
@@ -470,7 +470,7 @@ export default function AdminTicketDetailPage() {
 
           {/* Public thread */}
           <Card>
-            <CardHeader className="pb-3">
+            <CardHeader className="pb-0">
               <CardTitle className="text-base">Public Conversation</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4 p-3 ml-4 mr-4 border border-[#282c46] h-[400px] rounded-lg overflow-x-auto ">
@@ -479,12 +479,12 @@ export default function AdminTicketDetailPage() {
               ) : (
                 publicMessages.map((msg) => (
                   <div key={msg.id} className={msg.author_user_id === user?.id ? "w-[60%] ml-auto" : "w-[60%] ml-0"}>
-                    <div className="flex items-center gap-2 mb-1">
+                    <div className="flex items-center gap-2 mb-1.5">
                       <span className="text-sm font-medium">{msg.author_name}</span>
-                      <Badge variant="outline" className="text-xs py-0 px-1.5">
+                      <Badge variant="outline" className="text-[10px] !py-[1px] !px-[10px]">
                         {formatStatus(msg.author_role)}
                       </Badge>
-                      <span className="text-xs text-muted-foreground ml-auto">
+                      <span className="text-[10px] text-muted-foreground ml-auto">
                         {formatDateTime(msg.created_at)}
                       </span>
                     </div>
@@ -498,7 +498,7 @@ export default function AdminTicketDetailPage() {
 
           {/* Internal notes */}
           <Card className="border-amber-500/20">
-            <CardHeader className="pb-3">
+            <CardHeader className="pb-0">
               <CardTitle className="text-base flex items-center gap-2">
                 <Lock className="size-4 text-amber-500" />
                 Internal Notes
@@ -530,7 +530,7 @@ export default function AdminTicketDetailPage() {
           {/* Checklist — job tickets only */}
           {ticket.type === "job" && (
             <Card>
-              <CardHeader className="pb-3">
+              <CardHeader className="pb-0">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-base">Checklist</CardTitle>
                   <Button
@@ -608,7 +608,7 @@ export default function AdminTicketDetailPage() {
 
           {/* Compose */}
           <Card>
-            <CardHeader className="pb-3">
+            <CardHeader className="pb-0">
               <CardTitle className="text-base">
                 {isInternal ? "Add Internal Note" : "Add Public Reply"}
               </CardTitle>
@@ -703,7 +703,7 @@ export default function AdminTicketDetailPage() {
 
           {/* History / audit */}
           <Card>
-            <CardHeader className="pb-3">
+            <CardHeader className="pb-0">
               <CardTitle className="text-base">Activity Log</CardTitle>
             </CardHeader>
             <CardContent>

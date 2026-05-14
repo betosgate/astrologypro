@@ -188,7 +188,7 @@ export function AcceptInvitationForm(props: AcceptInvitationFormProps) {
     <div className="flex min-h-screen flex-col bg-background">
       <MarketingHeader />
       <main className="flex flex-1 items-center justify-center px-4 py-12">
-        <div className="w-full max-w-md rounded-lg border bg-card p-6 shadow-sm">
+        <div className="w-full max-w-xl rounded-lg border bg-card p-6 shadow-sm">
           {props.state === "invalid" ? (
             <div className="space-y-5 text-center">
               <div className="mx-auto flex size-11 items-center justify-center rounded-full bg-muted">

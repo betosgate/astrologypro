@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       status: "success",
-      redirectTo: "/mystery-school?subscribed=true",
+      redirectTo: "/mystery-school/training?subscribed=true",
       studentId: result.student.id,
     });
   } catch (error) {
