@@ -401,12 +401,12 @@ export default function AdminTicketDetailPage() {
             <CardHeader className="pb-3">
               <CardTitle className="text-base">Public Conversation</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 p-3 ml-4 mr-4 border border-[#282c46] h-[400px] rounded-lg overflow-x-auto ">
               {publicMessages.length === 0 ? (
                 <p className="text-sm text-muted-foreground">No public messages yet.</p>
               ) : (
                 publicMessages.map((msg) => (
-                  <div key={msg.id} className={msg.author_role === "staff" ? "pl-4 border-l-2 border-primary/30" : ""}>
+                  <div key={msg.id} className={msg.author_role === "staff" ? " w-[50%] ml-auto" : ""}>
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-sm font-medium">{msg.author_name}</span>
                       <Badge variant="outline" className="text-xs py-0 px-1.5">
@@ -610,10 +610,10 @@ export default function AdminTicketDetailPage() {
         </div>
 
         {/* Sidebar */}
-        <div className="space-y-4">
+        <div className="space-y-4 sticky top-5 overflow-hidden max-h-screen overflow-y-auto scrollbar-none">
           {/* Requester info */}
           <Card>
-            <CardHeader className="pb-3">
+            <CardHeader className="pb-0">
               <CardTitle className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                 Requester
               </CardTitle>
@@ -629,7 +629,7 @@ export default function AdminTicketDetailPage() {
 
           {/* Ticket metadata */}
           <Card>
-            <CardHeader className="pb-3">
+            <CardHeader className="pb-0">
               <CardTitle className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                 Details
               </CardTitle>
@@ -686,7 +686,7 @@ export default function AdminTicketDetailPage() {
 
           {/* Admin actions */}
           <Card>
-            <CardHeader className="pb-3">
+            <CardHeader className="pb-0">
               <CardTitle className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                 Actions
               </CardTitle>
