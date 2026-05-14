@@ -118,6 +118,17 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return problem(422, "Validation Error", `type must be one of: ${validTypes.join(", ")}.`);
   }
 
+  // Capture technical info for metadata
+  const userAgent = req.headers.get("user-agent") || "unknown";
+  const ip = req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || "unknown";
+  const enrichedMetadata = {
+    system_info: {
+      user_agent: userAgent,
+      ip_address: ip,
+      created_via: "admin_api"
+    }
+  };
+
   const admin = createAdminClient();
 
   const { data: ticket, error } = await admin
@@ -136,9 +147,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       requester_name: body.requester_name ?? null,
       requester_role: body.requester_role ?? "staff",
       tags: body.tags ?? [],
-      metadata: {
-        attachments: Array.isArray(body.attachments) ? body.attachments : [],
-      },
+      metadata: enrichedMetadata,
       created_by: admin_user.id,
     })
     .select()
@@ -149,6 +158,23 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
 
   const typedTicket = ticket as { id: string; subject: string; priority: string; category: string };
+
+  const finalAttachments = Array.isArray(body.attachments) ? body.attachments : [];
+
+  // Insert initial description and attachments as the first message
+  const authUserResp = await admin.auth.admin.getUserById(admin_user.id);
+  const authMetadata = authUserResp.data.user?.user_metadata ?? {};
+  const authorName = (authMetadata.full_name as string | null) ?? (authMetadata.display_name as string | null) ?? body.requester_name ?? "Admin";
+
+  await admin.from("ticket_messages").insert({
+    ticket_id: typedTicket.id,
+    author_user_id: admin_user.id,
+    author_name: authorName,
+    author_role: "staff",
+    body: description.trim(),
+    is_internal: false,
+    attachments: finalAttachments
+  });
 
   // Trigger notifications
   await notifyStaffOfTicket({

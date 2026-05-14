@@ -16,6 +16,12 @@ interface AdminPatchBody {
   // For adding an internal note or public reply via PATCH
   message?: string;
   is_internal?: boolean;
+  attachments?: Array<{
+    url: string;
+    name: string;
+    type: string;
+    size: number;
+  }>;
 }
 
 // ─── Problem Details helper ───────────────────────────────────────────────────
@@ -238,6 +244,7 @@ export async function PATCH(
       author_role: "staff",
       body: body.message.trim(),
       is_internal: isInternal,
+      attachments: body.attachments ?? [],
     });
 
     await admin.from("ticket_history").insert({

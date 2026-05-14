@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Loader2, SendHorizonal, X, Clock, Star } from "lucide-react";
+import { ArrowLeft, Loader2, SendHorizonal, X, Clock, Star, Paperclip, FileText, Download } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -37,12 +37,20 @@ interface Ticket {
   updated_at: string;
 }
 
+interface TicketAttachment {
+  url: string;
+  name: string;
+  type: string;
+  size: number;
+}
+
 interface TicketMessage {
   id: string;
   author_name: string;
   author_role: string;
   body: string;
   is_internal: boolean;
+  attachments?: TicketAttachment[];
   created_at: string;
 }
 
@@ -222,7 +230,9 @@ export default function TicketDetailPage() {
   const [data, setData] = useState<TicketData | null>(null);
   const [loading, setLoading] = useState(true);
   const [replyBody, setReplyBody] = useState("");
+  const [replyAttachments, setReplyAttachments] = useState<TicketAttachment[]>([]);
   const [sending, setSending] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [closing, setClosing] = useState(false);
 
   const loadTicket = useCallback(async () => {
@@ -249,20 +259,24 @@ export default function TicketDetailPage() {
 
   async function handleReply(e: React.FormEvent) {
     e.preventDefault();
-    if (!replyBody.trim()) return;
+    if (!replyBody.trim() && replyAttachments.length === 0) return;
 
     setSending(true);
     try {
       const res = await fetch(`/api/support/tickets/${ticketId}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ body: replyBody.trim() }),
+        body: JSON.stringify({ 
+          body: replyBody.trim(),
+          attachments: replyAttachments
+        }),
       });
       if (!res.ok) {
         const err = await res.json();
         throw new Error(err.detail ?? "Failed to send reply.");
       }
       setReplyBody("");
+      setReplyAttachments([]);
       toast.success("Reply sent.");
       await loadTicket();
     } catch (err) {
@@ -271,6 +285,63 @@ export default function TicketDetailPage() {
       setSending(false);
     }
   }
+
+  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("File too large (max 10MB)");
+      return;
+    }
+
+    setUploading(true);
+    const body = new FormData();
+    body.append("file", file);
+    body.append("kind", "ticket");
+
+    try {
+      const res = await fetch("/api/admin/tickets/upload", { method: "POST", body });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Upload failed");
+
+      setReplyAttachments((prev) => [
+        ...prev,
+        {
+          url: data.url,
+          name: data.name ?? file.name,
+          type: data.type ?? file.type,
+          size: data.size ?? file.size,
+        },
+      ]);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
+  }
+
+  const renderAttachments = (attachments?: TicketAttachment[]) => {
+    if (!attachments || attachments.length === 0) return null;
+    return (
+      <div className="mt-3 flex flex-wrap gap-2">
+        {attachments.map((att, i) => (
+          <a
+            key={i}
+            href={att.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 rounded-md border bg-muted/30 px-2.5 py-1.5 text-xs hover:bg-muted/50 transition-colors"
+          >
+            <FileText className="size-3.5 text-muted-foreground" />
+            <span className="max-w-[150px] truncate">{att.name}</span>
+            <Download className="size-3 text-muted-foreground ml-1" />
+          </a>
+        ))}
+      </div>
+    );
+  };
 
   async function handleClose() {
     setClosing(true);
@@ -421,6 +492,7 @@ export default function TicketDetailPage() {
                             </span>
                           </div>
                           <p className="text-sm whitespace-pre-wrap">{msg.body}</p>
+                          {renderAttachments(msg.attachments)}
                         </div>
                       );
                     })}
@@ -439,14 +511,59 @@ export default function TicketDetailPage() {
                       rows={4}
                       disabled={sending}
                     />
-                    <Button type="submit" size="sm" disabled={sending || !replyBody.trim()}>
-                      {sending ? (
-                        <Loader2 className="size-4 mr-2 animate-spin" />
-                      ) : (
-                        <SendHorizonal className="size-4 mr-2" />
-                      )}
-                      Send Reply
-                    </Button>
+
+                    {replyAttachments.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {replyAttachments.map((att) => (
+                          <div key={att.url} className="flex items-center gap-2 rounded-md border bg-muted/50 px-2 py-1 text-xs">
+                            <FileText className="size-3" />
+                            <span className="max-w-[100px] truncate">{att.name}</span>
+                            <button
+                              type="button"
+                              onClick={() => setReplyAttachments(prev => prev.filter(a => a.url !== att.url))}
+                              className="text-muted-foreground hover:text-destructive"
+                            >
+                              <X className="size-3" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="flex items-center justify-between">
+                      <Button type="submit" size="sm" disabled={sending || (!replyBody.trim() && replyAttachments.length === 0)}>
+                        {sending ? (
+                          <Loader2 className="size-4 mr-2 animate-spin" />
+                        ) : (
+                          <SendHorizonal className="size-4 mr-2" />
+                        )}
+                        Send Reply
+                      </Button>
+
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="file"
+                          id="file-upload"
+                          className="hidden"
+                          onChange={handleFileUpload}
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => document.getElementById("file-upload")?.click()}
+                          disabled={sending || uploading}
+                          className="text-muted-foreground"
+                        >
+                          {uploading ? (
+                            <Loader2 className="size-3.5 animate-spin" />
+                          ) : (
+                            <Paperclip className="size-3.5 mr-1.5" />
+                          )}
+                          Attach File
+                        </Button>
+                      </div>
+                    </div>
                   </form>
                 </>
               )}
