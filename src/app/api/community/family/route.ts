@@ -96,7 +96,7 @@ export async function GET() {
   const { data, error } = await supabase
     .from("community_family_members")
     .select(
-      "id, full_name, date_of_birth, birth_time, birth_city, birth_country, birth_lat, birth_lng, relationship, age_group, natal_chart, natal_status, natal_report_id, natal_report_status, natal_report_generated_at, natal_last_generated_at, chart_updated_at, notes, created_at, updated_at"
+      "id, user_id, full_name, date_of_birth, birth_time, birth_city, birth_country, birth_lat, birth_lng, relationship, age_group, natal_chart, natal_status, natal_report_id, natal_report_status, natal_report_generated_at, natal_last_generated_at, chart_updated_at, notes, created_at, updated_at"
     )
     .eq("member_id", member.id)
     .order("created_at", { ascending: true });
