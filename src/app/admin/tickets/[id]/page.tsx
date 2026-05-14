@@ -406,7 +406,7 @@ export default function AdminTicketDetailPage() {
                 <p className="text-sm text-muted-foreground">No public messages yet.</p>
               ) : (
                 publicMessages.map((msg) => (
-                  <div key={msg.id} className={msg.author_role === "staff" ? " w-[50%] ml-auto" : ""}>
+                  <div key={msg.id} className={msg.author_role === "staff" ? "w-[60%] ml-auto" : "w-[60%] ml-0"}>
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-sm font-medium">{msg.author_name}</span>
                       <Badge variant="outline" className="text-xs py-0 px-1.5">
