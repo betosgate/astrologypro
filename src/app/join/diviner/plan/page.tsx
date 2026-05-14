@@ -91,7 +91,8 @@ function formatMoney(amount: number | null, currency: string | null) {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
       currency: (currency ?? "USD").toUpperCase(),
-      maximumFractionDigits: 0,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
     }).format(amount);
   } catch {
     return `${(currency ?? "USD").toUpperCase()} ${amount.toLocaleString()}`;

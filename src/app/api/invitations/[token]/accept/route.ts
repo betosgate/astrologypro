@@ -292,18 +292,8 @@ export async function POST(req: NextRequest, { params }: Params) {
       break;
     }
     case "community_perennial_mandalism": {
-      const { error } = await admin.from("community_members").insert({
-        user_id: userId,
-        full_name: fullName,
-        email: emailLower,
-        phone: normalizedPhone,
-        membership_type: "perennial_mandalism",
-        membership_status: "active",
-        plan_type: "individual",
-        joined_at: new Date().toISOString(),
-        onboarding_completed: false,
-      });
-      if (error) profileInsertError = error.message;
+      // Perennial Mandalism is payment-backed. The active community member
+      // row is created by Stripe checkout finalization, not invite acceptance.
       break;
     }
     case "community_mystery_school": {
