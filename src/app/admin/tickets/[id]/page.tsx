@@ -676,7 +676,7 @@ export default function AdminTicketDetailPage() {
               {ticket.sla_breached && !ticket.sla_breached_at && (
                 <Badge
                   variant="outline"
-                  className="w-full justify-center bg-red-500/10 text-red-600 border-red-500/20"
+                  className="w-full justify-center bg-red-500/10 text-red-600 border-red-500/20 "
                 >
                   SLA Breached
                 </Badge>
