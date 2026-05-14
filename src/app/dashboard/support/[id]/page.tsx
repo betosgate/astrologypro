@@ -14,7 +14,9 @@ import {
 } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Loader2, SendHorizonal, X, Clock, Star } from "lucide-react";
+import { ArrowLeft, Loader2, SendHorizonal, X, Clock, Star, Paperclip, FileText, Download, User, LifeBuoy } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
+import { cn } from "@/lib/utils";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -37,12 +39,21 @@ interface Ticket {
   updated_at: string;
 }
 
+interface TicketAttachment {
+  url: string;
+  name: string;
+  type: string;
+  size: number;
+}
+
 interface TicketMessage {
   id: string;
+  author_user_id: string;
   author_name: string;
   author_role: string;
   body: string;
   is_internal: boolean;
+  attachments?: TicketAttachment[];
   created_at: string;
 }
 
@@ -220,10 +231,12 @@ export default function TicketDetailPage() {
   const ticketId = params.id;
 
   const [data, setData] = useState<TicketData | null>(null);
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [replyBody, setReplyBody] = useState("");
+  const [replyAttachments, setReplyAttachments] = useState<TicketAttachment[]>([]);
   const [sending, setSending] = useState(false);
-  const [closing, setClosing] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   const loadTicket = useCallback(async () => {
     try {
@@ -236,12 +249,19 @@ export default function TicketDetailPage() {
       }
       const json: TicketData = await res.json();
       setData(json);
+
+      // Get current user if not already set
+      if (!currentUser) {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        setCurrentUser(user);
+      }
     } catch {
       toast.error("Failed to load ticket.");
     } finally {
       setLoading(false);
     }
-  }, [ticketId, router]);
+  }, [ticketId, router, currentUser]);
 
   useEffect(() => {
     loadTicket();
@@ -249,20 +269,24 @@ export default function TicketDetailPage() {
 
   async function handleReply(e: React.FormEvent) {
     e.preventDefault();
-    if (!replyBody.trim()) return;
+    if (!replyBody.trim() && replyAttachments.length === 0) return;
 
     setSending(true);
     try {
       const res = await fetch(`/api/support/tickets/${ticketId}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ body: replyBody.trim() }),
+        body: JSON.stringify({ 
+          body: replyBody.trim(),
+          attachments: replyAttachments
+        }),
       });
       if (!res.ok) {
         const err = await res.json();
         throw new Error(err.detail ?? "Failed to send reply.");
       }
       setReplyBody("");
+      setReplyAttachments([]);
       toast.success("Reply sent.");
       await loadTicket();
     } catch (err) {
@@ -272,26 +296,62 @@ export default function TicketDetailPage() {
     }
   }
 
-  async function handleClose() {
-    setClosing(true);
+  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("File too large (max 10MB)");
+      return;
+    }
+
+    setUploading(true);
+    const body = new FormData();
+    body.append("file", file);
+    body.append("kind", "ticket");
+
     try {
-      const res = await fetch(`/api/support/tickets/${ticketId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "closed" }),
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.detail ?? "Failed to close ticket.");
-      }
-      toast.success("Ticket closed.");
-      await loadTicket();
+      const res = await fetch("/api/admin/tickets/upload", { method: "POST", body });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Upload failed");
+
+      setReplyAttachments((prev) => [
+        ...prev,
+        {
+          url: data.url,
+          name: data.name ?? file.name,
+          type: data.type ?? file.type,
+          size: data.size ?? file.size,
+        },
+      ]);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to close ticket.");
+      toast.error(err instanceof Error ? err.message : "Upload failed");
     } finally {
-      setClosing(false);
+      setUploading(false);
+      e.target.value = "";
     }
   }
+
+  const renderAttachments = (attachments?: TicketAttachment[]) => {
+    if (!attachments || attachments.length === 0) return null;
+    return (
+      <div className="mt-2 flex flex-wrap gap-2">
+        {attachments.map((att, i) => (
+          <a
+            key={i}
+            href={att.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 rounded-md border bg-muted/30 px-2 py-1 text-[10px] hover:bg-muted/50 transition-colors"
+          >
+            <FileText className="size-3 text-muted-foreground" />
+            <span className="max-w-[120px] truncate">{att.name}</span>
+            <Download className="size-2.5 text-muted-foreground ml-1" />
+          </a>
+        ))}
+      </div>
+    );
+  };
 
   if (loading) {
     return (
@@ -319,7 +379,7 @@ export default function TicketDetailPage() {
         Back to Support
       </Link>
 
-      {/* Two-column layout: conversation left, context sidebar right */}
+      {/* Two-column layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* ── Left: main conversation ─────────────────────────────────── */}
         <div className="lg:col-span-2 space-y-4">
@@ -351,95 +411,145 @@ export default function TicketDetailPage() {
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent>
               <div className="prose prose-sm dark:prose-invert max-w-none">
-                <p className="whitespace-pre-wrap text-sm">{ticket.description}</p>
+                <p className="whitespace-pre-wrap text-sm text-muted-foreground">{ticket.description}</p>
               </div>
 
               {/* Resolution note */}
               {isResolved && ticket.resolution && (
-                <div className="rounded-md border border-green-500/20 bg-green-500/5 p-3">
+                <div className="mt-4 rounded-md border border-green-500/20 bg-green-500/5 p-3">
                   <p className="text-xs font-semibold text-green-700 dark:text-green-400 mb-1">
                     Resolution
                   </p>
                   <p className="text-sm whitespace-pre-wrap">{ticket.resolution}</p>
                 </div>
               )}
-
-              {/* Close action */}
-              {!isClosed && !isResolved && (
-                <div className="pt-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleClose}
-                    disabled={closing}
-                    className="text-muted-foreground"
-                  >
-                    {closing ? (
-                      <Loader2 className="size-3.5 mr-1.5 animate-spin" />
-                    ) : (
-                      <X className="size-3.5 mr-1.5" />
-                    )}
-                    Mark as Resolved &amp; Close
-                  </Button>
-                </div>
-              )}
             </CardContent>
           </Card>
 
           {/* Conversation thread */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Conversation</CardTitle>
+          <Card className="flex flex-col h-[600px]">
+            <CardHeader className="pb-3 border-b">
+              <CardTitle className="text-base flex items-center gap-2">
+                <SendHorizonal className="size-4 text-primary" />
+                Conversation
+              </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="flex-1 overflow-y-auto p-4 space-y-4">
               {messages.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
+                <div className="h-full flex items-center justify-center text-muted-foreground italic text-sm">
                   No messages yet. Add a reply below.
-                </p>
+                </div>
               ) : (
                 <div className="space-y-4">
                   {messages
                     .filter((m) => !m.is_internal)
                     .map((msg) => {
+                      const isMe = msg.author_user_id === currentUser?.id;
                       const isStaff = msg.author_role === "staff";
+                      
                       return (
                         <div
                           key={msg.id}
-                          className={`rounded-md p-3 ${isStaff ? "bg-primary/5 border border-primary/10" : "bg-muted/40 border border-border"}`}
+                          className={cn(
+                            "flex flex-col max-w-[85%] sm:max-w-[75%]",
+                            isMe ? "ml-auto items-end" : "mr-auto items-start"
+                          )}
                         >
-                          <div className="flex items-center gap-2 mb-1.5">
-                            <span className="text-sm font-medium">{msg.author_name}</span>
-                            {isStaff && (
-                              <Badge variant="outline" className="text-xs py-0 px-1.5 bg-primary/10 text-primary border-primary/20">
+                          <div className={cn(
+                            "flex items-center gap-2 mb-1 px-1",
+                            isMe ? "flex-row-reverse" : "flex-row"
+                          )}>
+                            <span className="text-[10px] font-medium text-muted-foreground">
+                              {isMe ? "Me" : msg.author_name}
+                            </span>
+                            {isStaff && !isMe && (
+                              <Badge variant="outline" className="text-[8px] h-3.5 px-1 bg-primary/10 text-primary border-primary/20">
                                 Support
                               </Badge>
                             )}
-                            <span className="text-xs text-muted-foreground ml-auto">
-                              {formatDateTime(msg.created_at)}
-                            </span>
                           </div>
-                          <p className="text-sm whitespace-pre-wrap">{msg.body}</p>
+                          
+                          <div
+                            className={cn(
+                              "rounded-2xl px-4 py-2 text-sm shadow-sm",
+                              isMe 
+                                ? "bg-primary text-primary-foreground rounded-tr-none" 
+                                : "bg-muted border rounded-tl-none"
+                            )}
+                          >
+                            <p className="whitespace-pre-wrap leading-relaxed">{msg.body}</p>
+                            {renderAttachments(msg.attachments)}
+                          </div>
+                          
+                          <span className="text-[9px] text-muted-foreground mt-1 px-1">
+                            {formatDateTime(msg.created_at)}
+                          </span>
                         </div>
                       );
                     })}
                 </div>
               )}
+            </CardContent>
 
-              {/* Reply form */}
-              {!isClosed && (
-                <>
-                  <Separator />
-                  <form onSubmit={handleReply} className="space-y-3">
+            {/* Reply form */}
+            <div className="p-4 border-t bg-muted/10">
+              {!isClosed ? (
+                <form onSubmit={handleReply} className="space-y-3">
+                  <div className="relative">
                     <Textarea
                       placeholder="Write a reply..."
                       value={replyBody}
                       onChange={(e) => setReplyBody(e.target.value)}
-                      rows={4}
+                      rows={3}
+                      className="resize-none pr-10 bg-background"
                       disabled={sending}
                     />
-                    <Button type="submit" size="sm" disabled={sending || !replyBody.trim()}>
+                    <div className="absolute right-2 bottom-2 flex items-center gap-1">
+                       <input
+                        type="file"
+                        id="file-upload"
+                        className="hidden"
+                        onChange={handleFileUpload}
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="size-8 text-muted-foreground hover:text-primary"
+                        onClick={() => document.getElementById("file-upload")?.click()}
+                        disabled={sending || uploading}
+                      >
+                        {uploading ? (
+                          <Loader2 className="size-4 animate-spin" />
+                        ) : (
+                          <Paperclip className="size-4" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+
+                  {replyAttachments.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {replyAttachments.map((att) => (
+                        <div key={att.url} className="flex items-center gap-2 rounded-md border bg-background px-2 py-1 text-[10px]">
+                          <FileText className="size-3" />
+                          <span className="max-w-[100px] truncate">{att.name}</span>
+                          <button
+                            type="button"
+                            onClick={() => setReplyAttachments(prev => prev.filter(a => a.url !== att.url))}
+                            className="text-muted-foreground hover:text-destructive"
+                          >
+                            <X className="size-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="flex justify-end">
+                    <Button type="submit" size="sm" disabled={sending || (!replyBody.trim() && replyAttachments.length === 0)}>
                       {sending ? (
                         <Loader2 className="size-4 mr-2 animate-spin" />
                       ) : (
@@ -447,16 +557,14 @@ export default function TicketDetailPage() {
                       )}
                       Send Reply
                     </Button>
-                  </form>
-                </>
-              )}
-
-              {isClosed && (
-                <p className="text-sm text-muted-foreground italic">
+                  </div>
+                </form>
+              ) : (
+                <div className="text-center py-2 text-xs text-muted-foreground italic border rounded-lg bg-muted/20">
                   This ticket is closed. No further replies can be added.
-                </p>
+                </div>
               )}
-            </CardContent>
+            </div>
           </Card>
 
           {/* CSAT after resolution/close */}
@@ -467,12 +575,12 @@ export default function TicketDetailPage() {
         <div className="space-y-4">
           {/* Ticket metadata */}
           <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                Ticket Details
+            <CardHeader className="pb-3 border-b">
+              <CardTitle className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Ticket Information
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3 text-sm">
+            <CardContent className="space-y-3 text-sm pt-4">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Ticket #</span>
                 <span className="font-mono text-xs">{ticket.ticket_number}</span>
@@ -481,37 +589,31 @@ export default function TicketDetailPage() {
                 <span className="text-muted-foreground">Category</span>
                 <span>{ticket.category}</span>
               </div>
-              {ticket.subcategory && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Subcategory</span>
-                  <span>{ticket.subcategory}</span>
-                </div>
-              )}
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Status</span>
-                <Badge variant="outline" className={`text-xs ${statusColors[ticket.status] ?? ""}`}>
+                <Badge variant="outline" className={cn("text-[10px] h-5", statusColors[ticket.status] ?? "")}>
                   {formatStatus(ticket.status)}
                 </Badge>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Priority</span>
-                <Badge variant="outline" className={`text-xs ${priorityColors[ticket.priority] ?? ""}`}>
+                <Badge variant="outline" className={cn("text-[10px] h-5", priorityColors[ticket.priority] ?? "")}>
                   {formatStatus(ticket.priority)}
                 </Badge>
               </div>
-              {ticket.assigned_team && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Team</span>
-                  <span>{formatStatus(ticket.assigned_team)}</span>
-                </div>
-              )}
               <Separator />
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Opened</span>
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Clock className="size-3.5" />
+                  <span>Opened</span>
+                </div>
                 <span className="text-xs">{formatDateTime(ticket.created_at)}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Updated</span>
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Clock className="size-3.5" />
+                  <span>Updated</span>
+                </div>
                 <span className="text-xs">{formatDateTime(ticket.updated_at)}</span>
               </div>
             </CardContent>
@@ -520,13 +622,13 @@ export default function TicketDetailPage() {
           {/* SLA clock */}
           {(ticket.sla_due_at || ticket.first_response_due_at) && (
             <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
+              <CardHeader className="pb-3 border-b">
+                <CardTitle className="text-xs font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
                   <Clock className="size-3.5" />
-                  SLA
+                  SLA Timeline
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="space-y-4 pt-4">
                 {ticket.first_response_due_at && (
                   <SlaBlock
                     sla_due_at={ticket.first_response_due_at}
@@ -543,16 +645,15 @@ export default function TicketDetailPage() {
             </Card>
           )}
 
-          {/* Help text */}
-          <Card className="bg-muted/30 border-dashed">
+          {/* Help card */}
+          <Card className="bg-primary/5 border-primary/10">
             <CardContent className="pt-4 space-y-2">
-              <p className="text-xs text-muted-foreground font-medium">What happens next?</p>
-              <p className="text-xs text-muted-foreground">
-                Our support team will review your ticket and reply as soon as possible. You will see their
-                response in the Conversation panel on the left.
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Once your issue is resolved, you can close the ticket or leave a satisfaction rating.
+              <div className="flex items-center gap-2 text-primary">
+                <LifeBuoy className="size-4" />
+                <p className="text-xs font-bold">Support Guide</p>
+              </div>
+              <p className="text-[11px] text-muted-foreground leading-relaxed">
+                Our team usually replies within 24 hours. You will receive an email notification when a staff member replies to your ticket.
               </p>
             </CardContent>
           </Card>

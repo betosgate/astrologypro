@@ -113,7 +113,7 @@ export async function finalizePerennialCommunityCheckoutSession(
       .maybeSingle(),
     admin
       .from("community_members")
-      .select("id, email, full_name, first_name, last_name, phone, joined_at, intake_data, date_of_birth, birth_time, birth_city, birth_country")
+      .select("id, email, full_name, first_name, last_name, phone, joined_at, intake_data, extra_member_count, date_of_birth, birth_time, birth_city, birth_country")
       .eq("user_id", userId)
       .maybeSingle(),
   ]);
@@ -233,6 +233,7 @@ export async function finalizePerennialCommunityCheckoutSession(
     plan_type: canonicalPlanType,
     joined_at: existingMember?.joined_at ?? new Date().toISOString(),
     intake_data: intakeData,
+    extra_member_count: existingMember?.extra_member_count ?? 0,
     ...(fullName ? { full_name: fullName } : {}),
     ...(firstName ? { first_name: firstName } : {}),
     ...(lastName ? { last_name: lastName } : {}),

@@ -9,16 +9,23 @@ export function NavLink({
   children,
   className,
   exact,
+  activeExclusions = [],
 }: {
   href: string;
   children: React.ReactNode;
   className?: string;
   exact?: boolean;
+  activeExclusions?: string[];
 }) {
   const pathname = usePathname();
-  const isActive = exact
+  const baseActive = exact
     ? pathname === href
     : pathname === href || pathname.startsWith(href + "/");
+  const isExcluded = activeExclusions.some(
+    (excludedHref) =>
+      pathname === excludedHref || pathname.startsWith(excludedHref + "/"),
+  );
+  const isActive = baseActive && !isExcluded;
 
   return (
     <Link

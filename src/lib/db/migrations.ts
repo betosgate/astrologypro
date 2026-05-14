@@ -99,6 +99,9 @@ import { MIGRATION_SQL as MIG_20260511000001_PM3 } from "@/data/migrations/20260
 import { MIGRATION_SQL as MIG_20260513000001_TCTC } from "@/data/migrations/20260513000001_trainee_customer_terms_contract";
 import { MIGRATION_SQL as MIG_20260513000003 } from "@/data/migrations/20260513000003_ingress_charts_legacy_mongo_import";
 import { MIGRATION_SQL as MIG_20260514000001 } from "@/data/migrations/20260514000001_ingress_chart_related_insights_rpc";
+import { MIGRATION_SQL as MIG_20260508000001_ODCC } from "@/data/migrations/20260508000001_diviner_owned_campaign_commission";
+import { MIGRATION_SQL as MIG_20260513000001_JTM } from "@/data/migrations/20260513000001_job_ticket_module";
+import { MIGRATION_SQL as MIG_20260513000002_TSR } from "@/data/migrations/20260513000002_ticket_system_reconciliation";
 
 /**
  * Allowlisted migrations that the admin migration runner can execute.
@@ -900,6 +903,13 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
     sortKey: "20260507000001",
     sql: MIG_20260507000001_SFMC,
   },
+  "20260508000001_diviner_owned_campaign_commission": {
+    id: "20260508000001_diviner_owned_campaign_commission",
+    title: "Diviner-Owned Campaign Commission",
+    description: "Adds commission_source_campaign_id to bookings and is_diviner_self_referral to campaign_conversions.",
+    sortKey: "20260508000001",
+    sql: MIG_20260508000001_ODCC,
+  },
   "20260511000001_pm_plan_tiers_three_plan_alignment": {
     id: "20260511000001_pm_plan_tiers_three_plan_alignment",
     title: "Community: PM three-plan tier alignment",
@@ -915,6 +925,20 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Normalizes post-login trainee contract requirements from Diviner Service Agreement to Customer Terms of Service. Pending trainee diviner-service requirements are superseded so the next contract orchestration pass creates the correct Customer Terms requirement.",
     sortKey: "20260513000001",
     sql: MIG_20260513000001_TCTC,
+  },
+  "20260513000001_job_ticket_module": {
+    id: "20260513000001_job_ticket_module",
+    title: "Job Ticket Module",
+    description: "Phase I: Job Ticket Module Implementation.",
+    sortKey: "20260513000001_1",
+    sql: MIG_20260513000001_JTM,
+  },
+  "20260513000002_ticket_system_reconciliation": {
+    id: "20260513000002_ticket_system_reconciliation",
+    title: "Ticket System Reconciliation",
+    description: "Replaces redundant job_tickets and ticket_comments with enhancements to the established system.",
+    sortKey: "20260513000002",
+    sql: MIG_20260513000002_TSR,
   },
   "20260513000003_ingress_charts_legacy_mongo_import": {
     id: "20260513000003_ingress_charts_legacy_mongo_import",

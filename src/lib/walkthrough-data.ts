@@ -9110,6 +9110,924 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
     ],
     screens: [
       {
+        "name": "diviner-dashboard-after-onboarding",
+        "label": "Diviner Dashboard",
+        "description": "Dashboard shown after full onboarding completion.",
+        "group": "Dashboard & Settings",
+        "subModule": "Diviners",
+        "purpose": "Provides access to diviner tools and features.",
+        "bullets": [
+          "Shows dashboard overview.",
+          "Displays sessions and planetary data.",
+          "Profile completion checklist.",
+          "Sidebar navigation for full system access."
+        ]
+      },
+      {
+        "name": "diviner-subscription-settings",
+        "label": "Diviner Subscription Settings",
+        "description": "Subscription and membership management screen for diviners using the AstrologyPro platform.",
+        "group": "Dashboard & Settings",
+        "subModule": "Diviners",
+        "purpose": "Allows diviners to manage their subscription status, billing information, renewal cycle, and membership access for astrology services on the platform.",
+        "bullets": [
+          "Displays the main settings dashboard for diviner accounts.",
+          "Shows current subscription membership status.",
+          "Verified Partner badge identifies approved diviner accounts.",
+          "Subscription section displays active billing information.",
+          "Enrollment date shows when the diviner joined the platform.",
+          "Billing section displays monthly subscription pricing.",
+          "Next renewal date informs the diviner about upcoming billing cycles.",
+          "Manage Subscription button allows plan and billing management.",
+          "Settings navigation includes Account, Payments, Calendar, Notifications, Phone, and Loyalty tabs.",
+          "The screen acts as the central subscription-management area for diviner accounts."
+        ]
+      },
+      {
+        "name": "stripe-connect-setup",
+        "label": "Stripe Connect Integration",
+        "description": "Stripe payment onboarding and payout connection screen for diviner financial setup.",
+        "group": "Stripe Onboarding",
+        "subModule": "Diviner's-Stripe Onboarding",
+        "purpose": "Allows diviners to connect Stripe accounts for accepting client payments, processing charges, and receiving payouts securely through the platform.",
+        "bullets": [
+          "Displays Stripe Connect integration status.",
+          "Charges section indicates whether payment collection is enabled.",
+          "Payouts section indicates whether bank payouts are enabled.",
+          "Connect Stripe Account button launches the Stripe onboarding process.",
+          "Stripe onboarding uses secure external Stripe-hosted verification pages.",
+          "Users can configure payment-processing capabilities through Stripe.",
+          "The integration enables diviners to accept payments from clients directly.",
+          "The screen acts as the payment-gateway integration center for diviners."
+        ]
+      },
+      {
+        "name": "stripe-phone-verification",
+        "label": "Stripe Phone Verification",
+        "description": "Initial Stripe onboarding step used for phone verification and account identification.",
+        "group": "Stripe Onboarding",
+        "subModule": "Diviner's-Stripe Onboarding",
+        "purpose": "Collects contact information required by Stripe before financial onboarding can continue.",
+        "bullets": [
+          "Displays Stripe-hosted onboarding workflow.",
+          "Business branding is shown on the onboarding page.",
+          "Users can enter phone-number information for verification.",
+          "Test account mode is supported for sandbox environments.",
+          "Stripe Terms of Service and Privacy Policy are displayed.",
+          "Submit button validates onboarding information.",
+          "The step initializes Stripe account verification for the diviner."
+        ]
+      },
+      {
+        "name": "stripe-business-type-selection",
+        "label": "Stripe Business Type Selection",
+        "description": "Business classification step within the Stripe onboarding process.",
+        "group": "Stripe Onboarding",
+        "subModule": "Diviner's-Stripe Onboarding",
+        "purpose": "Allows diviners to define their business entity type for financial compliance and payment processing.",
+        "bullets": [
+          "Users can select a business structure such as Individual or Company.",
+          "Business type impacts payout and compliance requirements.",
+          "Stripe uses the information for identity and tax verification.",
+          "Continue button advances the onboarding workflow.",
+          "Business setup instructions are displayed to guide the user.",
+          "The screen helps configure financial identity requirements."
+        ]
+      },
+      {
+        "name": "stripe-personal-details-verification",
+        "label": "Stripe Personal Details Verification",
+        "description": "Identity-verification form for Stripe onboarding.",
+        "group": "Stripe Onboarding",
+        "subModule": "Diviner's-Stripe Onboarding",
+        "purpose": "Collects personal identity information required for regulatory and financial compliance.",
+        "bullets": [
+          "Users enter legal first and last names.",
+          "Email address is collected for account communication.",
+          "Date of birth is required for identity verification.",
+          "Home-address details are collected for compliance validation.",
+          "Phone number is required for account security.",
+          "Last four digits of the Social Security Number are collected.",
+          "Country and state selectors help validate regional compliance.",
+          "Continue button saves the verification details.",
+          "The screen supports financial identity verification and fraud prevention."
+        ]
+      },
+      {
+        "name": "stripe-business-details-configuration_v1",
+        "label": "Stripe Business Details Configuration",
+        "description": "Business-information setup screen for Stripe financial onboarding.",
+        "group": "Stripe Onboarding",
+        "subModule": "Diviner's-Stripe Onboarding",
+        "purpose": "Allows diviners to define business category, industry, and website information for payment processing approval.",
+        "bullets": [
+          "Industry selector categorizes the diviner business type.",
+          "Website field captures the official business or service URL.",
+          "Stripe validates website information for compliance purposes.",
+          "Product or service descriptions may be required if no website exists.",
+          "Continue button advances the Stripe onboarding process.",
+          "The screen helps Stripe assess risk and business legitimacy."
+        ]
+      },
+      {
+        "name": "stripe-bank-selection",
+        "label": "Stripe Bank Account Selection",
+        "description": "Bank-account connection and payout setup screen for Stripe onboarding.",
+        "group": "Stripe Onboarding",
+        "subModule": "Diviner's-Stripe Onboarding",
+        "purpose": "Allows diviners to select and connect bank accounts for receiving Stripe payouts.",
+        "bullets": [
+          "Search field helps locate banking institutions.",
+          "Users can choose OAuth and non-OAuth bank integrations.",
+          "Bank availability and connection status are displayed visually.",
+          "Manual bank-account entry is supported.",
+          "Continue button confirms selected payout methods.",
+          "The screen enables secure payout account configuration."
+        ]
+      },
+      {
+        "name": "stripe-bank-consent-modal",
+        "label": "Stripe Bank Connection Consent",
+        "description": "Consent modal displayed before connecting financial institutions through Stripe.",
+        "group": "Stripe Onboarding",
+        "subModule": "Diviner's-Stripe Onboarding",
+        "purpose": "Obtains user permission before Stripe accesses bank-account information.",
+        "bullets": [
+          "Explains encrypted bank-account connection process.",
+          "Displays security and privacy messaging.",
+          "Users can review access permissions before continuing.",
+          "Agree and Continue button authorizes account linking.",
+          "Manual verification option is also available.",
+          "The modal ensures financial-consent compliance."
+        ]
+      },
+      {
+        "name": "stripe-oauth-bank-login",
+        "label": "Stripe OAuth Bank Login",
+        "description": "OAuth-based financial institution login screen for Stripe bank linking.",
+        "group": "Stripe Onboarding",
+        "subModule": "Diviner's-Stripe Onboarding",
+        "purpose": "Redirects users to authenticate with their banking institution securely.",
+        "bullets": [
+          "Displays the selected banking institution.",
+          "Users authenticate directly with the bank provider.",
+          "OAuth flow securely shares limited account access.",
+          "Continue button launches bank authentication.",
+          "Users can select different banks if needed.",
+          "The workflow ensures secure third-party bank authorization."
+        ]
+      },
+      {
+        "name": "stripe-account-selection",
+        "label": "Stripe Financial Account Selection",
+        "description": "Bank-account selection interface after successful financial authentication.",
+        "group": "Stripe Onboarding",
+        "subModule": "Diviner's-Stripe Onboarding",
+        "purpose": "Allows diviners to choose which financial accounts should be connected to Stripe payouts.",
+        "bullets": [
+          "Lists available connected bank accounts.",
+          "Users can select multiple accounts if supported.",
+          "Account-ending digits help identify each bank account.",
+          "Stripe displays connection permissions before confirmation.",
+          "Connect Accounts button finalizes the linkage process.",
+          "The screen manages payout-account authorization."
+        ]
+      },
+      {
+        "name": "stripe-link-account-saving_v22",
+        "label": "Stripe Link Account Saving",
+        "description": "Stripe Link information-saving screen for faster future account onboarding.",
+        "group": "Stripe Onboarding",
+        "subModule": "Diviner's-Stripe Onboarding",
+        "purpose": "Allows users to save payment and account details securely using Stripe Link.",
+        "bullets": [
+          "Displays encrypted data-saving information.",
+          "Users can save email and phone-number details.",
+          "Stripe Link accelerates future financial onboarding flows.",
+          "Save with Link button stores reusable account information.",
+          "Users may continue without saving details.",
+          "The screen enhances onboarding convenience and security."
+        ]
+      },
+      {
+        "name": "stripe-bank-link-success",
+        "label": "Stripe Bank Connection Success",
+        "description": "Confirmation screen shown after successful Stripe bank-account linking.",
+        "group": "Stripe Onboarding",
+        "subModule": "Diviner's-Stripe Onboarding",
+        "purpose": "Confirms successful financial-account connection and onboarding completion.",
+        "bullets": [
+          "Displays successful payout-account connection confirmation.",
+          "Users receive onboarding completion feedback.",
+          "Done button exits the onboarding process.",
+          "Stripe confirms the selected accounts are now connected.",
+          "The screen finalizes the financial-linking workflow."
+        ]
+      },
+      {
+        "name": "stripe-linked-bank-management",
+        "label": "Stripe Linked Bank Management",
+        "description": "Bank-account management screen showing connected payout accounts.",
+        "group": "Stripe Onboarding",
+        "subModule": "Diviner's-Stripe Onboarding",
+        "purpose": "Allows diviners to manage linked Stripe payout accounts and select preferred payout destinations.",
+        "bullets": [
+          "Displays all linked bank accounts.",
+          "Linked badges indicate active Stripe connections.",
+          "Users can select a preferred payout account.",
+          "Bank-account identifiers display masked account numbers.",
+          "Additional bank accounts can be linked manually.",
+          "Continue button proceeds with payout configuration.",
+          "The screen acts as the payout-account management center."
+        ]
+      },
+      {
+        "name": "stripe-review-and-submit",
+        "label": "Stripe Review & Submit",
+        "description": "Final Stripe onboarding review screen before activation.",
+        "group": "Stripe Onboarding",
+        "subModule": "Diviner's-Stripe Onboarding",
+        "purpose": "Allows diviners to review all submitted onboarding information before final Stripe account activation.",
+        "bullets": [
+          "Displays business-type information summary.",
+          "Professional details are shown for verification.",
+          "Public statement descriptor information is displayed.",
+          "Personal identity details are summarized.",
+          "Selected payout-account details are displayed.",
+          "Edit buttons allow correction of onboarding sections.",
+          "Agreement and disclosure documents are referenced.",
+          "Agree and Submit button finalizes Stripe onboarding.",
+          "The screen acts as the final compliance-review checkpoint."
+        ]
+      },
+      {
+        "name": "stripe-payment-dashboard-enabled",
+        "label": "Stripe Payments Dashboard Enabled",
+        "description": "Post-onboarding Stripe payment-management dashboard for diviners.",
+        "group": "Stripe Onboarding",
+        "subModule": "Diviner's-Stripe Onboarding",
+        "purpose": "Displays live payment-processing and payout status after successful Stripe activation.",
+        "bullets": [
+          "Charges status indicates payment collection is enabled.",
+          "Payout status confirms bank transfers are active.",
+          "Available balance displays current Stripe account funds.",
+          "Pending balance shows upcoming payout amounts.",
+          "Payout schedule explains transfer timing.",
+          "Recent payouts section tracks payment disbursement history.",
+          "Stripe account identifier is displayed for reference.",
+          "The dashboard acts as the operational payment center for diviners."
+        ]
+      },
+      {
+        "name": "diviner-service-catalog",
+        "label": "Service Catalog",
+        "description": "Diviners can browse and select astrology service types from the service catalog. Each service card displays duration, pricing guidance, and whether birth data is required.",
+        "group": "Service Catalog & Scheduling",
+        "subModule": "Diviners",
+        "purpose": "Allows diviners to explore available astrology services and start configuring offerings for their public profile.",
+        "bullets": [
+          "Displays all available astrology service types.",
+          "Each service card contains service title, duration, suggested pricing, and birth data requirement.",
+          "Diviners can add services to their personal offerings.",
+          "Services include natal chart, solar return, weekly transits, relationship readings, and predictive astrology.",
+          "Service cards include quick action buttons for setup.",
+          "Designed to simplify onboarding of diviner services.",
+          "Acts as the starting point for the service publishing workflow."
+        ]
+      },
+      {
+        "name": "diviner-add-service-modal",
+        "label": "Add Service Modal",
+        "description": "After selecting a service from the catalog, the diviner configures pricing and activates the service setup process.",
+        "group": "Service Catalog & Scheduling",
+        "subModule": "Diviners",
+        "purpose": "Allows diviners to define their own service pricing before adding the service into their active workspace.",
+        "bullets": [
+          "Opens when the diviner clicks the Add Service button.",
+          "Displays selected service details including duration and category.",
+          "Supports custom pricing configuration.",
+          "Shows suggested default pricing guidance.",
+          "Allows the diviner to confirm and add the service.",
+          "Birth data requirements are shown when applicable.",
+          "Added services become available for scheduling and publishing."
+        ]
+      },
+      {
+        "name": "diviner-availability-empty-state",
+        "label": "Availability Empty State",
+        "description": "Initial availability screen shown when no schedules have been created yet.",
+        "group": "Service Catalog & Scheduling",
+        "subModule": "Diviners",
+        "purpose": "Encourages diviners to create booking schedules so clients can reserve sessions.",
+        "bullets": [
+          "Displays a no schedules available message.",
+          "Provides a New Schedule action button.",
+          "Introduces booking availability management.",
+          "Acts as the starting point for scheduling setup.",
+          "Supports future service booking activation.",
+          "Helps diviners configure working hours and session windows."
+        ]
+      },
+      {
+        "name": "diviner-create-availability-schedule",
+        "label": "Create Availability Schedule",
+        "description": "Diviners create booking schedules linked to their services using configurable dates, weekdays, durations, and timezones.",
+        "group": "Service Catalog & Scheduling",
+        "subModule": "Diviners",
+        "purpose": "Allows diviners to define when clients can book astrology sessions.",
+        "bullets": [
+          "Supports linking schedules to specific services.",
+          "Allows selection of weekdays for availability.",
+          "Supports start and end date configuration.",
+          "Allows start and end booking times.",
+          "Session duration can be configured.",
+          "Timezone selection is supported.",
+          "Optional notes and instructions can be added for clients.",
+          "Schedules determine client booking windows.",
+          "Created schedules become visible in the availability dashboard."
+        ]
+      },
+      {
+        "name": "diviner-availability-dashboard",
+        "label": "Availability Dashboard",
+        "description": "Displays all created availability schedules with active status, timings, and linked services.",
+        "group": "Service Catalog & Scheduling",
+        "subModule": "Diviners",
+        "purpose": "Provides schedule management for diviners after availability windows are created.",
+        "bullets": [
+          "Displays all configured schedules.",
+          "Shows active or inactive schedule status.",
+          "Displays linked service information.",
+          "Shows available weekdays and timing windows.",
+          "Supports edit and delete actions.",
+          "Includes activation toggle for schedules.",
+          "Helps manage booking availability across services."
+        ]
+      },
+      {
+        "name": "diviner-landing-page-services-offline",
+        "label": "Landing Page Services - Offline",
+        "description": "Landing page management screen where services are initially added but remain offline before being published.",
+        "group": "Service Catalog & Scheduling",
+        "subModule": "Diviners",
+        "purpose": "Allows diviners to manage visibility and customization of their public service pages.",
+        "bullets": [
+          "Displays total services statistics.",
+          "Shows live and offline service counts.",
+          "Services can remain unpublished initially.",
+          "Supports service search and category filtering.",
+          "Customize action allows editing landing page content.",
+          "Analytics links are available for service performance tracking.",
+          "Offline toggle prevents public visibility."
+        ]
+      },
+      {
+        "name": "diviner-landing-page-services-live",
+        "label": "Landing Page Services - Live",
+        "description": "After enabling the service toggle, the diviner publishes the service landing page publicly.",
+        "group": "Service Catalog & Scheduling",
+        "subModule": "Diviners",
+        "purpose": "Allows diviners to make astrology services publicly visible and bookable.",
+        "bullets": [
+          "Service status changes from offline to live.",
+          "Live toggle activates public visibility.",
+          "View live page action becomes available.",
+          "Services can now receive traffic and bookings.",
+          "Analytics tracking is enabled for live services.",
+          "Landing pages support marketing campaigns.",
+          "Published services are accessible to clients and affiliates."
+        ]
+      },
+      {
+        "name": "diviner-affiliate-dashboard-empty",
+        "label": "Affiliate Dashboard Empty State",
+        "description": "Initial affiliate management dashboard shown before agreement signing and affiliate invitations.",
+        "group": "Affiliate Program",
+        "subModule": "Diviners-Affiliate",
+        "purpose": "Introduces affiliate management and referral commission tracking for diviners.",
+        "bullets": [
+          "Displays affiliate performance summary cards.",
+          "Shows commissions, payouts, and balances.",
+          "Prompts the diviner to sign the affiliate agreement.",
+          "Affiliate invitations remain blocked until agreement acceptance.",
+          "Supports future referral and commission tracking.",
+          "Provides invitation management actions."
+        ]
+      },
+      {
+        "name": "diviner-affiliate-agreement",
+        "label": "Affiliate Program Agreement",
+        "description": "Agreement review screen where diviners must accept affiliate program terms before inviting partners.",
+        "group": "Affiliate Program",
+        "subModule": "Diviners-Affiliate",
+        "purpose": "Ensures affiliate partnerships comply with platform terms and commission policies.",
+        "bullets": [
+          "Displays affiliate program legal agreement.",
+          "Includes commission rules and payment policies.",
+          "Explains referral tracking and attribution.",
+          "Requires agreement checkbox confirmation.",
+          "Sign agreement button activates affiliate functionality.",
+          "Agreement acceptance unlocks affiliate invitations.",
+          "Supports compliance and audit tracking."
+        ]
+      },
+      {
+        "name": "diviner-invite-affiliate-modal",
+        "label": "Invite Affiliate Modal",
+        "description": "Diviners can invite affiliate partners by email after signing the affiliate agreement.",
+        "group": "Affiliate Program",
+        "subModule": "Diviners-Affiliate",
+        "purpose": "Allows diviners to onboard referral partners and grow traffic through affiliate marketing.",
+        "bullets": [
+          "Supports affiliate invitation via email.",
+          "Captures affiliate name and email.",
+          "Allows optional personal message.",
+          "Supports configurable commission setup.",
+          "Invitation links have expiration periods.",
+          "Send Invitation action dispatches email invitations.",
+          "Affiliate tracking starts after acceptance."
+        ]
+      },
+      {
+        "name": "diviner-affiliate-list",
+        "label": "Affiliate List Management",
+        "description": "Displays invited affiliates and their onboarding status after invitations are sent.",
+        "group": "Affiliate Program",
+        "subModule": "Diviners-Affiliate",
+        "purpose": "Allows diviners to monitor affiliate invitations, statuses, and commissions.",
+        "bullets": [
+          "Displays affiliate records in a table layout.",
+          "Shows affiliate email and commission details.",
+          "Tracks invitation status such as pending.",
+          "Displays invitation creation date.",
+          "Supports affiliate management actions.",
+          "Provides visibility into referral onboarding.",
+          "Used for long-term affiliate relationship management."
+        ]
+      },
+      {
+        "name": "affiliate-email-invitation",
+        "label": "Affiliate Invitation Email",
+        "description": "Email invitation sent to affiliate partners containing referral onboarding instructions.",
+        "group": "Affiliate Program",
+        "subModule": "Diviners-Affiliate",
+        "purpose": "Allows invited affiliates to access the affiliate registration flow securely.",
+        "bullets": [
+          "Includes invitation acceptance button.",
+          "Displays personal message from the diviner.",
+          "Explains affiliate earning process.",
+          "Contains invitation expiration details.",
+          "Provides referral onboarding instructions.",
+          "Supports affiliate program growth.",
+          "Acts as the entry point for affiliate registration."
+        ]
+      },
+      {
+        "name": "affiliate-invitation-registration",
+        "label": "Affiliate Invitation Registration",
+        "description": "Affiliate registration form where invited partners create their accounts and accept invitations.",
+        "group": "Affiliate Program",
+        "subModule": "Diviners-Affiliate",
+        "purpose": "Allows affiliate partners to complete onboarding and access the affiliate portal.",
+        "bullets": [
+          "Displays affiliate invitation details.",
+          "Pre-fills affiliate email information.",
+          "Supports password setup.",
+          "Allows optional phone number entry.",
+          "Includes personal invitation message.",
+          "Create account and accept button completes onboarding.",
+          "Successful registration redirects the affiliate into the portal dashboard."
+        ]
+      },
+      {
+        "name": "affiliate-portal-dashboard",
+        "label": "Affiliate Portal Dashboard",
+        "description": "Affiliate dashboard where partners track referrals, clicks, conversions, and commissions.",
+        "group": "Affiliate Program",
+        "subModule": "Diviners-Affiliate",
+        "purpose": "Provides affiliates with marketing tools and referral tracking after successful onboarding.",
+        "bullets": [
+          "Displays affiliate performance metrics.",
+          "Tracks clicks and conversions.",
+          "Shows total earnings information.",
+          "Supports Stripe payout connection.",
+          "Displays marketing kit and referral campaigns.",
+          "Provides unique referral links.",
+          "Includes copy link and preview actions.",
+          "Allows affiliates to promote astrology services externally."
+        ]
+      },
+      {
+        "name": "affiliate_stripe_onboarding",
+        "label": "Affiliate Stripe Account Setup",
+        "description": "After accepting the affiliate invitation and entering the affiliate dashboard, the affiliate must connect and create a Stripe account before receiving commissions and payouts.",
+        "group": "Affiliate Program",
+        "subModule": "Diviners-Affiliate",
+        "purpose": "This onboarding flow ensures affiliates securely connect with Stripe so referral commissions, payouts, and financial transactions can be processed correctly through the platform.",
+        "bullets": [
+          "Affiliate receives invitation email from the Diviner.",
+          "Affiliate clicks the invitation link from the email.",
+          "Invitation acceptance form opens with affiliate information prefilled.",
+          "Affiliate enters personal details such as name, phone number, and password.",
+          "Affiliate clicks the 'Create account & accept' button.",
+          "After account creation, affiliate is redirected to the Affiliate Dashboard.",
+          "Affiliate dashboard displays referral statistics, marketing kit links, and payout setup requirements.",
+          "Before earning payouts, affiliate must connect a Stripe account.",
+          "Affiliate clicks the 'Connect Stripe' button from the dashboard.",
+          "Stripe onboarding page opens in secure hosted mode.",
+          "Stripe onboarding screen informs the affiliate that the platform partners with Stripe for secure payments and financial services.",
+          "Affiliate enters email address and phone number during Stripe onboarding.",
+          "Stripe verification uses secure OTP and identity confirmation steps.",
+          "Affiliate submits onboarding information through the Stripe form.",
+          "After successful verification, the Stripe account becomes connected to the affiliate profile.",
+          "Connected Stripe account enables commission payout processing.",
+          "Affiliate can now receive referral earnings and payout transfers.",
+          "Affiliate dashboard continues showing clicks, conversions, earnings, and referral performance analytics.",
+          "Affiliate can share marketing links and referral campaigns after Stripe onboarding completion.",
+          "The entire affiliate onboarding process follows the same walkthrough structure already used in the Diviner onboarding and service publishing flow."
+        ]
+      },
+      {
+        "name": "affiliate_assignment_modal",
+        "label": "Affiliate Assignment Creation",
+        "description": "Diviner can assign affiliates to services or profiles with commission-based partnerships.",
+        "group": "Affiliate Program",
+        "subModule": "Diviners-Affiliate",
+        "purpose": "This screen allows Diviners to connect affiliates with services and define commission rules for referral earnings.",
+        "bullets": [
+          "Diviner opens the Affiliates module from the Marketing section.",
+          "Clicking 'New Assignment' opens the affiliate assignment modal.",
+          "Diviner can choose assignment scope as Profile or Service.",
+          "Service scope assigns affiliates to a specific astrology service.",
+          "Diviner selects a service such as Nativity Birth Chart.",
+          "Affiliate can be searched using email or affiliate name.",
+          "Affiliate search results display available affiliate accounts.",
+          "Diviner selects the affiliate from the list.",
+          "Commission type can be Percentage or Flat amount.",
+          "Commission value defines how much the affiliate earns per booking.",
+          "Optional private notes help internal affiliate management.",
+          "Create Assignment button activates the affiliate partnership."
+        ]
+      },
+      {
+        "name": "affiliate_campaign_dashboard",
+        "label": "Affiliate Campaign Dashboard",
+        "description": "Affiliate dashboard displays all created campaigns, earnings, clicks, and conversion analytics.",
+        "group": "Affiliate Program",
+        "subModule": "Diviners-Affiliate",
+        "purpose": "This dashboard helps affiliates monitor campaign performance and referral earnings.",
+        "bullets": [
+          "Affiliate logs into the Affiliate Portal.",
+          "Campaign dashboard displays active campaigns.",
+          "Statistics cards show total campaigns, clicks, and earnings.",
+          "Campaign table lists all affiliate referral campaigns.",
+          "Each campaign displays status, clicks, conversions, and revenue.",
+          "Affiliate can open campaign details for deeper analytics.",
+          "New Campaign button allows affiliates to create referral campaigns.",
+          "Campaign performance updates automatically after successful bookings."
+        ]
+      },
+      {
+        "name": "new_affiliate_campaign",
+        "label": "Create Affiliate Campaign",
+        "description": "Affiliates create referral campaigns connected to assigned services or products.",
+        "group": "Affiliate Program",
+        "subModule": "Diviners-Affiliate",
+        "purpose": "This screen allows affiliates to generate trackable referral campaigns for marketing promotions.",
+        "bullets": [
+          "Affiliate clicks the 'New Campaign' button.",
+          "Affiliate chooses campaign type.",
+          "Per-diviner campaigns are linked to specific Diviner partnerships.",
+          "General product campaigns promote platform-wide products.",
+          "Affiliate selects an assigned product from the dropdown.",
+          "Selected product displays commission percentage.",
+          "Campaign name helps affiliates track marketing performance.",
+          "Optional notes describe target audience or promotion plans.",
+          "Channel field can store marketing platforms such as Instagram or YouTube.",
+          "UTM fields support advanced marketing analytics.",
+          "Create Campaign button generates the referral campaign."
+        ]
+      },
+      {
+        "name": "campaign_detail_analytics",
+        "label": "Affiliate Campaign Details",
+        "description": "Campaign detail page displays analytics, referral URL, conversions, and earnings.",
+        "group": "Affiliate Program",
+        "subModule": "Diviners-Affiliate",
+        "purpose": "This screen helps affiliates monitor referral performance and share campaign links.",
+        "bullets": [
+          "Campaign detail page displays campaign status.",
+          "Unique referral URL is generated for sharing.",
+          "Affiliate can copy and share the campaign link.",
+          "Analytics cards display clicks, conversions, earnings, and reversed transactions.",
+          "Recent conversions section tracks booking activity.",
+          "Campaign statistics update automatically after customer bookings.",
+          "Archive button allows campaign deactivation."
+        ]
+      },
+      {
+        "name": "service_landing_page",
+        "label": "Affiliate Service Landing Page",
+        "description": "Customers visiting affiliate referral links land on the service booking page.",
+        "group": "Affiliate Program",
+        "subModule": "Diviners-Affiliate",
+        "purpose": "This page introduces the astrology service and allows customers to begin booking.",
+        "bullets": [
+          "Customer opens the affiliate referral URL.",
+          "Landing page displays service title and description.",
+          "Diviner profile information is displayed.",
+          "Service pricing and session duration are visible.",
+          "Included features explain what customers receive.",
+          "Book This Reading button starts the booking process.",
+          "Affiliate referral tracking remains attached throughout the booking flow."
+        ]
+      },
+      {
+        "name": "booking_date_time_selection",
+        "label": "Booking Date & Time",
+        "description": "Customer selects available booking schedule before continuing payment steps.",
+        "group": "Affiliate Program",
+        "subModule": "Diviners-Affiliate",
+        "purpose": "This step allows customers to choose available appointment dates and times.",
+        "bullets": [
+          "Customer selects a booking date from the calendar.",
+          "Available time slots are displayed dynamically.",
+          "Timezone information is shown for accuracy.",
+          "Selected service and session price are visible.",
+          "Customer chooses a preferred appointment time.",
+          "Next button continues the booking process."
+        ]
+      },
+      {
+        "name": "booking_contact_information",
+        "label": "Booking Contact Information",
+        "description": "Customer enters personal and birth information required for astrology sessions.",
+        "group": "Affiliate Program",
+        "subModule": "Diviners-Affiliate",
+        "purpose": "This step collects booking contact details and astrology birth information.",
+        "bullets": [
+          "Customer enters full name and email address.",
+          "Phone number is required for communication.",
+          "Date of birth is collected for astrology analysis.",
+          "Place of birth helps generate accurate astrology readings.",
+          "Optional notes can describe customer expectations or requests.",
+          "Next button continues to payment confirmation."
+        ]
+      },
+      {
+        "name": "booking_contact_filled_1",
+        "label": "Completed Contact Information",
+        "description": "Customer contact and birth information is successfully completed before payment.",
+        "group": "Affiliate Program",
+        "subModule": "Diviners-Affiliate",
+        "purpose": "This screen confirms that required booking information has been entered correctly.",
+        "bullets": [
+          "Customer information fields are completed.",
+          "Birth details are validated successfully.",
+          "Location information displays timezone support.",
+          "Notes section stores additional customer instructions.",
+          "Customer can review details before payment.",
+          "Next button opens payment confirmation step."
+        ]
+      },
+      {
+        "name": "booking_payment_confirmation",
+        "label": "Confirm & Pay",
+        "description": "Customer reviews booking summary and completes secure Stripe payment.",
+        "group": "Affiliate Program",
+        "subModule": "Diviners-Affiliate",
+        "purpose": "This step securely processes booking payments and confirms the astrology session.",
+        "bullets": [
+          "Booking summary displays service details.",
+          "Session duration, date, and timezone are visible.",
+          "Stripe payment system handles secure checkout.",
+          "Customer can select payment methods such as Card, Cash App Pay, or Amazon Pay.",
+          "Card information is securely entered through Stripe.",
+          "Country and billing details are validated.",
+          "Pay Now button processes the booking payment."
+        ]
+      },
+      {
+        "name": "stripe_checkout_details",
+        "label": "Stripe Checkout Form",
+        "description": "Stripe secure checkout collects payment and optional customer account information.",
+        "group": "Affiliate Program",
+        "subModule": "Diviners-Affiliate",
+        "purpose": "This section securely validates payment information before final booking confirmation.",
+        "bullets": [
+          "Customer enters card details securely.",
+          "Expiration date and security code are validated.",
+          "Billing country is selected.",
+          "Optional Link checkout allows faster future payments.",
+          "Customer can save payment details securely.",
+          "Stripe encryption protects sensitive payment information.",
+          "Successful payment automatically completes booking."
+        ]
+      },
+      {
+        "name": "booking_confirmation_screen",
+        "label": "Booking Confirmation",
+        "description": "Successful booking confirmation is displayed after payment completion.",
+        "group": "Affiliate Program",
+        "subModule": "Diviners-Affiliate",
+        "purpose": "This screen confirms the booking and provides session access information.",
+        "bullets": [
+          "Booking confirmation message is displayed.",
+          "Session date and time are confirmed.",
+          "Customer can join the session directly from the confirmation page.",
+          "Calendar integration allows saving the appointment.",
+          "Confirmation email is automatically sent.",
+          "Affiliate conversion tracking updates successfully.",
+          "Affiliate earnings are recorded after successful payment."
+        ]
+      },
+      {
+        "name": "affiliate_dashboard_overview",
+        "label": "Affiliate Dashboard Overview",
+        "description": "After completing Stripe onboarding, campaign setup, and referral sharing, affiliates can monitor their complete performance from the dashboard.",
+        "group": "Affiliate Program",
+        "subModule": "Diviners-Affiliate",
+        "purpose": "This dashboard gives affiliates a centralized overview of earnings, campaign performance, marketing links, and referral analytics.",
+        "bullets": [
+          "Affiliate logs into the Affiliate Portal dashboard.",
+          "Dashboard displays connected Stripe account status.",
+          "Stripe verification confirms payouts are enabled.",
+          "Open Stripe Dashboard button allows affiliates to manage payout settings.",
+          "Statistics cards display total clicks, conversions, and total earnings.",
+          "Marketing Kit section shows available promotional landing pages.",
+          "Each marketing card contains campaign image, commission percentage, and referral link.",
+          "Affiliate can copy referral links directly from the dashboard.",
+          "Preview button opens the customer-facing landing page.",
+          "Dashboard automatically tracks customer clicks and successful conversions.",
+          "Recent Campaigns section displays all active affiliate campaigns.",
+          "Campaign table includes campaign name, referral code, and current status.",
+          "Affiliate earnings increase automatically after successful customer bookings.",
+          "All campaign analytics are updated in real time after purchases.",
+          "Dashboard helps affiliates monitor performance and optimize promotions."
+        ]
+      },
+      {
+        "name": "campaign_management_dashboard",
+        "label": "Campaign Management Dashboard",
+        "description": "Diviners can manage and monitor all marketing campaigns directly from the marketing module dashboard.",
+        "group": "Marketing & Campaigns",
+        "subModule": "Campaign Management",
+        "purpose": "Allows diviners to create, monitor, and analyze promotional campaigns without needing affiliate assistance.",
+        "bullets": [
+          "Diviner opens the Marketing module from the sidebar navigation.",
+          "Campaigns section displays all active and inactive campaigns.",
+          "Dashboard shows total campaigns, total affiliates, conversions, and commission spending.",
+          "Campaign table displays campaign name, destination type, URL code, status, and conversion count.",
+          "Analytics tab helps track campaign performance.",
+          "Status filter allows diviners to filter campaigns by active or inactive state.",
+          "Create Campaign button opens the campaign creation workflow.",
+          "Each campaign row contains quick action buttons for viewing or managing campaigns.",
+          "Campaign performance updates automatically after bookings or conversions.",
+          "Marketing dashboard acts as the central campaign management area."
+        ]
+      },
+      {
+        "name": "campaign_creation_modal",
+        "label": "Campaign Creation Modal",
+        "description": "Diviners can create direct promotional campaigns for services, profile pages, or astrology offerings.",
+        "group": "Marketing & Campaigns",
+        "subModule": "Campaign Management",
+        "purpose": "Enables diviners to independently create referral campaigns and promotional service links.",
+        "bullets": [
+          "Clicking Create Campaign opens the campaign setup modal.",
+          "Diviner enters campaign name and optional campaign description.",
+          "Campaign destination can be selected as profile page or specific service.",
+          "Available services are displayed with category, duration, and pricing.",
+          "Diviner selects which astrology service should receive traffic.",
+          "Optional marketing channel selection supports platforms like Facebook.",
+          "Start date and end date can be configured for campaign duration.",
+          "UTM parameters help track marketing traffic sources.",
+          "Create Campaign button generates a unique campaign referral URL.",
+          "Campaign settings are saved automatically after successful creation."
+        ]
+      },
+      {
+        "name": "campaign_created_confirmation",
+        "label": "Campaign Created Confirmation",
+        "description": "After creating a campaign, the system generates a shareable campaign URL for promotions and bookings.",
+        "group": "Marketing & Campaigns",
+        "subModule": "Campaign Management",
+        "purpose": "Provides diviners with direct campaign links for sharing across websites, social media, and affiliates.",
+        "bullets": [
+          "System displays successful campaign creation confirmation.",
+          "Generated campaign URL is automatically created for sharing.",
+          "Copy button copies the referral URL to clipboard.",
+          "External launch button opens the campaign in a new browser tab.",
+          "Campaign code is generated automatically for tracking purposes.",
+          "Done button closes the confirmation modal.",
+          "Create Another button starts a new campaign setup process.",
+          "Campaign URL redirects customers directly to the booking experience.",
+          "All conversions from the campaign are tracked automatically.",
+          "Campaign performance becomes visible in the analytics dashboard."
+        ]
+      },
+      {
+        "name": "service_landing_page_12",
+        "label": "Astrology Service Landing Page",
+        "description": "Customers opening the campaign link are redirected to the astrology service landing page.",
+        "group": "Marketing & Campaigns",
+        "subModule": "Campaign Management",
+        "purpose": "Introduces the astrology service and encourages visitors to start the booking process.",
+        "bullets": [
+          "Campaign URL opens the service landing page in a new tab.",
+          "Service page displays astrology category and practitioner information.",
+          "Customers can view service pricing and session duration.",
+          "Book This Reading button starts the booking workflow.",
+          "Service overview explains the reading purpose and experience.",
+          "What's Included section describes session features and benefits.",
+          "Landing page includes service imagery and astrology branding.",
+          "Visitors can review practitioner information before booking.",
+          "Pricing and session details are clearly visible.",
+          "Page is optimized for campaign conversion and direct booking."
+        ]
+      },
+      {
+        "name": "booking_date_time_selection_13",
+        "label": "Booking Date And Time Selection",
+        "description": "Customers select available session dates and time slots before continuing to booking confirmation.",
+        "group": "Marketing & Campaigns",
+        "subModule": "Campaign Management",
+        "purpose": "Allows customers to schedule astrology sessions based on available practitioner times.",
+        "bullets": [
+          "Booking workflow begins with date and time selection.",
+          "Calendar component displays available appointment dates.",
+          "Available time slots are shown according to local timezone.",
+          "Selected service name and pricing are displayed.",
+          "Customer chooses preferred session timing.",
+          "Time slots automatically update based on practitioner availability.",
+          "Selected appointment duration is displayed.",
+          "Next button continues the booking process.",
+          "Back button returns customer to previous step.",
+          "Timezone conversion ensures accurate appointment scheduling."
+        ]
+      },
+      {
+        "name": "booking_contact_form_14",
+        "label": "Booking Contact Information",
+        "description": "Customers provide personal and astrology birth details required for the session.",
+        "group": "Marketing & Campaigns",
+        "subModule": "Campaign Management",
+        "purpose": "Collects customer information needed for astrology analysis and appointment communication.",
+        "bullets": [
+          "Customer enters full name, email, and phone number.",
+          "Birth information section collects date and place of birth.",
+          "Place search helps customers select birth location accurately.",
+          "Notes field allows customers to provide additional context.",
+          "Phone number is required for session communication.",
+          "Astrology readings depend on accurate birth information.",
+          "Validation ensures required fields are completed.",
+          "Next button moves to payment confirmation.",
+          "Back button returns to scheduling step.",
+          "All information is securely stored with the booking."
+        ]
+      },
+      {
+        "name": "booking_payment_screen_16",
+        "label": "Booking Payment And Confirmation",
+        "description": "Customers review booking details and complete secure online payment.",
+        "group": "Marketing & Campaigns",
+        "subModule": "Campaign Management",
+        "purpose": "Handles secure checkout and payment confirmation for astrology bookings.",
+        "bullets": [
+          "Booking summary displays service, duration, date, and timezone.",
+          "Customer details are shown before payment submission.",
+          "Payment section supports card, Cash App Pay, and Amazon Pay.",
+          "Stripe secure checkout integration processes payments safely.",
+          "Card information fields support major payment providers.",
+          "Country and billing information can be configured.",
+          "Pay Now button completes the booking transaction.",
+          "Booking total is displayed before payment confirmation.",
+          "Secure checkout indicators improve customer trust.",
+          "Payment data is processed securely through Stripe."
+        ]
+      },
+      {
+        "name": "booking_confirmation_success",
+        "label": "Booking Success Confirmation",
+        "description": "After successful payment, the customer receives booking confirmation and session access details.",
+        "group": "Marketing & Campaigns",
+        "subModule": "Campaign Management",
+        "purpose": "Confirms successful booking creation and provides access to upcoming astrology sessions.",
+        "bullets": [
+          "Booking Confirmed message appears after successful payment.",
+          "Session details include date, time, timezone, and schedule.",
+          "Join Your Session button provides direct meeting access.",
+          "Add To Calendar option downloads calendar event file.",
+          "Confirmation email is automatically sent to the customer.",
+          "Booking information is stored in the scheduling system.",
+          "Customer can return later using session access link.",
+          "Session reminder workflows can trigger automatically.",
+          "Confirmation screen finalizes the booking journey.",
+          "Campaign conversion tracking is updated after booking success."
+        ]
+      }
+,
+      {
         name: "overview",
         label: "Dashboard Overview",
         description: "The full-length command centre for your practice — every signal you need to run your day surfaces here on a single scrolling page. If the diviner hasn't earned their certified badge yet, a gold 'Get certified' banner sits at the very top with a Learn more link to Settings. Just beneath the Dashboard header (with a 'Welcome back' subtitle and a one-click link to the public profile URL astrologypro.com/{username}), cross-sell banners surface promo opportunities for training and community. Today's Sessions shows your next appointment while Planetary Returns — Next 30 Days lists upcoming planetary return milestones across your client roster. A profile completion checklist tracks 8 setup tasks with a percentage bar. An ROI Banner contextualises the month's revenue. Eight stat cards follow: This Month Revenue, This Month Bookings, New Clients, Upcoming sessions, Testimonials rating, Client Retention rate, No-Show Rate, and Follow-Ups Due. A Revenue — Last 6 Months bar chart gives the financial arc at a glance. Then two columns of live widgets round out the page: Upcoming Bookings (next 5 appointments with status badges), Quick Actions (View Bookings, Edit Profile, Manage Services, View Live Profile), Check-Ins last 7 days, Gift Certificates outstanding value, Weekly Subscriptions active count, and Active Campaigns with spend vs. budget.",
@@ -9570,45 +10488,392 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "Birth data gap — entries without birth time show '—' in the Birth Time column; follow up to complete the chart"
         ]
       },
-      {
-        name: "campaigns",
-        label: "Campaigns",
-        description: "Design and run trackable marketing campaigns at /dashboard/campaigns. Every campaign targets exactly one destination — the diviner's profile page OR one of their enabled service landing pages — and gets a unique short URL in the format /r/cmp_XXXXXXXX that logs rich click data for every visitor. The page opens on a Campaigns tab (table of all campaigns) with a sibling Analytics tab for aggregate performance across every campaign. Each row shows name, status (Draft / Active / Paused / Completed), destination badge (Profile or a specific service), the campaign URL with a Copy button, start/end dates, commission rate, and live counts for affiliates, clicks, unique clicks, and conversions. Creating a campaign prompts the diviner for a name, a destination picker populated only with their admin-enabled services, an optional date window, and commission terms for affiliates.",
-        group: "Campaigns",
-        purpose: "Lets diviners promote a specific page (profile or single service) and measure exactly which channels, devices, and geographies drive real bookings — tied to the landing-page access-control system so disabled services can never be selected as a destination.",
-        bullets: [
-          "Destination Picker — shows 'My Profile Page' as the default and a dropdown of enabled service landing pages only; admin-disabled services never appear, even via dev-tools tampering (server validates)",
-          "Campaign URL format — /r/cmp_ + 8 alphanumeric chars (e.g. cmp_8FK29XQ) generated server-side, copied with one click from the row",
-          "/r/[code] tracking redirect — entity-based resolution: the redirect reads campaign.destination_type and looks up the current profile/service URL at click time, so username/slug renames don't break old campaign links",
-          "Click logging — every hit records device, geo (country), referrer, session cookie, and is_bot flag into campaign_clicks before redirecting via 307",
-          "Unique click window — the same visitor within 24h counts as total but not unique, giving clean 'visitors vs. hits' separation",
-          "Status lifecycle — Draft (URL is dormant, no clicks logged) → Active (live tracking) → Paused / Completed / Archived; only Active campaigns log clicks",
-          "Auto-pause trigger — if the admin disables the linked service via diviner_services.is_enabled, a DB trigger flips active campaigns pointing to that service into paused with a banner explaining why",
-          "Campaigns tab — sortable columns for Name, Status, Destination, Campaign URL, Dates, Affiliates, Clicks, Unique, Conversions, Revenue, Commission",
-          "Analytics tab — aggregate KPI cards (Total Campaigns, Active, Conversions, Revenue, Avg ROI) plus a Campaign Performance table with per-row Clicks and Unique columns so drill-down is not required for basic review",
-          "Row actions — eye icon opens the campaign detail page, edit dialog lets the diviner change status, dates, and commission without losing history",
-          "Create Campaign dialog — name, description, destination picker, commission type (% or flat), rate, budget cap, start/end dates; validates that the chosen destination is still enabled before saving"
-        ]
-      },
-      {
-        name: "campaign_analytics_detail",
-        label: "Per-Campaign Analytics",
-        description: "Deep-dive analytics for a single campaign at /dashboard/campaigns/[id]/analytics. The page is structured around the question 'where is this campaign's traffic coming from, and how is it converting?' — KPI cards at the top (Total Clicks, Unique Clicks, Bookings, Revenue, Conversion Rate, Bounce indicator), a clicks-over-time chart below them, and three side-by-side breakdowns: Devices (mobile / desktop / tablet), Geo (top countries), and Referrers (direct, social platforms, search engines, other tracking links). A clicks table at the bottom lists individual click events with timestamp, device summary, country, referrer, and unique/repeat flag, so the diviner can audit exactly how a spike or dip happened.",
-        group: "Campaigns",
-        purpose: "Answers the practical question of whether this specific campaign is worth continuing — is traffic coming from the audience the diviner expected, and is it actually converting into bookings?",
-        bullets: [
-          "KPI strip — Total Clicks, Unique Clicks, Bookings, Revenue, Conversion Rate in prominent cards",
-          "Clicks over time — line chart showing hourly or daily click volume, useful for spotting campaign spikes aligned to posts or ads",
-          "Device breakdown — mobile / desktop / tablet shares so the diviner knows where to focus their copy and imagery",
-          "Geo breakdown — top countries by unique visitors, based on Vercel edge geo headers",
-          "Referrer breakdown — direct typed, social (Instagram, Facebook, X), search (Google, Bing), and other /r/ codes or affiliate links",
-          "Clicks table — individual event list with timestamp, device, country, referrer, is_unique_click flag, and is_bot flag",
-          "Period selector — 7 / 30 / 90 days or All time to match the aggregate analytics tab",
-          "Attribution chain — if a click came from an affiliate link that then routed to this campaign, the chain is shown in the click detail",
-          "Back to campaign — quick link to the campaign detail page to tweak settings without losing scroll position",
-          "Export CSV — download the clicks table for manual analysis or feeding into another BI tool"
-        ]
-      },
+      
+
+    // -----------------------Campaigns-----------------//
+  {
+    "name": "campaigns-dashboard",
+    "label": "Campaigns Dashboard",
+    "description": "Main campaigns page where the diviner can manage and analyze affiliate marketing campaigns.",
+    "group": "Campaigns",
+    "purpose": "Shows all campaign activity in one place so the diviner can review performance and create new campaigns.",
+    "bullets": [
+      "Shows KPI cards for total campaigns, total affiliates, conversions, and commission spent.",
+      "Campaigns and Analytics tabs are available at the top.",
+      "Search, status filter, from date, and to date filters help find campaigns.",
+      "All Campaigns table shows campaign name, status, destination, campaign URL, dates, affiliates, conversions, and actions.",
+      "Create Campaign button starts a new campaign setup."
+    ]
+  },
+  {
+    "name": "create-campaign-basic-modal",
+    "label": "Create Campaign Modal",
+    "description": "Popup form used to create a new promotional campaign for affiliates.",
+    "group": "Campaigns",
+    "purpose": "Collects campaign details before generating a trackable campaign link.",
+    "bullets": [
+      "User enters campaign name and optional description.",
+      "User chooses where campaign visitors should go.",
+      "Destination options include My Profile Page and One of My Services.",
+      "Channel, start date, end date, and UTM parameters can be added.",
+      "Create Campaign button saves the campaign."
+    ]
+  },
+  {
+    "name": "create-campaign-service-selection",
+    "label": "Campaign Service Selection",
+    "description": "Service destination selection area inside the campaign creation modal.",
+    "group": "Campaigns",
+    "purpose": "Allows the diviner to send campaign traffic to a specific service landing page.",
+    "bullets": [
+      "One of My Services option is selected.",
+      "Available services are listed with name, category, duration, price, and publish status.",
+      "Published services can be used as direct campaign destinations.",
+      "Unpublished services show warning text that visitors will redirect to the profile until published.",
+      "The modal supports scrolling when many services are available."
+    ]
+  },
+  {
+    "name": "campaign-created-confirmation",
+    "label": "Campaign Created Confirmation",
+    "description": "Success modal shown after a campaign is created.",
+    "group": "Campaigns",
+    "purpose": "Confirms that the campaign is ready and gives the diviner a shareable tracking URL.",
+    "bullets": [
+      "Shows Campaign Created success message.",
+      "Displays selected campaign name and destination.",
+      "Shows generated campaign URL.",
+      "Copy button allows the URL to be copied for affiliate sharing.",
+      "Done closes the modal and Create Another starts a new campaign."
+    ]
+  },
+  {
+    "name": "campaign-service-landing-page",
+    "label": "Campaign Service Landing Page",
+    "description": "Customer-facing service page opened from a campaign link.",
+    "group": "Campaigns",
+    "purpose": "Lets visitors review the selected service and begin booking.",
+    "bullets": [
+      "Shows service title, category, description, image, diviner name, price, and session length.",
+      "Book This Reading button begins the booking process.",
+      "Page includes what is included in the service.",
+      "Campaign traffic lands directly on the chosen service when published."
+    ]
+  },
+  {
+    "name": "booking-date-time-selection",
+    "label": "Booking Date And Time Selection",
+    "description": "First booking step where the customer chooses a session date and available time.",
+    "group": "Campaigns",
+    "purpose": "Allows the customer to select an available appointment slot.",
+    "bullets": [
+      "Booking flow shows Date & Time, Contact, and Confirm & Pay steps.",
+      "Calendar displays available dates.",
+      "Available time slots are shown for the selected date.",
+      "Timezone is shown based on the customer location.",
+      "Next button moves to the contact step."
+    ]
+  },
+  {
+    "name": "booking-selected-time-details",
+    "label": "Selected Booking Time Details",
+    "description": "Expanded detail view after the customer selects a session time.",
+    "group": "Campaigns",
+    "purpose": "Confirms the selected service, time, description, and price before continuing.",
+    "bullets": [
+      "Selected time slot is highlighted.",
+      "Session detail card shows service name, time range, description, and price.",
+      "Customer can review the appointment details before clicking Next.",
+      "Back button allows returning to the previous page."
+    ]
+  },
+  {
+    "name": "booking-contact-form",
+    "label": "Booking Contact Form",
+    "description": "Second booking step where the customer provides contact and birth information.",
+    "group": "Campaigns",
+    "purpose": "Collects required customer details needed for the reading session.",
+    "bullets": [
+      "Collects full name, email, and phone number.",
+      "Collects birth date and place of birth.",
+      "Shows detected birth location coordinates.",
+      "Notes field allows the customer to add extra context.",
+      "Next button moves to payment confirmation."
+    ]
+  },
+  {
+    "name": "booking-confirm-and-pay",
+    "label": "Booking Confirm And Pay",
+    "description": "Final booking payment step where the customer reviews the booking and pays.",
+    "group": "Campaigns",
+    "purpose": "Completes the paid booking for the selected reading.",
+    "bullets": [
+      "Shows booking summary with service, duration, date, time, schedule type, timezone, client, and total.",
+      "Payment options include Card, Cash App Pay, and Amazon Pay.",
+      "Card payment form collects card number, expiry, security code, country, email, phone, and full name.",
+      "Pay Now button submits payment.",
+      "Back button allows returning to previous booking step."
+    ]
+  },
+  {
+    "name": "booking-confirmation",
+    "label": "Booking Confirmation",
+    "description": "Success page shown after payment and booking completion.",
+    "group": "Campaigns",
+    "purpose": "Confirms that the customer successfully booked the session.",
+    "bullets": [
+      "Shows Booking Confirmed success message.",
+      "Displays service name, date, time, timezone, and schedule type.",
+      "Join Your Session button is available.",
+      "Add to Calendar button lets the customer download an ICS calendar file.",
+      "Message confirms that booking details will also be sent by email."
+    ]
+  },
+
+  //  -------------affiliate-list----------//
+
+
+  
+  {
+    "name": "affiliate-list",
+    "label": "Affiliate List",
+    "description": "Main affiliate management screen available at /dashboard/affiliates where diviners can manage all affiliate partners connected to their account. The page displays overall affiliate statistics, earnings, payouts, pending commissions, search tools, filters, and a complete affiliate table showing every affiliate invited or assigned by the logged-in diviner only.",
+    "group": "Diviner - Affiliate",
+    "purpose": "Allows diviners to monitor affiliate partners, track commissions, review affiliate activity, invite new affiliates, and open detailed affiliate analytics pages.",
+    "bullets": [
+      "Only the logged-in diviner’s affiliates are visible on this page.",
+      "Top KPI cards display Total Affiliates, Commissions Earned, Total Paid, and Pending Balance.",
+      "Search bar allows filtering affiliates by name or email address.",
+      "Status dropdown filters affiliates by Active, Expired, Pending, or other lifecycle states.",
+      "Date range filters narrow affiliate creation history.",
+      "Affiliate table shows Name, Email, Commission Rate, Status, Created Date, and Actions.",
+      "Invite Affiliate button opens the affiliate invitation modal.",
+      "Assign Affiliate button is used to connect affiliates with campaigns, services, or profile promotions.",
+      "Eye icon inside Actions opens the detailed affiliate analytics page.",
+      "Each affiliate row belongs only to the current diviner account and cannot access other diviners’ partnerships."
+    ]
+  },
+  {
+    "name": "invite-affiliate-modal",
+    "label": "Invite Affiliate Modal",
+    "description": "Modal dialog opened from the Invite Affiliate button where diviners can invite new affiliate partners by entering their basic information and optional commission settings.",
+    "group": "Diviner - Affiliate",
+    "purpose": "Lets diviners send secure affiliate invitations directly through email with optional personal notes and customized commission settings.",
+    "bullets": [
+      "Modal collects affiliate Name and Email address.",
+      "Personal Message field allows diviners to send custom onboarding notes.",
+      "Commission section supports optional customized commission rates.",
+      "Invitation links automatically expire after a configured validity window.",
+      "Send Invitation button triggers email delivery to the affiliate.",
+      "Affiliate invitations are connected to the current diviner account.",
+      "System validates email format before sending.",
+      "Duplicate invitations can be restricted by server validation.",
+      "Invitation creation automatically stores invite tracking records.",
+      "Commission setup can later be updated from affiliate assignments."
+    ]
+  },
+  {
+    "name": "affiliate-email-invitation",
+    "label": "Affiliate Invitation Email",
+    "description": "Automated invitation email sent to affiliates after a diviner sends an affiliate invite. The email contains onboarding details, affiliate program explanation, personal notes, and the secure invitation acceptance button.",
+    "group": "Diviner - Affiliate",
+    "purpose": "Provides affiliates with secure onboarding access and explains how the AstrologyPro affiliate partnership system works.",
+    "bullets": [
+      "Email clearly identifies the inviting diviner.",
+      "Affiliate invitation explains commission-based referral earnings.",
+      "Personal Note section displays the diviner’s custom message.",
+      "How It Works section explains the affiliate workflow step-by-step.",
+      "Invitation expiration date is clearly displayed.",
+      "Accept Invitation button opens the secure affiliate registration page.",
+      "Footer includes unsubscribe and privacy policy links.",
+      "Invitation links are unique per affiliate and securely tokenized.",
+      "Email branding matches AstrologyPro affiliate identity.",
+      "Invitation can safely be ignored if received unexpectedly."
+    ]
+  },
+  {
+    "name": "affiliate-accept-invitation",
+    "label": "Accept Affiliate Invitation",
+    "description": "Affiliate onboarding page opened after clicking the Accept Invitation button from the invitation email. The affiliate completes account setup and creates login credentials.",
+    "group": "Diviner - Affiliate",
+    "purpose": "Allows invited affiliates to create their AstrologyPro affiliate account and officially join the diviner partnership program.",
+    "bullets": [
+      "Invitation banner shows the inviting diviner and affiliate email.",
+      "Commission percentage and invitation expiration are displayed.",
+      "Personal message from the diviner is visible during onboarding.",
+      "Affiliate enters Name, Phone Number, and Password.",
+      "Email field is prefilled from the invitation.",
+      "Create account & accept button finalizes onboarding.",
+      "Affiliate account is linked automatically with the inviting diviner.",
+      "Password is securely stored using authentication encryption.",
+      "Terms acceptance is required before activation.",
+      "Successful onboarding redirects affiliates to the Affiliate Dashboard."
+    ]
+  },
+  {
+    "name": "affiliate-dashboard",
+    "label": "Affiliate Dashboard",
+    "description": "Main affiliate portal dashboard shown after affiliate account creation and login. The dashboard provides campaign links, payout setup, marketing tools, and earnings analytics for the affiliate.",
+    "group": "Diviner - Affiliate",
+    "purpose": "Allows affiliates to copy referral campaign links, monitor conversions, track commissions, and manage payout setup.",
+    "bullets": [
+      "Dashboard displays Total Clicks, Conversions, and Total Earned.",
+      "Stripe connection banner allows payout account onboarding.",
+      "Marketing Kit section displays available campaign cards.",
+      "Each campaign card includes a referral tracking URL.",
+      "Copy Link button copies affiliate campaign URLs instantly.",
+      "Preview button opens the public landing page.",
+      "Recent Campaigns table displays active campaigns assigned to the affiliate.",
+      "Campaign links are tied to real campaign tracking codes.",
+      "Affiliate statistics update based on referral activity.",
+      "Dashboard only shows campaigns assigned to the logged-in affiliate."
+    ]
+  },
+    {
+  "name": "affiliate-list-details-navigation",
+  "label": "Affiliate List & Details Navigation",
+  "description": "Affiliate management screen where the logged-in diviner can view and manage only their own affiliate partners. Every affiliate displayed in the table belongs exclusively to the currently authenticated diviner account. The page includes affiliate statistics, commission tracking, filters, and navigation into detailed affiliate analytics.",
+  "group": "Diviner - Affiliate",
+  "purpose": "Allows diviners to review their affiliate partners, monitor commissions, and open detailed affiliate performance pages directly from the affiliate list.",
+  "bullets": [
+    "The affiliate list is scoped only to the currently logged-in diviner account.",
+    "Diviners cannot view affiliates belonging to other diviners.",
+    "Top summary cards display Total Affiliates, Commissions Earned, Total Paid, and Pending Balance.",
+    "Search field filters affiliates by name or email address.",
+    "Status dropdown filters affiliate lifecycle states such as Active or Expired.",
+    "Affiliate table displays Name, Email, Commission Rate, Status, Created Date, and Actions.",
+    "Each affiliate row represents a single affiliate partner connected to the logged-in diviner.",
+    "The Details button (eye icon highlighted with the red arrow) opens the full affiliate analytics page.",
+    "Affiliate detail pages include campaign performance, clicks, conversions, commissions, assignments, and payout history.",
+    "Navigation into the detail page keeps the context tied to the selected affiliate only.",
+    "Affiliate analytics help diviners understand traffic quality and campaign effectiveness.",
+    "All affiliate tracking data remains isolated per diviner account for security and ownership separation."
+  ]
+},
+  {
+    "name": "affiliate-details-page",
+    "label": "Affiliate Details Page",
+    "description": "Detailed affiliate analytics page opened when a diviner clicks the Details icon from the affiliate list. This screen shows complete performance tracking for a single affiliate partner.",
+    "group": "Diviner - Affiliate",
+    "purpose": "Provides deep analytics about affiliate traffic, conversions, campaign performance, commissions, assignments, and payout history.",
+    "bullets": [
+      "Header displays affiliate profile information and status.",
+      "KPI cards show Human Clicks, Unique Clicks, Conversions, Bot Clicks, and Total Earned.",
+      "Device analytics visualize desktop and mobile traffic distribution.",
+      "Country analytics display geographic click distribution.",
+      "Source analytics show traffic origins such as direct or referral.",
+      "Channel Performance summarizes campaign performance metrics.",
+      "Assignments section lists linked profile or service commission mappings.",
+      "Campaigns section lists every campaign connected to the affiliate.",
+      "Rate History tracks historical commission percentage changes.",
+      "Recent Conversions table displays booking-level affiliate earnings.",
+      "All analytics belong only to the currently selected affiliate."
+    ]
+  },
+
+
+  {
+    "name": "affiliate-traffic-analytics",
+    "label": "Affiliate Traffic Analytics",
+    "description": "Traffic analytics section inside the affiliate details page showing detailed click, source, device, and geographic performance insights.",
+    "group": "Diviner - Affiliate",
+    "purpose": "Helps diviners understand how affiliate traffic performs across devices, countries, and acquisition channels.",
+    "bullets": [
+      "Human Clicks separate valid visitors from filtered bots.",
+      "Unique Click tracking prevents duplicate visitor inflation.",
+      "Conversions card displays successful booking totals.",
+      "Bot Click card shows automatically filtered suspicious traffic.",
+      "Device analytics compare desktop versus mobile traffic.",
+      "Country analytics display visitor distribution by geography.",
+      "Source analytics identify direct, referral, or campaign traffic.",
+      "Channel Performance groups campaign performance metrics together.",
+      "Analytics refresh dynamically based on selected date range.",
+      "Traffic data supports affiliate optimization and fraud monitoring."
+    ]
+  },
+  {
+    "name": "affiliate-assignments",
+    "label": "Affiliate Assignments",
+    "description": "Assignments section inside the affiliate detail page where diviners manage affiliate commission mappings to profile destinations or individual services.",
+    "group": "Diviner - Affiliate",
+    "purpose": "Allows diviners to define which destinations an affiliate can promote and what commission percentage applies.",
+    "bullets": [
+      "Assignments can target Profile pages or specific Services.",
+      "Each assignment displays Current Rate, Assigned Date, and Status.",
+      "Manage Assignments button opens assignment management tools.",
+      "Different services may use different commission percentages.",
+      "Assignments control which campaigns affiliates can access.",
+      "Inactive assignments automatically stop future commission calculations.",
+      "Commission rates apply only to new bookings after assignment.",
+      "Historical bookings preserve previous commission values.",
+      "Assignments are scoped only to the selected affiliate.",
+      "Assignment records support future auditing and reporting."
+    ]
+  },
+  {
+    "name": "affiliate-campaign-list",
+    "label": "Affiliate Campaign List",
+    "description": "Campaign section inside the affiliate detail page listing every campaign connected to the selected affiliate partner.",
+    "group": "Diviner - Affiliate",
+    "purpose": "Allows diviners to review campaign-specific affiliate tracking codes and open detailed campaign analytics pages.",
+    "bullets": [
+      "Campaign table displays Campaign Name, Tracking Code, Status, and Created Date.",
+      "Tracking codes use cmp_ prefixed identifiers.",
+      "View Details button opens the detailed campaign analytics page.",
+      "Campaign statuses include Active and inactive lifecycle states.",
+      "Campaign rows belong only to the selected affiliate.",
+      "Campaign tracking links are tied to booking attribution logic.",
+      "Multiple campaigns can be connected to one affiliate.",
+      "Campaign codes remain stable even if landing pages change.",
+      "Campaign activity contributes to affiliate conversion totals.",
+      "Campaign visibility respects diviner ownership permissions."
+    ]
+  },
+ 
+  {
+    "name": "affiliate-campaign-details",
+    "label": "Affiliate Campaign Details",
+    "description": "Detailed campaign analytics page opened after clicking View Details from the affiliate campaign list. This page focuses on a single affiliate-linked campaign.",
+    "group": "Diviner - Affiliate",
+    "purpose": "Provides detailed campaign-level performance tracking including clicks, conversions, commissions, traffic analytics, and conversion history.",
+    "bullets": [
+      "Header displays campaign title, purpose, and active status.",
+      "Campaign URL section provides direct tracking link copy functionality.",
+      "Analytics cards display Human Clicks, Unique Clicks, Conversions, Commission Revenue, and Bot Clicks.",
+      "Device analytics visualize desktop and mobile visitor breakdowns.",
+      "Country analytics show campaign geographic performance.",
+      "Source analytics identify traffic acquisition sources.",
+      "Date Range section displays campaign activity duration.",
+      "History Cap explains conversion history retention limits.",
+      "Affiliate Management notice explains assignment ownership behavior.",
+      "Conversion History table displays affiliate booking attribution records.",
+      "Analytics and Edit buttons allow campaign management actions.",
+      "All campaign data is isolated to the selected affiliate-linked campaign."
+    ]
+  },
+
+   {
+    "name": "affiliate-conversion-history",
+    "label": "Affiliate Conversion History",
+    "description": "Conversion and commission history section inside the affiliate detail page showing every booking conversion generated by the affiliate.",
+    "group": "Diviner - Affiliate",
+    "purpose": "Provides booking-level commission tracking and payout transparency for affiliate-generated conversions.",
+    "bullets": [
+      "Table displays Date, Order Amount, Commission Rate, Commission Value, and Status.",
+      "Earned status indicates valid completed commission payouts.",
+      "Reversed status indicates refunds or canceled bookings.",
+      "Refund explanations are displayed directly inside the status field.",
+      "Conversion records are ordered newest first.",
+      "Historical conversion values remain immutable for auditing.",
+      "Commission totals contribute to affiliate payout balances.",
+      "Conversion visibility is scoped to the selected affiliate only.",
+      "Refund reversals automatically adjust affiliate earnings.",
+      "Conversion history supports financial reconciliation and reporting."
+    ]
+  },
+
+
+// --------------------//
       {
         name: "affiliates",
         label: "Affiliate Partners",
@@ -10607,7 +11872,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
           "\"Active — visible to clients\" toggle — enable now, or create the schedule hidden and activate later",
           "Footer buttons: Cancel (dismiss without saving) + \"Create Schedule\" (validates required fields and publishes)"
         ]
-      },
+      }
     ],
   },
   {

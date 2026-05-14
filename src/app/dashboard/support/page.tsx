@@ -19,7 +19,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, LifeBuoy, Circle } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Plus, LifeBuoy, Circle, Search, Clock, User as UserIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Support | Dashboard" };
@@ -33,9 +35,9 @@ interface SupportTicket {
   status: string;
   priority: string;
   category: string;
+  assigned_to: string | null;
   created_at: string;
   updated_at: string;
-  // unread = updated_at > last customer message timestamp; we derive from updated_at vs created_at heuristic
   _unread?: boolean;
 }
 
@@ -74,7 +76,11 @@ function formatDate(d: string) {
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
-export default async function SupportPage() {
+export default async function SupportPage({
+  searchParams,
+}: {
+  searchParams: { [key: string]: string | string[] | undefined };
+}) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -84,90 +90,135 @@ export default async function SupportPage() {
 
   const admin = createAdminClient();
 
-  const { data: tickets } = await admin
+  const statusFilter = (searchParams.status as string) || "all";
+  const searchQuery = (searchParams.q as string) || "";
+
+  let query = admin
     .from("support_tickets")
     .select(
-      "id, ticket_number, subject, status, priority, category, created_at, updated_at"
+      "id, ticket_number, subject, status, priority, category, assigned_to, created_at, updated_at",
+      { count: "exact" }
     )
     .eq("requester_user_id", user.id)
-    .order("created_at", { ascending: false })
-    .limit(50);
+    .order("created_at", { ascending: false });
 
+  if (statusFilter !== "all") {
+    query = query.eq("status", statusFilter);
+  }
+
+  if (searchQuery) {
+    query = query.or(`subject.ilike.%${searchQuery}%,ticket_number.ilike.%${searchQuery}%`);
+  }
+
+  const { data: tickets, count } = await query.limit(50);
   const rawTickets = (tickets as SupportTicket[]) ?? [];
 
-  // Derive unread indicator: a ticket is "unread" if it has a staff reply newer than the
-  // ticket's updated_at as perceived by the customer — we use a simple heuristic:
-  // status is "waiting_requester" (staff replied and waiting) and updated_at > created_at
+  // Derive unread indicator
   const ticketList = rawTickets.map((t) => ({
     ...t,
     _unread: t.status === "waiting_requester",
   }));
-  const openCount = ticketList.filter((t) =>
-    ["open", "in_progress", "waiting_requester", "waiting_internal", "escalated"].includes(t.status)
-  ).length;
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
-            <LifeBuoy className="size-6" />
+            <LifeBuoy className="size-6 text-primary" />
             Support
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            {openCount > 0
-              ? `${openCount} open ticket${openCount !== 1 ? "s" : ""}`
-              : "No open tickets"}
+            {count ?? 0} total ticket{count !== 1 ? "s" : ""} found
           </p>
         </div>
-        <Button asChild>
-          <Link href="/dashboard/support/new">
-            <Plus className="size-4 mr-2" />
-            New Ticket
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <form className="relative">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              name="q"
+              type="search"
+              placeholder="Search my tickets..."
+              defaultValue={searchQuery}
+              className="pl-9 w-[200px] lg:w-[300px]"
+            />
+          </form>
+          <Button asChild>
+            <Link href="/dashboard/support/new">
+              <Plus className="size-4 mr-2" />
+              New Ticket
+            </Link>
+          </Button>
+        </div>
+      </div>
+
+      {/* Stats Overview */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card className="bg-blue-500/5 border-blue-500/20 shadow-none">
+          <CardHeader className="pb-2">
+            <CardDescription className="text-blue-600 font-medium text-xs uppercase tracking-wider">Open</CardDescription>
+            <CardTitle className="text-2xl">{ticketList.filter(t => t.status === 'open').length}</CardTitle>
+          </CardHeader>
+        </Card>
+        <Card className="bg-purple-500/5 border-purple-500/20 shadow-none">
+          <CardHeader className="pb-2">
+            <CardDescription className="text-purple-600 font-medium text-xs uppercase tracking-wider">In Progress</CardDescription>
+            <CardTitle className="text-2xl">{ticketList.filter(t => t.status === 'in_progress').length}</CardTitle>
+          </CardHeader>
+        </Card>
+        <Card className="bg-yellow-500/5 border-yellow-500/20 shadow-none">
+          <CardHeader className="pb-2">
+            <CardDescription className="text-yellow-600 font-medium text-xs uppercase tracking-wider">Waiting on Me</CardDescription>
+            <CardTitle className="text-2xl">{ticketList.filter(t => t.status === 'waiting_requester').length}</CardTitle>
+          </CardHeader>
+        </Card>
+        <Card className="bg-green-500/5 border-green-500/20 shadow-none">
+          <CardHeader className="pb-2">
+            <CardDescription className="text-green-600 font-medium text-xs uppercase tracking-wider">Resolved</CardDescription>
+            <CardTitle className="text-2xl">{ticketList.filter(t => t.status === 'resolved').length}</CardTitle>
+          </CardHeader>
+        </Card>
       </div>
 
       {/* Tickets table */}
       <Card>
-        <CardHeader>
-          <CardTitle>My Tickets</CardTitle>
-          <CardDescription>
-            All support requests you have submitted.
-          </CardDescription>
+        <CardHeader className="border-b bg-muted/30 py-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <CardTitle className="text-lg">My Tickets</CardTitle>
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+               <Link href="?status=all" className={`text-[11px] px-3 py-1 rounded-full font-medium transition-colors ${statusFilter === 'all' ? 'bg-primary text-primary-foreground' : 'bg-background hover:bg-muted border'}`}>All</Link>
+               <Link href="?status=open" className={`text-[11px] px-3 py-1 rounded-full font-medium transition-colors ${statusFilter === 'open' ? 'bg-primary text-primary-foreground' : 'bg-background hover:bg-muted border'}`}>Open</Link>
+               <Link href="?status=in_progress" className={`text-[11px] px-3 py-1 rounded-full font-medium transition-colors ${statusFilter === 'in_progress' ? 'bg-primary text-primary-foreground' : 'bg-background hover:bg-muted border'}`}>In Progress</Link>
+               <Link href="?status=resolved" className={`text-[11px] px-3 py-1 rounded-full font-medium transition-colors ${statusFilter === 'resolved' ? 'bg-primary text-primary-foreground' : 'bg-background hover:bg-muted border'}`}>Resolved</Link>
+            </div>
+          </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           {ticketList.length === 0 ? (
             <div className="py-12 text-center text-muted-foreground">
               <LifeBuoy className="size-8 mx-auto mb-3 opacity-40" />
-              <p className="font-medium">No tickets yet</p>
+              <p className="font-medium">No tickets found</p>
               <p className="text-sm mt-1">
-                Need help?{" "}
-                <Link
-                  href="/dashboard/support/new"
-                  className="text-primary underline underline-offset-4"
-                >
-                  Submit a support request
-                </Link>
+                {searchQuery ? "Try a different search term" : "Need help? Submit a support request"}
               </p>
             </div>
           ) : (
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead>Ticket #</TableHead>
-                  <TableHead>Subject</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Priority</TableHead>
-                  <TableHead>Created</TableHead>
+                <TableRow className="bg-muted/20">
+                  <TableHead className="w-[120px] text-xs uppercase font-bold tracking-wider">Ticket #</TableHead>
+                  <TableHead className="text-xs uppercase font-bold tracking-wider">Subject</TableHead>
+                  <TableHead className="text-xs uppercase font-bold tracking-wider">Category</TableHead>
+                  <TableHead className="text-xs uppercase font-bold tracking-wider">Status</TableHead>
+                  <TableHead className="text-xs uppercase font-bold tracking-wider">Priority</TableHead>
+                  <TableHead className="text-xs uppercase font-bold tracking-wider">Assignee</TableHead>
+                  <TableHead className="text-xs uppercase font-bold tracking-wider">Created</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {ticketList.map((ticket) => (
-                  <TableRow key={ticket.id}>
-                    <TableCell className="font-mono text-xs">
+                  <TableRow key={ticket.id} className="group cursor-pointer hover:bg-muted/50 border-b">
+                    <TableCell className="font-mono text-[11px] font-medium text-muted-foreground">
                       <Link
                         href={`/dashboard/support/${ticket.id}`}
                         className="text-primary hover:underline"
@@ -182,19 +233,19 @@ export default async function SupportPage() {
                         )}
                         <Link
                           href={`/dashboard/support/${ticket.id}`}
-                          className="hover:underline line-clamp-1"
+                          className="font-semibold text-sm hover:underline line-clamp-1"
                         >
                           {ticket.subject}
                         </Link>
                       </span>
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
+                    <TableCell className="text-xs font-medium text-muted-foreground">
                       {ticket.category}
                     </TableCell>
                     <TableCell>
                       <Badge
                         variant="outline"
-                        className={statusColors[ticket.status] ?? ""}
+                        className={cn("text-[10px] h-5 px-2", statusColors[ticket.status] ?? "")}
                       >
                         {formatStatus(ticket.status)}
                       </Badge>
@@ -202,13 +253,28 @@ export default async function SupportPage() {
                     <TableCell>
                       <Badge
                         variant="outline"
-                        className={priorityColors[ticket.priority] ?? ""}
+                        className={cn("text-[10px] h-5 px-2", priorityColors[ticket.priority] ?? "")}
                       >
                         {formatStatus(ticket.priority)}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {formatDate(ticket.created_at)}
+                    <TableCell>
+                       <div className="flex items-center gap-2 text-xs">
+                        <UserIcon className="size-3 text-muted-foreground shrink-0" />
+                        {ticket.assigned_to ? (
+                          <span className="text-[11px] font-medium truncate max-w-[150px]">
+                            Support Agent
+                          </span>
+                        ) : (
+                          <span className="text-[11px] italic text-muted-foreground">Unassigned</span>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-[11px] text-muted-foreground whitespace-nowrap">
+                       <div className="flex items-center gap-1.5">
+                        <Clock className="size-3" />
+                        {formatDate(ticket.created_at)}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendFamilyMemberInvite } from "@/lib/email";
 import {
+  includedMemberLimitForTier,
   resolveEntitlementFromRow,
   type PmEntitlement,
 } from "@/lib/community/pm-entitlement";
@@ -11,12 +12,6 @@ import { ensureCanonicalSelfFamilyMember } from "@/lib/community/self-family-mem
 export const dynamic = "force-dynamic";
 
 export const runtime = "nodejs";
-
-/**
- * Safe ceiling when we can't resolve any tier AND the member's legacy
- * `plan_type` says family. Matches the historical FAMILY_PLAN_LIMIT.
- */
-const LEGACY_FALLBACK_FAMILY_LIMIT = 5;
 
 async function getMemberAndEntitlement() {
   const supabase = await createClient();
@@ -35,7 +30,7 @@ async function getMemberAndEntitlement() {
   const { data: member } = await supabase
     .from("community_members")
     .select(
-      "id, user_id, full_name, membership_status, pm_tier_id, plan_type, date_of_birth, birth_time, birth_city, birth_country"
+      "id, user_id, full_name, membership_status, pm_tier_id, plan_type, extra_member_count, date_of_birth, birth_time, birth_city, birth_country"
     )
     .eq("user_id", user.id)
     .single();
@@ -60,9 +55,10 @@ function buildFamilyPayload(
   members: unknown[],
   entitlement: PmEntitlement,
 ) {
-  const maxMembers =
-    entitlement.tier?.max_total_members ??
-    (entitlement.isFamilyEntitled ? LEGACY_FALLBACK_FAMILY_LIMIT : 1);
+  const maxMembers = includedMemberLimitForTier(
+    entitlement.tier,
+    entitlement.planTypeCanonical,
+  );
 
   return {
     members,
@@ -100,7 +96,7 @@ export async function GET() {
   const { data, error } = await supabase
     .from("community_family_members")
     .select(
-      "id, full_name, date_of_birth, birth_time, birth_city, birth_country, birth_lat, birth_lng, relationship, age_group, natal_chart, natal_status, natal_report_id, natal_report_status, natal_report_generated_at, natal_last_generated_at, chart_updated_at, notes, created_at, updated_at"
+      "id, user_id, full_name, date_of_birth, birth_time, birth_city, birth_country, birth_lat, birth_lng, relationship, age_group, natal_chart, natal_status, natal_report_id, natal_report_status, natal_report_generated_at, natal_last_generated_at, chart_updated_at, notes, created_at, updated_at"
     )
     .eq("member_id", member.id)
     .order("created_at", { ascending: true });
@@ -138,21 +134,25 @@ export async function POST(request: NextRequest) {
   }
 
   // ── Household-size ceiling ──────────────────────────────────────────────
-  // Prefer the tier's max_total_members (includes the primary, so subtract 1
-  // for family-only headcount). Fall back to the legacy constant only when
-  // no tier is resolved.
-  const tierMaxTotal = entitlement.tier?.max_total_members ?? null;
-  const familyOnlyLimit =
-    tierMaxTotal != null
-      ? Math.max(0, tierMaxTotal - 1) // subtract the primary
-      : LEGACY_FALLBACK_FAMILY_LIMIT;
+  // Use the current paid allowance, not the tier upgrade ceiling. The primary
+  // member consumes one slot, so the family-only limit is currentMax - 1.
+  const currentMaxMembers = includedMemberLimitForTier(
+    entitlement.tier,
+    entitlement.planTypeCanonical,
+  );
+  const familyOnlyLimit = Math.max(0, currentMaxMembers - 1);
 
-  const { count } = await supabase
+  const { data: householdRows } = await supabase
     .from("community_family_members")
-    .select("id", { count: "exact", head: true })
+    .select("id, user_id, relationship")
     .eq("member_id", member.id);
+  const nonSelfCount = (householdRows ?? []).filter(
+    (row) =>
+      row.user_id !== member.user_id &&
+      (row.relationship ?? "").toLowerCase() !== "self"
+  ).length;
 
-  if ((count ?? 0) >= familyOnlyLimit) {
+  if (nonSelfCount >= familyOnlyLimit) {
     return NextResponse.json(
       {
         error: `Your plan allows up to ${familyOnlyLimit} family member${familyOnlyLimit === 1 ? "" : "s"}.`,

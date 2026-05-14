@@ -153,33 +153,8 @@ export async function GET() {
     eligibility.eligible = true;
   }
 
-  if (!eligibility.eligible) {
-    return NextResponse.json({
-      decan_access_locked: true,
-      lock_reason: "foundation_incomplete",
-      foundation: {
-        completedWeeks: eligibility.foundation.completedWeeks,
-        totalWeeks: eligibility.foundation.totalWeeks,
-        completedLessons: eligibility.foundation.completedLessons,
-        totalLessons: eligibility.foundation.totalLessons,
-      },
-      student: {
-        id: studentTyped.id,
-        trainingStatus: "foundation",
-        startQuarter: studentTyped.start_quarter,
-      },
-      decans: [],
-      completedCount: 0,
-      totalDecans: 36,
-      current_decan_number: null,
-      q1_complete: false,
-      graduation_eligible: false,
-      unexcused_missed_count: 0,
-      subscription: subscriptionSummary,
-    });
-  }
-
-  // All 36 decans with new metadata columns
+  // All 36 decans with new metadata columns. Fetch this before the
+  // foundation gate so locked students can still see the full roadmap.
   const { data: decansRaw, error: decansError } = await supabase
     .from("decans")
     .select(
@@ -213,6 +188,91 @@ export async function GET() {
   };
 
   const decans = (decansRaw ?? []) as unknown as DecanRow[];
+  const now = new Date();
+  const currentYear = now.getFullYear();
+
+  /**
+   * Compute the canonical window_open / window_close / grace_close for a decan.
+   * If the progress row already has persisted lifecycle fields (set by the cron),
+   * those take precedence.
+   */
+  function decanWindows(d: Pick<DecanRow, "start_month" | "start_day" | "end_month" | "end_day">) {
+    const crossesYearBoundary = d.start_month === 12 && d.end_month !== 12;
+    const windowOpen = new Date(currentYear, d.start_month - 1, d.start_day, 0, 0, 0);
+    const windowClose = new Date(
+      crossesYearBoundary ? currentYear + 1 : currentYear,
+      d.end_month - 1,
+      d.end_day,
+      23, 59, 59
+    );
+    const graceClose = new Date(windowClose.getTime() + 2 * 24 * 60 * 60 * 1000);
+    const previewOpen = new Date(windowOpen.getTime() - 7 * 24 * 60 * 60 * 1000);
+    return { windowOpen, windowClose, graceClose, previewOpen };
+  }
+
+  if (!eligibility.eligible) {
+    return NextResponse.json({
+      decan_access_locked: true,
+      lock_reason: "foundation_incomplete",
+      foundation: {
+        completedWeeks: eligibility.foundation.completedWeeks,
+        totalWeeks: eligibility.foundation.totalWeeks,
+        completedLessons: eligibility.foundation.completedLessons,
+        totalLessons: eligibility.foundation.totalLessons,
+      },
+      student: {
+        id: studentTyped.id,
+        trainingStatus: "foundation",
+        startQuarter: studentTyped.start_quarter,
+      },
+      decans: decans.map((decan) => {
+        const windows = decanWindows(decan);
+
+        return {
+          id: decan.id,
+          decan_number: decan.decan_number,
+          sign: decan.sign,
+          planet: decan.planet,
+          title: decan.title,
+          decan_name: decan.decan_name ?? null,
+          tarot_card_ref: decan.tarot_card_ref ?? null,
+          artwork_url: decan.artwork_url ?? null,
+          preview_text: decan.preview_text ?? null,
+          start_month: decan.start_month,
+          start_day: decan.start_day,
+          end_month: decan.end_month,
+          end_day: decan.end_day,
+          astronomical_start: decan.astronomical_start ?? null,
+          astronomical_end: decan.astronomical_end ?? null,
+          status: "locked",
+          window_open: windows.windowOpen.toISOString(),
+          window_close: windows.windowClose.toISOString(),
+          grace_close: windows.graceClose.toISOString(),
+          unlocked_at: null,
+          completed_at: null,
+          missed_at: null,
+          ritual_done: false,
+          scry_done: false,
+          journal_done: false,
+          days_remaining: null,
+          is_current: false,
+          retry_year: null,
+          retry_window_open: null,
+          retry_window_close: null,
+          admin_excused: false,
+          excuse_reason: null,
+          excused_at: null,
+        };
+      }),
+      completedCount: 0,
+      totalDecans: 36,
+      current_decan_number: null,
+      q1_complete: false,
+      graduation_eligible: false,
+      unexcused_missed_count: 0,
+      subscription: subscriptionSummary,
+    });
+  }
 
   // Student's progress records — include new lifecycle and retry columns
   const { data: progressRaw } = await supabase
@@ -249,28 +309,6 @@ export async function GET() {
   const progressMap = new Map<string, ProgressRow>(
     ((progressRaw ?? []) as unknown as ProgressRow[]).map((p) => [p.decan_id, p])
   );
-
-  const now = new Date();
-  const currentYear = now.getFullYear();
-
-  /**
-   * Compute the canonical window_open / window_close / grace_close for a decan.
-   * If the progress row already has persisted lifecycle fields (set by the cron),
-   * those take precedence.
-   */
-  function decanWindows(d: Pick<DecanRow, "start_month" | "start_day" | "end_month" | "end_day">) {
-    const crossesYearBoundary = d.start_month === 12 && d.end_month !== 12;
-    const windowOpen = new Date(currentYear, d.start_month - 1, d.start_day, 0, 0, 0);
-    const windowClose = new Date(
-      crossesYearBoundary ? currentYear + 1 : currentYear,
-      d.end_month - 1,
-      d.end_day,
-      23, 59, 59
-    );
-    const graceClose = new Date(windowClose.getTime() + 2 * 24 * 60 * 60 * 1000);
-    const previewOpen = new Date(windowOpen.getTime() - 7 * 24 * 60 * 60 * 1000);
-    return { windowOpen, windowClose, graceClose, previewOpen };
-  }
 
   let currentDecanNumber: number | null = null;
 

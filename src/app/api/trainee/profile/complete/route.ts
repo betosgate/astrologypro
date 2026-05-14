@@ -22,6 +22,63 @@ const ALLOWED_SPECIALTIES = [
   "Crystal Healing",
 ];
 
+const ALLOWED_TIMEZONES = new Set([
+  "America/New_York",
+  "America/Chicago",
+  "America/Denver",
+  "America/Los_Angeles",
+  "America/Anchorage",
+  "Pacific/Honolulu",
+  "Asia/Kolkata",
+  "Asia/Dubai",
+  "Europe/London",
+  "Europe/Berlin",
+  "Australia/Sydney",
+]);
+
+function normalizePhone(value: unknown) {
+  const trimmed = typeof value === "string" ? value.trim() : "";
+  if (!trimmed) return null;
+
+  const compact = trimmed.replace(/[\s().-]/g, "");
+  if (/^\+[1-9]\d{7,14}$/.test(compact)) return compact;
+
+  const digits = trimmed.replace(/\D/g, "");
+  if (digits.length === 10) return digits;
+
+  return undefined;
+}
+
+function validateOptionalUrl(value: unknown) {
+  const trimmed = typeof value === "string" ? value.trim() : "";
+  if (!trimmed) return null;
+
+  try {
+    const url = new URL(trimmed);
+    if (url.protocol !== "http:" && url.protocol !== "https:") return undefined;
+    return trimmed;
+  } catch {
+    return undefined;
+  }
+}
+
+function validateOptionalBirthDate(value: unknown) {
+  const trimmed = typeof value === "string" ? value.trim() : "";
+  if (!trimmed) return null;
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return undefined;
+  const parsed = new Date(`${trimmed}T12:00:00`);
+  if (Number.isNaN(parsed.getTime()) || parsed > new Date()) return undefined;
+
+  return trimmed;
+}
+
+function validateOptionalBirthTime(value: unknown) {
+  const trimmed = typeof value === "string" ? value.trim() : "";
+  if (!trimmed) return null;
+  return /^\d{2}:\d{2}$/.test(trimmed) ? trimmed : undefined;
+}
+
 /**
  * POST /api/trainee/profile/complete
  *
@@ -73,6 +130,41 @@ export async function POST(req: NextRequest) {
         { status: 422 }
       );
     }
+    if (display_name.trim().length < 2) {
+      return NextResponse.json(
+        { error: "Display name must be at least 2 characters." },
+        { status: 422 }
+      );
+    }
+
+    const normalizedPhone = normalizePhone(phone);
+    if (!normalizedPhone) {
+      return NextResponse.json(
+        { error: "Phone number is required." },
+        { status: 422 }
+      );
+    }
+    if (normalizedPhone === undefined) {
+      return NextResponse.json(
+        { error: "Phone must be a valid E.164 number or a 10-digit number." },
+        { status: 422 }
+      );
+    }
+
+    if (!timezone || typeof timezone !== "string" || !ALLOWED_TIMEZONES.has(timezone)) {
+      return NextResponse.json(
+        { error: "A supported timezone is required." },
+        { status: 422 }
+      );
+    }
+
+    const normalizedAvatarUrl = validateOptionalUrl(avatar_url);
+    if (normalizedAvatarUrl === undefined) {
+      return NextResponse.json(
+        { error: "Avatar URL must be a valid http or https URL." },
+        { status: 422 }
+      );
+    }
 
     // Validate specialties array
     const validSpecialties: string[] = [];
@@ -88,6 +180,40 @@ export async function POST(req: NextRequest) {
     if (bio && typeof bio === "string" && bio.length > 500) {
       return NextResponse.json(
         { error: "Bio must be 500 characters or fewer." },
+        { status: 422 }
+      );
+    }
+
+    if (goals && typeof goals === "string" && goals.length > 1000) {
+      return NextResponse.json(
+        { error: "Goals must be 1000 characters or fewer." },
+        { status: 422 }
+      );
+    }
+
+    const normalizedBirthDate = validateOptionalBirthDate(birth_date);
+    if (normalizedBirthDate === undefined) {
+      return NextResponse.json(
+        { error: "Birth date must be a valid past date." },
+        { status: 422 }
+      );
+    }
+
+    const normalizedBirthTime = validateOptionalBirthTime(birth_time);
+    if (normalizedBirthTime === undefined) {
+      return NextResponse.json(
+        { error: "Birth time must use HH:MM format." },
+        { status: 422 }
+      );
+    }
+
+    const normalizedBirthCity =
+      typeof birth_city === "string" && birth_city.trim()
+        ? birth_city.trim()
+        : null;
+    if (normalizedBirthCity && normalizedBirthCity.length > 120) {
+      return NextResponse.json(
+        { error: "Birth city must be 120 characters or fewer." },
         { status: 422 }
       );
     }
@@ -150,6 +276,16 @@ export async function POST(req: NextRequest) {
         ),
       ),
     );
+    const selectedAllowedSpecialties = validSpecialties.filter((item) =>
+      allowedSpecialtiesForPackage.has(item),
+    );
+
+    if (selectedAllowedSpecialties.length === 0) {
+      return NextResponse.json(
+        { error: "Select at least one specialty or area of interest." },
+        { status: 422 }
+      );
+    }
 
     // ── Update trainee record ──
     const { error: updateError } = await admin
@@ -157,12 +293,10 @@ export async function POST(req: NextRequest) {
       .update({
         name: display_name.trim(),
         bio: bio?.trim() || null,
-        avatar_url: avatar_url?.trim() || null,
-        phone: phone?.trim() || null,
-        timezone: timezone || null,
-        specialties: validSpecialties.filter((item) =>
-          allowedSpecialtiesForPackage.has(item),
-        ),
+        avatar_url: normalizedAvatarUrl,
+        phone: normalizedPhone,
+        timezone,
+        specialties: selectedAllowedSpecialties,
         goals: goals?.trim() || null,
         onboarding_completed: true,
         updated_at: new Date().toISOString(),
@@ -178,15 +312,15 @@ export async function POST(req: NextRequest) {
     }
 
     // ── Upsert client record with birth data ──
-    if (birth_date || birth_time || birth_city) {
+    if (normalizedBirthDate || normalizedBirthTime || normalizedBirthCity) {
       const clientPayload: Record<string, unknown> = {
         user_id: user.id,
         email: user.email!,
         full_name: display_name.trim(),
       };
-      if (birth_date) clientPayload.birth_date = birth_date;
-      if (birth_time) clientPayload.birth_time = birth_time;
-      if (birth_city) clientPayload.birth_city = birth_city.trim();
+      if (normalizedBirthDate) clientPayload.birth_date = normalizedBirthDate;
+      if (normalizedBirthTime) clientPayload.birth_time = normalizedBirthTime;
+      if (normalizedBirthCity) clientPayload.birth_city = normalizedBirthCity;
 
       const { error: clientError } = await admin
         .from("clients")
@@ -204,10 +338,10 @@ export async function POST(req: NextRequest) {
       {
         display_name: display_name.trim(),
         bio: bio?.trim() || undefined,
-        avatar_url: avatar_url?.trim() || undefined,
-        specialties: validSpecialties.length > 0 ? validSpecialties : undefined,
-        phone: phone?.trim() || undefined,
-        timezone: timezone || undefined,
+        avatar_url: normalizedAvatarUrl || undefined,
+        specialties: selectedAllowedSpecialties,
+        phone: normalizedPhone,
+        timezone,
       },
       "trainees"
     ).catch(console.error);

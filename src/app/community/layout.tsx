@@ -68,10 +68,6 @@ export default async function CommunityLayout({ children }: { children: React.Re
     .maybeSingle();
 
 
-  console.log("[CommunityLayout] user.id =", user.id, "onboarding_completed =", member?.onboarding_completed);
-
-
-
   if (!member) {
     const invitedRole = user.user_metadata?.role;
     if (
