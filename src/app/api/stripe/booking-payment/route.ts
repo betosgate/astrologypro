@@ -710,8 +710,9 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (bookingError || !booking) {
+      console.error("[booking-payment] Failed to create booking:", bookingError);
       return NextResponse.json(
-        { error: "Failed to create booking" },
+        { error: "Failed to create booking", details: bookingError },
         { status: 500 }
       );
     }
