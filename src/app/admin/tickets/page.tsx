@@ -121,6 +121,19 @@ export default async function AdminTicketsPage({
 
   const admin = createAdminClient();
 
+  // Load stats for cards
+  const [
+    { count: openCountTotal },
+    { count: inProgressCountTotal },
+    { count: waitingCountTotal },
+    { count: resolvedCountTotal }
+  ] = await Promise.all([
+    admin.from("support_tickets").select("*", { count: "exact", head: true }).eq("status", "open"),
+    admin.from("support_tickets").select("*", { count: "exact", head: true }).eq("status", "in_progress"),
+    admin.from("support_tickets").select("*", { count: "exact", head: true }).eq("status", "waiting_internal"),
+    admin.from("support_tickets").select("*", { count: "exact", head: true }).eq("status", "resolved"),
+  ]);
+
   // Load queues for filter dropdown
   const { data: queuesData } = await admin
     .from("ticket_queues")
@@ -146,11 +159,9 @@ export default async function AdminTicketsPage({
     // Tab filters
     if (activeTab === "unassigned") {
       query = query.is("assigned_to", null);
-      // Exclude terminal statuses for unassigned view
       query = query.not("status", "in", '("resolved","closed","cancelled")');
     } else if (activeTab === "sla_at_risk") {
       const twoHoursFromNow = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString();
-      // Tickets that are at-risk: sla_due_at exists, not yet breached, and due within 2h — or already breached
       query = query
         .not("status", "in", '("resolved","closed","cancelled")')
         .not("sla_due_at", "is", null)
@@ -171,7 +182,6 @@ export default async function AdminTicketsPage({
       if (toExclusive) query = query.lt("created_at", toExclusive);
     }
 
-    // Text search: subject, requester name, ticket_number
     if (search && search.trim()) {
       const q = search.trim();
       query = query.or(
@@ -213,12 +223,6 @@ export default async function AdminTicketsPage({
   const firstVisibleTicket = (currentPage - 1) * limit + 1;
   const lastVisibleTicket = Math.min(currentPage * limit, total);
 
-  // Summary counts for header
-  const openCount = tickets.filter((t) =>
-    ["open", "in_progress", "escalated", "waiting_requester", "waiting_internal"].includes(t.status)
-  ).length;
-
-  // Build tab URLs — preserve non-tab filters
   function tabUrl(key: string) {
     const params = new URLSearchParams();
     if (key !== "all") params.set("tab", key);
@@ -241,10 +245,37 @@ export default async function AdminTicketsPage({
           <h1 className="text-2xl font-bold">Tickets</h1>
           <p className="text-sm text-muted-foreground mt-1">
             {total} ticket{total !== 1 ? "s" : ""} total
-            {openCount > 0 && ` · ${openCount} open`}
           </p>
         </div>
         <TicketsPageActions />
+      </div>
+
+      {/* Stats Overview */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card className="bg-blue-500/5 border-blue-500/20 shadow-none">
+          <CardHeader className="pb-2">
+            <CardDescription className="text-blue-600 font-medium text-xs uppercase tracking-wider">Open</CardDescription>
+            <CardTitle className="text-2xl">{openCountTotal ?? 0}</CardTitle>
+          </CardHeader>
+        </Card>
+        <Card className="bg-purple-500/5 border-purple-500/20 shadow-none">
+          <CardHeader className="pb-2">
+            <CardDescription className="text-purple-600 font-medium text-xs uppercase tracking-wider">In Progress</CardDescription>
+            <CardTitle className="text-2xl">{inProgressCountTotal ?? 0}</CardTitle>
+          </CardHeader>
+        </Card>
+        <Card className="bg-yellow-500/5 border-yellow-500/20 shadow-none">
+          <CardHeader className="pb-2">
+            <CardDescription className="text-yellow-600 font-medium text-xs uppercase tracking-wider">Waiting on Us</CardDescription>
+            <CardTitle className="text-2xl">{waitingCountTotal ?? 0}</CardTitle>
+          </CardHeader>
+        </Card>
+        <Card className="bg-green-500/5 border-green-500/20 shadow-none">
+          <CardHeader className="pb-2">
+            <CardDescription className="text-green-600 font-medium text-xs uppercase tracking-wider">Resolved</CardDescription>
+            <CardTitle className="text-2xl">{resolvedCountTotal ?? 0}</CardTitle>
+          </CardHeader>
+        </Card>
       </div>
 
       {/* Tabs */}
@@ -278,8 +309,8 @@ export default async function AdminTicketsPage({
 
       {/* Table with bulk actions */}
       <Card>
-        <CardHeader className="pb-3">
-          <CardTitle>
+        <CardHeader className="pb-3 border-b bg-muted/10">
+          <CardTitle className="text-lg">
             {activeTab === "all" && "All Tickets"}
             {activeTab === "unassigned" && "Unassigned Tickets"}
             {activeTab === "sla_at_risk" && "SLA At-Risk Tickets"}
@@ -289,12 +320,12 @@ export default async function AdminTicketsPage({
             Select rows to apply bulk actions.
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           <TicketsBulkTable tickets={tickets} queueMap={queueMap} queues={queues} />
 
           {/* Pagination */}
           {total > 0 && (
-            <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
+            <div className="mt-6 flex items-center justify-between text-sm text-muted-foreground border-t pt-4">
               <span>
                 Showing {firstVisibleTicket}-{lastVisibleTicket} of {total} ticket{total !== 1 ? "s" : ""} · Page {currentPage} of {totalPages}
               </span>
