@@ -108,25 +108,36 @@ function RequesterAutocomplete({
 }) {
   const [suggestions, setSuggestions] = useState<RequesterSuggestion[]>([]);
   const [open, setOpen] = useState(false);
+  const [fetching, setFetching] = useState(false);
   const [activeSuggestion, setActiveSuggestion] = useState(-1);
   const containerRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const requestRef = useRef(0);
 
   function fetchSuggestions(q: string) {
+    const requestId = requestRef.current + 1;
+    requestRef.current = requestId;
+    setFetching(true);
+
     const params = new URLSearchParams({ limit: "5" });
     if (q.trim()) params.set("q", q.trim());
 
     fetch(`/api/admin/tickets/requesters?${params.toString()}`)
       .then((res) => (res.ok ? res.json() : { users: [] }))
       .then((data) => {
+        if (requestRef.current !== requestId) return;
         const users = Array.isArray(data.users) ? data.users : [];
         setSuggestions(users);
         setOpen(users.length > 0);
         setActiveSuggestion(-1);
       })
       .catch(() => {
+        if (requestRef.current !== requestId) return;
         setSuggestions([]);
         setOpen(false);
+      })
+      .finally(() => {
+        if (requestRef.current === requestId) setFetching(false);
       });
   }
 
@@ -182,6 +193,7 @@ function RequesterAutocomplete({
         onKeyDown={handleKeyDown}
         autoComplete="off"
       />
+      {fetching && <Progress value={65} className="mt-2 h-1 animate-pulse" />}
       {open && suggestions.length > 0 && (
         <div className="absolute top-full left-0 right-0 z-50 mt-1 max-h-64 overflow-y-auto rounded-md border bg-popover shadow-md">
           {suggestions.map((user, idx) => (
