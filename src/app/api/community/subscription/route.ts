@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import { resolveEntitlementFromRow } from "@/lib/community/pm-entitlement";
+import {
+  includedMemberLimitForTier,
+  resolveEntitlementFromRow,
+} from "@/lib/community/pm-entitlement";
 
 export const dynamic = "force-dynamic";
 
@@ -83,7 +86,7 @@ export async function GET() {
     const { data: member, error } = await admin
       .from("community_members")
       .select(
-        "id, membership_type, membership_status, plan_type, pm_tier_id, stripe_subscription_id, joined_at, current_period_end, expires_at"
+        "id, user_id, membership_type, membership_status, plan_type, pm_tier_id, stripe_subscription_id, joined_at, current_period_end, expires_at, extra_member_count"
       )
       .eq("user_id", user.id)
       .single();
@@ -117,12 +120,16 @@ export async function GET() {
     // Count family members (only relevant for family plan)
     let memberCount = 1;
     if (planType === "family") {
-      const { count } = await admin
+      const { data: householdRows } = await admin
         .from("community_family_members")
-        .select("id", { count: "exact", head: true })
+        .select("id, user_id, relationship")
         .eq("member_id", member.id);
-      // +1 to include the primary member themselves
-      memberCount = (count ?? 0) + 1;
+      const nonSelfCount = (householdRows ?? []).filter(
+        (row) =>
+          row.user_id !== member.user_id &&
+          (row.relationship ?? "").toLowerCase() !== "self"
+      ).length;
+      memberCount = nonSelfCount + 1;
     }
 
     // Derive renewal_date from the same source order as Community UI:
@@ -200,12 +207,14 @@ export async function GET() {
         : PLAN_LABELS[membershipType]?.[planType] ??
           PLAN_LABELS["perennial_mandalism"]["individual"];
 
-    const maxMembers =
-      !isMysterySchool && entitlement.tier?.max_total_members != null
-        ? entitlement.tier.max_total_members
-        : planType === "family"
-          ? LEGACY_MAX_MEMBERS["family"]
-          : LEGACY_MAX_MEMBERS["individual"];
+    const maxMembers = !isMysterySchool
+      ? includedMemberLimitForTier(
+          entitlement.tier,
+          planType === "family" ? "family" : "individual",
+        )
+      : planType === "family"
+        ? LEGACY_MAX_MEMBERS["family"]
+        : LEGACY_MAX_MEMBERS["individual"];
 
     return NextResponse.json({
       subscription: {

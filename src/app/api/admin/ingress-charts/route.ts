@@ -48,11 +48,10 @@ export async function GET(req: NextRequest) {
   }
 
   // ── Main filtered query ──────────────────────────────────────────────────────
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let query: any = admin
     .from("ingress_charts")
     .select(
-      "id, title, ingress_type, importance, is_published, is_social_advo, validity_start, validity_end, location_name, author_name, sector_focus, tags, created_at, event_timestamp",
+      "id, title, ingress_type, importance, short_description, is_social_advo, validity_start, validity_end, location_name, author_name, sector_focus, tags, created_at, event_timestamp",
       { count: "exact" }
     );
 

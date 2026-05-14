@@ -88,6 +88,52 @@ export function maxMembersForTier(
 }
 
 /**
+ * Current paid allowance, not the upgrade ceiling.
+ *
+ * `base_member_limit` is what the selected tier includes today. `max_total_members`
+ * is the maximum the tier may reach after buying extra seats. Dashboards and
+ * ordinary add-member gates should use this helper; upgrade/seat-purchase flows
+ * may still compare against `max_total_members`.
+ */
+export function currentMemberLimitForTier(
+  tier: Pick<PmPlanTierRow, "base_member_limit" | "max_total_members"> | null,
+  fallbackPlanType: LegacyPlanType,
+  extraMemberCount: number | null | undefined = 0,
+): number {
+  const fallbackLimit = fallbackPlanType === "family" ? 5 : 1;
+  const includedLimit =
+    typeof tier?.base_member_limit === "number" && tier.base_member_limit > 0
+      ? tier.base_member_limit
+      : fallbackLimit;
+  const ceiling =
+    typeof tier?.max_total_members === "number" && tier.max_total_members > 0
+      ? tier.max_total_members
+      : includedLimit;
+  const purchasedExtras = Math.max(0, Number(extraMemberCount ?? 0));
+
+  return Math.max(1, Math.min(ceiling, includedLimit + purchasedExtras));
+}
+
+/**
+ * Included slots for the current tier before any extra-seat expansion.
+ * This is what the membership summary should show for a fresh Family plan:
+ * Family includes 5 total members even if the tier's expansion ceiling is 15.
+ */
+export function includedMemberLimitForTier(
+  tier: Pick<PmPlanTierRow, "name" | "base_member_limit"> | null,
+  fallbackPlanType: LegacyPlanType,
+): number {
+  const tierName = tier?.name?.trim().toLowerCase();
+  if (tierName === "individual") return 1;
+  if (tierName === "couple") return 2;
+  if (tierName === "family") return 5;
+  if (typeof tier?.base_member_limit === "number" && tier.base_member_limit > 0) {
+    return tier.base_member_limit;
+  }
+  return fallbackPlanType === "family" ? 5 : 1;
+}
+
+/**
  * Resolve entitlement from an already-loaded community_members row.
  *
  * Callers that have the member row in hand (most API routes) should use this

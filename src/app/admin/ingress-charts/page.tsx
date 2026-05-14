@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -22,10 +23,9 @@ import {
   Globe,
   MapPin,
   Plus,
-  Pencil,
-  Trash2,
   ChevronDown,
   Loader2,
+  TrendingUp,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -55,6 +55,12 @@ const IMPORTANCE_BADGE: Record<string, string> = {
   "Low Impact": "bg-green-100 text-green-700 border-green-200",
 };
 
+const VIEW_FILTERS = [
+  { label: "All Charts", value: "" },
+  { label: "Upcoming", value: "upcoming" },
+  { label: "Past", value: "past" },
+] as const;
+
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
 type IngressChart = {
@@ -62,7 +68,7 @@ type IngressChart = {
   title: string;
   ingress_type: string | null;
   importance: string | null;
-  is_published: boolean;
+  short_description: string | null;
   is_social_advo: boolean;
   validity_start: string | null;
   validity_end: string | null;
@@ -75,7 +81,6 @@ type IngressChart = {
 
 type StatsData = {
   total: number;
-  published: number;
   upcoming: number;
   social_advo: number;
 };
@@ -88,6 +93,10 @@ function formatDate(iso: string) {
     month: "short",
     day: "numeric",
   });
+}
+
+function formatOptionalDate(iso: string | null) {
+  return iso ? formatDate(iso) : "Not set";
 }
 
 function getSectorKey(val: string): string {
@@ -183,8 +192,10 @@ function SectorDropdown({
 // ─── Main page ─────────────────────────────────────────────────────────────────
 
 export default function AdminIngressChartsPage() {
+  const router = useRouter();
   const [charts, setCharts] = useState<IngressChart[]>([]);
-  const [stats, setStats] = useState<StatsData>({ total: 0, published: 0, upcoming: 0, social_advo: 0 });
+  const [stats, setStats] = useState<StatsData>({ total: 0, upcoming: 0, social_advo: 0 });
+  const [expandedSectorIds, setExpandedSectorIds] = useState<Record<string, boolean>>({});
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -253,7 +264,6 @@ export default function AdminIngressChartsPage() {
       if (p === 1) {
         setStats({
           total: json.total,
-          published: json.published ?? 0,
           upcoming: json.upcoming ?? 0,
           social_advo: json.social_advo ?? 0,
         });
@@ -291,25 +301,8 @@ export default function AdminIngressChartsPage() {
     }
   }
 
-  async function togglePublish(chart: IngressChart) {
-    const res = await fetch(`/api/admin/ingress-charts/${chart.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ is_published: !chart.is_published }),
-    });
-    if (res.ok) {
-      setCharts((prev) =>
-        prev.map((c) => c.id === chart.id ? { ...c, is_published: !c.is_published } : c)
-      );
-    }
-  }
-
-  async function handleDelete(id: string) {
-    const res = await fetch(`/api/admin/ingress-charts/${id}`, { method: "DELETE" });
-    if (res.ok) {
-      setCharts((prev) => prev.filter((c) => c.id !== id));
-      setStats((s) => ({ ...s, total: s.total - 1 }));
-    }
+  function toggleSectorExpansion(chartId: string) {
+    setExpandedSectorIds((prev) => ({ ...prev, [chartId]: !prev[chartId] }));
   }
 
   return (
@@ -318,7 +311,7 @@ export default function AdminIngressChartsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Mundane Astrology</h1>
-          <p className="text-muted-foreground">Manage planetary ingress chart publications.</p>
+          <p className="text-muted-foreground">Manage planetary ingress charts.</p>
         </div>
         <div className="flex gap-2">
           <AlertDialog>
@@ -357,9 +350,8 @@ export default function AdminIngressChartsPage() {
       </div>
 
       {/* Stats bar */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <StatCard label="Total Charts" value={stats.total} />
-        <StatCard label="Published" value={stats.published} />
         <StatCard label="Upcoming" value={stats.upcoming} />
         <StatCard label="Social Advo" value={stats.social_advo} />
       </div>
@@ -413,15 +405,31 @@ export default function AdminIngressChartsPage() {
         />
 
         {/* View toggle */}
-        <select
-          value={view}
-          onChange={(e) => applyFilter("view", e.target.value)}
-          className="flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+        <div
+          className="flex h-9 overflow-hidden rounded-md border border-input bg-background shadow-sm"
+          role="group"
+          aria-label="Chart view"
         >
-          <option value="">All</option>
-          <option value="upcoming">Upcoming</option>
-          <option value="past">Past</option>
-        </select>
+          {VIEW_FILTERS.map((option) => {
+            const selected = view === option.value;
+
+            return (
+              <button
+                key={option.value || "all"}
+                type="button"
+                aria-pressed={selected}
+                onClick={() => applyFilter("view", option.value)}
+                className={`border-r px-3 text-sm font-medium transition last:border-r-0 ${
+                  selected
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-transparent text-muted-foreground hover:bg-muted hover:text-foreground"
+                }`}
+              >
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
 
         {/* Sort */}
         <select
@@ -457,154 +465,158 @@ export default function AdminIngressChartsPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-3">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {charts.map((chart) => {
             const borderColor = INGRESS_COLORS[chart.ingress_type ?? ""] ?? "border-violet-500";
+            const chartSectors = chart.sector_focus ?? [];
+            const sectorsExpanded = expandedSectorIds[chart.id] ?? false;
+            const visibleSectors = sectorsExpanded
+              ? chartSectors
+              : chartSectors.slice(0, 2);
+            const detailHref = `/admin/ingress-charts/${chart.id}`;
 
             return (
               <div
                 key={chart.id}
-                className={`relative rounded-lg border bg-card pl-1 shadow-sm border-l-4 ${borderColor}`}
+                role="link"
+                tabIndex={0}
+                aria-label={`View details for ${chart.title}`}
+                onClick={() => router.push(detailHref)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    router.push(detailHref);
+                  }
+                }}
+                className={`group flex min-h-[360px] cursor-pointer flex-col rounded-lg border-2 bg-card p-4 shadow-sm transition hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${borderColor}`}
               >
-                <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-start sm:justify-between">
-                  {/* Left: info */}
-                  <div className="flex-1 space-y-2 min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      {chart.ingress_type && (
-                        <Badge variant="outline" className="text-xs">
-                          {chart.ingress_type}
-                        </Badge>
-                      )}
-                      <span className="font-semibold text-base leading-tight">{chart.title}</span>
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-                      {chart.location_name && (
-                        <span className="flex items-center gap-1">
-                          <MapPin className="size-3.5" /> {chart.location_name}
-                        </span>
-                      )}
-                      {(chart.validity_start || chart.validity_end) && (
-                        <span>
-                          {chart.validity_start ? formatDate(chart.validity_start) : "—"}
-                          {" – "}
-                          {chart.validity_end ? formatDate(chart.validity_end) : "—"}
-                        </span>
-                      )}
-                      {chart.importance && (
-                        <Badge
-                          variant="outline"
-                          className={`text-xs ${IMPORTANCE_BADGE[chart.importance] ?? ""}`}
-                        >
-                          {chart.importance}
-                        </Badge>
-                      )}
-                      {chart.author_name && (
-                        <span className="text-xs">by {chart.author_name}</span>
-                      )}
-                    </div>
-
-                    {/* Sectors */}
-                    {chart.sector_focus?.length > 0 && (
-                      <div className="flex flex-wrap gap-1">
-                        {chart.sector_focus.slice(0, 2).map((s) => (
-                          <span
-                            key={s}
-                            className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground"
-                          >
-                            {getSectorKey(s)}
-                          </span>
-                        ))}
-                        {chart.sector_focus.length > 2 && (
-                          <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-                            +{chart.sector_focus.length - 2} more
-                          </span>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Tags */}
-                    {chart.tags?.length > 0 && (
-                      <div className="flex flex-wrap gap-1">
-                        {chart.tags.slice(0, 3).map((tag) => (
-                          <span
-                            key={tag}
-                            className="rounded-full border px-2 py-0.5 text-xs text-muted-foreground"
-                          >
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
-                    )}
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex min-w-0 items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                    <TrendingUp className="size-3.5 shrink-0 text-orange-500" />
+                    <span className="truncate">{chart.ingress_type ?? "Ingress Chart"}</span>
                   </div>
 
-                  {/* Right: actions */}
-                  <div className="flex shrink-0 flex-wrap items-center gap-3">
-                    {/* Social Advo toggle */}
+                  <div
+                    className="flex shrink-0 items-center gap-2"
+                    onClick={(event) => event.stopPropagation()}
+                    onKeyDown={(event) => event.stopPropagation()}
+                  >
                     <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                       <Switch
                         checked={chart.is_social_advo}
                         onCheckedChange={() => toggleSocialAdvo(chart)}
                         aria-label="Social Advo"
                       />
-                      Advo
+                      Social Advo
                     </div>
-
-                    {/* Publish/Unpublish */}
-                    <Button
-                      size="sm"
-                      variant={chart.is_published ? "secondary" : "outline"}
-                      onClick={() => togglePublish(chart)}
-                    >
-                      {chart.is_published ? "Unpublish" : "Publish"}
-                    </Button>
-
-                    {/* Edit */}
-                    <Button size="sm" variant="outline" asChild>
-                      <Link href={`/admin/ingress-charts/${chart.id}/edit`}>
-                        <Pencil className="size-3.5 mr-1" /> Edit
-                      </Link>
-                    </Button>
-
-                    {/* Delete */}
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="size-4" />
-                          <span className="sr-only">Delete</span>
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Delete ingress chart?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            &ldquo;{chart.title}&rdquo; will be permanently deleted. This action
-                            cannot be undone.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={() => handleDelete(chart.id)}
-                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                          >
-                            Delete
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
                   </div>
+                </div>
+
+                <div className="mt-3 space-y-3">
+                  <div className="space-y-2">
+                    <h2 className="text-sm font-bold leading-snug text-foreground">
+                      {chart.title}
+                    </h2>
+
+                    {chart.short_description && (
+                      <p className="line-clamp-3 text-sm leading-6 text-muted-foreground">
+                        {chart.short_description}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="space-y-3">
+                    <h3 className="inline-flex rounded-sm bg-primary/10 px-1.5 py-0.5 text-sm font-bold text-foreground">
+                      This Chart Focused On :
+                    </h3>
+                    {chartSectors.length > 0 ? (
+                      <div className="flex flex-wrap gap-2">
+                        {visibleSectors.map((s) => (
+                          <span
+                            key={s}
+                            className="rounded-full bg-orange-500 px-2.5 py-1 text-[11px] font-semibold text-white"
+                          >
+                            {getSectorKey(s)}
+                          </span>
+                        ))}
+                        {chartSectors.length > 2 && (
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              toggleSectorExpansion(chart.id);
+                            }}
+                            onKeyDown={(event) => event.stopPropagation()}
+                            className="text-xs font-semibold text-orange-500 transition hover:text-orange-600"
+                          >
+                            {sectorsExpanded ? "Less" : `+ ${chartSectors.length - 2} other`}
+                          </button>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">No focus sectors added.</p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="mt-auto border-t pt-3">
+                  <dl className="space-y-1.5 text-xs">
+                    <div className="flex items-center justify-between gap-4">
+                      <dt className="text-muted-foreground">Start date</dt>
+                      <dd className="text-right font-semibold text-foreground">
+                        {formatOptionalDate(chart.validity_start)}
+                      </dd>
+                    </div>
+                    <div className="flex items-center justify-between gap-4">
+                      <dt className="text-muted-foreground">End date</dt>
+                      <dd className="text-right font-semibold text-foreground">
+                        {formatOptionalDate(chart.validity_end)}
+                      </dd>
+                    </div>
+                    {chart.location_name && (
+                      <div className="flex items-center justify-between gap-4">
+                        <dt className="text-muted-foreground">Location</dt>
+                        <dd className="flex items-center justify-end gap-1 text-right font-semibold text-foreground">
+                          <MapPin className="size-3.5 shrink-0 text-muted-foreground" />
+                          {chart.location_name}
+                        </dd>
+                      </div>
+                    )}
+                    {chart.importance && (
+                      <div className="flex items-center justify-between gap-4">
+                        <dt className="text-muted-foreground">Importance</dt>
+                        <dd>
+                          <Badge
+                            variant="outline"
+                            className={`text-xs ${IMPORTANCE_BADGE[chart.importance] ?? ""}`}
+                          >
+                            {chart.importance}
+                          </Badge>
+                        </dd>
+                      </div>
+                    )}
+                    {chart.author_name && (
+                      <div className="flex items-center justify-between gap-4">
+                        <dt className="text-muted-foreground">Author</dt>
+                        <dd className="text-right font-semibold text-foreground">
+                          {chart.author_name}
+                        </dd>
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between gap-4">
+                      <dt className="text-muted-foreground">Created on</dt>
+                      <dd className="text-right font-semibold text-foreground">
+                        {formatDate(chart.created_at)}
+                      </dd>
+                    </div>
+                  </dl>
                 </div>
               </div>
             );
           })}
 
           {hasMore && (
-            <div className="flex justify-center pt-2">
+            <div className="flex justify-center pt-2 md:col-span-2 xl:col-span-3">
               <Button
                 variant="outline"
                 size="sm"
