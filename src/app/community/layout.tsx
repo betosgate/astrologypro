@@ -72,7 +72,17 @@ export default async function CommunityLayout({ children }: { children: React.Re
 
 
 
-  if (!member) redirect("/get-started");
+  if (!member) {
+    const invitedRole = user.user_metadata?.role;
+    if (
+      user.user_metadata?.invited_by_admin === true &&
+      (invitedRole === "community_perennial_mandalism" ||
+        invitedRole === "perennial_mandalism")
+    ) {
+      redirect("/join/community/plan?invited=true");
+    }
+    redirect("/get-started");
+  }
   // PM-only gate: legacy Mystery School-only users must use /mystery-school
   if (member.membership_type !== "perennial_mandalism") redirect("/mystery-school");
 
@@ -136,7 +146,6 @@ export default async function CommunityLayout({ children }: { children: React.Re
     typeof rawAvatarUrl === "string" && rawAvatarUrl.trim() !== ""
       ? rawAvatarUrl
       : null;
-  const statusLabel = "Active Member";
   const memberHandle = getCommunityHandle(displayName, member.id);
   const initials = getInitials(displayName);
 
@@ -218,9 +227,6 @@ export default async function CommunityLayout({ children }: { children: React.Re
               <p className="truncate text-sm font-medium">
                 {displayName}
               </p>
-              <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
-                {statusLabel}
-              </p>
               <p className="truncate text-xs text-muted-foreground">
                 @{memberHandle}
               </p>
@@ -248,7 +254,6 @@ export default async function CommunityLayout({ children }: { children: React.Re
                 displayName={displayName}
                 avatarUrl={avatarUrl}
                 memberHandle={memberHandle}
-                statusLabel={statusLabel}
                 membershipLabel={membershipLabel}
               />
               <Link href="/community" className="text-lg font-bold">

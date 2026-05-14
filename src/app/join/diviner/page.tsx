@@ -36,6 +36,7 @@ export default function JoinDivinerPage() {
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [confirmPassword, setConfirmPassword] = useState("");
   const [profileUrl, setProfileUrl] = useState("");
+  const [profileUrlEdited, setProfileUrlEdited] = useState(false);
   const [inviteToken, setInviteToken] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -53,7 +54,9 @@ export default function JoinDivinerPage() {
 
   function handleNameChange(value: string) {
     setFullName(value);
-    setProfileUrl((current) => current || slugify(value));
+    if (!profileUrlEdited) {
+      setProfileUrl(slugify(value));
+    }
   }
 
   async function handleSubmit(event: React.FormEvent) {
@@ -205,20 +208,17 @@ export default function JoinDivinerPage() {
                       className="h-12 border-white/10 bg-white/[0.03] text-base text-white placeholder:text-[#626a88]"
                       autoComplete="new-password"
                       minLength={8}
+                      showStrength
                       aria-invalid={passwordError ? "true" : "false"}
                       aria-describedby={
-                        passwordError ? "diviner-password-error" : "diviner-password-help"
+                        passwordError ? "diviner-password-error" : undefined
                       }
                     />
                     {passwordError ? (
                       <p id="diviner-password-error" className="text-sm font-medium text-red-300">
                         {passwordError}
                       </p>
-                    ) : (
-                      <p id="diviner-password-help" className="text-sm text-[#8d96b8]">
-                        Use uppercase, lowercase, a number, and a special character.
-                      </p>
-                    )}
+                    ) : null}
                   </div>
 
                   <div className="space-y-2">
@@ -232,6 +232,8 @@ export default function JoinDivinerPage() {
                       onChange={(event) => setConfirmPassword(event.target.value)}
                       className="h-12 border-white/10 bg-white/[0.03] text-base text-white placeholder:text-[#626a88]"
                       autoComplete="new-password"
+                      minLength={8}
+                      confirmValue={password}
                     />
                   </div>
 
@@ -243,8 +245,12 @@ export default function JoinDivinerPage() {
                       id="diviner-url"
                       placeholder="maya-starweaver"
                       value={profileUrl}
-                      onChange={(event) => setProfileUrl(slugify(event.target.value))}
+                      onChange={(event) => {
+                        setProfileUrlEdited(true);
+                        setProfileUrl(slugify(event.target.value));
+                      }}
                       className="h-12 border-white/10 bg-white/[0.03] text-base text-white placeholder:text-[#626a88]"
+                      autoComplete="username"
                     />
                     <p className="text-sm text-[#8d96b8]">
                       Your page:{" "}
