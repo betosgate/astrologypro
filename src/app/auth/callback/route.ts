@@ -125,6 +125,7 @@ export async function GET(request: NextRequest) {
           userId: user.id,
           isAdmin: false,
           isInvited,
+          invitedRole: typeof metadata.role === "string" ? metadata.role : undefined,
           adminClient: admin,
         });
         return NextResponse.redirect(new URL(destination, origin));
