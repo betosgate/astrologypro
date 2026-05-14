@@ -6,12 +6,18 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
+  Bookmark,
   CalendarDays,
   CalendarPlus,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
   Clock,
+  Landmark,
+  MoonStar,
+  MoveRight,
+  NotebookTabs,
+  ShieldCheck,
   Search,
   Sparkles,
 } from "lucide-react";
@@ -48,22 +54,40 @@ type FilterKey =
 
 const CATEGORY_COLORS: Record<string, string> = {
   ritual: "border-violet-400/30 bg-violet-500/15 text-violet-200",
-  ceremony: "border-indigo-400/30 bg-indigo-500/15 text-indigo-200",
+  ceremony: "border-teal-400/30 bg-teal-500/15 text-teal-200",
   "live class": "border-blue-400/30 bg-blue-500/15 text-blue-200",
-  meditation: "border-teal-400/30 bg-teal-500/15 text-teal-200",
+  meditation: "border-rose-400/30 bg-rose-500/15 text-rose-200",
+  other: "border-slate-400/20 bg-slate-500/10 text-slate-200",
 };
 
 const CATEGORY_DOT: Record<string, string> = {
   ritual: "bg-purple-500",
-  ceremony: "bg-indigo-500",
+  ceremony: "bg-teal-500",
   "live class": "bg-blue-500",
-  meditation: "bg-teal-500",
+  meditation: "bg-rose-500",
+  other: "bg-slate-400",
+};
+
+const CATEGORY_ICON_COLORS: Record<string, string> = {
+  ritual: "border-violet-400/30 bg-violet-500/10 text-violet-200",
+  ceremony: "border-teal-400/30 bg-teal-500/10 text-teal-200",
+  "live class": "border-blue-400/30 bg-blue-500/10 text-blue-200",
+  meditation: "border-rose-400/30 bg-rose-500/10 text-rose-200",
+  other: "border-slate-400/20 bg-slate-500/10 text-slate-200",
+};
+
+const CATEGORY_CARD_COLORS: Record<string, string> = {
+  ritual: "border-violet-400/20 bg-violet-500/[0.07] shadow-[0_0_32px_rgba(139,92,246,0.08)]",
+  ceremony: "border-teal-400/20 bg-teal-500/[0.07] shadow-[0_0_32px_rgba(20,184,166,0.08)]",
+  "live class": "border-blue-400/20 bg-blue-500/[0.07] shadow-[0_0_32px_rgba(59,130,246,0.08)]",
+  meditation: "border-rose-400/20 bg-rose-500/[0.07] shadow-[0_0_32px_rgba(244,63,94,0.08)]",
+  other: "border-white/10 bg-background/45",
 };
 
 const FILTERS: Array<{ key: FilterKey; label: string }> = [
   { key: "all", label: "All" },
   { key: "ritual", label: "Rituals" },
-  { key: "ceremony", label: "Ceremony" },
+  { key: "ceremony", label: "Sunday Service" },
   { key: "live class", label: "Live Class" },
   { key: "meditation", label: "Meditation" },
   { key: "my_rsvps", label: "My RSVPs" },
@@ -108,14 +132,66 @@ function formatShortDate(iso: string): string {
   }).format(new Date(iso));
 }
 
+function normalizeCategory(cat: string | null): string {
+  const value = cat?.trim().toLowerCase();
+  if (!value) return "other";
+  if (value.includes("sunday")) return "ceremony";
+  return CATEGORY_COLORS[value] ? value : "other";
+}
+
+function categoryLabel(cat: string | null): string {
+  const normalized = normalizeCategory(cat);
+  if (normalized === "ceremony") return "Sunday Service";
+  if (normalized === "other") return cat || "Other";
+  return normalized;
+}
+
+function shortCategoryLabel(cat: string | null): string {
+  const normalized = normalizeCategory(cat);
+  if (normalized === "ceremony") return "Service";
+  if (normalized === "live class") return "Class";
+  if (normalized === "other") return "Other";
+  return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+}
+
 function categoryColor(cat: string | null): string {
-  if (!cat) return "border-white/10 bg-muted/60 text-muted-foreground";
-  return CATEGORY_COLORS[cat.toLowerCase()] ?? "border-white/10 bg-muted/60 text-muted-foreground";
+  return CATEGORY_COLORS[normalizeCategory(cat)];
 }
 
 function categoryDot(cat: string | null): string {
-  if (!cat) return "bg-gray-400";
-  return CATEGORY_DOT[cat.toLowerCase()] ?? "bg-gray-400";
+  return CATEGORY_DOT[normalizeCategory(cat)];
+}
+
+function categoryIconClasses(cat: string | null): string {
+  return CATEGORY_ICON_COLORS[normalizeCategory(cat)];
+}
+
+function categoryCardClasses(cat: string | null): string {
+  return CATEGORY_CARD_COLORS[normalizeCategory(cat)];
+}
+
+function EventCategoryIcon({ category, className }: { category: string | null; className?: string }) {
+  const normalized = normalizeCategory(category);
+
+  return (
+    <span
+      className={cn(
+        "flex size-11 shrink-0 items-center justify-center rounded-full border shadow-inner",
+        categoryIconClasses(category),
+        className
+      )}
+    >
+      {normalized === "ritual" ? (
+        <MoonStar className="size-5" />
+      ) : normalized === "ceremony" ? (
+        <Landmark className="size-5" />
+      ) : normalized === "live class" ? (
+        <NotebookTabs className="size-5" />
+      ) : (
+        <Sparkles className="size-5" />
+      )}
+    </span>
+  );
 }
 
 function isSameDay(a: Date, b: Date): boolean {
@@ -264,7 +340,7 @@ export default function CommunityEventsPage() {
       if (!eventMatchesSearch(event, search)) return false;
       if (activeFilter === "all") return true;
       if (activeFilter === "my_rsvps") return isAttending(rsvpMap[event.id]);
-      return event.category?.toLowerCase() === activeFilter;
+      return normalizeCategory(event.category) === activeFilter;
     });
   }, [activeFilter, events, rsvpMap, search]);
 
@@ -402,23 +478,24 @@ export default function CommunityEventsPage() {
                         </span>
                       ) : null}
                     </div>
-                    <div className="mt-2 space-y-1">
+                    <div className="mt-5 flex flex-col items-start gap-1">
                       {dayEvents.slice(0, 2).map((event) => (
-                        <div
+                        <span
                           key={event.id}
-                          className="flex min-w-0 items-center gap-1 rounded bg-muted/60 px-1.5 py-1"
+                          className={cn(
+                            "inline-flex max-w-full items-center gap-1 rounded border px-1.5 py-0.5 text-[10px] font-medium leading-none",
+                            categoryColor(event.category)
+                          )}
                           title={event.title}
                         >
                           <span className={cn("size-1.5 shrink-0 rounded-full", categoryDot(event.category))} />
-                          <span className="truncate text-[10px] leading-none text-foreground/90">
-                            {event.title}
-                          </span>
-                        </div>
+                          <span className="truncate">{shortCategoryLabel(event.category)}</span>
+                        </span>
                       ))}
                       {dayEvents.length > 2 ? (
-                        <div className="text-[10px] text-muted-foreground">
+                        <span className="text-[10px] font-medium leading-none text-muted-foreground">
                           +{dayEvents.length - 2} more
-                        </div>
+                        </span>
                       ) : null}
                     </div>
                   </button>
@@ -428,14 +505,14 @@ export default function CommunityEventsPage() {
           </div>
 
           <div className="flex flex-wrap gap-3 rounded-lg border bg-card/50 px-3 py-2 text-xs text-muted-foreground">
-            {Object.entries(CATEGORY_DOT).map(([cat, dot]) => (
+            {Object.entries(CATEGORY_DOT).filter(([cat]) => cat !== "other").map(([cat, dot]) => (
               <span key={cat} className="flex items-center gap-1 capitalize">
                 <span className={`inline-block size-2 rounded-full ${dot}`} />
-                {cat}
+                {cat === "ceremony" ? "Sunday Service" : cat}
               </span>
             ))}
             <span className="flex items-center gap-1">
-              <span className="inline-block size-2 rounded-full bg-gray-400" />
+              <span className="inline-block size-2 rounded-full bg-slate-400" />
               Other
             </span>
           </div>
@@ -456,7 +533,10 @@ export default function CommunityEventsPage() {
                 myRegisteredEvents.map((event) => (
                   <button
                     key={event.id}
-                    className="flex w-full items-center justify-between gap-3 rounded-md border bg-background/35 px-3 py-2 text-left transition-colors hover:bg-muted/40"
+                    className={cn(
+                      "flex w-full items-center gap-3 rounded-md border px-3 py-2.5 text-left transition-colors hover:border-primary/30 hover:bg-muted/40",
+                      categoryCardClasses(event.category)
+                    )}
                     onClick={() => {
                       const date = new Date(event.start_at);
                       setSelectedDay(date);
@@ -464,13 +544,18 @@ export default function CommunityEventsPage() {
                       setViewMonth(date.getMonth() + 1);
                     }}
                   >
-                    <span className="min-w-0">
+                    <EventCategoryIcon category={event.category} className="size-9" />
+                    <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-medium">{event.title}</span>
-                      <span className="text-xs text-muted-foreground">{formatEventTime(event.start_at)}</span>
+                      <span className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
+                        <CalendarDays className="size-3" />
+                        {formatEventTime(event.start_at)}
+                      </span>
                     </span>
-                    <Badge variant="outline" className="shrink-0 text-xs capitalize">
+                    <Badge variant="outline" className="hidden shrink-0 border-emerald-400/25 bg-emerald-500/10 text-xs capitalize text-emerald-300 sm:inline-flex">
                       {rsvpMap[event.id]?.my_rsvp?.replace("_", " ")}
                     </Badge>
+                    <MoveRight className="size-4 shrink-0 text-primary/70" />
                   </button>
                 ))
               )}
@@ -515,31 +600,37 @@ export default function CommunityEventsPage() {
               ) : (
                 agendaEvents.map((event) => {
                   const rsvp = rsvpMap[event.id];
+                  const categoryName = categoryLabel(event.category);
                   return (
-                    <Card key={event.id} className="border-white/10 bg-background/45">
+                    <Card
+                      key={event.id}
+                      className={cn("overflow-hidden", categoryCardClasses(event.category))}
+                    >
                       <CardHeader className="space-y-3 p-4 pb-2">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <CardTitle className="text-sm leading-snug">{event.title}</CardTitle>
+                        <div className="flex items-start gap-3">
+                          <EventCategoryIcon category={event.category} className="size-14" />
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-start justify-between gap-2">
+                              {event.category ? (
+                                <Badge variant="outline" className={cn("text-[10px] uppercase tracking-wide", categoryColor(event.category))}>
+                                  {categoryName}
+                                </Badge>
+                              ) : null}
+                              <Bookmark className="size-4 shrink-0 text-muted-foreground/70" />
+                            </div>
+                            <CardTitle className="mt-2 text-base leading-snug">{event.title}</CardTitle>
                             <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                               <span className="inline-flex items-center gap-1">
                                 <Clock className="size-3" />
                                 {selectedDay ? formatTimeOnly(event.start_at) : formatShortDate(event.start_at)}
                                 {event.end_at ? ` - ${formatTimeOnly(event.end_at)}` : ""}
                               </span>
+                              <Badge variant="outline" className="border-primary/25 bg-primary/10 text-[10px] text-primary">
+                                <ShieldCheck className="mr-1 size-3" />
+                                {DISPLAY_FOR_LABELS[event.display_for] ?? event.display_for}
+                              </Badge>
                             </div>
                           </div>
-                          <span className={cn("mt-1 size-2.5 shrink-0 rounded-full", categoryDot(event.category))} />
-                        </div>
-                        <div className="flex flex-wrap gap-1.5">
-                          {event.category ? (
-                            <Badge variant="outline" className={cn("text-xs capitalize", categoryColor(event.category))}>
-                              {event.category}
-                            </Badge>
-                          ) : null}
-                          <Badge variant="outline" className="border-primary/25 bg-primary/10 text-xs text-primary">
-                            {DISPLAY_FOR_LABELS[event.display_for] ?? event.display_for}
-                          </Badge>
                         </div>
                       </CardHeader>
                       <CardContent className="space-y-3 p-4 pt-1">
@@ -554,7 +645,7 @@ export default function CommunityEventsPage() {
                           initialStatus={rsvp?.my_rsvp ?? null}
                           initialCounts={{ going: rsvp?.going_count ?? 0, maybe: rsvp?.maybe_count ?? 0 }}
                         />
-                        <Button asChild size="sm" variant="outline" className="h-8 w-full text-xs">
+                        <Button asChild size="sm" variant="outline" className="h-8 w-full border-primary/40 text-xs text-primary hover:bg-primary/10 hover:text-primary">
                           <a href={buildIcsHref(event)} download={`event-${event.id}.ics`}>
                             <CalendarPlus className="mr-1.5 size-3.5" />
                             Add to Calendar
