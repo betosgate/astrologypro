@@ -15,8 +15,11 @@ import {
   Megaphone,
   Menu,
   Package,
+  Plus,
   UserCircle,
   Users,
+  LifeBuoy,
+  MessageSquare,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -29,7 +32,20 @@ import {
 } from "@/components/ui/sheet";
 import { PortalLogoutButton } from "@/components/portal/logout-button";
 
-const NAV_GROUPS = [
+type NavItemDef = {
+  label: string;
+  href: string;
+  icon: React.ElementType;
+  exact?: boolean;
+  children?: { label: string; href: string; icon: React.ElementType }[];
+};
+
+type NavGroupDef = {
+  label: string;
+  items: NavItemDef[];
+};
+
+const NAV_GROUPS: NavGroupDef[] = [
   {
     label: "Overview",
     items: [
@@ -53,7 +69,22 @@ const NAV_GROUPS = [
     label: "Reports",
     items: [
       { label: "Earnings", href: "/affiliate/earnings", icon: DollarSign },
-      { label: "Rate history", href: "/affiliate/rate-history", icon: History },
+      { label: "History", href: "/affiliate/history", icon: History },
+    ],
+  },
+  {
+    label: "Support",
+    items: [
+      {
+        label: "Support",
+        href: "/affiliate/support/tickets",
+        icon: LifeBuoy,
+        exact: true,
+        children: [
+          { label: "My Tickets", href: "/affiliate/support/tickets", icon: MessageSquare },
+          { label: "New Ticket", href: "/affiliate/support/new", icon: Plus },
+        ],
+      },
     ],
   },
   {
@@ -64,14 +95,6 @@ const NAV_GROUPS = [
     ],
   },
 ];
-
-type NavItemDef = {
-  label: string;
-  href: string;
-  icon: React.ElementType;
-  exact?: boolean;
-  children?: { label: string; href: string; icon: React.ElementType }[];
-};
 
 function isItemActive(
   item: { href: string; exact?: boolean },
@@ -171,7 +194,7 @@ function NavGroup({
   pathname,
   onClick,
 }: {
-  group: (typeof NAV_GROUPS)[number];
+  group: NavGroupDef;
   pathname: string;
   onClick?: () => void;
 }) {
