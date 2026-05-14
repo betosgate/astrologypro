@@ -46,7 +46,8 @@ function formatAmount(amount: number, currency: string): string {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
       currency: currency.toUpperCase(),
-      maximumFractionDigits: 0,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
     }).format(display);
   } catch {
     return `${currency.toUpperCase()} ${display.toLocaleString()}`;

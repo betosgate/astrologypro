@@ -6,7 +6,7 @@ export function getInvitedRoleDestination(role: string | undefined): string {
       return "/join/trainee/plan?invited=true";
     case "perennial_mandalism":
     case "community_perennial_mandalism":
-      return "/community/onboarding?invited=true";
+      return "/join/community/plan?invited=true";
     case "mystery_school":
     case "community_mystery_school":
       return "/join/mystery-school?invited=true";

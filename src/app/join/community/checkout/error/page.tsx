@@ -25,6 +25,14 @@ export default async function CommunityCheckoutErrorPage({
   const resolvedSearchParams = searchParams ? await searchParams : {};
   const reasonParam = resolvedSearchParams.reason;
   const reason = Array.isArray(reasonParam) ? reasonParam[0] : reasonParam;
+  const sourceParam = resolvedSearchParams.source;
+  const source = Array.isArray(sourceParam) ? sourceParam[0] : sourceParam;
+  const retryHref = source === "invite" ? "/join/community/plan?invited=true" : "/trainee";
+  const retryLabel = source === "invite" ? "Return to Plan Selection" : "OK";
+  const retryHint =
+    source === "invite"
+      ? "You can restart the Perennial Mandalism checkout from the plan selection page."
+      : "You can restart the Perennial Mandalism checkout from your trainee dashboard.";
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-6">
@@ -44,13 +52,13 @@ export default async function CommunityCheckoutErrorPage({
         </div>
         <div className="space-y-3">
           <Button asChild className="w-full">
-            <Link href="/trainee">
+            <Link href={retryHref}>
               <RefreshCcw className="mr-2 size-4" />
-              OK
+              {retryLabel}
             </Link>
           </Button>
           <p className="text-xs text-muted-foreground">
-            You can restart the Perennial Mandalism checkout from your trainee dashboard.
+            {retryHint}
           </p>
         </div>
       </div>

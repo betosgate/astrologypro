@@ -26,7 +26,6 @@ interface MobileNavProps {
   displayName: string;
   avatarUrl?: string | null;
   memberHandle: string;
-  statusLabel: string;
   membershipLabel: string;
 }
 
@@ -35,7 +34,6 @@ export function MobileNav({
   displayName,
   avatarUrl,
   memberHandle,
-  statusLabel,
   membershipLabel,
 }: MobileNavProps) {
   const [open, setOpen] = useState(false);
@@ -84,9 +82,6 @@ export function MobileNav({
             </Avatar>
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-medium">{displayName}</p>
-              <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
-                {statusLabel}
-              </p>
               <p className="truncate text-xs text-muted-foreground">
                 @{memberHandle}
               </p>

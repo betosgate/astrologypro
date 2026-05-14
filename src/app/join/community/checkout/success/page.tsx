@@ -146,6 +146,9 @@ export default async function CommunityCheckoutSuccessPage({
     if (source === "trainee") {
       redirect("/join/community/checkout/error?source=trainee&reason=missing-session");
     }
+    if (source === "invite") {
+      redirect("/join/community/checkout/error?source=invite&reason=missing-session");
+    }
     redirect("/switch?pm=missing-session");
   }
 
@@ -159,11 +162,14 @@ export default async function CommunityCheckoutSuccessPage({
     if (source === "trainee") {
       redirect("/join/community/checkout/error?source=trainee&reason=provision-failed");
     }
+    if (source === "invite") {
+      redirect("/join/community/checkout/error?source=invite&reason=provision-failed");
+    }
     redirect("/switch?subscribed=true&pm=provision-failed");
   }
 
   const contractsSource = source === "trainee" ? "trainee-pm-upgrade" : "community-checkout";
-  const contractsHref = `/contracts/pending?source=${contractsSource}&session_id=${encodeURIComponent(sessionId)}&next=${encodeURIComponent("/community")}`;
+  const contractsHref = `/contracts/pending?source=${contractsSource}&session_id=${encodeURIComponent(sessionId)}&next=${encodeURIComponent("/community/onboarding")}`;
   const checkoutDetails = await getCheckoutDetails(
     sessionId,
     result.planId ?? titleCase(result.planType),

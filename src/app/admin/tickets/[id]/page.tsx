@@ -470,12 +470,12 @@ export default function AdminTicketDetailPage() {
             <CardHeader className="pb-3">
               <CardTitle className="text-base">Public Conversation</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 p-3 ml-4 mr-4 border border-[#282c46] h-[400px] rounded-lg overflow-x-auto ">
               {publicMessages.length === 0 ? (
                 <p className="text-sm text-muted-foreground">No public messages yet.</p>
               ) : (
                 publicMessages.map((msg) => (
-                  <div key={msg.id} className={msg.author_role === "staff" ? "pl-4 border-l-2 border-primary/30" : ""}>
+                  <div key={msg.id} className={msg.author_role === "staff" ? " w-[50%] ml-auto" : ""}>
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-sm font-medium">{msg.author_name}</span>
                       <Badge variant="outline" className="text-xs py-0 px-1.5">
@@ -732,10 +732,10 @@ export default function AdminTicketDetailPage() {
         </div>
 
         {/* Sidebar */}
-        <div className="space-y-4">
+        <div className="space-y-4 sticky top-5 overflow-hidden max-h-screen overflow-y-auto scrollbar-none">
           {/* Requester info */}
           <Card>
-            <CardHeader className="pb-3">
+            <CardHeader className="pb-0">
               <CardTitle className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                 Requester
               </CardTitle>
@@ -751,7 +751,7 @@ export default function AdminTicketDetailPage() {
 
           {/* Ticket metadata */}
           <Card>
-            <CardHeader className="pb-3">
+            <CardHeader className="pb-0">
               <CardTitle className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                 Details
               </CardTitle>
@@ -798,7 +798,7 @@ export default function AdminTicketDetailPage() {
               {ticket.sla_breached && !ticket.sla_breached_at && (
                 <Badge
                   variant="outline"
-                  className="w-full justify-center bg-red-500/10 text-red-600 border-red-500/20"
+                  className="w-full justify-center bg-red-500/10 text-red-600 border-red-500/20 "
                 >
                   SLA Breached
                 </Badge>
@@ -808,7 +808,7 @@ export default function AdminTicketDetailPage() {
 
           {/* Admin actions */}
           <Card>
-            <CardHeader className="pb-3">
+            <CardHeader className="pb-0">
               <CardTitle className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                 Actions
               </CardTitle>
@@ -817,7 +817,7 @@ export default function AdminTicketDetailPage() {
               <div className="space-y-1.5">
                 <Label className="text-xs">Status</Label>
                 <Select value={status} onValueChange={setStatus}>
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -833,7 +833,7 @@ export default function AdminTicketDetailPage() {
               <div className="space-y-1.5">
                 <Label className="text-xs">Priority</Label>
                 <Select value={priority} onValueChange={setPriority}>
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -849,7 +849,7 @@ export default function AdminTicketDetailPage() {
               <div className="space-y-1.5">
                 <Label className="text-xs">Queue</Label>
                 <Select value={queueId || "_none"} onValueChange={(v) => setQueueId(v === "_none" ? "" : v)}>
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue placeholder="No queue" />
                   </SelectTrigger>
                   <SelectContent>
@@ -866,7 +866,7 @@ export default function AdminTicketDetailPage() {
               <div className="space-y-1.5">
                 <Label className="text-xs">Assigned Team</Label>
                 <Select value={assignedTeam || "_none"} onValueChange={(v) => setAssignedTeam(v === "_none" ? "" : v)}>
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue placeholder="Unassigned" />
                   </SelectTrigger>
                   <SelectContent>
