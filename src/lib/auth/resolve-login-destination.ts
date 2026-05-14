@@ -52,6 +52,13 @@ function needsInvitedDivinerPlan(
   );
 }
 
+function normalizeInvitedRole(role: string | null | undefined) {
+  if (role === "community_perennial_mandalism") return "perennial_mandalism";
+  if (role === "community_mystery_school") return "mystery_school";
+  if (role === "advocate") return "social_advo";
+  return role;
+}
+
 function hasActiveMysterySchoolAccess(
   ms: PortalCheckData["mysteryStudent"]
 ): boolean {
@@ -125,9 +132,7 @@ const ROLE_HIERARCHY: Array<{
       d.community.membership_status === "active",
     destination: (d, isInvited) => {
       if (!d.community?.onboarding_completed) {
-        return isInvited
-          ? getInvitedRoleDestination("perennial_mandalism")
-          : "/community/onboarding";
+        return "/community/onboarding";
       }
       return "/community";
     },
@@ -205,6 +210,7 @@ export interface ResolveOptions {
   userId: string;
   isAdmin: boolean;
   isInvited: boolean;
+  invitedRole?: string;
   adminClient: SupabaseClient;
 }
 
@@ -214,6 +220,7 @@ export async function resolveLoginDestination({
   userId,
   isAdmin,
   isInvited,
+  invitedRole,
   adminClient,
 }: ResolveOptions): Promise<string> {
   // 1. Hard payment gate for invited trainees/diviners before legal or portal routing.
@@ -227,6 +234,11 @@ export async function resolveLoginDestination({
     .select("id, onboarding_completed, paid_at")
     .eq("user_id", userId)
     .maybeSingle();
+  const { data: earlyCommunity } = await adminClient
+    .from("community_members")
+    .select("id, membership_type, membership_status, onboarding_completed")
+    .eq("user_id", userId)
+    .maybeSingle();
 
   if (needsInvitedDivinerPlan(earlyDiviner as PortalCheckData["diviner"])) {
     return "/join/diviner/plan";
@@ -234,6 +246,17 @@ export async function resolveLoginDestination({
 
   if (isInvited && earlyTrainee && !earlyTrainee.paid_at) {
     return getInvitedRoleDestination("trainee");
+  }
+
+  if (
+    isInvited &&
+    normalizeInvitedRole(invitedRole) === "perennial_mandalism" &&
+    !(
+      earlyCommunity?.membership_type === "perennial_mandalism" &&
+      earlyCommunity?.membership_status === "active"
+    )
+  ) {
+    return getInvitedRoleDestination("perennial_mandalism");
   }
 
   // 2. Pending contract gate (legal — must sign before entering any portal)
@@ -274,12 +297,7 @@ export async function resolveLoginDestination({
         .eq("user_id", userId)
         .maybeSingle()
         .then((r) => r.data),
-      adminClient
-        .from("community_members")
-        .select("id, membership_type, membership_status, onboarding_completed")
-        .eq("user_id", userId)
-        .maybeSingle()
-        .then((r) => r.data),
+      Promise.resolve(earlyCommunity),
       adminClient
         .from("clients")
         .select("id")

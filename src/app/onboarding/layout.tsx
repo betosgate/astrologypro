@@ -41,6 +41,8 @@ export default async function OnboardingLayout({
       userId: user.id,
       isAdmin: !!adminUser,
       isInvited: user.user_metadata?.invited_by_admin === true,
+      invitedRole:
+        typeof user.user_metadata?.role === "string" ? user.user_metadata.role : undefined,
       adminClient: admin,
     });
     if (destination === "/onboarding") {

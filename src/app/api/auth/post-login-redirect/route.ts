@@ -55,12 +55,15 @@ export async function GET(req: NextRequest) {
   const adminUser = await requireAdmin();
   const isAdmin = !!adminUser;
   const isInvited = user.user_metadata?.invited_by_admin === true;
+  const invitedRole =
+    typeof user.user_metadata?.role === "string" ? user.user_metadata.role : undefined;
   const admin = createAdminClient();
 
   const destination = await resolveLoginDestination({
     userId: user.id,
     isAdmin,
     isInvited,
+    invitedRole,
     adminClient: admin,
   });
 
