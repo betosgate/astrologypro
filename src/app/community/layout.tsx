@@ -68,10 +68,6 @@ export default async function CommunityLayout({ children }: { children: React.Re
     .maybeSingle();
 
 
-  console.log("[CommunityLayout] user.id =", user.id, "onboarding_completed =", member?.onboarding_completed);
-
-
-
   if (!member) {
     const invitedRole = user.user_metadata?.role;
     if (
@@ -146,7 +142,6 @@ export default async function CommunityLayout({ children }: { children: React.Re
     typeof rawAvatarUrl === "string" && rawAvatarUrl.trim() !== ""
       ? rawAvatarUrl
       : null;
-  const statusLabel = "Active Member";
   const memberHandle = getCommunityHandle(displayName, member.id);
   const initials = getInitials(displayName);
 
@@ -228,9 +223,6 @@ export default async function CommunityLayout({ children }: { children: React.Re
               <p className="truncate text-sm font-medium">
                 {displayName}
               </p>
-              <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
-                {statusLabel}
-              </p>
               <p className="truncate text-xs text-muted-foreground">
                 @{memberHandle}
               </p>
@@ -258,7 +250,6 @@ export default async function CommunityLayout({ children }: { children: React.Re
                 displayName={displayName}
                 avatarUrl={avatarUrl}
                 memberHandle={memberHandle}
-                statusLabel={statusLabel}
                 membershipLabel={membershipLabel}
               />
               <Link href="/community" className="text-lg font-bold">

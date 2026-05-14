@@ -1811,7 +1811,7 @@ function MappingForm({
                 }
                 disabled={!!initialMapping}
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -1829,7 +1829,7 @@ function MappingForm({
                   onValueChange={setDefinitionId}
                   disabled={!!initialMapping}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue placeholder="Select…" />
                   </SelectTrigger>
                   <SelectContent>
@@ -1856,7 +1856,7 @@ function MappingForm({
             <div className="space-y-1">
               <Label>Asset</Label>
               <Select value={assetId} onValueChange={setAssetId}>
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select…" />
                 </SelectTrigger>
                 <SelectContent>
