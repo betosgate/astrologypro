@@ -1,11 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -95,18 +102,23 @@ export default function AdminMundaneEntitiesPage() {
 
   const [search, setSearch] = useState("");
   const [entityType, setEntityType] = useState("");
+  const filtersRef = useRef({ search, entityType });
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<EntityForm>(EMPTY_FORM);
   const [formError, setFormError] = useState("");
 
-  async function fetchEntities(p: number, replace: boolean, overrides?: { search?: string; entityType?: string }) {
+  const fetchEntities = useCallback(async (
+    p: number,
+    replace: boolean,
+    overrides?: { search?: string; entityType?: string }
+  ) => {
     if (p === 1) setLoading(true);
     else setLoadingMore(true);
 
-    const s = overrides?.search ?? search;
-    const et = overrides?.entityType ?? entityType;
+    const s = overrides?.search ?? filtersRef.current.search;
+    const et = overrides?.entityType ?? filtersRef.current.entityType;
 
     const params = new URLSearchParams({ page: String(p) });
     if (s) params.set("search", s);
@@ -122,13 +134,27 @@ export default function AdminMundaneEntitiesPage() {
     }
     setLoading(false);
     setLoadingMore(false);
-  }
+  }, []);
 
-  useEffect(() => { fetchEntities(1, true); }, []);
+  useEffect(() => {
+    filtersRef.current = { search, entityType };
+  }, [search, entityType]);
+
+  useEffect(() => {
+    let active = true;
+    Promise.resolve().then(() => {
+      if (active) fetchEntities(1, true);
+    });
+    return () => {
+      active = false;
+    };
+  }, [fetchEntities]);
 
   function applyFilter(key: "search" | "entityType", value: string) {
+    const nextFilters = { ...filtersRef.current, [key]: value };
     if (key === "entityType") setEntityType(value);
-    fetchEntities(1, true, { search, entityType, [key]: value });
+    filtersRef.current = nextFilters;
+    fetchEntities(1, true, nextFilters);
   }
 
   function openAdd() {
@@ -231,20 +257,32 @@ export default function AdminMundaneEntitiesPage() {
           <Input
             placeholder="Search name or region…"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              const value = e.target.value;
+              setSearch(value);
+              filtersRef.current = { ...filtersRef.current, search: value };
+            }}
             onKeyDown={(e) => { if (e.key === "Enter") fetchEntities(1, true); }}
           />
         </div>
-        <select
-          value={entityType}
-          onChange={(e) => applyFilter("entityType", e.target.value)}
-          className="flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+        <Select
+          value={entityType || "all"}
+          onValueChange={(value) =>
+            applyFilter("entityType", value === "all" ? "" : value)
+          }
         >
-          <option value="">All Types</option>
-          {ENTITY_TYPES.map((t) => (
-            <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>
-          ))}
-        </select>
+          <SelectTrigger className="w-full sm:w-40">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent className="w-[var(--radix-select-trigger-width)]">
+            <SelectItem value="all">All Types</SelectItem>
+            {ENTITY_TYPES.map((type) => (
+              <SelectItem key={type} value={type}>
+                {type.charAt(0).toUpperCase() + type.slice(1)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <Button size="sm" variant="outline" onClick={() => fetchEntities(1, true)}>
           Search
         </Button>
@@ -354,15 +392,23 @@ export default function AdminMundaneEntitiesPage() {
             </div>
             <div>
               <label className="text-sm font-medium">Type *</label>
-              <select
+              <Select
                 value={form.entity_type}
-                onChange={(e) => setForm((f) => ({ ...f, entity_type: e.target.value }))}
-                className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+                onValueChange={(value) =>
+                  setForm((f) => ({ ...f, entity_type: value }))
+                }
               >
-                {ENTITY_TYPES.map((t) => (
-                  <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>
-                ))}
-              </select>
+                <SelectTrigger className="mt-1 w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="w-[var(--radix-select-trigger-width)]">
+                  {ENTITY_TYPES.map((type) => (
+                    <SelectItem key={type} value={type}>
+                      {type.charAt(0).toUpperCase() + type.slice(1)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <label className="text-sm font-medium">Region</label>
