@@ -675,9 +675,9 @@ export default function AdminIngressChartDetailPage() {
           {tags.length > 0 ? (
             <div className="flex flex-wrap gap-2 mb-2">
               {tags.map((tag) => (
-                <span key={tag} className="bg-primary text-primary-foreground px-3 py-1 rounded-full text-sm font-medium inline-flex items-center justify-center">
+                <Link key={tag} href={`/admin/ingress-charts-list?tag=${encodeURIComponent(tag)}`} className="bg-primary text-primary-foreground px-3 py-1 rounded-full text-sm font-medium inline-flex items-center justify-center hover:bg-primary/80 transition-colors">
                   <RichText text={tag} iconColor="text-black" useSymbolsForPlanets={true} />
-                </span>
+                </Link>
               ))}
             </div>
           ) : (
@@ -694,9 +694,9 @@ export default function AdminIngressChartDetailPage() {
           {sectorFocus.length > 0 ? (
             <div className="flex flex-wrap gap-2 mb-2">
               {sectorFocus.map((sector) => (
-                <span key={sector} className="bg-primary text-primary-foreground px-3 py-1 rounded-full text-sm font-medium">
+                <Link key={sector} href={`/admin/ingress-charts-list?sector=${encodeURIComponent(sector)}`} className="bg-primary text-primary-foreground px-3 py-1 rounded-full text-sm font-medium hover:bg-primary/80 transition-colors">
                   {displaySector(sector)}
-                </span>
+                </Link>
               ))}
             </div>
           ) : (
