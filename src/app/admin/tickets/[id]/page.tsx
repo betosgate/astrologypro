@@ -740,7 +740,7 @@ export default function AdminTicketDetailPage() {
           </Card>
 
           {/* History / audit */}
-          <Card>
+          <Card className="h-[200px] overflow-hidden overflow-y-auto">
             <CardHeader className="pb-0">
               <CardTitle className="text-base">Activity Log</CardTitle>
             </CardHeader>
