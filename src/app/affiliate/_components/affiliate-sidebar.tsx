@@ -75,16 +75,7 @@ const NAV_GROUPS: NavGroupDef[] = [
   {
     label: "Support",
     items: [
-      {
-        label: "Support",
-        href: "/affiliate/support/tickets",
-        icon: LifeBuoy,
-        exact: true,
-        children: [
-          { label: "My Tickets", href: "/affiliate/support/tickets", icon: MessageSquare },
-          { label: "New Ticket", href: "/affiliate/support/new", icon: Plus },
-        ],
-      },
+      { label: "Support", href: "/dashboard/support", icon: LifeBuoy },
     ],
   },
   {
