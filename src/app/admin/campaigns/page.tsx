@@ -188,7 +188,15 @@ export default function AdminCampaignsPage() {
     setLoading(false);
   }, [currentQ, filterStatus, filterDiviner, currentPage, pageSize, currentSort, currentDir]);
 
-  useEffect(() => { loadCampaigns(); }, [loadCampaigns]);
+  useEffect(() => {
+    let active = true;
+    Promise.resolve().then(() => {
+      if (active) loadCampaigns();
+    });
+    return () => {
+      active = false;
+    };
+  }, [loadCampaigns]);
 
   useEffect(() => {
     // No longer need to fetch all diviners here
@@ -294,7 +302,7 @@ export default function AdminCampaignsPage() {
   }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
+    <div className="p-6 space-y-6">
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -573,12 +581,17 @@ export default function AdminCampaignsPage() {
             </div>
             <div className="space-y-2">
               <Label>Status</Label>
-              <select className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm" value={editStatus} onChange={(e) => setEditStatus(e.target.value)}>
-                <option value="active">Active</option>
-                <option value="paused">Paused</option>
-                <option value="archived">Archived</option>
-                <option value="expired">Expired</option>
-              </select>
+              <Select value={editStatus} onValueChange={setEditStatus}>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="w-[var(--radix-select-trigger-width)]">
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="paused">Paused</SelectItem>
+                  <SelectItem value="archived">Archived</SelectItem>
+                  <SelectItem value="expired">Expired</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">

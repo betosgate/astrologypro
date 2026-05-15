@@ -29,6 +29,13 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Loader2, Plus, Users } from "lucide-react";
 
 interface Affiliate {
@@ -85,8 +92,16 @@ export default function AdminAffiliatesPage() {
   const [formCommType, setFormCommType] = useState("percentage");
   const [formCommValue, setFormCommValue] = useState("10");
 
-  const loadAffiliates = useCallback(async (cursor?: string | null) => {
+  const loadAffiliates = useCallback(async (
+    cursor?: string | null,
+    resetPagination = false
+  ) => {
     setLoading(true);
+    if (resetPagination) {
+      setCursorStack([]);
+      setNextCursor(null);
+      setHasMore(false);
+    }
     const params = new URLSearchParams();
     if (filterStatus) params.set("status", filterStatus);
     if (filterDiviner) params.set("diviner_id", filterDiviner);
@@ -104,10 +119,13 @@ export default function AdminAffiliatesPage() {
   }, [filterStatus, filterDiviner, q]);
 
   useEffect(() => {
-    setCursorStack([]);
-    setNextCursor(null);
-    setHasMore(false);
-    loadAffiliates();
+    let active = true;
+    Promise.resolve().then(() => {
+      if (active) loadAffiliates(null, true);
+    });
+    return () => {
+      active = false;
+    };
   }, [loadAffiliates]);
 
   useEffect(() => {
@@ -157,8 +175,6 @@ export default function AdminAffiliatesPage() {
 
   function goNextPage() {
     if (!nextCursor) return;
-    // The current first item's cursor is the last item id on the current page
-    const currentCursor = cursorStack.length > 0 ? cursorStack[cursorStack.length - 1] : undefined;
     setCursorStack((prev) => [...prev, nextCursor]);
     loadAffiliates(nextCursor);
   }
@@ -201,16 +217,18 @@ export default function AdminAffiliatesPage() {
             <div className="mt-2 space-y-4">
               <div className="space-y-2">
                 <Label>Diviner</Label>
-                <select
-                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
-                  value={formDivinerId}
-                  onChange={(e) => setFormDivinerId(e.target.value)}
-                >
-                  <option value="">Select diviner…</option>
-                  {diviners.map((d) => (
-                    <option key={d.id} value={d.id}>{d.display_name}</option>
-                  ))}
-                </select>
+                <Select value={formDivinerId || undefined} onValueChange={setFormDivinerId}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select diviner..." />
+                  </SelectTrigger>
+                  <SelectContent className="w-[var(--radix-select-trigger-width)]">
+                    {diviners.map((d) => (
+                      <SelectItem key={d.id} value={d.id}>
+                        {d.display_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
                 <Label>Name</Label>
@@ -226,14 +244,15 @@ export default function AdminAffiliatesPage() {
               </div>
               <div className="space-y-2">
                 <Label>Commission type</Label>
-                <select
-                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
-                  value={formCommType}
-                  onChange={(e) => setFormCommType(e.target.value)}
-                >
-                  <option value="percentage">Percentage</option>
-                  <option value="fixed">Fixed amount</option>
-                </select>
+                <Select value={formCommType} onValueChange={setFormCommType}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="w-[var(--radix-select-trigger-width)]">
+                    <SelectItem value="percentage">Percentage</SelectItem>
+                    <SelectItem value="fixed">Fixed amount</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
                 <Label>{formCommType === "percentage" ? "Commission %" : "Fixed amount (cents)"}</Label>
@@ -276,27 +295,37 @@ export default function AdminAffiliatesPage() {
           value={q}
           onChange={(e) => setQ(e.target.value)}
         />
-        <select
-          className="flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm"
-          value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value)}
+        <Select
+          value={filterStatus || "all"}
+          onValueChange={(value) => setFilterStatus(value === "all" ? "" : value)}
         >
-          <option value="">All statuses</option>
-          <option value="active">Active</option>
-          <option value="pending">Pending</option>
-          <option value="suspended">Suspended</option>
-          <option value="blocked">Blocked</option>
-        </select>
-        <select
-          className="flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm"
-          value={filterDiviner}
-          onChange={(e) => setFilterDiviner(e.target.value)}
+          <SelectTrigger className="w-full sm:w-40">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent className="w-[var(--radix-select-trigger-width)]">
+            <SelectItem value="all">All statuses</SelectItem>
+            <SelectItem value="active">Active</SelectItem>
+            <SelectItem value="pending">Pending</SelectItem>
+            <SelectItem value="suspended">Suspended</SelectItem>
+            <SelectItem value="blocked">Blocked</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select
+          value={filterDiviner || "all"}
+          onValueChange={(value) => setFilterDiviner(value === "all" ? "" : value)}
         >
-          <option value="">All diviners</option>
-          {diviners.map((d) => (
-            <option key={d.id} value={d.id}>{d.display_name}</option>
-          ))}
-        </select>
+          <SelectTrigger className="w-full sm:w-48">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent className="w-[var(--radix-select-trigger-width)]">
+            <SelectItem value="all">All diviners</SelectItem>
+            {diviners.map((d) => (
+              <SelectItem key={d.id} value={d.id}>
+                {d.display_name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Table */}
