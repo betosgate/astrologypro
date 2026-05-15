@@ -3,6 +3,7 @@ import {
   InvitationsClient,
   type InvitationRow,
 } from "@/components/admin/invitations-client";
+import { ALL_USER_TYPES } from "@/components/admin/user-type-options";
 
 export const metadata = { title: "Invitations — Admin" };
 
@@ -19,6 +20,67 @@ interface InvitationSearchParams {
 const ALLOWED_PAGE_SIZES = [10, 25, 50, 100];
 const DEFAULT_PAGE_SIZE = 25;
 const ALLOWED_SORT_COLUMNS = ["email", "role_slug", "status", "invited_by", "expires_at", "created_at"];
+const ROLE_LABEL_BY_SLUG = new Map(
+  ALL_USER_TYPES.map((role) => [role.value, role.label])
+);
+
+function getInvitationDisplayStatus(invitation: InvitationRow) {
+  const status = invitation.status.toLowerCase();
+  if (invitation.role_slug === "diviner") {
+    if (status === "pending") return "pending";
+    if (status === "accepted") {
+      return invitation.diviner_subscription_status === "active"
+        ? "completed"
+        : "active";
+    }
+  }
+
+  return status;
+}
+
+function fmtSearchDate(iso?: string | null) {
+  if (!iso) return "";
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
+
+  return [
+    iso,
+    date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    }),
+  ].join(" ");
+}
+
+function matchesInvitationSearch(invitation: InvitationRow, query: string) {
+  const terms = query
+    .toLowerCase()
+    .split(/\s+/)
+    .filter(Boolean);
+
+  if (terms.length === 0) return true;
+
+  const roleLabel = ROLE_LABEL_BY_SLUG.get(invitation.role_slug) ?? "";
+  const displayStatus = getInvitationDisplayStatus(invitation);
+  const searchableText = [
+    invitation.email,
+    invitation.role_slug,
+    roleLabel,
+    invitation.status,
+    displayStatus,
+    invitation.invited_by,
+    invitation.expires_at,
+    fmtSearchDate(invitation.expires_at),
+    invitation.created_at,
+    fmtSearchDate(invitation.created_at),
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+
+  return terms.every((term) => searchableText.includes(term));
+}
 
 // ─── Data fetch ───────────────────────────────────────────────────────────────
 
@@ -51,17 +113,12 @@ async function getData(params: InvitationSearchParams) {
     }
   }
 
-  if (q) {
-    invitationsQuery = invitationsQuery.or(
-      [
-        `email.ilike.%${q}%`,
-        `role_slug.ilike.%${q}%`,
-        `invited_by.ilike.%${q}%`,
-      ].join(","),
+  const filteredInvitationsRes = await invitationsQuery;
+  if (filteredInvitationsRes.error) {
+    throw new Error(
+      `Failed to load invitations: ${filteredInvitationsRes.error.message}`
     );
   }
-
-  const filteredInvitationsRes = await invitationsQuery;
 
   const rawInvitations = (filteredInvitationsRes.data ?? []) as Array<Record<string, unknown>>;
 
@@ -154,22 +211,26 @@ async function getData(params: InvitationSearchParams) {
   });
 
   const filteredInvitations = invitations.filter((invitation) => {
-    if (!status || status === "all") return true;
-    if (status === "active") {
-      return (
-        invitation.role_slug === "diviner" &&
-        invitation.status === "accepted" &&
-        invitation.diviner_subscription_status !== "active"
-      );
-    }
-    if (status === "completed") {
-      return (
-        invitation.role_slug === "diviner" &&
-        invitation.status === "accepted" &&
-        invitation.diviner_subscription_status === "active"
-      );
-    }
-    return invitation.status === status;
+    const matchesStatus = (() => {
+      if (!status || status === "all") return true;
+      if (status === "active") {
+        return (
+          invitation.role_slug === "diviner" &&
+          invitation.status === "accepted" &&
+          invitation.diviner_subscription_status !== "active"
+        );
+      }
+      if (status === "completed") {
+        return (
+          invitation.role_slug === "diviner" &&
+          invitation.status === "accepted" &&
+          invitation.diviner_subscription_status === "active"
+        );
+      }
+      return invitation.status === status;
+    })();
+
+    return matchesStatus && matchesInvitationSearch(invitation, q);
   });
 
   const pagedInvitations = filteredInvitations.slice(from, to + 1);
