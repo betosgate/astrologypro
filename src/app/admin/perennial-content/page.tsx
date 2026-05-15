@@ -1,12 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Plus, Pencil, Trash2, Eye } from "lucide-react";
 
 const CONTENT_TYPES = ["text", "image", "video", "pdf", "youtube", "live_stream", "announcement"];
@@ -67,7 +74,7 @@ export default function AdminPerennialContentPage() {
   const [filterFrom, setFilterFrom] = useState("");
   const [filterTo, setFilterTo] = useState("");
 
-  async function load() {
+  const load = useCallback(async () => {
     setLoading(true);
     const params = new URLSearchParams();
     if (filterContentType) params.set("content_type", filterContentType);
@@ -77,12 +84,20 @@ export default function AdminPerennialContentPage() {
     const res = await fetch(`/api/admin/perennial-content?${params}`);
     if (res.ok) setItems(await res.json());
     setLoading(false);
-  }
+  }, [filterContentType, filterStatus, filterFrom, filterTo]);
 
-  useEffect(() => { load(); }, [filterContentType, filterStatus, filterFrom, filterTo]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    let active = true;
+    Promise.resolve().then(() => {
+      if (active) load();
+    });
+    return () => {
+      active = false;
+    };
+  }, [load]);
 
   function F(field: keyof Pick<FormState, "title" | "content_type" | "description" | "image_url" | "video_url" | "pdf_url" | "youtube_url" | "live_stream_url" | "display_start_at" | "display_end_at" | "status">) {
-    return (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
+    return (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
       setForm((f) => ({ ...f, [field]: e.target.value }));
   }
 
@@ -177,22 +192,38 @@ export default function AdminPerennialContentPage() {
 
       {/* Filters */}
       <div className="flex flex-wrap gap-3">
-        <select
-          className="flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
-          value={filterContentType}
-          onChange={(e) => setFilterContentType(e.target.value)}
+        <Select
+          value={filterContentType || "all"}
+          onValueChange={(value) => setFilterContentType(value === "all" ? "" : value)}
         >
-          <option value="">All types</option>
-          {CONTENT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-        </select>
-        <select
-          className="flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
-          value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value)}
+          <SelectTrigger className="w-full sm:w-40">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent className="w-[var(--radix-select-trigger-width)]">
+            <SelectItem value="all">All types</SelectItem>
+            {CONTENT_TYPES.map((type) => (
+              <SelectItem key={type} value={type}>
+                {type}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select
+          value={filterStatus || "all"}
+          onValueChange={(value) => setFilterStatus(value === "all" ? "" : value)}
         >
-          <option value="">All statuses</option>
-          {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
-        </select>
+          <SelectTrigger className="w-full sm:w-40">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent className="w-[var(--radix-select-trigger-width)]">
+            <SelectItem value="all">All statuses</SelectItem>
+            {STATUS_OPTIONS.map((status) => (
+              <SelectItem key={status} value={status}>
+                {status}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <Input type="date" value={filterFrom} onChange={(e) => setFilterFrom(e.target.value)} className="w-40" />
         <Input type="date" value={filterTo} onChange={(e) => setFilterTo(e.target.value)} className="w-40" />
         {(filterContentType || filterStatus || filterFrom || filterTo) && (
@@ -216,23 +247,39 @@ export default function AdminPerennialContentPage() {
                 </div>
                 <div className="space-y-1.5">
                   <Label>Content Type</Label>
-                  <select
-                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+                  <Select
                     value={form.content_type}
-                    onChange={F("content_type")}
+                    onValueChange={(value) => setForm((f) => ({ ...f, content_type: value }))}
                   >
-                    {CONTENT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-                  </select>
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="w-[var(--radix-select-trigger-width)]">
+                      {CONTENT_TYPES.map((type) => (
+                        <SelectItem key={type} value={type}>
+                          {type}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-1.5">
                   <Label>Status</Label>
-                  <select
-                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+                  <Select
                     value={form.status}
-                    onChange={F("status")}
+                    onValueChange={(value) => setForm((f) => ({ ...f, status: value }))}
                   >
-                    {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
-                  </select>
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="w-[var(--radix-select-trigger-width)]">
+                      {STATUS_OPTIONS.map((status) => (
+                        <SelectItem key={status} value={status}>
+                          {status}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-1.5 sm:col-span-2">
                   <Label>Description</Label>
