@@ -9,6 +9,13 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent } from "@/components/ui/card";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -423,29 +430,41 @@ export default function AdminIngressChartsPage() {
         </div>
 
         {/* Ingress type */}
-        <select
-          value={ingressType}
-          onChange={(e) => applyFilter("ingressType", e.target.value)}
-          className="flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+        <Select
+          value={ingressType || "all"}
+          onValueChange={(value) =>
+            applyFilter("ingressType", value === "all" ? "" : value)
+          }
         >
-          <option value="">All Types</option>
-          <option value="Aries Ingress">Aries Ingress</option>
-          <option value="Cancer Ingress">Cancer Ingress</option>
-          <option value="Libra Ingress">Libra Ingress</option>
-          <option value="Capricorn Ingress">Capricorn Ingress</option>
-        </select>
+          <SelectTrigger className="w-full sm:w-40">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent className="w-[var(--radix-select-trigger-width)]">
+            <SelectItem value="all">All Types</SelectItem>
+            <SelectItem value="Aries Ingress">Aries Ingress</SelectItem>
+            <SelectItem value="Cancer Ingress">Cancer Ingress</SelectItem>
+            <SelectItem value="Libra Ingress">Libra Ingress</SelectItem>
+            <SelectItem value="Capricorn Ingress">Capricorn Ingress</SelectItem>
+          </SelectContent>
+        </Select>
 
         {/* Importance */}
-        <select
-          value={importance}
-          onChange={(e) => applyFilter("importance", e.target.value)}
-          className="flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+        <Select
+          value={importance || "all"}
+          onValueChange={(value) =>
+            applyFilter("importance", value === "all" ? "" : value)
+          }
         >
-          <option value="">All Importance</option>
-          <option value="High Impact">High Impact</option>
-          <option value="Medium Impact">Medium Impact</option>
-          <option value="Low Impact">Low Impact</option>
-        </select>
+          <SelectTrigger className="w-full sm:w-44">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent className="w-[var(--radix-select-trigger-width)]">
+            <SelectItem value="all">All Importance</SelectItem>
+            <SelectItem value="High Impact">High Impact</SelectItem>
+            <SelectItem value="Medium Impact">Medium Impact</SelectItem>
+            <SelectItem value="Low Impact">Low Impact</SelectItem>
+          </SelectContent>
+        </Select>
 
         {/* Sector multi-select */}
         <SectorDropdown
@@ -484,17 +503,21 @@ export default function AdminIngressChartsPage() {
         </div>
 
         {/* Sort */}
-        <select
+        <Select
           value={sort}
-          onChange={(e) => applyFilter("sort", e.target.value)}
-          className="flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+          onValueChange={(value) => applyFilter("sort", value)}
         >
-          <option value="newest">Newest</option>
-          <option value="oldest">Oldest</option>
-          <option value="event_asc">Event Date ↑</option>
-          <option value="event_desc">Event Date ↓</option>
-          <option value="name_asc">Name A–Z</option>
-        </select>
+          <SelectTrigger className="w-full sm:w-40">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent className="w-[var(--radix-select-trigger-width)]">
+            <SelectItem value="newest">Newest</SelectItem>
+            <SelectItem value="oldest">Oldest</SelectItem>
+            <SelectItem value="event_asc">Event Date ↑</SelectItem>
+            <SelectItem value="event_desc">Event Date ↓</SelectItem>
+            <SelectItem value="name_asc">Name A–Z</SelectItem>
+          </SelectContent>
+        </Select>
 
         <Button size="sm" variant="outline" onClick={() => fetchCharts(1, true)}>
           Search

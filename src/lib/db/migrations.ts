@@ -102,6 +102,7 @@ import { MIGRATION_SQL as MIG_20260514000001 } from "@/data/migrations/202605140
 import { MIGRATION_SQL as MIG_20260508000001_ODCC } from "@/data/migrations/20260508000001_diviner_owned_campaign_commission";
 import { MIGRATION_SQL as MIG_20260513000001_JTM } from "@/data/migrations/20260513000001_job_ticket_module";
 import { MIGRATION_SQL as MIG_20260513000002_TSR } from "@/data/migrations/20260513000002_ticket_system_reconciliation";
+import { MIGRATION_SQL as MIG_20260515000001 } from "@/data/migrations/20260515000001_calendar_events_recurrence";
 
 /**
  * Allowlisted migrations that the admin migration runner can execute.
@@ -798,6 +799,13 @@ export const MIGRATIONS: Record<string, MigrationDescriptor> = {
       "Task 01a of the Affiliate Commission v2 sprint. Strictly additive. Creates diviner_service_affiliate_rate_history (full rate-edit audit keyed on assignment_id) and admin_action_log (force-revoke / force-archive / reverse events). Adds three stamp columns to bookings (commission_source_assignment_id, commission_rate_type_stamp, commission_rate_value_stamp) so the rate that pays out on a conversion is captured at booking creation time, not resolved live at webhook (spec §3.8). Adds rate_type_used + rate_value_used on campaign_conversions for permanent webhook-time audit. Extends affiliate_campaigns.status CHECK to allow 'archived'. Hardens campaign_conversions.campaign_id FK from ON DELETE CASCADE to ON DELETE RESTRICT so hard-delete of a campaign with conversions errors rather than cascade-wiping history. RLS: service_role ALL on both new tables, plus diviner/affiliate scoped SELECT on rate history and admin-only SELECT on action log. Idempotent: IF NOT EXISTS guards, DO blocks on policy + constraint work, end-of-migration sanity check raises if any of the four required additions didn't land. Spec: docs/specs/affiliate-commission-system.md (v1.2).",
     sortKey: "20260424000010",
     sql: MIG_20260424000010_ACV2A,
+  },
+  "20260515000001_calendar_events_recurrence": {
+    id: "20260515000001_calendar_events_recurrence",
+    title: "Calendar Events Recurrence metadata",
+    description: "Adds recurrence metadata columns to calendar_events to support recurring events.",
+    sortKey: "20260515000001",
+    sql: MIG_20260515000001,
   },
   "20260424009001_affiliate_commission_v2_destructive": {
     id: "20260424009001_affiliate_commission_v2_destructive",
