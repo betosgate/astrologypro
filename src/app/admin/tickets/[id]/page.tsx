@@ -385,7 +385,7 @@ export default function AdminTicketDetailPage() {
     body.append("kind", "ticket");
 
     try {
-      const res = await fetch("/api/admin/tickets/upload", { method: "POST", body });
+      const res = await fetch("/api/support/tickets/upload", { method: "POST", body });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Upload failed");
 

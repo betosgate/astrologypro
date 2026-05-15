@@ -279,7 +279,7 @@ export default function CreateTicketPage() {
         error?: string;
       }>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
-        xhr.open("POST", "/api/admin/tickets/upload");
+        xhr.open("POST", "/api/support/tickets/upload");
 
         xhr.upload.onprogress = (event) => {
           if (event.lengthComputable) {
