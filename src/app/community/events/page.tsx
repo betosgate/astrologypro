@@ -45,8 +45,8 @@ interface RsvpInfo {
 type FilterKey =
   | "all"
   | "ritual"
-  | "ceremony"
-  | "live class"
+  | "sunday_service"
+  | "live_class"
   | "meditation"
   | "my_rsvps";
 
@@ -54,32 +54,32 @@ type FilterKey =
 
 const CATEGORY_COLORS: Record<string, string> = {
   ritual: "border-violet-400/30 bg-violet-500/15 text-violet-200",
-  ceremony: "border-teal-400/30 bg-teal-500/15 text-teal-200",
-  "live class": "border-blue-400/30 bg-blue-500/15 text-blue-200",
+  sunday_service: "border-teal-400/30 bg-teal-500/15 text-teal-200",
+  live_class: "border-blue-400/30 bg-blue-500/15 text-blue-200",
   meditation: "border-rose-400/30 bg-rose-500/15 text-rose-200",
   other: "border-slate-400/20 bg-slate-500/10 text-slate-200",
 };
 
 const CATEGORY_DOT: Record<string, string> = {
   ritual: "bg-purple-500",
-  ceremony: "bg-teal-500",
-  "live class": "bg-blue-500",
+  sunday_service: "bg-teal-500",
+  live_class: "bg-blue-500",
   meditation: "bg-rose-500",
   other: "bg-slate-400",
 };
 
 const CATEGORY_ICON_COLORS: Record<string, string> = {
   ritual: "border-violet-400/30 bg-violet-500/10 text-violet-200",
-  ceremony: "border-teal-400/30 bg-teal-500/10 text-teal-200",
-  "live class": "border-blue-400/30 bg-blue-500/10 text-blue-200",
+  sunday_service: "border-teal-400/30 bg-teal-500/10 text-teal-200",
+  live_class: "border-blue-400/30 bg-blue-500/10 text-blue-200",
   meditation: "border-rose-400/30 bg-rose-500/10 text-rose-200",
   other: "border-slate-400/20 bg-slate-500/10 text-slate-200",
 };
 
 const CATEGORY_CARD_COLORS: Record<string, string> = {
   ritual: "border-violet-400/20 bg-violet-500/[0.07] shadow-[0_0_32px_rgba(139,92,246,0.08)]",
-  ceremony: "border-teal-400/20 bg-teal-500/[0.07] shadow-[0_0_32px_rgba(20,184,166,0.08)]",
-  "live class": "border-blue-400/20 bg-blue-500/[0.07] shadow-[0_0_32px_rgba(59,130,246,0.08)]",
+  sunday_service: "border-teal-400/20 bg-teal-500/[0.07] shadow-[0_0_32px_rgba(20,184,166,0.08)]",
+  live_class: "border-blue-400/20 bg-blue-500/[0.07] shadow-[0_0_32px_rgba(59,130,246,0.08)]",
   meditation: "border-rose-400/20 bg-rose-500/[0.07] shadow-[0_0_32px_rgba(244,63,94,0.08)]",
   other: "border-white/10 bg-background/45",
 };
@@ -87,8 +87,8 @@ const CATEGORY_CARD_COLORS: Record<string, string> = {
 const FILTERS: Array<{ key: FilterKey; label: string }> = [
   { key: "all", label: "All" },
   { key: "ritual", label: "Rituals" },
-  { key: "ceremony", label: "Sunday Service" },
-  { key: "live class", label: "Live Class" },
+  { key: "sunday_service", label: "Sunday Service" },
+  { key: "live_class", label: "Live Class" },
   { key: "meditation", label: "Meditation" },
   { key: "my_rsvps", label: "My RSVPs" },
 ];
@@ -135,21 +135,25 @@ function formatShortDate(iso: string): string {
 function normalizeCategory(cat: string | null): string {
   const value = cat?.trim().toLowerCase();
   if (!value) return "other";
-  if (value.includes("sunday")) return "ceremony";
+  // Maintain backward compatibility for old event string labels
+  if (value.includes("sunday") || value === "ceremony") return "sunday_service";
+  if (value.includes("live class") || value === "live_class") return "live_class";
   return CATEGORY_COLORS[value] ? value : "other";
 }
 
 function categoryLabel(cat: string | null): string {
   const normalized = normalizeCategory(cat);
-  if (normalized === "ceremony") return "Sunday Service";
+  if (normalized === "sunday_service") return "Sunday Service";
+  if (normalized === "live_class") return "Live Class";
   if (normalized === "other") return cat || "Other";
-  return normalized;
+  // Capitalize first letter
+  return normalized.charAt(0).toUpperCase() + normalized.slice(1);
 }
 
 function shortCategoryLabel(cat: string | null): string {
   const normalized = normalizeCategory(cat);
-  if (normalized === "ceremony") return "Service";
-  if (normalized === "live class") return "Class";
+  if (normalized === "sunday_service") return "Service";
+  if (normalized === "live_class") return "Class";
   if (normalized === "other") return "Other";
   return normalized.charAt(0).toUpperCase() + normalized.slice(1);
 }
