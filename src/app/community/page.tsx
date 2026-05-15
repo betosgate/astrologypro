@@ -1050,12 +1050,23 @@ export default async function CommunityDashboardPage() {
       href: "/community/resources",
       highlight: false,
     },
-    {
-      icon: Users,
-      label: "Manage Family",
-      href: "/community/plan?tab=members",
-      highlight: familyMembers.length === 0,
-    },
+    // Plan-aware family/upgrade slot:
+    // Single-plan (individual) users are directed to upgrade so they don't
+    // land on a members page where they cannot do anything useful.
+    // Couple/family users go straight to the members management tab.
+    membershipPlanType === "family"
+      ? {
+          icon: Users,
+          label: "Manage Family",
+          href: "/community/plan?tab=members",
+          highlight: familyMembers.length === 0,
+        }
+      : {
+          icon: CreditCard,
+          label: "Upgrade Plan",
+          href: "/community/plan",
+          highlight: true,
+        },
     {
       icon: BookText,
       label: "Book a Reading",
