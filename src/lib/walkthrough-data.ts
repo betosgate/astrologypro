@@ -1718,11 +1718,860 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
       "⚙️ Operational Purpose — Helps separate legal rollout planning from core contract editing.",
       "🧠 Why This Block Matters — It gives admins a simple controlled way to prepare role-specific amendment deployment."
     ]
-  }
-,
+  },
+// -----------------Invitations------------------//
 
-      
+
+// ---------------------Admin-Invitations------------------//
+
+  {
+    "name": "admin-invitations-list-v1",
+    "label": "Admin Invitation Management",
+    "description": "Centralized invitation management screen where platform administrators manage onboarding invitations for internal users and staff accounts.",
+    "group": "Invitations",
+    "subModule": "Admin - Invitations",
+    "purpose": "Allows administrators to send, monitor, search, and manage invitation records for Admins, Diviners, Trainees, and other platform roles.",
+    "bullets": [
+      "The Invitations page displays all onboarding invitation records.",
+      "Admins can search invitations using email address, role, or inviter.",
+      "Status tabs include All, Pending, Active, Completed, Expired, and Cancelled.",
+      "Invitation records display Email, Role, Status, Invited By, Expiration Date, Sent Date, and Actions.",
+      "Pending invitations indicate users who have not completed onboarding.",
+      "Completed status indicates successful registration and activation.",
+      "The Invite User button opens the invitation creation modal.",
+      "Administrators can monitor onboarding progress directly from the table.",
+      "Invitation lifecycle tracking helps manage platform access securely.",
+      "Actions menu provides additional invitation management options."
+    ]
+  },
+  {
+    "name": "admin-invite-user-modal",
+    "label": "Admin Invite User Modal",
+    "description": "Modal form used by platform administrators to send onboarding invitations to new internal users.",
+    "group": "Invitations",
+    "subModule": "Admin - Invitations",
+    "purpose": "Collects user email and role selection before triggering the invitation workflow.",
+    "bullets": [
+      "The modal opens after clicking the Invite User button.",
+      "Administrators enter the recipient email address.",
+      "Role dropdown allows selecting Admin, Diviner, or other supported roles.",
+      "Send Invitation button triggers the onboarding email workflow.",
+      "Cancel button closes the modal without submitting.",
+      "Role assignment determines onboarding permissions and dashboard access.",
+      "Invitation records are automatically added to the Invitations table.",
+      "The invitation workflow starts immediately after submission."
+    ]
+  },
+  {
+    "name": "admin-invitation-email",
+    "label": "Admin Invitation Email",
+    "description": "Automated onboarding email sent to invited administrators or internal users.",
+    "group": "Invitations",
+    "subModule": "Admin - Invitations",
+    "purpose": "Allows invited users to securely access the account registration setup process.",
+    "bullets": [
+      "Invitation email is generated automatically after admin submission.",
+      "The email contains an Accept Invitation button.",
+      "Users are informed about the assigned platform role.",
+      "Invitation links expire automatically for security protection.",
+      "The email explains the next onboarding steps.",
+      "Users can safely ignore unexpected invitations.",
+      "The onboarding process begins after clicking Accept Invitation.",
+      "Invitation links redirect users into secure registration setup."
+    ]
+  },
+  {
+    "name": "admin-account-registration",
+    "label": "Admin Account Registration",
+    "description": "Secure account creation screen where invited administrators complete their profile setup and create login credentials.",
+    "group": "Invitations",
+    "subModule": "Admin - Invitations",
+    "purpose": "Allows invited admins to activate their AstrologyPro administrative account.",
+    "bullets": [
+      "Registration form opens after clicking Accept Invitation from the email.",
+      "Invitation email address is automatically prefilled.",
+      "Users enter their full name for account creation.",
+      "Password fields include secure password validation.",
+      "Password requirements include uppercase, lowercase, numeric, and special characters.",
+      "Confirm password validation ensures password matching.",
+      "Password strength indicators guide secure credential setup.",
+      "Accept Invitation button finalizes account activation.",
+      "Secure onboarding validation protects administrator account setup."
+    ]
+  },
+  {
+    "name": "admin-registration-validation",
+    "label": "Admin Password Validation",
+    "description": "Interactive password validation state shown during administrator registration setup.",
+    "group": "Invitations",
+    "subModule": "Admin - Invitations",
+    "purpose": "Ensures strong password compliance before administrator account activation.",
+    "bullets": [
+      "Password strength indicators update in real time.",
+      "Validation checks minimum character requirements.",
+      "Uppercase and lowercase requirements are verified.",
+      "Numeric password requirements are enforced.",
+      "Special character requirements improve account security.",
+      "Confirm password field validates password matching.",
+      "Visual indicators confirm successful validation states.",
+      "Strong password enforcement protects administrative accounts."
+    ]
+  },
+  {
+    "name": "admin-dashboard-overview",
+    "label": "Admin Dashboard Overview",
+    "description": "Primary administrative analytics dashboard displayed after successful invitation acceptance and account activation.",
+    "group": "Invitations",
+    "subModule": "Admin - Invitations",
+    "purpose": "Provides administrators with platform-wide operational analytics, onboarding statistics, and user activity monitoring.",
+    "bullets": [
+      "Platform Overview dashboard opens after successful account activation.",
+      "Analytics cards display bookings, revenue, page views, and completion rates.",
+      "Active Users and New Users metrics track platform growth.",
+      "Role-based statistics display Diviners, Clients, Advocates, Trainees, and Communities.",
+      "Top Diviners by Revenue section highlights platform performance leaders.",
+      "Recently Joined section displays newest onboarded users.",
+      "Sidebar navigation provides access to analytics, users, campaigns, invitations, reports, and configuration tools.",
+      "Administrative dashboard becomes the central operational workspace.",
+      "Platform metrics help administrators monitor onboarding and business performance.",
+      "Dashboard access confirms successful onboarding completion."
+    ]
+  },
+// ---------------------Divinner-Invitations------------------//
+
+
+  {
+    "name": "admin-invitation-list-1",
+    "label": "Invitation Management",
+    "description": "Administrative invitation management screen used to invite new users into the AstrologyPro platform and monitor invitation lifecycle statuses.",
+    "group": "Invitations",
+    "subModule": "Divinner-Invitations",
+    "purpose": "Allows administrators to create, monitor, filter, and manage platform invitations for roles such as Diviner, Admin, Trainee, and Community members.",
+    "bullets": [
+      "The Invitations page displays all sent and pending platform invitations.",
+      "Admins can search invitations using email address, inviter name, or role.",
+      "Status tabs include All, Pending, Active, Completed, Expired, and Cancelled.",
+      "Invitation table displays Email, Role, Status, Invited By, Expiration Date, Sent Date, and Actions.",
+      "The Invite User button opens the invitation modal."
+    ]
+  },
+  {
+    "name": "invite-user-modal",
+    "label": "Invite User Modal",
+    "description": "Modal window used by administrators to send a new platform invitation to a future user.",
+    "group": "Invitations",
+    "subModule": "Divinner-Invitations",
+    "purpose": "Collects the invited user's email address and role before sending the invitation email.",
+    "bullets": [
+      "Admin enters the recipient email address.",
+      "Admin selects the user role from the dropdown.",
+      "Send Invitation triggers the email invitation workflow.",
+      "Cancel closes the modal without sending.",
+      "Selected role decides the onboarding flow."
+    ]
+  },
+  {
+    "name": "invitation-email-flow-1",
+    "label": "Invitation Email",
+    "description": "Automated email invitation sent to newly invited users for account onboarding.",
+    "group": "Invitations",
+    "subModule": "Divinner-Invitations",
+    "purpose": "Allows invited users to securely access the registration workflow and create their AstrologyPro account.",
+    "bullets": [
+      "Email contains an Accept Invitation button.",
+      "User can see which role they are invited to join.",
+      "Invitation link has expiry validation.",
+      "Email explains the next onboarding step.",
+      "Accept Invitation opens the registration setup page."
+    ]
+  },
+  {
+    "name": "diviner-registration-form-1",
+    "label": "Diviner Registration Setup",
+    "description": "Public registration onboarding page where invited diviners create their AstrologyPro account profile and credentials.",
+    "group": "Invitations",
+    "subModule": "Divinner-Invitations",
+    "purpose": "Allows invited diviners to create their professional account, secure password, and public profile URL.",
+    "bullets": [
+      "Email is prefilled from the invitation.",
+      "User enters full name.",
+      "Password strength validation is shown.",
+      "Confirm password must match.",
+      "User creates a public profile URL and clicks Register."
+    ]
+  },
+  {
+    "name": "diviner-plan-selection",
+    "label": "Diviner Plan Selection",
+    "description": "Subscription and plan selection page where newly registered diviners choose their professional AstrologyPro package.",
+    "group": "Invitations",
+    "subModule": "Divinner-Invitations",
+    "purpose": "Allows diviners to select their preferred divination course plan before payment.",
+    "bullets": [
+      "User selects Tarot Reader, Oracle, or Astrologer plan.",
+      "Each plan shows setup price and monthly price.",
+      "Best value plan is highlighted.",
+      "Selected plan controls unlocked diviner features.",
+      "User continues to payment after choosing a plan."
+    ]
+  },
+  {
+    "name": "stripe-payment-checkout",
+    "label": "Stripe Payment Checkout",
+    "description": "Secure Stripe-hosted payment page used to complete the selected diviner subscription purchase.",
+    "group": "Invitations",
+    "subModule": "Divinner-Invitations",
+    "purpose": "Processes secure subscription payment and activates the diviner account.",
+    "bullets": [
+      "Checkout shows total amount and recurring monthly amount.",
+      "User can select INR or USD.",
+      "Card and billing details are entered securely.",
+      "Setup fee and monthly subscription are shown.",
+      "Subscribe button starts payment."
+    ]
+  },
+  {
+    "name": "payment-processing-state",
+    "label": "Payment Processing",
+    "description": "Intermediate payment processing state displayed while Stripe confirms and completes the subscription transaction.",
+    "group": "Invitations",
+    "subModule": "Divinner-Invitations",
+    "purpose": "Prevents duplicate submissions while payment verification is being processed.",
+    "bullets": [
+      "Processing state appears after payment submission.",
+      "Payment fields become disabled.",
+      "Loader shows payment verification is active.",
+      "User waits until Stripe confirms the payment.",
+      "Successful payment redirects to the success page."
+    ]
+  },
+  {
+    "name": "payment-success-screen",
+    "label": "Payment Success Confirmation",
+    "description": "Confirmation page shown after successful subscription payment and diviner account activation.",
+    "group": "Invitations",
+    "subModule": "Divinner-Invitations",
+    "purpose": "Confirms payment completion and guides users into contract signing.",
+    "bullets": [
+      "Payment successful message confirms activation.",
+      "Amount paid and selected plan are displayed.",
+      "Recurring amount and checkout status are shown.",
+      "Customer email is recorded.",
+      "Continue to Contract opens the agreement workflow."
+    ]
+  },
+  {
+    "name": "diviner-contract-signing",
+    "label": "Diviner Contract Agreement",
+    "description": "Mandatory contract acceptance workflow where newly activated diviners review and electronically sign platform agreements.",
+    "group": "Invitations",
+    "subModule": "Divinner-Invitations",
+    "purpose": "Ensures legal agreement acceptance before granting full dashboard access.",
+    "bullets": [
+      "Pending Contracts page shows required agreements.",
+      "User reviews the Diviner Service Agreement.",
+      "Agreement includes confidentiality and service terms.",
+      "User types full name as electronic signature.",
+      "I Accept and Continue completes the contract step."
+    ]
+  },
+  {
+    "name": "diviner-dashboard-overview",
+    "label": "Diviner Dashboard Overview",
+    "description": "Primary dashboard displayed after onboarding completion, payment activation, and contract acceptance.",
+    "group": "Invitations",
+    "subModule": "Divinner-Invitations",
+    "purpose": "Provides diviners with operational tools, profile setup tasks, session management, and professional platform access.",
+    "bullets": [
+      "Dashboard opens after contract signing.",
+      "Certification and community banners are shown.",
+      "Today's Sessions widget shows scheduled sessions.",
+      "Profile checklist guides setup completion.",
+      "Sidebar gives access to Orders, Clients, Sessions, Services, Marketing, and Profile."
+    ]
+  },
+
+      // ---------------------Trainee-Invitations------------------//
+  {
+    "name": "trainee-invitations-list",
+    "label": "Trainee Invitation Management",
+    "description": "Centralized invitation management interface where administrators monitor and manage trainee onboarding invitations.",
+    "group": "Invitations",
+    "subModule": "Trainee Invitations",
+    "purpose": "Allows administrators to send, track, and manage onboarding invitations for trainee program participants.",
+    "bullets": [
+      "The Invitations page displays all trainee invitation records.",
+      "Administrators can search invitations by email address, role, or inviter.",
+      "Status filters include All, Pending, Active, Completed, Expired, and Cancelled.",
+      "Invitation records display Email, Role, Status, Invited By, Expiration Date, and Sent Date.",
+      "Pending invitations indicate trainees who have not completed onboarding.",
+      "Accepted invitations indicate successful invitation activation.",
+      "The Invite User button opens the trainee invitation modal.",
+      "Administrators can monitor trainee onboarding progress from the dashboard.",
+      "Invitation management supports secure trainee registration workflows.",
+      "Actions menu allows invitation management and tracking operations."
+    ]
+  },
+  {
+    "name": "trainee-invite-user-modal",
+    "label": "Trainee Invite User Modal",
+    "description": "Invitation modal used by administrators to onboard new trainee accounts into the AstrologyPro platform.",
+    "group": "Invitations",
+    "subModule": "Trainee Invitations",
+    "purpose": "Collects trainee email and role information before sending the onboarding invitation.",
+    "bullets": [
+      "The modal opens after clicking the Invite User button.",
+      "Administrators enter the trainee email address.",
+      "Role dropdown allows selecting the Trainee role.",
+      "Send Invitation button triggers the onboarding email workflow.",
+      "Cancel button closes the modal without submission.",
+      "Invitation records are automatically added to the Invitations table.",
+      "Role assignment determines trainee onboarding flow access.",
+      "Invitation emails are generated immediately after submission."
+    ]
+  },
+  {
+    "name": "trainee-invitation-email",
+    "label": "Trainee Invitation Email",
+    "description": "Automated onboarding email sent to invited trainees with secure registration access.",
+    "group": "Invitations",
+    "subModule": "Trainee Invitations",
+    "purpose": "Provides trainees with secure access to begin their registration and training setup process.",
+    "bullets": [
+      "Invitation emails are automatically generated after admin submission.",
+      "The email contains an Accept Invitation button.",
+      "Users are informed they were invited as a Trainee.",
+      "Invitation links expire automatically after a limited time.",
+      "The email explains onboarding and account setup steps.",
+      "Unexpected invitations can safely be ignored.",
+      "Accept Invitation button redirects users into registration setup.",
+      "Invitation onboarding starts after clicking the secure invitation link."
+    ]
+  },
+  {
+    "name": "trainee-account-registration",
+    "label": "Trainee Account Registration",
+    "description": "Secure trainee registration screen where invited users create their AstrologyPro trainee account.",
+    "group": "Invitations",
+    "subModule": "Trainee Invitations",
+    "purpose": "Allows trainees to activate their account and create login credentials before entering the training platform.",
+    "bullets": [
+      "The trainee registration screen opens after invitation acceptance.",
+      "Invitation email address is automatically prefilled.",
+      "Users enter their full name during registration.",
+      "Custom trainee profile URL can be configured.",
+      "Phone number collection supports trainee communication workflows.",
+      "Password validation enforces secure credential requirements.",
+      "Password strength indicators guide secure account creation.",
+      "Confirm password validation ensures matching credentials.",
+      "Accept Invitation button finalizes trainee account activation.",
+      "Secure onboarding validation protects trainee registration."
+    ]
+  },
+  {
+    "name": "trainee-training-plan-selection",
+    "label": "Trainee Training Plan Selection",
+    "description": "Training program selection screen where trainees choose their preferred certification path before payment.",
+    "group": "Invitations",
+    "subModule": "Trainee Invitations",
+    "purpose": "Allows trainees to review and select astrology or tarot training programs during onboarding.",
+    "bullets": [
+      "Trainees can select from Astrology, Tarot, or Full combined programs.",
+      "Each training card displays pricing, features, and certification details.",
+      "Training plans explain mentorship and lesson access benefits.",
+      "Program cards display included modules and learning paths.",
+      "Highlighted plans indicate recommended or most complete options.",
+      "Continue to Payment button redirects trainees into checkout.",
+      "Program selection becomes part of the trainee onboarding workflow.",
+      "Training enrollment begins after successful payment processing."
+    ]
+  },
+  {
+    "name": "trainee-payment-checkout",
+    "label": "Trainee Payment Checkout",
+    "description": "Stripe-powered checkout interface used to complete trainee training program payments.",
+    "group": "Invitations",
+    "subModule": "Trainee Invitations",
+    "purpose": "Processes secure payments for trainee certification and onboarding access.",
+    "bullets": [
+      "Stripe checkout securely processes trainee payments.",
+      "Currency selection supports localized payment options.",
+      "Checkout displays selected trainee program pricing.",
+      "Contact information is automatically prefilled from onboarding.",
+      "Card details are securely collected during payment.",
+      "Country and billing details support payment verification.",
+      "Pay button completes trainee enrollment processing.",
+      "Successful payment activates trainee onboarding continuation."
+    ]
+  },
+  {
+    "name": "trainee-payment-success_v1",
+    "label": "Trainee Payment Success",
+    "description": "Confirmation screen displayed after successful trainee program payment completion.",
+    "group": "Invitations",
+    "subModule": "Trainee Invitations",
+    "purpose": "Confirms successful payment processing and transitions trainees into profile setup.",
+    "bullets": [
+      "Payment Successful screen confirms completed checkout.",
+      "Program activation status is displayed to the trainee.",
+      "Payment details summarize amount paid and selected plan.",
+      "Account activation confirmation is displayed after payment.",
+      "Next step guidance explains onboarding continuation.",
+      "Recent plan information displays selected training package.",
+      "Go to Next Step button continues profile onboarding.",
+      "Successful payment provisions trainee program access."
+    ]
+  },
+  {
+    "name": "trainee-profile-setup-about",
+    "label": "Trainee Profile Setup - About You",
+    "description": "First onboarding profile setup step where trainees enter their personal information and profile details.",
+    "group": "Invitations",
+    "subModule": "Trainee Invitations",
+    "purpose": "Collects foundational trainee profile information before entering the training platform.",
+    "bullets": [
+      "Step 1 of the onboarding flow focuses on personal profile setup.",
+      "Display name field defines trainee public identity.",
+      "Bio section allows trainees to introduce themselves.",
+      "Avatar URL supports trainee profile image setup.",
+      "Phone number collection supports mentor communication.",
+      "Timezone selection personalizes scheduling and training sessions.",
+      "Continue button advances to the next onboarding step.",
+      "Profile completion improves trainee onboarding personalization."
+    ]
+  },
+  {
+    "name": "trainee-profile-setup-specialties",
+    "label": "Trainee Profile Setup - Specialties",
+    "description": "Second onboarding profile setup step where trainees select interests, specialties, and training goals.",
+    "group": "Invitations",
+    "subModule": "Trainee Invitations",
+    "purpose": "Captures trainee interests and learning objectives for personalized training experiences.",
+    "bullets": [
+      "Step 2 collects trainee specialties and learning interests.",
+      "Users can select Astrology, Tarot, Numerology, Human Design, and other specialties.",
+      "Interest tags personalize future training recommendations.",
+      "Goal input field captures trainee learning objectives.",
+      "Selected specialties help customize training experiences.",
+      "Back button returns to the previous onboarding step.",
+      "Continue button advances to final onboarding setup.",
+      "Interest selection supports mentor and curriculum alignment."
+    ]
+  },
+  {
+    "name": "trainee-profile-setup-birth-data",
+    "label": "Trainee Profile Setup - Birth Data",
+    "description": "Final onboarding step where trainees optionally provide birth information for astrology-based training experiences.",
+    "group": "Invitations",
+    "subModule": "Trainee Invitations",
+    "purpose": "Collects optional astrological birth information for chart calculations and personalized training.",
+    "bullets": [
+      "Step 3 focuses on optional astrology birth data collection.",
+      "Birth date input supports natal chart calculations.",
+      "Birth time field improves astrological accuracy.",
+      "Birth city field supports location-based chart generation.",
+      "All birth data fields are optional.",
+      "Astrology calculations use submitted birth information.",
+      "Back button returns to the previous onboarding step.",
+      "Complete Profile & Start Training finalizes onboarding.",
+      "Successful completion activates trainee training access."
+    ]
+  },
+  {
+    "name": "trainee-pending-contracts",
+    "label": "Trainee Pending Contracts",
+    "description": "Agreement acceptance screen requiring trainees to review and accept platform terms before dashboard access.",
+    "group": "Invitations",
+    "subModule": "Trainee Invitations",
+    "purpose": "Ensures trainees complete required legal agreements before entering the training portal.",
+    "bullets": [
+      "Pending Contracts screen displays required onboarding agreements.",
+      "Customer Terms of Service must be reviewed before continuation.",
+      "Scrollable agreement container displays complete legal content.",
+      "Agreement version and effective dates are displayed.",
+      "Users must review terms before proceeding.",
+      "Accept and Continue button finalizes contract acceptance.",
+      "Agreement completion is required before portal access.",
+      "Legal compliance protects both trainees and the platform."
+    ]
+  },
+  {
+    "name": "trainee-dashboard-overview",
+    "label": "Trainee Dashboard Overview",
+    "description": "Primary trainee portal dashboard displayed after successful onboarding completion.",
+    "group": "Invitations",
+    "subModule": "Trainee Invitations",
+    "purpose": "Provides trainees with access to training programs, lessons, appointments, progress tracking, and community features.",
+    "bullets": [
+      "The Trainee Dashboard becomes available after onboarding completion.",
+      "Dashboard displays training progress and lesson completion.",
+      "My Appointments section manages trainee sessions and schedules.",
+      "Training Progress section tracks certification advancement.",
+      "Begin Your Training card provides direct access to lesson programs.",
+      "Sidebar navigation includes Dashboard, Training, Meetings, Progress, Quiz History, and Library Resources.",
+      "Mentor assignment section displays coaching and support information.",
+      "Community and diviner promotion banners encourage engagement.",
+      "Portal access confirms successful onboarding and activation.",
+      "The trainee workspace becomes the central learning environment."
+    ]
+  },
+
+  //---------------------------Mystery-School-Invitations------------------//
+  {
+    "name": "mystery-school-invitations-list",
+    "label": "Mystery School Invitation List",
+    "description": "Admin invitation list showing all sent and pending invitations, including Mystery School invitations.",
+    "group": "Invitations",
+    "subModule": "mystery-school-Invitations",
+    "purpose": "Helps admin track invited users, roles, statuses, inviter name, expiry date, sent date, and available actions.",
+    "bullets": [
+      "Shows invitation count, search box, and status filters.",
+      "Displays role as Community Mystery School for Mystery School users.",
+      "Shows whether invitation is pending, accepted, completed, expired, or cancelled.",
+      "Invite User button starts the new invitation flow."
+    ]
+  },
+  {
+    "name": "mystery-school-invite-user-modal",
+    "label": "Invite Mystery School User",
+    "description": "Popup modal used by admin to invite a user into the Mystery School community role.",
+    "group": "Invitations",
+    "subModule": "mystery-school-Invitations",
+    "purpose": "Allows admin to enter the user email and select the Mystery School role before sending the invitation.",
+    "bullets": [
+      "Admin enters the invited user email address.",
+      "Role dropdown is used to select Community Mystery School.",
+      "Send Invitation button sends the invitation email.",
+      "Cancel closes the modal without sending."
+    ]
+  },
+  {
+    "name": "mystery-school-invitation-email",
+    "label": "Mystery School Invitation Email",
+    "description": "Email received by the invited user after the admin sends a Mystery School invitation.",
+    "group": "Invitations",
+    "subModule": "mystery-school-Invitations",
+    "purpose": "Lets the invited user understand the invitation and start registration from the email link.",
+    "bullets": [
+      "Email says the user is invited to AstrologyPro as Community - Mystery School.",
+      "Shows that the invitation link expires in 7 days.",
+      "Accept Invitation button opens the registration flow.",
+      "User can ignore the email if they did not expect the invitation."
+    ]
+  },
+  {
+    "name": "mystery-school-create-account",
+    "label": "Create Mystery School Account",
+    "description": "Registration page opened after the user clicks Accept Invitation from the email.",
+    "group": "Invitations",
+    "subModule": "mystery-school-Invitations",
+    "purpose": "Allows the invited user to create their Mystery School account before entering the enrollment flow.",
+    "bullets": [
+      "Email is pre-filled from the invitation.",
+      "User enters full name, URL, phone, password, and confirm password.",
+      "Password rules are validated on screen.",
+      "Accept Invitation creates the account and continues onboarding."
+    ]
+  },
+  {
+    "name": "mystery-school-entry-overview",
+    "label": "Enter Mystery School",
+    "description": "First Mystery School enrollment screen explaining the program before the user chooses a start quarter.",
+    "group": "Invitations",
+    "subModule": "mystery-school-Invitations",
+    "purpose": "Introduces the Mystery School program, pricing, and learning structure.",
+    "bullets": [
+      "Shows one-time enrollment and monthly subscription pricing.",
+      "Explains 12-week foundation training.",
+      "Explains 36-Decan year-long practice.",
+      "Shows ritual performer and graduation pathway.",
+      "Choose Your Start Quarter button moves to quarter selection."
+    ]
+  },
+  {
+    "name": "mystery-school-quarter-selection",
+    "label": "Choose Entry Quarter",
+    "description": "Quarter selection screen where the user selects the seasonal cohort they want to join.",
+    "group": "Invitations",
+    "subModule": "mystery-school-Invitations",
+    "purpose": "Lets the invited user choose when their Mystery School training should begin.",
+    "bullets": [
+      "Shows available quarters such as Summer, Autumn, Winter, and Spring.",
+      "Each quarter displays start date and Week 1 begin date.",
+      "Back button returns to the overview step.",
+      "Review & Confirm button moves to enrollment review."
+    ]
+  },
+  {
+    "name": "mystery-school-review-confirm",
+    "label": "Review Mystery School Enrollment",
+    "description": "Review screen showing selected cohort, enrollment fee, monthly subscription, and agreement checkbox.",
+    "group": "Invitations",
+    "subModule": "mystery-school-Invitations",
+    "purpose": "Lets the user confirm the Mystery School cohort and cost before payment.",
+    "bullets": [
+      "Displays selected cohort and start details.",
+      "Shows one-time enrollment fee and monthly subscription amount.",
+      "User must confirm they understand the selected cohort and access rules.",
+      "Proceed to Payment continues to checkout."
+    ]
+  },
+  {
+    "name": "mystery-school-ready-to-enroll",
+    "label": "Ready to Enroll",
+    "description": "Final pre-payment screen confirming the selected Mystery School cohort and payment route.",
+    "group": "Invitations",
+    "subModule": "mystery-school-Invitations",
+    "purpose": "Prepares the user to complete secure payment through Stripe.",
+    "bullets": [
+      "Shows selected cohort name.",
+      "Shows enrollment fee and monthly subscription.",
+      "Enroll in Mystery School button opens Stripe checkout.",
+      "Back button returns to the previous review step."
+    ]
+  },
+  {
+    "name": "mystery-school-stripe-payment",
+    "label": "Mystery School Stripe Payment",
+    "description": "Stripe checkout screen for paying the Mystery School enrollment and monthly subscription.",
+    "group": "Invitations",
+    "subModule": "mystery-school-Invitations",
+    "purpose": "Collects payment securely before activating Mystery School access.",
+    "bullets": [
+      "Shows total amount due and recurring monthly amount.",
+      "Displays selected currency and exchange information.",
+      "Shows contact email from the invitation account.",
+      "User enters card information, cardholder name, and country.",
+      "Subscribe button completes payment."
+    ]
+  },
+  {
+    "name": "mystery-school-pending-contracts",
+    "label": "Mystery School Pending Contracts",
+    "description": "Contract acceptance screen shown after payment before the user enters the Mystery School portal.",
+    "group": "Invitations",
+    "subModule": "mystery-school-Invitations",
+    "purpose": "Ensures the user accepts required agreements before accessing Mystery School content.",
+    "bullets": [
+      "Shows pending agreement content in a scrollable contract panel.",
+      "User must review the agreement before continuing.",
+      "I Accept and Continue button completes contract acceptance.",
+      "Access is blocked until required contracts are accepted."
+    ]
+  },
+  {
+    "name": "mystery-school-training-dashboard",
+    "label": "Mystery School Training Dashboard",
+    "description": "Training portal opened after invitation, account setup, payment, and contract completion.",
+    "group": "Invitations",
+    "subModule": "mystery-school-Invitations",
+    "purpose": "Gives the enrolled user access to Mystery School foundation training and weekly progress tracking.",
+    "bullets": [
+      "Displays current foundation quarter and week progress.",
+      "Shows 0 of 12 weeks completed at the start.",
+      "Week 1 is available first, while later weeks are locked.",
+      "Training is completed week by week in sequence.",
+      "Sidebar provides access to Training, Decans, and Graduation."
+    ]
+  },
     
+
+  // ---------------------------Perennial-Mandalism-Invitations------------------//
+  {
+    "name": "perennial-invitations-list",
+    "label": "Perennial Mandalism Invitation List",
+    "description": "Admin invitation management screen showing all Perennial Mandalism invitations and invitation statuses.",
+    "group": "Invitations",
+    "subModule": "Perennial- Invitations",
+    "purpose": "Allows admin users to manage, search, monitor, and track all Perennial Mandalism invitation flows from a centralized dashboard.",
+    "bullets": [
+      "Displays all invitation records in a searchable table.",
+      "Shows invitation role, inviter name, sent date, expiry date, and invitation status.",
+      "Supports statuses such as pending, accepted, completed, expired, and cancelled.",
+      "Invite User button starts the Perennial Mandalism invitation process.",
+      "Filters allow admins to quickly sort invitations by status."
+    ]
+  },
+  {
+    "name": "perennial-invite-user-modal",
+    "label": "Invite Perennial Member",
+    "description": "Popup modal used by admin to invite a user into the Perennial Mandalism community.",
+    "group": "Invitations",
+    "subModule": "Perennial- Invitations",
+    "purpose": "Allows admins to send invitation emails for Community Perennial Mandalism membership access.",
+    "bullets": [
+      "Admin enters the member email address.",
+      "Role dropdown allows selection of Community - Perennial Mandalism.",
+      "Send Invitation button triggers invitation email delivery.",
+      "Cancel closes the popup without sending an invitation.",
+      "Invitation is linked to the selected community membership role."
+    ]
+  },
+  {
+    "name": "perennial-invitation-email",
+    "label": "Perennial Mandalism Invitation Email",
+    "description": "Invitation email received after the admin sends a Perennial Mandalism community invitation.",
+    "group": "Invitations",
+    "subModule": "Perennial- Invitations",
+    "purpose": "Guides invited users into the registration and membership onboarding process.",
+    "bullets": [
+      "Email confirms the user has been invited to AstrologyPro.",
+      "Displays Community - Perennial Mandalism role information.",
+      "Invitation link expiration period is shown inside the email.",
+      "Accept Invitation button opens account registration.",
+      "Email includes onboarding guidance and next-step information."
+    ]
+  },
+  {
+    "name": "perennial-create-account",
+    "label": "Create Perennial Account",
+    "description": "Account setup screen opened after the invited user clicks the invitation email link.",
+    "group": "Invitations",
+    "subModule": "Perennial- Invitations",
+    "purpose": "Allows invited users to create their secure Perennial Mandalism membership account.",
+    "bullets": [
+      "Email field is automatically prefilled from the invitation.",
+      "User enters full name, custom URL, phone number, and password.",
+      "Password strength rules are validated in real time.",
+      "Confirm password validation ensures passwords match.",
+      "Accept Invitation button completes account setup."
+    ]
+  },
+  {
+    "name": "perennial-community-plan-selection",
+    "label": "Choose Perennial Community Plan",
+    "description": "Membership plan selection screen shown after account setup.",
+    "group": "Invitations",
+    "subModule": "Perennial- Invitations",
+    "purpose": "Allows users to choose a Perennial Mandalism membership plan before payment.",
+    "bullets": [
+      "Displays Individual, Couple, and Family membership plans.",
+      "Each plan shows monthly pricing and included benefits.",
+      "Family plan can support multiple household members.",
+      "Selected plan determines membership access and billing.",
+      "Continue to Payment button starts checkout flow."
+    ]
+  },
+  {
+    "name": "perennial-stripe-payment",
+    "label": "Perennial Membership Stripe Checkout",
+    "description": "Stripe-hosted payment screen for completing Perennial Mandalism subscription payment.",
+    "group": "Invitations",
+    "subModule": "Perennial- Invitations",
+    "purpose": "Processes secure recurring membership payments for community subscriptions.",
+    "bullets": [
+      "Displays selected membership plan and billing amount.",
+      "Supports multiple currencies such as INR and USD.",
+      "User enters card details, cardholder name, and country.",
+      "Stripe handles secure payment processing.",
+      "Subscribe button activates the recurring membership."
+    ]
+  },
+  {
+    "name": "perennial-payment-success",
+    "label": "Perennial Payment Success",
+    "description": "Confirmation screen displayed after successful Perennial membership payment.",
+    "group": "Invitations",
+    "subModule": "Perennial- Invitations",
+    "purpose": "Confirms successful payment activation and guides the user to the next onboarding step.",
+    "bullets": [
+      "Shows payment success confirmation message.",
+      "Displays membership activation details.",
+      "Shows next billing date and active plan information.",
+      "Indicates that agreements must still be completed.",
+      "Go to Next Step button continues onboarding."
+    ]
+  },
+  {
+    "name": "perennial-pending-contracts",
+    "label": "Perennial Pending Contracts",
+    "description": "Agreement acceptance screen shown before the user enters the Perennial community portal.",
+    "group": "Invitations",
+    "subModule": "Perennial- Invitations",
+    "purpose": "Ensures all required agreements are accepted before membership access is granted.",
+    "bullets": [
+      "Displays scrollable customer terms and agreement content.",
+      "Users must review agreements before continuing.",
+      "I Accept and Continue button finalizes agreement acceptance.",
+      "Portal access is blocked until contracts are accepted.",
+      "Supports role-based and membership-based agreements."
+    ]
+  },
+  {
+    "name": "perennial-profile-setup-personal",
+    "label": "Perennial Profile Setup - Personal Details",
+    "description": "First onboarding step for completing the member profile after contracts are accepted.",
+    "group": "Invitations",
+    "subModule": "Perennial- Invitations",
+    "purpose": "Collects personal member information required for community personalization.",
+    "bullets": [
+      "User enters first name, last name, phone, gender, and occupation.",
+      "Birth date, birth time, and birth location are collected.",
+      "Email is automatically populated from the account.",
+      "Step progress indicator shows onboarding progress.",
+      "Next button moves to address information."
+    ]
+  },
+  {
+    "name": "perennial-profile-setup-address",
+    "label": "Perennial Profile Setup - Address",
+    "description": "Second onboarding step used to collect address and location details.",
+    "group": "Invitations",
+    "subModule": "Perennial- Invitations",
+    "purpose": "Captures regional information to personalize community experiences and recommendations.",
+    "bullets": [
+      "User enters address, city, state, and ZIP code.",
+      "Location information helps personalize community content.",
+      "Back button returns to previous onboarding step.",
+      "Next button moves to household configuration.",
+      "Step progress indicator highlights onboarding stage."
+    ]
+  },
+  {
+    "name": "perennial-profile-setup-household",
+    "label": "Perennial Profile Setup - Household",
+    "description": "Family plan household management step for adding household members.",
+    "group": "Invitations",
+    "subModule": "Perennial- Invitations",
+    "purpose": "Allows Family plan members to add and manage household participants.",
+    "bullets": [
+      "Shows available household member slots.",
+      "Add Member button allows adding family participants.",
+      "Displays total members added versus available plan slots.",
+      "Supports Family membership onboarding workflows.",
+      "Next button continues to journey setup."
+    ]
+  },
+  {
+    "name": "perennial-profile-setup-journey",
+    "label": "Perennial Profile Setup - Journey",
+    "description": "Final onboarding step for collecting optional personalization and relationship information.",
+    "group": "Invitations",
+    "subModule": "Perennial- Invitations",
+    "purpose": "Captures optional lifestyle and relationship details to personalize the community experience.",
+    "bullets": [
+      "Relationship status dropdown allows personal preference selection.",
+      "Optional questionnaire section supports deeper onboarding customization.",
+      "Back button returns to previous onboarding step.",
+      "Complete Profile & Enter Community finalizes onboarding.",
+      "Completing this step activates full community access."
+    ]
+  },
+  {
+    "name": "perennial-community-dashboard",
+    "label": "Perennial Mandalism Dashboard",
+    "description": "Main Perennial Mandalism community dashboard shown after onboarding completion.",
+    "group": "Invitations",
+    "subModule": "Perennial- Invitations",
+    "purpose": "Provides members with access to community features, resources, rituals, billing, and membership tools.",
+    "bullets": [
+      "Displays active membership plan and billing information.",
+      "Shows membership renewal timeline and journey completion progress.",
+      "Provides access to sessions, events, rituals, charts, and resources.",
+      "Family plan shows member slot usage and management actions.",
+      "Dashboard includes buttons for profile management, readings, agreements, and sacred library access."
+    ]
+  },
 
       // -----------------Content-------------//
 
