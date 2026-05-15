@@ -442,7 +442,7 @@ export function InvitationsClient({
               <AdminTableSearch
                 defaultValue={q}
                 onSearch={(value) => pushParams({ q: value })}
-                placeholder="Search email, role, inviter..."
+                placeholder="Search email, role, status, inviter..."
               />
             </div>
 
