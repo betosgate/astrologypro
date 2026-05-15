@@ -9,6 +9,7 @@ import {
 import {
   computeBirthDataReadiness,
   buildNatalChartFromBirthData,
+  isBirthDataComplete,
 } from "@/lib/community/birth-data-readiness";
 import { ensureCanonicalSelfFamilyMember } from "@/lib/community/self-family-member";
 import {
@@ -18,6 +19,7 @@ import {
   type PersonInput,
 } from "@/lib/horoscope/saved-report-match";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { resolveEntitlementFromRow } from "@/lib/community/pm-entitlement";
 
 export const dynamic = "force-dynamic";
 
@@ -31,7 +33,7 @@ async function getMember(supabase: Awaited<ReturnType<typeof createClient>>) {
   const { data: member } = await supabase
     .from("community_members")
     .select(
-      "id, user_id, full_name, membership_status, date_of_birth, birth_time, birth_city, birth_country"
+      "id, user_id, full_name, membership_status, plan_type, pm_tier_id, date_of_birth, birth_time, birth_city, birth_country"
     )
     .eq("user_id", user.id)
     .single();
@@ -169,11 +171,37 @@ export async function GET() {
     }
   }
 
+  // ── Plan entitlement ────────────────────────────────────────────────────────
+  // Resolve isFamilyEntitled from the canonical pm-entitlement helper so the
+  // client page can drive plan-aware CTAs without a separate API call.
+  const admin = createAdminClient();
+  const entitlement = await resolveEntitlementFromRow(admin, {
+    pm_tier_id: (member as { pm_tier_id?: string | null }).pm_tier_id ?? null,
+    plan_type: (member as { plan_type?: string | null }).plan_type ?? null,
+  });
+
+  // Count how many household members have birth data complete enough for
+  // relationship-chart generation (same gate as the POST handler below).
+  const birthDataCompleteCount = (familyMembers ?? []).filter((fm) =>
+    isBirthDataComplete({
+      date_of_birth: fm.date_of_birth ?? null,
+      birth_time: fm.birth_time ?? null,
+      birth_city: fm.birth_city ?? null,
+      birth_country: (fm as { birth_country?: string | null }).birth_country ?? null,
+      birth_lat: (fm as { birth_lat?: number | null }).birth_lat ?? null,
+      birth_lng: (fm as { birth_lng?: number | null }).birth_lng ?? null,
+    })
+  ).length;
+
   return NextResponse.json({
     familyMembers: familyMembers ?? [],
     charts: charts ?? [],
     relationshipReports: relationshipReports ?? [],
     familyOverviewReports,
+    // Plan-aware fields (additive — old callers can ignore):
+    isFamilyEntitled: entitlement.isFamilyEntitled,
+    planType: entitlement.planTypeCanonical,
+    birthDataCompleteCount,
   });
 }
 

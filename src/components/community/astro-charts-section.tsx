@@ -83,6 +83,49 @@ type ApiResponse = {
   status?: { natal: ApiStatus; transit: ApiStatus };
 };
 
+type AstroChartsSectionProps = {
+  includedMemberLimit?: number;
+  tierName?: string | null;
+};
+
+function getPlanScopedTooltipCopy({
+  includedMemberLimit = 1,
+  tierName,
+}: AstroChartsSectionProps) {
+  const normalizedTier = tierName?.trim().toLowerCase() ?? "";
+  const scope =
+    normalizedTier.includes("family") || includedMemberLimit > 2
+      ? "family"
+      : normalizedTier.includes("couple") || includedMemberLimit === 2
+      ? "couple"
+      : "single";
+
+  if (scope === "family") {
+    return {
+      natal:
+        "View natal charts for household members included in your plan. Complete missing birth details before generating any chart.",
+      transit:
+        "View this month's transit reports for household profiles with complete birth data and ready natal charts.",
+    };
+  }
+
+  if (scope === "couple") {
+    return {
+      natal:
+        "View natal charts for you and your partner. Complete missing birth details before generating either chart.",
+      transit:
+        "View this month's transit reports for profiles with complete birth data and ready natal charts.",
+    };
+  }
+
+  return {
+    natal:
+      "View your natal chart when your birth details are complete. If anything is missing, complete your birth data first.",
+    transit:
+      "View this month's transit report once your birth data and natal chart are ready.",
+  };
+}
+
 // Polling is reserved for real "pending" (background generation) states.
 // Confirmed empty/failed/ready responses stop fetching immediately so the
 // dashboard doesn't sit on a spinner for minutes when no data exists.
@@ -90,7 +133,15 @@ const POLL_INTERVAL_MS = 10_000;
 const MAX_PENDING_POLLS = 18; // ~3 minutes, only while explicitly pending
 const MAX_ERROR_RETRIES = 2;
 
-export function AstroChartsSection() {
+export function AstroChartsSection({
+  includedMemberLimit = 1,
+  tierName = null,
+}: AstroChartsSectionProps) {
+  const tooltipCopy = getPlanScopedTooltipCopy({
+    includedMemberLimit,
+    tierName,
+  });
+
   /**
    * community-natal-carousel Task 02 (2026-04-26): the dashboard ready
    * state is a member carousel. `natalCharts` is the full list returned
@@ -269,8 +320,7 @@ export function AstroChartsSection() {
           </div>
           {showTooltip === "natal" && (
             <div className="mt-2 rounded-md border bg-muted/50 p-2 text-xs text-muted-foreground">
-              Browse saved natal charts for you and your household members, and
-              open the full chart details for any available profile.
+              {tooltipCopy.natal}
             </div>
           )}
         </CardHeader>
@@ -447,8 +497,7 @@ export function AstroChartsSection() {
           </div>
           {showTooltip === "transit" && (
             <div className="mt-2 rounded-md border bg-muted/50 p-2 text-xs text-muted-foreground">
-              Monthly transits show how current planetary movements are affecting
-              your natal chart — revealing opportunities and challenges for the month ahead.
+              {tooltipCopy.transit}
             </div>
           )}
         </CardHeader>

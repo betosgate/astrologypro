@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Flame,
   Loader2,
@@ -56,6 +57,8 @@ export default function RitualDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [navigating, setNavigating] = useState(false);
+  const isBusy = saving || navigating;
 
   useEffect(() => {
     if (!id) return;
@@ -99,12 +102,17 @@ export default function RitualDetailPage() {
   }
 
   function handleBegin() {
+    setNavigating(true);
     router.push(`/community/rituals/${id}/playback`);
   }
 
   async function handlePerformAgain() {
+    setNavigating(true);
     const updatedRitual = await patchStep({ reset: true });
-    if (!updatedRitual) return;
+    if (!updatedRitual) {
+      setNavigating(false);
+      return;
+    }
     router.push(`/community/rituals/${id}/playback`);
   }
 
@@ -115,9 +123,28 @@ export default function RitualDetailPage() {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center gap-3 py-20">
-        <Loader2 className="size-8 animate-spin text-amber-400/60" />
-        <p className="text-sm text-muted-foreground">Loading ritual...</p>
+      <div className="mx-auto max-w-5xl space-y-6">
+        <div className="mt-3 flex items-center gap-3">
+          <Skeleton className="size-11 rounded-xl bg-amber-500/10" />
+          <div className="space-y-2">
+            <Skeleton className="h-7 w-64 bg-amber-500/10" />
+            <Skeleton className="h-4 w-48 bg-amber-500/5" />
+          </div>
+        </div>
+        <Card className="border-border/60">
+          <CardHeader className="pb-3">
+            <Skeleton className="h-5 w-32 bg-amber-500/10" />
+            <Skeleton className="mt-1 h-4 w-48 bg-amber-500/5" />
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <Skeleton className="h-12 w-full rounded-xl bg-amber-500/5" />
+              <Skeleton className="h-12 w-full rounded-xl bg-amber-500/5" />
+              <Skeleton className="h-12 w-full rounded-xl bg-amber-500/5" />
+            </div>
+          </CardContent>
+        </Card>
+        <Skeleton className="h-12 w-48 rounded-md bg-amber-500/10" />
       </div>
     );
   }
@@ -200,11 +227,11 @@ export default function RitualDetailPage() {
             <div className="flex flex-wrap justify-center gap-3">
               <Button
                 onClick={handlePerformAgain}
-                disabled={saving}
+                disabled={isBusy}
                 variant="outline"
                 className="border-amber-500/30 text-amber-400 hover:bg-amber-500/10"
               >
-                {saving ? (
+                {isBusy ? (
                   <Loader2 className="mr-2 size-4 animate-spin" />
                 ) : (
                   <RotateCcw className="mr-2 size-4" />
@@ -324,10 +351,18 @@ export default function RitualDetailPage() {
 
             <div className="flex flex-wrap gap-3">
               <Button
-                onClick={() => router.push(`/community/rituals/${id}/playback`)}
+                onClick={() => {
+                  setNavigating(true);
+                  router.push(`/community/rituals/${id}/playback`);
+                }}
+                disabled={navigating}
                 className="bg-primary text-black shadow-md hover:from-amber-500 hover:to-orange-500"
               >
-                <Play className="mr-2 size-4" />
+                {navigating ? (
+                  <Loader2 className="mr-2 size-4 animate-spin" />
+                ) : (
+                  <Play className="mr-2 size-4" />
+                )}
                 Continue
               </Button>
               <Button
@@ -439,10 +474,10 @@ export default function RitualDetailPage() {
       <Button
         size="lg"
         onClick={handleBegin}
-        disabled={saving}
+        disabled={isBusy}
         className="bg-primary px-8 text-base font-semibold text-black shadow-xl shadow-amber-500/15 hover:from-amber-500 hover:to-orange-500"
       >
-        {saving ? (
+        {isBusy ? (
           <Loader2 className="mr-2 size-5 animate-spin" />
         ) : (
           <Flame className="mr-2 size-5" />

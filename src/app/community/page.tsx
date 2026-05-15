@@ -1050,12 +1050,23 @@ export default async function CommunityDashboardPage() {
       href: "/community/resources",
       highlight: false,
     },
-    {
-      icon: Users,
-      label: "Manage Family",
-      href: "/community/plan?tab=members",
-      highlight: familyMembers.length === 0,
-    },
+    // Plan-aware family/upgrade slot:
+    // Single-plan (individual) users are directed to upgrade so they don't
+    // land on a members page where they cannot do anything useful.
+    // Couple/family users go straight to the members management tab.
+    membershipPlanType === "family"
+      ? {
+          icon: Users,
+          label: "Manage Family",
+          href: "/community/plan?tab=members",
+          highlight: familyMembers.length === 0,
+        }
+      : {
+          icon: CreditCard,
+          label: "Upgrade Plan",
+          href: "/community/plan",
+          highlight: true,
+        },
     {
       icon: BookText,
       label: "Book a Reading",
@@ -1768,7 +1779,10 @@ export default async function CommunityDashboardPage() {
           />
 
           {/* Astro Charts polling/display */}
-          <AstroChartsSection />
+          <AstroChartsSection
+            includedMemberLimit={maxMembers}
+            tierName={tierName}
+          />
         </div>
 
         {/* Own natal chart status */}
@@ -1933,7 +1947,7 @@ export default async function CommunityDashboardPage() {
                   <Link href="/community/rituals/new">+ Create Ritual</Link>
                 </Button>
                 {rituals.length > 0 && (
-                  <Button asChild variant="ghost" size="sm">
+                  <Button asChild variant="outline" size="sm">
                     <Link href="/community/rituals">View All</Link>
                   </Button>
                 )}
@@ -2037,7 +2051,7 @@ export default async function CommunityDashboardPage() {
                   Each card tracks Profile, Natal, Monthly, and Relationship progress.
                 </p>
               </div>
-              <Button asChild variant="ghost" size="sm">
+              <Button asChild variant="outline" size="sm">
                 <Link href="/community/plan?tab=members">Manage Family →</Link>
               </Button>
             </div>
@@ -2327,7 +2341,7 @@ export default async function CommunityDashboardPage() {
               <BookMarked className="size-4 text-muted-foreground" />
               <h3 className="text-sm font-semibold">Content Library</h3>
             </div>
-            <Button asChild variant="ghost" size="sm">
+            <Button asChild variant="outline" size="sm">
               <Link href="/community/library">View All →</Link>
             </Button>
           </div>
@@ -2342,7 +2356,7 @@ export default async function CommunityDashboardPage() {
                 <Star className="size-4 text-amber-500" />
                 <h3 className="text-sm font-semibold">Spiritual Wisdom</h3>
               </div>
-              <Button asChild variant="ghost" size="sm">
+              <Button asChild variant="outline" size="sm">
                 <Link href="/community/resources">View All →</Link>
               </Button>
             </div>

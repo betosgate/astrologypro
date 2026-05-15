@@ -532,7 +532,7 @@ export function RoleUpgradeBanners({
           return (
             <div
               key={banner.key}
-              className={`relative overflow-hidden rounded-xl border bg-gradient-to-r ${s.wrapper}`}
+              className={`relative overflow-hidden rounded-xl border bg-gradient-to-r ${s.wrapper} cursor-pointer`}
             >
               <div className={`pointer-events-none absolute inset-0 bg-gradient-to-r ${s.glow}`} />
               <div className={`pointer-events-none absolute -right-8 -top-8 size-40 rounded-full blur-3xl ${s.orb1}`} />
@@ -553,7 +553,7 @@ export function RoleUpgradeBanners({
                   <button
                     type="button"
                     onClick={() => setOpenModal(banner.key)}
-                    className={`flex items-center gap-1.5 rounded-lg bg-gradient-to-r px-4 py-2 text-xs font-bold text-white shadow-lg transition-all hover:scale-105 hover:shadow-xl ${s.cta} ${s.ctaShadow}`}
+                    className={`flex items-center gap-1.5 rounded-lg bg-gradient-to-r px-4 py-2 text-xs font-bold text-white shadow-lg transition-all hover:scale-105 hover:shadow-xl ${s.cta} ${s.ctaShadow} cursor-pointer`}
                   >
                     {banner.cta}
                     <ArrowRight className="size-3.5" />
@@ -561,7 +561,7 @@ export function RoleUpgradeBanners({
                   <button
                     type="button"
                     onClick={() => dismiss(banner.key)}
-                    className="rounded-md p-1.5 text-white/30 transition-colors hover:text-white/70"
+                    className="rounded-md p-1.5 text-white/30 transition-colors hover:text-white/70 cursor-pointer"
                     aria-label={`Dismiss ${banner.title}`}
                   >
                     <X className="size-3.5" />

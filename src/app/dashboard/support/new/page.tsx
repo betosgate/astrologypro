@@ -22,7 +22,31 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { ArrowLeft, Loader2, Paperclip, X, FileText, ExternalLink } from "lucide-react";
+
+// ─── Attachment helpers ───────────────────────────────────────────────────────
+
+function getAttachmentExtension(att: { name: string; url: string }) {
+  const cleanName = att.name.split("?")[0] ?? "";
+  const cleanUrl = att.url.split("?")[0] ?? "";
+  return (cleanName.split(".").pop() || cleanUrl.split(".").pop() || "").toLowerCase();
+}
+
+function isPreviewableImage(att: { name: string; url: string; type: string }) {
+  const ext = getAttachmentExtension(att);
+  return att.type.startsWith("image/") || ["jpg", "jpeg", "png", "webp", "gif"].includes(ext);
+}
+
+function isPreviewablePdf(att: { name: string; url: string; type: string }) {
+  return att.type === "application/pdf" || getAttachmentExtension(att) === "pdf";
+}
 
 // ─── Category / Subcategory map ───────────────────────────────────────────────
 
@@ -130,6 +154,13 @@ const PRIORITY_OPTIONS = [
 ] as const;
 
 type CategoryKey = keyof typeof CATEGORY_MAP;
+interface TicketAttachment {
+  url: string;
+  name: string;
+  type: string;
+  size: number;
+}
+
 type PriorityValue = (typeof PRIORITY_OPTIONS)[number]["value"];
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -144,7 +175,10 @@ export default function NewTicketPage() {
   const [priority, setPriority] = useState<PriorityValue>("normal");
   const [entityType, setEntityType] = useState("none");
   const [entityId, setEntityId] = useState("");
+  const [attachments, setAttachments] = useState<TicketAttachment[]>([]);
+  const [selectedAttachment, setSelectedAttachment] = useState<TicketAttachment | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   function handleCategoryChange(val: string) {
     setCategory(val as CategoryKey);
@@ -152,6 +186,42 @@ export default function NewTicketPage() {
   }
 
   const subcategoryOptions = category ? (CATEGORY_MAP[category]?.subcategories ?? []) : [];
+
+  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("File too large (max 10MB)");
+      return;
+    }
+
+    setUploading(true);
+    const body = new FormData();
+    body.append("file", file);
+    body.append("kind", "ticket");
+
+    try {
+      const res = await fetch("/api/support/tickets/upload", { method: "POST", body });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Upload failed");
+
+      setAttachments((prev) => [
+        ...prev,
+        {
+          url: data.url,
+          name: data.name ?? file.name,
+          type: data.type ?? file.type,
+          size: data.size ?? file.size,
+        },
+      ]);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -183,6 +253,7 @@ export default function NewTicketPage() {
           priority,
           related_entity_type: entityType !== "none" ? entityType : undefined,
           related_entity_id: (entityType !== "none" && entityId.trim()) ? entityId.trim() : undefined,
+          attachments: attachments.length > 0 ? attachments : undefined,
         }),
       });
 
@@ -193,7 +264,7 @@ export default function NewTicketPage() {
 
       const ticket = await res.json();
       toast.success(`Ticket ${ticket.ticket_number} created.`);
-      router.push(`/dashboard/support/${ticket.id}`);
+      router.push(`/dashboard/support`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Something went wrong.");
     } finally {
@@ -202,6 +273,7 @@ export default function NewTicketPage() {
   }
 
   return (
+    <>
     <div className="space-y-6">
       {/* Back link */}
       <Link
@@ -318,6 +390,30 @@ export default function NewTicketPage() {
                 rows={6}
                 required
               />
+              
+              {attachments.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {attachments.map((att) => (
+                    <div key={att.url} className="flex items-center gap-2 rounded-md border bg-muted/50 px-2 py-1 text-[10px]">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedAttachment(att)}
+                        className="flex items-center gap-1.5 hover:text-primary transition-colors"
+                      >
+                        <FileText className="size-3" />
+                        <span className="max-w-[150px] truncate">{att.name}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setAttachments(prev => prev.filter(a => a.url !== att.url))}
+                        className="text-muted-foreground hover:text-destructive"
+                      >
+                        <X className="size-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Related entity selector */}
@@ -359,18 +455,97 @@ export default function NewTicketPage() {
             </div>
 
             {/* Actions */}
-            <div className="flex items-center gap-3 pt-2">
-              <Button type="submit" disabled={submitting}>
-                {submitting && <Loader2 className="size-4 mr-2 animate-spin" />}
-                Submit Ticket
-              </Button>
-              <Button type="button" variant="ghost" asChild>
-                <Link href="/dashboard/support">Cancel</Link>
-              </Button>
+            <div className="flex items-center justify-between pt-2">
+              <div className="flex items-center gap-3">
+                <Button type="submit" disabled={submitting}>
+                  {submitting && <Loader2 className="size-4 mr-2 animate-spin" />}
+                  Submit Ticket
+                </Button>
+                <Button type="button" variant="ghost" asChild>
+                  <Link href="/dashboard/support">Cancel</Link>
+                </Button>
+              </div>
+
+              <div className="flex items-center gap-2">
+                 <input
+                  type="file"
+                  id="file-upload"
+                  className="hidden"
+                  onChange={handleFileUpload}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-9 w-9 p-0 text-muted-foreground hover:text-primary"
+                  onClick={() => document.getElementById("file-upload")?.click()}
+                  disabled={uploading}
+                >
+                  {uploading ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <Paperclip className="size-4" />
+                  )}
+                </Button>
+                {uploading && <span className="text-xs text-muted-foreground animate-pulse">Uploading...</span>}
+              </div>
             </div>
           </form>
         </CardContent>
       </Card>
     </div>
+
+    {/* Attachment preview modal */}
+    <Dialog open={selectedAttachment !== null} onOpenChange={(open) => { if (!open) setSelectedAttachment(null); }}>
+      <DialogContent className="max-h-[90vh] overflow-hidden p-0 sm:max-w-4xl">
+        {selectedAttachment && (
+          <div className="flex max-h-[90vh] flex-col">
+            <DialogHeader className="border-b px-6 py-4 pr-12">
+              <DialogTitle className="truncate text-base">
+                {selectedAttachment.name}
+              </DialogTitle>
+              <DialogDescription>
+                {(selectedAttachment.size / (1024 * 1024)).toFixed(2)} MB
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="min-h-0 flex-1 bg-muted/20 p-4">
+              {isPreviewableImage(selectedAttachment) ? (
+                <div className="flex max-h-[70vh] items-center justify-center overflow-auto rounded-md border bg-background p-2">
+                  <img
+                    src={selectedAttachment.url}
+                    alt={selectedAttachment.name}
+                    className="max-h-[66vh] max-w-full rounded object-contain"
+                  />
+                </div>
+              ) : isPreviewablePdf(selectedAttachment) ? (
+                <div className="h-[70vh] overflow-hidden rounded-md border bg-background">
+                  <iframe
+                    src={selectedAttachment.url}
+                    title={selectedAttachment.name}
+                    className="h-full w-full"
+                  />
+                </div>
+              ) : (
+                <div className="flex min-h-[320px] flex-col items-center justify-center rounded-md border bg-background px-6 text-center">
+                  <FileText className="mb-3 size-10 text-muted-foreground" />
+                  <p className="text-sm font-medium">Preview is not available for this file type.</p>
+                  <p className="mt-1 max-w-md text-sm text-muted-foreground">
+                    Open the attachment in a new tab to view it with your browser or download it.
+                  </p>
+                  <Button className="mt-4" variant="secondary" asChild>
+                    <a href={selectedAttachment.url} target="_blank" rel="noreferrer">
+                      <ExternalLink className="mr-2 size-4" />
+                      Open attachment
+                    </a>
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }

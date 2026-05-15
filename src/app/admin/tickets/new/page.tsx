@@ -279,7 +279,7 @@ export default function CreateTicketPage() {
         error?: string;
       }>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
-        xhr.open("POST", "/api/admin/tickets/upload");
+        xhr.open("POST", "/api/support/tickets/upload");
 
         xhr.upload.onprogress = (event) => {
           if (event.lengthComputable) {
@@ -369,7 +369,7 @@ export default function CreateTicketPage() {
 
       const ticket = await res.json();
       toast.success("Ticket created successfully!");
-      router.push(`/admin/tickets/${ticket.id}`);
+      router.push(`/admin/tickets`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Something went wrong.");
     } finally {

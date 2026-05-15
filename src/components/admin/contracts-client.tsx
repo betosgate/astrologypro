@@ -7,6 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type {
@@ -332,43 +339,49 @@ export function ContractsClient({
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="version-kind">Version Kind</Label>
-                    <select
-                      id="version-kind"
-                      className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+                    <Select
                       value={templateDraft.version_kind}
-                      onChange={(event) =>
+                      onValueChange={(value) =>
                         setTemplateDraft({
                           ...templateDraft,
-                          version_kind: event.target.value as ContractTemplate["version_kind"],
+                          version_kind: value as ContractTemplate["version_kind"],
                         })
                       }
                     >
-                      {VERSION_KIND_OPTIONS.map((option) => (
-                        <option key={option} value={option}>
-                          {option}
-                        </option>
-                      ))}
-                    </select>
+                      <SelectTrigger id="version-kind" className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="w-[var(--radix-select-trigger-width)]">
+                        {VERSION_KIND_OPTIONS.map((option) => (
+                          <SelectItem key={option} value={option}>
+                            {option}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="applicability-mode">Applicability</Label>
-                    <select
-                      id="applicability-mode"
-                      className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+                    <Select
                       value={templateDraft.applicability_mode}
-                      onChange={(event) =>
+                      onValueChange={(value) =>
                         setTemplateDraft({
                           ...templateDraft,
-                          applicability_mode: event.target.value as ContractTemplate["applicability_mode"],
+                          applicability_mode: value as ContractTemplate["applicability_mode"],
                         })
                       }
                     >
-                      {APPLICABILITY_OPTIONS.map((option) => (
-                        <option key={option} value={option}>
-                          {option}
-                        </option>
-                      ))}
-                    </select>
+                      <SelectTrigger id="applicability-mode" className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="w-[var(--radix-select-trigger-width)]">
+                        {APPLICABILITY_OPTIONS.map((option) => (
+                          <SelectItem key={option} value={option}>
+                            {option}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="amends-template-id">Amends Template Id</Label>
@@ -412,20 +425,23 @@ export function ContractsClient({
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="current-consolidated">Current Consolidated Path</Label>
-                  <select
-                    id="current-consolidated"
-                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+                  <Select
                     value={templateDraft.is_current_consolidated ? "yes" : "no"}
-                    onChange={(event) =>
+                    onValueChange={(value) =>
                       setTemplateDraft({
                         ...templateDraft,
-                        is_current_consolidated: event.target.value === "yes",
+                        is_current_consolidated: value === "yes",
                       })
                     }
                   >
-                    <option value="yes">yes</option>
-                    <option value="no">no</option>
-                  </select>
+                    <SelectTrigger id="current-consolidated" className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="w-[var(--radix-select-trigger-width)]">
+                      <SelectItem value="yes">yes</SelectItem>
+                      <SelectItem value="no">no</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="contract-summary">Summary</Label>
@@ -484,27 +500,31 @@ export function ContractsClient({
                         )
                       }
                     />
-                    <select
-                      className="flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+                    <Select
                       value={variable.source_type}
-                      onChange={(event) =>
+                      onValueChange={(value) =>
                         setVariableDrafts((current) =>
                           current.map((entry, entryIndex) =>
                             entryIndex === index
                               ? {
                                   ...entry,
-                                  source_type: event.target.value as EditableVariable["source_type"],
+                                  source_type: value as EditableVariable["source_type"],
                                 }
                               : entry,
                           ),
                         )
                       }
                     >
-                      <option value="system">system</option>
-                      <option value="user_profile">user_profile</option>
-                      <option value="role_profile">role_profile</option>
-                      <option value="runtime">runtime</option>
-                    </select>
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="w-[var(--radix-select-trigger-width)]">
+                        <SelectItem value="system">system</SelectItem>
+                        <SelectItem value="user_profile">user_profile</SelectItem>
+                        <SelectItem value="role_profile">role_profile</SelectItem>
+                        <SelectItem value="runtime">runtime</SelectItem>
+                      </SelectContent>
+                    </Select>
                     <Input
                       value={variable.default_value ?? ""}
                       placeholder="Default value"
@@ -542,45 +562,53 @@ export function ContractsClient({
               <CardContent className="space-y-3">
                 {requirementDrafts.map((requirement, index) => (
                   <div key={requirement.localId} className="grid gap-3 rounded-lg border p-3 md:grid-cols-5">
-                    <select
-                      className="flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+                    <Select
                       value={requirement.role_key}
-                      onChange={(event) =>
+                      onValueChange={(value) =>
                         setRequirementDrafts((current) =>
                           current.map((entry, entryIndex) =>
-                            entryIndex === index ? { ...entry, role_key: event.target.value } : entry,
+                            entryIndex === index ? { ...entry, role_key: value } : entry,
                           ),
                         )
                       }
                     >
-                      {ROLE_OPTIONS.map((role) => (
-                        <option key={role} value={role}>
-                          {role}
-                        </option>
-                      ))}
-                    </select>
-                    <select
-                      className="flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="w-[var(--radix-select-trigger-width)]">
+                        {ROLE_OPTIONS.map((role) => (
+                          <SelectItem key={role} value={role}>
+                            {role}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Select
                       value={requirement.trigger_event}
-                      onChange={(event) =>
+                      onValueChange={(value) =>
                         setRequirementDrafts((current) =>
                           current.map((entry, entryIndex) =>
                             entryIndex === index
                               ? {
                                   ...entry,
-                                  trigger_event: event.target.value as EditableRequirement["trigger_event"],
+                                  trigger_event: value as EditableRequirement["trigger_event"],
                                 }
                               : entry,
                           ),
                         )
                       }
                     >
-                      {TRIGGER_OPTIONS.map((trigger) => (
-                        <option key={trigger} value={trigger}>
-                          {trigger}
-                        </option>
-                      ))}
-                    </select>
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="w-[var(--radix-select-trigger-width)]">
+                        {TRIGGER_OPTIONS.map((trigger) => (
+                          <SelectItem key={trigger} value={trigger}>
+                            {trigger}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <Input
                       type="number"
                       value={requirement.priority}
