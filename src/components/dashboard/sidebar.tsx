@@ -44,6 +44,9 @@ import {
   Bell,
   ChevronUp,
   ChevronRight,
+  Package,
+  DollarSign,
+  History,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -145,14 +148,46 @@ const navItems: NavItem[] = [
   { label: "Support", href: "/dashboard/support", icon: LifeBuoy },
 ];
 
+const affiliateNavItems: NavItem[] = [
+  { label: "Overview", href: "/affiliate", icon: LayoutDashboard },
+  {
+    label: "Partnerships",
+    href: "#partnerships-group",
+    icon: Users,
+    children: [
+      { label: "Partnerships", href: "/affiliate/partnerships", icon: Users },
+      { label: "Products", href: "/affiliate/products", icon: Package },
+      { label: "Campaigns", href: "/affiliate/campaigns", icon: Megaphone },
+    ],
+  },
+  {
+    label: "Reports",
+    href: "#reports-group",
+    icon: DollarSign,
+    children: [
+      { label: "Earnings", href: "/affiliate/earnings", icon: DollarSign },
+      { label: "History", href: "/affiliate/rate-history", icon: History },
+    ],
+  },
+  { label: "Notifications", href: "/affiliate/notifications", icon: Bell },
+  { label: "Profile", href: "/affiliate/profile", icon: User },
+  { label: "Support", href: "/dashboard/support", icon: LifeBuoy },
+];
+
 interface SidebarProps {
-  diviner: {
+  diviner?: {
     display_name: string;
     username: string;
     avatar_url: string | null;
   };
+  affiliate?: {
+    name: string;
+    email: string;
+    avatar_url: string | null;
+  };
   isAdmin?: boolean;
   isSupportStaff?: boolean;
+  isAffiliate?: boolean;
 }
 
 function NavLink({
@@ -279,12 +314,14 @@ function isParentActive(item: NavItem, pathname: string): boolean {
   return item.children.some((child) => pathname.startsWith(child.href));
 }
 
-export function Sidebar({ diviner, isAdmin, isSupportStaff }: SidebarProps) {
+export function Sidebar({ diviner, affiliate, isAdmin, isSupportStaff, isAffiliate }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   
-  // Conditionally add admin items
-  const dynamicNavItems = [...navItems];
+  // Select base nav items based on role
+  const baseNavItems = isAffiliate && !diviner ? affiliateNavItems : navItems;
+  const dynamicNavItems = [...baseNavItems];
+
   if (isAdmin || isSupportStaff) {
     // Insert after "Settings" or at the end
     dynamicNavItems.push({ 
@@ -302,7 +339,7 @@ export function Sidebar({ diviner, isAdmin, isSupportStaff }: SidebarProps) {
   // Default-expand any parent whose child is currently active
   useEffect(() => {
     const initialExpanded = new Set<string>();
-    for (const item of navItems) {
+    for (const item of baseNavItems) {
       if (item.children && isParentActive(item, pathname)) {
         initialExpanded.add(item.label);
       }
@@ -324,6 +361,7 @@ export function Sidebar({ diviner, isAdmin, isSupportStaff }: SidebarProps) {
 
   const isActive = (href: string) => {
     if (href === "/dashboard") return pathname === "/dashboard";
+    if (href === "/affiliate") return pathname === "/affiliate";
     if (href.startsWith("#")) return false; // parent group placeholder
     return pathname.startsWith(href);
   };
@@ -339,13 +377,17 @@ export function Sidebar({ diviner, isAdmin, isSupportStaff }: SidebarProps) {
     router.push("/login");
   }
 
-  const initials = diviner.display_name
+  const displayName = diviner?.display_name ?? affiliate?.name ?? "User";
+  const username = diviner?.username ?? affiliate?.email?.split("@")[0] ?? "";
+  const avatar_url = diviner?.avatar_url ?? affiliate?.avatar_url ?? null;
+
+  const initials = displayName
     .split(" ")
     .map((n) => n[0])
     .join("")
     .toUpperCase()
     .slice(0, 2);
-  const avatarUrl = getDivinerAvatarUrl(diviner.avatar_url);
+  const avatarUrl = getDivinerAvatarUrl(avatar_url);
 
   return (
     <>
@@ -361,7 +403,7 @@ export function Sidebar({ diviner, isAdmin, isSupportStaff }: SidebarProps) {
           <SheetContent side="left" className="w-64 p-0">
             <SheetHeader className="border-b px-4 py-3">
               <SheetTitle className="text-lg font-bold">
-                AstrologyPro
+                AstrologyPro {isAffiliate && !diviner && <span className="text-amber-500 ml-1">Affiliate</span>}
               </SheetTitle>
             </SheetHeader>
             <nav className="flex flex-col gap-1 p-4">
@@ -385,10 +427,10 @@ export function Sidebar({ diviner, isAdmin, isSupportStaff }: SidebarProps) {
                 </Avatar>
                 <div className="flex-1 truncate">
                   <p className="text-sm font-medium truncate">
-                    {diviner.display_name}
+                    {displayName}
                   </p>
                   <p className="text-xs text-muted-foreground truncate">
-                    @{diviner.username}
+                    @{username}
                   </p>
                 </div>
               </div>
@@ -424,8 +466,8 @@ export function Sidebar({ diviner, isAdmin, isSupportStaff }: SidebarProps) {
       {/* Desktop sidebar */}
       <aside className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0 lg:z-50 lg:border-r lg:bg-background">
         <div className="flex h-14 items-center border-b px-6">
-          <Link href="/dashboard" className="text-lg font-bold">
-            AstrologyPro
+          <Link href={isAffiliate && !diviner ? "/affiliate" : "/dashboard"} className="text-lg font-bold">
+            AstrologyPro {isAffiliate && !diviner && <span className="text-amber-500 ml-1">Affiliate</span>}
           </Link>
         </div>
         <nav className="flex-1 flex flex-col gap-1 p-4 overflow-y-auto">
@@ -448,10 +490,10 @@ export function Sidebar({ diviner, isAdmin, isSupportStaff }: SidebarProps) {
             </Avatar>
             <div className="flex-1 truncate">
               <p className="text-sm font-medium truncate">
-                {diviner.display_name}
+                {displayName}
               </p>
               <p className="text-xs text-muted-foreground truncate">
-                @{diviner.username}
+                @{username}
               </p>
             </div>
           </div>
