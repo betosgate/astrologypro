@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/dialog";
 import {
   AlertCircle,
+  ArrowUpRight,
   Check,
   CreditCard,
   Download,
@@ -40,6 +41,7 @@ import {
   Trash2,
   Users,
 } from "lucide-react";
+import Link from "next/link";
 import { toast } from "sonner";
 import {
   BirthCityAutocomplete,
@@ -864,129 +866,173 @@ export default function CommunityPlanPage() {
               <Skeleton className="h-16 w-full" />
             </div>
           ) : plan ? (
-            <>
-              {/* Summary bar */}
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="font-medium">
-                    {plan.member_count} of {plan.tier.included_members} included
-                    seats used
-                  </span>
-                  {plan.extra_member_count > 0 && (
-                    <Badge variant="secondary" className="text-xs">
-                      {plan.extra_member_count} extra @{" "}
-                      {formatMoney(plan.extra_member_charge)}/mo
-                    </Badge>
-                  )}
-                </div>
-                <Progress
-                  value={Math.min(
-                    100,
-                    (plan.member_count / plan.tier.included_members) * 100
-                  )}
-                  className="h-2"
-                  aria-label={`${plan.member_count} of ${plan.tier.included_members} seats used`}
-                />
-              </div>
+            (() => {
+              // Derive plan entitlement from the tier's included_members slot count.
+              // Individual tiers have included_members === 1; Couple/Family > 1.
+              const isSinglePlan = plan.tier.included_members <= 1;
 
-              {/* Add member button */}
-              <div className="flex justify-end">
-                <Button
-                  size="sm"
-                  onClick={() => {
-                    setMemberForm({ ...EMPTY_FORM });
-                    setAddMemberError(null);
-                    setAddPreview(null);
-                    setShowAddMember(true);
-                  }}
-                  disabled={plan.member_count >= plan.tier.max_total_members}
-                >
-                  <Plus className="mr-1.5 size-4" />
-                  Add Member
-                </Button>
-              </div>
+              return (
+                <>
+                  {/* Summary bar */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="font-medium">
+                        {plan.member_count} of {plan.tier.included_members} included
+                        seats used
+                      </span>
+                      {plan.extra_member_count > 0 && (
+                        <Badge variant="secondary" className="text-xs">
+                          {plan.extra_member_count} extra @{" "}
+                          {formatMoney(plan.extra_member_charge)}/mo
+                        </Badge>
+                      )}
+                    </div>
+                    <Progress
+                      value={Math.min(
+                        100,
+                        (plan.member_count / plan.tier.included_members) * 100
+                      )}
+                      className="h-2"
+                      aria-label={`${plan.member_count} of ${plan.tier.included_members} seats used`}
+                    />
+                  </div>
 
-              {/* Members list */}
-              {plan.family_members.length === 0 ? (
-                <Card>
-                  <CardContent className="flex flex-col items-center gap-4 py-12 text-center">
-                    <div className="flex size-14 items-center justify-center rounded-full bg-primary/10">
-                      <Users className="size-7 text-primary" />
+                  {/* ── Single-plan upgrade hint OR Add Member button ──────────── */}
+                  {isSinglePlan ? (
+                    // Single/individual plan users cannot add household members.
+                    // Show a clear upgrade prompt instead of a disabled button.
+                    <div className="rounded-lg border border-dashed border-primary/30 bg-primary/5 px-4 py-4">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="space-y-0.5">
+                          <p className="text-sm font-semibold text-foreground">
+                            Need household charts?
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Upgrade to Couple or Family to add members and
+                            generate charts for your household.
+                          </p>
+                        </div>
+                        <Button asChild size="sm" className="w-full sm:w-auto shrink-0">
+                          <Link href="/community/plan">
+                            <ArrowUpRight className="mr-1.5 size-4" />
+                            Upgrade Plan
+                          </Link>
+                        </Button>
+                      </div>
                     </div>
-                    <div>
-                      <h2 className="font-semibold">No members yet</h2>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        Add members to your plan to include them in your
-                        membership.
-                      </p>
+                  ) : (
+                    // Couple/family users: show Add Member button.
+                    <div className="flex justify-end">
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          setMemberForm({ ...EMPTY_FORM });
+                          setAddMemberError(null);
+                          setAddPreview(null);
+                          setShowAddMember(true);
+                        }}
+                        disabled={plan.member_count >= plan.tier.max_total_members}
+                      >
+                        <Plus className="mr-1.5 size-4" />
+                        Add Member
+                      </Button>
                     </div>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="space-y-2">
-                  {plan.family_members.map((m) => {
-                    const dob = new Date(m.date_of_birth + "T12:00:00");
-                    return (
-                      <Card key={m.id}>
-                        <CardContent className="flex items-center justify-between gap-4 py-4">
-                          <div className="flex items-center gap-3 min-w-0">
-                            <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
-                              {m.full_name.charAt(0).toUpperCase()}
-                            </div>
-                            <div className="min-w-0">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <p className="font-medium text-sm">
-                                  {m.full_name}
-                                </p>
-                                {m.relationship && (
-                                  <Badge
-                                    variant="secondary"
-                                    className="text-xs capitalize"
-                                  >
-                                    {m.relationship}
-                                  </Badge>
-                                )}
-                                <Badge
-                                  variant="outline"
-                                  className="text-xs capitalize"
-                                >
-                                  {m.age_group}
-                                </Badge>
-                                {m.is_extra && (
-                                  <Badge
-                                    variant="secondary"
-                                    className="text-xs bg-amber-100 text-amber-800 border-amber-300"
-                                  >
-                                    +{formatMoney(plan.tier.extra_member_price)}
-                                    /mo
-                                  </Badge>
-                                )}
-                              </div>
-                              <p className="text-xs text-muted-foreground mt-0.5">
-                                {dob.toLocaleDateString("en-US", {
-                                  month: "short",
-                                  day: "numeric",
-                                  year: "numeric",
-                                })}
-                              </p>
-                            </div>
-                          </div>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="size-8 shrink-0 text-muted-foreground hover:text-destructive"
-                            onClick={() => setRemovingMember(m)}
-                            aria-label={`Remove ${m.full_name}`}
-                          >
-                            <Trash2 className="size-4" />
+                  )}
+
+                  {/* Members list */}
+                  {plan.family_members.length === 0 ? (
+                    <Card>
+                      <CardContent className="flex flex-col items-center gap-4 py-12 text-center">
+                        <div className="flex size-14 items-center justify-center rounded-full bg-primary/10">
+                          <Users className="size-7 text-primary" />
+                        </div>
+                        <div>
+                          <h2 className="font-semibold">
+                            {isSinglePlan ? "Individual plan" : "No members yet"}
+                          </h2>
+                          <p className="mt-1 text-sm text-muted-foreground">
+                            {isSinglePlan
+                              ? "Your current plan includes 1 seat (yourself). Upgrade to Couple or Family to add household members."
+                              : "Add members to your plan to include them in your membership."}
+                          </p>
+                        </div>
+                        {isSinglePlan && (
+                          <Button asChild size="sm" variant="outline">
+                            <Link href="/community/plan">
+                              <ArrowUpRight className="mr-1.5 size-4" />
+                              Upgrade Plan
+                            </Link>
                           </Button>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </div>
-              )}
-            </>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <div className="space-y-2">
+                      {plan.family_members.map((m) => {
+                        const dob = new Date(m.date_of_birth + "T12:00:00");
+                        return (
+                          <Card key={m.id}>
+                            <CardContent className="flex items-center justify-between gap-4 py-4">
+                              <div className="flex items-center gap-3 min-w-0">
+                                <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
+                                  {m.full_name.charAt(0).toUpperCase()}
+                                </div>
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <p className="font-medium text-sm">
+                                      {m.full_name}
+                                    </p>
+                                    {m.relationship && (
+                                      <Badge
+                                        variant="secondary"
+                                        className="text-xs capitalize"
+                                      >
+                                        {m.relationship}
+                                      </Badge>
+                                    )}
+                                    <Badge
+                                      variant="outline"
+                                      className="text-xs capitalize"
+                                    >
+                                      {m.age_group}
+                                    </Badge>
+                                    {m.is_extra && (
+                                      <Badge
+                                        variant="secondary"
+                                        className="text-xs bg-amber-100 text-amber-800 border-amber-300"
+                                      >
+                                        +{formatMoney(plan.tier.extra_member_price)}
+                                        /mo
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  <p className="text-xs text-muted-foreground mt-0.5">
+                                    {dob.toLocaleDateString("en-US", {
+                                      month: "short",
+                                      day: "numeric",
+                                      year: "numeric",
+                                    })}
+                                  </p>
+                                </div>
+                              </div>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="size-8 shrink-0 text-muted-foreground hover:text-destructive"
+                                onClick={() => setRemovingMember(m)}
+                                aria-label={`Remove ${m.full_name}`}
+                              >
+                                <Trash2 className="size-4" />
+                              </Button>
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
+                    </div>
+                  )}
+                </>
+              );
+            })()
           ) : null}
         </TabsContent>
 
