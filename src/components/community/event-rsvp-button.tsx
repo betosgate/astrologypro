@@ -11,12 +11,19 @@ interface Props {
   eventId: string;
   initialStatus: RsvpStatus | null;
   initialCounts: { going: number; maybe: number };
+  onStatusChange?: (status: RsvpStatus | null, counts: { going: number; maybe: number }) => void;
 }
 
-export function EventRsvpButton({ eventId, initialStatus, initialCounts }: Props) {
+export function EventRsvpButton({ eventId, initialStatus, initialCounts, onStatusChange }: Props) {
   const [status, setStatus] = useState<RsvpStatus | null>(initialStatus);
   const [counts, setCounts] = useState(initialCounts);
   const [loading, setLoading] = useState(false);
+
+  function applyState(nextStatus: RsvpStatus | null, nextCounts: { going: number; maybe: number }) {
+    setStatus(nextStatus);
+    setCounts(nextCounts);
+    onStatusChange?.(nextStatus, nextCounts);
+  }
 
   async function handleRsvp(next: RsvpStatus) {
     if (loading) return;
@@ -33,26 +40,22 @@ export function EventRsvpButton({ eventId, initialStatus, initialCounts }: Props
 
     if (next === status) {
       // Toggle off — DELETE
-      setStatus(null);
-      setCounts(newCounts);
+      applyState(null, newCounts);
       try {
         const res = await fetch(`/api/community/events/${eventId}/rsvp`, {
           method: "DELETE",
         });
         if (!res.ok) {
-          setStatus(prev);
-          setCounts(prevCounts);
+          applyState(prev, prevCounts);
         }
       } catch {
-        setStatus(prev);
-        setCounts(prevCounts);
+        applyState(prev, prevCounts);
       }
     } else {
       // Upsert new status
       if (next === "going") newCounts.going += 1;
       if (next === "maybe") newCounts.maybe += 1;
-      setStatus(next);
-      setCounts(newCounts);
+      applyState(next, newCounts);
       try {
         const res = await fetch(`/api/community/events/${eventId}/rsvp`, {
           method: "POST",
@@ -60,12 +63,10 @@ export function EventRsvpButton({ eventId, initialStatus, initialCounts }: Props
           body: JSON.stringify({ status: next }),
         });
         if (!res.ok) {
-          setStatus(prev);
-          setCounts(prevCounts);
+          applyState(prev, prevCounts);
         }
       } catch {
-        setStatus(prev);
-        setCounts(prevCounts);
+        applyState(prev, prevCounts);
       }
     }
 

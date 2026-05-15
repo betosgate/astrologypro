@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { CalendarEventForm, EventFormValues } from "@/components/admin/calendar-event-form";
+import { getRecurrenceDisplay, CalendarRecurrenceDisplayEvent } from "@/lib/calendar-events/display";
 
 function toDatetimeLocal(iso: string | null | undefined, timezone = "UTC"): string {
   if (!iso) return "";
@@ -30,12 +31,20 @@ export default function EditCalendarEventPage() {
   const [error, setError] = useState<string | null>(null);
 
   const [initialValues, setInitialValues] = useState<Partial<EventFormValues>>({});
+  const [recurrenceContext, setRecurrenceContext] = useState<CalendarRecurrenceDisplayEvent | null>(null);
 
   useEffect(() => {
     fetch(`/api/admin/calendar/${id}`)
       .then((r) => r.json())
       .then((data) => {
         const timezone = data.event_timezone ?? data.recurrence_rule?.timezone ?? "UTC";
+        setRecurrenceContext({
+          recurrence_series_id: data.recurrence_series_id ?? null,
+          recurrence_parent_id: data.recurrence_parent_id ?? null,
+          recurrence_position: data.recurrence_position ?? null,
+          recurrence_generated_at: data.recurrence_generated_at ?? null,
+          recurrence_rule: data.recurrence_rule ?? null,
+        });
         setInitialValues({
           title: data.title ?? "",
           description: data.description ?? "",
@@ -79,11 +88,12 @@ export default function EditCalendarEventPage() {
   }
 
   async function handleDelete() {
-    if (!confirm("Delete this event? This cannot be undone.")) return;
+    const recurrence = getRecurrenceDisplay(recurrenceContext ?? {});
+    const message = recurrence.isRecurring
+      ? "Delete only this occurrence? Other occurrences in this recurring series will remain."
+      : "Delete this event? This cannot be undone.";
 
-    // In Phase 1, we only allow deleting single occurrences by default.
-    // To properly support "delete future", we would need to know if this is part of a series,
-    // but the API defaults to 'single' delete unless seriesAction=future is provided.
+    if (!confirm(message)) return;
 
     const res = await fetch(`/api/admin/calendar/${id}`, { method: "DELETE" });
     if (res.ok) router.push("/admin/calendar");
@@ -116,6 +126,7 @@ export default function EditCalendarEventPage() {
         saving={saving}
         onSubmit={handleSubmit}
         onDelete={handleDelete}
+        recurrenceContext={recurrenceContext}
       />
     </div>
   );

@@ -19,8 +19,11 @@ import {
   RECURRENCE_DAYS,
   RecurrenceDay,
 } from "@/lib/calendar-events/constants";
+import { getRecurrenceDisplay, CalendarRecurrenceDisplayEvent } from "@/lib/calendar-events/display";
 import { generateOccurrenceResult, zonedDateTimeToUtc } from "@/lib/calendar-events/recurrence";
 import { TIMEZONE_OPTIONS, getLocalTimezone } from "@/lib/timezone-utils";
+import { Badge } from "@/components/ui/badge";
+import { Repeat } from "lucide-react";
 
 export interface EventFormValues {
   title: string;
@@ -40,6 +43,7 @@ interface CalendarEventFormProps {
   onSubmit: (data: any) => Promise<void>;
   onDelete?: () => Promise<void>;
   saving: boolean;
+  recurrenceContext?: CalendarRecurrenceDisplayEvent | null;
 }
 
 export function CalendarEventForm({
@@ -48,8 +52,10 @@ export function CalendarEventForm({
   onSubmit,
   onDelete,
   saving,
+  recurrenceContext,
 }: CalendarEventFormProps) {
   const router = useRouter();
+  const recurrenceDisplay = getRecurrenceDisplay(recurrenceContext ?? {});
 
   const [form, setForm] = useState<EventFormValues>({
     title: initialValues?.title ?? "",
@@ -252,6 +258,11 @@ export function CalendarEventForm({
                   onCheckedChange={(checked) => setRecurringEnabled(!!checked)}
                 />
                 <Label htmlFor="recurring_enabled" className="font-semibold text-base">Repeat this event</Label>
+                {recurringEnabled && (
+                  <Badge variant="outline" className="border-yellow-500/40 text-yellow-600">
+                    Automation Pending
+                  </Badge>
+                )}
               </div>
 
               {recurringEnabled && (
@@ -298,7 +309,12 @@ export function CalendarEventForm({
 
                   {(previewOccurrences.length > 0 || previewResult.exceededLimit) && (
                     <div className="mt-4 p-4 rounded-md border bg-muted/30 text-sm">
-                      <h4 className="font-semibold mb-2">Occurrences to be created ({previewOccurrences.length})</h4>
+                      <div className="mb-2 flex flex-wrap items-center gap-2">
+                        <h4 className="font-semibold">Occurrences to be created ({previewOccurrences.length})</h4>
+                        <Badge variant="outline" className="border-yellow-500/40 text-yellow-600">
+                          Automation Pending
+                        </Badge>
+                      </div>
                       {previewResult.exceededLimit && (
                         <p className="mb-2 text-xs text-red-500">
                           This repeat range creates more than 120 dates. Shorten the repeat range before saving.
@@ -317,7 +333,7 @@ export function CalendarEventForm({
                         )}
                       </ul>
                       <p className="text-xs text-muted-foreground italic border-t pt-2 mt-2">
-                        Occurrences are shown in {form.timezone}. They will be created when this form is saved. No background automation runs in this phase.
+                        Occurrences are shown in {form.timezone}. They will be created as real calendar events when this form is saved. Automation is pending before launch.
                       </p>
                     </div>
                   )}
@@ -326,9 +342,37 @@ export function CalendarEventForm({
             </div>
           )}
 
-          {isEdit && (
-            <div className="mt-4 text-xs text-muted-foreground p-3 bg-muted/20 border rounded">
-              <p>This edits only this calendar occurrence. Series-wide recurring edits will be added before launch.</p>
+          {isEdit && recurrenceDisplay.isRecurring && (
+            <div className="mt-4 space-y-2 rounded-md border bg-muted/20 p-3 text-xs text-muted-foreground">
+              <div className="flex flex-wrap gap-1.5">
+                <Badge variant="outline" className="text-[10px]">
+                  <Repeat className="mr-1 size-3" />
+                  Recurring
+                </Badge>
+                <Badge variant="secondary" className="text-[10px]">
+                  {recurrenceDisplay.typeLabel}
+                </Badge>
+                {recurrenceDisplay.occurrenceLabel && (
+                  <Badge variant="outline" className="text-[10px]">
+                    {recurrenceDisplay.occurrenceLabel}
+                  </Badge>
+                )}
+                {recurrenceDisplay.automationLabel && (
+                  <Badge variant="outline" className="border-yellow-500/40 text-[10px] text-yellow-600">
+                    {recurrenceDisplay.automationLabel}
+                  </Badge>
+                )}
+              </div>
+              <p>{recurrenceDisplay.editNotice}</p>
+              <p>
+                Automation pending: occurrences are generated on admin save in this phase. Before launch, cron/worker should handle rolling generation, cleanup, reminders, and long-range maintenance.
+              </p>
+            </div>
+          )}
+
+          {isEdit && !recurrenceDisplay.isRecurring && (
+            <div className="mt-4 rounded-md border bg-muted/20 p-3 text-xs text-muted-foreground">
+              <p>This is a one-time calendar event.</p>
             </div>
           )}
 
@@ -347,7 +391,7 @@ export function CalendarEventForm({
             </div>
             {isEdit && onDelete && (
               <Button type="button" variant="destructive" onClick={onDelete}>
-                Delete
+                {recurrenceDisplay.isRecurring ? "Delete This Occurrence" : "Delete Event"}
               </Button>
             )}
           </div>
