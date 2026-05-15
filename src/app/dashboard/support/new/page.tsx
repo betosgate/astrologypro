@@ -264,7 +264,7 @@ export default function NewTicketPage() {
 
       const ticket = await res.json();
       toast.success(`Ticket ${ticket.ticket_number} created.`);
-      router.push(`/dashboard/support/${ticket.id}`);
+      router.push(`/dashboard/support`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Something went wrong.");
     } finally {

@@ -369,7 +369,7 @@ export default function CreateTicketPage() {
 
       const ticket = await res.json();
       toast.success("Ticket created successfully!");
-      router.push(`/admin/tickets/${ticket.id}`);
+      router.push(`/admin/tickets`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Something went wrong.");
     } finally {
