@@ -6,6 +6,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import type { ContractAmendmentRollout, ContractTemplate } from "@/lib/contract-orchestration";
 
@@ -172,35 +179,40 @@ export function ContractAmendmentsClient({
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-1.5">
               <Label htmlFor="amendment-template">Amendment Template</Label>
-              <select
-                id="amendment-template"
-                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
-                value={amendmentTemplateId}
-                onChange={(event) => setAmendmentTemplateId(event.target.value)}
+              <Select
+                value={amendmentTemplateId || undefined}
+                onValueChange={setAmendmentTemplateId}
               >
-                <option value="">Select amendment template</option>
-                {amendmentTemplates.map((template) => (
-                  <option key={template.id} value={template.id}>
-                    {template.title} ({template.version})
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger id="amendment-template" className="w-full">
+                  <SelectValue placeholder="Select amendment template" />
+                </SelectTrigger>
+                <SelectContent className="w-[var(--radix-select-trigger-width)]">
+                  {amendmentTemplates.map((template) => (
+                    <SelectItem key={template.id} value={template.id}>
+                      {template.title} ({template.version})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="consolidated-template">Future-User Consolidated Template</Label>
-              <select
-                id="consolidated-template"
-                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
-                value={consolidatedTemplateId}
-                onChange={(event) => setConsolidatedTemplateId(event.target.value)}
+              <Select
+                value={consolidatedTemplateId || "none"}
+                onValueChange={(value) => setConsolidatedTemplateId(value === "none" ? "" : value)}
               >
-                <option value="">No linked consolidated template</option>
-                {consolidatedTemplates.map((template) => (
-                  <option key={template.id} value={template.id}>
-                    {template.title} ({template.version_kind})
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger id="consolidated-template" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="w-[var(--radix-select-trigger-width)]">
+                  <SelectItem value="none">No linked consolidated template</SelectItem>
+                  {consolidatedTemplates.map((template) => (
+                    <SelectItem key={template.id} value={template.id}>
+                      {template.title} ({template.version_kind})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 

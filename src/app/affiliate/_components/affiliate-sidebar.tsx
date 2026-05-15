@@ -9,17 +9,14 @@ import {
   ChevronDown,
   ChevronRight,
   DollarSign,
-  Handshake,
   History,
   LayoutDashboard,
   Megaphone,
   Menu,
   Package,
-  Plus,
   UserCircle,
   Users,
   LifeBuoy,
-  MessageSquare,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
