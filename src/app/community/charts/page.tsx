@@ -78,6 +78,11 @@ type ChartsPagePayload = {
   charts: RelationshipChart[];
   relationshipReports: RelationshipReportRow[];
   familyOverviewReports: FamilyOverviewReportRow[];
+  // Plan-aware fields added by the API (additive — may be absent in older
+  // responses; we default to conservative values when missing).
+  isFamilyEntitled?: boolean;
+  planType?: string;
+  birthDataCompleteCount?: number;
 };
 
 /**
@@ -278,6 +283,9 @@ async function fetchChartsPagePayload(): Promise<ChartsPagePayload> {
     payload.charts = data.charts ?? [];
     payload.relationshipReports = data.relationshipReports ?? [];
     payload.familyOverviewReports = data.familyOverviewReports ?? [];
+    payload.isFamilyEntitled = data.isFamilyEntitled ?? false;
+    payload.planType = data.planType;
+    payload.birthDataCompleteCount = data.birthDataCompleteCount ?? 0;
   }
 
   return payload;
@@ -296,6 +304,10 @@ export default function ChartsPage() {
   const [familyOverviewReports, setFamilyOverviewReports] = useState<
     FamilyOverviewReportRow[]
   >([]);
+  // Plan-aware state — defaults to conservative values so single-plan users
+  // are never accidentally shown generate/manage-family flows.
+  const [isFamilyEntitled, setIsFamilyEntitled] = useState(false);
+  const [birthDataCompleteCount, setBirthDataCompleteCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [overviewOpen, setOverviewOpen] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -309,6 +321,8 @@ export default function ChartsPage() {
     setCharts(data.charts);
     setRelationshipReports(data.relationshipReports);
     setFamilyOverviewReports(data.familyOverviewReports);
+    setIsFamilyEntitled(data.isFamilyEntitled ?? false);
+    setBirthDataCompleteCount(data.birthDataCompleteCount ?? 0);
     if (shouldFocusSelf) {
       setOverviewOpen(true);
       setExpandedId(null);
@@ -333,6 +347,8 @@ export default function ChartsPage() {
       setCharts(data.charts);
       setRelationshipReports(data.relationshipReports);
       setFamilyOverviewReports(data.familyOverviewReports);
+      setIsFamilyEntitled(data.isFamilyEntitled ?? false);
+      setBirthDataCompleteCount(data.birthDataCompleteCount ?? 0);
       if (shouldFocusSelf) {
         setOverviewOpen(true);
         setExpandedId(null);
@@ -451,7 +467,7 @@ export default function ChartsPage() {
         </Button>
       </div>
 
-      {!loading && familyMembers.length > 0 && (
+      {!loading && isFamilyEntitled && familyMembers.length > 0 && (
         <Card>
           <button
             type="button"
@@ -554,20 +570,65 @@ export default function ChartsPage() {
 
       {loading ? (
         <RelationshipChartsSkeleton />
-      ) : familyMembers.length < 2 ? (
+      ) : !isFamilyEntitled ? (
+        // ── Single/individual plan ────────────────────────────────────────
+        // User cannot add household members on their current plan.
+        // Do not show Manage Family or Generate buttons.
         <Card>
           <CardContent className="flex flex-col items-center gap-4 py-12 text-center">
             <div className="flex size-14 items-center justify-center rounded-full bg-primary/10">
               <Heart className="size-7 text-primary" />
             </div>
-            <div>
-              <h2 className="font-semibold">Not enough family members</h2>
+            <div className="max-w-xs">
+              <h2 className="font-semibold">
+                Relationship Charts require a household plan
+              </h2>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Compare two birth charts for romantic, friendship, or business
+                dynamics. Upgrade to Couple or Family to add household members
+                and generate relationship charts.
+              </p>
+            </div>
+            <Button asChild size="sm">
+              <Link href="/community/plan">Upgrade Plan</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      ) : familyMembers.length < 2 ? (
+        // ── Family/couple user: not enough profiles ──────────────────────
+        <Card>
+          <CardContent className="flex flex-col items-center gap-4 py-12 text-center">
+            <div className="flex size-14 items-center justify-center rounded-full bg-primary/10">
+              <Heart className="size-7 text-primary" />
+            </div>
+            <div className="max-w-xs">
+              <h2 className="font-semibold">Not enough household members</h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                Add at least 2 family members to generate relationship charts.
+                Add at least one more household member to generate relationship
+                charts.
               </p>
             </div>
             <Button asChild size="sm">
               <Link href="/community/plan?tab=members">Manage Family</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      ) : birthDataCompleteCount < 2 ? (
+        // ── Family/couple user: 2+ profiles but missing birth data ─────────
+        <Card>
+          <CardContent className="flex flex-col items-center gap-4 py-12 text-center">
+            <div className="flex size-14 items-center justify-center rounded-full bg-amber-500/10">
+              <Heart className="size-7 text-amber-600" />
+            </div>
+            <div className="max-w-xs">
+              <h2 className="font-semibold">Complete birth details</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Relationship charts need two members with date of birth, birth
+                time, location, and coordinates.
+              </p>
+            </div>
+            <Button asChild size="sm" variant="outline">
+              <Link href="/community/plan?tab=members">Complete Family Details</Link>
             </Button>
           </CardContent>
         </Card>

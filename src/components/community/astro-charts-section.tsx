@@ -36,10 +36,11 @@ type NatalChartItem = {
   id: string;
   natal_chart: Record<string, unknown>;
   full_name: string;
-  date_of_birth: string;
+  date_of_birth: string | null;
   natal_report_id?: string | null;
   natal_report_status?: string | null;
   chart_state?: string | null;
+  missing_fields?: string[];
 };
 
 /**
@@ -59,6 +60,7 @@ type MonthlyTransitItem = {
   full_report_status: string | null;
   full_report_generated_at: string | null;
   report_state?: string | null;
+  missing_fields?: string[];
 };
 
 type ApiResponse = {
@@ -81,6 +83,49 @@ type ApiResponse = {
   status?: { natal: ApiStatus; transit: ApiStatus };
 };
 
+type AstroChartsSectionProps = {
+  includedMemberLimit?: number;
+  tierName?: string | null;
+};
+
+function getPlanScopedTooltipCopy({
+  includedMemberLimit = 1,
+  tierName,
+}: AstroChartsSectionProps) {
+  const normalizedTier = tierName?.trim().toLowerCase() ?? "";
+  const scope =
+    normalizedTier.includes("family") || includedMemberLimit > 2
+      ? "family"
+      : normalizedTier.includes("couple") || includedMemberLimit === 2
+      ? "couple"
+      : "single";
+
+  if (scope === "family") {
+    return {
+      natal:
+        "View natal charts for household members included in your plan. Complete missing birth details before generating any chart.",
+      transit:
+        "View this month's transit reports for household profiles with complete birth data and ready natal charts.",
+    };
+  }
+
+  if (scope === "couple") {
+    return {
+      natal:
+        "View natal charts for you and your partner. Complete missing birth details before generating either chart.",
+      transit:
+        "View this month's transit reports for profiles with complete birth data and ready natal charts.",
+    };
+  }
+
+  return {
+    natal:
+      "View your natal chart when your birth details are complete. If anything is missing, complete your birth data first.",
+    transit:
+      "View this month's transit report once your birth data and natal chart are ready.",
+  };
+}
+
 // Polling is reserved for real "pending" (background generation) states.
 // Confirmed empty/failed/ready responses stop fetching immediately so the
 // dashboard doesn't sit on a spinner for minutes when no data exists.
@@ -88,7 +133,15 @@ const POLL_INTERVAL_MS = 10_000;
 const MAX_PENDING_POLLS = 18; // ~3 minutes, only while explicitly pending
 const MAX_ERROR_RETRIES = 2;
 
-export function AstroChartsSection() {
+export function AstroChartsSection({
+  includedMemberLimit = 1,
+  tierName = null,
+}: AstroChartsSectionProps) {
+  const tooltipCopy = getPlanScopedTooltipCopy({
+    includedMemberLimit,
+    tierName,
+  });
+
   /**
    * community-natal-carousel Task 02 (2026-04-26): the dashboard ready
    * state is a member carousel. `natalCharts` is the full list returned
@@ -267,8 +320,7 @@ export function AstroChartsSection() {
           </div>
           {showTooltip === "natal" && (
             <div className="mt-2 rounded-md border bg-muted/50 p-2 text-xs text-muted-foreground">
-              Browse saved natal charts for you and your household members, and
-              open the full chart details for any available profile.
+              {tooltipCopy.natal}
             </div>
           )}
         </CardHeader>
@@ -313,12 +365,27 @@ export function AstroChartsSection() {
                 Boolean(
                   active.natal_chart && Object.keys(active.natal_chart).length > 0
                 );
+              const isMissingDetails = active.chart_state === "missing_details";
+              const missingFields = active.missing_fields ?? [];
+              const missingLabel =
+                missingFields.length > 0
+                  ? missingFields.join(", ")
+                  : "birth details";
               const ctaLabel = isGenerated
                 ? "View Full Chart"
+                : isMissingDetails
+                ? "Complete Birth Data"
                 : "Generate Natal Chart";
               const ctaHref = isGenerated
                 ? `/community/family/${active.id}`
+                : isMissingDetails
+                ? "/community/profile"
                 : "/community/family";
+              const statusLabel = isGenerated
+                ? "Chart Ready"
+                : isMissingDetails
+                ? "Missing Details"
+                : "Ready to Generate";
 
               return (
                 <div className="space-y-2">
@@ -329,32 +396,33 @@ export function AstroChartsSection() {
                         className={`text-xs shrink-0 ${
                           !isGenerated ? "bg-amber-500" : ""
                         }`}
-                      >
-                        {isGenerated ? "Chart Ready" : "Ready to Generate"}
-                      </Badge>
+	                      >
+	                        {statusLabel}
+	                      </Badge>
                       <span className="text-xs text-muted-foreground truncate">
                         {active.full_name}
                       </span>
-                    </div>
-                    {isMulti && (
-                      <span
-                        className="text-[10px] text-muted-foreground tabular-nums shrink-0"
-                        aria-label={`Member ${safeIndex + 1} of ${total}`}
-                      >
-                        {safeIndex + 1} / {total}
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    DOB:{" "}
-                    {new Date(
-                      active.date_of_birth + "T12:00:00"
-                    ).toLocaleDateString("en-US", {
-                      month: "long",
-                      day: "numeric",
-                      year: "numeric",
-                    })}
-                  </p>
+	                    </div>
+	                    <span
+	                      className="text-[10px] text-muted-foreground tabular-nums shrink-0"
+	                      aria-label={`Member ${safeIndex + 1} of ${total}`}
+	                    >
+	                      {safeIndex + 1} / {total}
+	                    </span>
+	                  </div>
+	                  <p className="text-xs text-muted-foreground">
+	                    {isMissingDetails
+	                      ? `Missing: ${missingLabel}`
+	                      : active.date_of_birth
+	                      ? `DOB: ${new Date(
+	                          active.date_of_birth + "T12:00:00"
+	                        ).toLocaleDateString("en-US", {
+	                          month: "long",
+	                          day: "numeric",
+	                          year: "numeric",
+	                        })}`
+	                      : "DOB: Not set"}
+	                  </p>
                   <div className="flex items-center gap-1.5">
                     {isMulti && (
                       <Button
@@ -429,8 +497,7 @@ export function AstroChartsSection() {
           </div>
           {showTooltip === "transit" && (
             <div className="mt-2 rounded-md border bg-muted/50 p-2 text-xs text-muted-foreground">
-              Monthly transits show how current planetary movements are affecting
-              your natal chart — revealing opportunities and challenges for the month ahead.
+              {tooltipCopy.transit}
             </div>
           )}
         </CardHeader>
@@ -464,15 +531,23 @@ export function AstroChartsSection() {
               );
               const active = monthlyTransits[safeIndex];
               const total = monthlyTransits.length;
-              const isMulti = total > 1;
-              const detailedHref = `/community/transits/detailed?familyMemberId=${encodeURIComponent(
-                active.family_member_id
-              )}&month=${encodeURIComponent(active.month)}`;
-              const isPending = active.generation_status === "pending";
-              const ctaLabel = (() => {
-                if (isPending) return "Generating…";
-                if (active.full_report_status === "failed")
-                  return "Retry Transit Report";
+	              const isMulti = total > 1;
+	              const detailedHref = `/community/transits/detailed?familyMemberId=${encodeURIComponent(
+	                active.family_member_id
+	              )}&month=${encodeURIComponent(active.month)}`;
+	              const isPending = active.generation_status === "pending";
+	              const isMissingDetails =
+	                active.report_state === "missing_details";
+	              const missingFields = active.missing_fields ?? [];
+	              const missingLabel =
+	                missingFields.length > 0
+	                  ? missingFields.join(", ")
+	                  : "birth details";
+	              const ctaLabel = (() => {
+	                if (isMissingDetails) return "Complete Birth Data";
+	                if (isPending) return "Generating…";
+	                if (active.full_report_status === "failed")
+	                  return "Retry Transit Report";
                 if (
                   active.report_state === "generated" ||
                   active.full_report_id
@@ -480,14 +555,21 @@ export function AstroChartsSection() {
                   return "View Transit Report";
                 return "Generate Transit Report";
               })();
-              const ctaDisabled = isPending;
-              const hasGeneratedReport =
-                active.report_state === "generated" || Boolean(active.full_report_id);
-              const ctaHref =
-                hasGeneratedReport ? detailedHref : "/community/transits";
-              const statusLabel = hasGeneratedReport
-                ? "Report Ready"
-                : "Ready to Generate";
+	              const ctaDisabled = isPending;
+	              const hasGeneratedReport =
+	                active.report_state === "generated" ||
+	                Boolean(active.full_report_id);
+	              const ctaHref =
+	                isMissingDetails
+	                  ? "/community/profile"
+	                  : hasGeneratedReport
+	                  ? detailedHref
+	                  : "/community/transits";
+	              const statusLabel = hasGeneratedReport
+	                ? "Report Ready"
+	                : isMissingDetails
+	                ? "Missing Details"
+	                : "Ready to Generate";
               return (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between gap-2">
@@ -505,28 +587,28 @@ export function AstroChartsSection() {
                           {active.member_name}
                         </span>
                       ) : null}
-                    </div>
-                    {isMulti && (
-                      <span
-                        className="text-[10px] text-muted-foreground tabular-nums shrink-0"
-                        aria-label={`Transit ${safeIndex + 1} of ${total}`}
-                      >
-                        {safeIndex + 1} / {total}
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Month:{" "}
-                    {active.month
-                      ? new Date(active.month + "-01T12:00:00").toLocaleDateString(
-                          "en-US",
-                          {
-                            month: "long",
-                            year: "numeric",
-                          }
-                        )
-                      : ""}
-                  </p>
+	                    </div>
+	                    <span
+	                      className="text-[10px] text-muted-foreground tabular-nums shrink-0"
+	                      aria-label={`Transit ${safeIndex + 1} of ${total}`}
+	                    >
+	                      {safeIndex + 1} / {total}
+	                    </span>
+	                  </div>
+	                  <p className="text-xs text-muted-foreground">
+	                    {isMissingDetails
+	                      ? `Missing: ${missingLabel}`
+	                      : `Month: ${
+	                          active.month
+	                            ? new Date(
+	                                active.month + "-01T12:00:00"
+	                              ).toLocaleDateString("en-US", {
+	                                month: "long",
+	                                year: "numeric",
+	                              })
+	                            : ""
+	                        }`}
+	                  </p>
                   <div className="flex items-center gap-1.5">
                     {isMulti && (
                       <Button

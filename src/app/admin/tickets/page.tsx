@@ -9,10 +9,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { TicketsFilter } from "@/components/admin/tickets-filter";
 import { TicketsBulkTable } from "@/components/admin/tickets-bulk-actions";
 import { TicketsPageActions } from "@/components/admin/tickets-page-actions";
+import { TicketsPagination } from "@/components/admin/tickets-pagination";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Tickets | Admin" };
@@ -54,16 +54,6 @@ const TABS = [
 
 type TabKey = (typeof TABS)[number]["key"];
 
-function paginationItems(currentPage: number, totalPages: number) {
-  return Array.from({ length: totalPages }, (_, i) => i + 1)
-    .filter((p) => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 2)
-    .reduce<(number | "…")[]>((acc, p, idx, arr) => {
-      if (idx > 0 && p - arr[idx - 1] > 1) acc.push("…");
-      acc.push(p);
-      return acc;
-    }, []);
-}
-
 function utcDateStart(date: string) {
   const [year, month, day] = date.split("-").map(Number);
   if (!year || !month || !day) return null;
@@ -93,6 +83,7 @@ export default async function AdminTicketsPage({
     date_to?: string;
     tab?: string;
     page?: string;
+    pageSize?: string;
   }>;
 }) {
   const user = await requireAdmin();
@@ -108,6 +99,7 @@ export default async function AdminTicketsPage({
     date_to,
     tab: tabParam,
     page: pageParam,
+    pageSize: pageSizeParam,
   } = await searchParams;
 
   const activeTab: TabKey =
@@ -117,7 +109,8 @@ export default async function AdminTicketsPage({
 
   const parsedPage = parseInt(pageParam ?? "1", 10);
   const page = Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage : 1;
-  const limit = 10;
+  const parsedPageSize = parseInt(pageSizeParam ?? "10", 10);
+  const limit = [10, 25, 50, 100].includes(parsedPageSize) ? parsedPageSize : 10;
 
   const admin = createAdminClient();
 
@@ -204,28 +197,10 @@ export default async function AdminTicketsPage({
     tickets = (currentPageData as SupportTicket[]) ?? [];
   }
 
-  function ticketsUrl(targetPage: number) {
-    const params = new URLSearchParams();
-    if (targetPage > 1) params.set("page", String(targetPage));
-    if (activeTab !== "all") params.set("tab", activeTab);
-    if (status && status !== "all") params.set("status", status);
-    if (type && type !== "all") params.set("type", type);
-    if (priority && priority !== "all") params.set("priority", priority);
-    if (queue && queue !== "all") params.set("queue", queue);
-    if (search) params.set("search", search);
-    if (date_from) params.set("date_from", date_from);
-    if (date_to) params.set("date_to", date_to);
-    const qs = params.toString();
-    return qs ? `/admin/tickets?${qs}` : "/admin/tickets";
-  }
-
-  const pages = paginationItems(currentPage, totalPages);
-  const firstVisibleTicket = (currentPage - 1) * limit + 1;
-  const lastVisibleTicket = Math.min(currentPage * limit, total);
-
   function tabUrl(key: string) {
     const params = new URLSearchParams();
     if (key !== "all") params.set("tab", key);
+    if (limit !== 10) params.set("pageSize", String(limit));
     if (status && status !== "all") params.set("status", status);
     if (type && type !== "all") params.set("type", type);
     if (priority && priority !== "all") params.set("priority", priority);
@@ -325,58 +300,12 @@ export default async function AdminTicketsPage({
 
           {/* Pagination */}
           {total > 0 && (
-            <div className="mt-6 flex items-center justify-between text-sm text-muted-foreground border-t pt-4">
-              <span>
-                Showing {firstVisibleTicket}-{lastVisibleTicket} of {total} ticket{total !== 1 ? "s" : ""} · Page {currentPage} of {totalPages}
-              </span>
-              <div className="flex items-center gap-1">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={currentPage <= 1}
-                  asChild={currentPage > 1}
-                >
-                  {currentPage > 1 ? (
-                    <Link href={ticketsUrl(currentPage - 1)}>Previous</Link>
-                  ) : (
-                    <span>Previous</span>
-                  )}
-                </Button>
-
-                <div className="hidden items-center gap-1 sm:flex">
-                  {pages.map((p, idx) =>
-                    p === "…" ? (
-                      <span key={`ellipsis-${idx}`} className="px-2 text-muted-foreground">
-                        ...
-                      </span>
-                    ) : (
-                      <Button
-                        key={p}
-                        variant={p === currentPage ? "default" : "outline"}
-                        size="sm"
-                        className="h-8 w-8 p-0"
-                        asChild={p !== currentPage}
-                      >
-                        {p === currentPage ? <span>{p}</span> : <Link href={ticketsUrl(p)}>{p}</Link>}
-                      </Button>
-                    )
-                  )}
-                </div>
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={currentPage >= totalPages}
-                  asChild={currentPage < totalPages}
-                >
-                  {currentPage < totalPages ? (
-                    <Link href={ticketsUrl(currentPage + 1)}>Next</Link>
-                  ) : (
-                    <span>Next</span>
-                  )}
-                </Button>
-              </div>
-            </div>
+            <TicketsPagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              total={total}
+              pageSize={limit}
+            />
           )}
         </CardContent>
       </Card>

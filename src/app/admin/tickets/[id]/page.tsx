@@ -114,6 +114,7 @@ interface TicketData {
 }
 
 const EMPTY_QUEUES: TicketQueue[] = [];
+const ACTIVITY_LOG_PAGE_SIZE = 10;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -175,6 +176,7 @@ export default function AdminTicketDetailPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [sending, setSending] = useState(false);
+  const [visibleActivityLogCount, setVisibleActivityLogCount] = useState(ACTIVITY_LOG_PAGE_SIZE);
 
   // Checklist state
   const [tasks, setTasks] = useState<TicketTask[]>([]);
@@ -249,6 +251,10 @@ export default function AdminTicketDetailPage() {
   useEffect(() => {
     loadTicket();
   }, [loadTicket]);
+
+  useEffect(() => {
+    setVisibleActivityLogCount(ACTIVITY_LOG_PAGE_SIZE);
+  }, [ticketId]);
 
   useEffect(() => {
     // Load tasks for job tickets after main data loads
@@ -441,6 +447,9 @@ export default function AdminTicketDetailPage() {
   const publicMessages = Array.isArray(messages) ? messages.filter((m) => m && !m.is_internal) : [];
   const internalNotes = Array.isArray(messages) ? messages.filter((m) => m && m.is_internal) : [];
   const safeHistory = Array.isArray(history) ? history : [];
+  const visibleHistory = safeHistory.slice(0, visibleActivityLogCount);
+  const hasMoreHistory = visibleActivityLogCount < safeHistory.length;
+  const canCollapseHistory = visibleActivityLogCount > ACTIVITY_LOG_PAGE_SIZE;
 
   return (
     <div className="space-y-6">
@@ -740,13 +749,13 @@ export default function AdminTicketDetailPage() {
           </Card>
 
           {/* History / audit */}
-          <Card>
+          <Card className="h-[200px] overflow-hidden overflow-y-auto">
             <CardHeader className="pb-0">
               <CardTitle className="text-base">Activity Log</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                {safeHistory.map((entry) => (
+                {visibleHistory.map((entry) => (
                   <div key={entry.id} className="flex gap-3 text-sm">
                     <span className="text-muted-foreground shrink-0 text-xs mt-0.5">
                       {formatDateTime(entry.created_at)}
@@ -768,7 +777,32 @@ export default function AdminTicketDetailPage() {
                   </div>
                 ))}
               </div>
+           
             </CardContent>
+               <div className="mt-4 flex items-center gap-2 ml-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    setVisibleActivityLogCount((count) =>
+                      Math.min(count + ACTIVITY_LOG_PAGE_SIZE, safeHistory.length)
+                    )
+                  }
+                  disabled={!hasMoreHistory}
+                >
+                  View More
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setVisibleActivityLogCount(ACTIVITY_LOG_PAGE_SIZE)}
+                  disabled={!canCollapseHistory}
+                >
+                  Collapse All
+                </Button>
+              </div>
           </Card>
         </div>
 

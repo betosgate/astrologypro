@@ -451,7 +451,7 @@ export default function CommunityFamilyPage() {
                     onChange={(e) =>
                       setForm((f) => ({ ...f, birthLat: e.target.value }))
                     }
-                    placeholder="e.g. 40.7128"
+                    placeholder="Auto-filled from city"
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -461,7 +461,7 @@ export default function CommunityFamilyPage() {
                     onChange={(e) =>
                       setForm((f) => ({ ...f, birthLng: e.target.value }))
                     }
-                    placeholder="e.g. -74.0060"
+                    placeholder="Auto-filled from city"
                   />
                 </div>
               </div>

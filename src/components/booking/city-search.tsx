@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 
 export interface CityResult {
   city: string;
+  country: string;
   lat: number;
   lng: number;
   timezone: string;
@@ -119,7 +120,9 @@ export function CitySearch({
   function selectResult(result: NominatimResult) {
     const lat = parseFloat(result.lat);
     const lng = parseFloat(result.lon);
-    const cityName = result.display_name.split(",").slice(0, 2).join(",").trim();
+    const parts = result.display_name.split(",").map((s) => s.trim());
+    const cityName = parts.slice(0, 2).join(", ");
+    const country = parts[parts.length - 1] || "";
 
     setQuery(cityName);
     setIsOpen(false);
@@ -127,6 +130,7 @@ export function CitySearch({
 
     onChange({
       city: cityName,
+      country,
       lat,
       lng,
       timezone: timezoneFromCoords(lat, lng),
