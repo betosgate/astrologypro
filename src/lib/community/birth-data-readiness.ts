@@ -121,6 +121,32 @@ export function isBirthDataComplete(fm: BirthDataInput): boolean {
 }
 
 /**
+ * Human-readable labels for UI hints. Latitude/longitude are one user-facing
+ * problem ("birth city coordinates"), so this intentionally dedupes them.
+ */
+export function formatMissingBirthDataFields(
+  fields: BirthDataField[]
+): string[] {
+  const labels = fields.map((field) => {
+    switch (field) {
+      case "date_of_birth":
+        return "Date of birth";
+      case "birth_time":
+        return "Birth time";
+      case "birth_city":
+        return "Birth city";
+      case "birth_country":
+        return "Birth country";
+      case "birth_lat":
+      case "birth_lng":
+        return "Birth city coordinates";
+    }
+  });
+
+  return Array.from(new Set(labels));
+}
+
+/**
  * Build a `NatalChartData` from a family-member row's birth fields.
  *
  * Throws when the row is incomplete — call sites must always check

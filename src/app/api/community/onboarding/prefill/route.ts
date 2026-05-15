@@ -48,7 +48,7 @@ export async function GET() {
     const { data: familyMembers, error: familyError } = await supabase
       .from("community_family_members")
       .select(
-        "id, full_name, date_of_birth, birth_time, birth_city, birth_country, relationship, notes, invite_email, user_id"
+        "id, full_name, date_of_birth, birth_time, birth_city, birth_country, birth_lat, birth_lng, relationship, notes, invite_email, user_id"
       )
       .eq("member_id", member.id)
       .order("created_at", { ascending: true });
@@ -61,7 +61,20 @@ export async function GET() {
       );
     }
 
-    return NextResponse.json({ member, family_members: familyMembers ?? [] });
+    const selfFamilyMember = (familyMembers ?? []).find(
+      (row) =>
+        row.user_id === user.id ||
+        (row.relationship ?? "").toLowerCase() === "self"
+    );
+
+    return NextResponse.json({
+      member: {
+        ...member,
+        birth_lat: selfFamilyMember?.birth_lat ?? null,
+        birth_lng: selfFamilyMember?.birth_lng ?? null,
+      },
+      family_members: familyMembers ?? [],
+    });
   } catch (err) {
     console.error("[onboarding/prefill] error:", err);
     return NextResponse.json(

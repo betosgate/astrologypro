@@ -100,6 +100,8 @@ interface ProfileForm {
   birthTime: string;
   birthCity: string;
   birthCountry: string;
+  birthLat: number | null;
+  birthLng: number | null;
   relationship_status: string;
   personality: string;
   strengths: string;
@@ -135,6 +137,8 @@ interface HouseholdMemberForm {
   birthTime: string;
   birthCity: string;
   birthCountry: string;
+  birthLat: number | null;
+  birthLng: number | null;
   notes: string;
 }
 
@@ -154,6 +158,8 @@ function emptyForm(): ProfileForm {
     birthTime: "",
     birthCity: "",
     birthCountry: "",
+    birthLat: null,
+    birthLng: null,
     relationship_status: "",
     personality: "",
     strengths: "",
@@ -193,6 +199,8 @@ function createHouseholdMember(
     birthTime: member?.birthTime ?? "",
     birthCity: member?.birthCity ?? "",
     birthCountry: member?.birthCountry ?? "",
+    birthLat: member?.birthLat ?? null,
+    birthLng: member?.birthLng ?? null,
     notes: member?.notes ?? "",
   };
 }
@@ -202,6 +210,12 @@ function legacyFormatPhone(raw: string): string {
   if (digits.length <= 3) return digits;
   if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
   return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+}
+
+function numberOrNull(value: unknown): number | null {
+  if (value == null || value === "") return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
 }
 
 type PrefillResponse = {
@@ -220,6 +234,8 @@ type PrefillResponse = {
     birth_time?: string | null;
     birth_city?: string | null;
     birth_country?: string | null;
+    birth_lat?: number | string | null;
+    birth_lng?: number | string | null;
     relationship_status?: string | null;
     plan_type?: string | null;
     intake_data?: Record<string, unknown> | null;
@@ -232,6 +248,8 @@ type PrefillResponse = {
     birth_time: string | null;
     birth_city: string | null;
     birth_country: string | null;
+    birth_lat: number | string | null;
+    birth_lng: number | string | null;
     notes: string | null;
   }>;
 };
@@ -342,6 +360,10 @@ export default function OnboardingPage() {
           birthTime: member.birth_time || String(intake.birth_time ?? "") || "",
           birthCity: member.birth_city || String(intake.birth_city ?? "") || "",
           birthCountry: member.birth_country || String(intake.birth_country ?? "") || "",
+          birthLat:
+            numberOrNull(member.birth_lat) ?? numberOrNull(intake.birthLat),
+          birthLng:
+            numberOrNull(member.birth_lng) ?? numberOrNull(intake.birthLng),
           relationship_status:
             member.relationship_status || String(intake.relationship_status ?? "") || "",
           personality: String(intake.personality ?? ""),
@@ -385,6 +407,8 @@ export default function OnboardingPage() {
             birthTime: member.birth_time ?? "",
             birthCity: member.birth_city ?? "",
             birthCountry: member.birth_country ?? "",
+            birthLat: numberOrNull(member.birth_lat),
+            birthLng: numberOrNull(member.birth_lng),
             notes: member.notes ?? "",
           })
         );
@@ -420,6 +444,9 @@ export default function OnboardingPage() {
       if (!form.birthTime?.trim()) return "Birth time is required.";
       if (!form.birthCity.trim()) return "Birth city is required.";
       if (!form.birthCountry.trim()) return "Birth country is required.";
+      if (form.birthLat == null || form.birthLng == null) {
+        return "Please select a birth location from the search results.";
+      }
     }
 
     if (targetStep === 2) {
@@ -445,6 +472,12 @@ export default function OnboardingPage() {
         }
         if (!member.dateOfBirth) {
           return `Household member ${index + 1} needs a birth date.`;
+        }
+        if (
+          member.birthCity.trim() &&
+          (member.birthLat == null || member.birthLng == null)
+        ) {
+          return `Household member ${index + 1} needs a birth location selected from search results.`;
         }
       }
     }
@@ -499,6 +532,8 @@ export default function OnboardingPage() {
           birth_time: form.birthTime,
           birth_city: form.birthCity.trim(),
           birth_country: form.birthCountry.trim(),
+          birth_lat: form.birthLat,
+          birth_lng: form.birthLng,
           relationship_status: form.relationship_status || null,
           personality: form.personality.trim() || null,
           strengths: form.strengths.trim() || null,
@@ -538,6 +573,8 @@ export default function OnboardingPage() {
             birth_time: member.birthTime || null,
             birth_city: member.birthCity.trim() || null,
             birth_country: member.birthCountry.trim() || null,
+            birth_lat: member.birthLat,
+            birth_lng: member.birthLng,
             notes: member.notes.trim() || null,
           })),
         }),
@@ -764,10 +801,20 @@ export default function OnboardingPage() {
               <CitySearch
                 value={form.birthCity}
                 placeholder="Search birth city..."
+                onTextChange={(text) =>
+                  patch({
+                    birthCity: text,
+                    birthCountry: "",
+                    birthLat: null,
+                    birthLng: null,
+                  })
+                }
                 onChange={(result) =>
                   patch({
                     birthCity: result.city,
-                    birthCountry: result.city.split(",").pop()?.trim() || "",
+                    birthCountry: result.country,
+                    birthLat: result.lat,
+                    birthLng: result.lng,
                   })
                 }
               />
@@ -956,10 +1003,20 @@ export default function OnboardingPage() {
                       <CitySearch
                         value={member.birthCity}
                         placeholder="Search birth city..."
+                        onTextChange={(text) =>
+                          updateHouseholdMember(index, {
+                            birthCity: text,
+                            birthCountry: "",
+                            birthLat: null,
+                            birthLng: null,
+                          })
+                        }
                         onChange={(result) =>
                           updateHouseholdMember(index, {
                             birthCity: result.city,
-                            birthCountry: result.city.split(",").pop()?.trim() || "",
+                            birthCountry: result.country,
+                            birthLat: result.lat,
+                            birthLng: result.lng,
                           })
                         }
                       />
