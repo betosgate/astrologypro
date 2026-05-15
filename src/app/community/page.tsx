@@ -1779,7 +1779,10 @@ export default async function CommunityDashboardPage() {
           />
 
           {/* Astro Charts polling/display */}
-          <AstroChartsSection />
+          <AstroChartsSection
+            includedMemberLimit={maxMembers}
+            tierName={tierName}
+          />
         </div>
 
         {/* Own natal chart status */}
