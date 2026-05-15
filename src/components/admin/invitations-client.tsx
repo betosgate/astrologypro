@@ -34,6 +34,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Table,
   TableBody,
   TableCell,
@@ -712,21 +719,22 @@ export function InvitationsClient({
 
             <div className="space-y-1.5">
               <Label htmlFor="invite-role">Role *</Label>
-              <select
-                id="invite-role"
-                value={inviteRole}
-                onChange={(event) => setInviteRole(event.target.value)}
-                required
+              <Select
+                value={inviteRole || undefined}
+                onValueChange={setInviteRole}
                 disabled={!!lockedRoleId}
-                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               >
-                <option value="">Select a role…</option>
-                {INVITABLE_USER_TYPES.map((role) => (
-                  <option key={role.value} value={role.value}>
-                    {role.label}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger id="invite-role" className="w-full">
+                  <SelectValue placeholder="Select a role..." />
+                </SelectTrigger>
+                <SelectContent className="w-[var(--radix-select-trigger-width)]">
+                  {INVITABLE_USER_TYPES.map((role) => (
+                    <SelectItem key={role.value} value={role.value}>
+                      {role.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             {isAffiliate ? (
