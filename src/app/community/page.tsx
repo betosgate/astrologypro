@@ -62,6 +62,7 @@ import {
 } from "@/lib/community/chart-report-state";
 import {
   computeBirthDataReadiness,
+  formatMissingBirthDataFields,
   isBirthDataComplete,
 } from "@/lib/community/birth-data-readiness";
 import { SectionContainer } from "@/components/shared/section-container";
@@ -782,23 +783,9 @@ export default async function CommunityDashboardPage() {
       selfBirthDataFieldCount) *
       100
   );
-  const profileMissingFields = selfBirthReadiness.missing.map((field) => {
-    switch (field) {
-      case "date_of_birth":
-        return "Date of birth";
-      case "birth_time":
-        return "Birth time";
-      case "birth_city":
-        return "Birth city";
-      case "birth_country":
-        return "Birth country";
-      case "birth_lat":
-      case "birth_lng":
-        return "Birth city coordinates";
-      default:
-        return field;
-    }
-  });
+  const profileMissingFields = formatMissingBirthDataFields(
+    selfBirthReadiness.missing
+  );
 
   // ── Household Readiness Card metrics ─────────────────────────────────────
   // Spec: tasks/06.05.2026/community-dashboard-household-readiness-card/
@@ -1811,7 +1798,7 @@ export default async function CommunityDashboardPage() {
             </Card>
           ) : ( */}
           {ownChartReady ? null : (
-            <Card className="border-dashed border-amber-500/20">
+            <Card className="border-dashed border-amber-500/20 sm:col-span-2">
               <CardContent className="flex flex-col items-center gap-3 py-6 text-center">
                 <div className="flex size-12 items-center justify-center rounded-full bg-amber-500/15">
                   <Sparkles className="size-6 text-amber-600" aria-hidden="true" />

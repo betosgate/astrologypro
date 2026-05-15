@@ -6,6 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Loader2, ArrowLeft, Save } from "lucide-react";
 import { toast } from "sonner";
 
@@ -168,29 +175,35 @@ export default function UserEditPage() {
                   <label htmlFor="videoProvider" className="text-xs font-medium text-muted-foreground">
                     Video Provider
                   </label>
-                  <select
-                    id="videoProvider"
+                  <Select
                     value={videoProvider}
-                    onChange={(e) => setVideoProvider(e.target.value)}
-                    className="w-full h-9 rounded-md border bg-transparent px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary"
+                    onValueChange={setVideoProvider}
                   >
-                    <option value="daily">Daily.co (Default)</option>
-                    <option value="chime">AWS Chime SDK</option>
-                  </select>
+                    <SelectTrigger id="videoProvider" className="w-full focus:ring-1 focus:ring-primary">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="w-[var(--radix-select-trigger-width)]">
+                      <SelectItem value="daily">Daily.co (Default)</SelectItem>
+                      <SelectItem value="chime">AWS Chime SDK</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-1.5">
                   <label htmlFor="phoneProvider" className="text-xs font-medium text-muted-foreground">
                     Phone Provider
                   </label>
-                  <select
-                    id="phoneProvider"
+                  <Select
                     value={phoneProvider}
-                    onChange={(e) => setPhoneProvider(e.target.value)}
-                    className="w-full h-9 rounded-md border bg-transparent px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary"
+                    onValueChange={setPhoneProvider}
                   >
-                    <option value="twilio">Twilio (Default)</option>
-                    <option value="chime">AWS Chime PSTN</option>
-                  </select>
+                    <SelectTrigger id="phoneProvider" className="w-full focus:ring-1 focus:ring-primary">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="w-[var(--radix-select-trigger-width)]">
+                      <SelectItem value="twilio">Twilio (Default)</SelectItem>
+                      <SelectItem value="chime">AWS Chime PSTN</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
             )}

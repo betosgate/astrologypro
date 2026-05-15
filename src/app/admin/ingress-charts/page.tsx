@@ -59,6 +59,7 @@ const VIEW_FILTERS = [
   { label: "All Charts", value: "" },
   { label: "Upcoming", value: "upcoming" },
   { label: "Past", value: "past" },
+  { label: "Social Advo", value: "social_advo" },
 ] as const;
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
@@ -73,10 +74,10 @@ type IngressChart = {
   validity_start: string | null;
   validity_end: string | null;
   location_name: string | null;
-  author_name: string | null;
   sector_focus: string[];
   tags: string[];
   created_at: string;
+  event_timestamp: string | null;
 };
 
 type StatsData = {
@@ -99,18 +100,45 @@ function formatOptionalDate(iso: string | null) {
   return iso ? formatDate(iso) : "Not set";
 }
 
+function formatDateTime(iso: string) {
+  return new Date(iso).toLocaleString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
 function getSectorKey(val: string): string {
   return SECTORS.find((s) => s.val === val)?.key ?? val;
 }
 
 // ─── Stat card ─────────────────────────────────────────────────────────────────
 
-function StatCard({ label, value }: { label: string; value: number }) {
+function StatCard({
+  label,
+  value,
+  active = false,
+  onClick,
+}: {
+  label: string;
+  value: number;
+  active?: boolean;
+  onClick: () => void;
+}) {
   return (
-    <div className="rounded-lg border bg-card px-4 py-3">
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={`rounded-lg border bg-card px-4 py-3 text-left transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+        active ? "border-primary bg-primary/5" : ""
+      }`}
+    >
       <p className="text-xs text-muted-foreground">{label}</p>
       <p className="mt-0.5 text-2xl font-bold">{value}</p>
-    </div>
+    </button>
   );
 }
 
@@ -202,7 +230,7 @@ export default function AdminIngressChartsPage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [importing, setImporting] = useState(false);
 
-  async function handleImportMongo() {
+  async function handleImportMongo(showToast = true) {
     setImporting(true);
     try {
       const res = await fetch("/api/admin/ingress-charts/import-mongo", {
@@ -213,13 +241,19 @@ export default function AdminIngressChartsPage() {
       
       const json = await res.json();
       if (res.ok) {
-        toast.success(`Import completed! Processed: ${json.processed}, Inserted: ${json.inserted}`);
+        if (showToast) {
+          toast.success(`Import completed! Processed: ${json.processed}, Inserted: ${json.inserted}`);
+        }
         fetchCharts(1, true); // Refresh the list
       } else {
-        toast.error(`Import failed: ${json.detail || json.error || "Unknown error"}`);
+        if (showToast) {
+          toast.error(`Import failed: ${json.detail || json.error || "Unknown error"}`);
+        }
       }
     } catch (error) {
-      toast.error("An error occurred during import.");
+      if (showToast) {
+        toast.error("An error occurred during import.");
+      }
       console.error(error);
     } finally {
       setImporting(false);
@@ -231,7 +265,7 @@ export default function AdminIngressChartsPage() {
   const [ingressType, setIngressType] = useState("");
   const [importance, setImportance] = useState("");
   const [sectors, setSectors] = useState<string[]>([]);
-  const [view, setView] = useState("");
+  const [view, setView] = useState("upcoming");
   const [sort, setSort] = useState("newest");
 
   async function fetchCharts(p: number, replace: boolean, overrides?: Partial<{
@@ -274,7 +308,10 @@ export default function AdminIngressChartsPage() {
     setLoadingMore(false);
   }
 
-  useEffect(() => { fetchCharts(1, true); }, []);
+  useEffect(() => {
+    void fetchCharts(1, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function applyFilter(key: string, value: unknown) {
     const overrides: Record<string, unknown> = {
@@ -318,12 +355,12 @@ export default function AdminIngressChartsPage() {
             <AlertDialogTrigger asChild>
               <Button size="sm" variant="outline" disabled={importing}>
                 {importing ? <Loader2 className="mr-1.5 size-4 animate-spin" /> : <Globe className="mr-1.5 size-4" />}
-                Import Mongo
+                Import Charts
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>Import from MongoDB?</AlertDialogTitle>
+                <AlertDialogTitle>Import charts?</AlertDialogTitle>
                 <AlertDialogDescription>
                   This will connect to the legacy MongoDB and import ingress charts.
                   Existing charts with the same Mongo ID will be skipped.
@@ -335,7 +372,7 @@ export default function AdminIngressChartsPage() {
                   onClick={() => handleImportMongo()}
                   className="bg-primary text-primary-foreground hover:bg-primary/90"
                 >
-                  Import
+                  Import Charts
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
@@ -351,9 +388,24 @@ export default function AdminIngressChartsPage() {
 
       {/* Stats bar */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <StatCard label="Total Charts" value={stats.total} />
-        <StatCard label="Upcoming" value={stats.upcoming} />
-        <StatCard label="Social Advo" value={stats.social_advo} />
+        <StatCard
+          label="Total Charts"
+          value={stats.total}
+          active={view === ""}
+          onClick={() => applyFilter("view", "")}
+        />
+        <StatCard
+          label="Upcoming"
+          value={stats.upcoming}
+          active={view === "upcoming"}
+          onClick={() => applyFilter("view", "upcoming")}
+        />
+        <StatCard
+          label="Social Advo"
+          value={stats.social_advo}
+          active={view === "social_advo"}
+          onClick={() => applyFilter("view", "social_advo")}
+        />
       </div>
 
       {/* Filters */}
@@ -561,6 +613,14 @@ export default function AdminIngressChartsPage() {
 
                 <div className="mt-auto border-t pt-3">
                   <dl className="space-y-1.5 text-xs">
+                    {chart.event_timestamp && (
+                      <div className="flex items-center justify-between gap-4">
+                        <dt className="text-muted-foreground">Event Timestamp</dt>
+                        <dd className="text-right font-semibold text-foreground">
+                          {formatDateTime(chart.event_timestamp)}
+                        </dd>
+                      </div>
+                    )}
                     <div className="flex items-center justify-between gap-4">
                       <dt className="text-muted-foreground">Start date</dt>
                       <dd className="text-right font-semibold text-foreground">
@@ -592,14 +652,6 @@ export default function AdminIngressChartsPage() {
                           >
                             {chart.importance}
                           </Badge>
-                        </dd>
-                      </div>
-                    )}
-                    {chart.author_name && (
-                      <div className="flex items-center justify-between gap-4">
-                        <dt className="text-muted-foreground">Author</dt>
-                        <dd className="text-right font-semibold text-foreground">
-                          {chart.author_name}
                         </dd>
                       </div>
                     )}
