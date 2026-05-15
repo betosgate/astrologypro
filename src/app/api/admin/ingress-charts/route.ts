@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
   const ingressType = sp.get("ingress_type") ?? "";
   const importance  = sp.get("importance") ?? "";
   const sectorsParam = sp.get("sectors") ?? "";
-  const view    = sp.get("view") ?? ""; // "upcoming" | "past" | ""
+  const view    = sp.get("view") ?? ""; // "upcoming" | "past" | "social_advo" | ""
   const sort    = sp.get("sort") ?? "newest";
   // Legacy date range params (keep backward-compat)
   const createdFrom = sp.get("created_from") ?? "";
@@ -51,7 +51,7 @@ export async function GET(req: NextRequest) {
   let query: any = admin
     .from("ingress_charts")
     .select(
-      "id, title, ingress_type, importance, short_description, is_social_advo, validity_start, validity_end, location_name, author_name, sector_focus, tags, created_at, event_timestamp",
+      "id, title, ingress_type, importance, short_description, is_social_advo, validity_start, validity_end, location_name, sector_focus, tags, created_at, event_timestamp",
       { count: "exact" }
     );
 
@@ -86,6 +86,8 @@ export async function GET(req: NextRequest) {
     query = query.gte("validity_start", today);
   } else if (view === "past") {
     query = query.lt("validity_start", today);
+  } else if (view === "social_advo") {
+    query = query.eq("is_social_advo", true);
   }
 
   // Legacy date range
@@ -123,7 +125,8 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({
     charts: data ?? [],
-    total: count ?? 0,
+    total: total_stat,
+    filtered_total: count ?? 0,
     page,
     hasMore: offset + limit < (count ?? 0),
     // Stats

@@ -24,6 +24,13 @@ type ImportBody = {
   publish_imported?: unknown;
 };
 
+type ImportOptions = {
+  batch_size?: unknown;
+  dry_run?: unknown;
+  limit?: unknown;
+  publish_imported?: unknown;
+};
+
 type IngressMongoConfig = {
   collectionName: string;
   dbName: string;
@@ -281,6 +288,22 @@ function problem(status: number, title: string, detail: string) {
   );
 }
 
+function importResultResponse(result: Awaited<ReturnType<typeof runIngressMongoImport>>) {
+  return NextResponse.json({
+    ok: true,
+    dry_run: result.dry_run,
+    table: TABLE_NAME,
+    source: result.source,
+    processed: result.processed,
+    inserted: result.inserted,
+    skipped_existing: result.skipped_existing,
+    skipped_no_mongo_id: result.skipped_no_mongo_id,
+    note: result.dry_run
+      ? "Dry run only. No Postgres rows were inserted."
+      : "Import completed. Existing rows are detected by ingress_charts.mongo_id and skipped.",
+  });
+}
+
 async function assertImportColumnsExist() {
   const admin = createAdminClient();
   const probe = await admin
@@ -324,20 +347,24 @@ async function assertImportColumnsExist() {
   };
 }
 
-export async function POST(req: NextRequest) {
-  const user = await getAdminUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+let activeImport:
+  | Promise<Awaited<ReturnType<typeof runIngressMongoImportUnlocked>>>
+  | null = null;
 
-  const body = (await req.json().catch(() => ({}))) as ImportBody;
-  const batchSizeRaw = scalarInteger(body.batch_size);
-  const limit = scalarInteger(body.limit);
+async function runIngressMongoImportUnlocked(options: ImportOptions = {}) {
+  const batchSizeRaw = scalarInteger(options.batch_size);
+  const limit = scalarInteger(options.limit);
   const batchSize =
     batchSizeRaw && batchSizeRaw > 0 ? Math.min(batchSizeRaw, 500) : 100;
-  const dryRun = scalarBoolean(body.dry_run, false);
-  const publishImported = scalarBoolean(body.publish_imported, false);
+  const dryRun = scalarBoolean(options.dry_run, false);
+  const publishImported = scalarBoolean(options.publish_imported, false);
 
   const schema = await assertImportColumnsExist();
-  if (!schema.ok) return schema.response;
+  if (!schema.ok) {
+    throw new Error(
+      `Import schema check failed with status ${schema.response.status}.`,
+    );
+  }
 
   const config = await fetchIngressMongoConfig();
   const admin = createAdminClient();
@@ -431,10 +458,8 @@ export async function POST(req: NextRequest) {
 
     await flushBatch();
 
-    return NextResponse.json({
-      ok: true,
+    return {
       dry_run: dryRun,
-      table: TABLE_NAME,
       source: {
         database: config.dbName,
         collection: config.collectionName,
@@ -444,15 +469,43 @@ export async function POST(req: NextRequest) {
       inserted,
       skipped_existing: skippedExisting,
       skipped_no_mongo_id: skippedNoMongoId,
-      note: dryRun
-        ? "Dry run only. No Postgres rows were inserted."
-        : "Import completed. Existing rows are detected by ingress_charts.mongo_id and skipped.",
-    });
+    };
+  } finally {
+    await mongo.close().catch(() => undefined);
+  }
+}
+
+export async function runIngressMongoImport(options: ImportOptions = {}) {
+  if (activeImport) {
+    const result = await activeImport;
+    return { ...result, already_running: true };
+  }
+
+  activeImport = runIngressMongoImportUnlocked(options);
+
+  try {
+    const result = await activeImport;
+    return { ...result, already_running: false };
+  } finally {
+    activeImport = null;
+  }
+}
+
+export async function POST(req: NextRequest) {
+  const user = await getAdminUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const body = (await req.json().catch(() => ({}))) as ImportBody;
+
+  const schema = await assertImportColumnsExist();
+  if (!schema.ok) return schema.response;
+
+  try {
+    const result = await runIngressMongoImport(body);
+    return importResultResponse(result);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown import error";
     console.error("[admin/ingress-charts/import-mongo] Error:", err);
     return problem(502, "Ingress Mongo Import Failed", message);
-  } finally {
-    await mongo.close().catch(() => undefined);
   }
 }
