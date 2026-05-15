@@ -16,6 +16,8 @@ export async function GET(req: NextRequest) {
   const sectorsParam = sp.get("sectors") ?? "";
   const view    = sp.get("view") ?? ""; // "upcoming" | "past" | "social_advo" | ""
   const sort    = sp.get("sort") ?? "newest";
+  const tagsParam = sp.get("tags") ?? "";
+  const useFilteredStats = sp.get("use_filtered_stats") === "true";
   // Legacy date range params (keep backward-compat)
   const createdFrom = sp.get("created_from") ?? "";
   const createdTo   = sp.get("created_to") ?? "";
@@ -26,25 +28,29 @@ export async function GET(req: NextRequest) {
 
   const admin = createAdminClient();
 
-  // ── Stats (always computed from all charts, ignoring current filters) ────────
-  const [statsRes] = await Promise.all([
-    admin
-      .from("ingress_charts")
-      .select("is_published, is_social_advo, validity_start", { count: "exact" }),
-  ]);
-
   let total_stat = 0;
   let published_stat = 0;
   let upcoming_stat  = 0;
   let social_advo_stat = 0;
 
-  if (!statsRes.error && statsRes.data) {
-    total_stat       = statsRes.count ?? statsRes.data.length;
-    published_stat   = statsRes.data.filter((c) => c.is_published).length;
-    upcoming_stat    = statsRes.data.filter(
-      (c) => c.validity_start && c.validity_start >= today
-    ).length;
-    social_advo_stat = statsRes.data.filter((c) => c.is_social_advo).length;
+  if (useFilteredStats) {
+    // We will compute these after applying filters
+  } else {
+    // ── Stats (always computed from all charts, ignoring current filters) ────────
+    const [statsRes] = await Promise.all([
+      admin
+        .from("ingress_charts")
+        .select("is_published, is_social_advo, validity_start", { count: "exact" }),
+    ]);
+
+    if (!statsRes.error && statsRes.data) {
+      total_stat       = statsRes.count ?? statsRes.data.length;
+      published_stat   = statsRes.data.filter((c) => c.is_published).length;
+      upcoming_stat    = statsRes.data.filter(
+        (c) => c.validity_start && c.validity_start >= today
+      ).length;
+      social_advo_stat = statsRes.data.filter((c) => c.is_social_advo).length;
+    }
   }
 
   // ── Main filtered query ──────────────────────────────────────────────────────
@@ -78,6 +84,16 @@ export async function GET(req: NextRequest) {
     } else if (sectorList.length > 1) {
       // overlaps — chart has at least one of the sectors
       query = query.overlaps("sector_focus", sectorList);
+    }
+  }
+
+  // Tags: chart must contain ANY of the requested tags
+  if (tagsParam) {
+    const tagList = tagsParam.split(",").map((s) => s.trim()).filter(Boolean);
+    if (tagList.length === 1) {
+      query = query.contains("tags", [tagList[0]]);
+    } else if (tagList.length > 1) {
+      query = query.overlaps("tags", tagList);
     }
   }
 
@@ -118,10 +134,60 @@ export async function GET(req: NextRequest) {
       break;
   }
 
+  if (useFilteredStats) {
+    // Run count queries with same filters
+    let uq = admin.from("ingress_charts").select("id", { count: "exact", head: true });
+    let saq = admin.from("ingress_charts").select("id", { count: "exact", head: true });
+
+    if (search) {
+      uq = uq.or(`title.ilike.%${search}%,location_name.ilike.%${search}%`);
+      saq = saq.or(`title.ilike.%${search}%,location_name.ilike.%${search}%`);
+    }
+    if (ingressType) {
+      uq = uq.eq("ingress_type", ingressType);
+      saq = saq.eq("ingress_type", ingressType);
+    }
+    if (importance) {
+      uq = uq.eq("importance", importance);
+      saq = saq.eq("importance", importance);
+    }
+    if (sectorsParam) {
+      const sectorList = sectorsParam.split(",").map((s) => s.trim()).filter(Boolean);
+      if (sectorList.length === 1) {
+        uq = uq.contains("sector_focus", [sectorList[0]]);
+        saq = saq.contains("sector_focus", [sectorList[0]]);
+      } else if (sectorList.length > 1) {
+        uq = uq.overlaps("sector_focus", sectorList);
+        saq = saq.overlaps("sector_focus", sectorList);
+      }
+    }
+    if (tagsParam) {
+      const tagList = tagsParam.split(",").map((s) => s.trim()).filter(Boolean);
+      if (tagList.length === 1) {
+        uq = uq.contains("tags", [tagList[0]]);
+        saq = saq.contains("tags", [tagList[0]]);
+      } else if (tagList.length > 1) {
+        uq = uq.overlaps("tags", tagList);
+        saq = saq.overlaps("tags", tagList);
+      }
+    }
+
+    uq = uq.gte("validity_start", today);
+    saq = saq.eq("is_social_advo", true);
+
+    const [uRes, saRes] = await Promise.all([uq, saq]);
+    upcoming_stat = uRes.count ?? 0;
+    social_advo_stat = saRes.count ?? 0;
+  }
+
   query = query.range(offset, offset + limit - 1);
 
   const { data, error, count } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  if (useFilteredStats) {
+    total_stat = count ?? 0;
+  }
 
   return NextResponse.json({
     charts: data ?? [],
