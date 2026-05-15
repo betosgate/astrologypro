@@ -15,6 +15,8 @@ type FamilyMemberInput = {
   birth_time?: string | null;
   birth_city?: string | null;
   birth_country?: string | null;
+  birth_lat?: number | null;
+  birth_lng?: number | null;
   notes?: string | null;
 };
 
@@ -63,6 +65,14 @@ function normalizeFamilyMembers(raw: unknown): FamilyMemberInput[] {
         typeof item.birth_city === "string" ? item.birth_city.trim() : null,
       birth_country:
         typeof item.birth_country === "string" ? item.birth_country.trim() : null,
+      birth_lat:
+        item.birth_lat != null && Number.isFinite(Number(item.birth_lat))
+          ? Number(item.birth_lat)
+          : null,
+      birth_lng:
+        item.birth_lng != null && Number.isFinite(Number(item.birth_lng))
+          ? Number(item.birth_lng)
+          : null,
       notes: typeof item.notes === "string" ? item.notes.trim() : null,
     }))
     .filter((item) => item.full_name || item.relationship || item.date_of_birth);
@@ -390,6 +400,8 @@ export async function POST(req: NextRequest) {
           birth_time: trimStr(familyMember.birth_time),
           birth_city: trimStr(familyMember.birth_city),
           birth_country: trimStr(familyMember.birth_country),
+          birth_lat: familyMember.birth_lat ?? null,
+          birth_lng: familyMember.birth_lng ?? null,
           notes: trimStr(familyMember.notes),
           age_group: ageYears < 14 ? "child" : "adult",
         };

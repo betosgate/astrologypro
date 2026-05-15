@@ -73,6 +73,13 @@ export function ChartQuickActions() {
   const [loading, setLoading] = useState(true);
   const [result, setResult] = useState<ResultState>({ kind: "idle" });
 
+  // Plan-aware state for the Relationship Charts CTA.
+  // Loaded alongside birth data so both are ready on first paint.
+  const [isFamilyEntitled, setIsFamilyEntitled] = useState(false);
+  const [householdProfileCount, setHouseholdProfileCount] = useState(0);
+  const [birthDataCompleteCount, setBirthDataCompleteCount] = useState(0);
+  const [hasRelationshipReport, setHasRelationshipReport] = useState(false);
+
   // Modal state (opens when user clicks a button and data is incomplete)
   const [modalOpen, setModalOpen] = useState(false);
   const [pendingType, setPendingType] = useState<ChartType | null>(null);
@@ -98,27 +105,49 @@ export function ChartQuickActions() {
   async function fetchBirthData() {
     setLoading(true);
     try {
-      const res = await fetch("/api/community/me/birth-data");
-      if (!res.ok) {
-        setBirthData(null);
-        return;
-      }
-      const json = await res.json();
-      setBirthData(json.data);
-      // Prefill modal with any partial data
-      if (json.data) {
-        setFullName(json.data.fullName ?? "");
-        setDob(json.data.dateOfBirth ?? "");
-        setTime(json.data.birthTime ?? "");
-        setCityQuery(json.data.birthCity ?? "");
-        if (json.data.birthLat && json.data.birthLng && json.data.birthCity) {
-          setSelectedCity({
-            label: json.data.birthCity,
-            lat: json.data.birthLat,
-            lng: json.data.birthLng,
-            tzone: json.data.birthTimezone ?? "",
-          });
+      // Fetch birth data and relationship-chart plan state in parallel.
+      const [birthRes, chartsRes] = await Promise.all([
+        fetch("/api/community/me/birth-data"),
+        fetch("/api/community/relationship-charts", { cache: "no-store" }),
+      ]);
+
+      if (birthRes.ok) {
+        const json = await birthRes.json();
+        setBirthData(json.data);
+        // Prefill modal with any partial data
+        if (json.data) {
+          setFullName(json.data.fullName ?? "");
+          setDob(json.data.dateOfBirth ?? "");
+          setTime(json.data.birthTime ?? "");
+          setCityQuery(json.data.birthCity ?? "");
+          if (json.data.birthLat && json.data.birthLng && json.data.birthCity) {
+            setSelectedCity({
+              label: json.data.birthCity,
+              lat: json.data.birthLat,
+              lng: json.data.birthLng,
+              tzone: json.data.birthTimezone ?? "",
+            });
+          }
         }
+      } else {
+        setBirthData(null);
+      }
+
+      if (chartsRes.ok) {
+        const chartsJson = await chartsRes.json();
+        setIsFamilyEntitled(chartsJson.isFamilyEntitled ?? false);
+        const members: unknown[] = chartsJson.familyMembers ?? [];
+        setHouseholdProfileCount(members.length);
+        setBirthDataCompleteCount(chartsJson.birthDataCompleteCount ?? 0);
+        // A report exists if any relationship_report or chart row has been generated.
+        const reports: Array<{ astro_ai_response_id?: string | null; report_status?: string | null }> =
+          chartsJson.relationshipReports ?? [];
+        const charts: Array<{ generated_at?: string | null }> = chartsJson.charts ?? [];
+        setHasRelationshipReport(
+          reports.some(
+            (r) => r.astro_ai_response_id && r.report_status === "generated"
+          ) || charts.some((c) => c.generated_at)
+        );
       }
     } catch {
       setBirthData(null);
@@ -278,13 +307,69 @@ export function ChartQuickActions() {
               variant="outline"
               className="h-auto flex-col gap-2 py-4 cursor-pointer"
             >
-              <Link href="/community/charts?focus=self">
-                <Heart className="size-6 text-primary" />
-                <div className="text-center">
-                  <p className="font-semibold text-sm">Relationship Charts</p>
-                  <p className="text-xs text-muted-foreground">Open your compatibility charts</p>
-                </div>
-              </Link>
+              {/* Plan-aware Relationship Charts CTA.
+                  Decision ladder (mirrors the core product rule):
+                    single-plan  → Upgrade for Relationship Charts → /community/plan
+                    family + <2 profiles → Manage Family → /community/plan?tab=members
+                    family + 2+ profiles but <2 birth-complete → Complete Details
+                    has generated report → View Relationship Charts
+                    eligible → Generate Relationship Chart
+              */}
+              {(() => {
+                if (!isFamilyEntitled) {
+                  return (
+                    <Link href="/community/plan">
+                      <Heart className="size-6 text-primary" />
+                      <div className="text-center">
+                        <p className="font-semibold text-sm">Relationship Charts</p>
+                        <p className="text-xs text-muted-foreground">
+                          Upgrade for household charts
+                        </p>
+                      </div>
+                    </Link>
+                  );
+                }
+                if (householdProfileCount < 2) {
+                  return (
+                    <Link href="/community/plan?tab=members">
+                      <Heart className="size-6 text-primary" />
+                      <div className="text-center">
+                        <p className="font-semibold text-sm">Relationship Charts</p>
+                        <p className="text-xs text-muted-foreground">
+                          Manage Family to add members
+                        </p>
+                      </div>
+                    </Link>
+                  );
+                }
+                if (birthDataCompleteCount < 2) {
+                  return (
+                    <Link href="/community/plan?tab=members">
+                      <Heart className="size-6 text-primary" />
+                      <div className="text-center">
+                        <p className="font-semibold text-sm">Relationship Charts</p>
+                        <p className="text-xs text-muted-foreground">
+                          Complete birth details
+                        </p>
+                      </div>
+                    </Link>
+                  );
+                }
+                const relHref = "/community/charts?focus=self";
+                return (
+                  <Link href={relHref}>
+                    <Heart className="size-6 text-primary" />
+                    <div className="text-center">
+                      <p className="font-semibold text-sm">Relationship Charts</p>
+                      <p className="text-xs text-muted-foreground">
+                        {hasRelationshipReport
+                          ? "View your compatibility charts"
+                          : "Open your compatibility charts"}
+                      </p>
+                    </div>
+                  </Link>
+                );
+              })()}
             </Button>
           </div>
         </CardContent>

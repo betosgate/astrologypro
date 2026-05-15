@@ -50,16 +50,28 @@ export default async function DashboardLayout({
     console.error("[dashboard/layout] diviner fetch error:", divinerError);
   }
 
+  // Check for affiliate account
+  const { data: affiliateAccount } = await admin
+    .from("affiliate_accounts")
+    .select("id, name, email, avatar_url, status")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  const isAffiliate = affiliateAccount?.status === "active";
+
   // Gate non-admin users.
   if (!isAnyAdmin) {
-    if (!diviner) redirect("/onboarding");
-    if (
-      !diviner.onboarding_completed &&
-      diviner.subscription_status !== "active"
-    ) {
-      redirect("/join/diviner/plan");
+    if (!diviner && !isAffiliate) redirect("/onboarding");
+    
+    if (diviner) {
+      if (
+        !diviner.onboarding_completed &&
+        diviner.subscription_status !== "active"
+      ) {
+        redirect("/join/diviner/plan");
+      }
+      if (!diviner.onboarding_completed) redirect("/onboarding");
     }
-    if (!diviner.onboarding_completed) redirect("/onboarding");
   }
 
   const portals = await getUserPortals(supabase, user.id, { isAdmin });
@@ -70,11 +82,17 @@ export default async function DashboardLayout({
       <Sidebar
         isAdmin={isAdmin}
         isSupportStaff={isSupportStaff}
-        diviner={{
-          display_name: diviner?.display_name ?? user.email?.split("@")[0] ?? "Admin",
-          username: diviner?.username ?? "",
-          avatar_url: diviner?.avatar_url ?? null,
-        }}
+        isAffiliate={isAffiliate}
+        diviner={diviner ? {
+          display_name: diviner.display_name,
+          username: diviner.username,
+          avatar_url: diviner.avatar_url,
+        } : undefined}
+        affiliate={affiliateAccount ? {
+          name: affiliateAccount.name,
+          email: affiliateAccount.email,
+          avatar_url: affiliateAccount.avatar_url,
+        } : undefined}
       />
       <main className="lg:pl-64">
         {/* Top utility bar — only visible on desktop when user has multiple roles */}

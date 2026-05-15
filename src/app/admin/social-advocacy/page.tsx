@@ -1,11 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Plus, Trash2, Pencil, Megaphone, Eye } from "lucide-react";
 
 type SocialAdvo = {
@@ -38,15 +45,16 @@ export default function AdminSocialAdvocacyPage() {
   const [createdTo, setCreatedTo] = useState("");
   const [updatedFrom, setUpdatedFrom] = useState("");
   const [updatedTo, setUpdatedTo] = useState("");
+  const filtersRef = useRef({ createdFrom, createdTo, updatedFrom, updatedTo });
 
   const fmt = (d: string) => d ? new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—";
 
-  async function load(overrides?: { createdFrom?: string; createdTo?: string; updatedFrom?: string; updatedTo?: string }) {
+  const load = useCallback(async (overrides?: { createdFrom?: string; createdTo?: string; updatedFrom?: string; updatedTo?: string }) => {
     setLoading(true);
-    const cf = overrides?.createdFrom ?? createdFrom;
-    const ct = overrides?.createdTo ?? createdTo;
-    const uf = overrides?.updatedFrom ?? updatedFrom;
-    const ut = overrides?.updatedTo ?? updatedTo;
+    const cf = overrides?.createdFrom ?? filtersRef.current.createdFrom;
+    const ct = overrides?.createdTo ?? filtersRef.current.createdTo;
+    const uf = overrides?.updatedFrom ?? filtersRef.current.updatedFrom;
+    const ut = overrides?.updatedTo ?? filtersRef.current.updatedTo;
     const params = new URLSearchParams();
     if (cf) params.set("created_from", cf);
     if (ct) params.set("created_to", ct);
@@ -55,13 +63,25 @@ export default function AdminSocialAdvocacyPage() {
     const res = await fetch(`/api/admin/social-advocacy?${params}`);
     if (res.ok) setItems(await res.json());
     setLoading(false);
-  }
+  }, []);
 
   function resetFilters() {
     setCreatedFrom(""); setCreatedTo(""); setUpdatedFrom(""); setUpdatedTo("");
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    filtersRef.current = { createdFrom, createdTo, updatedFrom, updatedTo };
+  }, [createdFrom, createdTo, updatedFrom, updatedTo]);
+
+  useEffect(() => {
+    let active = true;
+    Promise.resolve().then(() => {
+      if (active) load();
+    });
+    return () => {
+      active = false;
+    };
+  }, [load]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -167,9 +187,21 @@ export default function AdminSocialAdvocacyPage() {
                 </div>
                 <div className="space-y-1.5">
                   <Label>Frequency</Label>
-                  <select className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm" value={form.frequency} onChange={F("frequency")}>
-                    {FREQUENCIES.map((f) => <option key={f}>{f}</option>)}
-                  </select>
+                  <Select
+                    value={form.frequency}
+                    onValueChange={(value) => setForm((f) => ({ ...f, frequency: value }))}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="w-[var(--radix-select-trigger-width)]">
+                      {FREQUENCIES.map((frequency) => (
+                        <SelectItem key={frequency} value={frequency}>
+                          {frequency}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-1.5">
                   <Label>Link URL</Label>

@@ -88,19 +88,32 @@ export default async function SupportPage({
 
   if (!user) redirect("/login");
 
-  const admin = createAdminClient();
+  const adminClient = createAdminClient();
+  const { data: adminRow } = await adminClient
+    .from("admin_users")
+    .select("role")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  const isAdmin = adminRow?.role === "admin";
+  const isSupportStaff = adminRow?.role === "support_staff";
+  const canSeeAll = isAdmin || isSupportStaff;
 
   const statusFilter = (searchParams.status as string) || "all";
   const searchQuery = (searchParams.q as string) || "";
 
-  let query = admin
+  let query = adminClient
     .from("support_tickets")
     .select(
       "id, ticket_number, subject, status, priority, category, assigned_to, created_at, updated_at",
       { count: "exact" }
-    )
-    .eq("requester_user_id", user.id)
-    .order("created_at", { ascending: false });
+    );
+
+  if (!canSeeAll) {
+    query = query.eq("requester_user_id", user.id);
+  }
+
+  query = query.order("created_at", { ascending: false });
 
   if (statusFilter !== "all") {
     query = query.eq("status", statusFilter);
@@ -126,10 +139,10 @@ export default async function SupportPage({
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <LifeBuoy className="size-6 text-primary" />
-            Support
+            {canSeeAll ? "Support Queue" : "Support"}
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            {count ?? 0} total ticket{count !== 1 ? "s" : ""} found
+            {count ?? 0} total ticket{count !== 1 ? "s" : ""} {canSeeAll ? "in queue" : "found"}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -138,7 +151,7 @@ export default async function SupportPage({
             <Input
               name="q"
               type="search"
-              placeholder="Search my tickets..."
+              placeholder={canSeeAll ? "Search all tickets..." : "Search my tickets..."}
               defaultValue={searchQuery}
               className="pl-9 w-[200px] lg:w-[300px]"
             />
@@ -168,7 +181,7 @@ export default async function SupportPage({
         </Card>
         <Card className="bg-yellow-500/5 border-yellow-500/20 shadow-none">
           <CardHeader className="pb-2">
-            <CardDescription className="text-yellow-600 font-medium text-xs uppercase tracking-wider">Waiting on Me</CardDescription>
+            <CardDescription className="text-yellow-600 font-medium text-xs uppercase tracking-wider">{canSeeAll ? "Waiting on User" : "Waiting on Me"}</CardDescription>
             <CardTitle className="text-2xl">{ticketList.filter(t => t.status === 'waiting_requester').length}</CardTitle>
           </CardHeader>
         </Card>
@@ -184,7 +197,7 @@ export default async function SupportPage({
       <Card>
         <CardHeader className="border-b bg-muted/30 py-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <CardTitle className="text-lg">My Tickets</CardTitle>
+            <CardTitle className="text-lg">{canSeeAll ? "Global Queue" : "My Tickets"}</CardTitle>
             <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
                <Link href="?status=all" className={`text-[11px] px-3 py-1 rounded-full font-medium transition-colors ${statusFilter === 'all' ? 'bg-primary text-primary-foreground' : 'bg-background hover:bg-muted border'}`}>All</Link>
                <Link href="?status=open" className={`text-[11px] px-3 py-1 rounded-full font-medium transition-colors ${statusFilter === 'open' ? 'bg-primary text-primary-foreground' : 'bg-background hover:bg-muted border'}`}>Open</Link>
