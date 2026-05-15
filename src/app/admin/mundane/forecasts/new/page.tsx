@@ -6,6 +6,13 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { ArrowLeft, Loader2 } from "lucide-react";
 
 type EntityOption = { id: string; name: string; flag_emoji: string | null };
@@ -142,18 +149,24 @@ export default function AdminForecastNewPage() {
 
             <div>
               <label className="text-sm font-medium">Related Entity</label>
-              <select
-                value={form.entity_id}
-                onChange={(e) => setForm((f) => ({ ...f, entity_id: e.target.value }))}
-                className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+              <Select
+                value={form.entity_id || "none"}
+                onValueChange={(value) =>
+                  setForm((f) => ({ ...f, entity_id: value === "none" ? "" : value }))
+                }
               >
-                <option value="">— None —</option>
-                {entities.map((en) => (
-                  <option key={en.id} value={en.id}>
-                    {en.flag_emoji ? `${en.flag_emoji} ` : ""}{en.name}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger className="mt-1 w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="w-[var(--radix-select-trigger-width)]">
+                  <SelectItem value="none">None</SelectItem>
+                  {entities.map((entity) => (
+                    <SelectItem key={entity.id} value={entity.id}>
+                      {entity.flag_emoji ? `${entity.flag_emoji} ` : ""}{entity.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
@@ -179,16 +192,24 @@ export default function AdminForecastNewPage() {
 
             <div>
               <label className="text-sm font-medium">Confidence Level</label>
-              <select
-                value={form.confidence_level}
-                onChange={(e) => setForm((f) => ({ ...f, confidence_level: e.target.value }))}
-                className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+              <Select
+                value={form.confidence_level || "none"}
+                onValueChange={(value) =>
+                  setForm((f) => ({ ...f, confidence_level: value === "none" ? "" : value }))
+                }
               >
-                <option value="">— Select —</option>
-                {CONFIDENCE_LEVELS.map((c) => (
-                  <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
-                ))}
-              </select>
+                <SelectTrigger className="mt-1 w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="w-[var(--radix-select-trigger-width)]">
+                  <SelectItem value="none">Select</SelectItem>
+                  {CONFIDENCE_LEVELS.map((confidence) => (
+                    <SelectItem key={confidence} value={confidence}>
+                      {confidence.charAt(0).toUpperCase() + confidence.slice(1)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </CardContent>
         </Card>
