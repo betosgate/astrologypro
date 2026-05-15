@@ -12,9 +12,16 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Loader2, SendHorizonal, X, Clock, Star, Paperclip, FileText, Download, User, LifeBuoy } from "lucide-react";
+import { ArrowLeft, Loader2, SendHorizonal, X, Clock, Star, Paperclip, FileText, Download, User, LifeBuoy, ExternalLink } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -35,6 +42,7 @@ interface Ticket {
   sla_breached: boolean;
   first_response_due_at: string | null;
   assigned_team: string | null;
+  attachments?: TicketAttachment[];
   created_at: string;
   updated_at: string;
 }
@@ -60,6 +68,23 @@ interface TicketMessage {
 interface TicketData {
   ticket: Ticket;
   messages: TicketMessage[];
+}
+
+// ─── Attachment helpers ───────────────────────────────────────────────────────
+
+function getAttachmentExtension(attachment: TicketAttachment) {
+  const cleanName = attachment.name.split("?")[0] ?? "";
+  const cleanUrl = attachment.url.split("?")[0] ?? "";
+  return (cleanName.split(".").pop() || cleanUrl.split(".").pop() || "").toLowerCase();
+}
+
+function isPreviewableImage(attachment: TicketAttachment) {
+  const ext = getAttachmentExtension(attachment);
+  return attachment.type.startsWith("image/") || ["jpg", "jpeg", "png", "webp", "gif"].includes(ext);
+}
+
+function isPreviewablePdf(attachment: TicketAttachment) {
+  return attachment.type === "application/pdf" || getAttachmentExtension(attachment) === "pdf";
 }
 
 // ─── Status helpers ───────────────────────────────────────────────────────────
@@ -234,6 +259,7 @@ export default function TicketDetailPage() {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [replyBody, setReplyBody] = useState("");
+  const [selectedAttachment, setSelectedAttachment] = useState<TicketAttachment | null>(null);
   const [replyAttachments, setReplyAttachments] = useState<TicketAttachment[]>([]);
   const [sending, setSending] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -311,7 +337,7 @@ export default function TicketDetailPage() {
     body.append("kind", "ticket");
 
     try {
-      const res = await fetch("/api/admin/tickets/upload", { method: "POST", body });
+      const res = await fetch("/api/support/tickets/upload", { method: "POST", body });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Upload failed");
 
@@ -337,17 +363,16 @@ export default function TicketDetailPage() {
     return (
       <div className="mt-2 flex flex-wrap gap-2">
         {attachments.map((att, i) => (
-          <a
+          <button
             key={i}
-            href={att.url}
-            target="_blank"
-            rel="noopener noreferrer"
+            type="button"
+            onClick={() => setSelectedAttachment(att)}
             className="flex items-center gap-2 rounded-md border bg-muted/30 px-2 py-1 text-[10px] hover:bg-muted/50 transition-colors"
           >
             <FileText className="size-3 text-muted-foreground" />
             <span className="max-w-[120px] truncate">{att.name}</span>
             <Download className="size-2.5 text-muted-foreground ml-1" />
-          </a>
+          </button>
         ))}
       </div>
     );
@@ -369,6 +394,7 @@ export default function TicketDetailPage() {
   const showCsat = isResolved || isClosed;
 
   return (
+    <>
     <div className="space-y-4">
       {/* Back */}
       <Link
@@ -415,6 +441,8 @@ export default function TicketDetailPage() {
               <div className="prose prose-sm dark:prose-invert max-w-none">
                 <p className="whitespace-pre-wrap text-sm text-muted-foreground">{ticket.description}</p>
               </div>
+
+              {renderAttachments(ticket.attachments)}
 
               {/* Resolution note */}
               {isResolved && ticket.resolution && (
@@ -497,45 +525,29 @@ export default function TicketDetailPage() {
             <div className="p-4 border-t bg-muted/10">
               {!isClosed ? (
                 <form onSubmit={handleReply} className="space-y-3">
-                  <div className="relative">
+                  <div>
                     <Textarea
                       placeholder="Write a reply..."
                       value={replyBody}
                       onChange={(e) => setReplyBody(e.target.value)}
                       rows={3}
-                      className="resize-none pr-10 bg-background"
+                      className="resize-none bg-background"
                       disabled={sending}
                     />
-                    <div className="absolute right-2 bottom-2 flex items-center gap-1">
-                       <input
-                        type="file"
-                        id="file-upload"
-                        className="hidden"
-                        onChange={handleFileUpload}
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="size-8 text-muted-foreground hover:text-primary"
-                        onClick={() => document.getElementById("file-upload")?.click()}
-                        disabled={sending || uploading}
-                      >
-                        {uploading ? (
-                          <Loader2 className="size-4 animate-spin" />
-                        ) : (
-                          <Paperclip className="size-4" />
-                        )}
-                      </Button>
-                    </div>
                   </div>
 
                   {replyAttachments.length > 0 && (
                     <div className="flex flex-wrap gap-2">
                       {replyAttachments.map((att) => (
                         <div key={att.url} className="flex items-center gap-2 rounded-md border bg-background px-2 py-1 text-[10px]">
-                          <FileText className="size-3" />
-                          <span className="max-w-[100px] truncate">{att.name}</span>
+                          <button
+                            type="button"
+                            onClick={() => setSelectedAttachment(att)}
+                            className="flex items-center gap-1.5 hover:text-primary transition-colors"
+                          >
+                            <FileText className="size-3" />
+                            <span className="max-w-[100px] truncate">{att.name}</span>
+                          </button>
                           <button
                             type="button"
                             onClick={() => setReplyAttachments(prev => prev.filter(a => a.url !== att.url))}
@@ -548,7 +560,31 @@ export default function TicketDetailPage() {
                     </div>
                   )}
 
-                  <div className="flex justify-end">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="file"
+                        id="file-upload"
+                        className="hidden"
+                        onChange={handleFileUpload}
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-9 w-9 p-0 text-muted-foreground hover:text-primary"
+                        onClick={() => document.getElementById("file-upload")?.click()}
+                        disabled={sending || uploading}
+                      >
+                        {uploading ? (
+                          <Loader2 className="size-4 animate-spin" />
+                        ) : (
+                          <Paperclip className="size-4" />
+                        )}
+                      </Button>
+                      {uploading && <span className="text-[10px] text-muted-foreground animate-pulse">Uploading...</span>}
+                    </div>
+
                     <Button type="submit" size="sm" disabled={sending || (!replyBody.trim() && replyAttachments.length === 0)}>
                       {sending ? (
                         <Loader2 className="size-4 mr-2 animate-spin" />
@@ -660,5 +696,58 @@ export default function TicketDetailPage() {
         </div>
       </div>
     </div>
+
+    {/* ── Attachment preview modal ─────────────────────────────────── */}
+    <Dialog open={selectedAttachment !== null} onOpenChange={(open) => { if (!open) setSelectedAttachment(null); }}>
+      <DialogContent className="max-h-[90vh] overflow-hidden p-0 sm:max-w-4xl">
+        {selectedAttachment && (
+          <div className="flex max-h-[90vh] flex-col">
+            <DialogHeader className="border-b px-6 py-4 pr-12">
+              <DialogTitle className="truncate text-base">
+                {selectedAttachment.name}
+              </DialogTitle>
+              <DialogDescription>
+                {(selectedAttachment.size / (1024 * 1024)).toFixed(2)} MB
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="min-h-0 flex-1 bg-muted/20 p-4">
+              {isPreviewableImage(selectedAttachment) ? (
+                <div className="flex max-h-[70vh] items-center justify-center overflow-auto rounded-md border bg-background p-2">
+                  <img
+                    src={selectedAttachment.url}
+                    alt={selectedAttachment.name}
+                    className="max-h-[66vh] max-w-full rounded object-contain"
+                  />
+                </div>
+              ) : isPreviewablePdf(selectedAttachment) ? (
+                <div className="h-[70vh] overflow-hidden rounded-md border bg-background">
+                  <iframe
+                    src={selectedAttachment.url}
+                    title={selectedAttachment.name}
+                    className="h-full w-full"
+                  />
+                </div>
+              ) : (
+                <div className="flex min-h-[320px] flex-col items-center justify-center rounded-md border bg-background px-6 text-center">
+                  <FileText className="mb-3 size-10 text-muted-foreground" />
+                  <p className="text-sm font-medium">Preview is not available for this file type.</p>
+                  <p className="mt-1 max-w-md text-sm text-muted-foreground">
+                    Open the attachment in a new tab to view it with your browser or download it.
+                  </p>
+                  <Button className="mt-4" variant="secondary" asChild>
+                    <a href={selectedAttachment.url} target="_blank" rel="noreferrer">
+                      <ExternalLink className="mr-2 size-4" />
+                      Open attachment
+                    </a>
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }
