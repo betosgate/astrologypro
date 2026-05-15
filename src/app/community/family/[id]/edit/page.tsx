@@ -423,7 +423,7 @@ export default function FamilyMemberEditPage() {
                   id="birthLat"
                   value={birthLat}
                   onChange={(e) => setBirthLat(e.target.value)}
-                  placeholder="e.g. 40.7128"
+                  placeholder="Auto-filled from city"
                 />
               </div>
               <div className="space-y-1.5">
@@ -432,7 +432,7 @@ export default function FamilyMemberEditPage() {
                   id="birthLng"
                   value={birthLng}
                   onChange={(e) => setBirthLng(e.target.value)}
-                  placeholder="e.g. -74.0060"
+                  placeholder="Auto-filled from city"
                 />
               </div>
             </div>

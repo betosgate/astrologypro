@@ -10,6 +10,13 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   ChevronDown,
   ChevronUp,
   Plus,
@@ -43,6 +50,8 @@ type Revision = {
   change_summary: string | null;
   created_at: string;
 };
+
+const SELECT_NONE_VALUE = "__none__";
 
 type Post = {
   id: string;
@@ -178,15 +187,18 @@ function BlockEditor({
       {blocks.map((block, idx) => (
         <div key={idx} className="border rounded-lg p-3 space-y-2 bg-muted/30">
           <div className="flex items-center gap-2">
-            <select
-              value={block.type}
-              onChange={(e) => updateBlockType(idx, e.target.value as BlockType)}
-              className="flex h-7 rounded-md border border-input bg-background px-2 text-xs shadow-sm"
-            >
-              {BLOCK_TYPES.map((t) => (
-                <option key={t} value={t}>{t}</option>
-              ))}
-            </select>
+            <Select value={block.type} onValueChange={(value) => updateBlockType(idx, value as BlockType)}>
+              <SelectTrigger className="h-7 w-[6.75rem] px-2 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent position="popper" align="start">
+                {BLOCK_TYPES.map((t) => (
+                  <SelectItem key={t} value={t} className="text-xs">
+                    {t}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <div className="ml-auto flex items-center gap-1">
               <button
                 type="button"
@@ -577,15 +589,18 @@ export default function BlogEditorPage() {
             <CardContent className="space-y-3">
               <div className="space-y-1.5">
                 <Label className="text-xs">Status</Label>
-                <select
-                  value={status}
-                  onChange={(e) => setStatus(e.target.value as BlogStatus)}
-                  className="flex h-9 w-full rounded-md border border-input px-3 py-1 text-sm shadow-sm"
-                >
-                  {VALID_STATUSES.map((s) => (
-                    <option key={s} value={s}>{STATUS_LABELS[s]}</option>
-                  ))}
-                </select>
+                <Select value={status} onValueChange={(value) => setStatus(value as BlogStatus)}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent position="popper" align="start">
+                    {VALID_STATUSES.map((s) => (
+                      <SelectItem key={s} value={s}>
+                        {STATUS_LABELS[s]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               {status === "scheduled" && (
                 <div className="space-y-1.5">
@@ -631,29 +646,41 @@ export default function BlogEditorPage() {
             <CardContent className="space-y-3">
               <div className="space-y-1.5">
                 <Label className="text-xs">Author</Label>
-                <select
-                  value={authorId}
-                  onChange={(e) => setAuthorId(e.target.value)}
-                  className="flex h-9 w-full rounded-md border border-input px-3 py-1 text-sm shadow-sm"
+                <Select
+                  value={authorId || SELECT_NONE_VALUE}
+                  onValueChange={(value) => setAuthorId(value === SELECT_NONE_VALUE ? "" : value)}
                 >
-                  <option value="">— None —</option>
-                  {authors.map((a) => (
-                    <option key={a.id} value={a.id}>{a.name}</option>
-                  ))}
-                </select>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent position="popper" align="start">
+                    <SelectItem value={SELECT_NONE_VALUE}>- None -</SelectItem>
+                    {authors.map((a) => (
+                      <SelectItem key={a.id} value={a.id}>
+                        {a.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs">Series</Label>
-                <select
-                  value={seriesId}
-                  onChange={(e) => setSeriesId(e.target.value)}
-                  className="flex h-9 w-full rounded-md border border-input px-3 py-1 text-sm shadow-sm"
+                <Select
+                  value={seriesId || SELECT_NONE_VALUE}
+                  onValueChange={(value) => setSeriesId(value === SELECT_NONE_VALUE ? "" : value)}
                 >
-                  <option value="">— None —</option>
-                  {seriesList.map((s) => (
-                    <option key={s.id} value={s.id}>{s.name}</option>
-                  ))}
-                </select>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent position="popper" align="start">
+                    <SelectItem value={SELECT_NONE_VALUE}>- None -</SelectItem>
+                    {seriesList.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>
+                        {s.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </CardContent>
           </Card>
@@ -784,31 +811,47 @@ export default function BlogEditorPage() {
               {/* Difficulty Level */}
               <div className="space-y-1.5">
                 <Label className="text-xs">Difficulty Level</Label>
-                <select
-                  value={difficultyLevel}
-                  onChange={(e) => setDifficultyLevel(e.target.value)}
-                  className="flex h-9 w-full rounded-md border border-input px-3 py-1 text-sm shadow-sm"
+                <Select
+                  value={difficultyLevel || SELECT_NONE_VALUE}
+                  onValueChange={(value) =>
+                    setDifficultyLevel(value === SELECT_NONE_VALUE ? "" : value)
+                  }
                 >
-                  <option value="">— None —</option>
-                  {DIFFICULTY_LEVELS.map((d) => (
-                    <option key={d.value} value={d.value}>{d.label}</option>
-                  ))}
-                </select>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent position="popper" align="start">
+                    <SelectItem value={SELECT_NONE_VALUE}>- None -</SelectItem>
+                    {DIFFICULTY_LEVELS.map((d) => (
+                      <SelectItem key={d.value} value={d.value}>
+                        {d.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* Content Intent */}
               <div className="space-y-1.5">
                 <Label className="text-xs">Content Intent</Label>
-                <select
-                  value={contentIntent}
-                  onChange={(e) => setContentIntent(e.target.value)}
-                  className="flex h-9 w-full rounded-md border border-input px-3 py-1 text-sm shadow-sm"
+                <Select
+                  value={contentIntent || SELECT_NONE_VALUE}
+                  onValueChange={(value) =>
+                    setContentIntent(value === SELECT_NONE_VALUE ? "" : value)
+                  }
                 >
-                  <option value="">— None —</option>
-                  {CONTENT_INTENTS.map((c) => (
-                    <option key={c.value} value={c.value}>{c.label}</option>
-                  ))}
-                </select>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent position="popper" align="start">
+                    <SelectItem value={SELECT_NONE_VALUE}>- None -</SelectItem>
+                    {CONTENT_INTENTS.map((c) => (
+                      <SelectItem key={c.value} value={c.value}>
+                        {c.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </CardContent>
           </Card>

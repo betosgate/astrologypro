@@ -17,6 +17,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -25,7 +32,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/components/providers/auth-provider";
-import { ArrowLeft, Loader2, SendHorizonal, Lock, CheckSquare, Square, Plus, Paperclip, FileText, X, Download } from "lucide-react";
+import { ArrowLeft, Loader2, SendHorizonal, Lock, CheckSquare, Square, Plus, Paperclip, FileText, X, Download, ExternalLink } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -141,6 +148,21 @@ function formatDateTime(d: string | null | undefined) {
   }
 }
 
+function getAttachmentExtension(attachment: TicketAttachment) {
+  const cleanName = attachment.name.split("?")[0] ?? "";
+  const cleanUrl = attachment.url.split("?")[0] ?? "";
+  return (cleanName.split(".").pop() || cleanUrl.split(".").pop() || "").toLowerCase();
+}
+
+function isPreviewableImage(attachment: TicketAttachment) {
+  const ext = getAttachmentExtension(attachment);
+  return attachment.type.startsWith("image/") || ["jpg", "jpeg", "png", "webp", "gif"].includes(ext);
+}
+
+function isPreviewablePdf(attachment: TicketAttachment) {
+  return attachment.type === "application/pdf" || getAttachmentExtension(attachment) === "pdf";
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function AdminTicketDetailPage() {
@@ -175,6 +197,7 @@ export default function AdminTicketDetailPage() {
   const [messageBody, setMessageBody] = useState("");
   const [isInternal, setIsInternal] = useState(true);
   const [messageAttachments, setMessageAttachments] = useState<TicketAttachment[]>([]);
+  const [selectedAttachment, setSelectedAttachment] = useState<TicketAttachment | null>(null);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -396,17 +419,16 @@ export default function AdminTicketDetailPage() {
     return (
       <div className="mt-3 flex flex-wrap gap-2">
         {attachments.map((att, i) => (
-          <a
+          <button
             key={i}
-            href={att.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-2 rounded-md border bg-muted/30 px-2.5 py-1.5 text-xs hover:bg-muted/50 transition-colors"
+            type="button"
+            onClick={() => setSelectedAttachment(att)}
+            className="flex items-center gap-2 rounded-md border bg-muted/30 px-2.5 py-1.5 text-xs transition-colors hover:bg-muted/50"
           >
             <FileText className="size-3.5 text-muted-foreground" />
             <span className="max-w-[150px] truncate">{att.name}</span>
             <Download className="size-3 text-muted-foreground ml-1" />
-          </a>
+          </button>
         ))}
       </div>
     );
@@ -643,12 +665,28 @@ export default function AdminTicketDetailPage() {
                 {messageAttachments.length > 0 && (
                   <div className="flex flex-wrap gap-2">
                     {messageAttachments.map((att) => (
-                      <div key={att.url} className="flex items-center gap-2 rounded-md border bg-muted/50 px-2 py-1 text-xs">
+                      <div
+                        key={att.url}
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => setSelectedAttachment(att)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            setSelectedAttachment(att);
+                          }
+                        }}
+                        className="flex items-center gap-2 rounded-md border bg-muted/50 px-2 py-1 text-xs transition-colors hover:bg-muted/70 cursor-pointer"
+                      >
                         <FileText className="size-3" />
                         <span className="max-w-[100px] truncate">{att.name}</span>
                         <button
                           type="button"
-                          onClick={() => setMessageAttachments(prev => prev.filter(a => a.url !== att.url))}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setMessageAttachments(prev => prev.filter(a => a.url !== att.url));
+                            setSelectedAttachment((current) => (current?.url === att.url ? null : current));
+                          }}
                           className="text-muted-foreground hover:text-destructive"
                         >
                           <X className="size-3" />
@@ -907,6 +945,62 @@ export default function AdminTicketDetailPage() {
           </Card>
         </div>
       </div>
+
+      <Dialog
+        open={selectedAttachment !== null}
+        onOpenChange={(open) => {
+          if (!open) setSelectedAttachment(null);
+        }}
+      >
+        <DialogContent className="max-h-[90vh] overflow-hidden p-0 sm:max-w-4xl">
+          {selectedAttachment && (
+            <div className="flex max-h-[90vh] flex-col">
+              <DialogHeader className="border-b px-6 py-4 pr-12">
+                <DialogTitle className="truncate text-base">
+                  {selectedAttachment.name}
+                </DialogTitle>
+                <DialogDescription>
+                  {(selectedAttachment.size / (1024 * 1024)).toFixed(2)} MB
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="min-h-0 flex-1 bg-muted/20 p-4">
+                {isPreviewableImage(selectedAttachment) ? (
+                  <div className="flex max-h-[70vh] items-center justify-center overflow-auto rounded-md border bg-background p-2">
+                    <img
+                      src={selectedAttachment.url}
+                      alt={selectedAttachment.name}
+                      className="max-h-[66vh] max-w-full rounded object-contain"
+                    />
+                  </div>
+                ) : isPreviewablePdf(selectedAttachment) ? (
+                  <div className="h-[70vh] overflow-hidden rounded-md border bg-background">
+                    <iframe
+                      src={selectedAttachment.url}
+                      title={selectedAttachment.name}
+                      className="h-full w-full"
+                    />
+                  </div>
+                ) : (
+                  <div className="flex min-h-[320px] flex-col items-center justify-center rounded-md border bg-background px-6 text-center">
+                    <FileText className="mb-3 size-10 text-muted-foreground" />
+                    <p className="text-sm font-medium">Preview is not available for this file type.</p>
+                    <p className="mt-1 max-w-md text-sm text-muted-foreground">
+                      Open the attachment in a new tab to view it with your browser or download it.
+                    </p>
+                    <Button className="mt-4" variant="secondary" asChild>
+                      <a href={selectedAttachment.url} target="_blank" rel="noreferrer">
+                        <ExternalLink className="mr-2 size-4" />
+                        Open attachment
+                      </a>
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

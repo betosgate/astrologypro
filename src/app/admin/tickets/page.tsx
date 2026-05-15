@@ -117,7 +117,7 @@ export default async function AdminTicketsPage({
 
   const parsedPage = parseInt(pageParam ?? "1", 10);
   const page = Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage : 1;
-  const limit = 50;
+  const limit = 10;
 
   const admin = createAdminClient();
 
@@ -144,7 +144,7 @@ export default async function AdminTicketsPage({
   const queueMap = Object.fromEntries(queues.map((q) => [q.id, q.name]));
 
   function buildTicketsQuery(pageNumber: number) {
-    const offset = (pageNumber - 1) * limit;
+    const skip = (pageNumber - 1) * limit;
     let query = admin
       .from("support_tickets")
       .select(
@@ -154,7 +154,7 @@ export default async function AdminTicketsPage({
       .order("priority", { ascending: true })
       .order("created_at", { ascending: false })
       .order("id", { ascending: false })
-      .range(offset, offset + limit - 1);
+      .range(skip, skip + limit - 1);
 
     // Tab filters
     if (activeTab === "unassigned") {

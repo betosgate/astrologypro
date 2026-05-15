@@ -8,8 +8,13 @@ import {
   deriveMonthlyReportState,
   deriveNatalReportState,
 } from "@/lib/community/chart-report-state";
-import { isBirthDataComplete } from "@/lib/community/birth-data-readiness";
+import {
+  computeBirthDataReadiness,
+  formatMissingBirthDataFields,
+  isBirthDataComplete,
+} from "@/lib/community/birth-data-readiness";
 import { ensureCurrentMonthTransitsForMember } from "@/lib/community/ensure-monthly-transits";
+import { ensureCanonicalSelfFamilyMember } from "@/lib/community/self-family-member";
 
 export const dynamic = "force-dynamic";
 
@@ -72,13 +77,16 @@ export async function GET() {
   // 1. Try primary owner path
   const { data: primaryMember } = await supabase
     .from("community_members")
-    .select("id, membership_status")
+    .select(
+      "id, user_id, full_name, membership_status, date_of_birth, birth_time, birth_city, birth_country"
+    )
     .eq("user_id", user.id)
     .maybeSingle();
 
   if (primaryMember) {
     memberId = primaryMember.id;
     membershipStatus = primaryMember.membership_status;
+    await ensureCanonicalSelfFamilyMember(primaryMember, user.id);
   } else {
     // 2. Try household member path
     const { data: familyMember } = await supabase
@@ -124,6 +132,7 @@ export async function GET() {
     natal_report_id: string | null;
     natal_report_status: string | null;
     chart_state: string;
+    missing_fields: string[];
   };
 
   type MonthlyTransitItem = {
@@ -140,6 +149,7 @@ export async function GET() {
     full_report_generated_at: string | null;
     generated_at: string | null;
     report_state: string;
+    missing_fields: string[];
   };
 
   let natalChart: NatalChartItem | null = null;
@@ -159,23 +169,24 @@ export async function GET() {
     natalStatus = "empty";
     transitStatus = "empty";
   } else {
-    // ── Natal carousel: same rule as before — only members whose stored
-    //    natal_chart passes shape validation. Unchanged behaviour for
-    //    back-compat with the existing carousel UI.
-    // ── Natal carousel: include every household member with complete birth 
-    //    data, even if their chart hasn't been generated yet. This allows 
-    //    the dashboard to show a "Generate" CTA for them.
-    natalCharts = familyRows
-      .filter((row) => isBirthDataComplete(row))
-      .map((row) => ({
+    // ── Natal carousel: include every household member, including incomplete
+    //    rows. A logged-in self profile with missing details is still a real
+    //    `1 / 1` item and should not render as a plain empty state.
+    natalCharts = familyRows.map((row) => {
+      const readiness = computeBirthDataReadiness(row);
+      return {
         id: row.id,
         full_name: row.full_name,
         date_of_birth: row.date_of_birth,
         natal_chart: isValidNatalChart(row.natal_chart) ? row.natal_chart : {},
         natal_report_id: row.natal_report_id,
         natal_report_status: row.natal_report_status,
-        chart_state: deriveNatalReportState(row),
-      }));
+        chart_state: readiness.complete
+          ? deriveNatalReportState(row)
+          : "missing_details",
+        missing_fields: formatMissingBirthDataFields(readiness.missing),
+      };
+    });
 
     natalChart =
       natalCharts.find((c) => c.chart_state === "generated") ??
@@ -300,7 +311,6 @@ export async function GET() {
               generation_status: row.generation_status,
               full_report_id: row.full_report_id,
               full_report_status: row.full_report_status,
-              full_report_generated_at: row.full_report_generated_at,
             },
             currentMonth
           );
@@ -318,15 +328,17 @@ export async function GET() {
               row.full_report_generated_at as string | null,
             generated_at: row.generated_at as string | null,
             report_state: reportState,
+            missing_fields: [],
           });
         }
 
-        // community-dashboard-monthly-transit-card-sync (2026-04-30):
-        // Mirrors Natal Carousel behavior — if an eligible member has no 
-        // transit row yet, add a placeholder so they still appear in the 
-        // dashboard carousel (allows the user to see the "Generate" CTA).
-        for (const id of eligibleIds) {
+        // Mirrors Natal Carousel behavior: every household profile appears in
+        // the carousel. Eligible missing rows get "Generate"; incomplete rows
+        // get "Missing Details".
+        for (const row of familyRows) {
+          const id = row.id;
           if (!seen.has(id)) {
+            const readiness = computeBirthDataReadiness(row);
             monthlyTransits.push({
               id: "",
               family_member_id: id,
@@ -339,7 +351,8 @@ export async function GET() {
               full_report_status: null,
               full_report_generated_at: null,
               generated_at: null,
-              report_state: "missing",
+              report_state: readiness.complete ? "missing" : "missing_details",
+              missing_fields: formatMissingBirthDataFields(readiness.missing),
             });
           }
         }
@@ -372,7 +385,7 @@ export async function GET() {
     // Task sync audit: ensure we never return "empty" if the household 
     // actually has members. This forces the carousel to show placeholders
     // if rows are missing.
-    if (transitStatus === "empty" && eligibleIds.length > 0) {
+    if (transitStatus === "empty" && allFamilyIds.length > 0) {
       transitStatus = "ready";
     }
   }
