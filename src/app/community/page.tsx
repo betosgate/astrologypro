@@ -1947,7 +1947,7 @@ export default async function CommunityDashboardPage() {
                   <Link href="/community/rituals/new">+ Create Ritual</Link>
                 </Button>
                 {rituals.length > 0 && (
-                  <Button asChild variant="ghost" size="sm">
+                  <Button asChild variant="outline" size="sm">
                     <Link href="/community/rituals">View All</Link>
                   </Button>
                 )}
@@ -2051,7 +2051,7 @@ export default async function CommunityDashboardPage() {
                   Each card tracks Profile, Natal, Monthly, and Relationship progress.
                 </p>
               </div>
-              <Button asChild variant="ghost" size="sm">
+              <Button asChild variant="outline" size="sm">
                 <Link href="/community/plan?tab=members">Manage Family →</Link>
               </Button>
             </div>
@@ -2341,7 +2341,7 @@ export default async function CommunityDashboardPage() {
               <BookMarked className="size-4 text-muted-foreground" />
               <h3 className="text-sm font-semibold">Content Library</h3>
             </div>
-            <Button asChild variant="ghost" size="sm">
+            <Button asChild variant="outline" size="sm">
               <Link href="/community/library">View All →</Link>
             </Button>
           </div>
@@ -2356,7 +2356,7 @@ export default async function CommunityDashboardPage() {
                 <Star className="size-4 text-amber-500" />
                 <h3 className="text-sm font-semibold">Spiritual Wisdom</h3>
               </div>
-              <Button asChild variant="ghost" size="sm">
+              <Button asChild variant="outline" size="sm">
                 <Link href="/community/resources">View All →</Link>
               </Button>
             </div>
