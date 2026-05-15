@@ -777,7 +777,9 @@ export default function AdminTicketDetailPage() {
                   </div>
                 ))}
               </div>
-              <div className="mt-4 flex items-center gap-2">
+           
+            </CardContent>
+               <div className="mt-4 flex items-center gap-2 ml-4">
                 <Button
                   type="button"
                   variant="outline"
@@ -801,7 +803,6 @@ export default function AdminTicketDetailPage() {
                   Collapse All
                 </Button>
               </div>
-            </CardContent>
           </Card>
         </div>
 
