@@ -1,36 +1,16 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, Suspense } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent } from "@/components/ui/card";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import {
   Globe,
   MapPin,
-  Plus,
-  ChevronDown,
   Loader2,
   TrendingUp,
 } from "lucide-react";
@@ -148,135 +128,35 @@ function StatCard({
   );
 }
 
-// ─── Sector dropdown ────────────────────────────────────────────────────────────
+// ─── Main Content ──────────────────────────────────────────────────────────────
 
-function SectorDropdown({
-  selected,
-  onChange,
-}: {
-  selected: string[];
-  onChange: (vals: string[]) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, []);
-
-  function toggle(val: string) {
-    onChange(
-      selected.includes(val) ? selected.filter((v) => v !== val) : [...selected, val]
-    );
-  }
-
-  const label =
-    selected.length === 0
-      ? "All Sectors"
-      : `${selected.length} sector${selected.length > 1 ? "s" : ""}`;
-
-  return (
-    <div className="relative" ref={ref}>
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        className="gap-1.5 h-9"
-        onClick={() => setOpen((v) => !v)}
-      >
-        {label} <ChevronDown className="size-3.5" />
-      </Button>
-      {open && (
-        <div className="absolute left-0 top-full z-50 mt-1 w-64 rounded-md border bg-popover p-2 shadow-lg">
-          {SECTORS.map((s) => (
-            <label
-              key={s.val}
-              className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-muted"
-            >
-              <input
-                type="checkbox"
-                checked={selected.includes(s.val)}
-                onChange={() => toggle(s.val)}
-                className="size-3.5"
-              />
-              {s.key}
-            </label>
-          ))}
-          {selected.length > 0 && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="mt-1 w-full text-xs"
-              onClick={() => onChange([])}
-            >
-              Clear sectors
-            </Button>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── Main page ─────────────────────────────────────────────────────────────────
-
-export default function AdminIngressChartsPage() {
+function IngressChartsListContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const initialTag = searchParams.get("tag") || "";
+  const initialSector = searchParams.get("sector") || "";
+
   const [charts, setCharts] = useState<IngressChart[]>([]);
   const [stats, setStats] = useState<StatsData>({ total: 0, upcoming: 0, social_advo: 0 });
   const [expandedSectorIds, setExpandedSectorIds] = useState<Record<string, boolean>>({});
+  const [expandedTagIds, setExpandedTagIds] = useState<Record<string, boolean>>({});
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [importing, setImporting] = useState(false);
-
-  async function handleImportMongo(showToast = true) {
-    setImporting(true);
-    try {
-      const res = await fetch("/api/admin/ingress-charts/import-mongo", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ dry_run: false }),
-      });
-
-      const json = await res.json();
-      if (res.ok) {
-        if (showToast) {
-          toast.success(`Import completed! Processed: ${json.processed}, Inserted: ${json.inserted}`);
-        }
-        fetchCharts(1, true); // Refresh the list
-      } else {
-        if (showToast) {
-          toast.error(`Import failed: ${json.detail || json.error || "Unknown error"}`);
-        }
-      }
-    } catch (error) {
-      if (showToast) {
-        toast.error("An error occurred during import.");
-      }
-      console.error(error);
-    } finally {
-      setImporting(false);
-    }
-  }
 
   // Filters
   const [search, setSearch] = useState("");
   const [ingressType, setIngressType] = useState("");
   const [importance, setImportance] = useState("");
-  const [sectors, setSectors] = useState<string[]>([]);
+  const [sectors, setSectors] = useState<string[]>(initialSector ? [initialSector] : []);
+  const [tag, setTag] = useState(initialTag);
   const [view, setView] = useState("upcoming");
   const [sort, setSort] = useState("event_asc");
 
   async function fetchCharts(p: number, replace: boolean, overrides?: Partial<{
     search: string; ingressType: string; importance: string;
-    sectors: string[]; view: string; sort: string;
+    sectors: string[]; view: string; sort: string; tags: string;
   }>) {
     if (p === 1) setLoading(true);
     else setLoadingMore(true);
@@ -287,13 +167,15 @@ export default function AdminIngressChartsPage() {
     const sec = overrides?.sectors ?? sectors;
     const v = overrides?.view ?? view;
     const so = overrides?.sort ?? sort;
+    const t = overrides?.tags ?? tag;
 
-    const params = new URLSearchParams({ page: String(p), sort: so });
+    const params = new URLSearchParams({ page: String(p), sort: so, use_filtered_stats: "true" });
     if (s) params.set("search", s);
     if (it) params.set("ingress_type", it);
     if (imp) params.set("importance", imp);
     if (sec.length) params.set("sectors", sec.join(","));
     if (v) params.set("view", v);
+    if (t) params.set("tags", t);
 
     const res = await fetch(`/api/admin/ingress-charts?${params}`);
     if (res.ok) {
@@ -321,13 +203,14 @@ export default function AdminIngressChartsPage() {
 
   function applyFilter(key: string, value: unknown) {
     const overrides: Record<string, unknown> = {
-      search, ingressType, importance, sectors, view, sort,
+      search, ingressType, importance, sectors, view, sort, tag,
       [key]: value,
     };
     if (key === "ingressType") setIngressType(value as string);
     else if (key === "importance") setImportance(value as string);
     else if (key === "view") setView(value as string);
     else if (key === "sort") setSort(value as string);
+    else if (key === "tag") setTag(value as string);
     fetchCharts(1, true, overrides as Parameters<typeof fetchCharts>[2]);
   }
 
@@ -348,48 +231,25 @@ export default function AdminIngressChartsPage() {
     setExpandedSectorIds((prev) => ({ ...prev, [chartId]: !prev[chartId] }));
   }
 
+  function toggleTagExpansion(chartId: string) {
+    setExpandedTagIds((prev) => ({ ...prev, [chartId]: !prev[chartId] }));
+  }
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Ingress Charts</h1>
-          <p className="text-muted-foreground">Manage planetary ingress charts.</p>
+          <h1 className="text-2xl font-bold">
+            Ingress Charts List
+            {tag && ` under tag: ${tag}`}
+            {sectors.length > 0 && ` under sector: ${getSectorKey(sectors[0])}`}
+          </h1>
+          <p className="text-muted-foreground">Browse and search all ingress charts.</p>
         </div>
-        <div className="flex gap-2">
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button size="sm" variant="outline" disabled={importing}>
-                {importing ? <Loader2 className="mr-1.5 size-4 animate-spin" /> : <Globe className="mr-1.5 size-4" />}
-                Import Charts
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Import charts?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This will connect to the legacy MongoDB and import ingress charts.
-                  Existing charts with the same Mongo ID will be skipped.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={() => handleImportMongo()}
-                  className="bg-primary text-primary-foreground hover:bg-primary/90"
-                >
-                  Import Charts
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-
-          <Button asChild size="sm">
-            <Link href="/admin/ingress-charts/new">
-              <Plus className="mr-1.5 size-4" /> New Chart
-            </Link>
-          </Button>
-        </div>
+        <Button asChild variant="outline">
+          <Link href="/admin/ingress-charts">Back to List</Link>
+        </Button>
       </div>
 
       {/* Stats bar */}
@@ -428,33 +288,17 @@ export default function AdminIngressChartsPage() {
           />
         </div>
 
-
         {/* Importance */}
-        <Select
-          value={importance || "all"}
-          onValueChange={(value) =>
-            applyFilter("importance", value === "all" ? "" : value)
-          }
+        <select
+          value={importance}
+          onChange={(e) => applyFilter("importance", e.target.value)}
+          className="flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
         >
-          <SelectTrigger className="w-full sm:w-44">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent className="w-[var(--radix-select-trigger-width)]">
-            <SelectItem value="all">All Importance</SelectItem>
-            <SelectItem value="High Impact">High Impact</SelectItem>
-            <SelectItem value="Medium Impact">Medium Impact</SelectItem>
-            <SelectItem value="Low Impact">Low Impact</SelectItem>
-          </SelectContent>
-        </Select>
-
-        {/* Sector multi-select */}
-        <SectorDropdown
-          selected={sectors}
-          onChange={(vals) => {
-            setSectors(vals);
-            fetchCharts(1, true, { sectors: vals });
-          }}
-        />
+          <option value="">All Importance</option>
+          <option value="High Impact">High Impact</option>
+          <option value="Medium Impact">Medium Impact</option>
+          <option value="Low Impact">Low Impact</option>
+        </select>
 
         {/* View toggle */}
         <div
@@ -472,8 +316,8 @@ export default function AdminIngressChartsPage() {
                 aria-pressed={selected}
                 onClick={() => applyFilter("view", option.value)}
                 className={`border-r px-3 text-sm font-medium transition last:border-r-0 ${selected
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-transparent text-muted-foreground hover:bg-muted hover:text-foreground"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-transparent text-muted-foreground hover:bg-muted hover:text-foreground"
                   }`}
               >
                 {option.label}
@@ -483,19 +327,15 @@ export default function AdminIngressChartsPage() {
         </div>
 
         {/* Sort */}
-        <Select
+        <select
           value={sort}
-          onValueChange={(value) => applyFilter("sort", value)}
+          onChange={(e) => applyFilter("sort", e.target.value)}
+          className="flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
         >
-          <SelectTrigger className="w-full sm:w-44">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent className="w-[var(--radix-select-trigger-width)]">
-            <SelectItem value="event_asc">Event Date ↑</SelectItem>
-            <SelectItem value="event_desc">Event Date ↓</SelectItem>
-            <SelectItem value="name_asc">Name A–Z</SelectItem>
-          </SelectContent>
-        </Select>
+          <option value="event_asc">Event Date ↑</option>
+          <option value="event_desc">Event Date ↓</option>
+          <option value="name_asc">Name A–Z</option>
+        </select>
 
         <Button size="sm" variant="outline" onClick={() => fetchCharts(1, true)}>
           Search
@@ -526,6 +366,13 @@ export default function AdminIngressChartsPage() {
             const visibleSectors = sectorsExpanded
               ? chartSectors
               : chartSectors.slice(0, 2);
+            
+            const chartTags = chart.tags ?? [];
+            const tagsExpanded = expandedTagIds[chart.id] ?? false;
+            const visibleTags = tagsExpanded
+              ? chartTags
+              : chartTags.slice(0, 2);
+
             const detailHref = `/admin/ingress-charts/${chart.id}`;
 
             return (
@@ -610,6 +457,33 @@ export default function AdminIngressChartsPage() {
                       <p className="text-xs text-muted-foreground">No focus sectors added.</p>
                     )}
                   </div>
+
+                  {/* Tags */}
+                  {chartTags.length > 0 && (
+                    <div className="space-y-1">
+                      <h3 className="text-xs font-bold text-foreground">Tags:</h3>
+                      <div className="flex flex-wrap gap-1 items-center">
+                        {visibleTags.map((t) => (
+                          <Badge key={t} variant="secondary" className="text-[10px] px-1.5 py-0">
+                            {t}
+                          </Badge>
+                        ))}
+                        {chartTags.length > 2 && (
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              toggleTagExpansion(chart.id);
+                            }}
+                            onKeyDown={(event) => event.stopPropagation()}
+                            className="text-xs font-semibold text-orange-500 transition hover:text-orange-600 ml-1"
+                          >
+                            {tagsExpanded ? "Less" : `+ ${chartTags.length - 2} more`}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="mt-auto border-t pt-3">
@@ -684,5 +558,17 @@ export default function AdminIngressChartsPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function IngressChartsListPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex justify-center py-12">
+        <Loader2 className="size-6 animate-spin text-muted-foreground" />
+      </div>
+    }>
+      <IngressChartsListContent />
+    </Suspense>
   );
 }

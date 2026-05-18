@@ -1,10 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -91,18 +98,23 @@ export default function AdminMundaneForecastsPage() {
 
   const [filterType, setFilterType] = useState("");
   const [filterPublished, setFilterPublished] = useState("");
+  const filtersRef = useRef({ filterType, filterPublished });
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<ForecastForm>(EMPTY_FORM);
   const [formError, setFormError] = useState("");
 
-  async function fetchForecasts(p: number, replace: boolean, overrides?: { filterType?: string; filterPublished?: string }) {
+  const fetchForecasts = useCallback(async (
+    p: number,
+    replace: boolean,
+    overrides?: { filterType?: string; filterPublished?: string }
+  ) => {
     if (p === 1) setLoading(true);
     else setLoadingMore(true);
 
-    const ft = overrides?.filterType ?? filterType;
-    const fp = overrides?.filterPublished ?? filterPublished;
+    const ft = overrides?.filterType ?? filtersRef.current.filterType;
+    const fp = overrides?.filterPublished ?? filtersRef.current.filterPublished;
 
     const params = new URLSearchParams({ page: String(p) });
     if (ft) params.set("forecast_type", ft);
@@ -118,9 +130,9 @@ export default function AdminMundaneForecastsPage() {
     }
     setLoading(false);
     setLoadingMore(false);
-  }
+  }, []);
 
-  async function loadEntityOptions() {
+  const loadEntityOptions = useCallback(async () => {
     const res = await fetch("/api/admin/mundane-entities?page=1");
     if (res.ok) {
       const json = await res.json();
@@ -130,17 +142,30 @@ export default function AdminMundaneForecastsPage() {
         flag_emoji: e.flag_emoji,
       })));
     }
-  }
-
-  useEffect(() => {
-    fetchForecasts(1, true);
-    loadEntityOptions();
   }, []);
 
+  useEffect(() => {
+    filtersRef.current = { filterType, filterPublished };
+  }, [filterType, filterPublished]);
+
+  useEffect(() => {
+    let active = true;
+    Promise.resolve().then(() => {
+      if (!active) return;
+      fetchForecasts(1, true);
+      loadEntityOptions();
+    });
+    return () => {
+      active = false;
+    };
+  }, [fetchForecasts, loadEntityOptions]);
+
   function applyFilter(key: "filterType" | "filterPublished", value: string) {
+    const nextFilters = { ...filtersRef.current, [key]: value };
     if (key === "filterType") setFilterType(value);
     if (key === "filterPublished") setFilterPublished(value);
-    fetchForecasts(1, true, { filterType, filterPublished, [key]: value });
+    filtersRef.current = nextFilters;
+    fetchForecasts(1, true, nextFilters);
   }
 
   function openAdd() {
@@ -243,25 +268,39 @@ export default function AdminMundaneForecastsPage() {
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-2">
-        <select
-          value={filterType}
-          onChange={(e) => applyFilter("filterType", e.target.value)}
-          className="flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+        <Select
+          value={filterType || "all"}
+          onValueChange={(value) =>
+            applyFilter("filterType", value === "all" ? "" : value)
+          }
         >
-          <option value="">All Types</option>
-          {FORECAST_TYPES.map((t) => (
-            <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>
-          ))}
-        </select>
-        <select
-          value={filterPublished}
-          onChange={(e) => applyFilter("filterPublished", e.target.value)}
-          className="flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+          <SelectTrigger className="w-full sm:w-40">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent className="w-[var(--radix-select-trigger-width)]">
+            <SelectItem value="all">All Types</SelectItem>
+            {FORECAST_TYPES.map((type) => (
+              <SelectItem key={type} value={type}>
+                {type.charAt(0).toUpperCase() + type.slice(1)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select
+          value={filterPublished || "all"}
+          onValueChange={(value) =>
+            applyFilter("filterPublished", value === "all" ? "" : value)
+          }
         >
-          <option value="">All</option>
-          <option value="true">Published</option>
-          <option value="false">Drafts</option>
-        </select>
+          <SelectTrigger className="w-full sm:w-36">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent className="w-[var(--radix-select-trigger-width)]">
+            <SelectItem value="all">All</SelectItem>
+            <SelectItem value="true">Published</SelectItem>
+            <SelectItem value="false">Drafts</SelectItem>
+          </SelectContent>
+        </Select>
         {total > 0 && (
           <span className="text-sm text-muted-foreground">{total} forecast{total !== 1 ? "s" : ""}</span>
         )}
@@ -378,44 +417,66 @@ export default function AdminMundaneForecastsPage() {
             </div>
             <div>
               <label className="text-sm font-medium">Entity</label>
-              <select
-                value={form.entity_id}
-                onChange={(e) => setForm((f) => ({ ...f, entity_id: e.target.value }))}
-                className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+              <Select
+                value={form.entity_id || "none"}
+                onValueChange={(value) =>
+                  setForm((f) => ({ ...f, entity_id: value === "none" ? "" : value }))
+                }
               >
-                <option value="">— No specific entity —</option>
-                {entityOptions.map((e) => (
-                  <option key={e.id} value={e.id}>
-                    {e.flag_emoji ? `${e.flag_emoji} ` : ""}{e.name}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger className="mt-1 w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="w-[var(--radix-select-trigger-width)]">
+                  <SelectItem value="none">No specific entity</SelectItem>
+                  {entityOptions.map((entity) => (
+                    <SelectItem key={entity.id} value={entity.id}>
+                      {entity.flag_emoji ? `${entity.flag_emoji} ` : ""}{entity.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="text-sm font-medium">Type *</label>
-                <select
+                <Select
                   value={form.forecast_type}
-                  onChange={(e) => setForm((f) => ({ ...f, forecast_type: e.target.value }))}
-                  className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+                  onValueChange={(value) =>
+                    setForm((f) => ({ ...f, forecast_type: value }))
+                  }
                 >
-                  {FORECAST_TYPES.map((t) => (
-                    <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>
-                  ))}
-                </select>
+                  <SelectTrigger className="mt-1 w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="w-[var(--radix-select-trigger-width)]">
+                    {FORECAST_TYPES.map((type) => (
+                      <SelectItem key={type} value={type}>
+                        {type.charAt(0).toUpperCase() + type.slice(1)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div>
                 <label className="text-sm font-medium">Signal Strength</label>
-                <select
-                  value={form.signal_strength}
-                  onChange={(e) => setForm((f) => ({ ...f, signal_strength: e.target.value }))}
-                  className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+                <Select
+                  value={form.signal_strength || "none"}
+                  onValueChange={(value) =>
+                    setForm((f) => ({ ...f, signal_strength: value === "none" ? "" : value }))
+                  }
                 >
-                  <option value="">— None —</option>
-                  {SIGNAL_STRENGTHS.map((s) => (
-                    <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
-                  ))}
-                </select>
+                  <SelectTrigger className="mt-1 w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="w-[var(--radix-select-trigger-width)]">
+                    <SelectItem value="none">None</SelectItem>
+                    {SIGNAL_STRENGTHS.map((strength) => (
+                      <SelectItem key={strength} value={strength}>
+                        {strength.charAt(0).toUpperCase() + strength.slice(1)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-2">

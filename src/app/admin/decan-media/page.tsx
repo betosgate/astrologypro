@@ -1,12 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Plus, Trash2, Pencil, Video, FileText, Eye } from "lucide-react";
 
 const ZODIAC_SIGNS = ["Aries","Taurus","Gemini","Cancer","Leo","Virgo","Libra","Scorpio","Sagittarius","Capricorn","Aquarius","Pisces"];
@@ -38,21 +45,34 @@ export default function AdminDecanMediaPage() {
   const [filterSign, setFilterSign] = useState("");
   const [createdFrom, setCreatedFrom] = useState("");
   const [createdTo, setCreatedTo] = useState("");
+  const dateFiltersRef = useRef({ createdFrom, createdTo });
   const [previewItem, setPreviewItem] = useState<Media | null>(null);
 
-  async function load(overrides?: { createdFrom?: string; createdTo?: string }) {
+  const load = useCallback(async (overrides?: { createdFrom?: string; createdTo?: string }) => {
     setLoading(true);
     const params = new URLSearchParams();
-    const cf = overrides?.createdFrom ?? createdFrom;
-    const ct = overrides?.createdTo ?? createdTo;
+    const cf = overrides?.createdFrom ?? dateFiltersRef.current.createdFrom;
+    const ct = overrides?.createdTo ?? dateFiltersRef.current.createdTo;
     if (cf) params.set("created_from", cf);
     if (ct) params.set("created_to", ct);
     const res = await fetch(`/api/admin/decan-media?${params}`);
     if (res.ok) setItems(await res.json());
     setLoading(false);
-  }
+  }, []);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    dateFiltersRef.current = { createdFrom, createdTo };
+  }, [createdFrom, createdTo]);
+
+  useEffect(() => {
+    let active = true;
+    Promise.resolve().then(() => {
+      if (active) load();
+    });
+    return () => {
+      active = false;
+    };
+  }, [load]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -78,11 +98,11 @@ export default function AdminDecanMediaPage() {
     setItems((prev) => prev.filter((i) => i.id !== id));
   }
 
-  function F(field: string) { return (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => setForm((f) => ({ ...f, [field]: e.target.value })); }
+  function F(field: string) { return (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setForm((f) => ({ ...f, [field]: e.target.value })); }
 
   const filtered = filterSign ? items.filter((i) => i.sign === filterSign) : items;
 
-  function handleDateSearch() { load(); }
+  function handleDateSearch() { load({ createdFrom, createdTo }); }
   function handleDateReset() { setCreatedFrom(""); setCreatedTo(""); load({ createdFrom: "", createdTo: "" }); }
 
   return (
@@ -125,17 +145,37 @@ export default function AdminDecanMediaPage() {
               <div className="grid gap-4 sm:grid-cols-3">
                 <div className="space-y-1.5">
                   <Label>Sign *</Label>
-                  <select className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm" value={form.sign} onChange={F("sign")}>
-                    {ZODIAC_SIGNS.map((s) => <option key={s}>{s}</option>)}
-                  </select>
+                  <Select
+                    value={form.sign}
+                    onValueChange={(value) => setForm((f) => ({ ...f, sign: value }))}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="w-[var(--radix-select-trigger-width)]">
+                      {ZODIAC_SIGNS.map((sign) => (
+                        <SelectItem key={sign} value={sign}>
+                          {sign}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-1.5">
                   <Label>Decan *</Label>
-                  <select className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm" value={form.decan} onChange={F("decan")}>
-                    <option value="1">Decan 1</option>
-                    <option value="2">Decan 2</option>
-                    <option value="3">Decan 3</option>
-                  </select>
+                  <Select
+                    value={form.decan}
+                    onValueChange={(value) => setForm((f) => ({ ...f, decan: value }))}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="w-[var(--radix-select-trigger-width)]">
+                      <SelectItem value="1">Decan 1</SelectItem>
+                      <SelectItem value="2">Decan 2</SelectItem>
+                      <SelectItem value="3">Decan 3</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-1.5">
                   <Label className="invisible">Active</Label>
@@ -174,10 +214,22 @@ export default function AdminDecanMediaPage() {
       <div className="flex flex-wrap items-end gap-3">
         <div className="space-y-1">
           <Label className="text-xs">Sign</Label>
-          <select className="flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm w-40" value={filterSign} onChange={(e) => setFilterSign(e.target.value)}>
-            <option value="">All Signs</option>
-            {ZODIAC_SIGNS.map((s) => <option key={s}>{s}</option>)}
-          </select>
+          <Select
+            value={filterSign || "all"}
+            onValueChange={(value) => setFilterSign(value === "all" ? "" : value)}
+          >
+            <SelectTrigger className="w-full sm:w-40">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="w-[var(--radix-select-trigger-width)]">
+              <SelectItem value="all">All Signs</SelectItem>
+              {ZODIAC_SIGNS.map((sign) => (
+                <SelectItem key={sign} value={sign}>
+                  {sign}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div className="space-y-1">
           <Label className="text-xs">Created from</Label>

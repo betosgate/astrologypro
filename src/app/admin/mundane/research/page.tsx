@@ -1,11 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -63,18 +70,23 @@ export default function ResearchListPage() {
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const filtersRef = useRef({ search, status: statusFilter });
 
   const [entityOptions, setEntityOptions] = useState<EntityOption[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState<ProjectForm>(EMPTY_FORM);
   const [formError, setFormError] = useState("");
 
-  async function fetchProjects(p: number, replace: boolean, overrides?: { search?: string; status?: string }) {
+  const fetchProjects = useCallback(async (
+    p: number,
+    replace: boolean,
+    overrides?: { search?: string; status?: string }
+  ) => {
     if (p === 1) setLoading(true);
     else setLoadingMore(true);
 
-    const s = overrides?.search ?? search;
-    const st = overrides?.status ?? statusFilter;
+    const s = overrides?.search ?? filtersRef.current.search;
+    const st = overrides?.status ?? filtersRef.current.status;
 
     const params = new URLSearchParams({ page: String(p) });
     if (s) params.set("search", s);
@@ -90,9 +102,9 @@ export default function ResearchListPage() {
     }
     setLoading(false);
     setLoadingMore(false);
-  }
+  }, []);
 
-  async function loadEntityOptions() {
+  const loadEntityOptions = useCallback(async () => {
     const res = await fetch("/api/admin/mundane/entities?page=1");
     if (res.ok) {
       const json = await res.json();
@@ -104,18 +116,30 @@ export default function ResearchListPage() {
         }))
       );
     }
-  }
-
-  useEffect(() => {
-    fetchProjects(1, true);
-    loadEntityOptions();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    filtersRef.current = { search, status: statusFilter };
+  }, [search, statusFilter]);
+
+  useEffect(() => {
+    let active = true;
+    Promise.resolve().then(() => {
+      if (!active) return;
+      fetchProjects(1, true);
+      loadEntityOptions();
+    });
+    return () => {
+      active = false;
+    };
+  }, [fetchProjects, loadEntityOptions]);
+
   function applyFilter(key: "search" | "status", value: string) {
+    const nextFilters = { ...filtersRef.current, [key]: value };
     if (key === "search") setSearch(value);
     if (key === "status") setStatusFilter(value);
-    fetchProjects(1, true, { search, [key]: value });
+    filtersRef.current = nextFilters;
+    fetchProjects(1, true, nextFilters);
   }
 
   function openAdd() {
@@ -177,21 +201,31 @@ export default function ResearchListPage() {
           <Input
             placeholder="Search projects..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              const value = e.target.value;
+              setSearch(value);
+              filtersRef.current = { ...filtersRef.current, search: value };
+            }}
             onKeyDown={(e) => { if (e.key === "Enter") fetchProjects(1, true); }}
             className="pl-9"
           />
         </div>
-        <select
-          value={statusFilter}
-          onChange={(e) => applyFilter("status", e.target.value)}
-          className="flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+        <Select
+          value={statusFilter || "all"}
+          onValueChange={(value) =>
+            applyFilter("status", value === "all" ? "" : value)
+          }
         >
-          <option value="">All Statuses</option>
-          <option value="active">Active</option>
-          <option value="archived">Archived</option>
-          <option value="completed">Completed</option>
-        </select>
+          <SelectTrigger className="w-full sm:w-40">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent className="w-[var(--radix-select-trigger-width)]">
+            <SelectItem value="all">All Statuses</SelectItem>
+            <SelectItem value="active">Active</SelectItem>
+            <SelectItem value="archived">Archived</SelectItem>
+            <SelectItem value="completed">Completed</SelectItem>
+          </SelectContent>
+        </Select>
         <Button size="sm" variant="outline" onClick={() => fetchProjects(1, true)}>
           Search
         </Button>
@@ -283,18 +317,24 @@ export default function ResearchListPage() {
             </div>
             <div>
               <label className="text-sm font-medium">Linked Entity</label>
-              <select
-                value={form.entity_ids[0] ?? ""}
-                onChange={(e) => setForm((f) => ({ ...f, entity_ids: e.target.value ? [e.target.value] : [] }))}
-                className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+              <Select
+                value={form.entity_ids[0] ?? "none"}
+                onValueChange={(value) =>
+                  setForm((f) => ({ ...f, entity_ids: value === "none" ? [] : [value] }))
+                }
               >
-                <option value="">-- No linked entity --</option>
-                {entityOptions.map((e) => (
-                  <option key={e.id} value={e.id}>
-                    {e.flag_emoji ? `${e.flag_emoji} ` : ""}{e.name}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger className="mt-1 w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="w-[var(--radix-select-trigger-width)]">
+                  <SelectItem value="none">No linked entity</SelectItem>
+                  {entityOptions.map((entity) => (
+                    <SelectItem key={entity.id} value={entity.id}>
+                      {entity.flag_emoji ? `${entity.flag_emoji} ` : ""}{entity.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             {formError && <p className="text-sm text-destructive">{formError}</p>}
           </div>

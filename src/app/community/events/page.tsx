@@ -86,7 +86,7 @@ const CATEGORY_CARD_COLORS: Record<string, string> = {
 
 const FILTERS: Array<{ key: FilterKey; label: string }> = [
   { key: "all", label: "All" },
-  { key: "ritual", label: "Rituals" },
+  { key: "ritual", label: "Ritual" },
   { key: "sunday_service", label: "Sunday Service" },
   { key: "live_class", label: "Live Class" },
   { key: "meditation", label: "Meditation" },
@@ -98,6 +98,22 @@ const DISPLAY_FOR_LABELS: Record<string, string> = {
   members: "Members",
   students: "Students",
   members_and_guests: "Members & Guests",
+};
+
+const CATEGORY_LABELS: Record<string, string> = {
+  ritual: "Ritual",
+  sunday_service: "Sunday Service",
+  live_class: "Live Class",
+  meditation: "Meditation",
+  other: "Other",
+};
+
+const CATEGORY_SHORT_LABELS: Record<string, string> = {
+  ritual: "Ritual",
+  sunday_service: "Service",
+  live_class: "Class",
+  meditation: "Meditation",
+  other: "Other",
 };
 
 const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -136,26 +152,26 @@ function normalizeCategory(cat: string | null): string {
   const value = cat?.trim().toLowerCase();
   if (!value) return "other";
   // Maintain backward compatibility for old event string labels
-  if (value.includes("sunday") || value === "ceremony") return "sunday_service";
-  if (value.includes("live class") || value === "live_class") return "live_class";
+  if (value === "ritual" || value === "ceremony") return "ritual";
+  if (value.includes("sunday")) return "sunday_service";
+  if (
+    value === "live_class" ||
+    value.includes("live class") ||
+    value === "class" ||
+    value === "webinar" ||
+    value === "workshop"
+  ) return "live_class";
+  if (value === "meditation") return "meditation";
+  if (value === "orientation") return "other";
   return CATEGORY_COLORS[value] ? value : "other";
 }
 
 function categoryLabel(cat: string | null): string {
-  const normalized = normalizeCategory(cat);
-  if (normalized === "sunday_service") return "Sunday Service";
-  if (normalized === "live_class") return "Live Class";
-  if (normalized === "other") return cat || "Other";
-  // Capitalize first letter
-  return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+  return CATEGORY_LABELS[normalizeCategory(cat)] ?? "Other";
 }
 
 function shortCategoryLabel(cat: string | null): string {
-  const normalized = normalizeCategory(cat);
-  if (normalized === "sunday_service") return "Service";
-  if (normalized === "live_class") return "Class";
-  if (normalized === "other") return "Other";
-  return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+  return CATEGORY_SHORT_LABELS[normalizeCategory(cat)] ?? "Other";
 }
 
 function categoryColor(cat: string | null): string {
@@ -187,9 +203,9 @@ function EventCategoryIcon({ category, className }: { category: string | null; c
     >
       {normalized === "ritual" ? (
         <MoonStar className="size-5" />
-      ) : normalized === "ceremony" ? (
+      ) : normalized === "sunday_service" ? (
         <Landmark className="size-5" />
-      ) : normalized === "live class" ? (
+      ) : normalized === "live_class" ? (
         <NotebookTabs className="size-5" />
       ) : (
         <Sparkles className="size-5" />
@@ -265,6 +281,16 @@ function eventMatchesSearch(event: CalendarEvent, search: string): boolean {
   return [event.title, event.description, event.category, event.display_for]
     .filter(Boolean)
     .some((value) => String(value).toLowerCase().includes(q));
+}
+
+function audienceLabel(displayFor: string | null): string {
+  if (!displayFor) return "Members";
+  if (DISPLAY_FOR_LABELS[displayFor]) return DISPLAY_FOR_LABELS[displayFor];
+  return displayFor
+    .split("_")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
@@ -370,6 +396,21 @@ export default function CommunityEventsPage() {
   const selectedDayEvents = selectedDay ? eventsOnDay(selectedDay) : [];
   const agendaEvents = selectedDay ? selectedDayEvents : upcomingEvents.slice(0, 6);
   const visibleEventCount = filteredEvents.length;
+
+  function handleRsvpStatusChange(
+    eventId: string,
+    status: RsvpInfo["my_rsvp"],
+    counts: { going: number; maybe: number }
+  ) {
+    setRsvpMap((current) => ({
+      ...current,
+      [eventId]: {
+        my_rsvp: status,
+        going_count: counts.going,
+        maybe_count: counts.maybe,
+      },
+    }));
+  }
 
   return (
     <div className="space-y-6">
@@ -510,9 +551,9 @@ export default function CommunityEventsPage() {
 
           <div className="flex flex-wrap gap-3 rounded-lg border bg-card/50 px-3 py-2 text-xs text-muted-foreground">
             {Object.entries(CATEGORY_DOT).filter(([cat]) => cat !== "other").map(([cat, dot]) => (
-              <span key={cat} className="flex items-center gap-1 capitalize">
+              <span key={cat} className="flex items-center gap-1">
                 <span className={`inline-block size-2 rounded-full ${dot}`} />
-                {cat === "ceremony" ? "Sunday Service" : cat}
+                {categoryLabel(cat)}
               </span>
             ))}
             <span className="flex items-center gap-1">
@@ -631,7 +672,7 @@ export default function CommunityEventsPage() {
                               </span>
                               <Badge variant="outline" className="border-primary/25 bg-primary/10 text-[10px] text-primary">
                                 <ShieldCheck className="mr-1 size-3" />
-                                {DISPLAY_FOR_LABELS[event.display_for] ?? event.display_for}
+                                {audienceLabel(event.display_for)}
                               </Badge>
                             </div>
                           </div>
@@ -648,6 +689,7 @@ export default function CommunityEventsPage() {
                           eventId={event.id}
                           initialStatus={rsvp?.my_rsvp ?? null}
                           initialCounts={{ going: rsvp?.going_count ?? 0, maybe: rsvp?.maybe_count ?? 0 }}
+                          onStatusChange={(status, counts) => handleRsvpStatusChange(event.id, status, counts)}
                         />
                         <Button asChild size="sm" variant="outline" className="h-8 w-full border-primary/40 text-xs text-primary hover:bg-primary/10 hover:text-primary">
                           <a href={buildIcsHref(event)} download={`event-${event.id}.ics`}>

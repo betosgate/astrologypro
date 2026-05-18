@@ -12,6 +12,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 
 const GENDER_OPTIONS = ["Male", "Female", "Non-binary", "Prefer not to say"];
@@ -235,19 +242,22 @@ export default function AddMemberPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="gender">Gender</Label>
-              <select
-                id="gender"
-                value={form.gender}
-                onChange={(e) => set("gender", e.target.value)}
-                className="flex h-9 w-full rounded-md border border-input px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              <Select
+                value={form.gender || "none"}
+                onValueChange={(value) => set("gender", value === "none" ? "" : value)}
               >
-                <option value="">Select...</option>
-                {GENDER_OPTIONS.map((g) => (
-                  <option key={g} value={g.toLowerCase()}>
-                    {g}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger id="gender" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="w-[var(--radix-select-trigger-width)]">
+                  <SelectItem value="none">Select...</SelectItem>
+                  {GENDER_OPTIONS.map((gender) => (
+                    <SelectItem key={gender} value={gender.toLowerCase()}>
+                      {gender}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </CardContent>
         </Card>
@@ -296,47 +306,58 @@ export default function AddMemberPage() {
           <CardContent className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="membership_type">Membership Type</Label>
-              <select
-                id="membership_type"
+              <Select
                 value={form.membership_type}
-                onChange={(e) => set("membership_type", e.target.value)}
-                className="flex h-9 w-full rounded-md border border-input px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                onValueChange={(value) => set("membership_type", value)}
               >
-                <option value="individual">Individual</option>
-                <option value="family">Family</option>
-              </select>
+                <SelectTrigger id="membership_type" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="w-[var(--radix-select-trigger-width)]">
+                  <SelectItem value="individual">Individual</SelectItem>
+                  <SelectItem value="family">Family</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label htmlFor="relation_type">Relation Type</Label>
-              <select
-                id="relation_type"
-                value={form.relation_type}
-                onChange={(e) => set("relation_type", e.target.value)}
-                className="flex h-9 w-full rounded-md border border-input px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              <Select
+                value={form.relation_type || "none"}
+                onValueChange={(value) => set("relation_type", value === "none" ? "" : value)}
               >
-                <option value="">Select...</option>
-                {RELATION_TYPES.map((r) => (
-                  <option key={r} value={r.toLowerCase()}>
-                    {r}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger id="relation_type" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="w-[var(--radix-select-trigger-width)]">
+                  <SelectItem value="none">Select...</SelectItem>
+                  {RELATION_TYPES.map((relation) => (
+                    <SelectItem key={relation} value={relation.toLowerCase()}>
+                      {relation}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label htmlFor="relationship_status">Relationship Status</Label>
-              <select
-                id="relationship_status"
-                value={form.relationship_status}
-                onChange={(e) => set("relationship_status", e.target.value)}
-                className="flex h-9 w-full rounded-md border border-input px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              <Select
+                value={form.relationship_status || "none"}
+                onValueChange={(value) =>
+                  set("relationship_status", value === "none" ? "" : value)
+                }
               >
-                <option value="">Select...</option>
-                <option value="single">Single</option>
-                <option value="married">Married</option>
-                <option value="divorced">Divorced</option>
-                <option value="widowed">Widowed</option>
-                <option value="in_relationship">In a Relationship</option>
-              </select>
+                <SelectTrigger id="relationship_status" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="w-[var(--radix-select-trigger-width)]">
+                  <SelectItem value="none">Select...</SelectItem>
+                  <SelectItem value="single">Single</SelectItem>
+                  <SelectItem value="married">Married</SelectItem>
+                  <SelectItem value="divorced">Divorced</SelectItem>
+                  <SelectItem value="widowed">Widowed</SelectItem>
+                  <SelectItem value="in_relationship">In a Relationship</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2 sm:col-span-2">
               <Label htmlFor="notes">Notes</Label>

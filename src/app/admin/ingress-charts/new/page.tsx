@@ -132,11 +132,13 @@ export default function NewIngressChartPage() {
   const router = useRouter();
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [sectorFocus, setSectorFocus] = useState<string[]>(SECTORS.map((sector) => sector.val));
+  const [sectorFocus, setSectorFocus] = useState<string[]>([]);
   const [city, setCity] = useState<CityOption | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successOpen, setSuccessOpen] = useState(false);
+  const [isPolling, setIsPolling] = useState(false);
+  const [pollingLogs, setPollingLogs] = useState<string[]>([]);
   const minEndDate = startDate ? addDays(startDate, 14) : "";
 
   function handleStartDateChange(value: string) {
@@ -156,7 +158,7 @@ export default function NewIngressChartPage() {
   function handleClear() {
     setStartDate("");
     setEndDate("");
-    setSectorFocus(SECTORS.map((sector) => sector.val));
+    setSectorFocus([]);
     setCity(null);
     setError(null);
   }
@@ -218,13 +220,81 @@ export default function NewIngressChartPage() {
     }
   }
 
+  async function startPolling() {
+    setIsPolling(true);
+    const startTime = Date.now();
+    const oneHour = 60 * 60 * 1000;
+    const threeMinutes = 3 * 60 * 1000;
+    let hasStarted = false;
+    let retryCount = 0;
+    
+    function addLog(msg: string) {
+      const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      setPollingLogs((prev) => [...prev, `[${time}] ${msg}`]);
+    }
+    
+    addLog("Starting calculation and searching for events...");
+    
+    async function poll() {
+      const elapsed = Date.now() - startTime;
+      if (elapsed >= oneHour) {
+        addLog("Calculation process completed for now.");
+        setIsPolling(false);
+        return;
+      }
+      
+      try {
+        addLog("Calculation ongoing... searching for results...");
+        const res = await fetch("/api/admin/ingress-charts/import-mongo", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ dry_run: false }),
+        });
+        
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.detail || "Import failed");
+        
+        if (json.inserted > 0) {
+          hasStarted = true;
+          addLog(`Great news! Found and created ${json.inserted} new charts!`);
+        }
+        
+        if (hasStarted) {
+          if (retryCount < 3) {
+            retryCount++;
+            addLog(`Checking again in 1 minute... (Update ${retryCount}/3)`);
+            setTimeout(poll, 60000);
+          } else {
+            addLog("Process done! Check the list for new charts.");
+            setIsPolling(false);
+            return;
+          }
+        } else {
+          addLog("No new updates for now.");
+          addLog("Still calculating in the background. We will check again in 3 minutes.");
+          setTimeout(poll, threeMinutes);
+        }
+      } catch (err: unknown) {
+        addLog("Calculation is taking a moment. We will try again in 30 seconds.");
+        setTimeout(poll, 30000);
+      }
+    }
+    
+    poll();
+  }
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">New Ingress Chart</h1>
-        <p className="text-muted-foreground">
-          Generate ingress charts from date range, sectors, and city.
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">New Ingress Chart</h1>
+          <p className="text-muted-foreground">
+            Generate ingress charts from date range, sectors, and city.
+          </p>
+        </div>
+        <Button variant="outline" size="sm" onClick={() => router.push("/admin/ingress-charts")}>
+          Back to List
+        </Button>
       </div>
 
       <form onSubmit={handleSubmit}>
@@ -299,6 +369,24 @@ export default function NewIngressChartPage() {
         </Card>
       </form>
 
+      {pollingLogs.length > 0 && (
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle className="text-base">New Chart Creation Process - Live Report</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="bg-muted/50 p-4 rounded-md text-sm max-h-64 overflow-y-auto space-y-2">
+              {pollingLogs.map((log, index) => (
+                <p key={index} className="flex items-start gap-2">
+                  <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-primary" />
+                  <span>{log}</span>
+                </p>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <Dialog open={successOpen} onOpenChange={setSuccessOpen}>
         <DialogContent>
           <DialogHeader>
@@ -309,7 +397,10 @@ export default function NewIngressChartPage() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button onClick={() => router.push("/admin/ingress-charts")}>
+            <Button onClick={() => {
+              setSuccessOpen(false);
+              startPolling();
+            }}>
               OK
             </Button>
           </DialogFooter>
