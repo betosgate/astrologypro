@@ -8,6 +8,13 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Loader2, Radio } from "lucide-react";
 import type {
   LiveIntegrationTier,
@@ -167,32 +174,40 @@ export default function AdminLivePlatformsPage() {
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label>Integration tier</Label>
-                <select
+                <Select
                   value={platform.integration_tier}
-                  onChange={(event) =>
-                    updateLocal(platform.platform_key, "integration_tier", event.target.value as LiveIntegrationTier)
+                  onValueChange={(value) =>
+                    updateLocal(platform.platform_key, "integration_tier", value as LiveIntegrationTier)
                   }
-                  className="flex h-9 w-full rounded-md border border-input px-3 py-2 text-sm"
                 >
-                  <option value="first_class">First class</option>
-                  <option value="managed">Managed</option>
-                  <option value="link_out_only">Link-out only</option>
-                  <option value="custom">Custom</option>
-                </select>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="w-[var(--radix-select-trigger-width)]">
+                    <SelectItem value="first_class">First class</SelectItem>
+                    <SelectItem value="managed">Managed</SelectItem>
+                    <SelectItem value="link_out_only">Link-out only</SelectItem>
+                    <SelectItem value="custom">Custom</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
                 <Label>Playback mode</Label>
-                <select
+                <Select
                   value={platform.playback_mode}
-                  onChange={(event) =>
-                    updateLocal(platform.platform_key, "playback_mode", event.target.value as LivePlaybackMode)
+                  onValueChange={(value) =>
+                    updateLocal(platform.platform_key, "playback_mode", value as LivePlaybackMode)
                   }
-                  className="flex h-9 w-full rounded-md border border-input px-3 py-2 text-sm"
                 >
-                  <option value="embedded_player">Embedded player</option>
-                  <option value="external_link">External link</option>
-                  <option value="manual_status">Manual status</option>
-                </select>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="w-[var(--radix-select-trigger-width)]">
+                    <SelectItem value="embedded_player">Embedded player</SelectItem>
+                    <SelectItem value="external_link">External link</SelectItem>
+                    <SelectItem value="manual_status">Manual status</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
                 <Label>Display name</Label>
