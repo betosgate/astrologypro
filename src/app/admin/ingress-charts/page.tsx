@@ -235,6 +235,7 @@ export default function AdminIngressChartsPage() {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [importing, setImporting] = useState(false);
+  const initialLoadStarted = useRef(false);
 
   async function handleImportMongo(showToast = true) {
     setImporting(true);
@@ -315,7 +316,11 @@ export default function AdminIngressChartsPage() {
   }
 
   useEffect(() => {
+    if (initialLoadStarted.current) return;
+
+    initialLoadStarted.current = true;
     void fetchCharts(1, true);
+    void handleImportMongo(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
