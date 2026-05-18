@@ -131,6 +131,12 @@ interface BookingWizardProps {
    * booking-payment, which validates and consumes it server-side.
    */
   discountToken?: string | null;
+  /**
+   * Source marker for authenticated booking flows. Community-origin bookings
+   * lock ownership to the logged-in Community user's email.
+   */
+  bookingSource?: "community" | null;
+  lockedEmail?: string | null;
 }
 
 const STEPS = [
@@ -322,6 +328,8 @@ export function BookingWizard({
   preselectedDate = null,
   startOnContact = false,
   discountToken = null,
+  bookingSource = null,
+  lockedEmail = null,
 }: BookingWizardProps) {
   // Start on the Contact step when the URL already carries a chosen date + time
   // (deep-link from the profile's "Next Available" picker) so users don't see a
@@ -342,7 +350,10 @@ export function BookingWizard({
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
-  const [bookingDetails, setBookingDetails] = useState<BookingDetails>(INITIAL_DETAILS);
+  const [bookingDetails, setBookingDetails] = useState<BookingDetails>(() => ({
+    ...INITIAL_DETAILS,
+    email: lockedEmail ?? "",
+  }));
   const [policyAcknowledged, setPolicyAcknowledged] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   // Stable session token for slot holds (persists for the lifetime of this wizard)
@@ -372,6 +383,15 @@ export function BookingWizard({
   const [clientTimezone, setClientTimezone] = useState(diviner.timezone || "UTC");
   const resolvedServiceName = hideServiceName ? (bookingLabel ?? "Reading Session") : (bookingLabel ?? service.name);
   const availabilityQuery = availabilityServiceId ? `&serviceId=${availabilityServiceId}` : "";
+
+  useEffect(() => {
+    if (!lockedEmail) return;
+    setBookingDetails((prev) => ({
+      ...prev,
+      email: lockedEmail,
+    }));
+    setPrefilled(true);
+  }, [lockedEmail]);
 
   useEffect(() => {
     if (!intakePrefill) return;
@@ -477,7 +497,7 @@ export function BookingWizard({
         setBookingDetails((prev) => ({
           ...prev,
           fullName: client.full_name || prev.fullName,
-          email: client.email || user.email || prev.email,
+          email: lockedEmail ?? client.email ?? user.email ?? prev.email,
           phone: client.phone || prev.phone,
         }));
         setPrefilled(true);
@@ -488,7 +508,7 @@ export function BookingWizard({
     }
 
     prefillFromProfile();
-  }, []);
+  }, [lockedEmail]);
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -653,6 +673,7 @@ export function BookingWizard({
           },
           refCode,
           discount_token: discountToken ?? undefined,
+          source: bookingSource ?? undefined,
           policyAcknowledgedAt: policyAcknowledged ? new Date().toISOString() : undefined,
           // Signal that this slot is not linked to any service — the API will skip charging.
           freeSlot: slotIsUnscoped ? true : undefined,
@@ -1029,15 +1050,25 @@ export function BookingWizard({
                     id="booking-email"
                     type="email"
                     value={bookingDetails.email}
-                    onChange={(e) =>
+                    onChange={(e) => {
+                      if (lockedEmail) return;
                       setBookingDetails((prev) => ({
                         ...prev,
                         email: e.target.value,
-                      }))
-                    }
+                      }));
+                    }}
                     placeholder="you@example.com"
                     autoComplete="email"
+                    readOnly={Boolean(lockedEmail)}
+                    disabled={Boolean(lockedEmail)}
+                    aria-readonly={Boolean(lockedEmail)}
+                    title={lockedEmail ? "Locked to your Community account email." : undefined}
                   />
+                  {lockedEmail && (
+                    <p className="text-xs text-muted-foreground">
+                      Locked to your Community account email.
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-2 md:col-span-2">
                   <Label htmlFor="booking-phone">

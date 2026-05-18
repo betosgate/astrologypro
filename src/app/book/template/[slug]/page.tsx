@@ -13,7 +13,11 @@ export const dynamic = "force-dynamic";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ submission?: string; discount_token?: string }>;
+  searchParams: Promise<{
+    submission?: string;
+    discount_token?: string;
+    source?: string;
+  }>;
 }
 
 /**
@@ -56,9 +60,10 @@ export default async function SharedBookingPage({
   searchParams,
 }: PageProps) {
   const { slug } = await params;
-  const { submission, discount_token } = await searchParams;
+  const { submission, discount_token, source } = await searchParams;
   const submissionId = submission?.trim() ?? "";
   const discountToken = discount_token?.trim() || null;
+  const bookingSource = source?.trim() === "community" ? "community" : null;
 
   const admin = createAdminClient();
   const [requestedTemplateRes, match, submissionRes] = await Promise.all([
@@ -104,12 +109,15 @@ export default async function SharedBookingPage({
       }
     : null;
 
-  const templateHomePath = `/services/${encodeURIComponent(requestedTemplate.slug as string)}${
-    discountToken ? `?discount_token=${encodeURIComponent(discountToken)}` : ""
+  const templateHomeSearch = new URLSearchParams();
+  if (discountToken) templateHomeSearch.set("discount_token", discountToken);
+  if (bookingSource) templateHomeSearch.set("source", bookingSource);
+  const templateHomePath = `/services/${encodeURIComponent(
+    requestedTemplate.slug as string
+  )}${templateHomeSearch.size > 0 ? `?${templateHomeSearch.toString()}` : ""}`;
+  const servicesPath = `/services${
+    templateHomeSearch.size > 0 ? `?${templateHomeSearch.toString()}` : ""
   }`;
-  const servicesPath = discountToken
-    ? `/services?discount_token=${encodeURIComponent(discountToken)}`
-    : "/services";
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-purple-950">
@@ -162,6 +170,7 @@ export default async function SharedBookingPage({
             submissionError={null}
             compatibleDivinerCount={match.diviners.length}
             discountToken={discountToken}
+            bookingSource={bookingSource}
           />
         )}
       </div>

@@ -52,6 +52,7 @@ interface BookingPaymentBody {
   policyAcknowledgedAt?: string;
   booking_notes?: string;
   discount_token?: string;
+  source?: string;
   /** True when the slot is from an unscoped availability (no service linked). Skips charging. */
   freeSlot?: boolean;
   /**
@@ -73,7 +74,7 @@ export async function POST(request: NextRequest) {
       divinerUsername,
       serviceId,
       scheduledAt,
-      clientEmail,
+      clientEmail: rawClientEmail,
       clientName,
       clientPhone,
       questionnaire,
@@ -83,6 +84,7 @@ export async function POST(request: NextRequest) {
       policyAcknowledgedAt,
       booking_notes,
       discount_token,
+      source,
       freeSlot,
       submissionId: rawSubmissionId,
     } = body;
@@ -97,6 +99,12 @@ export async function POST(request: NextRequest) {
         ? rawSubmissionId.trim()
         : null;
     const questionnaireData = questionnaire ?? {};
+    const isCommunitySource = source === "community";
+    let clientEmail =
+      typeof rawClientEmail === "string"
+        ? rawClientEmail.trim().toLowerCase()
+        : "";
+    let communityMemberUserId: string | null = null;
 
     // Sanitize ref_code against cmp_XXXXXXXX pattern so random URL params
     // can't pollute the column.
@@ -115,7 +123,7 @@ export async function POST(request: NextRequest) {
     };
 
     // Validate required fields
-    if (!serviceId || !scheduledAt || !clientEmail || !clientName) {
+    if (!serviceId || !scheduledAt || (!isCommunitySource && !clientEmail) || !clientName) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
@@ -135,6 +143,36 @@ export async function POST(request: NextRequest) {
     const supabase = await createClient();
     const adminSupabase = createAdminClient();
     lap("clients created");
+
+    if (isCommunitySource) {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      const authEmail = user?.email?.trim().toLowerCase() ?? null;
+
+      if (!user || !authEmail) {
+        return NextResponse.json(
+          { error: "Community booking requires sign in" },
+          { status: 401 }
+        );
+      }
+
+      const { data: member } = await supabase
+        .from("community_members")
+        .select("id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (!member) {
+        return NextResponse.json(
+          { error: "Community membership not found" },
+          { status: 403 }
+        );
+      }
+
+      clientEmail = authEmail;
+      communityMemberUserId = user.id;
+    }
 
     // Fetch the service first (source of truth for diviner_id)
     let { data: service, error: serviceError } = await adminSupabase
@@ -327,50 +365,52 @@ export async function POST(request: NextRequest) {
 
     // --- Auto-create auth user if they don't exist ---
     let isNewUser = false;
+    let clientAuthUserId: string | undefined =
+      communityMemberUserId ?? undefined;
 
-    // Try to create the auth user; capture the new user's ID if created.
-    const { data: createUserData, error: createUserError } =
-      await adminSupabase.auth.admin.createUser({
-        email: clientEmail,
-        email_confirm: true,
-        user_metadata: {
-          full_name: clientName,
-        },
-      });
-
-    let clientAuthUserId: string | undefined;
-
-    if (createUserError) {
-      const isEmailExists =
-        createUserError.code === "email_exists" ||
-        createUserError.message?.toLowerCase().includes("already registered");
-
-      if (!isEmailExists) {
-        console.error("Failed to auto-create auth user:", createUserError);
-      }
-
-      // Try the clients table first (fast path for returning bookers)
-      const { data: existingClientRecord } = await adminSupabase
-        .from("clients")
-        .select("user_id")
-        .eq("email", clientEmail)
-        .maybeSingle();
-      clientAuthUserId = existingClientRecord?.user_id ?? undefined;
-
-      // Fallback: user exists in auth but has never booked before (no client
-      // record yet). Look them up directly via the auth admin API.
-      if (!clientAuthUserId) {
-        const { data: authListData } = await adminSupabase.auth.admin.listUsers({
-          page: 1,
-          perPage: 1000,
+    if (!clientAuthUserId) {
+      // Try to create the auth user; capture the new user's ID if created.
+      const { data: createUserData, error: createUserError } =
+        await adminSupabase.auth.admin.createUser({
+          email: clientEmail,
+          email_confirm: true,
+          user_metadata: {
+            full_name: clientName,
+          },
         });
-        const authListUsers = (authListData?.users ?? []) as Array<{ id: string; email?: string }>;
-        const authUser = authListUsers.find((u) => u.email === clientEmail);
-        clientAuthUserId = authUser?.id;
+
+      if (createUserError) {
+        const isEmailExists =
+          createUserError.code === "email_exists" ||
+          createUserError.message?.toLowerCase().includes("already registered");
+
+        if (!isEmailExists) {
+          console.error("Failed to auto-create auth user:", createUserError);
+        }
+
+        // Try the clients table first (fast path for returning bookers)
+        const { data: existingClientRecord } = await adminSupabase
+          .from("clients")
+          .select("user_id")
+          .eq("email", clientEmail)
+          .maybeSingle();
+        clientAuthUserId = existingClientRecord?.user_id ?? undefined;
+
+        // Fallback: user exists in auth but has never booked before (no client
+        // record yet). Look them up directly via the auth admin API.
+        if (!clientAuthUserId) {
+          const { data: authListData } = await adminSupabase.auth.admin.listUsers({
+            page: 1,
+            perPage: 1000,
+          });
+          const authListUsers = (authListData?.users ?? []) as Array<{ id: string; email?: string }>;
+          const authUser = authListUsers.find((u) => u.email === clientEmail);
+          clientAuthUserId = authUser?.id;
+        }
+      } else {
+        isNewUser = true;
+        clientAuthUserId = createUserData.user.id;
       }
-    } else {
-      isNewUser = true;
-      clientAuthUserId = createUserData.user.id;
     }
 
     lap("auth user resolved");
@@ -504,7 +544,8 @@ export async function POST(request: NextRequest) {
       if (
         tokenRecord &&
         !tokenRecord.used_at &&
-        new Date(tokenRecord.expires_at) >= new Date()
+        new Date(tokenRecord.expires_at) >= new Date() &&
+        (!isCommunitySource || tokenRecord.user_id === communityMemberUserId)
       ) {
         const tokenPercent = Number(tokenRecord.discount_percent ?? 5);
         memberDiscountTokenId = tokenRecord.id as string;
@@ -726,6 +767,12 @@ export async function POST(request: NextRequest) {
           ...(availabilityTemplateTitle ? { availability_title: availabilityTemplateTitle } : {}),
           ...(availabilityTemplateDescription ? { availability_description: availabilityTemplateDescription } : {}),
           ...(submissionId ? { intake_submission_id: submissionId } : {}),
+          ...(isCommunitySource
+            ? {
+              booking_source: "community",
+              community_member_user_id: communityMemberUserId,
+            }
+            : {}),
           ...(memberDiscountApplied
             ? {
               member_discount_percent: memberDiscountPercent,

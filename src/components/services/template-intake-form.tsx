@@ -33,6 +33,7 @@ interface TemplateIntakeFormProps {
   templateSlug: string;
   embedded?: boolean;
   discountToken?: string | null;
+  bookingSource?: "community" | null;
 }
 
 interface TemplateCityAutocompleteProps {
@@ -207,10 +208,15 @@ function BirthDetailsCard({
   );
 }
 
-function appendDiscountToken(href: string, discountToken: string | null | undefined) {
-  if (!discountToken || typeof window === "undefined") return href;
+function appendBookingParams(
+  href: string,
+  discountToken: string | null | undefined,
+  bookingSource: "community" | null | undefined
+) {
+  if ((!discountToken && !bookingSource) || typeof window === "undefined") return href;
   const url = new URL(href, window.location.origin);
-  url.searchParams.set("discount_token", discountToken);
+  if (discountToken) url.searchParams.set("discount_token", discountToken);
+  if (bookingSource) url.searchParams.set("source", bookingSource);
   return `${url.pathname}${url.search}${url.hash}`;
 }
 
@@ -221,6 +227,7 @@ export function TemplateIntakeForm({
   templateSlug,
   embedded = false,
   discountToken = null,
+  bookingSource = null,
 }: TemplateIntakeFormProps) {
   const router = useRouter();
   const [state, setState] = useState<ServiceTemplateIntakeState>(createEmptyIntakeState);
@@ -280,7 +287,7 @@ export function TemplateIntakeForm({
       const fallbackSubmissionId =
         typeof json.submission?.id === "string" ? json.submission.id : "";
       const bookingUrl =
-        appendDiscountToken(
+        appendBookingParams(
           typeof json.next_url === "string"
             ? json.next_url
             : `/book/template/${encodeURIComponent(templateSlug)}${
@@ -289,6 +296,7 @@ export function TemplateIntakeForm({
                   : ""
               }`,
           discountToken,
+          bookingSource,
         );
 
       if (isGeneralTemplate) {
@@ -304,6 +312,9 @@ export function TemplateIntakeForm({
         }
         if (discountToken) {
           search.set("discount_token", discountToken);
+        }
+        if (bookingSource) {
+          search.set("source", bookingSource);
         }
 
         setPostSubmitChoices({

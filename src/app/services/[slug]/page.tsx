@@ -9,7 +9,7 @@ export const revalidate = 3600;
 
 interface PageProps {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ discount_token?: string }>;
+  searchParams: Promise<{ discount_token?: string; source?: string }>;
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
@@ -61,12 +61,16 @@ function getDiscountTokenParam(value: string | undefined) {
   return token ? token : null;
 }
 
+function getSourceParam(value: string | undefined): "community" | null {
+  return value?.trim() === "community" ? "community" : null;
+}
+
 export default async function ServiceOnlyLandingPage({
   params,
   searchParams,
 }: PageProps) {
   const { slug } = await params;
-  const { discount_token } = await searchParams;
+  const { discount_token, source } = await searchParams;
   const template = await getServiceLandingTemplate(slug);
 
   if (!template) notFound();
@@ -75,6 +79,7 @@ export default async function ServiceOnlyLandingPage({
     <ServiceTemplatePublicPage
       template={template}
       discountToken={getDiscountTokenParam(discount_token)}
+      bookingSource={getSourceParam(source)}
     />
   );
 }

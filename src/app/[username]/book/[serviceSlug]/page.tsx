@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -32,6 +32,8 @@ interface PageProps {
    *   while still booking the canonical diviner service.
    * `discount_token` — optional Perennial member discount token carried from
    *   /services through the shared calendar into payment setup.
+   * `source` — optional source marker. `community` means the final booking
+   *   must be owned by the logged-in Community account.
    */
   searchParams: Promise<{
     ref?: string;
@@ -40,7 +42,40 @@ interface PageProps {
     time?: string;
     template?: string;
     discount_token?: string;
+    source?: string;
   }>;
+}
+
+function getCommunitySource(value: string | undefined): "community" | null {
+  return value?.trim() === "community" ? "community" : null;
+}
+
+function buildBookingRedirectPath(
+  username: string,
+  serviceSlug: string,
+  params: {
+    ref?: string | null;
+    submission?: string | null;
+    date?: string | null;
+    time?: string | null;
+    template?: string | null;
+    discountToken?: string | null;
+    source?: "community" | null;
+  },
+) {
+  const search = new URLSearchParams();
+  if (params.ref) search.set("ref", params.ref);
+  if (params.submission) search.set("submission", params.submission);
+  if (params.date) search.set("date", params.date);
+  if (params.time) search.set("time", params.time);
+  if (params.template) search.set("template", params.template);
+  if (params.discountToken) search.set("discount_token", params.discountToken);
+  if (params.source) search.set("source", params.source);
+
+  const query = search.toString();
+  return `/${encodeURIComponent(username)}/book/${encodeURIComponent(serviceSlug)}${
+    query ? `?${query}` : ""
+  }`;
 }
 
 async function getDivinerAndService(username: string, serviceSlug: string) {
@@ -136,11 +171,12 @@ export async function generateMetadata({
 
 export default async function BookingPage({ params, searchParams }: PageProps) {
   const { username, serviceSlug } = await params;
-  const { ref, submission, date, time, template, discount_token } = await searchParams;
+  const { ref, submission, date, time, template, discount_token, source } = await searchParams;
   const refParam = ref ? `?ref=${encodeURIComponent(ref)}` : "";
   const submissionId = submission?.trim() || null;
   const templateParam = template?.trim() || null;
   const discountToken = discount_token?.trim() || null;
+  const bookingSource = getCommunitySource(source);
   const preselectedDate =
     date && /^\d{4}-\d{2}-\d{2}$/.test(date.trim()) ? date.trim() : null;
   const preselectedTime =
@@ -150,6 +186,40 @@ export default async function BookingPage({ params, searchParams }: PageProps) {
 
   if (!diviner || !service) {
     notFound();
+  }
+
+  let lockedEmail: string | null = null;
+  if (bookingSource === "community") {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    const authEmail = user?.email?.trim().toLowerCase() ?? null;
+
+    if (!user || !authEmail) {
+      const redirectPath = buildBookingRedirectPath(username, serviceSlug, {
+        ref: ref ?? null,
+        submission: submissionId,
+        date: preselectedDate,
+        time: preselectedTime,
+        template: templateParam,
+        discountToken,
+        source: bookingSource,
+      });
+      redirect(`/login?redirect=${encodeURIComponent(redirectPath)}`);
+    }
+
+    const { data: member } = await supabase
+      .from("community_members")
+      .select("id")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (!member) {
+      redirect("/get-started");
+    }
+
+    lockedEmail = authEmail;
   }
 
   let bookingDisplayName = service.name as string;
@@ -253,6 +323,8 @@ export default async function BookingPage({ params, searchParams }: PageProps) {
             preselectedDate={preselectedDate}
             startOnContact={startOnContact}
             discountToken={discountToken}
+            bookingSource={bookingSource}
+            lockedEmail={lockedEmail}
           />
         ) : (
           <div className="mx-auto max-w-xl rounded-2xl border border-amber-500/20 bg-amber-500/8 px-6 py-8 text-center">

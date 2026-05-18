@@ -20,7 +20,7 @@ export const metadata: Metadata = {
 };
 
 interface ServicesHubPageProps {
-  searchParams: Promise<{ discount_token?: string }>;
+  searchParams: Promise<{ discount_token?: string; source?: string }>;
 }
 
 function getDiscountTokenParam(value: string | undefined) {
@@ -28,17 +28,27 @@ function getDiscountTokenParam(value: string | undefined) {
   return token ? token : null;
 }
 
-function withDiscountToken(href: string, discountToken: string | null) {
-  if (!discountToken) return href;
-  const search = new URLSearchParams({ discount_token: discountToken });
+function getSourceParam(value: string | undefined) {
+  return value?.trim() === "community" ? "community" : null;
+}
+
+function withBookingParams(
+  href: string,
+  params: { discountToken: string | null; source: string | null }
+) {
+  if (!params.discountToken && !params.source) return href;
+  const search = new URLSearchParams();
+  if (params.discountToken) search.set("discount_token", params.discountToken);
+  if (params.source) search.set("source", params.source);
   return `${href}?${search.toString()}`;
 }
 
 export default async function ServicesHubPage({
   searchParams,
 }: ServicesHubPageProps) {
-  const { discount_token } = await searchParams;
+  const { discount_token, source } = await searchParams;
   const discountToken = getDiscountTokenParam(discount_token);
+  const bookingSource = getSourceParam(source);
   const templates = await getServiceLandingTemplates();
   const grouped = templates.reduce<Record<string, typeof templates>>((acc, template) => {
     const key = template.category ?? "other";
@@ -113,7 +123,10 @@ export default async function ServicesHubPage({
                     </div>
                     <div className="mt-6">
                       <Link
-                        href={withDiscountToken(`/services/${service.slug}`, discountToken)}
+                        href={withBookingParams(`/services/${service.slug}`, {
+                          discountToken,
+                          source: bookingSource,
+                        })}
                         className="inline-flex items-center gap-2 rounded-xl bg-amber-400/15 px-4 py-2.5 text-sm font-medium text-amber-200 transition-colors hover:bg-amber-400/20"
                       >
                         Compare Diviners
