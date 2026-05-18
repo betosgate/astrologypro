@@ -84,8 +84,8 @@ export async function POST(
     authUser?.user?.email ??
     "Customer";
 
-  // External users cannot set is_internal
-  const isInternal = false;
+  // Allow ticket creators to write internal/private notes on their tickets
+  const isInternal = body.is_internal === true;
 
   const { data: message, error: insertError } = await admin
     .from("ticket_messages")
