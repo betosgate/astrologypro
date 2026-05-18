@@ -147,7 +147,7 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
     groups: [
       {
         groupLabel: "Governance",
-        cards: [
+        cards: [ 
           { title: "Analytics", description: "Global health and KPI overview", href: "/admin", icon: LayoutDashboard, status: "live" },
           { title: "Users", description: "Master directory of all accounts", href: "/admin/users", icon: Users, status: "live" },
           { title: "Roles", description: "Role-based access configuration", href: "/admin/roles", icon: Shield, status: "live" },
@@ -3080,7 +3080,94 @@ export const WALKTHROUGH_SECTIONS: WalkthroughSection[] = [
     ]
   },
 
+  // ------------------------------Ingress Charts----------//
+  {
+    "name": "ingress-charts-dashboard",
+    "label": "Ingress Charts Dashboard",
+    "description": "Centralized astrology ingress chart management dashboard displaying planetary ingress events, chart statuses, and interpretation summaries.",
+    "group": "Astrology",
+    "subModule": "Ingress Charts",
+    "purpose": "Allows astrology administrators and researchers to monitor, generate, manage, and review ingress charts and societal astrology interpretations.",
+    "bullets": [
+      "Displays total chart statistics including upcoming and social advocacy charts.",
+      "Search bar allows filtering charts by title or location.",
+      "Importance and sector filters help narrow chart categories.",
+      "Tabs allow switching between upcoming, past, and social advocacy ingress charts.",
+      "Each chart card displays interpretation summary, impact level, location, and event period.",
+      "Social Advocacy toggle allows marking charts for public or advocacy-related usage.",
+      "New Chart button opens ingress chart generation workflow.",
+      "Import Charts button supports bulk ingestion of astrology chart records."
+    ]
+  },
+  {
+    "name": "new-ingress-chart-request",
+    "label": "Create New Ingress Chart",
+    "description": "Ingress chart generation request form used to create planetary ingress interpretations for selected dates, sectors, and locations.",
+    "group": "Astrology",
+    "subModule": "Ingress Charts",
+    "purpose": "Allows astrologers and admins to generate new ingress chart interpretations and forecasting records.",
+    "bullets": [
+      "Users select chart start date and end date range.",
+      "Sector dropdown allows assigning societal or thematic sectors.",
+      "City search field supports geographic targeting for interpretations.",
+      "System validates minimum date range requirements before submission.",
+      "Submit button starts background chart generation processing.",
+      "Clear button resets all chart request inputs.",
+      "Creation notes explain processing behavior and generation timelines.",
+      "Generated charts automatically appear in the ingress chart library after processing."
+    ]
+  },
+  {
+    "name": "ingress-chart-details",
+    "label": "Ingress Chart Interpretation Details",
+    "description": "Detailed ingress chart interpretation screen containing astrology analysis, planetary interpretations, rulership meanings, and event insights.",
+    "group": "Astrology",
+    "subModule": "Ingress Charts",
+    "purpose": "Provides in-depth astrological interpretation and societal forecasting for generated ingress charts.",
+    "bullets": [
+      "Displays ingress chart title, location, event period, and event timestamp.",
+      "Importance badge highlights overall impact level of the chart.",
+      "System Interpretation section provides AI-generated astrology analysis.",
+      "Interpretation includes planetary conjunctions, squares, sextiles, and societal implications.",
+      "Chart Ruler section explains ruling planet significance and placement meanings.",
+      "Astrology symbols and zodiac references are embedded within interpretations.",
+      "Share button allows chart interpretation sharing.",
+      "Back to Library navigation returns users to the ingress chart listing."
+    ]
+  },
 
+  {
+    "name": "ingress-chart-tags-and-related-insights",
+    "label": "Ingress Chart Tags and Related Insights",
+    "description": "Shows clickable chart tags, focused sectors, and related ingress chart insights connected to the current chart.",
+    "group": "Astrology",
+    "subModule": "Ingress Charts",
+    "purpose": "Helps admins discover similar ingress charts by clicking shared tags like Virgo Rising, Mercury in 10th, True Node Station, Social Change, Public Welfare, Kolkata, or 2026.",
+    "bullets": [
+      "Tags section displays all searchable tags connected with the current ingress chart.",
+      "Each tag is clickable and opens a filtered list of charts using the same tag.",
+      "Focused On section highlights the main sector, such as Weather & Agriculture.",
+      "Related Insights section shows other charts connected by similar themes.",
+      "Related chart cards display title, station type, focused tags, event time, and period.",
+      "Useful for comparing similar planetary ingress events across different dates and interpretations."
+    ]
+  },
+  {
+    "name": "ingress-charts-tag-filter-list",
+    "label": "Ingress Charts List by Tag",
+    "description": "Filtered ingress chart listing page shown after clicking a tag such as Virgo Rising.",
+    "group": "Astrology",
+    "subModule": "Ingress Charts",
+    "purpose": "Allows admins to browse all ingress charts that share the selected tag and compare their interpretations, dates, locations, and impact level.",
+    "bullets": [
+      "Page title shows the selected tag, for example Ingress Charts List under tag: Virgo Rising.",
+      "Summary cards show total charts, upcoming charts, and social advocacy chart count for the selected tag.",
+      "Search and filter controls allow filtering by title, location, importance, chart type, and event date.",
+      "Tabs allow switching between All Charts, Upcoming, Past, and Social Advo records.",
+      "Each chart card shows title, short interpretation, focused sectors, tags, event timestamp, start date, end date, location, importance, and created date.",
+      "Back to List button returns to the main ingress chart list."
+    ]
+  },
 
 // ---------------Nativity Birth Chart---------------//
 
