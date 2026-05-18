@@ -372,6 +372,13 @@ export function ServiceTemplatePublicPage(props: ServiceTemplatePublicPageProps)
                   </div>
                 </div>
 
+                {discountToken && (
+                  <div className="mt-4 rounded-xl border border-emerald-400/25 bg-emerald-400/10 px-4 py-3 text-sm text-emerald-100">
+                    5% Community member discount active. Checkout will show the
+                    platform-fee breakdown before payment.
+                  </div>
+                )}
+
                 <p className="mt-3 text-xs text-silver/50">
                   {hasIntakeForm
                     ? "CTA buttons open the product intake form first."
@@ -490,6 +497,14 @@ export function ServiceTemplatePublicPage(props: ServiceTemplatePublicPageProps)
                   <p className="text-xs text-gold/80">
                     <strong>Note:</strong> Exact birth date, time, and location improve the quality of astrology-based readings.
                   </p>
+                  </div>
+                )}
+
+                {discountToken && (
+                  <div className="mt-5 rounded-lg border border-emerald-400/20 bg-emerald-400/10 px-4 py-3">
+                    <p className="text-xs text-emerald-100">
+                      Your Community member discount token will carry through to booking.
+                    </p>
                   </div>
                 )}
 

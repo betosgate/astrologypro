@@ -486,10 +486,13 @@ export async function POST(request: NextRequest) {
     }
 
     // --- Member Discount Token Check ---
-    // Valid token reduces platform fee from 20% to 15% (platform cut only; diviner payout unchanged).
-    // Combined floor with any future stacking is 10%.
+    // Valid token gives the client a member discount funded from the platform
+    // fee. The customer's Stripe charge is reduced, while the diviner's
+    // pre-affiliate payout remains based on the original post-loyalty/gift
+    // reading price.
     let memberDiscountTokenId: string | null = null;
     let memberDiscountApplied = false;
+    let memberDiscountPercent = 0;
 
     if (discount_token) {
       const { data: tokenRecord } = await adminSupabase
@@ -503,8 +506,12 @@ export async function POST(request: NextRequest) {
         !tokenRecord.used_at &&
         new Date(tokenRecord.expires_at) >= new Date()
       ) {
+        const tokenPercent = Number(tokenRecord.discount_percent ?? 5);
         memberDiscountTokenId = tokenRecord.id as string;
         memberDiscountApplied = true;
+        memberDiscountPercent = Number.isFinite(tokenPercent) && tokenPercent > 0
+          ? tokenPercent
+          : 5;
       }
     }
 
@@ -532,16 +539,30 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Calculate platform fee on the final price.
+    // Calculate platform fee on the pre-member-discount price.
     // Use service-level fee if configured, otherwise fall back to global default (20%).
-    // Member discount token: platform fee drops by 5% (floor at 10%).
     const basePlatformFeePercent =
       typeof (service as Record<string, unknown>).platform_fee_percent === "number"
         ? Number((service as Record<string, unknown>).platform_fee_percent)
         : PRICING.platformFeePercent;
     const effectivePlatformFeePercent = memberDiscountApplied
-      ? Math.max(basePlatformFeePercent - 5, 10)
+      ? Math.max(basePlatformFeePercent - memberDiscountPercent, 0)
       : basePlatformFeePercent;
+    const priceBeforeMemberDiscount = finalPrice;
+    const grossAmountCentsBeforeMemberDiscount = Math.round(priceBeforeMemberDiscount * 100);
+    const memberDiscountCents =
+      memberDiscountApplied && grossAmountCentsBeforeMemberDiscount > 0
+        ? Math.min(
+          grossAmountCentsBeforeMemberDiscount,
+          Math.round(grossAmountCentsBeforeMemberDiscount * (memberDiscountPercent / 100)),
+        )
+        : 0;
+    const memberDiscountAmount = memberDiscountCents / 100;
+    const chargeAmountCents = Math.max(
+      0,
+      grossAmountCentsBeforeMemberDiscount - memberDiscountCents,
+    );
+    finalPrice = chargeAmountCents / 100;
 
     // Resolve the commission rate stamp BEFORE the money split so the
     // affiliate carve-out (Phase-2-prerequisite, sprint
@@ -575,7 +596,7 @@ export async function POST(request: NextRequest) {
     // includes the affiliate's share. Diviner's destination transfer
     // is correspondingly reduced. Non-stamped bookings → 0 cents →
     // unchanged from current behavior.
-    const grossAmountCentsForCarveOut = Math.round(finalPrice * 100);
+    const grossAmountCentsForCarveOut = grossAmountCentsBeforeMemberDiscount;
     const affiliateCommissionCents =
       stamp.reason === "stamped"
         ? computeCommissionCents(
@@ -585,10 +606,9 @@ export async function POST(request: NextRequest) {
         )
         : 0;
 
-    const grossAmountCents = Math.round(finalPrice * 100);
-    const bookingSplit = calculateMoneySplit({
-      grossAmountCents,
-      platformFeePercent: effectivePlatformFeePercent,
+    const standardBookingSplit = calculateMoneySplit({
+      grossAmountCents: grossAmountCentsBeforeMemberDiscount,
+      platformFeePercent: basePlatformFeePercent,
       affiliateCommissionCents,
       platformFeeRule:
         typeof (service as Record<string, unknown>).platform_fee_percent === "number"
@@ -598,6 +618,26 @@ export async function POST(request: NextRequest) {
         affiliateCommissionCents > 0 ? "stamped_affiliate_share" : "no_affiliate_share",
       memberDiscountApplied,
     });
+    const bookingSplit = memberDiscountApplied
+      ? {
+        ...standardBookingSplit,
+        grossAmountCents: chargeAmountCents,
+        platformFeeCents: Math.max(
+          0,
+          standardBookingSplit.platformFeeCents - memberDiscountCents,
+        ),
+        platformNetAmountCents: Math.max(
+          0,
+          standardBookingSplit.platformFeeCents - memberDiscountCents,
+        ),
+        trace: {
+          ...standardBookingSplit.trace,
+          platformFeePercent: effectivePlatformFeePercent,
+          grossAmountCents: chargeAmountCents,
+          memberDiscountApplied: true,
+        },
+      }
+      : standardBookingSplit;
     // What stays on platform balance: platform's true fee + affiliate's
     // share (Phase 2 will later transfer the affiliate share out to the
     // affiliate's connected account). The diviner's destination transfer
@@ -686,6 +726,13 @@ export async function POST(request: NextRequest) {
           ...(availabilityTemplateTitle ? { availability_title: availabilityTemplateTitle } : {}),
           ...(availabilityTemplateDescription ? { availability_description: availabilityTemplateDescription } : {}),
           ...(submissionId ? { intake_submission_id: submissionId } : {}),
+          ...(memberDiscountApplied
+            ? {
+              member_discount_percent: memberDiscountPercent,
+              member_discount_amount_cents: memberDiscountCents,
+              price_before_member_discount_cents: grossAmountCentsBeforeMemberDiscount,
+            }
+            : {}),
         },
         ...(policyAcknowledgedAt ? { policy_acknowledged_at: policyAcknowledgedAt } : {}),
         ...(refCode ? { ref_code: refCode } : {}),
@@ -767,7 +814,7 @@ export async function POST(request: NextRequest) {
       divinerId: resolvedDivinerId,
       serviceId,
       service,
-      amountCents: grossAmountCents,
+      amountCents: shouldCharge ? bookingSplit.grossAmountCents : 0,
       currency: "usd",
       status: initialOrderStatus,
       paidAt: shouldCharge ? null : new Date().toISOString(),
@@ -807,7 +854,7 @@ export async function POST(request: NextRequest) {
           ...(loyaltyRuleName
             ? { loyaltyDiscount: `${loyaltyDiscountPercent}%` }
             : {}),
-          ...(memberDiscountApplied ? { memberDiscount: "5%" } : {}),
+          ...(memberDiscountApplied ? { memberDiscount: `${memberDiscountPercent}%` } : {}),
         },
       });
 
@@ -825,7 +872,7 @@ export async function POST(request: NextRequest) {
         divinerId: resolvedDivinerId,
         serviceId,
         service,
-        amountCents: grossAmountCents,
+        amountCents: bookingSplit.grossAmountCents,
         currency: "usd",
         stripePaymentIntentId: paymentIntent.id,
         status: "pending_payment",
@@ -1157,7 +1204,7 @@ export async function POST(request: NextRequest) {
           loyaltyDiscount: {
             name: loyaltyRuleName,
             percent: loyaltyDiscountPercent,
-            saved: Math.round((service.base_price - finalPrice + giftDeduction) * 100) / 100,
+            saved: Math.round((service.base_price - priceBeforeMemberDiscount + giftDeduction) * 100) / 100,
           },
         }
         : {}),
@@ -1165,7 +1212,14 @@ export async function POST(request: NextRequest) {
         ? { giftDeduction: Math.round(giftDeduction * 100) / 100 }
         : {}),
       ...(memberDiscountApplied
-        ? { memberDiscount: { platformFeePercent: effectivePlatformFeePercent } }
+        ? {
+          memberDiscount: {
+            percent: memberDiscountPercent,
+            saved: memberDiscountAmount,
+            priceBeforeDiscount: priceBeforeMemberDiscount,
+            platformFeePercent: effectivePlatformFeePercent,
+          },
+        }
         : {}),
     });
   } catch (err) {

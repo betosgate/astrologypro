@@ -1517,7 +1517,7 @@ export default async function CommunityDashboardPage() {
             className="w-full sm:w-auto"
           >
             <Compass className="mr-1.5 size-3.5" />
-            Get a Reading
+            Get a Reading - 5% Discount
           </PerennialReadingButton>
           <Button asChild variant="outline" size="sm" className="w-full sm:w-auto">
             <Link href="/community/library">
