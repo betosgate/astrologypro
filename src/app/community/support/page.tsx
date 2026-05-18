@@ -18,6 +18,8 @@ interface SupportTicket {
   status: string;
   priority: string;
   category: string;
+  assigned_to?: string | null;
+  metadata?: any;
   created_at: string;
   updated_at: string;
 }
@@ -64,7 +66,7 @@ export default async function CommunitySupportPage() {
   const admin = createAdminClient();
   const { data: tickets } = await admin
     .from("support_tickets")
-    .select("id, ticket_number, subject, status, priority, category, created_at, updated_at")
+    .select("id, ticket_number, subject, status, priority, category, assigned_to, metadata, created_at, updated_at")
     .eq("requester_user_id", user.id)
     .order("created_at", { ascending: false })
     .limit(50);
@@ -124,6 +126,7 @@ export default async function CommunitySupportPage() {
                     <TableHead>Category</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Priority</TableHead>
+                    <TableHead>Assignee</TableHead>
                     <TableHead>Created</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -155,6 +158,24 @@ export default async function CommunitySupportPage() {
                         <Badge variant="outline" className={priorityColors[ticket.priority] ?? ""}>
                           {formatStatus(ticket.priority)}
                         </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1.5 text-xs">
+                          {ticket.assigned_to ? (
+                            <div className="flex flex-col">
+                              <span className="font-medium text-[11px] max-w-[150px] truncate text-foreground">
+                                {ticket.metadata?.assignee_name || "Support Agent"}
+                              </span>
+                              {ticket.metadata?.assignee_email && (
+                                <span className="text-[9px] text-muted-foreground max-w-[150px] truncate">
+                                  {ticket.metadata.assignee_email}
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="italic text-muted-foreground text-[11px]">Unassigned</span>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">{formatDate(ticket.created_at)}</TableCell>
                     </TableRow>

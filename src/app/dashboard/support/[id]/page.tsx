@@ -43,6 +43,7 @@ interface Ticket {
   sla_due_at: string | null;
   sla_breached: boolean;
   first_response_due_at: string | null;
+  assigned_to: string | null;
   assigned_team: string | null;
   attachments?: TicketAttachment[];
   created_at: string;
@@ -461,6 +462,14 @@ export default function TicketDetailPage() {
   if (!data) return null;
 
   const { ticket, messages } = data;
+  // Determine assignee display name: use metadata name if assigned, otherwise fallback to last staff comment author
+  const lastStaffMsg = messages.filter((m) => m.author_role === "staff").slice(-1)[0];
+  const assigneeName = ticket.assigned_to 
+    ? ((ticket as any).metadata?.assignee_name || "Support Agent")
+    : (lastStaffMsg?.author_name ?? null);
+  const assigneeEmail = ticket.assigned_to
+    ? ((ticket as any).metadata?.assignee_email || null)
+    : null;
   const isClosed = ticket.status === "closed" || ticket.status === "cancelled";
   const isResolved = ticket.status === "resolved";
   const showCsat = isResolved || isClosed;
@@ -827,6 +836,23 @@ export default function TicketDetailPage() {
                 <Badge variant="outline" className={cn("text-[10px] h-5", priorityColors[ticket.priority] ?? "")}>
                   {formatStatus(ticket.priority)}
                 </Badge>
+              </div>
+              <div className="flex justify-between items-start pt-1.5 border-t border-border mt-3">
+                <span className="text-muted-foreground">Assignee</span>
+                {assigneeName ? (
+                  <div className="text-right">
+                    <span className="font-semibold text-foreground text-xs block">
+                      {assigneeName}
+                    </span>
+                    {assigneeEmail && (
+                      <span className="text-[10px] text-muted-foreground block font-mono">
+                        {assigneeEmail}
+                      </span>
+                    )}
+                  </div>
+                ) : (
+                  <span className="text-xs italic text-muted-foreground">Unassigned</span>
+                )}
               </div>
               <Separator />
               <div className="flex justify-between items-center">
