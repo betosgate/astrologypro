@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,6 +8,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Plus, Pencil, Trash2, Eye } from "lucide-react";
 
 type Broadcast = {
@@ -50,12 +57,12 @@ export default function AdminBroadcastingPage() {
   const [updatedFrom, setUpdatedFrom] = useState("");
   const [updatedTo, setUpdatedTo] = useState("");
 
-  async function load(overrides?: { search?: string; status?: string; updatedFrom?: string; updatedTo?: string }) {
+  const load = useCallback(async (overrides?: { search?: string; status?: string; updatedFrom?: string; updatedTo?: string }) => {
     setLoading(true);
-    const s = overrides?.search ?? search;
-    const st = overrides?.status ?? statusFilter;
-    const uf = overrides?.updatedFrom ?? updatedFrom;
-    const ut = overrides?.updatedTo ?? updatedTo;
+    const s = overrides?.search ?? "";
+    const st = overrides?.status ?? "";
+    const uf = overrides?.updatedFrom ?? "";
+    const ut = overrides?.updatedTo ?? "";
     const params = new URLSearchParams();
     if (s) params.set("search", s);
     if (st) params.set("status", st);
@@ -68,12 +75,16 @@ export default function AdminBroadcastingPage() {
       setCount(json.count ?? 0);
     }
     setLoading(false);
-  }
+  }, []);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    void Promise.resolve().then(() =>
+      load({ search: "", status: "", updatedFrom: "", updatedTo: "" })
+    );
+  }, [load]);
 
   function F(field: keyof FormState) {
-    return (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
+    return (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
       setForm((f) => ({ ...f, [field]: e.target.value }));
   }
 
@@ -91,7 +102,7 @@ export default function AdminBroadcastingPage() {
       const d = await res.json();
       setError(d.error ?? "Failed");
     } else {
-      await load();
+      await load({ search, status: statusFilter, updatedFrom, updatedTo });
       setShowForm(false);
       setEditId(null);
       setForm({ ...EMPTY });
@@ -152,11 +163,19 @@ export default function AdminBroadcastingPage() {
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Status</Label>
-              <select className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-                <option value="">All</option>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-              </select>
+              <Select
+                value={statusFilter || "all"}
+                onValueChange={(value) => setStatusFilter(value === "all" ? "" : value)}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="w-[var(--radix-select-trigger-width)]">
+                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Updated from</Label>
@@ -168,7 +187,7 @@ export default function AdminBroadcastingPage() {
             </div>
           </div>
           <div className="mt-3 flex gap-2">
-            <Button size="sm" onClick={() => load()}>Search</Button>
+            <Button size="sm" onClick={() => load({ search, status: statusFilter, updatedFrom, updatedTo })}>Search</Button>
             <Button size="sm" variant="outline" onClick={() => { setSearch(""); setStatusFilter(""); setUpdatedFrom(""); setUpdatedTo(""); load({ search: "", status: "", updatedFrom: "", updatedTo: "" }); }}>Reset</Button>
           </div>
         </CardContent>
@@ -199,10 +218,23 @@ export default function AdminBroadcastingPage() {
                 </div>
                 <div className="space-y-1.5">
                   <Label>Status</Label>
-                  <select className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm" value={form.status} onChange={F("status")}>
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
-                  </select>
+                  <Select
+                    value={form.status}
+                    onValueChange={(value) =>
+                      setForm((current) => ({
+                        ...current,
+                        status: value as FormState["status"],
+                      }))
+                    }
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="w-[var(--radix-select-trigger-width)]">
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="inactive">Inactive</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
               {error && <p className="text-sm text-destructive">{error}</p>}

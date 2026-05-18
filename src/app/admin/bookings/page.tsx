@@ -3,6 +3,7 @@ import { requireAdmin } from "@/lib/admin-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { BookingsFilterForm } from "@/components/admin/bookings-filter-form";
 import { BookingDetailSheet } from "@/components/dashboard/booking-detail-sheet";
 import { getSessionLinkForBooking } from "@/lib/service-toolkit-mapping";
 import {
@@ -578,73 +579,16 @@ export default async function AdminBookingsPage({
 
       <Card>
         <CardContent className="pt-4">
-          <form method="GET" action="/admin/bookings" className="flex flex-wrap gap-3 items-end">
-            <input type="hidden" name="view" value={view} />
-            <div className="flex flex-col gap-1">
-              <label className="text-xs text-muted-foreground">Client name / email</label>
-              <input
-                name="search"
-                defaultValue={params.search ?? ""}
-                placeholder="Search client..."
-                className="h-9 w-48 rounded-md border px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-xs text-muted-foreground">Status</label>
-              <select
-                name="status"
-                defaultValue={params.status ?? "all"}
-                className="h-9 rounded-md border px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-              >
-                <option value="all">All statuses</option>
-                <option value="pending">Pending</option>
-                <option value="confirmed">Confirmed</option>
-                <option value="in_progress">In Progress</option>
-                <option value="completed">Completed</option>
-                <option value="canceled">Canceled</option>
-                <option value="no_show">No Show</option>
-              </select>
-            </div>
-            {view === "all" && (
-              <div className="flex flex-col gap-1">
-                <label className="text-xs text-muted-foreground">Diviner</label>
-                <select
-                  name="diviner_id"
-                  defaultValue={params.diviner_id ?? ""}
-                  className="h-9 rounded-md border px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                >
-                  <option value="">All diviners</option>
-                  {divinerOptions.map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {d.display_name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-            <div className="flex flex-col gap-1">
-              <label className="text-xs text-muted-foreground">From</label>
-              <input
-                type="date"
-                name="from"
-                defaultValue={params.from ?? ""}
-                className="h-9 rounded-md border px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-xs text-muted-foreground">To</label>
-              <input
-                type="date"
-                name="to"
-                defaultValue={params.to ?? ""}
-                className="h-9 rounded-md border px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-              />
-            </div>
-            <Button type="submit" size="sm">Filter</Button>
-            <Button type="button" variant="ghost" size="sm" asChild>
-              <Link href={`/admin/bookings?view=${view}`}>Clear</Link>
-            </Button>
-          </form>
+          <BookingsFilterForm
+            key={`${view}-${params.status ?? "all"}-${params.diviner_id ?? "all"}-${params.search ?? ""}-${params.from ?? ""}-${params.to ?? ""}`}
+            view={view}
+            status={params.status}
+            divinerId={params.diviner_id}
+            search={params.search}
+            from={params.from}
+            to={params.to}
+            divinerOptions={divinerOptions}
+          />
         </CardContent>
       </Card>
 

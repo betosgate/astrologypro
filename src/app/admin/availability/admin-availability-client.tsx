@@ -523,20 +523,23 @@ export function AdminAvailabilityClient() {
 
             <div className="space-y-1.5">
               <Label htmlFor="admin-availability-duration">Session Duration</Label>
-              <select
-                id="admin-availability-duration"
-                value={form.duration_minutes}
-                onChange={(event) =>
-                  setForm((prev) => ({ ...prev, duration_minutes: Number(event.target.value) }))
+              <Select
+                value={String(form.duration_minutes)}
+                onValueChange={(value) =>
+                  setForm((prev) => ({ ...prev, duration_minutes: Number(value) }))
                 }
-                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
               >
-                {DURATION_OPTIONS.map((duration) => (
-                  <option key={duration} value={duration}>
-                    {duration} minutes
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger id="admin-availability-duration" className="w-full">
+                  <SelectValue placeholder="Select duration" />
+                </SelectTrigger>
+                <SelectContent className="w-[var(--radix-select-trigger-width)]">
+                  {DURATION_OPTIONS.map((duration) => (
+                    <SelectItem key={duration} value={String(duration)}>
+                      {duration} minutes
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-1.5">
