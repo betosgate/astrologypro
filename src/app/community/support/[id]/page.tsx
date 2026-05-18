@@ -21,9 +21,11 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Loader2, SendHorizonal, X, Clock, Star, Paperclip, FileText, Download, User, LifeBuoy, ExternalLink } from "lucide-react";
+import { ArrowLeft, Loader2, SendHorizonal, X, Clock, Star, Paperclip, FileText, Download, User, LifeBuoy, ExternalLink, Lock } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -41,6 +43,7 @@ interface Ticket {
   sla_due_at: string | null;
   sla_breached: boolean;
   first_response_due_at: string | null;
+  assigned_to: string | null;
   assigned_team: string | null;
   attachments?: TicketAttachment[];
   created_at: string;
@@ -263,6 +266,10 @@ export default function TicketDetailPage() {
   const [replyAttachments, setReplyAttachments] = useState<TicketAttachment[]>([]);
   const [sending, setSending] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [internalNoteBody, setInternalNoteBody] = useState("");
+  const [sendingInternal, setSendingInternal] = useState(false);
+  const [internalNoteAttachments, setInternalNoteAttachments] = useState<TicketAttachment[]>([]);
+  const [uploadingInternal, setUploadingInternal] = useState(false);
 
   const loadTicket = useCallback(async () => {
     try {
@@ -304,7 +311,8 @@ export default function TicketDetailPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           body: replyBody.trim(),
-          attachments: replyAttachments
+          attachments: replyAttachments,
+          is_internal: false
         }),
       });
       if (!res.ok) {
@@ -319,6 +327,71 @@ export default function TicketDetailPage() {
       toast.error(err instanceof Error ? err.message : "Failed to send reply.");
     } finally {
       setSending(false);
+    }
+  }
+ 
+  async function handleAddInternalNote() {
+    if (!internalNoteBody.trim()) return;
+ 
+    setSendingInternal(true);
+    try {
+      const res = await fetch(`/api/support/tickets/${ticketId}/messages`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          body: internalNoteBody.trim(),
+          is_internal: true,
+          attachments: internalNoteAttachments
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail ?? "Failed to save private note.");
+      }
+      setInternalNoteBody("");
+      setInternalNoteAttachments([]);
+      toast.success("Private note added.");
+      await loadTicket();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to save private note.");
+    } finally {
+      setSendingInternal(false);
+    }
+  }
+ 
+  async function handleInternalFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+ 
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("File too large (max 10MB)");
+      return;
+    }
+ 
+    setUploadingInternal(true);
+    const body = new FormData();
+    body.append("file", file);
+    body.append("kind", "ticket");
+ 
+    try {
+      const res = await fetch("/api/support/tickets/upload", { method: "POST", body });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Upload failed");
+ 
+      setInternalNoteAttachments((prev) => [
+        ...prev,
+        {
+          url: data.url,
+          name: data.name ?? file.name,
+          type: data.type ?? file.type,
+          size: data.size ?? file.size,
+        },
+      ]);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setUploadingInternal(false);
+      e.target.value = "";
     }
   }
 
@@ -389,6 +462,15 @@ export default function TicketDetailPage() {
   if (!data) return null;
 
   const { ticket, messages } = data;
+  // Find the last staff response (either public reply or internal note)
+  const lastStaffMsg = messages.filter((m) => m.author_role === "staff").slice(-1)[0];
+  const assigneeName = ticket.assigned_to 
+    ? ((ticket as any).metadata?.assignee_name || "Support Agent")
+    : (lastStaffMsg?.author_name ?? null);
+  const assigneeEmail = ticket.assigned_to
+    ? ((ticket as any).metadata?.assignee_email || null)
+    : null;
+
   const isClosed = ticket.status === "closed" || ticket.status === "cancelled";
   const isResolved = ticket.status === "resolved";
   const showCsat = isResolved || isClosed;
@@ -453,6 +535,125 @@ export default function TicketDetailPage() {
                   <p className="text-sm whitespace-pre-wrap">{ticket.resolution}</p>
                 </div>
               )}
+            </CardContent>
+          </Card>
+
+          {/* Internal Notes */}
+          <Card className="border-amber-500/20 bg-amber-500/5">
+            <CardHeader className="pb-3 border-b border-amber-500/10">
+              <CardTitle className="text-sm font-semibold flex items-center gap-2 text-amber-600">
+                <Lock className="size-4" />
+                Internal Notes
+                <Badge variant="outline" className="text-[10px] bg-amber-500/10 text-amber-600 border-amber-500/20">
+                  Owner Eyes Only
+                </Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-4 space-y-4">
+              <div className="max-h-[300px] overflow-y-auto space-y-3 pr-1">
+                {messages.filter((m) => m.is_internal).length === 0 ? (
+                  <div className="text-sm text-muted-foreground italic text-center py-4">
+                    No internal notes yet.
+                  </div>
+                ) : (
+                  messages
+                    .filter((m) => m.is_internal)
+                    .map((note) => (
+                      <div key={note.id} className="rounded-lg bg-background border border-amber-500/20 p-3">
+                        <div className="flex justify-between items-center text-[10px] text-muted-foreground mb-1.5">
+                          <span className="font-semibold text-amber-600">{note.author_name}</span>
+                          <span>{formatDateTime(note.created_at)}</span>
+                        </div>
+                        <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">{note.body}</p>
+                        {renderAttachments(note.attachments)}
+                      </div>
+                    ))
+                )}
+              </div>
+ 
+              {/* Dedicated Private Note Composer */}
+              <div className="border-t border-amber-500/10 pt-4 mt-4 space-y-3">
+                <div className="space-y-2">
+                  <Textarea
+                    placeholder="Write a private note (only visible to you and support)..."
+                    value={internalNoteBody}
+                    onChange={(e) => setInternalNoteBody(e.target.value)}
+                    rows={2}
+                    className="resize-none bg-background border-amber-500/20 focus-visible:ring-amber-500 text-sm"
+                    disabled={sendingInternal}
+                  />
+
+                  {internalNoteAttachments.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {internalNoteAttachments.map((att) => (
+                        <div key={att.url} className="flex items-center gap-2 rounded-md border border-amber-500/20 bg-background px-2 py-1 text-[10px]">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedAttachment(att)}
+                            className="flex items-center gap-1.5 hover:text-amber-600 transition-colors"
+                          >
+                            <FileText className="size-3" />
+                            <span className="max-w-[100px] truncate">{att.name}</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setInternalNoteAttachments(prev => prev.filter(a => a.url !== att.url))}
+                            className="text-muted-foreground hover:text-destructive"
+                          >
+                            <X className="size-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between mt-2">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="file"
+                        id="internal-file-upload"
+                        className="hidden"
+                        onChange={handleInternalFileUpload}
+                        disabled={sendingInternal || uploadingInternal}
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-8 px-2.5 border-amber-500/20 hover:bg-amber-500/10 text-amber-700"
+                        onClick={() => document.getElementById("internal-file-upload")?.click()}
+                        disabled={sendingInternal || uploadingInternal}
+                      >
+                        {uploadingInternal ? (
+                          <Loader2 className="size-3.5 animate-spin" />
+                        ) : (
+                          <Paperclip className="size-3.5" />
+                        )}
+                        <span className="sr-only">Attach file</span>
+                      </Button>
+                    </div>
+
+                    <Button
+                      type="button"
+                      onClick={handleAddInternalNote}
+                      disabled={sendingInternal || (!internalNoteBody.trim() && internalNoteAttachments.length === 0)}
+                      className="bg-amber-600 hover:bg-amber-700 text-white text-xs h-8 px-3 flex items-center gap-1.5"
+                    >
+                      {sendingInternal ? (
+                        <>
+                          <Loader2 className="size-3.5 animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        <>
+                          <Lock className="size-3.5" />
+                          Save Private Note
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </div>
             </CardContent>
           </Card>
 
@@ -636,6 +837,23 @@ export default function TicketDetailPage() {
                 <Badge variant="outline" className={cn("text-[10px] h-5", priorityColors[ticket.priority] ?? "")}>
                   {formatStatus(ticket.priority)}
                 </Badge>
+              </div>
+              <div className="flex justify-between items-start pt-1.5 border-t border-border mt-3">
+                <span className="text-muted-foreground">Assignee</span>
+                {assigneeName ? (
+                  <div className="text-right">
+                    <span className="font-semibold text-foreground text-xs block">
+                      {assigneeName}
+                    </span>
+                    {assigneeEmail && (
+                      <span className="text-[10px] text-muted-foreground block font-mono">
+                        {assigneeEmail}
+                      </span>
+                    )}
+                  </div>
+                ) : (
+                  <span className="text-xs italic text-muted-foreground">Unassigned</span>
+                )}
               </div>
               <Separator />
               <div className="flex justify-between items-center">

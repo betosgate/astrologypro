@@ -141,7 +141,7 @@ export default async function AdminTicketsPage({
     let query = admin
       .from("support_tickets")
       .select(
-        "id, ticket_number, type, category, subject, status, priority, requester_name, requester_email, requester_role, assigned_to, assigned_team, queue_id, sla_due_at, sla_breached, created_at, updated_at",
+        "id, ticket_number, type, category, subject, status, priority, requester_name, requester_email, requester_role, assigned_to, assigned_team, queue_id, sla_due_at, sla_breached, metadata, created_at, updated_at",
         { count: "exact" }
       )
       .order("priority", { ascending: true })

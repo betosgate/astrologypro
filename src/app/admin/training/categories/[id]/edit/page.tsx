@@ -13,6 +13,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import Link from "next/link";
 import { SectionContainer } from "@/components/shared/section-container";
 import { TrainingNotes } from "@/components/admin/training-notes";
@@ -76,7 +83,7 @@ export default function EditCategoryPage() {
   }, [id, router]);
 
   function handleChange(
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) {
     const { name, value, type } = e.target;
     if (type === "checkbox") {
@@ -181,19 +188,23 @@ export default function EditCategoryPage() {
               <label className="text-sm font-medium" htmlFor="training_id">
                 Training Program <span className="text-red-500">*</span>
               </label>
-              <select
-                id="training_id"
-                name="training_id"
-                value={form.training_id}
-                onChange={handleChange}
-                required
-                className="w-full h-9 rounded-md border border-input px-3 py-2 text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
+              <Select
+                value={form.training_id || undefined}
+                onValueChange={(value) =>
+                  setForm((prev) => ({ ...prev, training_id: value }))
+                }
               >
-                <option value="">— Select a program —</option>
-                {programs.map((p) => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
-              </select>
+                <SelectTrigger id="training_id" className="w-full">
+                  <SelectValue placeholder="Select a program" />
+                </SelectTrigger>
+                <SelectContent className="w-[var(--radix-select-trigger-width)]">
+                  {programs.map((program) => (
+                    <SelectItem key={program.id} value={program.id}>
+                      {program.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Name */}
