@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Calendar } from "@/components/ui/calendar";
-import { format, isBefore, startOfDay } from "date-fns";
+import { format, isBefore, startOfDay, addMonths } from "date-fns";
 
 interface CalendarPickerProps {
   divinerId: string;
@@ -12,6 +12,10 @@ interface CalendarPickerProps {
   selectedDate: Date | undefined;
   /** When true, fetch slots from all availability templates regardless of service */
   allSlots?: boolean;
+  enableNextAvailableAssist?: boolean;
+  scanMonthsAhead?: number;
+  onNextAvailableMessage?: (message: string | null) => void;
+  onNoAvailabilityFoundChange?: (found: boolean) => void;
 }
 
 export function CalendarPicker({
@@ -21,13 +25,27 @@ export function CalendarPicker({
   onDateSelect,
   selectedDate,
   allSlots,
+  enableNextAvailableAssist = false,
+  scanMonthsAhead = 6,
+  onNextAvailableMessage,
+  onNoAvailabilityFoundChange,
 }: CalendarPickerProps) {
   const [availableDates, setAvailableDates] = useState<Set<string>>(new Set());
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
   const [loading, setLoading] = useState(false);
   const [loadedMonth, setLoadedMonth] = useState(false);
+  const assistedMonthRef = useRef<string | null>(null);
+  const autoJumpedMonthRef = useRef<string | null>(null);
   const serviceQuery = serviceId ? `&serviceId=${serviceId}` : "";
   const allSlotsQuery = allSlots ? "&allSlots=1" : "";
+
+  function handleMonthChange(month: Date) {
+    assistedMonthRef.current = null;
+    autoJumpedMonthRef.current = null;
+    onNextAvailableMessage?.(null);
+    onNoAvailabilityFoundChange?.(false);
+    setCurrentMonth(month);
+  }
 
   useEffect(() => {
     async function fetchMonthAvailability() {
@@ -39,9 +57,39 @@ export function CalendarPicker({
           `/api/availability/${divinerId}/month?month=${monthKey}&duration=${duration}${serviceQuery}${allSlotsQuery}`
         );
         const data = res.ok ? await res.json() : null;
-        setAvailableDates(
-          new Set(Array.isArray(data?.availableDates) ? data.availableDates : [])
-        );
+        const dates = Array.isArray(data?.availableDates) ? data.availableDates : [];
+
+        if (enableNextAvailableAssist && dates.length === 0) {
+          if (assistedMonthRef.current === monthKey) {
+            setAvailableDates(new Set());
+            return;
+          }
+          assistedMonthRef.current = monthKey;
+
+          const result = await findNextAvailableMonth(currentMonth);
+
+          if (result) {
+            autoJumpedMonthRef.current = result.monthKey;
+            setCurrentMonth(result.month);
+            setAvailableDates(new Set(result.dates));
+            onNoAvailabilityFoundChange?.(false);
+            onNextAvailableMessage?.(
+              `No availability in ${format(currentMonth, "MMMM yyyy")}. Showing next available dates in ${format(result.month, "MMMM yyyy")}.`
+            );
+          } else {
+            setAvailableDates(new Set());
+            onNoAvailabilityFoundChange?.(true);
+            onNextAvailableMessage?.(
+              `No availability found in the next ${scanMonthsAhead} months. Please choose another reader or try again later.`
+            );
+          }
+        } else {
+          setAvailableDates(new Set(dates));
+          onNoAvailabilityFoundChange?.(false);
+          if (autoJumpedMonthRef.current !== monthKey) {
+            onNextAvailableMessage?.(null);
+          }
+        }
       } catch {
         // Silently handle fetch errors
         setAvailableDates(new Set());
@@ -51,8 +99,43 @@ export function CalendarPicker({
       }
     }
 
+    async function findNextAvailableMonth(startMonth: Date) {
+      for (let i = 1; i <= scanMonthsAhead; i++) {
+        const nextMonth = addMonths(startMonth, i);
+        const monthKey = format(nextMonth, "yyyy-MM");
+
+        const res = await fetch(
+          `/api/availability/${divinerId}/month?month=${monthKey}&duration=${duration}${serviceQuery}${allSlotsQuery}`
+        );
+
+        const data = res.ok ? await res.json() : null;
+        const dates = Array.isArray(data?.availableDates) ? data.availableDates : [];
+
+        if (dates.length > 0) {
+          return {
+            month: nextMonth,
+            monthKey,
+            dates,
+            firstDate: dates[0],
+          };
+        }
+      }
+
+      return null;
+    }
+
     fetchMonthAvailability();
-  }, [currentMonth, divinerId, duration, serviceQuery, allSlotsQuery]);
+  }, [
+    currentMonth,
+    divinerId,
+    duration,
+    serviceQuery,
+    allSlotsQuery,
+    enableNextAvailableAssist,
+    scanMonthsAhead,
+    onNextAvailableMessage,
+    onNoAvailabilityFoundChange,
+  ]);
 
   const today = startOfDay(new Date());
 
@@ -69,11 +152,12 @@ export function CalendarPicker({
       )}
       <Calendar
         mode="single"
+        month={currentMonth}
         selected={selectedDate}
         onSelect={(date) => {
           if (date) onDateSelect(date);
         }}
-        onMonthChange={setCurrentMonth}
+        onMonthChange={handleMonthChange}
         disabled={(date) => {
           if (loading) return true;
           if (isBefore(date, today)) return true;

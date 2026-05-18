@@ -137,6 +137,7 @@ interface BookingWizardProps {
    */
   bookingSource?: "community" | null;
   lockedEmail?: string | null;
+  templateSlug?: string | null;
 }
 
 const STEPS = [
@@ -330,6 +331,7 @@ export function BookingWizard({
   discountToken = null,
   bookingSource = null,
   lockedEmail = null,
+  templateSlug = null,
 }: BookingWizardProps) {
   // Start on the Contact step when the URL already carries a chosen date + time
   // (deep-link from the profile's "Next Available" picker) so users don't see a
@@ -381,8 +383,30 @@ export function BookingWizard({
   const [hasAutoAdvancedFromQuery, setHasAutoAdvancedFromQuery] =
     useState(startOnContact);
   const [clientTimezone, setClientTimezone] = useState(diviner.timezone || "UTC");
+  const [nextAvailableMessage, setNextAvailableMessage] = useState<string | null>(null);
+  const [noAvailabilityFound, setNoAvailabilityFound] = useState(false);
+  const enableNextAvailableAssist =
+    bookingSource === "community" || Boolean(submissionId);
   const resolvedServiceName = hideServiceName ? (bookingLabel ?? "Reading Session") : (bookingLabel ?? service.name);
   const availabilityQuery = availabilityServiceId ? `&serviceId=${availabilityServiceId}` : "";
+  const templateForHandoff = templateSlug || service.slug;
+  const readerSearch = new URLSearchParams();
+  if (service.category === "tarot") {
+    readerSearch.set("type", "tarot");
+  } else if (service.category === "oracle") {
+    readerSearch.set("type", "oracle");
+  } else {
+    readerSearch.set("type", "astrologer");
+  }
+  readerSearch.set("template", templateForHandoff);
+  if (submissionId) readerSearch.set("submission", submissionId);
+  if (bookingSource) readerSearch.set("source", bookingSource);
+  if (discountToken) readerSearch.set("discount_token", discountToken);
+  const chooseAnotherReaderHref = `/discover?${readerSearch.toString()}`;
+  const servicesSearch = new URLSearchParams();
+  if (bookingSource) servicesSearch.set("source", bookingSource);
+  if (discountToken) servicesSearch.set("discount_token", discountToken);
+  const browseServicesHref = `/services${servicesSearch.size > 0 ? `?${servicesSearch.toString()}` : ""}`;
 
   useEffect(() => {
     if (!lockedEmail) return;
@@ -925,6 +949,25 @@ export function BookingWizard({
           {/* Step 1: Date & Time */}
           {step === 0 && (
             <div className="space-y-6">
+              {nextAvailableMessage && (
+                <div className="space-y-3 rounded-lg border border-amber-500/25 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+                  <p>
+                    {noAvailabilityFound
+                      ? `No availability found for ${diviner.display_name} in the next 6 months. You can choose another reader offering ${resolvedServiceName}, or browse other readings.`
+                      : nextAvailableMessage}
+                  </p>
+                  {noAvailabilityFound && (
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                      <Button asChild size="sm" className="bg-amber-400 text-slate-950 hover:bg-amber-300">
+                        <a href={chooseAnotherReaderHref}>Choose Another Reader</a>
+                      </Button>
+                      <Button asChild size="sm" variant="outline" className="border-amber-400/30 bg-transparent text-amber-100 hover:bg-amber-400/10">
+                        <a href={browseServicesHref}>Browse Other Services</a>
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
               <div className="flex flex-col items-center gap-6 md:flex-row md:items-start">
                 <CalendarPicker
                   divinerId={diviner.id}
@@ -932,6 +975,10 @@ export function BookingWizard({
                   duration={service.duration_minutes}
                   selectedDate={selectedDate}
                   onDateSelect={setSelectedDate}
+                  enableNextAvailableAssist={enableNextAvailableAssist}
+                  scanMonthsAhead={6}
+                  onNextAvailableMessage={setNextAvailableMessage}
+                  onNoAvailabilityFoundChange={setNoAvailabilityFound}
                 />
 
                 <div className="w-full flex-1">

@@ -325,6 +325,7 @@ export default async function BookingPage({ params, searchParams }: PageProps) {
             discountToken={discountToken}
             bookingSource={bookingSource}
             lockedEmail={lockedEmail}
+            templateSlug={templateParam}
           />
         ) : (
           <div className="mx-auto max-w-xl rounded-2xl border border-amber-500/20 bg-amber-500/8 px-6 py-8 text-center">
