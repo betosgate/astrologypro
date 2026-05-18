@@ -536,7 +536,7 @@ export default async function LibraryPage({ searchParams }: LibraryPageProps) {
               </p>
             </div>
             <PerennialReadingButton className="shrink-0">
-              Book a Reading
+              Book a Reading (5% member discount)
             </PerennialReadingButton>
           </CardContent>
         </Card>

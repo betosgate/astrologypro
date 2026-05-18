@@ -560,8 +560,8 @@ export default function CreateTicketPage() {
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label>Ticket Type</Label>
-                  <Select 
-                    value={formData.type} 
+                  <Select
+                    value={formData.type}
                     onValueChange={(v) => setFormData({ ...formData, type: v })}
                   >
                     <SelectTrigger className="w-full">
@@ -579,8 +579,8 @@ export default function CreateTicketPage() {
 
                 <div className="space-y-2">
                   <Label>Priority</Label>
-                  <Select 
-                    value={formData.priority} 
+                  <Select
+                    value={formData.priority}
                     onValueChange={(v) => setFormData({ ...formData, priority: v })}
                   >
                     <SelectTrigger className="w-full">

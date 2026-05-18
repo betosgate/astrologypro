@@ -52,6 +52,7 @@ interface BookingPaymentBody {
   policyAcknowledgedAt?: string;
   booking_notes?: string;
   discount_token?: string;
+  source?: string;
   /** True when the slot is from an unscoped availability (no service linked). Skips charging. */
   freeSlot?: boolean;
   /**
@@ -73,7 +74,7 @@ export async function POST(request: NextRequest) {
       divinerUsername,
       serviceId,
       scheduledAt,
-      clientEmail,
+      clientEmail: rawClientEmail,
       clientName,
       clientPhone,
       questionnaire,
@@ -83,6 +84,7 @@ export async function POST(request: NextRequest) {
       policyAcknowledgedAt,
       booking_notes,
       discount_token,
+      source,
       freeSlot,
       submissionId: rawSubmissionId,
     } = body;
@@ -97,6 +99,12 @@ export async function POST(request: NextRequest) {
         ? rawSubmissionId.trim()
         : null;
     const questionnaireData = questionnaire ?? {};
+    const isCommunitySource = source === "community";
+    let clientEmail =
+      typeof rawClientEmail === "string"
+        ? rawClientEmail.trim().toLowerCase()
+        : "";
+    let communityMemberUserId: string | null = null;
 
     // Sanitize ref_code against cmp_XXXXXXXX pattern so random URL params
     // can't pollute the column.
@@ -115,7 +123,7 @@ export async function POST(request: NextRequest) {
     };
 
     // Validate required fields
-    if (!serviceId || !scheduledAt || !clientEmail || !clientName) {
+    if (!serviceId || !scheduledAt || (!isCommunitySource && !clientEmail) || !clientName) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
@@ -135,6 +143,36 @@ export async function POST(request: NextRequest) {
     const supabase = await createClient();
     const adminSupabase = createAdminClient();
     lap("clients created");
+
+    if (isCommunitySource) {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      const authEmail = user?.email?.trim().toLowerCase() ?? null;
+
+      if (!user || !authEmail) {
+        return NextResponse.json(
+          { error: "Community booking requires sign in" },
+          { status: 401 }
+        );
+      }
+
+      const { data: member } = await supabase
+        .from("community_members")
+        .select("id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (!member) {
+        return NextResponse.json(
+          { error: "Community membership not found" },
+          { status: 403 }
+        );
+      }
+
+      clientEmail = authEmail;
+      communityMemberUserId = user.id;
+    }
 
     // Fetch the service first (source of truth for diviner_id)
     let { data: service, error: serviceError } = await adminSupabase
@@ -327,50 +365,52 @@ export async function POST(request: NextRequest) {
 
     // --- Auto-create auth user if they don't exist ---
     let isNewUser = false;
+    let clientAuthUserId: string | undefined =
+      communityMemberUserId ?? undefined;
 
-    // Try to create the auth user; capture the new user's ID if created.
-    const { data: createUserData, error: createUserError } =
-      await adminSupabase.auth.admin.createUser({
-        email: clientEmail,
-        email_confirm: true,
-        user_metadata: {
-          full_name: clientName,
-        },
-      });
-
-    let clientAuthUserId: string | undefined;
-
-    if (createUserError) {
-      const isEmailExists =
-        createUserError.code === "email_exists" ||
-        createUserError.message?.toLowerCase().includes("already registered");
-
-      if (!isEmailExists) {
-        console.error("Failed to auto-create auth user:", createUserError);
-      }
-
-      // Try the clients table first (fast path for returning bookers)
-      const { data: existingClientRecord } = await adminSupabase
-        .from("clients")
-        .select("user_id")
-        .eq("email", clientEmail)
-        .maybeSingle();
-      clientAuthUserId = existingClientRecord?.user_id ?? undefined;
-
-      // Fallback: user exists in auth but has never booked before (no client
-      // record yet). Look them up directly via the auth admin API.
-      if (!clientAuthUserId) {
-        const { data: authListData } = await adminSupabase.auth.admin.listUsers({
-          page: 1,
-          perPage: 1000,
+    if (!clientAuthUserId) {
+      // Try to create the auth user; capture the new user's ID if created.
+      const { data: createUserData, error: createUserError } =
+        await adminSupabase.auth.admin.createUser({
+          email: clientEmail,
+          email_confirm: true,
+          user_metadata: {
+            full_name: clientName,
+          },
         });
-        const authListUsers = (authListData?.users ?? []) as Array<{ id: string; email?: string }>;
-        const authUser = authListUsers.find((u) => u.email === clientEmail);
-        clientAuthUserId = authUser?.id;
+
+      if (createUserError) {
+        const isEmailExists =
+          createUserError.code === "email_exists" ||
+          createUserError.message?.toLowerCase().includes("already registered");
+
+        if (!isEmailExists) {
+          console.error("Failed to auto-create auth user:", createUserError);
+        }
+
+        // Try the clients table first (fast path for returning bookers)
+        const { data: existingClientRecord } = await adminSupabase
+          .from("clients")
+          .select("user_id")
+          .eq("email", clientEmail)
+          .maybeSingle();
+        clientAuthUserId = existingClientRecord?.user_id ?? undefined;
+
+        // Fallback: user exists in auth but has never booked before (no client
+        // record yet). Look them up directly via the auth admin API.
+        if (!clientAuthUserId) {
+          const { data: authListData } = await adminSupabase.auth.admin.listUsers({
+            page: 1,
+            perPage: 1000,
+          });
+          const authListUsers = (authListData?.users ?? []) as Array<{ id: string; email?: string }>;
+          const authUser = authListUsers.find((u) => u.email === clientEmail);
+          clientAuthUserId = authUser?.id;
+        }
+      } else {
+        isNewUser = true;
+        clientAuthUserId = createUserData.user.id;
       }
-    } else {
-      isNewUser = true;
-      clientAuthUserId = createUserData.user.id;
     }
 
     lap("auth user resolved");
@@ -486,10 +526,13 @@ export async function POST(request: NextRequest) {
     }
 
     // --- Member Discount Token Check ---
-    // Valid token reduces platform fee from 20% to 15% (platform cut only; diviner payout unchanged).
-    // Combined floor with any future stacking is 10%.
+    // Valid token gives the client a member discount funded from the platform
+    // fee. The customer's Stripe charge is reduced, while the diviner's
+    // pre-affiliate payout remains based on the original post-loyalty/gift
+    // reading price.
     let memberDiscountTokenId: string | null = null;
     let memberDiscountApplied = false;
+    let memberDiscountPercent = 0;
 
     if (discount_token) {
       const { data: tokenRecord } = await adminSupabase
@@ -501,10 +544,15 @@ export async function POST(request: NextRequest) {
       if (
         tokenRecord &&
         !tokenRecord.used_at &&
-        new Date(tokenRecord.expires_at) >= new Date()
+        new Date(tokenRecord.expires_at) >= new Date() &&
+        (!isCommunitySource || tokenRecord.user_id === communityMemberUserId)
       ) {
+        const tokenPercent = Number(tokenRecord.discount_percent ?? 5);
         memberDiscountTokenId = tokenRecord.id as string;
         memberDiscountApplied = true;
+        memberDiscountPercent = Number.isFinite(tokenPercent) && tokenPercent > 0
+          ? tokenPercent
+          : 5;
       }
     }
 
@@ -532,16 +580,30 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Calculate platform fee on the final price.
+    // Calculate platform fee on the pre-member-discount price.
     // Use service-level fee if configured, otherwise fall back to global default (20%).
-    // Member discount token: platform fee drops by 5% (floor at 10%).
     const basePlatformFeePercent =
       typeof (service as Record<string, unknown>).platform_fee_percent === "number"
         ? Number((service as Record<string, unknown>).platform_fee_percent)
         : PRICING.platformFeePercent;
     const effectivePlatformFeePercent = memberDiscountApplied
-      ? Math.max(basePlatformFeePercent - 5, 10)
+      ? Math.max(basePlatformFeePercent - memberDiscountPercent, 0)
       : basePlatformFeePercent;
+    const priceBeforeMemberDiscount = finalPrice;
+    const grossAmountCentsBeforeMemberDiscount = Math.round(priceBeforeMemberDiscount * 100);
+    const memberDiscountCents =
+      memberDiscountApplied && grossAmountCentsBeforeMemberDiscount > 0
+        ? Math.min(
+          grossAmountCentsBeforeMemberDiscount,
+          Math.round(grossAmountCentsBeforeMemberDiscount * (memberDiscountPercent / 100)),
+        )
+        : 0;
+    const memberDiscountAmount = memberDiscountCents / 100;
+    const chargeAmountCents = Math.max(
+      0,
+      grossAmountCentsBeforeMemberDiscount - memberDiscountCents,
+    );
+    finalPrice = chargeAmountCents / 100;
 
     // Resolve the commission rate stamp BEFORE the money split so the
     // affiliate carve-out (Phase-2-prerequisite, sprint
@@ -575,7 +637,7 @@ export async function POST(request: NextRequest) {
     // includes the affiliate's share. Diviner's destination transfer
     // is correspondingly reduced. Non-stamped bookings → 0 cents →
     // unchanged from current behavior.
-    const grossAmountCentsForCarveOut = Math.round(finalPrice * 100);
+    const grossAmountCentsForCarveOut = grossAmountCentsBeforeMemberDiscount;
     const affiliateCommissionCents =
       stamp.reason === "stamped"
         ? computeCommissionCents(
@@ -585,10 +647,9 @@ export async function POST(request: NextRequest) {
         )
         : 0;
 
-    const grossAmountCents = Math.round(finalPrice * 100);
-    const bookingSplit = calculateMoneySplit({
-      grossAmountCents,
-      platformFeePercent: effectivePlatformFeePercent,
+    const standardBookingSplit = calculateMoneySplit({
+      grossAmountCents: grossAmountCentsBeforeMemberDiscount,
+      platformFeePercent: basePlatformFeePercent,
       affiliateCommissionCents,
       platformFeeRule:
         typeof (service as Record<string, unknown>).platform_fee_percent === "number"
@@ -598,6 +659,26 @@ export async function POST(request: NextRequest) {
         affiliateCommissionCents > 0 ? "stamped_affiliate_share" : "no_affiliate_share",
       memberDiscountApplied,
     });
+    const bookingSplit = memberDiscountApplied
+      ? {
+        ...standardBookingSplit,
+        grossAmountCents: chargeAmountCents,
+        platformFeeCents: Math.max(
+          0,
+          standardBookingSplit.platformFeeCents - memberDiscountCents,
+        ),
+        platformNetAmountCents: Math.max(
+          0,
+          standardBookingSplit.platformFeeCents - memberDiscountCents,
+        ),
+        trace: {
+          ...standardBookingSplit.trace,
+          platformFeePercent: effectivePlatformFeePercent,
+          grossAmountCents: chargeAmountCents,
+          memberDiscountApplied: true,
+        },
+      }
+      : standardBookingSplit;
     // What stays on platform balance: platform's true fee + affiliate's
     // share (Phase 2 will later transfer the affiliate share out to the
     // affiliate's connected account). The diviner's destination transfer
@@ -686,6 +767,19 @@ export async function POST(request: NextRequest) {
           ...(availabilityTemplateTitle ? { availability_title: availabilityTemplateTitle } : {}),
           ...(availabilityTemplateDescription ? { availability_description: availabilityTemplateDescription } : {}),
           ...(submissionId ? { intake_submission_id: submissionId } : {}),
+          ...(isCommunitySource
+            ? {
+              booking_source: "community",
+              community_member_user_id: communityMemberUserId,
+            }
+            : {}),
+          ...(memberDiscountApplied
+            ? {
+              member_discount_percent: memberDiscountPercent,
+              member_discount_amount_cents: memberDiscountCents,
+              price_before_member_discount_cents: grossAmountCentsBeforeMemberDiscount,
+            }
+            : {}),
         },
         ...(policyAcknowledgedAt ? { policy_acknowledged_at: policyAcknowledgedAt } : {}),
         ...(refCode ? { ref_code: refCode } : {}),
@@ -767,7 +861,7 @@ export async function POST(request: NextRequest) {
       divinerId: resolvedDivinerId,
       serviceId,
       service,
-      amountCents: grossAmountCents,
+      amountCents: shouldCharge ? bookingSplit.grossAmountCents : 0,
       currency: "usd",
       status: initialOrderStatus,
       paidAt: shouldCharge ? null : new Date().toISOString(),
@@ -807,7 +901,7 @@ export async function POST(request: NextRequest) {
           ...(loyaltyRuleName
             ? { loyaltyDiscount: `${loyaltyDiscountPercent}%` }
             : {}),
-          ...(memberDiscountApplied ? { memberDiscount: "5%" } : {}),
+          ...(memberDiscountApplied ? { memberDiscount: `${memberDiscountPercent}%` } : {}),
         },
       });
 
@@ -825,7 +919,7 @@ export async function POST(request: NextRequest) {
         divinerId: resolvedDivinerId,
         serviceId,
         service,
-        amountCents: grossAmountCents,
+        amountCents: bookingSplit.grossAmountCents,
         currency: "usd",
         stripePaymentIntentId: paymentIntent.id,
         status: "pending_payment",
@@ -1157,7 +1251,7 @@ export async function POST(request: NextRequest) {
           loyaltyDiscount: {
             name: loyaltyRuleName,
             percent: loyaltyDiscountPercent,
-            saved: Math.round((service.base_price - finalPrice + giftDeduction) * 100) / 100,
+            saved: Math.round((service.base_price - priceBeforeMemberDiscount + giftDeduction) * 100) / 100,
           },
         }
         : {}),
@@ -1165,7 +1259,14 @@ export async function POST(request: NextRequest) {
         ? { giftDeduction: Math.round(giftDeduction * 100) / 100 }
         : {}),
       ...(memberDiscountApplied
-        ? { memberDiscount: { platformFeePercent: effectivePlatformFeePercent } }
+        ? {
+          memberDiscount: {
+            percent: memberDiscountPercent,
+            saved: memberDiscountAmount,
+            priceBeforeDiscount: priceBeforeMemberDiscount,
+            platformFeePercent: effectivePlatformFeePercent,
+          },
+        }
         : {}),
     });
   } catch (err) {

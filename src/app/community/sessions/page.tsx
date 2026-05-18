@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Calendar } from "lucide-react";
 import { formatDateTime } from "@/lib/format";
+import { CommunityReadingsSection } from "@/components/community/community-readings-section";
 
 export const metadata = { title: "Sessions - AstrologyPro Community" };
 export const dynamic = "force-dynamic";
@@ -60,20 +61,22 @@ export default async function CommunitySessionsPage() {
     <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">
-          {isMysterySchool ? "Live Classes & Study Circles" : "Group Sessions & Ceremonies"}
+          {isMysterySchool ? "Readings, Classes & Study Circles" : "Readings, Group Sessions & Ceremonies"}
         </h1>
         <p className="text-muted-foreground">
           {isMysterySchool
-            ? "Weekly live classes and peer practice groups."
-            : "New Moon, Full Moon, and wisdom circle gatherings."}
+            ? "Your booked readings, weekly live classes, and peer practice groups."
+            : "Your booked readings plus New Moon, Full Moon, and wisdom circle gatherings."}
         </p>
       </div>
+
+      <CommunityReadingsSection />
 
       {/* Upcoming events */}
       <section className="space-y-4">
         <div className="flex items-center gap-2">
           <Calendar className="size-5 text-muted-foreground" />
-          <h2 className="text-lg font-semibold">Upcoming</h2>
+          <h2 className="text-lg font-semibold">Upcoming Community Sessions</h2>
           <span className="text-sm text-muted-foreground">({upcoming.length})</span>
         </div>
 

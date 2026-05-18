@@ -24,6 +24,7 @@ import {
   ShieldAlert,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
+import { PRICING } from "@/lib/constants";
 import { CitySearch, type CityResult } from "@/components/booking/city-search";
 import { format } from "date-fns";
 import { getServicePurchaseConfig } from "@/lib/service-purchase";
@@ -130,6 +131,12 @@ interface BookingWizardProps {
    * booking-payment, which validates and consumes it server-side.
    */
   discountToken?: string | null;
+  /**
+   * Source marker for authenticated booking flows. Community-origin bookings
+   * lock ownership to the logged-in Community user's email.
+   */
+  bookingSource?: "community" | null;
+  lockedEmail?: string | null;
 }
 
 const STEPS = [
@@ -163,6 +170,10 @@ const INITIAL_DETAILS: BookingDetails = {
   birthTimezone: "",
   notes: "",
 };
+
+type MemberDiscountState =
+  | { status: "idle" | "checking" | "invalid"; percent: null }
+  | { status: "valid"; percent: number };
 
 function readCookie(name: string): string | undefined {
   if (typeof document === "undefined") return undefined;
@@ -317,6 +328,8 @@ export function BookingWizard({
   preselectedDate = null,
   startOnContact = false,
   discountToken = null,
+  bookingSource = null,
+  lockedEmail = null,
 }: BookingWizardProps) {
   // Start on the Contact step when the URL already carries a chosen date + time
   // (deep-link from the profile's "Next Available" picker) so users don't see a
@@ -337,7 +350,10 @@ export function BookingWizard({
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
-  const [bookingDetails, setBookingDetails] = useState<BookingDetails>(INITIAL_DETAILS);
+  const [bookingDetails, setBookingDetails] = useState<BookingDetails>(() => ({
+    ...INITIAL_DETAILS,
+    email: lockedEmail ?? "",
+  }));
   const [policyAcknowledged, setPolicyAcknowledged] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   // Stable session token for slot holds (persists for the lifetime of this wizard)
@@ -357,12 +373,25 @@ export function BookingWizard({
   const [error, setError] = useState<string | null>(null);
   const [creatingPaymentIntent, setCreatingPaymentIntent] = useState(false);
   const [prefilled, setPrefilled] = useState(false);
+  const [memberDiscount, setMemberDiscount] = useState<MemberDiscountState>({
+    status: discountToken ? "checking" : "idle",
+    percent: null,
+  });
   const [requestedTimeIso, setRequestedTimeIso] = useState<string | null>(null);
   const [hasAutoAdvancedFromQuery, setHasAutoAdvancedFromQuery] =
     useState(startOnContact);
   const [clientTimezone, setClientTimezone] = useState(diviner.timezone || "UTC");
   const resolvedServiceName = hideServiceName ? (bookingLabel ?? "Reading Session") : (bookingLabel ?? service.name);
   const availabilityQuery = availabilityServiceId ? `&serviceId=${availabilityServiceId}` : "";
+
+  useEffect(() => {
+    if (!lockedEmail) return;
+    setBookingDetails((prev) => ({
+      ...prev,
+      email: lockedEmail,
+    }));
+    setPrefilled(true);
+  }, [lockedEmail]);
 
   useEffect(() => {
     if (!intakePrefill) return;
@@ -393,6 +422,51 @@ export function BookingWizard({
       ? selectedSlot.servicePrice
       : Number(service.base_price ?? service.price ?? 0);
   const isFreeBooking = effectivePrice <= 0;
+  const memberDiscountPercent =
+    memberDiscount.status === "valid" ? memberDiscount.percent : null;
+  const basePlatformFeePercent = PRICING.platformFeePercent;
+  const discountedPlatformFeePercent =
+    memberDiscountPercent != null
+      ? Math.max(basePlatformFeePercent - memberDiscountPercent, 10)
+      : basePlatformFeePercent;
+  const standardPlatformFee = Math.round(effectivePrice * (basePlatformFeePercent / 100) * 100) / 100;
+  const discountedPlatformFee = Math.round(effectivePrice * (discountedPlatformFeePercent / 100) * 100) / 100;
+  const memberPlatformFeeSavings = Math.max(
+    0,
+    Math.round((standardPlatformFee - discountedPlatformFee) * 100) / 100
+  );
+  const discountedTotal = Math.max(
+    0,
+    Math.round((effectivePrice - memberPlatformFeeSavings) * 100) / 100
+  );
+
+  useEffect(() => {
+    if (!discountToken) {
+      setMemberDiscount({ status: "idle", percent: null });
+      return;
+    }
+
+    let cancelled = false;
+    setMemberDiscount({ status: "checking", percent: null });
+
+    fetch(`/api/community/discount-token/validate?token=${encodeURIComponent(discountToken)}`)
+      .then((res) => res.json())
+      .then((data: { valid?: boolean; discount_percent?: number }) => {
+        if (cancelled) return;
+        if (data.valid && typeof data.discount_percent === "number") {
+          setMemberDiscount({ status: "valid", percent: data.discount_percent });
+        } else {
+          setMemberDiscount({ status: "invalid", percent: null });
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setMemberDiscount({ status: "invalid", percent: null });
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [discountToken]);
 
   // Prefill intake data from stored client profile when ?prefill=true
   useEffect(() => {
@@ -423,7 +497,7 @@ export function BookingWizard({
         setBookingDetails((prev) => ({
           ...prev,
           fullName: client.full_name || prev.fullName,
-          email: client.email || user.email || prev.email,
+          email: lockedEmail ?? client.email ?? user.email ?? prev.email,
           phone: client.phone || prev.phone,
         }));
         setPrefilled(true);
@@ -434,7 +508,7 @@ export function BookingWizard({
     }
 
     prefillFromProfile();
-  }, []);
+  }, [lockedEmail]);
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -599,6 +673,7 @@ export function BookingWizard({
           },
           refCode,
           discount_token: discountToken ?? undefined,
+          source: bookingSource ?? undefined,
           policyAcknowledgedAt: policyAcknowledged ? new Date().toISOString() : undefined,
           // Signal that this slot is not linked to any service — the API will skip charging.
           freeSlot: slotIsUnscoped ? true : undefined,
@@ -818,6 +893,35 @@ export function BookingWizard({
           <CardTitle>{step === 2 && isFreeBooking ? "Confirm Booking" : (STEPS[step]?.label ?? "Booking")}</CardTitle>
         </CardHeader>
         <CardContent>
+          {discountToken && memberDiscount.status !== "idle" && (
+            <div
+              className={cn(
+                "mb-6 rounded-lg border px-4 py-3 text-sm",
+                memberDiscount.status === "valid"
+                  ? "border-emerald-500/25 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                  : memberDiscount.status === "checking"
+                    ? "border-amber-500/25 bg-amber-500/10 text-amber-700 dark:text-amber-300"
+                    : "border-destructive/25 bg-destructive/10 text-destructive"
+              )}
+            >
+              {memberDiscount.status === "valid" && (
+                <span>
+                  Community member benefit active: {memberDiscount.percent}% off
+                  the platform-fee portion of this booking.
+                </span>
+              )}
+              {memberDiscount.status === "checking" && (
+                <span>Checking your Community member discount...</span>
+              )}
+              {memberDiscount.status === "invalid" && (
+                <span>
+                  This Community discount token is expired or already used. The
+                  standard booking price will apply.
+                </span>
+              )}
+            </div>
+          )}
+
           {/* Step 1: Date & Time */}
           {step === 0 && (
             <div className="space-y-6">
@@ -946,15 +1050,25 @@ export function BookingWizard({
                     id="booking-email"
                     type="email"
                     value={bookingDetails.email}
-                    onChange={(e) =>
+                    onChange={(e) => {
+                      if (lockedEmail) return;
                       setBookingDetails((prev) => ({
                         ...prev,
                         email: e.target.value,
-                      }))
-                    }
+                      }));
+                    }}
                     placeholder="you@example.com"
                     autoComplete="email"
+                    readOnly={Boolean(lockedEmail)}
+                    disabled={Boolean(lockedEmail)}
+                    aria-readonly={Boolean(lockedEmail)}
+                    title={lockedEmail ? "Locked to your Community account email." : undefined}
                   />
+                  {lockedEmail && (
+                    <p className="text-xs text-muted-foreground">
+                      Locked to your Community account email.
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-2 md:col-span-2">
                   <Label htmlFor="booking-phone">
@@ -1160,10 +1274,48 @@ export function BookingWizard({
                     <span className="font-medium">{bookingDetails.fullName}</span>
                   </div>
                   <Separator />
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Reading price</span>
+                    <span className="font-medium">
+                      {formatCurrency(effectivePrice)}
+                    </span>
+                  </div>
+                  {memberDiscountPercent != null && !isFreeBooking && (
+                    <>
+                      <Separator />
+                      <div className="space-y-2 rounded-md border border-emerald-500/20 bg-emerald-500/5 p-3">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="font-medium text-emerald-700 dark:text-emerald-300">
+                            Community member benefit
+                          </span>
+                          <span className="font-semibold text-emerald-700 dark:text-emerald-300">
+                            -{memberDiscountPercent}% platform fee
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                          <span>Standard platform fee</span>
+                          <span>
+                            {basePlatformFeePercent}% ({formatCurrency(standardPlatformFee)})
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                          <span>Member platform fee</span>
+                          <span>
+                            {discountedPlatformFeePercent}% ({formatCurrency(discountedPlatformFee)})
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs font-medium text-emerald-700 dark:text-emerald-300">
+                          <span>Community member discount</span>
+                          <span>-{formatCurrency(memberPlatformFeeSavings)}</span>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                  <Separator />
                   <div className="flex items-center justify-between text-lg">
                     <span className="font-semibold">Total</span>
                     <span className="font-bold">
-                      {formatCurrency(effectivePrice)}
+                      {formatCurrency(discountedTotal)}
                     </span>
                   </div>
                 </div>

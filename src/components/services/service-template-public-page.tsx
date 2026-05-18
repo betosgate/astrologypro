@@ -68,6 +68,7 @@ interface ServiceTemplatePublicPageProps {
   embedded?: boolean;
   disableLinks?: boolean;
   discountToken?: string | null;
+  bookingSource?: "community" | null;
 }
 
 interface CtaButtonProps {
@@ -146,13 +147,18 @@ function CtaButton({ hasIntakeForm, href, label, className, disabled }: CtaButto
   );
 }
 
-function appendDiscountToken(href: string, discountToken: string | null | undefined) {
-  if (!discountToken) return href;
+function appendBookingParams(
+  href: string,
+  discountToken: string | null | undefined,
+  bookingSource: "community" | null | undefined
+) {
+  if (!discountToken && !bookingSource) return href;
   if (href.startsWith("#")) return href;
   const [path, hash = ""] = href.split("#");
   const [pathname, query = ""] = path.split("?");
   const search = new URLSearchParams(query);
-  search.set("discount_token", discountToken);
+  if (discountToken) search.set("discount_token", discountToken);
+  if (bookingSource) search.set("source", bookingSource);
   return `${pathname}?${search.toString()}${hash ? `#${hash}` : ""}`;
 }
 
@@ -245,7 +251,13 @@ function getFaqItems(template: ServiceTemplatePublicPageTemplate, hasIntakeForm:
 }
 
 export function ServiceTemplatePublicPage(props: ServiceTemplatePublicPageProps) {
-  const { template, embedded = false, disableLinks = false, discountToken = null } = props;
+  const {
+    template,
+    embedded = false,
+    disableLinks = false,
+    discountToken = null,
+    bookingSource = null,
+  } = props;
   const serviceImageUrl = template.image_url ?? getServiceImageUrl(template.slug);
   const requiresBirthData =
     template.category === "astrology" || template.requires_birth_data === true;
@@ -270,11 +282,12 @@ export function ServiceTemplatePublicPage(props: ServiceTemplatePublicPageProps)
   // book-without-diviner-flow bundle, 23.04.2026).
   const ctaHref = hasIntakeForm
     ? "#template-intake-form"
-    : appendDiscountToken(
+    : appendBookingParams(
         `/book/template/${encodeURIComponent(template.slug)}`,
         discountToken,
+        bookingSource,
       );
-  const servicesHref = appendDiscountToken("/services", discountToken);
+  const servicesHref = appendBookingParams("/services", discountToken, bookingSource);
   const ctaLabel = hasIntakeForm ? "Start Intake" : "Continue to Booking";
   const faqItems = getFaqItems(template, hasIntakeForm);
   const proofBullets = hasIntakeForm
@@ -371,6 +384,13 @@ export function ServiceTemplatePublicPage(props: ServiceTemplatePublicPageProps)
                     )}
                   </div>
                 </div>
+
+                {discountToken && (
+                  <div className="mt-4 rounded-xl border border-emerald-400/25 bg-emerald-400/10 px-4 py-3 text-sm text-emerald-100">
+                    5% Community member discount active. Checkout will show the
+                    platform-fee breakdown before payment.
+                  </div>
+                )}
 
                 <p className="mt-3 text-xs text-silver/50">
                   {hasIntakeForm
@@ -493,6 +513,14 @@ export function ServiceTemplatePublicPage(props: ServiceTemplatePublicPageProps)
                   </div>
                 )}
 
+                {discountToken && (
+                  <div className="mt-5 rounded-lg border border-emerald-400/20 bg-emerald-400/10 px-4 py-3">
+                    <p className="text-xs text-emerald-100">
+                      Your Community member discount token will carry through to booking.
+                    </p>
+                  </div>
+                )}
+
                 <div className="mt-6 flex flex-wrap gap-3 border-t border-white/8 pt-6">
                   <CtaButton
                     hasIntakeForm={hasIntakeForm}
@@ -572,6 +600,7 @@ export function ServiceTemplatePublicPage(props: ServiceTemplatePublicPageProps)
                   templateSlug={template.slug}
                   embedded={embedded}
                   discountToken={discountToken}
+                  bookingSource={bookingSource}
                 />
               </div>
             </section>

@@ -42,6 +42,7 @@ interface SupportTicket {
   queue_id: string | null;
   sla_due_at: string | null;
   sla_breached: boolean;
+  metadata?: any;
   created_at: string;
   updated_at: string;
 }
@@ -283,6 +284,7 @@ export function TicketsBulkTable({ tickets, queueMap, queues }: Props) {
                 </span>
               </TableHead>
               <TableHead>Queue / Team</TableHead>
+              <TableHead>Assignee</TableHead>
               <TableHead>Created</TableHead>
             </TableRow>
           </TableHeader>
@@ -355,6 +357,24 @@ export function TicketsBulkTable({ tickets, queueMap, queues }: Props) {
                   {ticket.queue_id
                     ? (queueMap[ticket.queue_id] ?? ticket.assigned_team ?? "Unassigned")
                     : (ticket.assigned_team ?? "Unassigned")}
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-1.5 text-xs">
+                    {ticket.assigned_to ? (
+                      <div className="flex flex-col">
+                        <span className="font-medium text-[11px] max-w-[150px] truncate text-foreground">
+                          {ticket.metadata?.assignee_name || "Support Agent"}
+                        </span>
+                        {ticket.metadata?.assignee_email && (
+                          <span className="text-[9px] text-muted-foreground max-w-[150px] truncate">
+                            {ticket.metadata.assignee_email}
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="italic text-muted-foreground text-[11px]">Unassigned</span>
+                    )}
+                  </div>
                 </TableCell>
                 <TableCell className="text-sm text-muted-foreground">
                   {formatDate(ticket.created_at)}

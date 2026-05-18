@@ -20,7 +20,7 @@ export const metadata: Metadata = {
 };
 
 interface ServicesHubPageProps {
-  searchParams: Promise<{ discount_token?: string }>;
+  searchParams: Promise<{ discount_token?: string; source?: string }>;
 }
 
 function getDiscountTokenParam(value: string | undefined) {
@@ -28,17 +28,27 @@ function getDiscountTokenParam(value: string | undefined) {
   return token ? token : null;
 }
 
-function withDiscountToken(href: string, discountToken: string | null) {
-  if (!discountToken) return href;
-  const search = new URLSearchParams({ discount_token: discountToken });
+function getSourceParam(value: string | undefined) {
+  return value?.trim() === "community" ? "community" : null;
+}
+
+function withBookingParams(
+  href: string,
+  params: { discountToken: string | null; source: string | null }
+) {
+  if (!params.discountToken && !params.source) return href;
+  const search = new URLSearchParams();
+  if (params.discountToken) search.set("discount_token", params.discountToken);
+  if (params.source) search.set("source", params.source);
   return `${href}?${search.toString()}`;
 }
 
 export default async function ServicesHubPage({
   searchParams,
 }: ServicesHubPageProps) {
-  const { discount_token } = await searchParams;
+  const { discount_token, source } = await searchParams;
   const discountToken = getDiscountTokenParam(discount_token);
+  const bookingSource = getSourceParam(source);
   const templates = await getServiceLandingTemplates();
   const grouped = templates.reduce<Record<string, typeof templates>>((acc, template) => {
     const key = template.category ?? "other";
@@ -62,6 +72,12 @@ export default async function ServicesHubPage({
             Every service page explains the offer clearly, then lets you compare
             diviners by availability or by profile before you book.
           </p>
+          {discountToken && (
+            <div className="mt-5 rounded-xl border border-emerald-400/25 bg-emerald-400/10 px-4 py-3 text-sm text-emerald-100">
+              5% Community member discount active. Checkout will show the
+              platform-fee breakdown before payment.
+            </div>
+          )}
         </div>
 
         <div className="mt-12 space-y-12">
@@ -93,8 +109,13 @@ export default async function ServicesHubPage({
                       {service.description}
                     </p>
                     <div className="mt-5 flex items-center justify-between text-sm">
-                      <span className="font-medium text-amber-300">
-                        from {formatCurrency(Number(service.base_price))}
+                      <span className="flex flex-col gap-1 font-medium text-amber-300">
+                        <span>from {formatCurrency(Number(service.base_price))}</span>
+                        {discountToken && (
+                          <span className="text-xs font-normal text-emerald-200">
+                            5% member discount available
+                          </span>
+                        )}
                       </span>
                       <span className="text-slate-400">
                         {isTimeBasedPublicService(service) ? "Time-based" : "Evergreen"}
@@ -102,7 +123,10 @@ export default async function ServicesHubPage({
                     </div>
                     <div className="mt-6">
                       <Link
-                        href={withDiscountToken(`/services/${service.slug}`, discountToken)}
+                        href={withBookingParams(`/services/${service.slug}`, {
+                          discountToken,
+                          source: bookingSource,
+                        })}
                         className="inline-flex items-center gap-2 rounded-xl bg-amber-400/15 px-4 py-2.5 text-sm font-medium text-amber-200 transition-colors hover:bg-amber-400/20"
                       >
                         Compare Diviners

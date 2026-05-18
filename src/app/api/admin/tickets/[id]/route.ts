@@ -121,7 +121,7 @@ export async function PATCH(
 
   const { data: ticket, error: fetchError } = await admin
     .from("support_tickets")
-    .select("id, status, priority, assigned_to")
+    .select("id, status, priority, assigned_to, metadata")
     .eq("id", id)
     .maybeSingle();
 
@@ -236,6 +236,46 @@ export async function PATCH(
       (metadata.display_name as string | null) ??
       authUser?.user?.email ??
       "Staff";
+
+    // Auto-assign the ticket to the commenting admin/staff
+    const assigneeEmail = authUser?.user?.email ?? null;
+    const existingMetadata = typeof ticket.metadata === "object" && ticket.metadata !== null ? ticket.metadata : {};
+    const updatedTicketMetadata = {
+      ...existingMetadata,
+      assignee_name: authorName,
+      assignee_email: assigneeEmail,
+    };
+
+    const { data: assignedTicket, error: assignError } = await admin
+      .from("support_tickets")
+      .update({
+        assigned_to: admin_user.id,
+        metadata: updatedTicketMetadata,
+      })
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (assignError) {
+      console.error("Failed to auto-assign ticket:", assignError.message);
+    } else if (assignedTicket) {
+      updatedTicket = assignedTicket;
+    }
+
+    // Also add to ticket history if it wasn't assigned to them already
+    if (ticket.assigned_to !== admin_user.id) {
+      const { error: histErr } = await admin.from("ticket_history").insert({
+        ticket_id: id,
+        actor_user_id: admin_user.id,
+        event_type: "assigned",
+        old_value: ticket.assigned_to ?? undefined,
+        new_value: admin_user.id,
+        note: "Auto-assigned on comment",
+      });
+      if (histErr) {
+        console.error("Failed to insert assignment history:", histErr.message);
+      }
+    }
 
     await admin.from("ticket_messages").insert({
       ticket_id: id,

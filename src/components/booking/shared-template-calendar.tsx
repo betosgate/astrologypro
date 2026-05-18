@@ -40,6 +40,7 @@ interface SharedTemplateCalendarProps {
   submissionError: string | null;
   compatibleDivinerCount: number;
   discountToken?: string | null;
+  bookingSource?: "community" | null;
 }
 
 interface AvailableDiviner {
@@ -84,6 +85,7 @@ export function SharedTemplateCalendar({
   submissionError,
   compatibleDivinerCount,
   discountToken = null,
+  bookingSource = null,
 }: SharedTemplateCalendarProps) {
   const router = useRouter();
 
@@ -256,6 +258,7 @@ export function SharedTemplateCalendar({
     const qs = new URLSearchParams();
     if (submissionId) qs.set("submission", submissionId);
     if (discountToken) qs.set("discount_token", discountToken);
+    if (bookingSource) qs.set("source", bookingSource);
     qs.set("date", dateStr);
     qs.set("time", slot.start);
     const url = `/${encodeURIComponent(d.username)}/book/${encodeURIComponent(

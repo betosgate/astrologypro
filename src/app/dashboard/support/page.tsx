@@ -105,7 +105,7 @@ export default async function SupportPage({
   let query = adminClient
     .from("support_tickets")
     .select(
-      "id, ticket_number, subject, status, priority, category, assigned_to, created_at, updated_at",
+      "id, ticket_number, subject, status, priority, category, assigned_to, metadata, created_at, updated_at",
       { count: "exact" }
     );
 
@@ -275,9 +275,16 @@ export default async function SupportPage({
                        <div className="flex items-center gap-2 text-xs">
                         <UserIcon className="size-3 text-muted-foreground shrink-0" />
                         {ticket.assigned_to ? (
-                          <span className="text-[11px] font-medium truncate max-w-[150px]">
-                            Support Agent
-                          </span>
+                          <div className="flex flex-col">
+                            <span className="text-[11px] font-medium truncate max-w-[150px]">
+                              {(ticket as any).metadata?.assignee_name || "Support Agent"}
+                            </span>
+                            {(ticket as any).metadata?.assignee_email && (
+                              <span className="text-[9px] text-muted-foreground truncate max-w-[150px]">
+                                {(ticket as any).metadata.assignee_email}
+                              </span>
+                            )}
+                          </div>
                         ) : (
                           <span className="text-[11px] italic text-muted-foreground">Unassigned</span>
                         )}

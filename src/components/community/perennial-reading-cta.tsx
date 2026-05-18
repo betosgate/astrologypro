@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import type { VariantProps } from "class-variance-authority";
 
 const SERVICES_PATH = "/services";
+const COMMUNITY_SERVICES_PATH = `${SERVICES_PATH}?source=community`;
 
 async function redirectToServicesWithDiscount() {
   try {
@@ -15,20 +16,22 @@ async function redirectToServicesWithDiscount() {
     });
 
     if (!res.ok) {
-      window.location.href = SERVICES_PATH;
+      window.location.href = COMMUNITY_SERVICES_PATH;
       return;
     }
 
     const { token } = (await res.json()) as { token?: string };
+    const search = new URLSearchParams({ source: "community" });
     if (typeof token === "string" && token.length > 0) {
-      window.location.href = `${SERVICES_PATH}?discount_token=${encodeURIComponent(token)}`;
+      search.set("discount_token", token);
+      window.location.href = `${SERVICES_PATH}?${search.toString()}`;
       return;
     }
   } catch {
     // Fall through to the non-discount services hub.
   }
 
-  window.location.href = SERVICES_PATH;
+  window.location.href = COMMUNITY_SERVICES_PATH;
 }
 
 interface PerennialReadingButtonProps

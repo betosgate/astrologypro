@@ -260,7 +260,7 @@ export function TransitCardExpander({
                   )} */}
                   <PerennialReadingButton size="sm" variant="ghost">
                     <BookOpen className="mr-1.5 size-4" />
-                    Book Reading
+                    Book Reading - 5% Discount
                   </PerennialReadingButton>
                 </div>
               </CardContent>

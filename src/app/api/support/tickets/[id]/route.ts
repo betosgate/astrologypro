@@ -78,12 +78,11 @@ export async function GET(
     return problem(403, "Forbidden", "You do not have access to this ticket.");
   }
 
-  // Fetch public messages only (not internal notes)
+  // Fetch all messages (both public and internal notes) for the requester
   const { data: messages, error: msgError } = await admin
     .from("ticket_messages")
     .select("*")
     .eq("ticket_id", id)
-    .eq("is_internal", false)
     .order("created_at", { ascending: true });
 
   if (msgError) {
