@@ -51,6 +51,7 @@ import {
   PerennialReadingButton,
   PerennialReadingCta,
 } from "@/components/community/perennial-reading-cta";
+import { CommunityReadingsDashboardPreview } from "@/components/community/community-readings-section";
 import { getCommunityDashboardFeed } from "@/lib/dashboard-content";
 import { calcFamilyProfileCompletion } from "@/lib/community/family-profile-completion";
 import { includedMemberLimitForTier } from "@/lib/community/pm-entitlement";
@@ -1282,6 +1283,8 @@ export default async function CommunityDashboardPage() {
         showTraineeUpgrade={false}
         showDivinerUpgrade
       />
+
+      <CommunityReadingsDashboardPreview />
 
       {/* ═══════════════════════════════════════════════════════════════════
           TOP SUMMARY BAR

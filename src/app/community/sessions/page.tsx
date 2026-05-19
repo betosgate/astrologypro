@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Calendar } from "lucide-react";
 import { formatDateTime } from "@/lib/format";
-import { CommunityReadingsSection } from "@/components/community/community-readings-section";
+import { CommunityReadingsExplorer } from "@/components/community/community-readings-section";
 
 export const metadata = { title: "Sessions - AstrologyPro Community" };
 export const dynamic = "force-dynamic";
@@ -70,7 +70,7 @@ export default async function CommunitySessionsPage() {
         </p>
       </div>
 
-      <CommunityReadingsSection />
+      <CommunityReadingsExplorer />
 
       {/* Upcoming events */}
       <section className="space-y-4">
